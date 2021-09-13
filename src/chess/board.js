@@ -32,6 +32,11 @@ export class Board {
         let [row, column] = positionToIndex(position);
         return this.squares[row][column];
     }
+
+    setSquare(position, piece) {
+        let [row, column] = positionToIndex(position);
+        this.squares[row][column] = piece;
+    }
 }
 
 export const Piece = {
