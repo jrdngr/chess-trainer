@@ -39,20 +39,20 @@ export class Board {
     }
 }
 
-export const Piece = {
-    WHITE_KING: '♔',
-    WHITE_QUEEN: '♕',
-    WHITE_ROOK: '♖',
-    WHITE_BISHOP: '♗',
-    WHITE_KNIGHT: '♘',
-    WHITE_PAWN: '♙',
+export const PieceType = {
+    WHITE_KING: 0,
+    WHITE_QUEEN: 1,
+    WHITE_ROOK: 2,
+    WHITE_BISHOP: 3,
+    WHITE_KNIGHT: 4,
+    WHITE_PAWN: 5,
 
-    BLACK_KING: '♚',
-    BLACK_QUEEN: '♛',
-    BLACK_ROOK: '♜',
-    BLACK_BISHOP: '♝',
-    BLACK_KNIGHT: '♞',
-    BLACK_PAWN: '♟︎',
+    BLACK_KING: 6,
+    BLACK_QUEEN: 7,
+    BLACK_ROOK: 8,
+    BLACK_BISHOP: 9,
+    BLACK_KNIGHT: 10,
+    BLACK_PAWN: 11,
 };
 
 const positionToIndex = (position) => {
