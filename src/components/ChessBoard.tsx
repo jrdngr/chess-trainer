@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Board } from '../chess/board';
 import './ChessBoard.css';
-import Piece from './Piece';
+import Square from './Square';
 
 function ChessBoard() {
   let [board, setBoard] = useState(Board.initialized());
@@ -20,7 +20,7 @@ function ChessBoard() {
             <div className="row">
               {row.map((square, j) => (
                 <span className={squareColor(i, j)}>
-                  <Piece type={square} />
+                  <Square data={square} />
                 </span>
               ))}
         </div>

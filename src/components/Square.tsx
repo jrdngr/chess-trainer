@@ -1,4 +1,4 @@
-import { PieceType } from '../chess/board';
+import { Piece } from '../chess/piece';
 import BlackBishop from '../images/pieces/black-bishop.svg';
 import BlackKing from '../images/pieces/black-king.svg';
 import BlackKnight from '../images/pieces/black-knight.svg';
@@ -12,36 +12,44 @@ import WhitePawn from '../images/pieces/white-pawn.svg';
 import WhiteQueen from '../images/pieces/white-queen.svg';
 import WhiteRook from '../images/pieces/white-rook.svg';
 
-const Piece = (props: any) => {
-    switch (props.type) {
-        case PieceType.WHITE_KING:
+const Square = (props: SquareProps) => {
+    if (props.data === null) {
+        return null;
+    } 
+
+    switch ([props.data.color, props.data.type]) {
+        case ['white', 'king']:
           return <img src={WhiteKing} className="piece" />;
-        case PieceType.WHITE_QUEEN:
+        case ['white', 'queen']:
           return <img src={WhiteQueen} className="piece" />;
-        case PieceType.WHITE_ROOK:
+        case ['white', 'rook']:
           return <img src={WhiteRook} className="piece" />;
-        case PieceType.WHITE_BISHOP:
+        case ['white', 'bishop']:
           return <img src={WhiteBishop} className="piece" />;
-        case PieceType.WHITE_KNIGHT:
+        case ['white', 'knight']:
           return <img src={WhiteKnight} className="piece" />;
-        case PieceType.WHITE_PAWN:
+        case ['white', 'pawn']:
           return <img src={WhitePawn} className="piece" />;
     
-        case PieceType.BLACK_KING:
+        case ['black', 'king']:
           return <img src={BlackKing} className="piece" />;
-        case PieceType.BLACK_QUEEN:
+        case ['black', 'queen']:
           return <img src={BlackQueen} className="piece" />;
-        case PieceType.BLACK_ROOK:
+        case ['black', 'rook']:
           return <img src={BlackRook} className="piece" />;
-        case PieceType.BLACK_BISHOP:
+        case ['black', 'bishop']:
           return <img src={BlackBishop} className="piece" />;
-        case PieceType.BLACK_KNIGHT:
+        case ['black', 'knight']:
           return <img src={BlackKnight} className="piece" />;
-        case PieceType.BLACK_PAWN:
+        case ['black', 'pawn']:
           return <img src={BlackPawn} className="piece" />;
         default:
             return null;
     }
 }
 
-export default Piece;
+type SquareProps = {
+    data: Piece | null;
+}
+
+export default Square;
