@@ -1,15 +1,10 @@
+import { Piece } from "./piece";
+
 export class Board {
+    private squares: Square[][];
+
     constructor() {
-        this.squares = [
-            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
-            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
-            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
-            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
-            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
-            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
-            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
-            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
-        ];
+        this.squares = [];
     }
 
     static initialized() {
@@ -28,16 +23,23 @@ export class Board {
         return board;
     }
 
-    square(position) {
+    square(position: Position) {
         let [row, column] = positionToIndex(position);
         return this.squares[row][column];
     }
 
-    setSquare(position, piece) {
+    setSquare(position: Position, piece: Piece | Empty) {
         let [row, column] = positionToIndex(position);
         this.squares[row][column] = piece;
     }
 }
+
+export type File = "A" | "B" | "C" | "D" | "E" | "F" | "H" | "G";
+export type Rank = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8";
+export type Position = `${File}${Rank}`;
+
+export type Empty = null;
+export type Square = Piece | Empty;
 
 export const PieceType = {
     WHITE_KING: 0,
@@ -55,11 +57,7 @@ export const PieceType = {
     BLACK_PAWN: 11,
 };
 
-const positionToIndex = (position) => {
-    if (position.length != 2) {
-        throw `Invalid position: ${position}`;
-    }
-
+const positionToIndex = (position: Position) => {
     const row = Number(position[1]) - 1;
     const column = position.toLowerCase().charCodeAt(0) - 97;
 
