@@ -19,7 +19,7 @@ npm run dev          # http://localhost:5173, also served on your LAN IP
 full-screen, chrome-free app.
 
 ```bash
-npm test             # 134 tests: chess rules, tree, SRS, PGN, analysis, seed data
+npm test             # 145 tests: chess rules, tree, SRS, PGN, analysis, seed data
 npm run typecheck
 npm run build        # production build into dist/
 npm run artifact     # repackage dist/ for publishing as a Claude Artifact
@@ -48,8 +48,23 @@ fuzz. `review()` is pure and deterministic, so the whole algorithm can be
 swapped without touching the UI.
 
 ### Repertoire
-Three seeded repertoires (White 1.e4; Black Najdorf vs 1.e4; Black Nimzo/QID vs
-1.d4) — about 460 trainable decision points in total.
+Two seeded repertoires built around what you actually play — the **Queen's
+Gambit** with White and the **King's Indian** with Black — about 860 trainable
+decision points in total.
+
+White answers 1...d5 with 2.c4 and covers the QGD (Exchange, with the minority
+attack), Slav, Semi-Slav (Botvinnik and Meran), QGA, Tarrasch, Chigorin, Albin
+and Baltic, plus every Indian defence after 1...Nf6: King's Indian, Grünfeld,
+Nimzo, Benoni, Benko, Budapest, Old Indian and the Dutch.
+
+Black answers 1.d4 with the King's Indian and covers the Classical (Mar del
+Plata, Bayonet, Petrosian, Exchange, Gligorić), Sämisch, Averbakh, Four Pawns,
+Makogonov, Fianchetto, the London and Torre anti-KID set-ups, and the c4/Nf3/g3
+move orders that transpose.
+
+Within a repertoire there is exactly one move for you in any given position — a
+repertoire is a set of decisions, not a menu — and a test enforces it. All the
+breadth is on the opponent's side.
 
 Browse by playing moves on the board. Playing a move the tree does not have
 offers to add it. Each move has a sheet: make it the main move, note why you
@@ -63,9 +78,10 @@ both routes' moves are offered as valid answers.
 ### Explore
 The reference database, as an opening explorer: move frequencies, win/draw/loss
 splits, opening names and ECO codes, and a handful of real master games.
-Seventeen named book lines (Poisoned Pawn, English Attack, Yugoslav, Berlin,
-Botvinnik Semi-Slav, Mar del Plata…) each with a summary and the ideas behind
-them. **Add to repertoire** lets you trim the line first — tap any move to set
+Twenty-eight named book lines — Mar del Plata, Bayonet, Sämisch, Fianchetto,
+Four Pawns, Averbakh, the KID Exchange, Slav main line, Meran, Botvinnik, QGA
+Classical, Tarrasch, Chigorin and more — each with a summary and the ideas
+behind it. **Add to repertoire** lets you trim the line first — tap any move to set
 the cut-off, because usually you want the idea and not twenty plies of theory.
 
 ### Analysis
@@ -96,10 +112,13 @@ the review queue.
 
 Everything is local: IndexedDB via `idb-keyval`, with a localStorage fallback
 and an in-memory last resort. Reload-safe, nothing leaves the device, no
-backend. Settings → Reset restores the seeded state.
+backend. Settings → Reset restores the seeded state. Saved state carries a
+schema version; when the seed data changes, an older save is discarded rather
+than migrated, and your settings are kept.
 
-The reference database is a small curated sample, authored as ~250 weighted
-paths in `src/model/seed/openingPaths.ts` and folded into a tree at runtime, so
+The reference database is a small curated sample, authored as ~320 weighted
+paths in `src/model/seed/openingPaths.ts`, weighted towards the Queen's Gambit
+and King's Indian and folded into a tree at runtime, so
 the numbers are internally consistent: a move is never shown as more popular
 than the position it comes from. Every seeded line — repertoires, book lines,
 master games — is checked for legality by the test suite.

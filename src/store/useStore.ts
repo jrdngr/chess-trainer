@@ -38,8 +38,15 @@ export const DEFAULT_SETTINGS: Settings = {
   chesscomUsername: '',
 };
 
+/**
+ * Bump when the seeded repertoires change shape or content. A saved state from
+ * an older schema is discarded rather than migrated — this is a prototype, and
+ * the seed data is the thing most likely to change.
+ */
+export const SCHEMA_VERSION = 2;
+
 interface PersistedState {
-  version: 1;
+  version: number;
   repertoires: Record<string, Repertoire>;
   repertoireOrder: string[];
   cards: Record<string, Card>;
@@ -74,7 +81,7 @@ interface StoreState extends PersistedState {
 function emptyPersisted(): PersistedState {
   const reps = buildSeedRepertoires();
   return {
-    version: 1,
+    version: SCHEMA_VERSION,
     repertoires: Object.fromEntries(reps.map((r) => [r.id, r])),
     repertoireOrder: reps.map((r) => r.id),
     cards: {},
@@ -86,7 +93,7 @@ function emptyPersisted(): PersistedState {
 
 function persistedFrom(state: StoreState): PersistedState {
   return {
-    version: 1,
+    version: SCHEMA_VERSION,
     repertoires: state.repertoires,
     repertoireOrder: state.repertoireOrder,
     cards: state.cards,
@@ -118,16 +125,22 @@ export const useStore = create<StoreState>((set, get) => {
 
     async init() {
       const saved = await loadState<PersistedState>();
-      if (saved?.repertoires) {
+      if (saved?.repertoires && saved.version === SCHEMA_VERSION) {
         set({
           ...saved,
           settings: { ...DEFAULT_SETTINGS, ...saved.settings },
           ready: true,
         });
-      } else {
-        set({ ready: true });
-        persist(get());
+        return;
       }
+      // No saved state, or it predates the current seed data: start fresh but
+      // keep whatever settings the user had chosen.
+      set({
+        ...emptyPersisted(),
+        settings: { ...DEFAULT_SETTINGS, ...(saved?.settings ?? {}) },
+        ready: true,
+      });
+      persist(get());
     },
 
     async resetAll() {

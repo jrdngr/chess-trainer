@@ -3,17 +3,18 @@ import { fenTurn } from '../chess/core';
 import { decisionPoints } from '../model/repertoire';
 import { allItems, buildSession, checkAnswer } from '../model/session';
 import { createCard, review } from '../model/srs';
+import { SEED_REPERTOIRES } from '../model/seed/repertoires';
 import { buildSeedRepertoires } from './seed';
 
 describe('seeded repertoires', () => {
   const reps = buildSeedRepertoires();
 
-  it('builds all three repertoires', () => {
+  it('builds the two repertoires the user actually plays', () => {
     expect(reps.map((r) => r.name)).toEqual([
-      'White — 1.e4',
-      'Black vs 1.e4 — Najdorf',
-      'Black vs 1.d4 — Nimzo / QID',
+      "White — Queen's Gambit",
+      "Black — King's Indian",
     ]);
+    expect(reps.map((r) => r.color)).toEqual(['w', 'b']);
   });
 
   it('gives every repertoire a substantial tree', () => {
@@ -31,20 +32,37 @@ describe('seeded repertoires', () => {
     }
   });
 
-  it('attaches the seeded notes', () => {
+  it('attaches every seeded note to a real node', () => {
+    const expected = SEED_REPERTOIRES.reduce((n, r) => n + Object.keys(r.notes ?? {}).length, 0);
     const noted = reps.flatMap((r) => Object.values(r.nodes)).filter((n) => n.note);
-    expect(noted.length).toBeGreaterThanOrEqual(10);
+    expect(expected).toBeGreaterThan(10);
+    expect(noted).toHaveLength(expected);
   });
 
   it('produces hundreds of trainable positions', () => {
     expect(allItems(reps).length).toBeGreaterThan(300);
   });
 
-  it('starts the White repertoire at move one', () => {
+  it('opens 1.d4 and answers 1...d5 with 2.c4', () => {
     const white = reps[0];
-    const first = decisionPoints(white)[0];
-    expect(first.depth).toBe(0);
-    expect(first.options.map((o) => o.san)).toEqual(['e4']);
+    const points = decisionPoints(white);
+    expect(points[0].depth).toBe(0);
+    expect(points[0].options.map((o) => o.san)).toEqual(['d4']);
+    const afterD5 = points.find((p) => p.pathSans.join(' ') === 'd4 d5')!;
+    expect(afterD5.options.map((o) => o.san)).toEqual(['c4']);
+  });
+
+  it('answers 1.d4 with the King\u2019s Indian', () => {
+    const black = reps[1];
+    const points = decisionPoints(black);
+    const afterD4 = points.find((p) => p.pathSans.join(' ') === 'd4')!;
+    expect(afterD4.options.map((o) => o.san)).toEqual(['Nf6']);
+    const afterC4 = points.find((p) => p.pathSans.join(' ') === 'd4 Nf6 c4')!;
+    expect(afterC4.options.map((o) => o.san)).toEqual(['g6']);
+    const tabiya = points.find(
+      (p) => p.pathSans.join(' ') === 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5 O-O Nc6 d5',
+    )!;
+    expect(tabiya.options.map((o) => o.san)).toEqual(['Ne7']);
   });
 });
 

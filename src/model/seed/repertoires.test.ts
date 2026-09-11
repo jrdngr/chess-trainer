@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Chess } from 'chess.js';
 import { SEED_REPERTOIRES } from './repertoires';
-import { fenTurn, walkSan } from '../../chess/core';
+import { fenTurn, positionKey, walkSan } from '../../chess/core';
 
 describe('seed repertoires', () => {
   for (const rep of SEED_REPERTOIRES) {
@@ -29,6 +29,28 @@ describe('seed repertoires', () => {
           return fenTurn(fen) === rep.color;
         });
         expect(bad).toEqual([]);
+      });
+
+      it('never prescribes two different moves for the user in one position', () => {
+        // A repertoire is a set of decisions, not a menu: the breadth belongs
+        // on the opponent's side of the tree.
+        const choices = new Map<string, Set<string>>();
+        for (const line of rep.lines) {
+          const sans = line.split(' ');
+          const { fens } = walkSan(sans);
+          sans.forEach((san, i) => {
+            if (i >= fens.length - 1) return;
+            if (fenTurn(fens[i]) !== rep.color) return;
+            const key = positionKey(fens[i]);
+            const set = choices.get(key) ?? new Set<string>();
+            set.add(san);
+            choices.set(key, set);
+          });
+        }
+        const forks = [...choices.entries()]
+          .filter(([, set]) => set.size > 1)
+          .map(([key, set]) => `${key} -> ${[...set].join('/')}`);
+        expect(forks).toEqual([]);
       });
 
       it('has notes that point at real positions', () => {
