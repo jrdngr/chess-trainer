@@ -19,7 +19,7 @@ npm run dev          # http://localhost:5173, also served on your LAN IP
 full-screen, chrome-free app.
 
 ```bash
-npm test             # 152 tests: chess rules, tree, SRS, PGN, analysis, seed data
+npm test             # 156 tests: chess rules, tree, SRS, PGN, analysis, seed data
 npm run typecheck
 npm run build        # production build into dist/
 npm run artifact     # repackage dist/ for publishing as a Claude Artifact
@@ -48,19 +48,26 @@ fuzz. `review()` is pure and deterministic, so the whole algorithm can be
 swapped without touching the UI.
 
 ### Repertoire
-Two seeded repertoires built around what you actually play — the **Queen's
-Gambit** with White and the **King's Indian** with Black — 889 trainable
-decision points across 187 complete lines, the deepest running 32 plies.
+Three seeded repertoires built around what you actually play — the **Queen's
+Gambit** with White, and the **King's Indian** (vs 1.d4) and **Sicilian Dragon**
+(vs 1.e4) with Black.
 
 White answers 1...d5 with 2.c4 and covers the QGD (Exchange, with the minority
 attack), Slav, Semi-Slav (Botvinnik and Meran), QGA, Tarrasch, Chigorin, Albin
 and Baltic, plus every Indian defence after 1...Nf6: King's Indian, Grünfeld,
 Nimzo, Benoni, Benko, Budapest, Old Indian and the Dutch.
 
-Black answers 1.d4 with the King's Indian and covers the Classical (Mar del
-Plata, Bayonet, Petrosian, Exchange, Gligorić), Sämisch, Averbakh, Four Pawns,
-Makogonov, Fianchetto, the London and Torre anti-KID set-ups, and the c4/Nf3/g3
-move orders that transpose.
+Black answers 1.d4 with the King's Indian — Classical (Mar del Plata, Bayonet,
+Petrosian, Exchange, Gligorić), Sämisch, Averbakh, Four Pawns, Makogonov,
+Fianchetto, the London and Torre anti-KID set-ups, and the c4/Nf3/g3 move orders
+that transpose — and answers 1.e4 with the Sicilian Dragon: the Yugoslav Attack
+(including the Soltis main line and the 9.O-O-O ...d5 break), Classical,
+Levenfish, fianchetto, and every anti-Sicilian worth the name (Moscow, Alapin,
+Closed, Grand Prix, Smith-Morra, the King's Indian Attack and 2.c4).
+
+The Dragon is chosen deliberately: it is the King's Indian's structural cousin —
+same ...g6/...Bg7 fianchetto, same opposite-castling race logic — so the two
+halves of the Black repertoire reinforce each other.
 
 Within a repertoire there is exactly one move for you in any given position — a
 repertoire is a set of decisions, not a menu — and a test enforces it. All the
@@ -74,10 +81,9 @@ a line covered through one move order counts through all of them. A line simply
 ending is not a hole — that is prep running out, not prep disagreeing with
 itself.
 
-There is one accepted gap, stated in the test with its reason: the Black
-repertoire does not answer **1.e4**. The King's Indian is a defence to 1.d4, and
-what to meet 1.e4 with is a separate decision — seeding a guess would put moves
-you don't play into the review queue.
+The opening position is checked per colour rather than per repertoire, so a
+Black repertoire is allowed to answer only 1.d4 as long as a sibling repertoire
+answers 1.e4. There are no accepted gaps left.
 
 Browse by playing moves on the board. Playing a move the tree does not have
 offers to add it. Each move has a sheet: make it the main move, note why you

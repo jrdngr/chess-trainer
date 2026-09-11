@@ -277,4 +277,84 @@ export const SEED_REPERTOIRES: SeedRepertoire[] = [
         'London. ...Qe8 and ...e5 is the cleanest set-up: you get the ...e5 break in without allowing the Bf4 pin to matter.',
     },
   },
+  {
+    id: 'rep_black_sicilian',
+    name: 'Black — Sicilian Dragon',
+    color: 'b',
+    lines: [
+      // ── Yugoslav Attack: 6.Be3 Bg7 7.f3 O-O 8.Qd2 Nc6 ──────────────────
+      // House move order: ...Bg7, ...O-O, ...Nc6, then ...Bd7 and ...Rc8.
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6 Bc4 Bd7 O-O-O Rc8 Bb3 Ne5 h4 h5 Bg5 Rc5',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6 Bc4 Bd7 O-O-O Rc8 Bb3 Ne5 Kb1 Nc4 Bxc4 Rxc4 g4 b5',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6 Bc4 Bd7 h4 h5 O-O-O Rc8 Bb3 Ne5',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6 Bc4 Bd7 Bb3 Rc8 h4 h5 O-O-O Ne5',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6 O-O-O d5 exd5 Nxd5 Nxc6 bxc6 Bd4 e5 Bc5 Be6',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6 g4 Be6 O-O-O Ne5 Nxe6 fxe6',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6 Nb3 Be6 O-O-O Rc8 Kb1 a5',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6 h4 h5 O-O-O Bd7 Bc4 Rc8 Bb3 Ne5',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Bc4 Nc6 Qd2 Bd7 O-O-O Rc8 Bb3 Ne5',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 Qd2 O-O f3 Nc6 Bc4 Bd7 O-O-O Rc8 Bb3 Ne5',
+      // ── Classical Dragon ────────────────────────────────────────────────
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be2 Bg7 O-O O-O Be3 Nc6 Nb3 Be6 f4 Na5 f5 Bc4',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be2 Bg7 O-O O-O Nb3 Nc6 Bg5 Be6 Kh1 Rc8',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be2 Bg7 Be3 O-O O-O Nc6 Nb3 Be6 f4 Na5',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 Be2 O-O O-O Nc6 Nb3 Be6 f4 Na5',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 Nb3 O-O Be2 Nc6 O-O Be6 f4 Na5',
+      // ── Other sixth moves ───────────────────────────────────────────────
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 f4 Bg7 Nf3 O-O Bd3 Nc6 O-O Bg4',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 f4 Bg7 e5 dxe5 fxe5 Ng4 Bb5+ Kf8',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 g3 Bg7 Bg2 Nc6 Nde2 O-O O-O Bd7',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Bc4 Bg7 Be3 O-O Bb3 Nc6 f3 Bd7',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 h3 Bg7 Be3 O-O g4 Nc6 Qd2 Bd7',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Bg5 Bg7 Qd2 Nc6 O-O-O O-O Nb3 Be6',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be2 Bg7 Bg5 O-O Qd2 Nc6 O-O-O Be6',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 f3 g6 c4 Bg7 Be3 O-O Nc3 Nc6 Be2 a6',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Nde2 Bg7 g3 O-O Bg2 Nc6 O-O Bd7',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Qd2 Bg7 f3 O-O g4 Nc6 h4 h5',
+      // ── Anti-Sicilians after 2.Nf3 d6 ───────────────────────────────────
+      'e4 c5 Nf3 d6 Bb5+ Bd7 Bxd7+ Qxd7 c4 Nf6 Nc3 g6 d4 cxd4 Nxd4 Bg7 f3 O-O',
+      'e4 c5 Nf3 d6 Bb5+ Bd7 Bxd7+ Qxd7 O-O Nf6 Qe2 Nc6 c3 g6 Rd1 Bg7 d4 cxd4',
+      'e4 c5 Nf3 d6 c3 Nf6 Be2 g6 O-O Bg7 d4 cxd4 cxd4 O-O',
+      'e4 c5 Nf3 d6 c4 Nf6 Nc3 g6 d4 cxd4 Nxd4 Bg7 Be2 O-O',
+      'e4 c5 Nf3 d6 Bc4 Nf6 d3 g6 O-O Bg7 Re1 O-O',
+      'e4 c5 Nf3 d6 Nc3 Nf6 d4 cxd4 Nxd4 g6 Be3 Bg7 f3 O-O',
+      'e4 c5 Nf3 d6 d4 cxd4 Qxd4 Nc6 Bb5 Bd7 Bxc6 Bxc6 Nc3 Nf6 Bg5 e6',
+      'e4 c5 Nf3 d6 h3 Nf6 Nc3 g6 g4 Bg7 Bg2 O-O',
+      'e4 c5 Nf3 d6 g3 g6 Bg2 Bg7 O-O Nc6 d3 Nf6 c3 O-O',
+      'e4 c5 Nf3 d6 b3 Nf6 Nc3 g6 Bb2 Bg7 e5 dxe5',
+      // ── Anti-Sicilians on move two ──────────────────────────────────────
+      'e4 c5 c3 Nf6 e5 Nd5 d4 cxd4 Nf3 Nc6 cxd4 d6 Bc4 Nb6 Bb5 dxe5 Nxe5 Bd7 Nxd7 Qxd7',
+      'e4 c5 c3 Nf6 e5 Nd5 Nf3 Nc6 Bc4 Nb6 Bb3 d5 exd6 Qxd6 O-O Be6',
+      'e4 c5 c3 Nf6 d3 Nc6 Nf3 g6 g3 Bg7 Bg2 O-O',
+      'e4 c5 Nc3 Nc6 g3 g6 Bg2 Bg7 d3 d6 f4 e6 Nf3 Nge7 O-O O-O',
+      'e4 c5 Nc3 Nc6 f4 g6 Nf3 Bg7 Bc4 e6 O-O Nge7 d3 O-O',
+      'e4 c5 Nc3 Nc6 Nge2 g6 d4 cxd4 Nxd4 Bg7 Be3 Nf6 f3 O-O',
+      'e4 c5 Nc3 Nc6 Nge2 g6 d4 cxd4 Nxd4 Bg7 Be3 Nf6 Bc4 O-O Bb3 d6 f3 Bd7',
+      'e4 c5 d4 cxd4 c3 dxc3 Nxc3 Nc6 Nf3 d6 Bc4 e6 O-O Nf6 Qe2 Be7',
+      'e4 c5 d4 cxd4 Nf3 d6 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O',
+      'e4 c5 f4 g6 Nf3 Bg7 Bc4 e6 O-O Ne7 d3 O-O',
+      'e4 c5 b3 Nc6 Bb2 e5 Bc4 d6 Nf3 Nf6 d3 Be7',
+      'e4 c5 Ne2 Nf6 Nbc3 d6 g3 g6 Bg2 Bg7 d4 cxd4',
+      'e4 c5 g3 g6 Bg2 Bg7 Ne2 Nc6 d3 d6 O-O Nf6',
+      'e4 c5 d3 Nc6 Nf3 g6 g3 Bg7 Bg2 d6 O-O Nf6',
+      'e4 c5 c4 Nc6 Nc3 g6 g3 Bg7 Bg2 d6 Nge2 Nf6',
+      'e4 c5 Bc4 d6 Nf3 Nf6 d3 g6 O-O Bg7',
+      'e4 c5 a3 Nc6 Nf3 g6 d4 cxd4 Nxd4 Bg7',
+      'e4 c5 b4 cxb4 a3 d5 exd5 Qxd5 Nf3 e5 axb4 Bxb4',
+    ],
+    notes: {
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6':
+        'The Dragon. The bishop on g7 is the same piece you play with in the King’s Indian, and the logic is the same: the long diagonal and the half-open file decide the game.',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6 Bc4 Bd7 O-O-O Rc8 Bb3 Ne5':
+        'Yugoslav tabiya. Both sides are attacking, so count tempi rather than material. The exchange sacrifice on c3 is a standing resource and often the only move.',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6 O-O-O':
+        'Against 9.O-O-O the ...d5 break comes at once — White has not spent a move on Bc4, so the centre is the right place to hit.',
+      'e4 c5 Nf3 d6 Bb5+ Bd7':
+        'Moscow Variation. Taking on d7 with the queen keeps the structure sound and lets you reach a Dragon set-up a move later.',
+      'e4 c5 c3 Nf6':
+        'Alapin. ...Nf6 provokes e5 and gives the knight a job; ...d6 and ...Nb6 follow, and the isolated-pawn position that results is comfortable.',
+      'e4 c5 Nc3 Nc6 g3 g6 Bg2 Bg7':
+        'Closed Sicilian. The same fianchetto structure you already know — play ...e6 and ...Nge7, then choose between the ...d5 and ...b5 breaks.',
+    },
+  },
 ];

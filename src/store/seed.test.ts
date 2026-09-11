@@ -9,12 +9,13 @@ import { buildSeedRepertoires } from './seed';
 describe('seeded repertoires', () => {
   const reps = buildSeedRepertoires();
 
-  it('builds the two repertoires the user actually plays', () => {
+  it('builds the three repertoires the user actually plays', () => {
     expect(reps.map((r) => r.name)).toEqual([
       "White — Queen's Gambit",
       "Black — King's Indian",
+      'Black — Sicilian Dragon',
     ]);
-    expect(reps.map((r) => r.color)).toEqual(['w', 'b']);
+    expect(reps.map((r) => r.color)).toEqual(['w', 'b', 'b']);
   });
 
   it('gives every repertoire a substantial tree', () => {
@@ -40,7 +41,7 @@ describe('seeded repertoires', () => {
   });
 
   it('produces hundreds of trainable positions', () => {
-    expect(allItems(reps).length).toBeGreaterThan(300);
+    expect(allItems(reps).length).toBeGreaterThan(800);
   });
 
   it('opens 1.d4 and answers 1...d5 with 2.c4', () => {
@@ -50,6 +51,23 @@ describe('seeded repertoires', () => {
     expect(points[0].options.map((o) => o.san)).toEqual(['d4']);
     const afterD5 = points.find((p) => p.pathSans.join(' ') === 'd4 d5')!;
     expect(afterD5.options.map((o) => o.san)).toEqual(['c4']);
+  });
+
+  it('answers 1.e4 with the Sicilian Dragon', () => {
+    const dragon = reps[2];
+    const points = decisionPoints(dragon);
+    expect(points.find((p) => p.pathSans.join(' ') === 'e4')!.options.map((o) => o.san)).toEqual(['c5']);
+    expect(
+      points.find((p) => p.pathSans.join(' ') === 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3')!
+        .options.map((o) => o.san),
+    ).toEqual(['g6']);
+    // The Yugoslav tabiya, where the whole variation is decided.
+    const yugoslav = points.find(
+      (p) =>
+        p.pathSans.join(' ') ===
+        'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6 Bc4 Bd7 O-O-O',
+    )!;
+    expect(yugoslav.options.map((o) => o.san)).toEqual(['Rc8']);
   });
 
   it('answers 1.d4 with the King\u2019s Indian', () => {

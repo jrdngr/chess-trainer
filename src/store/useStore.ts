@@ -43,7 +43,7 @@ export const DEFAULT_SETTINGS: Settings = {
  * an older schema is discarded rather than migrated — this is a prototype, and
  * the seed data is the thing most likely to change.
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 interface PersistedState {
   version: number;
