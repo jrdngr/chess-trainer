@@ -143,4 +143,6 @@ export interface Settings {
   hapticFeedback: boolean;
   lichessUsername: string;
   chesscomUsername: string;
+  /** Opt in to copying state to your Claude account for other devices. */
+  cloudSync: boolean;
 }

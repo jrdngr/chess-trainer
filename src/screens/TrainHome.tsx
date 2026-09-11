@@ -78,6 +78,8 @@ export function TrainHome({ onStart, onOpenSettings }: TrainHomeProps) {
       </div>
 
       <div className="screen">
+        <StorageWarning />
+
         <div className="stat-grid">
           <div className="stat due">
             <div className="n">{totalDue}</div>
@@ -153,6 +155,47 @@ export function TrainHome({ onStart, onOpenSettings }: TrainHomeProps) {
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * Silently forgetting everything is the worst possible failure for a trainer,
+ * so when nothing can persist the app says so rather than looking fine.
+ */
+function StorageWarning() {
+  const storage = useStore((s) => s.storage);
+  const cloud = useStore((s) => s.cloud);
+  const cloudSync = useStore((s) => s.settings.cloudSync);
+  const setSettings = useStore((s) => s.setSettings);
+  const syncNow = useStore((s) => s.syncNow);
+
+  const cloudWorking = cloudSync && (cloud.kind === 'synced' || cloud.kind === 'syncing');
+  if (storage.any || cloudWorking) return null;
+
+  const canTryCloud = cloud.kind !== 'unavailable';
+  return (
+    <div className="banner warn" style={{ marginBottom: 12 }}>
+      <span className="ico">⚠</span>
+      <div>
+        <div style={{ fontWeight: 650, color: 'var(--text)', marginBottom: 3 }}>
+          Progress is not being saved
+        </div>
+        This viewer blocks browser storage, so everything resets when you close the app.
+        {canTryCloud ? ' Saving to your Claude account instead will fix it.' : ''}
+        {canTryCloud && (
+          <button
+            className="btn sm block"
+            style={{ marginTop: 9 }}
+            onClick={async () => {
+              setSettings({ cloudSync: true });
+              await syncNow();
+            }}
+          >
+            Save to my Claude account
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 

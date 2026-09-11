@@ -79,7 +79,7 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
         />
       </div>
 
-      <div className="section-title">Sync</div>
+      <div className="section-title">Saving</div>
       <SyncCard />
 
       <div className="section-title">Data</div>
@@ -122,38 +122,41 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
 
 function SyncCard() {
   const cloud = useStore((s) => s.cloud);
+  const storage = useStore((s) => s.storage);
+  const enabled = useStore((s) => s.settings.cloudSync);
+  const setSettings = useStore((s) => s.setSettings);
   const syncNow = useStore((s) => s.syncNow);
   const [busy, setBusy] = useState(false);
   const unavailable = cloud.kind === 'unavailable';
 
   return (
     <div className="card">
-      <div className="row between">
+      <button
+        className="row between"
+        style={{ width: '100%', textAlign: 'left' }}
+        onClick={async () => {
+          const next = !enabled;
+          setSettings({ cloudSync: next });
+          if (next) {
+            setBusy(true);
+            await syncNow();
+            setBusy(false);
+          }
+        }}
+      >
         <span className="grow" style={{ minWidth: 0 }}>
           <span className="small" style={{ fontWeight: 600 }}>
-            Across devices
+            Save to my Claude account
           </span>
           <span className="tiny faint" style={{ display: 'block', marginTop: 3 }}>
-            {describeStatus(cloud)}
+            {enabled ? describeStatus(cloud) : 'Off'}
           </span>
         </span>
-        <span
-          className="dot"
-          style={{
-            width: 9,
-            height: 9,
-            background:
-              cloud.kind === 'synced'
-                ? 'var(--good)'
-                : cloud.kind === 'syncing'
-                  ? 'var(--accent)'
-                  : cloud.kind === 'error' || cloud.kind === 'too-large'
-                    ? 'var(--bad)'
-                    : 'var(--surface-3)',
-          }}
-        />
-      </div>
-      {!unavailable && (
+        <span className={`switch${enabled ? ' on' : ''}`} style={{ marginRight: 10 }}>
+          <i />
+        </span>
+      </button>
+      {enabled && !unavailable && (
         <button
           className="btn ghost block sm"
           style={{ marginTop: 11 }}
@@ -168,10 +171,25 @@ function SyncCard() {
           Sync now
         </button>
       )}
+      <div className="divider" />
+      <div className="row between tiny">
+        <span className="faint">This browser</span>
+        <span style={{ color: storage.any ? 'var(--good)' : 'var(--bad)', fontWeight: 650 }}>
+          {storage.any
+            ? storage.indexedDB
+              ? 'IndexedDB'
+              : 'localStorage'
+            : 'blocked by this viewer'}
+        </span>
+      </div>
       <div className="tiny faint" style={{ marginTop: 10 }}>
-        {unavailable
-          ? 'This copy saves to this browser only. Published to your Claude account, it also keeps your progress against your account so another device picks up where you left off.'
-          : 'Repertoires, review history and settings sync. Imported games stay on the device that imported them. Whichever device saved last wins, so finish a session before switching.'}
+        {!storage.any
+          ? 'This viewer sandboxes the page, so browser storage throws and nothing can be kept here. Your Claude account is the only place progress can live \u2014 keep this on.'
+          : !enabled
+            ? 'Progress is saved in this browser. Turn this on to carry it between devices as well.'
+            : unavailable
+              ? 'The runtime did not grant account storage here, so this stays a local install.'
+              : 'Repertoires, review history and settings are saved. Imported games stay on the device that imported them. Whichever device saved last wins, so finish a session before switching.'}
       </div>
     </div>
   );

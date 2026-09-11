@@ -3,6 +3,47 @@ import { del, get, set } from 'idb-keyval';
 const KEY = 'chess-repertoire-trainer:v1';
 
 /**
+ * Whether this page can persist anything locally at all.
+ *
+ * Artifacts are framed with a sandbox that withholds `allow-same-origin`, which
+ * makes the frame's origin opaque: touching `localStorage` or `indexedDB` there
+ * throws `SecurityError` rather than returning empty. Everything below already
+ * swallows that, so the app keeps working — but it would forget on every open,
+ * silently. Callers probe first and say so.
+ */
+export interface StorageSupport {
+  localStorage: boolean;
+  indexedDB: boolean;
+  any: boolean;
+}
+
+let probed: StorageSupport | null = null;
+
+export async function probeStorage(): Promise<StorageSupport> {
+  if (probed) return probed;
+  let ls = false;
+  try {
+    localStorage.setItem(`${KEY}:probe`, '1');
+    ls = localStorage.getItem(`${KEY}:probe`) === '1';
+    localStorage.removeItem(`${KEY}:probe`);
+  } catch {
+    ls = false;
+  }
+
+  let idb = false;
+  try {
+    await set(`${KEY}:probe`, 1);
+    idb = (await get(`${KEY}:probe`)) === 1;
+    await del(`${KEY}:probe`);
+  } catch {
+    idb = false;
+  }
+
+  probed = { localStorage: ls, indexedDB: idb, any: ls || idb };
+  return probed;
+}
+
+/**
  * IndexedDB with a localStorage fallback. The whole prototype state is a few
  * hundred KB at most, so it is written as a single record — simple to reason
  * about, and trivially replaceable with something finer-grained later.

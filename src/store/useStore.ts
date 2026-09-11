@@ -20,7 +20,7 @@ import type {
   Settings,
 } from '../model/types';
 import { cloudAvailable, readCloud, writeCloud, type CloudStatus } from './cloud';
-import { clearState, debounce, loadState, saveState } from './db';
+import { clearState, debounce, loadState, probeStorage, saveState, type StorageSupport } from './db';
 import { buildSeedRepertoires } from './seed';
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -37,6 +37,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hapticFeedback: true,
   lichessUsername: '',
   chesscomUsername: '',
+  cloudSync: true,
 };
 
 /**
@@ -61,6 +62,8 @@ interface PersistedState {
 interface StoreState extends PersistedState {
   ready: boolean;
   cloud: CloudStatus;
+  /** Which persistence backends actually work on this page. */
+  storage: StorageSupport;
   syncNow: () => Promise<void>;
   init: () => Promise<void>;
   resetAll: () => Promise<void>;
@@ -123,9 +126,17 @@ const persist = debounce((state: StoreState) => {
 }, 250);
 
 export const useStore = create<StoreState>((set, get) => {
-  /** Push to the cloud well after the user stops interacting. */
+  /**
+   * Push well after the user stops interacting. Held back until the first
+   * reconcile: a freshly seeded state must never overwrite the account copy
+   * before it has been read.
+   */
+  let hydrated = false;
+
   const pushCloud = debounce(() => {
     const state = get();
+    if (!hydrated) return;
+    if (!state.settings.cloudSync) return;
     if (state.cloud.kind === 'unavailable') return;
     set({ cloud: { kind: 'syncing' } });
     void writeCloud(syncableFrom(state), state.updatedAt).then((result) => {
@@ -152,29 +163,51 @@ export const useStore = create<StoreState>((set, get) => {
     ...emptyPersisted(),
     ready: false,
     cloud: cloudAvailable() ? { kind: 'idle', lastSyncedAt: null } : { kind: 'unavailable' },
+    storage: { localStorage: false, indexedDB: false, any: false },
 
     async init() {
+      const storage = await probeStorage();
       const saved = await loadState<PersistedState>();
-      if (saved?.repertoires && saved.version === SCHEMA_VERSION) {
+      const usableLocal = saved?.repertoires && saved.version === SCHEMA_VERSION ? saved : null;
+
+      // Read the account copy before deciding anything. When local storage is
+      // blocked — which is the normal case inside the artifact sandbox — this
+      // is the only place the user's progress exists.
+      const remote = cloudAvailable() ? await readCloud<PersistedState>() : null;
+      const usableRemote =
+        remote && remote.state?.repertoires && remote.state.version === SCHEMA_VERSION ? remote : null;
+
+      const localAt = usableLocal?.updatedAt ?? 0;
+      const remoteAt = usableRemote?.updatedAt ?? 0;
+      const chosen = usableRemote && remoteAt >= localAt ? usableRemote.state : usableLocal;
+
+      if (chosen) {
         set({
-          ...saved,
-          updatedAt: saved.updatedAt ?? Date.now(),
-          settings: { ...DEFAULT_SETTINGS, ...saved.settings },
+          ...chosen,
+          updatedAt: Math.max(localAt, remoteAt),
+          settings: { ...DEFAULT_SETTINGS, ...chosen.settings },
+          storage,
           ready: true,
+          cloud: usableRemote
+            ? { kind: 'synced', lastSyncedAt: Date.now() }
+            : cloudAvailable()
+              ? { kind: 'idle', lastSyncedAt: null }
+              : { kind: 'unavailable' },
         });
       } else {
-        // No saved state, or it predates the current seed data: start fresh
-        // but keep whatever settings the user had chosen.
+        // Nothing anywhere, or a save that predates the current seed data.
         set({
           ...emptyPersisted(),
           settings: { ...DEFAULT_SETTINGS, ...(saved?.settings ?? {}) },
+          storage,
           ready: true,
         });
-        persist(get());
       }
-      // Then catch up with another device, if there is one. The page is already
-      // interactive by this point; sync never blocks the first paint.
-      await get().syncNow();
+
+      hydrated = true;
+      if (storage.any) persist(get());
+      // Make sure the account copy exists and is current.
+      if (get().settings.cloudSync && cloudAvailable()) pushCloud();
     },
 
     async syncNow() {
@@ -182,11 +215,12 @@ export const useStore = create<StoreState>((set, get) => {
         set({ cloud: { kind: 'unavailable' } });
         return;
       }
+      hydrated = true;
       set({ cloud: { kind: 'syncing' } });
       const remote = await readCloud<PersistedState>();
       const local = get();
 
-      if (remote && remote.state.version === SCHEMA_VERSION && remote.updatedAt > local.updatedAt) {
+      if (remote?.state?.repertoires && remote.state.version === SCHEMA_VERSION && remote.updatedAt > local.updatedAt) {
         // Another device is ahead. Whole-state last-write-wins: right for one
         // person on two devices, and honest about not merging concurrent edits.
         set({

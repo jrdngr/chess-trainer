@@ -129,16 +129,29 @@ the review queue.
 
 ## Data
 
+**Where state actually lives depends on the viewer, and that matters.** Artifacts
+are framed with a sandbox that withholds `allow-same-origin`, so the frame's
+origin is opaque and touching `localStorage` or `indexedDB` throws
+`SecurityError` — not "returns empty", *throws*. A store that swallows that
+error keeps working and forgets everything on close, which is the worst possible
+failure for a trainer. So the app probes both backends at startup and treats the
+`db` runtime capability as the primary store when they are unavailable, which
+inside a published artifact is the normal case.
+
 The local store is IndexedDB via `idb-keyval`, with a localStorage fallback and
-an in-memory last resort. Reload-safe, no backend. Settings → Reset restores the
+an in-memory last resort. Reload-safe wherever it is allowed to run. Settings → Reset restores the
 seeded state. Saved state carries a schema version; when the seed data changes,
 an older save is discarded rather than migrated, and your settings are kept.
 
-**Across devices.** When the page runs as a published Artifact it also asks for
-the `db` runtime capability and keeps a copy of your state against your Claude
-account, so a session started on a phone can be picked up on a laptop. The local
-store stays the source of truth; sync is a layer on top and never blocks the
-first paint.
+**The account store.** When the page runs as a published Artifact it asks for
+the `db` runtime capability and keeps your state against your Claude account —
+both so a session started on a phone continues on a laptop, and because in the
+sandbox it is the only thing that persists at all. Startup reads the account copy
+*before* deciding anything, so a freshly seeded state can never overwrite real
+progress; pushes are held back until that reconcile completes.
+
+If neither backend works, the Train screen says **"Progress is not being saved"**
+with a one-tap fix rather than quietly resetting.
 
 A db document holds at most 256 KiB and a fully-trained state is ~1.8 MB of JSON
 (mostly FENs, which repeat heavily), so the payload is gzipped via
