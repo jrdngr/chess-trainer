@@ -19,7 +19,7 @@ npm run dev          # http://localhost:5173, also served on your LAN IP
 full-screen, chrome-free app.
 
 ```bash
-npm test             # 156 tests: chess rules, tree, SRS, PGN, analysis, seed data
+npm test             # 161 tests: chess rules, tree, SRS, PGN, analysis, seed data
 npm run typecheck
 npm run build        # production build into dist/
 npm run artifact     # repackage dist/ for publishing as a Claude Artifact
@@ -129,11 +129,30 @@ the review queue.
 
 ## Data
 
-Everything is local: IndexedDB via `idb-keyval`, with a localStorage fallback
-and an in-memory last resort. Reload-safe, nothing leaves the device, no
-backend. Settings → Reset restores the seeded state. Saved state carries a
-schema version; when the seed data changes, an older save is discarded rather
-than migrated, and your settings are kept.
+The local store is IndexedDB via `idb-keyval`, with a localStorage fallback and
+an in-memory last resort. Reload-safe, no backend. Settings → Reset restores the
+seeded state. Saved state carries a schema version; when the seed data changes,
+an older save is discarded rather than migrated, and your settings are kept.
+
+**Across devices.** When the page runs as a published Artifact it also asks for
+the `db` runtime capability and keeps a copy of your state against your Claude
+account, so a session started on a phone can be picked up on a laptop. The local
+store stays the source of truth; sync is a layer on top and never blocks the
+first paint.
+
+A db document holds at most 256 KiB and a fully-trained state is ~1.8 MB of JSON
+(mostly FENs, which repeat heavily), so the payload is gzipped via
+`CompressionStream` and base64-encoded — about 135 KiB in practice, and the size
+is checked before each write rather than discovered as a rejection. Imported
+games are deliberately left out of the sync: bulky, re-importable, and they would
+eat the headroom.
+
+Conflict handling is whole-state last-write-wins by timestamp. That is the right
+model for one person on two devices and honest about what it does not do: it
+does not merge two sessions reviewed concurrently. Settings shows the sync state
+and says so. Where the capability is absent — running locally, an older runtime,
+a viewer who declines — `claude.use('db')` resolves null and the app is local
+only, with the Settings card saying exactly that.
 
 The reference database is a small curated sample, authored as ~320 weighted
 paths in `src/model/seed/openingPaths.ts`, weighted towards the Queen's Gambit

@@ -19,6 +19,7 @@ import type {
   ReviewLogEntry,
   Settings,
 } from '../model/types';
+import { cloudAvailable, readCloud, writeCloud, type CloudStatus } from './cloud';
 import { clearState, debounce, loadState, saveState } from './db';
 import { buildSeedRepertoires } from './seed';
 
@@ -47,6 +48,8 @@ export const SCHEMA_VERSION = 3;
 
 interface PersistedState {
   version: number;
+  /** When this state was last changed, used to resolve device conflicts. */
+  updatedAt: number;
   repertoires: Record<string, Repertoire>;
   repertoireOrder: string[];
   cards: Record<string, Card>;
@@ -57,6 +60,8 @@ interface PersistedState {
 
 interface StoreState extends PersistedState {
   ready: boolean;
+  cloud: CloudStatus;
+  syncNow: () => Promise<void>;
   init: () => Promise<void>;
   resetAll: () => Promise<void>;
   resetProgress: () => void;
@@ -82,6 +87,7 @@ function emptyPersisted(): PersistedState {
   const reps = buildSeedRepertoires();
   return {
     version: SCHEMA_VERSION,
+    updatedAt: Date.now(),
     repertoires: Object.fromEntries(reps.map((r) => [r.id, r])),
     repertoireOrder: reps.map((r) => r.id),
     cards: {},
@@ -94,6 +100,7 @@ function emptyPersisted(): PersistedState {
 function persistedFrom(state: StoreState): PersistedState {
   return {
     version: SCHEMA_VERSION,
+    updatedAt: state.updatedAt,
     repertoires: state.repertoires,
     repertoireOrder: state.repertoireOrder,
     cards: state.cards,
@@ -103,14 +110,36 @@ function persistedFrom(state: StoreState): PersistedState {
   };
 }
 
+/**
+ * What goes to the cloud. Imported games are left out deliberately: they are
+ * bulky, re-importable, and the payload has to stay under a 256 KiB document.
+ */
+function syncableFrom(state: StoreState): PersistedState {
+  return { ...persistedFrom(state), importedGames: [] };
+}
+
 const persist = debounce((state: StoreState) => {
   void saveState(persistedFrom(state));
 }, 250);
 
 export const useStore = create<StoreState>((set, get) => {
+  /** Push to the cloud well after the user stops interacting. */
+  const pushCloud = debounce(() => {
+    const state = get();
+    if (state.cloud.kind === 'unavailable') return;
+    set({ cloud: { kind: 'syncing' } });
+    void writeCloud(syncableFrom(state), state.updatedAt).then((result) => {
+      if (result.ok) set({ cloud: { kind: 'synced', lastSyncedAt: Date.now() } });
+      else if (result.reason === 'unavailable') set({ cloud: { kind: 'unavailable' } });
+      else if (result.reason === 'too-large') set({ cloud: { kind: 'too-large', bytes: result.bytes ?? 0 } });
+      else set({ cloud: { kind: 'error', message: result.message ?? 'Sync failed' } });
+    });
+  }, 4000);
+
   const commit = (patch: Partial<StoreState>) => {
-    set(patch);
+    set({ ...patch, updatedAt: Date.now() } as Partial<StoreState>);
     persist(get());
+    pushCloud();
   };
 
   const updateRep = (repId: string, fn: (rep: Repertoire) => Repertoire) => {
@@ -122,31 +151,68 @@ export const useStore = create<StoreState>((set, get) => {
   return {
     ...emptyPersisted(),
     ready: false,
+    cloud: cloudAvailable() ? { kind: 'idle', lastSyncedAt: null } : { kind: 'unavailable' },
 
     async init() {
       const saved = await loadState<PersistedState>();
       if (saved?.repertoires && saved.version === SCHEMA_VERSION) {
         set({
           ...saved,
+          updatedAt: saved.updatedAt ?? Date.now(),
           settings: { ...DEFAULT_SETTINGS, ...saved.settings },
           ready: true,
         });
+      } else {
+        // No saved state, or it predates the current seed data: start fresh
+        // but keep whatever settings the user had chosen.
+        set({
+          ...emptyPersisted(),
+          settings: { ...DEFAULT_SETTINGS, ...(saved?.settings ?? {}) },
+          ready: true,
+        });
+        persist(get());
+      }
+      // Then catch up with another device, if there is one. The page is already
+      // interactive by this point; sync never blocks the first paint.
+      await get().syncNow();
+    },
+
+    async syncNow() {
+      if (!cloudAvailable()) {
+        set({ cloud: { kind: 'unavailable' } });
         return;
       }
-      // No saved state, or it predates the current seed data: start fresh but
-      // keep whatever settings the user had chosen.
-      set({
-        ...emptyPersisted(),
-        settings: { ...DEFAULT_SETTINGS, ...(saved?.settings ?? {}) },
-        ready: true,
-      });
-      persist(get());
+      set({ cloud: { kind: 'syncing' } });
+      const remote = await readCloud<PersistedState>();
+      const local = get();
+
+      if (remote && remote.state.version === SCHEMA_VERSION && remote.updatedAt > local.updatedAt) {
+        // Another device is ahead. Whole-state last-write-wins: right for one
+        // person on two devices, and honest about not merging concurrent edits.
+        set({
+          ...remote.state,
+          importedGames: local.importedGames,
+          settings: { ...DEFAULT_SETTINGS, ...remote.state.settings },
+          updatedAt: remote.updatedAt,
+          ready: true,
+          cloud: { kind: 'synced', lastSyncedAt: Date.now() },
+        });
+        persist(get());
+        return;
+      }
+
+      const result = await writeCloud(syncableFrom(get()), get().updatedAt);
+      if (result.ok) set({ cloud: { kind: 'synced', lastSyncedAt: Date.now() } });
+      else if (result.reason === 'unavailable') set({ cloud: { kind: 'unavailable' } });
+      else if (result.reason === 'too-large') set({ cloud: { kind: 'too-large', bytes: result.bytes ?? 0 } });
+      else set({ cloud: { kind: 'error', message: result.message ?? 'Sync failed' } });
     },
 
     async resetAll() {
       await clearState();
       set({ ...emptyPersisted(), ready: true });
       persist(get());
+      pushCloud();
     },
 
     resetProgress() {

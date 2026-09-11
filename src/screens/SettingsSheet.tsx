@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Sheet, toast } from '../components/ui';
+import { describeStatus } from '../store/cloud';
 import { DEFAULT_SETTINGS, useStore } from '../store/useStore';
 import type { Settings } from '../model/types';
 
@@ -78,6 +79,9 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
         />
       </div>
 
+      <div className="section-title">Sync</div>
+      <SyncCard />
+
       <div className="section-title">Data</div>
       <div className="stack">
         <button
@@ -107,11 +111,69 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
           </button>
         )}
         <div className="tiny faint">
-          Everything is stored in this browser only — IndexedDB, with a localStorage fallback.
-          Defaults: {DEFAULT_SETTINGS.newCardsPerSession} new per session.
+          Your progress lives in this browser (IndexedDB, with a localStorage fallback) and is
+          copied to your Claude account when sync is available. Defaults:{' '}
+          {DEFAULT_SETTINGS.newCardsPerSession} new positions per session.
         </div>
       </div>
     </Sheet>
+  );
+}
+
+function SyncCard() {
+  const cloud = useStore((s) => s.cloud);
+  const syncNow = useStore((s) => s.syncNow);
+  const [busy, setBusy] = useState(false);
+  const unavailable = cloud.kind === 'unavailable';
+
+  return (
+    <div className="card">
+      <div className="row between">
+        <span className="grow" style={{ minWidth: 0 }}>
+          <span className="small" style={{ fontWeight: 600 }}>
+            Across devices
+          </span>
+          <span className="tiny faint" style={{ display: 'block', marginTop: 3 }}>
+            {describeStatus(cloud)}
+          </span>
+        </span>
+        <span
+          className="dot"
+          style={{
+            width: 9,
+            height: 9,
+            background:
+              cloud.kind === 'synced'
+                ? 'var(--good)'
+                : cloud.kind === 'syncing'
+                  ? 'var(--accent)'
+                  : cloud.kind === 'error' || cloud.kind === 'too-large'
+                    ? 'var(--bad)'
+                    : 'var(--surface-3)',
+          }}
+        />
+      </div>
+      {!unavailable && (
+        <button
+          className="btn ghost block sm"
+          style={{ marginTop: 11 }}
+          disabled={busy || cloud.kind === 'syncing'}
+          onClick={async () => {
+            setBusy(true);
+            await syncNow();
+            setBusy(false);
+            toast('Sync finished');
+          }}
+        >
+          Sync now
+        </button>
+      )}
+      <div className="tiny faint" style={{ marginTop: 10 }}>
+        {unavailable
+          ? 'This copy saves to this browser only. Published to your Claude account, it also keeps your progress against your account so another device picks up where you left off.'
+          : 'Repertoires, review history and settings sync. Imported games stay on the device that imported them. Whichever device saved last wins, so finish a session before switching.'}
+      </div>
+    </div>
   );
 }
 
