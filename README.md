@@ -19,7 +19,7 @@ npm run dev          # http://localhost:5173, also served on your LAN IP
 full-screen, chrome-free app.
 
 ```bash
-npm test             # 145 tests: chess rules, tree, SRS, PGN, analysis, seed data
+npm test             # 152 tests: chess rules, tree, SRS, PGN, analysis, seed data
 npm run typecheck
 npm run build        # production build into dist/
 npm run artifact     # repackage dist/ for publishing as a Claude Artifact
@@ -49,8 +49,8 @@ swapped without touching the UI.
 
 ### Repertoire
 Two seeded repertoires built around what you actually play — the **Queen's
-Gambit** with White and the **King's Indian** with Black — about 860 trainable
-decision points in total.
+Gambit** with White and the **King's Indian** with Black — 889 trainable
+decision points across 187 complete lines, the deepest running 32 plies.
 
 White answers 1...d5 with 2.c4 and covers the QGD (Exchange, with the minority
 attack), Slav, Semi-Slav (Botvinnik and Meran), QGA, Tarrasch, Chigorin, Albin
@@ -65,6 +65,19 @@ move orders that transpose.
 Within a repertoire there is exactly one move for you in any given position — a
 repertoire is a set of decisions, not a menu — and a test enforces it. All the
 breadth is on the opponent's side.
+
+**Coverage is checked, not claimed.** `src/model/seed/coverage.test.ts` walks
+every position the repertoire reaches where the opponent is to move and prep
+already exists, and fails if any reply played in ≥3% of reference games has no
+prepared answer. Positions are merged by key first, exactly as training does, so
+a line covered through one move order counts through all of them. A line simply
+ending is not a hole — that is prep running out, not prep disagreeing with
+itself.
+
+There is one accepted gap, stated in the test with its reason: the Black
+repertoire does not answer **1.e4**. The King's Indian is a defence to 1.d4, and
+what to meet 1.e4 with is a separate decision — seeding a guess would put moves
+you don't play into the review queue.
 
 Browse by playing moves on the board. Playing a move the tree does not have
 offers to add it. Each move has a sheet: make it the main move, note why you
