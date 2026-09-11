@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Color } from '../chess/core';
+import { positionKey, type Color } from '../chess/core';
 import {
   addLine,
   createRepertoire,
@@ -19,6 +19,7 @@ import type {
   ReviewLogEntry,
   Settings,
 } from '../model/types';
+import { EMPTY_RECORD, recordRun, type PermadeathRecord } from '../model/permadeath';
 import { cloudAvailable, readCloud, writeCloud, type CloudStatus } from './cloud';
 import { clearState, debounce, loadState, probeStorage, saveState, type StorageSupport } from './db';
 import { buildSeedRepertoires } from './seed';
@@ -57,6 +58,7 @@ interface PersistedState {
   log: ReviewLogEntry[];
   settings: Settings;
   importedGames: ImportedGame[];
+  permadeath: PermadeathRecord;
 }
 
 interface StoreState extends PersistedState {
@@ -84,6 +86,15 @@ interface StoreState extends PersistedState {
 
   setSettings: (patch: Partial<Settings>) => void;
   setImportedGames: (games: ImportedGame[]) => void;
+
+  /** Log a finished permadeath run. */
+  endPermadeathRun: (depth: number, completed: boolean) => void;
+  /**
+   * The move that ended a run. Only the miss touches the schedule: correct
+   * moves in a run are primed by the ones before them, so crediting them would
+   * inflate intervals on evidence weaker than an isolated review.
+   */
+  missedInPermadeath: (repertoireId: string, fen: string, played: string, expected: string) => void;
 }
 
 function emptyPersisted(): PersistedState {
@@ -97,6 +108,7 @@ function emptyPersisted(): PersistedState {
     log: [],
     settings: { ...DEFAULT_SETTINGS },
     importedGames: [],
+    permadeath: { ...EMPTY_RECORD },
   };
 }
 
@@ -110,6 +122,7 @@ function persistedFrom(state: StoreState): PersistedState {
     log: state.log,
     settings: state.settings,
     importedGames: state.importedGames,
+    permadeath: state.permadeath,
   };
 }
 
@@ -184,6 +197,7 @@ export const useStore = create<StoreState>((set, get) => {
       if (chosen) {
         set({
           ...chosen,
+          permadeath: chosen.permadeath ?? { ...EMPTY_RECORD },
           updatedAt: Math.max(localAt, remoteAt),
           settings: { ...DEFAULT_SETTINGS, ...chosen.settings },
           storage,
@@ -225,6 +239,7 @@ export const useStore = create<StoreState>((set, get) => {
         // person on two devices, and honest about not merging concurrent edits.
         set({
           ...remote.state,
+          permadeath: remote.state.permadeath ?? { ...EMPTY_RECORD },
           importedGames: local.importedGames,
           settings: { ...DEFAULT_SETTINGS, ...remote.state.settings },
           updatedAt: remote.updatedAt,
@@ -343,6 +358,35 @@ export const useStore = create<StoreState>((set, get) => {
 
     setImportedGames(games) {
       commit({ importedGames: games });
+    },
+
+    endPermadeathRun(depth, completed) {
+      commit({ permadeath: recordRun(get().permadeath, depth, completed) });
+    },
+
+    missedInPermadeath(repertoireId, fen, played, expected) {
+      const key = positionKey(fen);
+      const id = cardId(repertoireId, key);
+      const state = get();
+      const card = state.cards[id] ?? createCard(id, repertoireId, key, fen);
+      const now = Date.now();
+      const { card: next } = review(card, 'again', now);
+      commit({
+        cards: { ...state.cards, [id]: next },
+        log: [
+          ...state.log.slice(-499),
+          {
+            cardId: id,
+            at: now,
+            grade: 'again',
+            correct: false,
+            playedSan: played,
+            expectedSan: expected,
+            intervalBefore: card.interval,
+            intervalAfter: next.interval,
+          },
+        ],
+      });
     },
   };
 });

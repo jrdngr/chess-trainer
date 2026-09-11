@@ -6,6 +6,7 @@ import { ImportScreen } from './screens/ImportScreen';
 import { RepertoireScreen } from './screens/RepertoireScreen';
 import { SettingsSheet } from './screens/SettingsSheet';
 import { TrainHome } from './screens/TrainHome';
+import { PermadeathSession } from './screens/PermadeathSession';
 import { TrainSession } from './screens/TrainSession';
 import type { TrainingItem } from './model/session';
 import { countDue } from './model/srs';
@@ -20,6 +21,7 @@ export default function App() {
 
   const [tab, setTab] = useState<Tab>('train');
   const [session, setSession] = useState<{ queue: TrainingItem[]; title: string } | null>(null);
+  const [permadeath, setPermadeath] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [explorePath, setExplorePath] = useState<string[] | undefined>();
@@ -35,6 +37,15 @@ export default function App() {
           <div className="spinner" />
         </div>
       </div>
+    );
+  }
+
+  if (permadeath) {
+    return (
+      <>
+        <PermadeathSession onExit={() => setPermadeath(false)} />
+        <ToastHost />
+      </>
     );
   }
 
@@ -70,7 +81,11 @@ export default function App() {
   return (
     <div className="app">
       {tab === 'train' && (
-        <TrainHome onStart={startSession} onOpenSettings={() => setSettingsOpen(true)} />
+        <TrainHome
+          onStart={startSession}
+          onStartPermadeath={() => setPermadeath(true)}
+          onOpenSettings={() => setSettingsOpen(true)}
+        />
       )}
       {tab === 'repertoire' && (
         <RepertoireScreen

@@ -8,6 +8,7 @@ import type { Repertoire } from '../model/types';
 
 export interface TrainHomeProps {
   onStart: (queue: TrainingItem[], title: string) => void;
+  onStartPermadeath: () => void;
   onOpenSettings: () => void;
 }
 
@@ -22,11 +23,12 @@ interface RepEntry {
   mastery: ReturnType<typeof masteryBuckets>;
 }
 
-export function TrainHome({ onStart, onOpenSettings }: TrainHomeProps) {
+export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainHomeProps) {
   const state = useStore();
   const reps = repertoireList(state);
   const now = Date.now();
   const [pick, setPick] = useState<RepEntry | null>(null);
+  const permadeath = state.permadeath;
 
   const perRep = useMemo<RepEntry[]>(
     () =>
@@ -112,6 +114,21 @@ export function TrainHome({ onStart, onOpenSettings }: TrainHomeProps) {
             Start session
           </button>
         </div>
+
+        <div className="section">Challenge</div>
+        <button className="card tap" onClick={onStartPermadeath}>
+          <div className="row">
+            <span className="grow">
+              <div style={{ fontWeight: 700, fontSize: 16 }}>Permadeath</div>
+              <div className="meta faint" style={{ fontSize: 13, marginTop: 2 }}>
+                {permadeath.runs === 0
+                  ? 'A secret line. One mistake ends it.'
+                  : `Best ${permadeath.best} \u00b7 ${permadeath.runs} ${permadeath.runs === 1 ? 'run' : 'runs'}${permadeath.survivals ? ` \u00b7 ${permadeath.survivals} completed` : ''}`}
+              </div>
+            </span>
+            <Icons.chevron size={18} />
+          </div>
+        </button>
 
         <div className="section">Repertoires</div>
         <div className="list">
