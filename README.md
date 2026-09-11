@@ -28,19 +28,19 @@ npm run artifact     # repackage dist/ for publishing as a Claude Artifact
 ## What is in here
 
 ### Train
-The main loop. A position appears, the app asks **what do you play here?**, you
-play a move on the board, and it compares it against your repertoire.
+The main loop. A position appears with the side to move, you play a move on
+the board, and it is checked against your repertoire.
 
-- Right: ✓ plus Again / Hard / Good / Easy, each labelled with when the position
-  comes back.
-- Wrong: your repertoire's move next to the one you played, with **Show why**
+- Right: **Correct** plus Again / Hard / Good / Easy, each labelled with when
+  the position comes back.
+- Wrong: your repertoire's move next to the one you played, with **Show line**
   (the continuation) and **Explore** (the reference database) one tap away. A
   wrong answer is graded `again` automatically — you spend your attention on
   understanding, not on a button.
 - No engine evaluations during recall by default. This is memory retrieval.
-- "Follow the line after a correct answer" (Settings, on by default) plays the
-  opponent's reply and asks the next move in the same line, so you can compare
-  line-running against pure position-by-position drilling.
+- "Follow the line" (Settings, on by default) plays the opponent's reply and
+  asks the next move in the same line, so you can compare line-running against
+  pure position-by-position drilling.
 
 Scheduling is a small SM-2 variant in `src/model/srs.ts`: learning steps of 1
 and 10 minutes, ease from 1.3 up, halved interval after a lapse, no interval
@@ -100,8 +100,8 @@ splits, opening names and ECO codes, and a handful of real master games.
 Twenty-eight named book lines — Mar del Plata, Bayonet, Sämisch, Fianchetto,
 Four Pawns, Averbakh, the KID Exchange, Slav main line, Meran, Botvinnik, QGA
 Classical, Tarrasch, Chigorin and more — each with a summary and the ideas
-behind it. **Add to repertoire** lets you trim the line first — tap any move to set
-the cut-off, because usually you want the idea and not twenty plies of theory.
+behind it. **Add** lets you trim the line first — tap any move to set the cut-off,
+because usually you want the idea and not twenty plies of theory.
 
 ### Analysis
 Board, move list, eval bar, three engine lines, PGN in and out. Real Stockfish
@@ -109,8 +109,8 @@ Board, move list, eval bar, three engine lines, PGN in and out. Real Stockfish
 fallback if the worker cannot start. Secondary to training on purpose.
 
 ### Import your games
-`Repertoire → ⤓` pulls your recent games from Lichess or Chess.com and compares
-them against your repertoire:
+**Repertoire → Import** pulls your recent games from Lichess or Chess.com and
+compares them against your repertoire:
 
 - **Gaps** — positions you reach often with nothing prepared
 - **Deviations** — positions where you played something other than your prep
@@ -150,7 +150,7 @@ sandbox it is the only thing that persists at all. Startup reads the account cop
 *before* deciding anything, so a freshly seeded state can never overwrite real
 progress; pushes are held back until that reconcile completes.
 
-If neither backend works, the Train screen says **"Progress is not being saved"**
+If neither backend works, the Train screen says **"Progress isn't being saved"**
 with a one-tap fix rather than quietly resetting.
 
 A db document holds at most 256 KiB and a fully-trained state is ~1.8 MB of JSON
@@ -165,7 +165,7 @@ model for one person on two devices and honest about what it does not do: it
 does not merge two sessions reviewed concurrently. Settings shows the sync state
 and says so. Where the capability is absent — running locally, an older runtime,
 a viewer who declines — `claude.use('db')` resolves null and the app is local
-only, with the Settings card saying exactly that.
+only, and the Sync row in Settings says so.
 
 The reference database is a small curated sample, authored as ~320 weighted
 paths in `src/model/seed/openingPaths.ts`, weighted towards the Queen's Gambit
@@ -173,6 +173,13 @@ and King's Indian and folded into a tree at runtime, so
 the numbers are internally consistent: a move is never shown as more popular
 than the position it comes from. Every seeded line — repertoires, book lines,
 master games — is checked for legality by the test suite.
+
+## Design
+
+Dark, borderless surfaces on a near-black ground, one indigo accent, white
+primary buttons, iOS-style large titles and grouped lists. Tokens live at the
+top of `src/styles.css`; the board palettes and highlights in
+`src/components/board.css`. Copy is kept to a few words per element.
 
 ## Layout
 

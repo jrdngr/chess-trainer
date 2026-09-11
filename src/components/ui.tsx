@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 /* ── icons ─────────────────────────────────────────────────────────────── */
-type IconProps = { size?: number };
+type IconProps = { size?: number; filled?: boolean };
 const s = (p: IconProps) => ({
   width: p.size ?? 22,
   height: p.size ?? 22,
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',
-  strokeWidth: 1.8,
+  strokeWidth: 2,
   strokeLinecap: 'round' as const,
   strokeLinejoin: 'round' as const,
 });
@@ -16,30 +16,31 @@ const s = (p: IconProps) => ({
 export const Icons = {
   train: (p: IconProps = {}) => (
     <svg {...s(p)}>
-      <path d="M12 3v4M5.6 5.6l2.9 2.9M3 12h4M18.4 5.6l-2.9 2.9M21 12h-4" />
-      <circle cx="12" cy="15" r="6" />
-      <path d="M12 13v2.2l1.6 1" />
+      <path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H13z" fill={p.filled ? 'currentColor' : 'none'} />
     </svg>
   ),
   tree: (p: IconProps = {}) => (
     <svg {...s(p)}>
-      <path d="M5 4v12a2 2 0 0 0 2 2h3M5 10h5" />
-      <rect x="12" y="2" width="8" height="4" rx="1.4" />
-      <rect x="12" y="8" width="8" height="4" rx="1.4" />
-      <rect x="12" y="16" width="8" height="4" rx="1.4" />
+      <circle cx="6" cy="5" r="2.5" fill={p.filled ? 'currentColor' : 'none'} />
+      <circle cx="6" cy="19" r="2.5" fill={p.filled ? 'currentColor' : 'none'} />
+      <circle cx="18" cy="9" r="2.5" fill={p.filled ? 'currentColor' : 'none'} />
+      <path d="M6 7.5v9M18 11.5c0 3-2.5 4-6 4H9" />
     </svg>
   ),
   book: (p: IconProps = {}) => (
     <svg {...s(p)}>
-      <path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v15H5.5A1.5 1.5 0 0 0 4 19.5z" />
-      <path d="M4 19.5A1.5 1.5 0 0 1 5.5 18H19v3H5.5A1.5 1.5 0 0 1 4 19.5z" />
-      <path d="M9 7.5h6M9 11h4" />
+      <circle cx="12" cy="12" r="9" fill={p.filled ? 'currentColor' : 'none'} />
+      <path
+        d="m15.5 8.5-2 5-5 2 2-5z"
+        fill={p.filled ? 'var(--bg)' : 'none'}
+        stroke={p.filled ? 'var(--bg)' : 'currentColor'}
+      />
     </svg>
   ),
   chart: (p: IconProps = {}) => (
     <svg {...s(p)}>
-      <path d="M3 20h18" />
-      <path d="M6 20v-6M11 20V7M16 20v-9M21 20V4" />
+      <path d="M3 13.5 8 8l4 4 4.5-6L21 9" />
+      <path d="M3 20h18" opacity={p.filled ? 1 : 0.5} />
     </svg>
   ),
   gear: (p: IconProps = {}) => (
@@ -49,29 +50,28 @@ export const Icons = {
     </svg>
   ),
   back: (p: IconProps = {}) => (
-    <svg {...s(p)}>
+    <svg {...s(p)} strokeWidth={2.4}>
       <path d="M15 5l-7 7 7 7" />
     </svg>
   ),
   close: (p: IconProps = {}) => (
-    <svg {...s(p)}>
+    <svg {...s(p)} strokeWidth={2.4}>
       <path d="M6 6l12 12M18 6L6 18" />
     </svg>
   ),
   plus: (p: IconProps = {}) => (
-    <svg {...s(p)}>
+    <svg {...s(p)} strokeWidth={2.4}>
       <path d="M12 5v14M5 12h14" />
     </svg>
   ),
   check: (p: IconProps = {}) => (
-    <svg {...s(p)}>
-      <path d="M4 12.5l5 5L20 6.5" />
+    <svg {...s(p)} strokeWidth={3}>
+      <path d="M5 12.5l4.5 4.5L19 7" />
     </svg>
   ),
   cross: (p: IconProps = {}) => (
-    <svg {...s(p)}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M9 9l6 6M15 9l-6 6" />
+    <svg {...s(p)} strokeWidth={3}>
+      <path d="M7 7l10 10M17 7L7 17" />
     </svg>
   ),
   flip: (p: IconProps = {}) => (
@@ -86,29 +86,23 @@ export const Icons = {
     </svg>
   ),
   prev: (p: IconProps = {}) => (
-    <svg {...s(p)}>
+    <svg {...s(p)} strokeWidth={2.4}>
       <path d="M15 5l-7 7 7 7" />
     </svg>
   ),
   next: (p: IconProps = {}) => (
-    <svg {...s(p)}>
+    <svg {...s(p)} strokeWidth={2.4}>
       <path d="M9 5l7 7-7 7" />
     </svg>
   ),
   first: (p: IconProps = {}) => (
-    <svg {...s(p)}>
-      <path d="M18 5l-7 7 7 7M6 5v14" />
+    <svg {...s(p)} strokeWidth={2.4}>
+      <path d="M17 5l-7 7 7 7M7 5v14" />
     </svg>
   ),
   last: (p: IconProps = {}) => (
-    <svg {...s(p)}>
-      <path d="M6 5l7 7-7 7M18 5v14" />
-    </svg>
-  ),
-  search: (p: IconProps = {}) => (
-    <svg {...s(p)}>
-      <circle cx="11" cy="11" r="6.5" />
-      <path d="M20 20l-4.2-4.2" />
+    <svg {...s(p)} strokeWidth={2.4}>
+      <path d="M7 5l7 7-7 7M17 5v14" />
     </svg>
   ),
   download: (p: IconProps = {}) => (
@@ -124,7 +118,10 @@ export const Icons = {
   ),
   star: (p: IconProps = {}) => (
     <svg {...s(p)}>
-      <path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9-5.3-2.9-5.3 2.9 1.1-5.9L3.5 9.7l5.9-.8z" />
+      <path
+        d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9-5.3-2.9-5.3 2.9 1.1-5.9L3.5 9.7l5.9-.8z"
+        fill={p.filled ? 'currentColor' : 'none'}
+      />
     </svg>
   ),
   note: (p: IconProps = {}) => (
@@ -137,6 +134,39 @@ export const Icons = {
   bolt: (p: IconProps = {}) => (
     <svg {...s(p)}>
       <path d="M13 2L5 13h6l-1 9 8-11h-6z" />
+    </svg>
+  ),
+  more: (p: IconProps = {}) => (
+    <svg {...s(p)} fill="currentColor" stroke="none">
+      <circle cx="5" cy="12" r="2" />
+      <circle cx="12" cy="12" r="2" />
+      <circle cx="19" cy="12" r="2" />
+    </svg>
+  ),
+  play: (p: IconProps = {}) => (
+    <svg {...s(p)}>
+      <path d="M7 4.5v15l12-7.5z" fill="currentColor" />
+    </svg>
+  ),
+  up: (p: IconProps = {}) => (
+    <svg {...s(p)} strokeWidth={2.4}>
+      <path d="M12 19V5M5 12l7-7 7 7" />
+    </svg>
+  ),
+  down: (p: IconProps = {}) => (
+    <svg {...s(p)} strokeWidth={2.4}>
+      <path d="M12 5v14M5 12l7 7 7-7" />
+    </svg>
+  ),
+  warn: (p: IconProps = {}) => (
+    <svg {...s(p)}>
+      <path d="M12 3 2.5 20h19z" />
+      <path d="M12 9v5M12 17.5v.5" />
+    </svg>
+  ),
+  cloud: (p: IconProps = {}) => (
+    <svg {...s(p)}>
+      <path d="M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.4 1.6A3.3 3.3 0 0 0 7 18z" />
     </svg>
   ),
 };
@@ -212,7 +242,7 @@ export function ToastHost() {
     toastSetter = (msg) => {
       setMessage(msg);
       if (msg) {
-        window.setTimeout(() => setMessage((cur) => (cur === msg ? null : cur)), 2200);
+        window.setTimeout(() => setMessage((cur) => (cur === msg ? null : cur)), 2000);
       }
     };
     return () => {
@@ -224,12 +254,77 @@ export function ToastHost() {
 }
 
 /* ── misc ──────────────────────────────────────────────────────────────── */
-export function Empty({ icon, title, hint }: { icon: string; title: string; hint?: string }) {
+export function Empty({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="empty">
-      <div className="big">{icon}</div>
-      <div style={{ fontWeight: 650, color: 'var(--text-dim)' }}>{title}</div>
-      {hint && <div className="tiny" style={{ marginTop: 6 }}>{hint}</div>}
+      <div className="t">{title}</div>
+      {hint && <div className="h">{hint}</div>}
+    </div>
+  );
+}
+
+/** Round icon button used in app bars. */
+export function IconButton({
+  onClick,
+  label,
+  children,
+  plain,
+  disabled,
+}: {
+  onClick: () => void;
+  label: string;
+  children: ReactNode;
+  plain?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      className={`icon-btn${plain ? ' plain' : ''}`}
+      onClick={onClick}
+      aria-label={label}
+      disabled={disabled}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** Move strip with a current-move marker, shared by every board screen. */
+export function MoveStrip({
+  sans,
+  cursor,
+  onSeek,
+  hint,
+}: {
+  sans: string[];
+  cursor: number;
+  onSeek: (n: number) => void;
+  hint?: string;
+}) {
+  return (
+    <div className="strip-wrap">
+      <IconButton label="Start" onClick={() => onSeek(0)} disabled={cursor === 0}>
+        <Icons.first size={18} />
+      </IconButton>
+      <IconButton label="Back" onClick={() => onSeek(cursor - 1)} disabled={cursor === 0}>
+        <Icons.prev size={18} />
+      </IconButton>
+      <div className="strip">
+        {sans.length === 0 && hint && <span className="hint">{hint}</span>}
+        {sans.map((san, i) => (
+          <button
+            key={i}
+            className={`mv${i === cursor - 1 ? ' current' : ''}${i >= cursor ? ' future' : ''}`}
+            onClick={() => onSeek(i + 1)}
+          >
+            {i % 2 === 0 && <span className="n">{i / 2 + 1}.</span>}
+            {san}
+          </button>
+        ))}
+      </div>
+      <IconButton label="Forward" onClick={() => onSeek(cursor + 1)} disabled={cursor >= sans.length}>
+        <Icons.next size={18} />
+      </IconButton>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { lookup, movePercent, formatGameCount, totalGamesAt, openingNameForPath } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
 import type { ExplorerMove, ReferenceGame } from '../model/types';
+import { Icons } from './ui';
 
 export interface ExplorerPanelProps {
   fen: string;
@@ -32,31 +33,28 @@ export function ExplorerPanel({
     return (
       <div className="card">
         {named && (
-          <div className="row between" style={{ marginBottom: 8 }}>
-            <div className="grow truncate" style={{ fontWeight: 650 }}>{named.name}</div>
+          <div className="row between" style={{ marginBottom: 6 }}>
+            <div className="grow truncate" style={{ fontWeight: 700 }}>{named.name}</div>
             <span className="chip">{named.eco}</span>
           </div>
         )}
-        <div className="tiny faint">
-          Out of the reference sample. This is a small curated database — only mainstream lines
-          are covered.
-        </div>
+        <div className="small faint">No reference games</div>
       </div>
     );
   }
 
   const moves = compact ? entry.moves.slice(0, 5) : entry.moves;
+  const name = named?.name ?? entry.opening;
+  const eco = named?.eco ?? entry.eco;
 
   return (
-    <div className="card" style={{ padding: '10px 6px 6px' }}>
-      <div className="row between" style={{ padding: '0 8px 8px' }}>
+    <div className="list">
+      <div className="exp-head">
         <div className="grow truncate">
-          {(named?.name ?? entry.opening) && (
-            <div style={{ fontWeight: 650, fontSize: 14 }}>{named?.name ?? entry.opening}</div>
-          )}
-          <div className="tiny faint">{formatGameCount(total)} games in sample</div>
+          {name && <div className="name truncate">{name}</div>}
+          <div className="games">{formatGameCount(total)} games</div>
         </div>
-        {(named?.eco ?? entry.eco) && <span className="chip">{named?.eco ?? entry.eco}</span>}
+        {eco && <span className="chip">{eco}</span>}
       </div>
 
       {moves.map((move) => (
@@ -70,27 +68,25 @@ export function ExplorerPanel({
       ))}
 
       {entry.topGames?.length && !compact ? (
-        <div style={{ padding: '10px 8px 4px' }}>
-          <div className="section-title" style={{ margin: '4px 0 6px' }}>Master games</div>
+        <>
+          <div className="exp-head" style={{ paddingTop: 16, borderTop: '1px solid var(--line)' }}>
+            <div className="name">Games</div>
+          </div>
           {entry.topGames.map((game, i) => (
-            <button
-              key={i}
-              className="exp-row"
-              style={{ padding: '8px 0' }}
-              onClick={() => onPickGame?.(game)}
-            >
-              <div className="grow" style={{ minWidth: 0 }}>
-                <div className="small truncate" style={{ fontWeight: 600 }}>
+            <button key={i} className="list-row" onClick={() => onPickGame?.(game)}>
+              <span className="grow">
+                <div className="title truncate">
                   {game.white} – {game.black}
                 </div>
-                <div className="tiny faint truncate">
+                <div className="meta truncate">
                   {game.event} · {game.year}
                 </div>
-              </div>
+              </span>
               <span className="chip">{game.result}</span>
+              <Icons.chevron size={16} />
             </button>
           ))}
-        </div>
+        </>
       ) : null}
     </div>
   );
@@ -116,19 +112,17 @@ function ExplorerRow({
     <button className="exp-row" onClick={onPlay}>
       <span className="exp-san">
         {move.san}
-        {inRepertoire && <span className="exp-inrep"> ★</span>}
+        {inRepertoire && <span className="star"><Icons.star size={12} filled /></span>}
       </span>
       <span className="exp-bar">
         <span className="w" style={{ width: `${w}%` }}>{w > 17 ? Math.round(w) : ''}</span>
         <span className="d" style={{ width: `${d}%` }}>{d > 17 ? Math.round(d) : ''}</span>
         <span className="b" style={{ width: `${b}%` }}>{b > 17 ? Math.round(b) : ''}</span>
       </span>
-      <span className="exp-count">
+      <span className="exp-pct">
         {pct >= 1 ? `${Math.round(pct)}%` : '<1%'}
-        <br />
-        <span className="faint" style={{ fontSize: 10.5 }}>{formatGameCount(move.games)}</span>
+        <span className="n">{formatGameCount(move.games)}</span>
       </span>
     </button>
   );
 }
-

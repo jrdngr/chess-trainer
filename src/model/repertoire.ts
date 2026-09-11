@@ -284,3 +284,8 @@ export function subtreeIds(rep: Repertoire, nodeId: string): string[] {
   }
   return out;
 }
+
+/** "White — Queen's Gambit" → "Queen's Gambit"; the side is shown separately. */
+export function displayName(name: string): string {
+  return name.replace(/^\s*(white|black)\s*[—–\-:]\s*/i, '').trim() || name;
+}

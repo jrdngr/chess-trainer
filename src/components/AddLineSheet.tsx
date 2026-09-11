@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Sheet, toast } from './ui';
-import { sansToMoveText, START_FEN, walkSan } from '../chess/core';
+import { Icons, Sheet, toast } from './ui';
+import { START_FEN, walkSan } from '../chess/core';
+import { displayName } from '../model/repertoire';
 import { repertoireList, useStore } from '../store/useStore';
 import type { MoveSource } from '../model/types';
 
@@ -20,8 +21,7 @@ export interface AddLineSheetProps {
 
 /**
  * Import a line into a repertoire, letting the user choose how much of it to
- * take. Tapping a move sets the cut-off — the common case is "I want this idea
- * but not twenty moves of theory".
+ * take. Tapping a move sets the cut-off.
  */
 export function AddLineSheet({
   open,
@@ -55,7 +55,6 @@ export function AddLineSheet({
     if (preferColor) {
       const byColor = reps.filter((r) => r.color === preferColor);
       if (byColor.length) {
-        // Prefer one that already contains the start of this line.
         const opener = sans[preferColor === 'w' ? 0 : 1];
         const match = byColor.find((r) =>
           Object.values(r.nodes).some((n) => n.parentId === null && n.san === sans[0]) ||
@@ -89,63 +88,48 @@ export function AddLineSheet({
       if (tip) annotate(target.id, tip.id, note);
     }
     onAdded?.(target.id, res.added);
-    toast(res.added > 0 ? `${res.added} new move${res.added === 1 ? '' : 's'} added` : 'Already in your repertoire');
+    toast(res.added > 0 ? `${res.added} added` : 'Already in repertoire');
     onClose();
   };
 
+  const moveCount = Math.ceil(effectiveDepth / 2);
+
   return (
     <Sheet open={open} onClose={onClose} title={title}>
-      <div className="tiny faint" style={{ marginBottom: 8 }}>
-        Tap a move to trim the line. {effectiveDepth} of {sans.length} plies selected.
+      <div className="section" style={{ marginTop: 0 }}>
+        <span>Line</span>
+        <span className="faint">Tap a move to trim</span>
       </div>
-
       <div className="card" style={{ padding: '10px 12px' }}>
-        <div className="movelist">
-          {sans.map((san, i) => {
-            const isWhite = i % 2 === 0;
-            return (
-              <span key={i} style={{ display: 'contents' }}>
-                {isWhite && <span className="num">{i / 2 + 1}.</span>}
-                <button
-                  className={`mv${i < effectiveDepth ? '' : ' future'}${i === effectiveDepth - 1 ? ' current' : ''}`}
-                  onClick={() => setDepth(i + 1)}
-                >
-                  {san}
-                </button>
-              </span>
-            );
-          })}
+        <div className="strip wrapped">
+          {sans.map((san, i) => (
+            <button
+              key={i}
+              className={`mv${i === effectiveDepth - 1 ? ' current' : ''}${i >= effectiveDepth ? ' future' : ''}`}
+              onClick={() => setDepth(i + 1)}
+            >
+              {i % 2 === 0 && <span className="n">{i / 2 + 1}.</span>}
+              {san}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="spacer" />
-      <div className="section-title" style={{ marginTop: 0 }}>Add to</div>
-      <div className="stack">
+      <div className="section">Repertoire</div>
+      <div className="list">
         {reps.map((rep) => (
-          <button
-            key={rep.id}
-            className={`tree-row${rep.id === targetId ? ' preferred' : ''}`}
-            onClick={() => setRepId(rep.id)}
-          >
-            <span className={`chip ${rep.color === 'w' ? 'white-side' : 'black-side'}`}>
-              {rep.color === 'w' ? 'W' : 'B'}
-            </span>
-            <span className="grow truncate" style={{ fontWeight: 600 }}>{rep.name}</span>
-            {rep.id === targetId && <span className="exp-inrep">selected</span>}
+          <button key={rep.id} className="list-row" onClick={() => setRepId(rep.id)}>
+            <span className={`side ${rep.color}`} />
+            <span className="grow title truncate">{displayName(rep.name)}</span>
+            {rep.id === targetId && <span style={{ color: 'var(--accent)' }}><Icons.check size={18} /></span>}
           </button>
         ))}
       </div>
 
       <div className="spacer" />
-      <div className="tiny faint" style={{ marginBottom: 8 }}>
-        {sansToMoveText(slice)}
-      </div>
       <button className="btn primary block" disabled={!target || !slice.length || !preview} onClick={add}>
-        Add {Math.ceil(effectiveDepth / 2)} move{Math.ceil(effectiveDepth / 2) === 1 ? '' : 's'} to {target?.name ?? '—'}
+        Add {moveCount} move{moveCount === 1 ? '' : 's'}
       </button>
-      <div className="tiny faint center" style={{ marginTop: 8 }}>
-        New positions where it is your turn enter the review queue immediately.
-      </div>
     </Sheet>
   );
 }

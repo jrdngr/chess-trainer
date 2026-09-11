@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../components/Board';
 import { ExplorerPanel } from '../components/ExplorerPanel';
-import { haptic, Icons, Sheet, toast } from '../components/ui';
+import { haptic, IconButton, Icons, Sheet } from '../components/ui';
 import { applySan, sansToMoveText, type LegalMove, type Square } from '../chess/core';
 import { openingNameForPath } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
+import { displayName } from '../model/repertoire';
 import { checkAnswer, type TrainingItem } from '../model/session';
-import { describeDelay, gradePreview, review } from '../model/srs';
+import { gradePreview } from '../model/srs';
 import type { Grade } from '../model/types';
 import { useStore } from '../store/useStore';
 
@@ -69,8 +70,8 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
     setStats((s) => ({ answered: s.answered + 1, correct: s.correct + (result.correct ? 1 : 0) }));
     if (settings.hapticFeedback) haptic(result.correct ? 12 : [18, 50, 18]);
     if (!result.correct) {
-      // A wrong answer is always a lapse; grade it immediately and let the
-      // user spend their attention on understanding rather than on a button.
+      // A wrong answer is always a lapse; grade it immediately so the user can
+      // spend their attention on understanding rather than on a button.
       grade(item, 'again', move.san, false);
     }
   };
@@ -107,17 +108,20 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
       .find((candidate) => candidate.fen === afterReply.after && candidate.cardId !== item.cardId);
   }, [item, queue, initialQueue, repertoires, settings.playOpponentReplies]);
 
+  const requeue = () => {
+    if (!item) return;
+    setQueue((q) => {
+      const next = [...q];
+      next.splice(Math.min(q.length, index + 4), 0, item);
+      return next;
+    });
+  };
+
   const onGrade = (value: Grade) => {
     if (!item) return;
     grade(item, value, played?.san ?? null, true);
     if (value === 'again') {
-      // Re-queue it for later in this session.
-      setQueue((q) => {
-        const next = [...q];
-        const insertAt = Math.min(q.length, index + 4);
-        next.splice(insertAt, 0, item);
-        return next;
-      });
+      requeue();
       advance();
       return;
     }
@@ -148,28 +152,44 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
   if (done) {
     const elapsed = Math.round((Date.now() - startedAt.current) / 1000);
     const accuracy = stats.answered ? Math.round((stats.correct / stats.answered) * 100) : 0;
+    const r = 60;
+    const c = 2 * Math.PI * r;
     return (
       <div className="app">
-        <div className="appbar">
-          <button className="btn plain sm" onClick={onExit}>
+        <div className="appbar compact">
+          <IconButton label="Close" onClick={onExit}>
             <Icons.close size={20} />
-          </button>
+          </IconButton>
           <div className="appbar-title">
-            <h1>Session complete</h1>
+            <div className="line">Done</div>
           </div>
+          <span style={{ width: 38 }} />
         </div>
         <div className="screen no-nav">
-          <div className="card center" style={{ padding: '26px 16px' }}>
-            <div style={{ fontSize: 44, marginBottom: 6 }}>{accuracy >= 80 ? '🎯' : '📈'}</div>
-            <div style={{ fontSize: 30, fontWeight: 750 }}>{accuracy}%</div>
-            <div className="muted small">
-              {stats.correct} of {stats.answered} positions first time
-            </div>
+          <div className="done-ring">
+            <svg width="132" height="132" viewBox="0 0 132 132">
+              <circle cx="66" cy="66" r={r} fill="none" stroke="var(--surface-2)" strokeWidth="8" />
+              <circle
+                cx="66"
+                cy="66"
+                r={r}
+                fill="none"
+                stroke={accuracy >= 80 ? 'var(--good)' : 'var(--accent)'}
+                strokeWidth="8"
+                strokeLinecap="round"
+                strokeDasharray={c}
+                strokeDashoffset={c * (1 - accuracy / 100)}
+              />
+            </svg>
+            <div className="pct">{accuracy}%</div>
           </div>
-          <div className="stat-grid" style={{ marginTop: 10 }}>
+          <div className="center muted" style={{ marginTop: 14 }}>
+            {stats.correct} of {stats.answered} correct
+          </div>
+          <div className="stat-grid" style={{ marginTop: 24 }}>
             <div className="stat">
               <div className="n">{stats.answered}</div>
-              <div className="l">Answered</div>
+              <div className="l">Positions</div>
             </div>
             <div className="stat">
               <div className="n">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}</div>
@@ -177,11 +197,11 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
             </div>
             <div className="stat">
               <div className="n">{stats.answered ? Math.round((elapsed / stats.answered) * 10) / 10 : 0}s</div>
-              <div className="l">Per card</div>
+              <div className="l">Per move</div>
             </div>
           </div>
           <div className="spacer" />
-          <button className="btn primary block" onClick={onExit}>
+          <button className="btn primary block xl" onClick={onExit}>
             Done
           </button>
         </div>
@@ -191,38 +211,37 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
 
   if (!item) return null;
 
-  const sideLabel = item.orientation === 'white' ? 'White' : 'Black';
+  const side = item.orientation === 'white' ? 'w' : 'b';
+  const sideLabel = side === 'w' ? 'White' : 'Black';
   const progress = ((index + (phase === 'ask' ? 0 : 1)) / queue.length) * 100;
+  const playedEntry = item.expected.find((e) => e.san === played?.san);
+  const alternatives = item.expected.filter((e) => !e.preferred).map((e) => e.san);
 
   return (
     <div className="app">
-      <div className="appbar">
-        <button className="btn plain sm" onClick={onExit} aria-label="End session">
+      <div className="appbar compact">
+        <IconButton label="End session" onClick={onExit}>
           <Icons.close size={20} />
-        </button>
+        </IconButton>
         <div className="appbar-title">
-          <div className="line" style={{ fontWeight: 650, fontSize: 15 }}>
-            {opening?.name ?? title}
-          </div>
-          <div className="sub">
-            {sideLabel} to play · {item.repertoireName}
-          </div>
+          <div className="line">{opening?.name ?? title}</div>
+          <div className="sub">{displayName(item.repertoireName)}</div>
         </div>
-        <div className="mono small muted">
+        <span className="num muted small" style={{ minWidth: 38, textAlign: 'right' }}>
           {Math.min(index + 1, queue.length)}/{queue.length}
-        </div>
+        </span>
       </div>
 
-      <div className="progress-track" style={{ margin: '0 14px' }}>
+      <div className="progress-track" style={{ margin: '0 16px 10px' }}>
         <div className="progress-fill" style={{ width: `${progress}%` }} />
       </div>
 
-      <div className="screen no-nav" style={{ paddingTop: 12 }}>
+      <div className="screen no-nav">
         <Board
           fen={boardFen}
-          orientation={item.orientation === 'white' ? 'w' : 'b'}
+          orientation={side}
           interactive={phase === 'ask'}
-          movableFor={item.orientation === 'white' ? 'w' : 'b'}
+          movableFor={side}
           onMove={onBoardMove}
           highlights={highlights}
           showCoordinates={settings.showCoordinates}
@@ -234,26 +253,28 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
 
         {phase === 'ask' && (
           <>
-            <div className="center" style={{ fontWeight: 650, fontSize: 17 }}>
-              What do you play here?
-            </div>
-            <div className="center tiny faint" style={{ marginTop: 3 }}>
-              Move {Math.floor(item.pathSans.length / 2) + 1} · {item.expected.length > 1
-                ? `${item.expected.length} moves in your repertoire`
-                : 'from memory'}
+            <div className="prompt">
+              <div className="who">
+                <span className={`side ${side}`} />
+                {sideLabel} to move
+              </div>
+              <div className="ctx">
+                Move {Math.floor(item.pathSans.length / 2) + 1}
+                {item.expected.length > 1 ? ` · ${item.expected.length} options` : ''}
+              </div>
             </div>
             <div className="spacer" />
-            <div className="row" style={{ gap: 8 }}>
-              <button className="btn ghost grow" onClick={() => setShowMoves((v) => !v)}>
-                {showMoves ? 'Hide moves' : 'Moves so far'}
+            <div className="row gap-8">
+              <button className="btn soft grow" onClick={() => setShowMoves((v) => !v)}>
+                {showMoves ? 'Hide moves' : 'Moves'}
               </button>
-              <button className="btn ghost grow" onClick={() => setExplore(true)}>
+              <button className="btn soft grow" onClick={() => setExplore(true)}>
                 Explore
               </button>
             </div>
             {showMoves && (
-              <div className="card small mono" style={{ marginTop: 10, lineHeight: 1.7 }}>
-                {sansToMoveText(item.pathSans) || 'Starting position'}
+              <div className="card movetext" style={{ marginTop: 10 }}>
+                {sansToMoveText(item.pathSans) || 'Start'}
               </div>
             )}
           </>
@@ -262,22 +283,17 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
         {phase === 'correct' && (
           <>
             <div className="verdict ok">
-              <Icons.check size={22} /> Correct
+              <span className="ico"><Icons.check size={16} /></span>
+              Correct
+              {playedEntry?.preferred === false && <span className="chip good">alternative</span>}
             </div>
-            <div className="center muted small" style={{ marginTop: 2 }}>
-              {played?.san}
-              {item.expected.find((e) => e.san === played?.san)?.preferred === false && ' · playable alternative'}
-            </div>
-            {item.expected.find((e) => e.san === played?.san)?.note && (
-              <div className="card small" style={{ marginTop: 10 }}>
-                {item.expected.find((e) => e.san === played?.san)!.note}
+            {playedEntry?.note && (
+              <div className="card small muted" style={{ marginTop: 8 }}>
+                {playedEntry.note}
               </div>
             )}
             <div className="spacer" />
-            <div className="tiny faint center" style={{ marginBottom: 7 }}>
-              How did that feel?
-            </div>
-            <div className="grade-row">
+            <div className="grades">
               {(['again', 'hard', 'good', 'easy'] as Grade[]).map((g) => (
                 <button key={g} className={g} onClick={() => onGrade(g)}>
                   <span style={{ textTransform: 'capitalize' }}>{g}</span>
@@ -291,95 +307,68 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
         {phase === 'wrong' && (
           <>
             <div className="verdict no">
-              <Icons.cross size={20} /> Not quite
+              <span className="ico"><Icons.cross size={14} /></span>
+              Wrong
             </div>
-            <div className="card" style={{ marginTop: 10 }}>
-              <div className="row between">
-                <span className="muted small">Your repertoire</span>
-                <span style={{ fontWeight: 750, fontSize: 16, color: 'var(--good)' }}>
-                  {answer?.preferred?.san}
-                </span>
+            <div className="compare" style={{ marginTop: 8 }}>
+              <div className="good">
+                <div className="k">Repertoire</div>
+                <div className="v">{answer?.preferred?.san}</div>
               </div>
-              <div className="divider" />
-              <div className="row between">
-                <span className="muted small">You played</span>
-                <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--bad)' }}>
-                  {played?.san}
-                </span>
+              <div className="bad">
+                <div className="k">Played</div>
+                <div className="v">{played?.san}</div>
               </div>
-              {item.expected.length > 1 && (
-                <>
-                  <div className="divider" />
-                  <div className="row between">
-                    <span className="muted small">Also prepared</span>
-                    <span className="small">
-                      {item.expected.filter((e) => !e.preferred).map((e) => e.san).join(', ')}
-                    </span>
+            </div>
+            {(alternatives.length > 0 || answer?.preferred?.note) && (
+              <div className="card small muted" style={{ marginTop: 10 }}>
+                {answer?.preferred?.note}
+                {alternatives.length > 0 && (
+                  <div className={answer?.preferred?.note ? 'mt-8 faint' : 'faint'}>
+                    Also {alternatives.join(', ')}
                   </div>
-                </>
-              )}
-              {answer?.preferred?.note && (
-                <>
-                  <div className="divider" />
-                  <div className="small muted">{answer.preferred.note}</div>
-                </>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {revealLine && (
-              <div className="card" style={{ marginTop: 10 }}>
-                <div className="section-title" style={{ margin: '0 0 6px' }}>The line continues</div>
-                <div className="small mono">{sansToMoveText(item.continuation, item.fen)}</div>
+              <div className="card movetext" style={{ marginTop: 10 }}>
+                {sansToMoveText(item.continuation, item.fen)}
               </div>
             )}
 
             <div className="spacer" />
-            <div className="row" style={{ gap: 8 }}>
-              <button className="btn ghost grow" onClick={() => setRevealLine((v) => !v)}>
-                {revealLine ? 'Hide line' : 'Show why'}
+            <div className="row gap-8">
+              <button className="btn soft grow" onClick={() => setRevealLine((v) => !v)}>
+                {revealLine ? 'Hide line' : 'Show line'}
               </button>
-              <button className="btn ghost grow" onClick={() => setExplore(true)}>
+              <button className="btn soft grow" onClick={() => setExplore(true)}>
                 Explore
               </button>
             </div>
-            <div className="spacer" />
+            <div className="spacer sm" />
             <button
               className="btn primary block"
               onClick={() => {
-                setQueue((q) => {
-                  const next = [...q];
-                  next.splice(Math.min(q.length, index + 4), 0, item);
-                  return next;
-                });
+                requeue();
                 advance();
               }}
             >
-              Continue · back in {describeDelay(review(card ?? ensureCard(item), 'again').delay)}
+              Continue
             </button>
           </>
         )}
       </div>
 
-      <Sheet
-        open={explore}
-        onClose={() => setExplore(false)}
-        title="Reference"
-        actions={
-          <button className="btn plain sm" onClick={() => setExplore(false)}>
-            <Icons.close size={18} />
-          </button>
-        }
-      >
-        <div className="tiny faint" style={{ marginBottom: 8 }}>
-          {sansToMoveText(item.pathSans) || 'Starting position'}
+      <Sheet open={explore} onClose={() => setExplore(false)} title="Reference">
+        <div className="movetext" style={{ marginBottom: 10 }}>
+          {sansToMoveText(item.pathSans) || 'Start'}
         </div>
         <ExplorerPanel
           fen={item.fen}
           path={item.pathSans}
           inRepertoire={item.expected.map((e) => e.san)}
-          onPlay={(san) => {
-            toast(`${san} — open Explore to add lines from here`);
-          }}
+          onPlay={() => setExplore(false)}
         />
       </Sheet>
     </div>

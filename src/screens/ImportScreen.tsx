@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AddLineSheet } from '../components/AddLineSheet';
 import { Board } from '../components/Board';
-import { Empty, Icons, Sheet, toast } from '../components/ui';
+import { Empty, IconButton, Icons, Sheet, toast } from '../components/ui';
 
 import {
   analyseAgainstRepertoire,
@@ -10,6 +10,7 @@ import {
   measureCoverage,
   type Finding,
 } from '../model/gameAnalysis';
+import { displayName } from '../model/repertoire';
 import { generateSampleArchive } from '../model/seed/sampleGames';
 import type { ImportedGame } from '../model/types';
 import { fetchGames, gamesFromPgn, type SourceId } from '../services/gameSources';
@@ -64,7 +65,6 @@ export function ImportScreen({ onBack }: ImportScreenProps) {
     const sample = generateSampleArchive({ username: name, count: 60, source });
     setImportedGames(sample);
     setStep('games');
-    toast('Loaded the bundled sample archive');
   };
 
   const loadPgn = () => {
@@ -74,13 +74,13 @@ export function ImportScreen({ onBack }: ImportScreenProps) {
       g.userColor ? g : { ...g, userColor: guessColor(g, name) },
     );
     if (!tagged.length) {
-      toast('No games found in that PGN');
+      toast('No games found');
       return;
     }
     setImportedGames(tagged);
     setPgnOpen(false);
     setStep('games');
-    toast(`${tagged.length} games read from PGN`);
+    toast(`${tagged.length} games imported`);
   };
 
   if (step === 'games' && games.length) {
@@ -102,27 +102,21 @@ export function ImportScreen({ onBack }: ImportScreenProps) {
     );
   }
 
+  const sourceName = source === 'lichess' ? 'Lichess' : 'Chess.com';
+
   return (
     <>
-      <div className="appbar">
-        <button className="btn plain sm" onClick={onBack}>
+      <div className="appbar compact">
+        <IconButton label="Back" onClick={onBack}>
           <Icons.back size={20} />
-        </button>
+        </IconButton>
         <div className="appbar-title">
-          <h1 style={{ fontSize: 18 }}>Import games</h1>
+          <div className="line">Import games</div>
         </div>
+        <span style={{ width: 38 }} />
       </div>
 
-      <div className="screen">
-        <div className="banner">
-          <span className="ico">↯</span>
-          <span>
-            Pull your recent games and compare them against your repertoire: where you left prep,
-            what you reach often with nothing prepared, and which lines never come up.
-          </span>
-        </div>
-
-        <div className="spacer" />
+      <div className="screen no-nav">
         <div className="segmented">
           <button className={source === 'lichess' ? 'active' : ''} onClick={() => setSource('lichess')}>
             Lichess
@@ -132,10 +126,10 @@ export function ImportScreen({ onBack }: ImportScreenProps) {
           </button>
         </div>
 
-        <div className="spacer" />
+        <div className="spacer sm" />
         <input
           className="field"
-          placeholder={source === 'lichess' ? 'Lichess username' : 'Chess.com username'}
+          placeholder="Username"
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
@@ -143,55 +137,45 @@ export function ImportScreen({ onBack }: ImportScreenProps) {
           onChange={(e) => setUsername(e.target.value)}
         />
 
-        <div className="spacer" />
+        <div className="spacer sm" />
         <button className="btn primary block" disabled={!username.trim() || loading} onClick={run}>
-          {loading ? 'Fetching…' : `Fetch last 120 games`}
+          {loading ? 'Importing…' : 'Import recent games'}
         </button>
 
         {error && (
-          <div className="banner warn" style={{ marginTop: 12 }}>
-            <span className="ico">⚠</span>
-            <div>
-              <div style={{ fontWeight: 650, color: 'var(--text)', marginBottom: 4 }}>
-                {error.blocked ? 'Blocked by the sandbox' : "Couldn't fetch"}
-              </div>
-              {error.message}
-              {error.blocked && (
-                <div style={{ marginTop: 8 }}>
-                  Use the sample archive below to try the flow, or paste a PGN exported from your
-                  account. Running the app locally makes the live fetch work.
-                </div>
-              )}
+          <div className="banner bad" style={{ marginTop: 12 }}>
+            <span className="ico"><Icons.warn size={20} /></span>
+            <div className="grow">
+              {error.blocked ? `Can't reach ${sourceName} from here` : "Couldn't import"}
+              <div className="sub">{error.blocked ? 'Paste a PGN or try the sample instead.' : error.message}</div>
             </div>
           </div>
         )}
 
-        <div className="section-title">Other ways in</div>
-        <div className="stack">
-          <button className="btn ghost block" onClick={() => setPgnOpen(true)}>
-            <Icons.note size={18} /> Paste a PGN export
+        <div className="section">Or</div>
+        <div className="list">
+          <button className="list-row" onClick={() => setPgnOpen(true)}>
+            <span className="grow title">Paste PGN</span>
+            <Icons.chevron size={18} />
           </button>
-          <button className="btn ghost block" onClick={loadSample}>
-            <Icons.bolt size={18} /> Load the bundled sample archive
+          <button className="list-row" onClick={loadSample}>
+            <span className="grow">
+              <div className="title">Try sample games</div>
+              <div className="meta">60 generated games</div>
+            </span>
+            <Icons.chevron size={18} />
           </button>
-        </div>
-        <div className="tiny faint" style={{ marginTop: 10 }}>
-          The sample archive is 60 generated games, not real ones. It exists so the analysis flow
-          has something to chew on when the network is unavailable.
         </div>
       </div>
 
       <Sheet open={pgnOpen} onClose={() => setPgnOpen(false)} title="Paste PGN">
-        <div className="tiny faint" style={{ marginBottom: 8 }}>
-          Any number of games. Your username is used to work out which side you had.
-        </div>
         <input
           className="field"
-          placeholder="Your username as it appears in the PGN"
+          placeholder="Your username in the PGN"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
-        <div className="spacer" />
+        <div className="spacer sm" />
         <textarea
           className="field"
           style={{ minHeight: 200 }}
@@ -199,19 +183,13 @@ export function ImportScreen({ onBack }: ImportScreenProps) {
           value={pgnText}
           onChange={(e) => setPgnText(e.target.value)}
         />
-        <div className="spacer" />
+        <div className="spacer sm" />
         <button className="btn primary block" disabled={!pgnText.trim()} onClick={loadPgn}>
-          Read games
+          Import
         </button>
       </Sheet>
     </>
   );
-}
-
-/** "Black vs 1.e4 — Najdorf" -> "Najdorf", so tabs stay readable on a phone. */
-function shortName(name: string) {
-  const tail = name.split('—').pop()?.trim();
-  return tail && tail.length <= 14 ? tail : name.slice(0, 12);
 }
 
 function guessColor(game: ImportedGame, username: string) {
@@ -268,122 +246,91 @@ function GameReview({
 
   return (
     <>
-      <div className="appbar">
-        <button className="btn plain sm" onClick={onExit}>
+      <div className="appbar compact">
+        <IconButton label="Back" onClick={onExit}>
           <Icons.back size={20} />
-        </button>
+        </IconButton>
         <div className="appbar-title">
-          <div className="line" style={{ fontWeight: 650, fontSize: 16 }}>Your games</div>
+          <div className="line">Your games</div>
           <div className="sub">{games.length} imported</div>
         </div>
-        <button className="btn plain sm" onClick={onBack} aria-label="Import again">
-          <Icons.download size={19} />
-        </button>
+        <IconButton label="Import again" onClick={onBack}>
+          <Icons.download size={20} />
+        </IconButton>
       </div>
 
-      <div className="screen">
+      <div className="screen no-nav">
         <div className="segmented">
           {reps.map((r) => (
             <button key={r.id} className={r.id === rep?.id ? 'active' : ''} onClick={() => setRepId(r.id)}>
-              {shortName(r.name)}
+              <span className="truncate" style={{ display: 'block' }}>{displayName(r.name)}</span>
             </button>
           ))}
         </div>
 
-        <div className="spacer" />
+        <div className="spacer sm" />
 
         {coverage && (
-          <div className="card">
-            <div className="row between small">
-              <span className="muted">{rep?.name}</span>
-              <span className="muted">{coverage.games} of your games</span>
+          <div className="stat-grid">
+            <div className="stat">
+              <div className="n">{coverage.inPrep}</div>
+              <div className="l">In book</div>
             </div>
-            <div className="stat-grid" style={{ marginTop: 11 }}>
-              <div className="stat">
-                <div className="n">{coverage.inPrep}</div>
-                <div className="l">In prep</div>
-              </div>
-              <div className="stat">
-                <div className="n">{coverage.outOfPrep}</div>
-                <div className="l">Off book</div>
-              </div>
-              <div className="stat">
-                <div className="n">{coverage.averageExitPly.toFixed(1)}</div>
-                <div className="l">Avg ply</div>
-              </div>
+            <div className="stat">
+              <div className="n">{coverage.outOfPrep}</div>
+              <div className="l">Off book</div>
             </div>
-            <div className="tiny faint" style={{ marginTop: 10 }}>
-              On average your games leave the repertoire after {(coverage.averageExitPly / 2).toFixed(1)}{' '}
-              moves.
+            <div className="stat">
+              <div className="n">{(coverage.averageExitPly / 2).toFixed(1)}</div>
+              <div className="l">Exit move</div>
             </div>
           </div>
         )}
 
-        <div className="spacer" />
-        <div className="segmented">
-          <button className={activeKind === 'gap' ? 'active' : ''} onClick={() => setKind('gap')}>
-            Gaps ({gapCount})
-          </button>
-          <button className={activeKind === 'deviation' ? 'active' : ''} onClick={() => setKind('deviation')}>
-            Deviations ({deviationCount})
-          </button>
-        </div>
-
-        <div className="spacer" />
-        <div className="tiny faint" style={{ marginBottom: 10 }}>
-          {activeKind === 'gap'
-            ? 'Positions you reach with nothing prepared, most frequent first.'
-            : 'Positions where you played something other than your repertoire move.'}
+        <div className="section">
+          <div className="segmented" style={{ width: '100%' }}>
+            <button className={activeKind === 'gap' ? 'active' : ''} onClick={() => setKind('gap')}>
+              Gaps · {gapCount}
+            </button>
+            <button className={activeKind === 'deviation' ? 'active' : ''} onClick={() => setKind('deviation')}>
+              Deviations · {deviationCount}
+            </button>
+          </div>
         </div>
 
         {shown.length === 0 && (
-          <Empty
-            icon="✓"
-            title={activeKind === 'gap' ? 'No frequent gaps' : 'You stuck to your prep'}
-            hint="Import more games to find thinner spots."
-          />
+          <Empty title={activeKind === 'gap' ? 'No gaps' : 'No deviations'} hint="Import more games to find more" />
         )}
 
         <div className="stack">
           {shown.slice(0, 25).map((f) => (
-            <button
-              key={`${f.kind}-${f.key}`}
-              className="card"
-              style={{ width: '100%', textAlign: 'left' }}
-              onClick={() => onOpenFinding(f)}
-            >
+            <button key={`${f.kind}-${f.key}`} className="card tap" onClick={() => onOpenFinding(f)}>
               <div className="row between">
-                <span className="small mono truncate grow">{f.lineText}</span>
+                <span className="movetext truncate grow" style={{ lineHeight: 1.4 }}>{f.lineText}</span>
                 <span className="chip">{f.games}×</span>
               </div>
-              <div className="row wrap" style={{ gap: 6, marginTop: 9 }}>
+              <div className="row wrap" style={{ gap: 6, marginTop: 10 }}>
                 {f.played.slice(0, 3).map((p) => (
-                  <span key={p.san} className="chip">
+                  <span key={p.san} className={`chip${f.kind === 'deviation' ? ' bad' : ''}`}>
                     {p.san} ×{p.count}
                   </span>
                 ))}
                 {f.expected.length > 0 && (
-                  <span className="chip" style={{ color: 'var(--accent)' }}>
-                    prep: {f.expected.join(', ')}
-                  </span>
+                  <span className="chip good">{f.expected.join(', ')}</span>
                 )}
-              </div>
-              <div className="tiny faint" style={{ marginTop: 8 }}>
-                {f.results.wins}W {f.results.draws}D {f.results.losses}L from here
+                <span className="tiny faint num" style={{ marginLeft: 'auto' }}>
+                  {f.results.wins}W {f.results.draws}D {f.results.losses}L
+                </span>
               </div>
             </button>
           ))}
         </div>
       </div>
 
-      <Sheet
-        open={!!finding}
-        onClose={onCloseFinding}
-        title={finding?.kind === 'gap' ? 'Nothing prepared here' : 'You left your prep'}
-      >
+      <Sheet open={!!finding} onClose={onCloseFinding} title={finding?.kind === 'gap' ? 'Gap' : 'Deviation'}>
         {finding && (
           <>
-            <div className="tiny faint" style={{ marginBottom: 10 }}>{finding.lineText}</div>
+            <div className="movetext" style={{ marginBottom: 10 }}>{finding.lineText}</div>
             <Board
               fen={finding.fen}
               orientation={rep?.color ?? 'w'}
@@ -391,49 +338,42 @@ function GameReview({
               showCoordinates={false}
               theme={state.settings.boardTheme}
             />
-            <div className="spacer" />
-            <div className="card">
-              <div className="row between small">
-                <span className="muted">Reached in</span>
-                <span style={{ fontWeight: 650 }}>{finding.games} games</span>
+            <div className="spacer sm" />
+            <div className="list">
+              <div className="list-row" style={{ minHeight: 44 }}>
+                <span className="grow muted small">Games</span>
+                <span style={{ fontWeight: 600 }}>{finding.games}</span>
               </div>
-              <div className="divider" />
-              <div className="row between small">
-                <span className="muted">You played</span>
-                <span style={{ fontWeight: 650 }}>
+              <div className="list-row" style={{ minHeight: 44 }}>
+                <span className="grow muted small">Played</span>
+                <span style={{ fontWeight: 600 }}>
                   {finding.played.map((p) => `${p.san} ×${p.count}`).join(', ') || '—'}
                 </span>
               </div>
               {finding.expected.length > 0 && (
-                <>
-                  <div className="divider" />
-                  <div className="row between small">
-                    <span className="muted">Your repertoire</span>
-                    <span style={{ fontWeight: 650, color: 'var(--accent)' }}>
-                      {finding.expected.join(', ')}
-                    </span>
-                  </div>
-                </>
+                <div className="list-row" style={{ minHeight: 44 }}>
+                  <span className="grow muted small">Repertoire</span>
+                  <span style={{ fontWeight: 600, color: 'var(--good)' }}>{finding.expected.join(', ')}</span>
+                </div>
               )}
-              <div className="divider" />
-              <div className="row between small">
-                <span className="muted">Score from here</span>
-                <span style={{ fontWeight: 650 }}>
+              <div className="list-row" style={{ minHeight: 44 }}>
+                <span className="grow muted small">Score</span>
+                <span style={{ fontWeight: 600 }} className="num">
                   {finding.results.wins}W {finding.results.draws}D {finding.results.losses}L
                 </span>
               </div>
             </div>
             <div className="spacer" />
             <button className="btn primary block" onClick={() => onAdd(findingToLine(finding))}>
-              Add {finding.played[0]?.san ?? 'this line'} to repertoire
+              <Icons.plus size={18} /> Add {finding.played[0]?.san ?? 'line'}
             </button>
             {finding.expected.length > 0 && (
               <button
-                className="btn ghost block"
+                className="btn block"
                 style={{ marginTop: 8 }}
                 onClick={() => onAdd([...finding.path, finding.expected[0]])}
               >
-                Drill the prepared move instead
+                Drill {finding.expected[0]} instead
               </button>
             )}
           </>
@@ -445,9 +385,8 @@ function GameReview({
         onClose={onCloseAdd}
         sans={addSans ?? []}
         source="games"
-        title="Add from your games"
+        title="Add to repertoire"
       />
     </>
   );
 }
-

@@ -32,7 +32,7 @@ export default function App() {
     return (
       <div className="app">
         <div className="screen no-nav" style={{ display: 'grid', placeItems: 'center' }}>
-          <div className="faint">Loading…</div>
+          <div className="spinner" />
         </div>
       </div>
     );
@@ -96,25 +96,25 @@ export default function App() {
           active={tab === 'train'}
           badge={dueCount}
           onClick={() => setTab('train')}
-          icon={<Icons.train />}
+          icon={<Icons.train filled={tab === 'train'} />}
         />
         <NavButton
           label="Repertoire"
           active={tab === 'repertoire'}
           onClick={() => setTab('repertoire')}
-          icon={<Icons.tree />}
+          icon={<Icons.tree filled={tab === 'repertoire'} />}
         />
         <NavButton
           label="Explore"
           active={tab === 'explore'}
           onClick={() => setTab('explore')}
-          icon={<Icons.book />}
+          icon={<Icons.book filled={tab === 'explore'} />}
         />
         <NavButton
           label="Analysis"
           active={tab === 'analysis'}
           onClick={() => setTab('analysis')}
-          icon={<Icons.chart />}
+          icon={<Icons.chart filled={tab === 'analysis'} />}
         />
       </nav>
 

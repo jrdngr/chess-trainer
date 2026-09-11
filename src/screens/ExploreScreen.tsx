@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { AddLineSheet } from '../components/AddLineSheet';
 import { Board } from '../components/Board';
 import { ExplorerPanel } from '../components/ExplorerPanel';
-import { Empty, Icons, Sheet, toast } from '../components/ui';
+import { Empty, IconButton, Icons, MoveStrip, Sheet } from '../components/ui';
 import { applySan, fenTurn, sansToMoveText, START_FEN, walkSan, type LegalMove } from '../chess/core';
 import { openingNameForPath } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
 import { BOOK_LINES } from '../model/seed/bookLines';
 import type { BookLine, ReferenceGame } from '../model/types';
 import { repertoireList, useStore } from '../store/useStore';
-import { childrenOf, fenAt } from '../model/repertoire';
+import { childrenOf, displayName, fenAt } from '../model/repertoire';
 
 export interface ExploreScreenProps {
   /** Optional starting line, e.g. jumped to from the repertoire browser. */
@@ -67,8 +67,8 @@ export function ExploreScreen({ initialPath, onConsumedInitial }: ExploreScreenP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.repertoires, visible, fen]);
 
-  // Only star moves that are the user's own choice here — a move covered as an
-  // opponent reply is a different thing, and is listed separately below.
+  // Only star moves that are the user's own choice here; a move covered as an
+  // opponent reply is listed separately below.
   const turn = fenTurn(fen);
   const inRepertoire = repMoves
     .filter((r) => state.repertoires[r.repId]?.color === turn)
@@ -93,18 +93,18 @@ export function ExploreScreen({ initialPath, onConsumedInitial }: ExploreScreenP
     <>
       <div className="appbar">
         <div className="appbar-title">
-          <div className="line" style={{ fontWeight: 650, fontSize: 17 }}>
-            {opening?.name ?? 'Explore'}
-          </div>
-          <div className="sub">{opening?.eco ?? 'Reference database'}</div>
+          {opening ? (
+            <>
+              <div className="line" style={{ fontSize: 20 }}>{opening.name}</div>
+              <div className="sub">{opening.eco}</div>
+            </>
+          ) : (
+            <h1>Explore</h1>
+          )}
         </div>
-        <button
-          className="btn plain sm"
-          onClick={() => setOrientation((o) => (o === 'w' ? 'b' : 'w'))}
-          aria-label="Flip board"
-        >
-          <Icons.flip size={19} />
-        </button>
+        <IconButton label="Flip board" onClick={() => setOrientation((o) => (o === 'w' ? 'b' : 'w'))}>
+          <Icons.flip size={20} />
+        </IconButton>
       </div>
 
       <div className="screen">
@@ -118,49 +118,20 @@ export function ExploreScreen({ initialPath, onConsumedInitial }: ExploreScreenP
           theme={state.settings.boardTheme}
         />
 
-        <div className="spacer" />
-
-        <div className="row" style={{ gap: 6 }}>
-          <button className="btn sm ghost" disabled={cursor === 0} onClick={() => setCursor(0)}>
-            <Icons.first size={16} />
-          </button>
-          <button className="btn sm ghost" disabled={cursor === 0} onClick={() => setCursor((c) => c - 1)}>
-            <Icons.prev size={16} />
-          </button>
-          <div className="strip grow">
-            {sans.length === 0 && <span className="tiny faint">Play a move or pick one below</span>}
-            {sans.map((san, i) => (
-              <button
-                key={i}
-                className={`mv${i === cursor - 1 ? ' current' : ''}`}
-                onClick={() => setCursor(i + 1)}
-              >
-                {i % 2 === 0 ? `${i / 2 + 1}.` : ''}
-                {san}
-              </button>
-            ))}
-          </div>
-          <button
-            className="btn sm ghost"
-            disabled={cursor >= sans.length}
-            onClick={() => setCursor((c) => c + 1)}
-          >
-            <Icons.next size={16} />
-          </button>
-        </div>
-
-        <div className="spacer" />
+        <div className="spacer sm" />
+        <MoveStrip sans={sans} cursor={cursor} onSeek={setCursor} hint="Play a move" />
+        <div className="spacer sm" />
 
         <div className="segmented">
           <button className={tab === 'explorer' ? 'active' : ''} onClick={() => setTab('explorer')}>
             Moves
           </button>
           <button className={tab === 'book' ? 'active' : ''} onClick={() => setTab('book')}>
-            Book lines {relevantBookLines.length ? `(${relevantBookLines.length})` : ''}
+            Lines{relevantBookLines.length ? ` · ${relevantBookLines.length}` : ''}
           </button>
         </div>
 
-        <div className="spacer" />
+        <div className="spacer sm" />
 
         {tab === 'explorer' ? (
           <>
@@ -172,17 +143,12 @@ export function ExploreScreen({ initialPath, onConsumedInitial }: ExploreScreenP
               onPickGame={setGame}
             />
             {repMoves.length > 0 && (
-              <div className="card" style={{ marginTop: 10 }}>
-                <div className="section-title" style={{ margin: '0 0 6px' }}>In your repertoire</div>
+              <div className="list" style={{ marginTop: 10 }}>
                 {repMoves.map((r) => (
-                  <div key={r.repId} className="row between small" style={{ padding: '3px 0' }}>
-                    <span className="muted truncate">
-                      {r.name}
-                      {state.repertoires[r.repId]?.color !== turn && (
-                        <span className="faint"> · replies covered</span>
-                      )}
-                    </span>
-                    <span style={{ fontWeight: 650 }}>{r.sans.join(', ') || '—'}</span>
+                  <div key={r.repId} className="list-row" style={{ minHeight: 46 }}>
+                    <span className={`side ${state.repertoires[r.repId]?.color ?? 'w'}`} />
+                    <span className="grow truncate small muted">{displayName(r.name)}</span>
+                    <span style={{ fontWeight: 700 }}>{r.sans.join(', ') || '—'}</span>
                   </div>
                 ))}
               </div>
@@ -191,42 +157,29 @@ export function ExploreScreen({ initialPath, onConsumedInitial }: ExploreScreenP
               <button
                 className="btn primary block"
                 style={{ marginTop: 12 }}
-                onClick={() => setAddLine({ sans: visible, title: 'Add this line' })}
+                onClick={() => setAddLine({ sans: visible, title: 'Add to repertoire' })}
               >
-                <Icons.plus size={18} /> Add line to repertoire
+                <Icons.plus size={18} /> Add to repertoire
               </button>
             )}
           </>
         ) : (
           <div className="stack">
             {relevantBookLines.length === 0 && (
-              <Empty icon="📖" title="No book lines from here" hint="Go back a few moves to see named variations." />
+              <Empty title="No named lines from here" hint="Step back to see more" />
             )}
             {relevantBookLines.map((line) => (
-              <button
-                key={line.id}
-                className="card"
-                style={{ width: '100%', textAlign: 'left' }}
-                onClick={() => setBookLine(line)}
-              >
+              <button key={line.id} className="card tap" onClick={() => setBookLine(line)}>
                 <div className="row between">
                   <div className="grow" style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 650 }}>{line.name}</div>
-                    <div className="tiny faint" style={{ marginTop: 3 }}>
-                      {line.eco} · {Math.ceil(line.moves.length / 2)} moves · for{' '}
-                      {line.forColor === 'w' ? 'White' : 'Black'}
+                    <div style={{ fontWeight: 700 }}>{line.name}</div>
+                    <div className="tiny faint" style={{ marginTop: 2 }}>
+                      {line.eco} · {line.forColor === 'w' ? 'White' : 'Black'} · {Math.ceil(line.moves.length / 2)} moves
                     </div>
                   </div>
                   <Icons.chevron size={18} />
                 </div>
                 <div className="small muted" style={{ marginTop: 8 }}>{line.summary}</div>
-                {line.tags && (
-                  <div className="row wrap" style={{ gap: 5, marginTop: 9 }}>
-                    {line.tags.map((t) => (
-                      <span key={t} className="chip">{t}</span>
-                    ))}
-                  </div>
-                )}
               </button>
             ))}
           </div>
@@ -256,12 +209,11 @@ export function ExploreScreen({ initialPath, onConsumedInitial }: ExploreScreenP
       <Sheet open={!!game} onClose={() => setGame(null)} title={game ? `${game.white} – ${game.black}` : ''}>
         {game && (
           <>
-            <div className="tiny faint" style={{ marginBottom: 10 }}>
-              {game.event} · {game.year} · {game.result}
+            <div className="row gap-6" style={{ marginBottom: 12 }}>
+              <span className="chip">{game.result}</span>
+              <span className="tiny faint truncate">{game.event} · {game.year}</span>
             </div>
-            <div className="card small mono" style={{ lineHeight: 1.8 }}>
-              {sansToMoveText(game.moves)}
-            </div>
+            <div className="card movetext">{sansToMoveText(game.moves)}</div>
             <div className="spacer" />
             <button
               className="btn primary block"
@@ -269,10 +221,9 @@ export function ExploreScreen({ initialPath, onConsumedInitial }: ExploreScreenP
                 setSans(game.moves);
                 setCursor(Math.min(game.moves.length, visible.length + 2));
                 setGame(null);
-                toast('Loaded — step through with the arrows');
               }}
             >
-              Replay this game
+              <Icons.play size={16} /> Replay
             </button>
           </>
         )}
@@ -305,23 +256,19 @@ function BookLineSheet({
     <Sheet open={!!line} onClose={onClose} title={line?.name}>
       {line && (
         <>
-          <div className="row" style={{ gap: 6, marginBottom: 10 }}>
+          <div className="row gap-6" style={{ marginBottom: 12 }}>
             <span className="chip">{line.eco}</span>
-            <span className={`chip ${line.forColor === 'w' ? 'white-side' : 'black-side'}`}>
-              for {line.forColor === 'w' ? 'White' : 'Black'}
-            </span>
+            <span className={`chip ${line.forColor}`}>{line.forColor === 'w' ? 'White' : 'Black'}</span>
           </div>
-          <div className="small muted">{line.summary}</div>
-          <div className="spacer" />
-          <div className="card small mono" style={{ lineHeight: 1.9 }}>
-            {sansToMoveText(line.moves)}
-          </div>
+          <div className="muted">{line.summary}</div>
+          <div className="spacer sm" />
+          <div className="card movetext">{sansToMoveText(line.moves)}</div>
           {line.ideas && (
             <>
-              <div className="section-title">Ideas</div>
-              <div className="stack">
+              <div className="section">Ideas</div>
+              <div className="list">
                 {line.ideas.map((idea, i) => (
-                  <div key={i} className="card small muted">
+                  <div key={i} className="list-row small muted" style={{ minHeight: 44 }}>
                     {idea}
                   </div>
                 ))}
@@ -329,12 +276,12 @@ function BookLineSheet({
             </>
           )}
           <div className="spacer" />
-          <div className="row" style={{ gap: 8 }}>
-            <button className="btn ghost grow" onClick={() => onPlay(line.moves)}>
-              Play through
+          <div className="row gap-8">
+            <button className="btn grow" onClick={() => onPlay(line.moves)}>
+              <Icons.play size={16} /> Play
             </button>
             <button className="btn primary grow" onClick={() => onAdd(line)}>
-              Add to repertoire
+              <Icons.plus size={18} /> Add
             </button>
           </div>
         </>
