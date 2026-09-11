@@ -2,10 +2,13 @@
  * Turn the Vite build into a page the Artifact tool can publish.
  *
  * The artifact host wraps the file in its own <!doctype>/<head>/<body>, so the
- * page we hand it must be bare content. CSS is inlined (small, and it avoids
- * any question about same-origin stylesheet loading in the sandbox); the app
- * bundle and the Stockfish worker stay as supporting files, since a worker
- * needs a real URL either way.
+ * page we hand it must be bare content.
+ *
+ * CSS and the app bundle are both inlined. Inlining the bundle is deliberate:
+ * it means the app boots even if relative supporting-file URLs resolve oddly
+ * against whatever path the sandbox serves the page from. The Stockfish worker
+ * has to stay a real file — a worker needs a URL — and that is the one piece
+ * that degrades gracefully on its own if it cannot load.
  */
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -31,20 +34,28 @@ if (!cssHref || !jsSrc) {
 
 const clean = (p) => p.replace(/^\.?\//, '');
 const css = readFileSync(join(dist, clean(cssHref)), 'utf8');
+const js = readFileSync(join(dist, clean(jsSrc)), 'utf8');
+
+// A literal </script> anywhere in the bundle would close the tag early.
+if (/<\/script/i.test(js) || /<\/style/i.test(css)) {
+  console.error('Built assets contain a closing tag sequence; cannot inline them safely.');
+  process.exit(1);
+}
 
 const page = `<title>Repertoire Trainer</title>
 <style>
 ${css}
 </style>
 <div id="root"></div>
-<script type="module" src="${clean(jsSrc)}"></script>
+<script type="module">
+${js}
+</script>
 `;
 
 mkdirSync(outDir, { recursive: true });
 writeFileSync(join(outDir, 'index.html'), page);
 
 const files = {
-  [clean(jsSrc)]: clean(jsSrc),
   'engine/stockfish.js': 'engine/stockfish.js',
 };
 
