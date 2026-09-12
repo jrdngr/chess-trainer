@@ -315,6 +315,7 @@ export const OPENING_NAMES: Record<string, { eco: string; name: string }> = {
   'd4 f5 c4 Nf6 g3 g6': { eco: 'A87', name: 'Dutch: Leningrad' },
   'd4 e5 dxe5 Nc6': { eco: 'A40', name: 'Englund Gambit' },
   'd4 d5 c4 e6 Nc3 Nf6 Nf3': { eco: 'D37', name: 'QGD: Three Knights' },
+  'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 f3': { eco: 'B54', name: 'Sicilian: Prins' },
   'e4 c5 Nf3 d6 Bc4': { eco: 'B50', name: 'Sicilian: 3.Bc4 Sideline' },
   'e4 c5 Nf3 d6 c3': { eco: 'B50', name: 'Sicilian: Alapin (delayed)' },
   'e4 c5 Nf3 d6 c4': { eco: 'B50', name: 'Sicilian: Maróczy Set-up' },

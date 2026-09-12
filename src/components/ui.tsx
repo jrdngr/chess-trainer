@@ -289,7 +289,82 @@ export function IconButton({
   );
 }
 
-/** Move strip with a current-move marker, shared by every board screen. */
+/** How a move reads in the strip. */
+export type MoveTone = 'mine' | 'theirs' | 'ghost' | 'bad' | 'good';
+
+export interface StripItem {
+  san: string;
+  /** Move number shown before the move, e.g. "12.". */
+  label?: string;
+  tone?: MoveTone;
+  current?: boolean;
+  /** Cursor position this chip jumps to. Omit to make it unclickable. */
+  seek?: number;
+}
+
+/**
+ * A scrolling row of moves with a cursor and arrows, shared by every board
+ * screen. Callers hand over already-decorated items, which is what lets the
+ * permadeath post-mortem colour the move that ended a run.
+ */
+export function Strip({
+  items,
+  cursor,
+  max,
+  onSeek,
+  hint,
+}: {
+  items: StripItem[];
+  cursor: number;
+  /** Highest cursor position the forward arrow can reach. */
+  max: number;
+  onSeek: (n: number) => void;
+  hint?: string;
+}) {
+  const strip = useRef<HTMLDivElement>(null);
+
+  /** Keep the current move in view — a cursor can start mid-line. */
+  useEffect(() => {
+    const el = strip.current;
+    if (!el || items.length === 0) return;
+    const index = items.findIndex((item) => item.current);
+    const active = el.children[index < 0 ? 0 : index] as HTMLElement | undefined;
+    if (!active) return;
+    el.scrollTo({
+      left: active.offsetLeft - el.clientWidth / 2 + active.offsetWidth / 2,
+      behavior: 'smooth',
+    });
+  }, [cursor, items]);
+
+  return (
+    <div className="strip-wrap">
+      <IconButton label="Start" onClick={() => onSeek(0)} disabled={cursor === 0}>
+        <Icons.first size={18} />
+      </IconButton>
+      <IconButton label="Back" onClick={() => onSeek(cursor - 1)} disabled={cursor === 0}>
+        <Icons.prev size={18} />
+      </IconButton>
+      <div className="strip" ref={strip}>
+        {items.length === 0 && hint && <span className="hint">{hint}</span>}
+        {items.map((item, i) => (
+          <button
+            key={i}
+            className={`mv${item.current ? ' current' : ''}${item.tone ? ` ${item.tone}` : ''}`}
+            onClick={() => item.seek !== undefined && onSeek(item.seek)}
+          >
+            {item.label && <span className="n">{item.label}</span>}
+            {item.san}
+          </button>
+        ))}
+      </div>
+      <IconButton label="Forward" onClick={() => onSeek(cursor + 1)} disabled={cursor >= max}>
+        <Icons.next size={18} />
+      </IconButton>
+    </div>
+  );
+}
+
+/** The plain case: a line you are scrubbing, numbered from the start position. */
 export function MoveStrip({
   sans,
   cursor,
@@ -301,46 +376,44 @@ export function MoveStrip({
   onSeek: (n: number) => void;
   hint?: string;
 }) {
-  const strip = useRef<HTMLDivElement>(null);
+  const items = sans.map((san, i) => ({
+    san,
+    label: i % 2 === 0 ? `${i / 2 + 1}.` : undefined,
+    current: i === cursor - 1,
+    tone: i >= cursor ? ('ghost' as const) : undefined,
+    seek: i + 1,
+  }));
+  return <Strip items={items} cursor={cursor} max={sans.length} onSeek={onSeek} hint={hint} />;
+}
 
-  /** Keep the current move in view — a cursor can start mid-line. */
-  useEffect(() => {
-    const el = strip.current;
-    if (!el || sans.length === 0) return;
-    const active = el.children[Math.max(0, cursor - 1)] as HTMLElement | undefined;
-    if (!active) return;
-    el.scrollTo({
-      left: active.offsetLeft - el.clientWidth / 2 + active.offsetWidth / 2,
-      behavior: 'smooth',
-    });
-  }, [cursor, sans.length]);
-
-  return (
-    <div className="strip-wrap">
-      <IconButton label="Start" onClick={() => onSeek(0)} disabled={cursor === 0}>
-        <Icons.first size={18} />
-      </IconButton>
-      <IconButton label="Back" onClick={() => onSeek(cursor - 1)} disabled={cursor === 0}>
-        <Icons.prev size={18} />
-      </IconButton>
-      <div className="strip" ref={strip}>
-        {sans.length === 0 && hint && <span className="hint">{hint}</span>}
-        {sans.map((san, i) => (
-          <button
-            key={i}
-            className={`mv${i === cursor - 1 ? ' current' : ''}${i >= cursor ? ' future' : ''}`}
-            onClick={() => onSeek(i + 1)}
-          >
-            {i % 2 === 0 && <span className="n">{i / 2 + 1}.</span>}
-            {san}
-          </button>
-        ))}
-      </div>
-      <IconButton label="Forward" onClick={() => onSeek(cursor + 1)} disabled={cursor >= sans.length}>
-        <Icons.next size={18} />
-      </IconButton>
-    </div>
-  );
+/**
+ * Copy text, falling back to a hidden textarea.
+ *
+ * `navigator.clipboard` needs a secure context and is often withheld inside a
+ * sandboxed frame, which is exactly where this app runs when published.
+ */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Fall through to the old way.
+  }
+  try {
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.top = '-1000px';
+    document.body.appendChild(area);
+    area.select();
+    area.setSelectionRange(0, text.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(area);
+    return ok;
+  } catch {
+    return false;
+  }
 }
 
 export function haptic(pattern: number | number[] = 12) {

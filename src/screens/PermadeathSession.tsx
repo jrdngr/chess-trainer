@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../components/Board';
-import { haptic, IconButton, Icons, MoveStrip } from '../components/ui';
+import { copyText, haptic, IconButton, Icons, Strip, toast, type StripItem } from '../components/ui';
 import {
   applySan,
   applyUci,
@@ -229,6 +229,51 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
     if (review) setCursor(review.deathPly);
   }, [review?.deathPly, review?.sans.length]);
 
+  /**
+   * The line as chips: your moves, the opponent's, the move that ended the run
+   * beside the one that would have continued it, and the rest of the line in
+   * grey. The two moves at the death ply share a move number, which is not
+   * notation anybody writes — it is the only honest way to show both.
+   */
+  const strip = useMemo<StripItem[]>(() => {
+    if (!review || !run) return [];
+    const label = (ply: number) => (ply % 2 === 0 ? `${ply / 2 + 1}.` : undefined);
+    const mine = (ply: number) => (ply % 2 === 0) === (run.color === 'w');
+    const items: StripItem[] = [];
+    // On the losing position the red chip is where you are, so the move that
+    // led there does not also claim the cursor.
+    const onBlunder = !!death?.played && cursor === review.deathPly;
+    const bad = (ply: number): StripItem => ({
+      san: death!.played!,
+      label: label(ply),
+      tone: 'bad',
+      seek: review.deathPly,
+      current: onBlunder,
+    });
+
+    review.sans.forEach((san, ply) => {
+      if (ply === review.deathPly && death?.played) {
+        // The move you actually played, then the move that was prepared.
+        items.push(bad(ply));
+        items.push({ san, label: label(ply), tone: 'good', seek: ply + 1, current: cursor === ply + 1 });
+        return;
+      }
+      items.push({
+        san,
+        label: label(ply),
+        tone: ply < review.deathPly ? (mine(ply) ? 'mine' : 'theirs') : 'ghost',
+        seek: ply + 1,
+        current: !onBlunder && cursor === ply + 1,
+      });
+    });
+
+    if (death?.played && review.sans.length === review.deathPly) {
+      // Nothing was prepared past here, so the losing move is the last chip.
+      items.push(bad(review.deathPly));
+    }
+    return items;
+  }, [review, run, death, cursor]);
+
   /** The line is named only once the run is over, so nothing leaks mid-run. */
   const named = useMemo(
     () =>
@@ -356,6 +401,28 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
     if (!playOn || engineTurn || finished?.gameOver) return;
     if (settings.hapticFeedback) haptic(10);
     setPlayOn({ ...playOn, fen: move.after, sans: [...playOn.sans, move.san] });
+  };
+
+  /**
+   * The game as it was actually played — your moves and the opponent's, ending
+   * on the move that finished the run. Not the continuation: this is meant to be
+   * pasted somewhere and discussed.
+   */
+  const playedText = () => {
+    if (!run) return '';
+    const sans = death?.played ? [...run.played, death.played] : run.played;
+    return sansToMoveText(sans);
+  };
+
+  const copyPlayed = async () => {
+    const text = playedText();
+    if (!text) return;
+    if (await copyText(text)) {
+      if (settings.hapticFeedback) haptic(10);
+      toast('Moves copied');
+    } else {
+      toast('Could not copy');
+    }
   };
 
   const seek = (n: number) => {
@@ -499,7 +566,7 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
         {review && (
           <>
             <div className="spacer sm" />
-            <MoveStrip sans={review.sans} cursor={cursor} onSeek={seek} />
+            <Strip items={strip} cursor={cursor} max={review.sans.length} onSeek={seek} />
             <div className="center faint tiny">
               {whereYouAre(cursor, review.deathPly, phase === 'survived')}
             </div>
@@ -572,12 +639,20 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
                 <div className="v">{death.played ?? '—'}</div>
               </div>
             </div>
-            {death.expected.length > 1 && (
-              <div className="center faint tiny" style={{ marginTop: 8 }}>
-                Also playable: {death.expected.slice(1, 5).join(', ')}
-                {death.expected.length > 5 ? '…' : ''}
-              </div>
-            )}
+            <div className="center faint tiny" style={{ marginTop: 8 }}>
+              {death.expected.length > 1 ? (
+                <>
+                  Any of these would have counted: {death.expected.slice(0, 6).join(', ')}
+                  {death.expected.length > 6 ? '…' : ''}
+                </>
+              ) : death.expected.length === 1 ? (
+                run.source === 'book'
+                  ? 'The only move the database has ever seen here.'
+                  : 'The only move you have prepared here — your repertoire is one move wide at this position.'
+              ) : (
+                'Nothing is prepared here.'
+              )}
+            </div>
           </>
         )}
 
@@ -613,6 +688,13 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
               </div>
               <div className="divider" />
               <div className="movetext">{revealText(source, run)}</div>
+            </div>
+            <button className="btn sm block" style={{ marginTop: 8 }} onClick={copyPlayed}>
+              <Icons.download size={16} />
+              Copy the moves I played
+            </button>
+            <div className="center faint tiny" style={{ marginTop: 6 }}>
+              {playedText() || 'Nothing played'}
             </div>
 
             <Record record={record} perLine={settings.permadeathPerLine} />

@@ -8,6 +8,7 @@ import {
   clockSpec,
   CLOCK_MODES,
   DEFAULT_OPTIONS,
+  lineOdds,
   lineWeakness,
   takeHint,
   timeOut,
@@ -36,7 +37,8 @@ import {
   type Weakness,
   type Run,
 } from './permadeath';
-import { addLine, createRepertoire, displayName } from './repertoire';
+import { addLine, createRepertoire, displayName, leafLines, pathTo } from './repertoire';
+import { lookup } from './reference';
 import { referenceIndex } from './referenceIndex';
 import { cardId, mulberry32 } from './session';
 import { buildSeedRepertoires } from '../store/seed';
@@ -254,7 +256,7 @@ describe('naming the line at the end of a run', () => {
     const generic = /^(King's|Queen's) Pawn Opening$|^Réti Opening$|^English Opening$/;
     const bad: string[] = [];
     for (let seed = 0; seed < 40; seed += 1) {
-      const run0 = startRepertoireRun(reps, 'random', { seed })!;
+      const run0 = startRepertoireRun(reps, 'random', { seed, index })!;
       const source = repertoireSource(reps.find((r) => displayName(r.name) === run0.sourceLabel)!);
       const run = finish(source, run0, seed + 1);
       const label = lineName(index, source, run);
@@ -267,13 +269,16 @@ describe('naming the line at the end of a run', () => {
     let named = 0;
     const distinct = new Set<string>();
     for (let seed = 0; seed < 40; seed += 1) {
-      const run0 = startRepertoireRun(reps, 'random', { seed })!;
+      const run0 = startRepertoireRun(reps, 'random', { seed, index })!;
       const source = repertoireSource(reps.find((r) => displayName(r.name) === run0.sourceLabel)!);
       const label = lineName(index, source, finish(source, run0, seed + 1));
       distinct.add(label.name);
       if (label.specific) named += 1;
     }
-    expect(named / 40).toBeGreaterThan(0.95);
+    // Not every line can be named: a couple of offbeat tries have no entry in
+    // the database, and the fallback — the repertoire's own name — is honest
+    // about that rather than inventing one.
+    expect(named / 40).toBeGreaterThan(0.9);
     expect(distinct.size).toBeGreaterThan(6);
   });
 
@@ -615,3 +620,152 @@ function startsWith(run: Run | null, sans: string[]): boolean {
   if (!run) return false;
   return sans.every((san, i) => run.target[i] === san);
 }
+
+describe('drawing move orders you will actually face', () => {
+  const reps = buildSeedRepertoires();
+  const kid = reps.filter((r) => r.name.includes('King'));
+
+  /** Total odds of every line whose first plies are these moves. */
+  function share(rep: Repertoire, side: 'w' | 'b', withIndex: boolean, prefix: string[]): number {
+    const odds = lineOdds(rep, side, withIndex ? index : null);
+    let hit = 0;
+    let all = 0;
+    for (const leaf of leafLines(rep)) {
+      const weight = odds.get(leaf.tipId) ?? 1;
+      all += weight;
+      if (prefix.every((san, i) => leaf.sans[i] === san)) hit += weight;
+    }
+    return all ? hit / all : 0;
+  }
+
+  it('follows the database when the opponent chooses', () => {
+    const rep = kid[0];
+    // 1.d4 is most of what a King's Indian actually meets; 1.b4 is a curiosity.
+    expect(share(rep, 'b', true, ['d4'])).toBeGreaterThan(0.5);
+    expect(share(rep, 'b', true, ['b4'])).toBeLessThan(0.05);
+  });
+
+  it('finds move orders that leaf counts had buried', () => {
+    // 1.Nf3 is a common route into these positions, but the repertoire answers
+    // it with few lines — counting leaves made it look like a curiosity.
+    const rep = kid[0];
+    expect(share(rep, 'b', true, ['Nf3'])).toBeGreaterThan(share(rep, 'b', false, ['Nf3']) * 2);
+  });
+
+  it('cuts how often a run turns on a reply almost nobody plays', () => {
+    const rep = kid[0];
+    /** Odds of drawing a line whose rarest opponent move is under `limit`. */
+    const obscure = (withIndex: boolean, limit: number) => {
+      const odds = lineOdds(rep, 'b', withIndex ? index : null);
+      let all = 0;
+      let hit = 0;
+      for (const leaf of leafLines(rep)) {
+        const weight = odds.get(leaf.tipId) ?? 1;
+        all += weight;
+        let rarest = 1;
+        for (const node of pathTo(rep, leaf.tipId)) {
+          if (fenTurn(node.fenBefore) === 'b') continue;
+          const entry = lookup(index, node.fenBefore);
+          if (!entry || entry.moves.length < 2) continue;
+          const total = entry.moves.reduce((sum, m) => sum + m.games, 0);
+          if (!total) continue;
+          rarest = Math.min(rarest, (entry.moves.find((m) => m.san === node.san)?.games ?? 0) / total);
+        }
+        if (rarest < limit) hit += weight;
+      }
+      return hit / all;
+    };
+
+    // Sidelines must not vanish — they are prep too — but they should not be a
+    // quarter of every run either.
+    expect(obscure(true, 0.05)).toBeLessThan(obscure(false, 0.05) * 0.75);
+    expect(obscure(true, 0.05)).toBeGreaterThan(0.05);
+  });
+
+  it('keeps a prepared sideline in the rotation rather than burying it', () => {
+    const rep = kid[0];
+    // The exact shape that can catch you out: a rare third move with one answer.
+    const sideline = share(rep, 'b', true, ['d4', 'Nf6', 'Nf3', 'g6', 'Bg5']);
+    expect(sideline).toBeGreaterThan(0);
+    expect(sideline).toBeLessThan(0.05);
+  });
+
+  it('does not let your own alternatives inflate a line', () => {
+    // Two answers to the same opponent move are one position on the board, so
+    // they split that position's odds rather than doubling its pull.
+    let rep = createRepertoire('Black — Forks', 'b', 'rep_forks');
+    rep = addLine(rep, ['d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4', 'd6'], 'seed').rep;
+    rep = addLine(rep, ['d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4', 'O-O'], 'seed').rep;
+    rep = addLine(rep, ['d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4', 'c5'], 'seed').rep;
+    rep = addLine(rep, ['d4', 'Nf6', 'Bg5', 'Ne4', 'Bf4', 'd5'], 'seed').rep;
+
+    const mainline = share(rep, 'b', true, ['d4', 'Nf6', 'c4']);
+    const sideline = share(rep, 'b', true, ['d4', 'Nf6', 'Bg5']);
+    // Three of the four leaves are the mainline, but they are one move order.
+    expect(mainline + sideline).toBeCloseTo(1, 5);
+    expect(mainline).toBeGreaterThan(sideline * 10);
+  });
+
+  it('gives the rarest lines back their share when short ones are skipped', () => {
+    const rep = kid[0];
+    const usable = new Set(
+      leafLines(rep)
+        .filter((l) => l.sans.filter((_, i) => i % 2 === 1).length >= 4)
+        .map((l) => l.tipId),
+    );
+    const odds = lineOdds(rep, 'b', index, usable);
+    const total = [...odds.values()].reduce((sum, n) => sum + n, 0);
+    // Skipped lines hand their odds to their siblings instead of losing them.
+    expect(total).toBeCloseTo(1, 5);
+    expect([...odds.keys()].every((id) => usable.has(id))).toBe(true);
+  });
+
+  it('draws evenly with no reference data rather than guessing', () => {
+    expect(lineOdds(kid[0], 'b', null).size).toBe(0);
+  });
+});
+
+describe('what counts as staying in your repertoire', () => {
+  const reps = buildSeedRepertoires();
+  const kid = reps.find((r) => r.name.includes('King'))!;
+  const source = repertoireSource(kid, index);
+
+  /** The position after these moves, as a run sitting on it. */
+  function at(sans: string[]): Run {
+    return {
+      source: 'repertoire',
+      sourceLabel: 'King’s Indian',
+      repertoireId: kid.id,
+      reverse: false,
+      color: 'b',
+      fen: walkSan(sans).fens[sans.length],
+      played: sans,
+      survived: 0,
+      over: false,
+      target: [],
+      hints: 0,
+      hintsUsed: 0,
+    };
+  }
+
+  it('accepts every prepared answer, not just the one line drawn', () => {
+    // 1.d4 Nf6 2.c4 g6 3.Nc3 Bg7 4.e4 d6 — several plans are prepared here.
+    const run = at(['d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7']);
+    const options = movesHere(source, run);
+    expect(options.length).toBeGreaterThan(1);
+    for (const san of options) expect(play(source, run, san).ok).toBe(true);
+  });
+
+  it('ends the run on a move prepared somewhere else in the repertoire', () => {
+    // ...Nh5 is real King's Indian prep — after d5, against a bishop on e3 or
+    // f4. It is not prepared against an early Bg5, and the run says so.
+    const run = at(['d4', 'Nf6', 'Nf3', 'g6', 'Bg5']);
+    expect(movesHere(source, run)).toEqual(['Bg7']);
+    const judged = play(source, run, 'Nh5');
+    expect(judged.ok).toBe(false);
+    if (!judged.ok) expect(judged.expected).toEqual(['Bg7']);
+
+    const elsewhere = at(['d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4', 'd6', 'f3', 'O-O', 'Be3', 'e5', 'd5']);
+    expect(movesHere(source, elsewhere)).toContain('Nh5');
+  });
+});

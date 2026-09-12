@@ -47,7 +47,7 @@ export function other(color: Color): Color {
  * Every position in the tree is indexed, the opponent's included — that is what
  * lets a reversed run judge the side you prepared *against*.
  */
-export function repertoireSource(rep: Repertoire): LineSource {
+export function repertoireSource(rep: Repertoire, index?: ReferenceIndex | null): LineSource {
   const byPosition = new Map<string, string[]>();
   const visit = (nodeId: string | null) => {
     const key = positionKey(fenAt(rep, nodeId));
@@ -67,8 +67,93 @@ export function repertoireSource(rep: Repertoire): LineSource {
     label: displayName(rep.name),
     color: rep.color,
     movesAt,
-    weightsAt: (fen) => movesAt(fen).map((san) => ({ san, weight: 1 })),
+    weightsAt: (fen) => {
+      const sans = movesAt(fen);
+      if (!index || sans.length < 2) return sans.map((san) => ({ san, weight: 1 }));
+      const games = new Map((lookup(index, fen)?.moves ?? []).map((m) => [m.san, m.games]));
+      const total = [...games.values()].reduce((sum, n) => sum + n, 0);
+      // A prepared move nobody in the database plays still deserves a turn, just
+      // a rare one: the floor keeps sidelines in the rotation without letting
+      // them crowd out the move orders you will actually meet.
+      const floor = Math.max(1, total * SIDELINE_FLOOR);
+      return sans.map((san) => ({ san, weight: Math.max(floor, games.get(san) ?? 0) }));
+    },
   };
+}
+
+/** The least often a prepared sideline may be chosen, as a share of the position. */
+const SIDELINE_FLOOR = 0.01;
+
+/**
+ * How often each line of a repertoire should come up, as a weight per leaf.
+ *
+ * Walked top-down so the weights form a distribution rather than a score per
+ * line. Two kinds of branching are told apart, which is the whole point:
+ *
+ * - Where the *opponent* chooses, the reference database says how often each
+ *   move is actually played, so you meet the King's Indian through 2.c4 far
+ *   more often than through 2.Bg5. A prepared move the database has never seen
+ *   falls back to an even split, and every share has a floor, so a sideline
+ *   stays in the rotation instead of vanishing.
+ * - Where *you* choose between prepared alternatives, the split is even. This
+ *   is what stops a heavily branched mainline from swamping everything else:
+ *   your own alternatives multiply leaves without making the position any more
+ *   likely to appear on the board.
+ *
+ * Returns an empty map without reference data: there is nothing to weight by,
+ * and the caller should draw evenly rather than trust a walk that would just
+ * favour whichever sideline branches least.
+ */
+export function lineOdds(
+  rep: Repertoire,
+  side: Color,
+  index?: ReferenceIndex | null,
+  eligible?: Set<string>,
+): Map<string, number> {
+  const odds = new Map<string, number>();
+  if (!index) return odds;
+  const wanted = (tipId: string) => !eligible || eligible.has(tipId);
+
+  // Branches with no line this run could use are pruned before anything is
+  // split, so their share goes to the lines that remain rather than being
+  // dropped — otherwise filtering out short lines quietly drags the mainline
+  // down and inflates whatever sideline happens to be all long lines.
+  const reachable = new Map<string, boolean>();
+  const leadsSomewhere = (nodeId: string | null): boolean => {
+    const key = nodeId ?? '';
+    const seen = reachable.get(key);
+    if (seen !== undefined) return seen;
+    const kids = childrenOf(rep, nodeId);
+    const ok = kids.length
+      ? kids.some((kid) => leadsSomewhere(kid.id))
+      : nodeId !== null && wanted(nodeId);
+    reachable.set(key, ok);
+    return ok;
+  };
+
+  const splits = (fen: string, kids: RepMove[]): number[] => {
+    const even = kids.map(() => 1 / kids.length);
+    if (kids.length < 2 || fenTurn(fen) === side) return even;
+    const entry = lookup(index, fen);
+    if (!entry || entry.moves.length < 2) return even;
+    const total = entry.moves.reduce((sum, m) => sum + m.games, 0);
+    if (total <= 0) return even;
+    const games = new Map(entry.moves.map((m) => [m.san, m.games]));
+    return kids.map((kid) => Math.max(SIDELINE_FLOOR, (games.get(kid.san) ?? 0) / total));
+  };
+
+  const visit = (nodeId: string | null, weight: number) => {
+    const kids = childrenOf(rep, nodeId).filter((kid) => leadsSomewhere(kid.id));
+    if (!kids.length) {
+      if (nodeId && wanted(nodeId)) odds.set(nodeId, weight);
+      return;
+    }
+    const shares = splits(fenAt(rep, nodeId), kids);
+    const total = shares.reduce((sum, n) => sum + n, 0) || 1;
+    kids.forEach((kid, i) => visit(kid.id, (weight * shares[i]) / total));
+  };
+  if (leadsSomewhere(null)) visit(null, 1);
+  return odds;
 }
 
 /**
@@ -204,6 +289,12 @@ export interface RunOptions {
   /** Positions you answer badly, scored — see `weaknessFromCards`. */
   weakness?: Weakness | null;
   hints?: number;
+  /**
+   * Reference data, used to draw realistic move orders. Without it every leaf
+   * line is equally likely, which quizzes you on your thinnest sidelines as
+   * often as on the lines you will actually face.
+   */
+  index?: ReferenceIndex | null;
 }
 
 /** The moves of a line that are yours to find. */
@@ -310,34 +401,32 @@ export function startRepertoireRun(
   })
     .map((rep) => {
       const side = reverse ? other(rep.color) : rep.color;
-      const lines = leafLines(rep)
+      const usable = leafLines(rep)
         .map((line) => {
           const path = pathTo(rep, line.tipId);
-          const keys = yourMoves(side, path).map((node) => node.key);
-          return {
-            path,
-            keys,
-            weight: weakness ? lineWeakness(rep.id, keys, weakness) : 1,
-          };
+          return { tipId: line.tipId, path, keys: yourMoves(side, path).map((n) => n.key) };
         })
         .filter((line) => line.keys.length >= minDecisions);
+      const odds = lineOdds(rep, side, opts.index, new Set(usable.map((l) => l.tipId)));
+      const even = odds.size === 0;
+      const lines = usable.map((line) => ({
+        path: line.path,
+        keys: line.keys,
+        weight:
+          (even ? 1 : (odds.get(line.tipId) ?? 0)) *
+          (weakness ? lineWeakness(rep.id, line.keys, weakness) : 1),
+      }));
       return { rep, side, lines };
     })
     .filter((c) => c.lines.length > 0);
   if (!candidates.length) return null;
 
-  // Repertoire first, line second, so a big repertoire cannot crowd out the
-  // others. Weighting applies within a repertoire as well as across them.
-  const picked = weakness
-    ? pickWeighted(
-        candidates,
-        (c) => c.lines.reduce((sum, l) => sum + l.weight, 0) / c.lines.length,
-        rand,
-      )
-    : candidates[Math.floor(rand() * candidates.length)];
-  const line = weakness
-    ? pickWeighted(picked.lines, (l) => l.weight, rand)
-    : picked.lines[Math.floor(rand() * picked.lines.length)];
+  // Repertoire first, then a line within it, so a big repertoire cannot crowd
+  // out the others however popular its lines are.
+  // Repertoire first and evenly, so a big one cannot crowd out the others
+  // however popular its lines are; the line within it is drawn on its odds.
+  const picked = candidates[Math.floor(rand() * candidates.length)];
+  const line = pickWeighted(picked.lines, (l) => l.weight, rand);
 
   return {
     source: 'repertoire',
@@ -538,12 +627,16 @@ export interface LineName {
  * that transposes into the King's Indian through an unusual move order can come
  * back as "Queen's Pawn Opening" — technically right and no use to anyone. When
  * the match is that shallow, fall back to the source's own name.
+ *
+ * Three plies is the cutoff because that is where a name starts saying more
+ * than the first move: "Sicilian: Alapin" earns its place, "Sicilian Defence"
+ * does not — and the fallback, the repertoire's own name, already beats it.
  */
 export function lineName(
   index: ReferenceIndex,
   source: LineSource,
   run: Run,
-  minPly = 4,
+  minPly = 3,
 ): LineName {
   const found = deepestName(index, fullLine(source, run));
   if (found && found.ply >= minPly) return { name: found.name, eco: found.eco, specific: true };
@@ -577,10 +670,11 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
     reverse: opts.reverse,
     weakness: opts.weakFirst ? (opts.weakness ?? null) : null,
     hints,
+    index: opts.index,
   });
   if (!run) return null;
   const rep = opts.reps.find((r) => r.id === run.repertoireId);
-  return rep ? { run, source: repertoireSource(rep) } : null;
+  return rep ? { run, source: repertoireSource(rep, opts.index) } : null;
 }
 
 /* ── record ─────────────────────────────────────────────────────────────── */

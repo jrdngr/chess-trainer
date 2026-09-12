@@ -548,7 +548,15 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .strip .mv .n { color: var(--text-3); font-weight: 500; margin-right: 2px; }
 .strip .mv.current { background: var(--text); color: var(--ink); }
 .strip .mv.current .n { color: rgba(0, 0, 0, 0.45); }
-.strip .mv.future { opacity: 0.5; }
+/* The moves you found yourself, against the ones the opponent played. */
+.strip .mv.mine { color: var(--text); background: var(--surface-3); }
+/* How the line goes on past the end of the run. */
+.strip .mv.ghost { opacity: 0.45; }
+/* The move that ended the run, beside the one that would have continued it. */
+.strip .mv.bad { background: var(--bad-soft); color: var(--bad); }
+.strip .mv.good { background: var(--good-soft); color: var(--good); }
+.strip .mv.bad.current, .strip .mv.good.current { box-shadow: inset 0 0 0 2px currentColor; }
+.strip .mv.bad .n, .strip .mv.good .n, .strip .mv.mine .n { color: inherit; opacity: 0.5; }
 .strip .hint { font-size: 13px; color: var(--text-3); padding-left: 4px; }
 
 .movetext { font-family: var(--mono); font-size: 13px; line-height: 1.7; color: var(--text-2); word-break: break-word; }

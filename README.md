@@ -77,9 +77,28 @@ default; the plain mode is a line from your repertoire, no clock, no help.
 - **Per-opening records** — a separate best for each opening and side, rather
   than one number across everything.
 
+A line is drawn in proportion to how often you would actually meet it. Where
+the *opponent* chooses, the reference database decides: a King's Indian arrives
+through 1.d4 2.c4 far more often than through 1.b4, and weighting by that cuts
+runs that turn on a reply played less than 5% of the time from a quarter to a
+sixth. Where *you* choose between prepared alternatives the split is even, so a
+heavily branched mainline cannot swamp everything else — your own alternatives
+multiply lines without making a position any likelier to appear on a board. Rare
+sidelines keep a floor rather than vanishing: they are prep too.
+
+Any move you have prepared from a position counts, not just the one the drawn
+line happens to continue. When only one move is prepared, the reveal says so,
+because "you left your prep" and "your prep is one move wide here" are different
+problems and only one of them is about recall.
+
 When a run ends, the board becomes a replay. Arrows and a tappable move strip
 walk the whole line, starting parked on the position that ended it — step
 forward to see how it was meant to continue, or back to see how you got there.
+The strip colours what happened: your own moves, the opponent's, the move that
+ended the run in red beside the prepared move in green (both carrying the same
+move number, which is nobody's notation but the only honest way to show a pair),
+and the rest of the line in grey. **Copy the moves I played** puts the game as
+played on the clipboard — not the continuation — for pasting somewhere.
 The mistake's red and green squares are shown only on that one position, so
 stepping away does not leave stale marks behind.
 
