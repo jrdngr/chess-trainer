@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { applySan, fenTurn, positionKey, START_FEN, walkSan } from '../chess/core';
 import {
+  DEFAULT_PREFS,
+  lineToKeep,
+  canKeepLine,
   beginRun,
   bookHas,
   bookSource,
@@ -1112,5 +1115,54 @@ describe('stepping outside your prep', () => {
   it('starts every run inside its prep', () => {
     expect(startRepertoireRun([rep], 'w', { seed: 1 })!.leftPrep).toBe(false);
     expect(startBookRun(index, 'w', { seed: 1 })!.leftPrep).toBe(false);
+  });
+});
+
+describe('keeping what a run survived', () => {
+  function runOf(over: Partial<Run>): Run {
+    return {
+      id: 'r', source: 'book', sourceLabel: 'Book', reverse: false, leftPrep: false,
+      color: 'w', fen: START_FEN, played: [], survived: 0, over: true, target: [],
+      hints: 0, hintsUsed: 0, prepEnded: null, ...over,
+    };
+  }
+
+  it('only keeps sources that produce theory', () => {
+    expect(canKeepLine('opening')).toBe(true);
+    expect(canKeepLine('book')).toBe(true);
+    // A repertoire run is already playing your own lines back at you.
+    expect(canKeepLine('repertoire')).toBe(false);
+  });
+
+  it('ends a White line on a White move', () => {
+    const run = runOf({ color: 'w', played: ['e4', 'c5', 'Nf3', 'd6'] });
+    expect(lineToKeep(run)).toEqual(['e4', 'c5', 'Nf3']);
+  });
+
+  it('ends a Black line on a Black move', () => {
+    const run = runOf({ color: 'b', played: ['e4', 'c5', 'Nf3'] });
+    expect(lineToKeep(run)).toEqual(['e4', 'c5']);
+  });
+
+  it('stops where the book stopped judging', () => {
+    // Extended mode carried the run four plies past the prep; those were sound
+    // but the book never vouched for them.
+    const run = runOf({ color: 'w', played: ['e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4'], prepEnded: 3 });
+    expect(lineToKeep(run)).toEqual(['e4', 'c5', 'Nf3']);
+  });
+
+  it('keeps nothing from a run that died on its first move', () => {
+    expect(lineToKeep(runOf({ color: 'w', played: [] }))).toEqual([]);
+    expect(lineToKeep(runOf({ color: 'b', played: ['e4'] }))).toEqual([]);
+  });
+
+  it('never includes the move that ended the run', () => {
+    // `played` holds correct moves only; the fatal one is reported separately.
+    const run = runOf({ color: 'w', played: ['e4', 'c5', 'Nf3'] });
+    expect(lineToKeep(run)).not.toContain('Qh5');
+  });
+
+  it('defaults to keeping lines on', () => {
+    expect(DEFAULT_PREFS.keepLine).toBe(true);
   });
 });

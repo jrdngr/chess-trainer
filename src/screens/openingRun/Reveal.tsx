@@ -41,6 +41,8 @@ export interface RevealProps {
   run: Run;
   /** Null when the line was played out in full. */
   death: Death | null;
+  /** What the run wrote into a repertoire, when it kept anything. */
+  kept?: { name: string; added: number } | null;
   onExit: () => void;
   onNewRun: () => void;
   onChangeOptions: () => void;
@@ -59,6 +61,7 @@ export function Reveal({
   source,
   run,
   death,
+  kept,
   onExit,
   onNewRun,
   onChangeOptions,
@@ -282,6 +285,24 @@ export function Reveal({
           <Icons.download size={16} />
           Copy the moves I played
         </button>
+
+        {kept && (
+          <div className="banner" style={{ marginTop: 12, background: 'var(--good-soft)' }}>
+            <span className="ico" style={{ color: 'var(--good)' }}>
+              <Icons.check size={20} />
+            </span>
+            <div className="grow">
+              {kept.added > 0
+                ? `${kept.added} ${kept.added === 1 ? 'move' : 'moves'} kept`
+                : 'Already in your repertoire'}
+              <div className="sub">
+                {kept.added > 0
+                  ? `Added to ${kept.name}. Drill will start asking, and Gap will look for what it misses.`
+                  : `${kept.name} already covers everything you survived.`}
+              </div>
+            </div>
+          </div>
+        )}
 
         <Record record={record} perLine={settings.openingRun.perLine} />
 

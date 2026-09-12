@@ -311,9 +311,24 @@ export const DEFAULT_OPTIONS: OpeningRunOptions = {
 export interface OpeningRunPrefs extends OpeningRunOptions {
   /** Break the record down by opening and side. */
   perLine: boolean;
+  /**
+   * Write what you survived into a repertoire. Only meaningful for the opening
+   * and book sources — a repertoire run is already playing your own lines back
+   * at you, so there is nothing there to keep.
+   */
+  keepLine: boolean;
 }
 
-export const DEFAULT_PREFS: OpeningRunPrefs = { ...DEFAULT_OPTIONS, perLine: false };
+export const DEFAULT_PREFS: OpeningRunPrefs = {
+  ...DEFAULT_OPTIONS,
+  perLine: false,
+  keepLine: true,
+};
+
+/** Does this source produce lines worth keeping? */
+export function canKeepLine(kind: SourceKind): boolean {
+  return kind === 'opening' || kind === 'book';
+}
 
 /* ── runs ───────────────────────────────────────────────────────────────── */
 
@@ -1089,4 +1104,24 @@ export function lineRecords(record: OpeningRunRecord): (LineRecord & { key: stri
   return Object.entries(normalizeRecord(record).byLine)
     .map(([key, value]) => ({ ...value, key }))
     .sort((a, b) => b.best - a.best || b.runs - a.runs);
+}
+
+/* ── keeping what you survived ──────────────────────────────────────────── */
+
+/**
+ * The part of a run worth writing into a repertoire.
+ *
+ * Only the moves that were actually correct, and only while the book was still
+ * judging them: a run's `played` never contains the move that ended it, and
+ * anything past `prepEnded` was passed by the engine rather than found in the
+ * book, which makes it sound but not theory. The line is trimmed to end on your
+ * own move, because one ending on the opponent's prepares nothing.
+ */
+export function lineToKeep(run: Run): string[] {
+  const inBook = run.prepEnded ?? run.played.length;
+  const cut = run.played.slice(0, Math.max(0, inBook));
+  // White's moves sit at even indices, so a White line has odd length.
+  const wantsOdd = run.color === 'w';
+  if (!cut.length) return [];
+  return cut.length % 2 === 1 === wantsOdd ? cut : cut.slice(0, -1);
 }

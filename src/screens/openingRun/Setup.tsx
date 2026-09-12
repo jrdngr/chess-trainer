@@ -11,6 +11,7 @@ import {
 import { sansToMoveText } from '../../chess/core';
 import {
   BLUNDER_LIMIT,
+  canKeepLine,
   clockDescription,
   clockLabel,
   CLOCK_MODES,
@@ -254,6 +255,14 @@ export function Setup({
             on={prefs.extended}
             onToggle={() => setOpeningRunPrefs({ extended: !prefs.extended })}
           />
+          {canKeepLine(prefs.kind) && (
+            <Toggle
+              label="Keep what I survive"
+              hint="Write the line into a repertoire when the run ends"
+              on={prefs.keepLine}
+              onToggle={() => setOpeningRunPrefs({ keepLine: !prefs.keepLine })}
+            />
+          )}
           <Toggle
             label="Per-opening records"
             hint="Keep a separate best for each opening and side"
@@ -261,6 +270,13 @@ export function Setup({
             onToggle={() => setOpeningRunPrefs({ perLine: !prefs.perLine })}
           />
         </div>
+        {canKeepLine(prefs.kind) && prefs.keepLine && (
+          <div className="note">
+            Every move you get right goes into a repertoire for that colour, or starts one if you
+            have none. Only the moves the book judged are kept — anything extended mode carried you
+            through was sound, but it is not theory.
+          </div>
+        )}
         {prefs.extended && (
           <div className="note">
             In extended mode the run does not stop when the prep does: the engine takes over, and

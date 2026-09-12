@@ -135,6 +135,16 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
 
         <div className="mode-grid">
           <Tile
+            name="Opening Run"
+            tag={
+              openingRun.runs > 0
+                ? { text: `best ${openingRun.best}` }
+                : { text: 'start here', tone: 'accent' }
+            }
+            art={<GradeBar grades={openingRun.grades} />}
+            onClick={() => onOpenMode('openingRun')}
+          />
+          <Tile
             name="Drill"
             tag={
               totalItems === 0
@@ -153,16 +163,6 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
               />
             }
             onClick={() => onOpenMode('drill')}
-          />
-          <Tile
-            name="Opening Run"
-            tag={
-              openingRun.runs > 0
-                ? { text: `best ${openingRun.best}` }
-                : { text: 'new', tone: 'accent' }
-            }
-            art={<GradeBar grades={openingRun.grades} />}
-            onClick={() => onOpenMode('openingRun')}
           />
           <Tile
             name="Repair"
@@ -215,16 +215,10 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
           <Tile
             wide
             name="Play"
-            tag={
-              totalItems === 0
-                ? { text: 'start here', tone: 'accent' }
-                : { text: levelById(state.settings.play.level).name }
-            }
+            tag={{ text: levelById(state.settings.play.level).name }}
             art={
               <div className="faint tiny">
-                {totalItems === 0
-                  ? 'A game against the engine. Keep the opening.'
-                  : 'Play a game, keep what you played.'}
+                A full game against the engine. Keep the opening.
               </div>
             }
             onClick={() => onOpenMode('play')}

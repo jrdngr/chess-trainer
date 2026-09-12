@@ -6,11 +6,13 @@ import {
   beginRun,
   bookHas,
   bookSource,
+  canKeepLine,
   extend,
   isComplete,
   isExtended,
   isUsersTurn,
   leavePrep,
+  lineToKeep,
   movesHere,
   opponentReply,
   outcomeOf,
@@ -23,6 +25,7 @@ import {
   type Run,
 } from '../../model/openingRun';
 import { deepestName } from '../../model/reference';
+import { displayName } from '../../model/repertoire';
 import { referenceIndex } from '../../model/referenceIndex';
 import { mulberry32 } from '../../model/session';
 import { repertoireList, useStore } from '../../store/useStore';
@@ -66,6 +69,7 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
   const endRun = useStore((s) => s.endOpeningRun);
   const missed = useStore((s) => s.missedInOpeningRun);
   const addToRep = useStore((s) => s.addLine);
+  const addRepertoire = useStore((s) => s.addRepertoire);
   const index = referenceIndex();
 
   const [phase, setPhase] = useState<Phase>('setup');
@@ -90,9 +94,35 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
     if (settings.hapticFeedback) haptic(pattern);
   };
 
+  /** What a finished run wrote into the repertoire, for the reveal to report. */
+  const [kept, setKept] = useState<{ name: string; added: number } | null>(null);
+
   const finish = (ended: Run, completed: boolean) => {
     settled.current = true;
     endRun(outcomeOf(ended, completed));
+    setKept(keepLine(ended));
+  };
+
+  /**
+   * Write what the run survived into a repertoire.
+   *
+   * A run from the book or a named opening is the app's way of meeting theory,
+   * so the lines it proves you know should end up somewhere the other modes can
+   * use them. A repertoire run has nothing to add — it was already yours.
+   */
+  const keepLine = (ended: Run): { name: string; added: number } | null => {
+    if (!prefs.keepLine || !canKeepLine(ended.source) || !source) return null;
+    const line = lineToKeep(ended);
+    if (!line.length) return null;
+    const existing = reps.find((rep) => rep.color === ended.color);
+    // Name a new repertoire after the line actually kept, not the line the run
+    // was walking: surviving three moves of a French does not make this the
+    // Winawer Poisoned Pawn, however deep the target went.
+    const named = deepestName(index, line);
+    const repId = existing?.id ?? addRepertoire(named?.name ?? ended.sourceLabel, ended.color);
+    const { added } = addToRep(repId, line, 'reference');
+    const rep = existing ?? { name: named?.name ?? ended.sourceLabel };
+    return { name: displayName(rep.name), added };
   };
 
   /** End the run here. `ended` may carry state the run picked up on the way out. */
@@ -168,6 +198,7 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
   useEffect(() => setHintSquare(null), [run?.fen]);
 
   const start = (options: OpeningRunOptions) => {
+    setKept(null);
     const started = beginRun({ ...options, reps, index, weakness: weaknessFromCards(cards) });
     if (!started) return;
     settled.current = false;
@@ -202,6 +233,7 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
         source={source}
         run={run}
         death={phase === 'dead' ? death : null}
+        kept={kept}
         onExit={onExit}
         onNewRun={() => start(prefs)}
         onChangeOptions={() => setPhase('setup')}
