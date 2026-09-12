@@ -94,24 +94,20 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
     if (settings.hapticFeedback) haptic(pattern);
   };
 
-  /** What a finished run wrote into the repertoire, for the reveal to report. */
-  const [kept, setKept] = useState<{ name: string; added: number } | null>(null);
-
   const finish = (ended: Run, completed: boolean) => {
     settled.current = true;
     endRun(outcomeOf(ended, completed));
-    setKept(keepLine(ended));
   };
 
   /**
-   * Write what the run survived into a repertoire.
+   * Write what the run survived into a repertoire, when asked to.
    *
-   * A run from the book or a named opening is the app's way of meeting theory,
-   * so the lines it proves you know should end up somewhere the other modes can
-   * use them. A repertoire run has nothing to add — it was already yours.
+   * Offered at the end rather than done automatically: a book run can hand you
+   * any opening in the database, and keeping all of them builds a wide, shallow
+   * repertoire rather than a coherent one.
    */
   const keepLine = (ended: Run): { name: string; added: number } | null => {
-    if (!prefs.keepLine || !canKeepLine(ended.source) || !source) return null;
+    if (!canKeepLine(ended.source)) return null;
     const line = lineToKeep(ended);
     if (!line.length) return null;
     const existing = reps.find((rep) => rep.color === ended.color);
@@ -198,7 +194,6 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
   useEffect(() => setHintSquare(null), [run?.fen]);
 
   const start = (options: OpeningRunOptions) => {
-    setKept(null);
     const started = beginRun({ ...options, reps, index, weakness: weaknessFromCards(cards) });
     if (!started) return;
     settled.current = false;
@@ -233,7 +228,7 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
         source={source}
         run={run}
         death={phase === 'dead' ? death : null}
-        kept={kept}
+        onSaveLine={() => keepLine(run)}
         onExit={onExit}
         onNewRun={() => start(prefs)}
         onChangeOptions={() => setPhase('setup')}

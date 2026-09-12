@@ -13,11 +13,13 @@ import {
 import { applySan, lastMoveOf, sansToMoveText, walkSan, type Square } from '../../chess/core';
 import {
   BLUNDER_LIMIT,
+  canKeepLine,
   extendedMoves,
   fullLine,
   gradeOf,
   isExtended,
   lineName,
+  lineToKeep,
   revealText,
   type DeathCause,
   type LineSource,
@@ -41,8 +43,8 @@ export interface RevealProps {
   run: Run;
   /** Null when the line was played out in full. */
   death: Death | null;
-  /** What the run wrote into a repertoire, when it kept anything. */
-  kept?: { name: string; added: number } | null;
+  /** Write the line into a repertoire; returns what it added. */
+  onSaveLine: () => { name: string; added: number } | null;
   onExit: () => void;
   onNewRun: () => void;
   onChangeOptions: () => void;
@@ -61,7 +63,7 @@ export function Reveal({
   source,
   run,
   death,
-  kept,
+  onSaveLine,
   onExit,
   onNewRun,
   onChangeOptions,
@@ -82,6 +84,14 @@ export function Reveal({
 
   /** Where the board is looking; starts where the run ended. */
   const [cursor, setCursor] = useState(line.deathPly);
+  const [saved, setSaved] = useState(false);
+
+  const keep = () => {
+    const result = onSaveLine();
+    if (!result) return;
+    setSaved(true);
+    toast(result.added > 0 ? `Saved to ${result.name}` : `Already in ${result.name}`);
+  };
   useEffect(() => setCursor(line.deathPly), [line.deathPly]);
   const seek = (n: number) => setCursor(Math.max(0, Math.min(line.sans.length, n)));
 
@@ -157,12 +167,26 @@ export function Reveal({
   const survivedLabel = run.survived === 1 ? '1 move' : `${run.survived} moves`;
   const prep = run.source === 'book' ? 'the book' : 'your prep';
 
-  /** Shared by both endings, which differ in everything but this. */
-  const newRun = (
-    <button className="btn primary sm" onClick={onNewRun}>
-      New run
-      <Icons.next size={16} />
-    </button>
+  /**
+   * Shared by both endings, which differ in everything but this.
+   *
+   * Saving is offered rather than done: a book run can hand you any opening in
+   * the database, and keeping every one of them builds a wide, shallow
+   * repertoire instead of a coherent one. Deciding at the end, having seen the
+   * line, is the only point at which that judgement can be made.
+   */
+  const actions = (
+    <div className="row gap-8">
+      {canKeepLine(run.source) && lineToKeep(run).length > 0 && (
+        <button className="btn sm" disabled={!!saved} onClick={keep}>
+          {saved ? 'Saved' : 'Save line'}
+        </button>
+      )}
+      <button className="btn primary sm" onClick={onNewRun}>
+        New run
+        <Icons.next size={16} />
+      </button>
+    </div>
   );
 
   return (
@@ -200,7 +224,7 @@ export function Reveal({
                 </span>
                 {deathTitle(death, grade === 'purple')}
               </div>
-              {newRun}
+              {actions}
             </div>
             <div className="compare mt-8">
               <div className="good">
@@ -229,7 +253,7 @@ export function Reveal({
                 </span>
                 {grade === 'yellow' ? 'Complete, out of prep' : 'Line complete'}
               </div>
-              {newRun}
+              {actions}
             </div>
             <div className="note center">
               {past > 0
@@ -286,23 +310,6 @@ export function Reveal({
           Copy the moves I played
         </button>
 
-        {kept && (
-          <div className="banner" style={{ marginTop: 12, background: 'var(--good-soft)' }}>
-            <span className="ico" style={{ color: 'var(--good)' }}>
-              <Icons.check size={20} />
-            </span>
-            <div className="grow">
-              {kept.added > 0
-                ? `${kept.added} ${kept.added === 1 ? 'move' : 'moves'} kept`
-                : 'Already in your repertoire'}
-              <div className="sub">
-                {kept.added > 0
-                  ? `Added to ${kept.name}. Drill will start asking, and Gap will look for what it misses.`
-                  : `${kept.name} already covers everything you survived.`}
-              </div>
-            </div>
-          </div>
-        )}
 
         <Record record={record} perLine={settings.openingRun.perLine} />
 

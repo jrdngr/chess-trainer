@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applySan, fenTurn, positionKey, START_FEN, walkSan } from '../chess/core';
 import {
-  DEFAULT_PREFS,
   lineToKeep,
   canKeepLine,
   beginRun,
@@ -1160,9 +1159,5 @@ describe('keeping what a run survived', () => {
     // `played` holds correct moves only; the fatal one is reported separately.
     const run = runOf({ color: 'w', played: ['e4', 'c5', 'Nf3'] });
     expect(lineToKeep(run)).not.toContain('Qh5');
-  });
-
-  it('defaults to keeping lines on', () => {
-    expect(DEFAULT_PREFS.keepLine).toBe(true);
   });
 });

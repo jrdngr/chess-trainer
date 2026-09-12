@@ -311,21 +311,16 @@ export const DEFAULT_OPTIONS: OpeningRunOptions = {
 export interface OpeningRunPrefs extends OpeningRunOptions {
   /** Break the record down by opening and side. */
   perLine: boolean;
-  /**
-   * Write what you survived into a repertoire. Only meaningful for the opening
-   * and book sources — a repertoire run is already playing your own lines back
-   * at you, so there is nothing there to keep.
-   */
-  keepLine: boolean;
 }
 
-export const DEFAULT_PREFS: OpeningRunPrefs = {
-  ...DEFAULT_OPTIONS,
-  perLine: false,
-  keepLine: true,
-};
+export const DEFAULT_PREFS: OpeningRunPrefs = { ...DEFAULT_OPTIONS, perLine: false };
 
-/** Does this source produce lines worth keeping? */
+/**
+ * Does this source produce lines worth offering to keep?
+ *
+ * A repertoire run is already playing your own lines back at you, so there is
+ * nothing there to save.
+ */
 export function canKeepLine(kind: SourceKind): boolean {
   return kind === 'opening' || kind === 'book';
 }
