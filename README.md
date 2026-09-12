@@ -314,6 +314,9 @@ src/
                the clock and engine-referee hooks
 ```
 
+Train and Permadeath sit side by side on the Train screen as two equal modes,
+each with its own hero and its own start button.
+
 Screens are built from a small set of shared pieces in `components/ui.tsx` —
 `AppBar`, `Section`, `Toggle`, `Stepper`, `Segmented`, `ChoiceRow`, `Strip` —
 so a new screen has nothing to invent. Layout comes from utility classes in

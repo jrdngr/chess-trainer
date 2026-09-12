@@ -125,26 +125,15 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
         </div>
 
         <Section title="Permadeath" />
-        <button className="card tap" onClick={onStartPermadeath}>
-          <div className="row between">
-            <span className="grow">
-              <div className="title">
-                {permadeath.runs === 0
-                  ? 'One secret line. One mistake.'
-                  : `${permadeath.best} ${permadeath.best === 1 ? 'move' : 'moves'} deep at your best`}
-              </div>
-              <div className="meta">
-                {permadeath.runs === 0
-                  ? 'Play a line from your prep until the first slip'
-                  : strongest
-                    ? `Deepest in the ${strongest.label}`
-                    : `${permadeath.runs} ${permadeath.runs === 1 ? 'run' : 'runs'}`}
-              </div>
-            </span>
-            <Icons.chevron size={18} />
+        <div className="hero">
+          <div className="big">{permadeath.runs === 0 ? '\u2014' : permadeath.best}</div>
+          <div className="lbl">
+            {permadeath.runs === 0
+              ? 'One secret line. One mistake.'
+              : `${permadeath.best === 1 ? 'move' : 'moves'} deep at your best`}
           </div>
           {permadeath.runs > 0 && (
-            <div className="pills mt-12">
+            <div className="pills">
               <span className="pill">
                 <b>{permadeath.runs}</b> {permadeath.runs === 1 ? 'run' : 'runs'}
               </span>
@@ -156,7 +145,20 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
               </span>
             </div>
           )}
-        </button>
+          {strongest && (
+            <div className="faint tiny" style={{ marginTop: 12 }}>
+              Deepest in the {strongest.label} \u2014 {strongest.best}{' '}
+              {strongest.best === 1 ? 'move' : 'moves'}
+            </div>
+          )}
+          <button
+            className="btn primary block xl"
+            style={{ marginTop: 18 }}
+            onClick={onStartPermadeath}
+          >
+            {permadeath.runs === 0 ? 'Start a run' : 'New run'}
+          </button>
+        </div>
 
         <Section title="Repertoires" />
         <div className="list">
