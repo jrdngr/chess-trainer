@@ -588,6 +588,10 @@ function Setup({ options, reps, record, perLine, onChange, onStart, onExit }: Se
       </div>
 
       <div className="screen no-nav">
+        <button className="btn primary block xl" disabled={blocked} onClick={() => onStart(effective)}>
+          {!blocked ? 'Start run' : options.reverse ? 'Nothing to play against' : 'No lines for that colour'}
+        </button>
+
         <div className="section">Play as</div>
         <div className="segmented">
           {(['w', 'b', 'random'] as ColorChoice[]).map((value) => (
@@ -720,11 +724,6 @@ function Setup({ options, reps, record, perLine, onChange, onStart, onExit }: Se
                 : 'A line is drawn from your repertoire. Any move you have prepared from a position counts — the run ends the moment you leave your own prep.'}
           </div>
         </div>
-
-        <div className="spacer" />
-        <button className="btn primary block xl" disabled={blocked} onClick={() => onStart(effective)}>
-          {!blocked ? 'Start run' : options.reverse ? 'Nothing to play against' : 'No lines for that colour'}
-        </button>
 
         {record.runs > 0 && <Record record={record} perLine={perLine} />}
       </div>
