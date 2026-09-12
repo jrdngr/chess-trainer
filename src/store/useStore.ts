@@ -126,6 +126,8 @@ interface StoreState extends PersistedState {
   annotate: (repId: string, nodeId: string, note: string) => void;
   reorder: (repId: string, nodeId: string, delta: number) => void;
   addRepertoire: (name: string, color: Color) => string;
+  /** Delete a repertoire outright, with everything that only existed for it. */
+  removeRepertoire: (repId: string) => void;
 
   grade: (item: TrainingItem, grade: Grade, playedSan: string | null, correct: boolean) => void;
   ensureCard: (item: TrainingItem) => Card;
@@ -415,6 +417,27 @@ export const useStore = create<StoreState>((set, get) => {
         repertoireOrder: [...get().repertoireOrder, rep.id],
       });
       return rep.id;
+    },
+
+    /**
+     * Deleting a repertoire takes its schedule and its logged mistakes with it.
+     * Those are keyed by repertoire and mean nothing without it — left behind
+     * they would count toward "positions ready" for lines that no longer exist.
+     */
+    removeRepertoire(repId) {
+      const state = get();
+      if (!state.repertoires[repId]) return;
+      const repertoires = { ...state.repertoires };
+      delete repertoires[repId];
+      commit({
+        repertoires,
+        repertoireOrder: state.repertoireOrder.filter((id) => id !== repId),
+        cards: Object.fromEntries(
+          Object.entries(state.cards).filter(([, card]) => card.repertoireId !== repId),
+        ),
+        log: state.log.filter((entry) => !entry.cardId.startsWith(`${repId}#`)),
+        mistakes: state.mistakes.filter((m) => m.repertoireId !== repId),
+      });
     },
 
     ensureCard(item) {

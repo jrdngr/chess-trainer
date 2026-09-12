@@ -5,6 +5,7 @@ import { allItems, buildSession, checkAnswer } from '../model/session';
 import { createCard, review } from '../model/srs';
 import { SEED_REPERTOIRES } from '../model/seed/repertoires';
 import { buildSeedRepertoires } from './seed';
+import { useStore } from './useStore';
 
 describe('seeded repertoires', () => {
   const reps = buildSeedRepertoires();
@@ -116,3 +117,53 @@ describe('a full training round trip', () => {
 function illegalAlternative(san: string) {
   return `${san}-not-a-move`;
 }
+
+describe('deleting a repertoire', () => {
+  it('takes its schedule, its log and its mistakes with it', () => {
+    const store = useStore.getState();
+    const id = store.addRepertoire('Throwaway', 'w');
+    useStore.getState().addLine(id, ['e4', 'c5', 'Nf3'], 'manual');
+
+    const rep = useStore.getState().repertoires[id];
+    const item = allItems([rep])[0];
+    useStore.getState().grade(item, 'good', 'e4', true);
+    useStore.getState().logMistake({
+      source: 'drill',
+      repertoireId: id,
+      key: item.key,
+      fen: item.fen,
+      played: 'd4',
+      expected: 'e4',
+    });
+
+    expect(Object.values(useStore.getState().cards).some((c) => c.repertoireId === id)).toBe(true);
+    expect(useStore.getState().mistakes.some((m) => m.repertoireId === id)).toBe(true);
+
+    useStore.getState().removeRepertoire(id);
+
+    const after = useStore.getState();
+    expect(after.repertoires[id]).toBeUndefined();
+    expect(after.repertoireOrder).not.toContain(id);
+    expect(Object.values(after.cards).some((c) => c.repertoireId === id)).toBe(false);
+    expect(after.mistakes.some((m) => m.repertoireId === id)).toBe(false);
+    expect(after.log.some((e) => e.cardId.startsWith(`${id}#`))).toBe(false);
+  });
+
+  it('leaves other repertoires untouched', () => {
+    const keep = useStore.getState().addRepertoire('Keep', 'b');
+    useStore.getState().addLine(keep, ['e4', 'c5'], 'manual');
+    const drop = useStore.getState().addRepertoire('Drop', 'w');
+    useStore.getState().addLine(drop, ['d4', 'd5'], 'manual');
+
+    useStore.getState().removeRepertoire(drop);
+
+    expect(useStore.getState().repertoires[keep]).toBeDefined();
+    expect(Object.keys(useStore.getState().repertoires[keep].nodes)).toHaveLength(2);
+  });
+
+  it('does nothing for an id that is not there', () => {
+    const before = useStore.getState().repertoireOrder.length;
+    useStore.getState().removeRepertoire('nope');
+    expect(useStore.getState().repertoireOrder).toHaveLength(before);
+  });
+});

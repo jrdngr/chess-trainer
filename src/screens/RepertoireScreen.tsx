@@ -22,6 +22,7 @@ export function RepertoireScreen({ onStart, onImport, onExploreFrom }: Repertoir
   const reps = repertoireList(state);
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
 
   const rep = openId ? state.repertoires[openId] : null;
 
@@ -58,7 +59,13 @@ export function RepertoireScreen({ onStart, onImport, onExploreFrom }: Repertoir
         {reps.length > 0 && (
           <div className="list">
             {reps.map((r) => (
-              <RepertoireRow key={r.id} rep={r} cards={state.cards} onOpen={() => setOpenId(r.id)} />
+              <RepertoireRow
+                key={r.id}
+                rep={r}
+                cards={state.cards}
+                onOpen={() => setOpenId(r.id)}
+                onMenu={() => setMenuFor(r.id)}
+              />
             ))}
           </div>
         )}
@@ -70,6 +77,7 @@ export function RepertoireScreen({ onStart, onImport, onExploreFrom }: Repertoir
       </div>
 
       <NewRepertoireSheet open={creating} onClose={() => setCreating(false)} />
+      <RepertoireMenu repId={menuFor} onClose={() => setMenuFor(null)} />
     </>
   );
 }
@@ -78,10 +86,12 @@ function RepertoireRow({
   rep,
   cards,
   onOpen,
+  onMenu,
 }: {
   rep: Repertoire;
   cards: Record<string, Card>;
   onOpen: () => void;
+  onMenu: () => void;
 }) {
   const nodes = Object.keys(rep.nodes).length;
   const trained = Object.values(cards).filter((c) => c.repertoireId === rep.id).length;
@@ -89,17 +99,94 @@ function RepertoireRow({
     .map((m) => m.san)
     .slice(0, 3);
   return (
-    <button className="list-row" style={{ minHeight: 64 }} onClick={onOpen}>
-      <span className={`side ${rep.color}`} />
-      <span className="grow">
-        <div className="title truncate">{displayName(rep.name)}</div>
-        <div className="meta">
-          {nodes} moves{trained ? ` · ${trained} trained` : ''}
-          {firstMoves.length > 0 ? ` · ${firstMoves.join(' ')}` : ''}
+    <div className="list-row" style={{ minHeight: 64 }}>
+      <button className="grow row" onClick={onOpen}>
+        <span className={`side ${rep.color}`} />
+        <span className="grow">
+          <div className="title truncate">{displayName(rep.name)}</div>
+          <div className="meta">
+            {nodes} moves{trained ? ` · ${trained} trained` : ''}
+            {firstMoves.length > 0 ? ` · ${firstMoves.join(' ')}` : ''}
+          </div>
+        </span>
+        <Icons.chevron size={18} />
+      </button>
+      <IconButton label={`Options for ${displayName(rep.name)}`} onClick={onMenu}>
+        <Icons.more size={18} />
+      </IconButton>
+    </div>
+  );
+}
+
+/**
+ * What can be done to a whole repertoire.
+ *
+ * Deleting takes the schedule and the logged mistakes with it, which is a lot
+ * to lose by accident, so it asks twice — the same two-tap confirm Settings
+ * uses for the other irreversible things.
+ */
+function RepertoireMenu({
+  repId,
+  onClose,
+  onDeleted,
+}: {
+  repId: string | null;
+  onClose: () => void;
+  onDeleted?: () => void;
+}) {
+  const rep = useStore((s) => (repId ? s.repertoires[repId] : null));
+  const cards = useStore((s) => s.cards);
+  const removeRepertoire = useStore((s) => s.removeRepertoire);
+  const [confirming, setConfirming] = useState(false);
+
+  // A fresh sheet always opens un-armed.
+  const close = () => {
+    setConfirming(false);
+    onClose();
+  };
+
+  if (!rep) return null;
+  const moves = Object.keys(rep.nodes).length;
+  const trained = Object.values(cards).filter((c) => c.repertoireId === rep.id).length;
+  const name = displayName(rep.name);
+
+  return (
+    <Sheet open onClose={close} title={name}>
+      <div className="list">
+        <div className="list-row kv">
+          <span className="k">Moves</span>
+          <span className="v num">{moves}</span>
         </div>
-      </span>
-      <Icons.chevron size={18} />
-    </button>
+        <div className="list-row kv">
+          <span className="k">Scheduled positions</span>
+          <span className="v num">{trained}</span>
+        </div>
+      </div>
+
+      <div className="spacer" />
+      <button
+        className="btn danger block"
+        onClick={() => {
+          if (!confirming) {
+            setConfirming(true);
+            return;
+          }
+          removeRepertoire(rep.id);
+          close();
+          onDeleted?.();
+          toast(`${name} deleted`);
+        }}
+      >
+        <Icons.trash size={18} />
+        {confirming ? 'Tap again to delete' : 'Delete repertoire'}
+      </button>
+      <div className="note center">
+        {trained > 0
+          ? `Its ${moves} moves and the schedule for ${trained} of them go too. This cannot be undone.`
+          : `All ${moves} moves go with it. This cannot be undone.`}
+      </div>
+      <div className="spacer" />
+    </Sheet>
   );
 }
 
@@ -159,6 +246,7 @@ function RepertoireBrowser({
   const [pendingMove, setPendingMove] = useState<LegalMove | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [showReference, setShowReference] = useState(false);
+  const [repMenu, setRepMenu] = useState(false);
 
   const fen = fenAt(rep, nodeId);
   const path = useMemo(() => pathTo(rep, nodeId), [rep, nodeId]);
@@ -210,9 +298,14 @@ function RepertoireBrowser({
         subtitle={`${opening?.eco ? `${opening.eco} · ` : ''}${opening ? name : `${Object.keys(rep.nodes).length} moves`}`}
         onBack={onBack}
         actions={
-          <IconButton label="Reference" onClick={() => setShowReference(true)}>
-            <Icons.book size={20} />
-          </IconButton>
+          <>
+            <IconButton label="Reference" onClick={() => setShowReference(true)}>
+              <Icons.book size={20} />
+            </IconButton>
+            <IconButton label="Repertoire options" onClick={() => setRepMenu(true)}>
+              <Icons.more size={20} />
+            </IconButton>
+          </>
         }
       />
 
@@ -308,6 +401,12 @@ function RepertoireBrowser({
           </button>
         </div>
       </div>
+
+      <RepertoireMenu
+        repId={repMenu ? rep.id : null}
+        onClose={() => setRepMenu(false)}
+        onDeleted={onBack}
+      />
 
       <NodeMenu
         rep={rep}
