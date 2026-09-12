@@ -359,9 +359,6 @@ export function TrainSession({ items, mode, title, onExit }: TrainSessionProps) 
               Correct
               {playedEntry?.preferred === false && <span className="chip good">alternative</span>}
             </div>
-            {playedEntry?.note && (
-              <div className="card small muted mt-8">{playedEntry.note}</div>
-            )}
             <div className="spacer" />
             <div className="grades">
               {(['again', 'hard', 'good', 'easy'] as Grade[]).map((g) => (
@@ -373,6 +370,9 @@ export function TrainSession({ items, mode, title, onExit }: TrainSessionProps) 
             <div className="center faint tiny" style={{ marginTop: 8 }}>
               How well did you know it?
             </div>
+            {playedEntry?.note && (
+              <div className="card small muted mt-16">{playedEntry.note}</div>
+            )}
           </>
         )}
 
@@ -404,6 +404,19 @@ export function TrainSession({ items, mode, title, onExit }: TrainSessionProps) 
                 <div className="v">{played?.san}</div>
               </div>
             </div>
+            <div className="spacer" />
+            <div className="row gap-8">
+              <button className="btn soft grow" onClick={() => setRevealLine((v) => !v)}>
+                {revealLine ? 'Hide line' : 'Show line'}
+              </button>
+              <button className="btn soft grow" onClick={() => setExplore(true)}>
+                Explore
+              </button>
+            </div>
+
+            {revealLine && (
+              <div className="card movetext mt-16">{sansToMoveText(item.continuation, item.fen)}</div>
+            )}
             {(alternatives.length > 0 || answer?.preferred?.note) && (
               <div className="card small muted mt-8">
                 {answer?.preferred?.note}
@@ -414,20 +427,6 @@ export function TrainSession({ items, mode, title, onExit }: TrainSessionProps) 
                 )}
               </div>
             )}
-
-            {revealLine && (
-              <div className="card movetext mt-8">{sansToMoveText(item.continuation, item.fen)}</div>
-            )}
-
-            <div className="spacer" />
-            <div className="row gap-8">
-              <button className="btn soft grow" onClick={() => setRevealLine((v) => !v)}>
-                {revealLine ? 'Hide line' : 'Show line'}
-              </button>
-              <button className="btn soft grow" onClick={() => setExplore(true)}>
-                Explore
-              </button>
-            </div>
           </>
         )}
       </div>
