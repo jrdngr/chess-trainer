@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { positionKey, walkSan, START_FEN } from '../chess/core';
+import { applySan, positionKey, walkSan, START_FEN } from '../chess/core';
 import {
   buildReferenceIndex,
   buildRefTree,
@@ -101,5 +101,57 @@ describe('formatting', () => {
     expect(formatGameCount(4200)).toBe('4.2k');
     expect(formatGameCount(42000)).toBe('42k');
     expect(formatGameCount(4_200_000)).toBe('4.2M');
+  });
+});
+
+describe('transposed positions', () => {
+  it('merges the moves of every route into one entry', () => {
+    // Two move orders reaching the same position, each with a continuation the
+    // other does not have. Overwriting would lose one of them.
+    const index = buildReferenceIndex({
+      paths: [
+        'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 Nc6 Bg5',
+        'e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3 d6 Be3',
+      ],
+      totalGames: 1000,
+      openingNames: {},
+      games: [],
+    });
+    let fen = START_FEN;
+    for (const san of 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 Nc6'.split(' ')) {
+      fen = applySan(fen, san)!.after;
+    }
+    const sans = lookup(index, fen)?.moves.map((m) => m.san) ?? [];
+    expect(sans).toContain('Bg5');
+    expect(sans).toContain('Be3');
+  });
+
+  it('conserves the games when two routes rejoin', () => {
+    // Both move orders lead here, so the split upstream and the merge here
+    // cancel out: the position is as popular as the games that reach it,
+    // neither inflated by counting each route nor halved by keeping only one.
+    const index = buildReferenceIndex({
+      paths: ['d4 Nf6 c4 e6 Nf3 d5', 'd4 Nf6 Nf3 e6 c4 d5'],
+      totalGames: 1000,
+      openingNames: {},
+      games: [],
+    });
+    let fen = START_FEN;
+    for (const san of 'd4 Nf6 c4 e6 Nf3'.split(' ')) fen = applySan(fen, san)!.after;
+    const entry = lookup(index, fen);
+    expect(entry?.moves).toHaveLength(1);
+    expect(totalGamesAt(entry)).toBe(1000);
+  });
+
+  it('keeps the King’s Indian branching the seed data authors', () => {
+    // The real index, which is what Opening Run draws from: after the King's
+    // Indian move order there must be more than one thing White can do, or
+    // every run of it is the same game.
+    const index = referenceIndex();
+    let fen = START_FEN;
+    for (const san of 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6'.split(' ')) fen = applySan(fen, san)!.after;
+    const sans = lookup(index, fen)?.moves.map((m) => m.san) ?? [];
+    expect(sans.length).toBeGreaterThanOrEqual(4);
+    expect(sans).toEqual(expect.arrayContaining(['Nf3', 'f3', 'Be2']));
   });
 });

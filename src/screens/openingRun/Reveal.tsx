@@ -13,13 +13,11 @@ import {
 import { applySan, lastMoveOf, sansToMoveText, walkSan, type Square } from '../../chess/core';
 import {
   BLUNDER_LIMIT,
-  canKeepLine,
   extendedMoves,
   fullLine,
   gradeOf,
   isExtended,
   lineName,
-  lineToKeep,
   revealText,
   type DeathCause,
   type LineSource,
@@ -43,6 +41,10 @@ export interface RevealProps {
   run: Run;
   /** Null when the line was played out in full. */
   death: Death | null;
+  /** This run produced a line worth offering to keep. */
+  canSaveLine: boolean;
+  /** That line is already in the repertoire, so there is nothing to add. */
+  alreadySaved: boolean;
   /** Write the line into a repertoire; returns what it added. */
   onSaveLine: () => { name: string; added: number } | null;
   onExit: () => void;
@@ -63,6 +65,8 @@ export function Reveal({
   source,
   run,
   death,
+  canSaveLine,
+  alreadySaved,
   onSaveLine,
   onExit,
   onNewRun,
@@ -175,11 +179,12 @@ export function Reveal({
    * repertoire instead of a coherent one. Deciding at the end, having seen the
    * line, is the only point at which that judgement can be made.
    */
+  const kept = saved || alreadySaved;
   const actions = (
     <div className="row gap-8">
-      {canKeepLine(run.source) && lineToKeep(run).length > 0 && (
-        <button className="btn sm" disabled={!!saved} onClick={keep}>
-          {saved ? 'Saved' : 'Save line'}
+      {canSaveLine && (
+        <button className="btn sm" disabled={kept} onClick={keep}>
+          {kept ? 'Saved' : 'Save line'}
         </button>
       )}
       <button className="btn primary sm" onClick={onNewRun}>

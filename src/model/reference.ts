@@ -88,6 +88,29 @@ export interface BuildIndexOptions {
 }
 
 /** Walk the authored tree and produce a position-keyed explorer index. */
+/**
+ * Fold one route's moves into what another route already found.
+ *
+ * Games add up: both move orders really do arrive here, so the position is as
+ * popular as the sum of the ways into it.
+ */
+function mergeMoves(existing: ExplorerMove[] | undefined, incoming: ExplorerMove[]): ExplorerMove[] {
+  if (!existing?.length) return [...incoming].sort((a, b) => b.games - a.games);
+  const bySan = new Map(existing.map((m) => [m.san, { ...m }]));
+  for (const move of incoming) {
+    const found = bySan.get(move.san);
+    if (!found) {
+      bySan.set(move.san, { ...move });
+      continue;
+    }
+    found.games += move.games;
+    found.white += move.white;
+    found.draw += move.draw;
+    found.black += move.black;
+  }
+  return [...bySan.values()].sort((a, b) => b.games - a.games);
+}
+
 export function buildReferenceIndex(opts: BuildIndexOptions): ReferenceIndex {
   const startFen = opts.startFen ?? START_FEN;
   const tree = buildRefTree(opts.paths);
@@ -117,8 +140,14 @@ export function buildReferenceIndex(opts: BuildIndexOptions): ReferenceIndex {
     }
 
     if (moves.length) {
-      moves.sort((a, b) => b.games - a.games);
-      entries.set(positionKey(fen), { key: positionKey(fen), moves });
+      // Transpositions are the normal case, not the exception: 1.e4 c5 2.Nf3 d6
+      // 3.d4 cxd4 4.Nxd4 Nf6 5.Nc3 Nc6 and the same moves with Nc6 and d6 swapped
+      // are one position authored as two paths. Overwriting here threw away
+      // whichever route was walked first, which is how a position with six real
+      // continuations came to offer one.
+      const key = positionKey(fen);
+      const existing = entries.get(key);
+      entries.set(key, { ...existing, key, moves: mergeMoves(existing?.moves, moves) });
     }
     for (const child of children) visit(child.node.children, child.fen, child.games);
   };

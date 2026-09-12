@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { positionKey, walkSan } from '../chess/core';
 import {
+  hasLine,
   addLine,
   addMove,
   childrenOf,
@@ -157,5 +158,36 @@ describe('decision points', () => {
     expect(dps).toHaveLength(3);
     expect(dps[0].depth).toBe(0);
     expect(dps[0].options.map((o) => o.san)).toEqual(['e4']);
+  });
+});
+
+describe('checking for a line without adding it', () => {
+  const base = addLine(createRepertoire('White', 'w', 'r'), ['e4', 'c5', 'Nf3', 'd6'], 'seed').rep;
+
+  it('finds a line that is fully there', () => {
+    expect(hasLine(base, ['e4', 'c5', 'Nf3', 'd6'])).toBe(true);
+  });
+
+  it('finds a prefix of one', () => {
+    expect(hasLine(base, ['e4', 'c5'])).toBe(true);
+  });
+
+  it('rejects a line that runs past what is there', () => {
+    expect(hasLine(base, ['e4', 'c5', 'Nf3', 'd6', 'd4'])).toBe(false);
+  });
+
+  it('rejects a line that diverges', () => {
+    expect(hasLine(base, ['e4', 'e5'])).toBe(false);
+    expect(hasLine(base, ['d4'])).toBe(false);
+  });
+
+  it('says no to an empty line, which is nothing to save', () => {
+    expect(hasLine(base, [])).toBe(false);
+  });
+
+  it('does not change the repertoire it inspects', () => {
+    const before = JSON.stringify(base);
+    hasLine(base, ['e4', 'c5', 'Nf3', 'd6', 'd4']);
+    expect(JSON.stringify(base)).toBe(before);
   });
 });

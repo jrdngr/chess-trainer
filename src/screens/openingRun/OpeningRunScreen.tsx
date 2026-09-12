@@ -25,7 +25,7 @@ import {
   type Run,
 } from '../../model/openingRun';
 import { deepestName } from '../../model/reference';
-import { displayName } from '../../model/repertoire';
+import { displayName, hasLine } from '../../model/repertoire';
 import { referenceIndex } from '../../model/referenceIndex';
 import { mulberry32 } from '../../model/session';
 import { repertoireList, useStore } from '../../store/useStore';
@@ -99,6 +99,23 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
     endRun(outcomeOf(ended, completed));
   };
 
+  /** Where a run's line would go, and whether there is anything to put there. */
+  const keepTarget = (ended: Run) => {
+    if (!canKeepLine(ended.source)) return null;
+    const line = lineToKeep(ended);
+    if (!line.length) return null;
+    return { line, existing: reps.find((rep) => rep.color === ended.color) ?? null };
+  };
+
+  /**
+   * Has this run's line already been written? Checked rather than discovered on
+   * tap, so replaying a line you have kept shows Saved from the start.
+   */
+  const alreadyKept = (ended: Run): boolean => {
+    const target = keepTarget(ended);
+    return !!target?.existing && hasLine(target.existing, target.line);
+  };
+
   /**
    * Write what the run survived into a repertoire, when asked to.
    *
@@ -107,10 +124,9 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
    * repertoire rather than a coherent one.
    */
   const keepLine = (ended: Run): { name: string; added: number } | null => {
-    if (!canKeepLine(ended.source)) return null;
-    const line = lineToKeep(ended);
-    if (!line.length) return null;
-    const existing = reps.find((rep) => rep.color === ended.color);
+    const target = keepTarget(ended);
+    if (!target) return null;
+    const { line, existing } = target;
     // Name a new repertoire after the line actually kept, not the line the run
     // was walking: surviving three moves of a French does not make this the
     // Winawer Poisoned Pawn, however deep the target went.
@@ -228,6 +244,8 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
         source={source}
         run={run}
         death={phase === 'dead' ? death : null}
+        canSaveLine={!!keepTarget(run)}
+        alreadySaved={alreadyKept(run)}
         onSaveLine={() => keepLine(run)}
         onExit={onExit}
         onNewRun={() => start(prefs)}

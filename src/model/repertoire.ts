@@ -31,6 +31,23 @@ export function childrenOf(rep: Repertoire, nodeId: string | null): RepMove[] {
   return ids.map((id) => rep.nodes[id]).filter(Boolean);
 }
 
+/**
+ * Is this whole line already in the repertoire?
+ *
+ * Read-only, so a screen can tell you there is nothing to add before you tap
+ * rather than after.
+ */
+export function hasLine(rep: Repertoire, sans: string[]): boolean {
+  if (!sans.length) return false;
+  let nodeId: string | null = null;
+  for (const san of sans) {
+    const kid: RepMove | undefined = childrenOf(rep, nodeId).find((child) => child.san === san);
+    if (!kid) return false;
+    nodeId = kid.id;
+  }
+  return true;
+}
+
 export function fenAt(rep: Repertoire, nodeId: string | null): string {
   if (nodeId === null) return rep.rootFen;
   return rep.nodes[nodeId]?.fenAfter ?? rep.rootFen;
