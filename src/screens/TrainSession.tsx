@@ -1,8 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../components/Board';
 import { ExplorerPanel } from '../components/ExplorerPanel';
-import { AppBar, haptic, Icons, Sheet } from '../components/ui';
-import { applySan, sansToMoveText, type LegalMove, type Square } from '../chess/core';
+import { AppBar, haptic, Icons, Sheet, Strip, type StripItem } from '../components/ui';
+import {
+  applySan,
+  fenTurn,
+  fullmoveNumber,
+  sansToMoveText,
+  walkSan,
+  type Color,
+  type LegalMove,
+  type Square,
+} from '../chess/core';
+import type { BoardTheme } from '../components/Board';
+import { formatScore } from '../engine/types';
+import { useEngine } from '../engine/useEngine';
 import { openingNameForPath } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
 import { displayName } from '../model/repertoire';
@@ -71,6 +83,7 @@ export function TrainSession({ items, mode, title, onExit }: TrainSessionProps) 
   const [revealLine, setRevealLine] = useState(false);
   const [showMoves, setShowMoves] = useState(false);
   const [explore, setExplore] = useState(false);
+  const [why, setWhy] = useState(false);
   const [stats, setStats] = useState({ answered: 0, correct: 0 });
   const [stopped, setStopped] = useState(false);
 
@@ -406,6 +419,9 @@ export function TrainSession({ items, mode, title, onExit }: TrainSessionProps) 
             </div>
             <div className="spacer" />
             <div className="row gap-8">
+              <button className="btn soft grow" onClick={() => setWhy(true)}>
+                Why?
+              </button>
               <button className="btn soft grow" onClick={() => setRevealLine((v) => !v)}>
                 {revealLine ? 'Hide line' : 'Show line'}
               </button>
@@ -431,6 +447,20 @@ export function TrainSession({ items, mode, title, onExit }: TrainSessionProps) 
         )}
       </div>
 
+      {played && (
+        <WhySheet
+          open={why}
+          onClose={() => setWhy(false)}
+          fen={item.fen}
+          side={side}
+          played={played}
+          expected={expectedMove}
+          expectedSan={answer?.preferred?.san}
+          theme={settings.boardTheme}
+          showCoordinates={settings.showCoordinates}
+        />
+      )}
+
       <Sheet open={explore} onClose={() => setExplore(false)} title="Reference">
         <div className="movetext" style={{ marginBottom: 10 }}>
           {sansToMoveText(item.pathSans) || 'Start'}
@@ -443,5 +473,155 @@ export function TrainSession({ items, mode, title, onExit }: TrainSessionProps) 
         />
       </Sheet>
     </>
+  );
+}
+
+/* ── why a move is wrong ────────────────────────────────────────────────── */
+
+interface Verdict {
+  cp: number | null;
+  mate: number | null;
+  /** The engine's continuation from the position, in SAN. */
+  sans: string[];
+  /** Captured with the result: the live snapshot is cleared once it is done. */
+  depth: number;
+}
+
+/**
+ * What happens after a wrong move.
+ *
+ * "It isn't in your repertoire" is a fact, not a reason. The engine plays the
+ * position on from the move you made and shows the reply that punishes it,
+ * beside what the prepared move would have been worth — so the answer to "why"
+ * is a line you can step through rather than a verdict.
+ */
+function WhySheet({
+  open,
+  onClose,
+  fen,
+  side,
+  played,
+  expected,
+  expectedSan,
+  theme,
+  showCoordinates,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** The position that was asked about. */
+  fen: string;
+  side: Color;
+  played: LegalMove;
+  expected: LegalMove | null;
+  expectedSan?: string;
+  theme: BoardTheme;
+  showCoordinates: boolean;
+}) {
+  const [found, setFound] = useState<{ played?: Verdict; best?: Verdict }>({});
+  const [cursor, setCursor] = useState(1);
+
+  // One search at a time: the move you played first, so there is something to
+  // read while the prepared move is still being weighed.
+  const probe = !open
+    ? null
+    : !found.played
+      ? played.after
+      : expected && !found.best
+        ? expected.after
+        : null;
+
+  const { snapshot, sanLines, backend } = useEngine(probe, {
+    enabled: open,
+    movetime: 1500,
+    multiPv: 1,
+    debounceMs: 80,
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    setFound({});
+    setCursor(1);
+  }, [open, fen, played.san]);
+
+  useEffect(() => {
+    if (!open || !probe || snapshot.thinking || snapshot.fen !== probe) return;
+    const line = sanLines[0];
+    if (!line || (line.cp === null && line.mate === null)) return;
+    const verdict: Verdict = {
+      cp: line.cp,
+      mate: line.mate,
+      sans: line.sans,
+      depth: line.depth || snapshot.depth,
+    };
+    setFound((current) =>
+      probe === played.after ? { ...current, played: verdict } : { ...current, best: verdict },
+    );
+  }, [open, probe, snapshot, sanLines, played.after]);
+
+  /** Your move, then how the engine says it gets punished. */
+  const line = useMemo(
+    () => (found.played ? [played.san, ...found.played.sans.slice(0, 8)] : [played.san]),
+    [found.played, played.san],
+  );
+  const fens = useMemo(() => walkSan(line, fen).fens, [line, fen]);
+  const at = Math.min(cursor, fens.length - 1);
+  const lastMove = at > 0 ? applySan(fens[at - 1], line[at - 1]) : null;
+
+  /** Scores read from the side that was to move, not from White's. */
+  const score = (v?: Verdict) =>
+    !v
+      ? null
+      : formatScore({
+          cp: v.cp === null ? null : side === 'w' ? v.cp : -v.cp,
+          mate: v.mate === null ? null : side === 'w' ? v.mate : -v.mate,
+        });
+
+  const items: StripItem[] = line.map((san, i) => ({
+    san,
+    label: fenTurn(fens[i]) === 'w' ? `${fullmoveNumber(fens[i])}.` : undefined,
+    tone: i === 0 ? 'bad' : 'ghost',
+    current: at === i + 1,
+    seek: i + 1,
+  }));
+
+  return (
+    <Sheet open={open} onClose={onClose} title={`Why not ${played.san}?`}>
+      <div className="compare">
+        <div className="bad">
+          <div className="k">{played.san}</div>
+          <div className="v">{score(found.played) ?? '…'}</div>
+        </div>
+        <div className="good">
+          <div className="k">{expectedSan ?? 'Repertoire'}</div>
+          <div className="v">{expected ? (score(found.best) ?? '…') : '—'}</div>
+        </div>
+      </div>
+
+      <div className="spacer sm" />
+      <Board
+        fen={fens[at]}
+        orientation={side}
+        interactive={false}
+        lastMove={lastMove ? { from: lastMove.from, to: lastMove.to } : null}
+        showCoordinates={showCoordinates}
+        theme={theme}
+      />
+      <div className="spacer sm" />
+      <Strip items={items} cursor={at} max={line.length} onSeek={setCursor} />
+
+      <div className="center faint tiny" style={{ marginTop: 8 }}>
+        {!found.played
+          ? 'Playing it out…'
+          : found.played.sans.length === 0
+            ? 'The engine finds nothing forced here — this one is a matter of plan, not tactics.'
+            : `${side === 'w' ? 'Black' : 'White'} answers ${found.played.sans[0]}. Step through to see where it goes.`}
+      </div>
+      {found.played && (
+        <div className="center faint tiny" style={{ marginTop: 6 }}>
+          {backend === 'stockfish' ? 'Stockfish' : 'Rough estimate'} at depth{' '}
+          {found.played.depth || '?'}, from the position after each move.
+        </div>
+      )}
+    </Sheet>
   );
 }

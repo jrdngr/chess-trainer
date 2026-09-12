@@ -37,10 +37,17 @@ the board, and it is checked against your repertoire.
   it, you got there, you knew it, it was instant. No "comes back in 4d" caption
   under each one — the number is noise at the moment you are being asked how
   well you knew something.
-- Wrong: your repertoire's move next to the one you played, with **Show line**
+- Wrong: your repertoire's move next to the one you played, both drawn on the
+  board — yours in red, the prepared one in green — with **Why?**, **Show line**
   (the continuation) and **Explore** (the reference database) one tap away. A
   wrong answer is graded `again` automatically — you spend your attention on
   understanding, not on a button.
+- **Why?** answers the question the red square does not. "It isn't in your
+  repertoire" is a fact, not a reason, so the engine plays the position on from
+  the move you made and shows the reply that punishes it, beside what the
+  prepared move was worth. The refutation is a line on a board you can step
+  through rather than a verdict, and the footer says which engine gave it and at
+  what depth, because a shallow opinion should look like one.
 - No engine evaluations during recall by default. This is memory retrieval.
 - "Follow the line" (Settings, on by default) plays the opponent's reply and
   asks the next move in the same line, so you can compare line-running against
