@@ -154,6 +154,14 @@ export function Reveal({
   const survivedLabel = run.survived === 1 ? '1 move' : `${run.survived} moves`;
   const prep = run.source === 'book' ? 'the book' : 'your prep';
 
+  /** Shared by both endings, which differ in everything but this. */
+  const newRun = (
+    <button className="btn primary sm" onClick={onNewRun}>
+      New run
+      <Icons.next size={16} />
+    </button>
+  );
+
   return (
     <>
       <AppBar
@@ -182,11 +190,14 @@ export function Reveal({
 
         {death ? (
           <>
-            <div className={`verdict ${GRADE_TONES[grade]}`}>
-              <span className="ico">
-                {death.cause === 'offprep' ? <Icons.book size={16} /> : <Icons.cross size={18} />}
-              </span>
-              {deathTitle(death, grade === 'purple')}
+            <div className="row between">
+              <div className={`verdict ${GRADE_TONES[grade]}`} style={{ padding: 0 }}>
+                <span className="ico">
+                  {death.cause === 'offprep' ? <Icons.book size={16} /> : <Icons.cross size={18} />}
+                </span>
+                {deathTitle(death, grade === 'purple')}
+              </div>
+              {newRun}
             </div>
             <div className="compare mt-8">
               <div className="good">
@@ -208,11 +219,14 @@ export function Reveal({
           </>
         ) : (
           <>
-            <div className={`verdict ${GRADE_TONES[grade]}`}>
-              <span className="ico">
-                <Icons.check size={18} />
-              </span>
-              {grade === 'yellow' ? 'Complete, out of prep' : 'Line complete'}
+            <div className="row between">
+              <div className={`verdict ${GRADE_TONES[grade]}`} style={{ padding: 0 }}>
+                <span className="ico">
+                  <Icons.check size={18} />
+                </span>
+                {grade === 'yellow' ? 'Complete, out of prep' : 'Line complete'}
+              </div>
+              {newRun}
             </div>
             <div className="note center">
               {past > 0
@@ -236,9 +250,6 @@ export function Reveal({
               </div>
             </>
           )}
-          <button className="btn primary block xl" onClick={onNewRun}>
-            New run
-          </button>
           <button className="btn block" onClick={() => onPlayOn(shownFen)}>
             <Icons.play size={18} />
             Play from here
