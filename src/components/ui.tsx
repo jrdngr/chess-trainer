@@ -301,6 +301,20 @@ export function MoveStrip({
   onSeek: (n: number) => void;
   hint?: string;
 }) {
+  const strip = useRef<HTMLDivElement>(null);
+
+  /** Keep the current move in view — a cursor can start mid-line. */
+  useEffect(() => {
+    const el = strip.current;
+    if (!el || sans.length === 0) return;
+    const active = el.children[Math.max(0, cursor - 1)] as HTMLElement | undefined;
+    if (!active) return;
+    el.scrollTo({
+      left: active.offsetLeft - el.clientWidth / 2 + active.offsetWidth / 2,
+      behavior: 'smooth',
+    });
+  }, [cursor, sans.length]);
+
   return (
     <div className="strip-wrap">
       <IconButton label="Start" onClick={() => onSeek(0)} disabled={cursor === 0}>
@@ -309,7 +323,7 @@ export function MoveStrip({
       <IconButton label="Back" onClick={() => onSeek(cursor - 1)} disabled={cursor === 0}>
         <Icons.prev size={18} />
       </IconButton>
-      <div className="strip">
+      <div className="strip" ref={strip}>
         {sans.length === 0 && hint && <span className="hint">{hint}</span>}
         {sans.map((san, i) => (
           <button

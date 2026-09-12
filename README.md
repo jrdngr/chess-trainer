@@ -77,6 +77,12 @@ default; the plain mode is a line from your repertoire, no clock, no help.
 - **Per-opening records** — a separate best for each opening and side, rather
   than one number across everything.
 
+When a run ends, the board becomes a replay. Arrows and a tappable move strip
+walk the whole line, starting parked on the position that ended it — step
+forward to see how it was meant to continue, or back to see how you got there.
+The mistake's red and green squares are shown only on that one position, so
+stepping away does not leave stale marks behind.
+
 Only the move that ends a run touches the schedule, graded `again`. The correct
 moves before it are primed by the ones before them, so crediting them would
 inflate intervals on weaker evidence than an isolated review gives.

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../components/Board';
-import { haptic, IconButton, Icons } from '../components/ui';
-import { applySan, type LegalMove, type Square } from '../chess/core';
+import { haptic, IconButton, Icons, MoveStrip } from '../components/ui';
+import { applySan, walkSan, type LegalMove, type Square } from '../chess/core';
 import { referenceIndex } from '../model/referenceIndex';
 import {
   beginRun,
@@ -10,6 +10,7 @@ import {
   clockSpec,
   CLOCK_MODES,
   HINT_BUDGETS,
+  fullLine,
   isComplete,
   isUsersTurn,
   lineName,
@@ -80,12 +81,15 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
   );
   const [thinking, setThinking] = useState(false);
   const [hintSquare, setHintSquare] = useState<Square | null>(null);
+  /** Where the post-mortem board is looking. Meaningless while the run is live. */
+  const [cursor, setCursor] = useState(0);
   const picker = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
   const settled = useRef(false);
 
   const source = game?.source ?? null;
   const run = game?.run ?? null;
   const myTurn = run ? isUsersTurn(run) : false;
+  const over = phase === 'dead' || phase === 'survived';
 
   /* ── clock ─────────────────────────────────────────────────────────────
    * Only your own thinking is charged, so the opponent's beat is free. A
@@ -161,6 +165,23 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
     setHintSquare(null);
   }, [run?.fen]);
 
+  /**
+   * The line as a board you can walk. Built only once the run is over — while it
+   * is live, the continuation is exactly what must not be on screen.
+   *
+   * The cursor starts where the run ended, so the first thing you see is the
+   * position you got wrong, with the next moves a tap away.
+   */
+  const review = useMemo(() => {
+    if (!over || !source || !run) return null;
+    const sans = fullLine(source, run);
+    return { sans, fens: walkSan(sans).fens, deathPly: run.played.length };
+  }, [over, source, run]);
+
+  useEffect(() => {
+    if (review) setCursor(review.deathPly);
+  }, [review?.deathPly, review?.sans.length]);
+
   /** The line is named only once the run is over, so nothing leaks mid-run. */
   const named = useMemo(
     () =>
@@ -170,12 +191,18 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
     [source, run, phase],
   );
 
+  /** Whatever the board is showing: the live position, or the one under review. */
+  const shownFen = review ? (review.fens[cursor] ?? run?.fen ?? '') : (run?.fen ?? '');
+  /** True when the post-mortem is parked on the position that ended the run. */
+  const atDeath = !review || cursor === review.deathPly;
+
   const lastMove = useMemo(() => {
-    if (!run || run.played.length === 0) return null;
-    const { fens } = walk(run.played.slice(0, -1));
-    const move = applySan(fens[fens.length - 1], run.played[run.played.length - 1]);
+    const sans = review ? review.sans.slice(0, cursor) : (run?.played ?? []);
+    if (sans.length === 0) return null;
+    const { fens } = walk(sans.slice(0, -1));
+    const move = applySan(fens[fens.length - 1], sans[sans.length - 1]);
     return move ? { from: move.from, to: move.to } : null;
-  }, [run]);
+  }, [run, review, cursor]);
 
   const highlights = useMemo(() => {
     const out: { square: Square; kind: 'good' | 'bad' | 'hint' }[] = [];
@@ -183,7 +210,7 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
       if (hintSquare) out.push({ square: hintSquare, kind: 'hint' });
       return out;
     }
-    if (phase !== 'dead' || !death || !run) return out;
+    if (phase !== 'dead' || !death || !run || !atDeath) return out;
     if (death.played) {
       const wrong = applySan(run.fen, death.played);
       if (wrong) out.push({ square: wrong.from, kind: 'bad' }, { square: wrong.to, kind: 'bad' });
@@ -191,7 +218,7 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
     const right = death.expected[0] ? applySan(run.fen, death.expected[0]) : null;
     if (right) out.push({ square: right.from, kind: 'good' }, { square: right.to, kind: 'good' });
     return out;
-  }, [phase, death, run, hintSquare]);
+  }, [phase, death, run, hintSquare, atDeath]);
 
   const start = (next: PermadeathOptions) => {
     const started = beginRun({
@@ -254,7 +281,11 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
     setGame({ source, run: taken.run });
   };
 
-  const over = phase !== 'playing';
+  const seek = (n: number) => {
+    if (!review) return;
+    setCursor(Math.max(0, Math.min(review.sans.length, n)));
+  };
+
   const survivedLabel = run.survived === 1 ? '1 move' : `${run.survived} moves`;
   const urgent = shown !== null && shown <= 5;
 
@@ -283,17 +314,27 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
 
       <div className="screen no-nav">
         <Board
-          fen={run.fen}
+          fen={shownFen}
           orientation={run.color}
           interactive={phase === 'playing' && myTurn && !thinking}
           movableFor={run.color}
           onMove={onMove}
-          lastMove={phase === 'dead' ? null : lastMove}
+          lastMove={phase === 'dead' && atDeath ? null : lastMove}
           highlights={highlights}
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
-          dimmed={over}
+          dimmed={over && atDeath}
         />
+
+        {review && (
+          <>
+            <div className="spacer sm" />
+            <MoveStrip sans={review.sans} cursor={cursor} onSeek={seek} />
+            <div className="center faint tiny">
+              {whereYouAre(cursor, review.deathPly, phase === 'survived')}
+            </div>
+          </>
+        )}
 
         <div className="spacer" />
 
@@ -411,6 +452,15 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
       </div>
     </div>
   );
+}
+
+/** Where the post-mortem cursor sits, relative to the end of the run. */
+function whereYouAre(cursor: number, deathPly: number, survived: boolean): string {
+  const anchor = survived ? 'the end' : 'your mistake';
+  const distance = Math.abs(cursor - deathPly);
+  const moves = `${distance} move${distance === 1 ? '' : 's'}`;
+  if (cursor === deathPly) return survived ? 'The end of the line' : 'Where the run ended';
+  return cursor < deathPly ? `${moves} before ${anchor}` : `${moves} after ${anchor}`;
 }
 
 function formatClock(seconds: number): string {
