@@ -320,6 +320,12 @@ export interface Run {
   openingId?: string;
   /** True when you are playing the side the repertoire prepares against. */
   reverse: boolean;
+  /**
+   * True once the run has stepped outside its prep onto a real book move and
+   * carried on. Everything after that is judged by the book, and the run is
+   * graded as an out-of-prep one however it ends.
+   */
+  leftPrep: boolean;
   color: Color;
   fen: string;
   played: string[];
@@ -340,8 +346,11 @@ export interface Run {
   prepEnded: number | null;
 }
 
-/** How a run ended. Time and a blunder are as real as leaving your prep. */
-export type DeathCause = 'move' | 'time' | 'blunder';
+/**
+ * How a run ended. Leaving the prep is kept apart from the rest: it is the one
+ * ending where the move you played was real theory.
+ */
+export type DeathCause = 'move' | 'time' | 'blunder' | 'offprep';
 
 export interface RunOptions {
   /** Skip lines that ask fewer than this many moves of the user. */
@@ -505,6 +514,7 @@ export function startRepertoireRun(
     sourceLabel: displayName(picked.rep.name),
     repertoireId: picked.rep.id,
     reverse,
+    leftPrep: false,
     color: picked.side,
     fen: START_FEN,
     played: [],
@@ -531,6 +541,7 @@ export function startBookRun(
     source: 'book',
     sourceLabel: 'Book',
     reverse: false,
+    leftPrep: false,
     color: side,
     fen: START_FEN,
     played: [],
@@ -562,6 +573,7 @@ export function startOpeningRun(
     sourceLabel: opening.name,
     openingId: opening.id,
     reverse: false,
+    leftPrep: false,
     color: side,
     fen: START_FEN,
     played: [],
@@ -674,6 +686,62 @@ export function opponentReply(source: LineSource, run: Run, rand: () => number):
   const move = applySan(run.fen, san);
   if (!move) return { ...run, over: true };
   return { ...run, fen: move.after, played: [...run.played, san] };
+}
+
+/* ── stepping outside your prep ─────────────────────────────────────────── */
+
+/**
+ * How a run ended, in four flavours rather than two.
+ *
+ * Leaving your prep is not the same kind of failure as playing a move nobody
+ * has ever played, and finishing a line after having left it is not the same
+ * kind of success as finishing one you knew all the way through. Keeping them
+ * apart is the difference between "learn this" and "you got that wrong".
+ */
+export type RunGrade = 'green' | 'yellow' | 'red' | 'purple';
+
+export function gradeOf(run: Run, completed: boolean): RunGrade {
+  if (completed) return run.leftPrep ? 'yellow' : 'green';
+  return run.leftPrep ? 'purple' : 'red';
+}
+
+export const GRADES: RunGrade[] = ['green', 'yellow', 'red', 'purple'];
+
+export function gradeLabel(grade: RunGrade): string {
+  switch (grade) {
+    case 'green':
+      return 'Clean finish';
+    case 'yellow':
+      return 'Finished out of prep';
+    case 'purple':
+      return 'Left your prep';
+    default:
+      return 'Run over';
+  }
+}
+
+/** Whether a move is real theory here, whatever your own prep says. */
+export function bookHas(index: ReferenceIndex, fen: string, san: string): boolean {
+  return (lookup(index, fen)?.moves ?? []).some((move) => move.san === san);
+}
+
+/**
+ * Step outside the prep and carry on.
+ *
+ * The move is played, it counts towards the score, and the drawn line stops
+ * steering — from here the caller judges with the book instead of the prep.
+ */
+export function leavePrep(run: Run, san: string): Run {
+  const move = applySan(run.fen, san);
+  if (!move) return { ...run, over: true };
+  return {
+    ...run,
+    fen: move.after,
+    played: [...run.played, san],
+    survived: run.survived + 1,
+    leftPrep: true,
+    target: [],
+  };
 }
 
 /* ── extended mode ──────────────────────────────────────────────────────── */
@@ -893,7 +961,9 @@ export interface PermadeathRecord {
    * What the last logged run was, so a run carried on past its prep updates its
    * own entry instead of counting twice.
    */
-  last?: { id: string; key: string; completed: boolean };
+  last?: { id: string; key: string; completed: boolean; grade?: RunGrade };
+  /** How runs ended, counted by grade. */
+  grades: Record<RunGrade, number>;
 }
 
 export const EMPTY_RECORD: PermadeathRecord = {
@@ -903,18 +973,25 @@ export const EMPTY_RECORD: PermadeathRecord = {
   lastAt: null,
   survivals: 0,
   byLine: {},
+  grades: { green: 0, yellow: 0, red: 0, purple: 0 },
 };
 
 /** A saved record from before per-opening bests existed is still a record. */
 export function normalizeRecord(record: Partial<PermadeathRecord> | undefined): PermadeathRecord {
-  if (!record) return { ...EMPTY_RECORD };
-  return { ...EMPTY_RECORD, ...record, byLine: record.byLine ?? {} };
+  if (!record) return { ...EMPTY_RECORD, grades: { ...EMPTY_RECORD.grades } };
+  return {
+    ...EMPTY_RECORD,
+    ...record,
+    byLine: record.byLine ?? {},
+    grades: { ...EMPTY_RECORD.grades, ...(record.grades ?? {}) },
+  };
 }
 
 export interface RunOutcome {
   /** The run this came from, so carrying a run on amends it. */
   id: string;
   key: string;
+  grade: RunGrade;
   label: string;
   color: Color;
   depth: number;
@@ -932,6 +1009,7 @@ export function outcomeOf(run: Run, completed: boolean): RunOutcome {
   return {
     id: run.id,
     key,
+    grade: gradeOf(run, completed),
     label: run.reverse ? `${run.sourceLabel} (reversed)` : run.sourceLabel,
     color: run.color,
     depth: run.survived,
@@ -967,7 +1045,13 @@ export function recordRun(
     lastDepth: outcome.depth,
     lastAt: at,
     survivals: base.survivals + addSurvival,
-    last: { id: outcome.id, key: outcome.key, completed: outcome.completed || alreadyCounted },
+    grades: amendGrades(base.grades, amend ? base.last?.grade : undefined, outcome.grade),
+    last: {
+      id: outcome.id,
+      key: outcome.key,
+      completed: outcome.completed || alreadyCounted,
+      grade: outcome.grade,
+    },
     byLine: {
       ...base.byLine,
       [outcome.key]: {
@@ -980,6 +1064,18 @@ export function recordRun(
       },
     },
   };
+}
+
+/** Move a run's grade tally, taking back the grade it was last logged under. */
+function amendGrades(
+  grades: Record<RunGrade, number>,
+  previous: RunGrade | undefined,
+  next: RunGrade,
+): Record<RunGrade, number> {
+  const out = { ...grades };
+  if (previous) out[previous] = Math.max(0, out[previous] - 1);
+  out[next] += 1;
+  return out;
 }
 
 /** Per-opening records, deepest first — what the breakdown shows. */

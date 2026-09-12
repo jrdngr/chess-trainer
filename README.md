@@ -105,9 +105,28 @@ multiply lines without making a position any likelier to appear on a board. Rare
 sidelines keep a floor rather than vanishing: they are prep too.
 
 Any move you have prepared from a position counts, not just the one the drawn
-line happens to continue. When only one move is prepared, the reveal says so,
-because "you left your prep" and "your prep is one move wide here" are different
-problems and only one of them is about recall.
+line happens to continue.
+
+Playing a move that is real theory but not in your prep is not a loss. The run
+pauses, names the line your move leads into, shows what your prep had instead,
+and offers three ways on: **add it to your repertoire and carry on**, carry on
+without adding it, or stop there. Carrying on keeps the move, keeps the score,
+and hands the judging to the book for the rest of the run — the prep is behind
+you, so the book is the only honest referee left. Only a move nobody has played
+is still a plain loss.
+
+That makes four endings rather than two, and they are coloured apart, because
+"learn this" and "you got that wrong" are different notes:
+
+| | |
+|---|---|
+| **Green** | finished the line, all of it inside your prep |
+| **Yellow** | finished, having stepped out of prep along the way |
+| **Red** | played a move that is neither prepared nor in the book |
+| **Purple** | the run ended out of prep |
+
+The record counts endings by grade and shows them as a bar, so a run of purple
+says something a run of red does not: the prep has gaps, not the recall.
 
 When a run ends, the board becomes a replay. Arrows and a tappable move strip
 walk the whole line, starting parked on the position that ended it — step

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applySan, fenTurn, positionKey, START_FEN, walkSan } from '../chess/core';
 import {
   beginRun,
+  bookHas,
   bookSource,
   clockDescription,
   clockLabel,
@@ -9,6 +10,10 @@ import {
   CLOCK_MODES,
   BLUNDER_LIMIT,
   DEFAULT_OPTIONS,
+  gradeLabel,
+  gradeOf,
+  GRADES,
+  leavePrep,
   evalLoss,
   extend,
   extendedMoves,
@@ -311,6 +316,7 @@ describe('the record', () => {
   const outcome = (depth: number, completed: boolean, key = 'rep:a:w', id = `r${(ids += 1)}`) => ({
     id,
     key,
+    grade: completed ? ('green' as const) : ('red' as const),
     label: 'Queen\u2019s Gambit',
     color: 'w' as const,
     depth,
@@ -616,6 +622,8 @@ describe('defaults', () => {
       weakFirst: false,
       clock: 'off',
       hints: 0,
+      extended: false,
+      openingId: '',
     });
   });
 
@@ -749,6 +757,7 @@ describe('what counts as staying in your repertoire', () => {
       sourceLabel: 'King’s Indian',
       repertoireId: kid.id,
       reverse: false,
+      leftPrep: false,
       color: 'b',
       fen: walkSan(sans).fens[sans.length],
       id: 'probe',
@@ -902,7 +911,17 @@ describe('extended mode', () => {
     const fixed = normalizeRecord(old);
     expect(fixed.last).toBeUndefined();
     // With nothing to amend, the next run counts as its own.
-    expect(recordRun(fixed, { id: 'x', key: 'k', label: 'L', color: 'w', depth: 2, completed: false }).runs).toBe(3);
+    expect(
+      recordRun(fixed, {
+        id: 'x',
+        key: 'k',
+        grade: 'red',
+        label: 'L',
+        color: 'w',
+        depth: 2,
+        completed: false,
+      }).runs,
+    ).toBe(3);
   });
 });
 
@@ -1011,5 +1030,87 @@ describe('running through one opening', () => {
 
   it('has no opening chosen by default', () => {
     expect(DEFAULT_OPTIONS.openingId).toBe('');
+  });
+});
+
+describe('stepping outside your prep', () => {
+  const rep = whiteRep();
+  const source = repertoireSource(rep, index);
+
+  function at(sans: string[]): Run {
+    const base = startRepertoireRun([rep], 'w', { seed: 1 })!;
+    return { ...base, fen: walkSan(sans).fens[sans.length], played: sans, target: [] };
+  }
+
+  it('tells a real move apart from one nobody plays', () => {
+    const run = at(['d4', 'd5']);
+    // The repertoire plays 2.c4 here. 2.Nf3 is not prepared but is real theory.
+    expect(movesHere(source, run)).toEqual(['c4']);
+    expect(bookHas(index, run.fen, 'Nf3')).toBe(true);
+    expect(bookHas(index, run.fen, 'Na3')).toBe(false);
+    expect(play(source, run, 'Nf3').ok).toBe(false);
+  });
+
+  it('carries the run on and hands the judging to the book', () => {
+    const run = at(['d4', 'd5']);
+    const carried = leavePrep(run, 'Nf3');
+    expect(carried.leftPrep).toBe(true);
+    expect(carried.over).toBe(false);
+    expect(carried.survived).toBe(run.survived + 1);
+    expect(carried.played).toEqual(['d4', 'd5', 'Nf3']);
+    // The drawn line stops steering, since it is not being followed any more.
+    expect(carried.target).toEqual([]);
+    expect(playedIsLegal(carried)).toBe(true);
+  });
+
+  it('refuses a move that is not legal', () => {
+    // No white pawn can reach e5 from the start square.
+    expect(applySan(at(['d4', 'd5']).fen, 'e5')).toBeNull();
+    expect(leavePrep(at(['d4', 'd5']), 'e5').over).toBe(true);
+  });
+
+  it('grades the four endings apart', () => {
+    const clean = at(['d4', 'd5']);
+    const strayed = { ...clean, leftPrep: true };
+    expect(gradeOf(clean, true)).toBe('green');
+    expect(gradeOf(strayed, true)).toBe('yellow');
+    expect(gradeOf(clean, false)).toBe('red');
+    expect(gradeOf(strayed, false)).toBe('purple');
+    for (const grade of GRADES) expect(gradeLabel(grade)).toBeTruthy();
+  });
+
+  it('files the grade with the run', () => {
+    const run = at(['d4', 'd5']);
+    expect(outcomeOf(run, true).grade).toBe('green');
+    expect(outcomeOf(leavePrep(run, 'Nf3'), true).grade).toBe('yellow');
+    expect(outcomeOf(leavePrep(run, 'Nf3'), false).grade).toBe('purple');
+  });
+
+  it('counts endings by grade, and moves the count when a run is amended', () => {
+    const run = at(['d4', 'd5']);
+    let record = recordRun(EMPTY_RECORD, outcomeOf({ ...run, survived: 4 }, true), 1000);
+    expect(record.grades).toEqual({ green: 1, yellow: 0, red: 0, purple: 0 });
+
+    // The same run carried on and ended out of prep: one run, one grade.
+    const strayed = { ...leavePrep(run, 'Nf3'), survived: 9 };
+    record = recordRun(record, outcomeOf(strayed, false), 2000);
+    expect(record.runs).toBe(1);
+    expect(record.grades).toEqual({ green: 0, yellow: 0, red: 0, purple: 1 });
+
+    const other = at(['d4', 'd5']);
+    record = recordRun(record, outcomeOf({ ...other, id: 'other', survived: 2 }, false), 3000);
+    expect(record.grades).toEqual({ green: 0, yellow: 0, red: 1, purple: 1 });
+  });
+
+  it('reads a record saved before grades were counted', () => {
+    const old = { runs: 3, best: 7, lastDepth: 1, lastAt: 5, survivals: 2, byLine: {} };
+    const fixed = normalizeRecord(old);
+    expect(fixed.grades).toEqual({ green: 0, yellow: 0, red: 0, purple: 0 });
+    expect(fixed.runs).toBe(3);
+  });
+
+  it('starts every run inside its prep', () => {
+    expect(startRepertoireRun([rep], 'w', { seed: 1 })!.leftPrep).toBe(false);
+    expect(startBookRun(index, 'w', { seed: 1 })!.leftPrep).toBe(false);
   });
 });

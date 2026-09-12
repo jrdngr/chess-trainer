@@ -22,7 +22,7 @@ import {
 } from '../chess/core';
 import { formatScore } from '../engine/types';
 import { useEngine } from '../engine/useEngine';
-import { formatGameCount, type CatalogueEntry } from '../model/reference';
+import { deepestName, formatGameCount, type CatalogueEntry } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
 import {
   beginRun,
@@ -32,8 +32,14 @@ import {
   CLOCK_MODES,
   HINT_BUDGETS,
   fullLine,
+  bookHas,
+  bookSource,
   extend,
   extendedMoves,
+  gradeOf,
+  gradeLabel,
+  GRADES,
+  leavePrep,
   isComplete,
   isExtended,
   isUsersTurn,
@@ -59,6 +65,7 @@ import {
   type PermadeathOptions,
   type PermadeathRecord,
   type Run,
+  type RunGrade,
   type SourceKind,
 } from '../model/permadeath';
 import { mulberry32 } from '../model/session';
@@ -70,7 +77,18 @@ export interface PermadeathSessionProps {
   onExit: () => void;
 }
 
-type Phase = 'setup' | 'playing' | 'dead' | 'survived' | 'playon';
+type Phase = 'setup' | 'playing' | 'offprep' | 'dead' | 'survived' | 'playon';
+
+/** A move that is theory here, but not in your prep. */
+interface OffPrep {
+  san: string;
+  /** What your prep had instead. */
+  expected: string[];
+  /** What the databases calls the line your move leads into. */
+  opening: string | null;
+  /** Whether there is a repertoire this could be added to. */
+  addable: boolean;
+}
 
 /** Your move past the prep, held until the engine has scored it. */
 interface Pending {
@@ -104,6 +122,8 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
   const endRun = useStore((s) => s.endPermadeathRun);
   const missed = useStore((s) => s.missedInPermadeath);
   const record = useStore((s) => s.permadeath);
+  const addToRep = useStore((s) => s.addLine);
+  const index = referenceIndex();
 
   const options = useMemo<PermadeathOptions>(
     () => ({
@@ -138,6 +158,8 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
   const [pending, setPending] = useState<Pending | null>(null);
   /** The engine's read on the position you are about to move in. */
   const [baseline, setBaseline] = useState<{ fen: string; cp: number } | null>(null);
+  /** A real book move you played that your prep does not have. */
+  const [offPrep, setOffPrep] = useState<OffPrep | null>(null);
   const picker = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
   const settled = useRef(false);
 
@@ -388,7 +410,7 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
   const named = useMemo(
     () =>
       source && run && phase !== 'playing' && phase !== 'setup'
-        ? lineName(referenceIndex(), source, run)
+        ? lineName(index, source, run)
         : null,
     [source, run, phase],
   );
@@ -426,7 +448,7 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
     const started = beginRun({
       ...next,
       reps,
-      index: referenceIndex(),
+      index,
       weakness: weaknessFromCards(cards),
     });
     if (!started) return;
@@ -470,6 +492,21 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
       setGame({ source, run: result.run });
       return;
     }
+    // A real theory move that your prep simply does not have is not the same
+    // mistake as a move nobody plays. Pause and let it be a decision.
+    if (!run.leftPrep && run.source !== 'book' && bookHas(index, run.fen, move.san)) {
+      if (settings.hapticFeedback) haptic(14);
+      const named = deepestName(index, [...run.played, move.san]);
+      setOffPrep({
+        san: move.san,
+        expected: result.expected,
+        opening: named && named.ply >= 3 ? named.name : null,
+        addable: !!run.repertoireId,
+      });
+      setPhase('offprep');
+      return;
+    }
+
     if (settings.hapticFeedback) haptic([22, 60, 22]);
     setDeath({ cause: 'move', played: result.played, expected: result.expected });
     setGame({ source, run: result.run });
@@ -479,6 +516,34 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
     // positions are not decision points and must not touch the schedule.
     if (run.repertoireId && !run.reverse) {
       missed(run.repertoireId, run.fen, result.played, result.expected[0] ?? '');
+    }
+  };
+
+  /** Keep the move, and let the book judge the rest of the run. */
+  const acceptOffPrep = (addToRepertoire: boolean) => {
+    if (!offPrep || !run) return;
+    if (addToRepertoire && run.repertoireId) {
+      addToRep(run.repertoireId, [...run.played, offPrep.san], 'manual');
+      toast(`${offPrep.san} added`);
+    }
+    if (settings.hapticFeedback) haptic(10);
+    setOffPrep(null);
+    // The prep is behind us now; the book takes over the judging.
+    setGame({ source: bookSource(index, run.color), run: leavePrep(run, offPrep.san) });
+    setPhase('playing');
+  };
+
+  /** Stop here instead. A softer ending than a move nobody plays. */
+  const declineOffPrep = () => {
+    if (!offPrep || !run) return;
+    const ended = { ...run, leftPrep: true };
+    setDeath({ cause: 'offprep', played: offPrep.san, expected: offPrep.expected });
+    setOffPrep(null);
+    setGame({ source, run: { ...ended, over: true } });
+    setPhase('dead');
+    finish(ended, false);
+    if (run.repertoireId && !run.reverse) {
+      missed(run.repertoireId, run.fen, offPrep.san, offPrep.expected[0] ?? '');
     }
   };
 
@@ -662,6 +727,7 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
   const survivedLabel = run.survived === 1 ? '1 move' : `${run.survived} moves`;
   const urgent = shown !== null && shown <= 5;
   const past = extendedMoves(run);
+  const grade = over ? gradeOf(run, phase === 'survived') : null;
   const liveScore =
     baseline?.fen === run.fen ? formatScore({ cp: baseline.cp, mate: null }) : null;
 
@@ -688,7 +754,16 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
             {formatClock(shown)}
           </span>
         )}
-        <span className="chip" style={{ minWidth: 38, justifyContent: 'center' }}>
+        <span
+          className="chip num"
+          style={{
+            minWidth: 38,
+            justifyContent: 'center',
+            ...(run.leftPrep
+              ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
+              : null),
+          }}
+        >
           {run.survived}
         </span>
       </div>
@@ -719,6 +794,53 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
 
         <div className="spacer" />
 
+        {phase === 'offprep' && offPrep && (
+          <>
+            <div className="verdict" style={{ color: 'var(--accent)' }}>
+              <span className="ico" style={{ background: 'var(--accent-soft)' }}>
+                <Icons.book size={16} />
+              </span>
+              Out of prep
+            </div>
+            <div className="center small muted" style={{ marginTop: 2 }}>
+              <b style={{ color: 'var(--text)' }}>{offPrep.san}</b> is a real move
+              {offPrep.opening ? ` — the ${offPrep.opening}` : ''} — but it is not in your
+              repertoire here.
+            </div>
+            <div className="compare" style={{ marginTop: 12 }}>
+              <div>
+                <div className="k">Your prep</div>
+                <div className="v">{offPrep.expected[0] ?? '—'}</div>
+              </div>
+              <div>
+                <div className="k">You played</div>
+                <div className="v" style={{ color: 'var(--accent)' }}>{offPrep.san}</div>
+              </div>
+            </div>
+            <div className="spacer" />
+            {offPrep.addable && (
+              <button className="btn accent block xl" onClick={() => acceptOffPrep(true)}>
+                <Icons.plus size={18} />
+                Add {offPrep.san} and carry on
+              </button>
+            )}
+            <button
+              className={`btn block${offPrep.addable ? '' : ' accent xl'}`}
+              style={{ marginTop: 8 }}
+              onClick={() => acceptOffPrep(false)}
+            >
+              Carry on without adding it
+            </button>
+            <button className="btn plain block" style={{ marginTop: 8 }} onClick={declineOffPrep}>
+              End the run here
+            </button>
+            <div className="center faint tiny" style={{ marginTop: 10 }}>
+              Carrying on hands the judging to the book, and the run is graded as an
+              out-of-prep one however it ends.
+            </div>
+          </>
+        )}
+
         {phase === 'playing' && (
           <>
             <div className="prompt">
@@ -735,9 +857,11 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
                   ? `The move starts on ${hintSquare}`
                   : extended
                     ? 'Past your prep — the engine is calling blunders now'
-                    : run.reverse
-                      ? 'Play the side your repertoire prepares against'
-                      : 'One mistake ends the run'}
+                    : run.leftPrep
+                      ? 'Out of your prep — the book is judging now'
+                      : run.reverse
+                        ? 'Play the side your repertoire prepares against'
+                        : 'One mistake ends the run'}
               </div>
             </div>
             {run.hints > 0 && !extended && (
@@ -758,11 +882,11 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
 
         {phase === 'survived' && (
           <>
-            <div className="verdict ok">
-              <span className="ico">
+            <div className="verdict" style={{ color: gradeColor(grade) }}>
+              <span className="ico" style={{ background: gradeWash(grade) }}>
                 <Icons.check size={18} />
               </span>
-              Line complete
+              {grade === 'yellow' ? 'Complete, out of prep' : 'Line complete'}
             </div>
             <div className="center muted small" style={{ marginTop: 2 }}>
               {past > 0 ? (
@@ -783,15 +907,19 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
 
         {phase === 'dead' && death && (
           <>
-            <div className="verdict no">
-              <span className="ico">
-                <Icons.cross size={18} />
+            <div className="verdict" style={{ color: gradeColor(grade) }}>
+              <span className="ico" style={{ background: gradeWash(grade) }}>
+                {death.cause === 'offprep' ? <Icons.book size={16} /> : <Icons.cross size={18} />}
               </span>
               {death.cause === 'time'
                 ? 'Out of time'
                 : death.cause === 'blunder'
                   ? 'Blunder'
-                  : 'Run over'}
+                  : death.cause === 'offprep'
+                    ? 'Stopped out of prep'
+                    : grade === 'purple'
+                      ? 'Run over, out of prep'
+                      : 'Run over'}
             </div>
             <div className="compare" style={{ marginTop: 10 }}>
               <div className="good">
@@ -814,7 +942,9 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
               </div>
             </div>
             <div className="center faint tiny" style={{ marginTop: 8 }}>
-              {death.cause === 'blunder'
+              {death.cause === 'offprep'
+                ? 'A real move, just not one you had prepared. Add it to your repertoire and it will not stop a run again.'
+                : death.cause === 'blunder'
                 ? `Past your prep the engine allows a drop of ${(BLUNDER_LIMIT / 100).toFixed(2)} before calling it a blunder.`
                 : death.expected.length > 1
                   ? `Any of these would have counted: ${death.expected.slice(0, 6).join(', ')}${death.expected.length > 6 ? '…' : ''}`
@@ -916,6 +1046,28 @@ function whereYouAre(cursor: number, deathPly: number, survived: boolean): strin
   return cursor < deathPly ? `${moves} before ${anchor}` : `${moves} after ${anchor}`;
 }
 
+const GRADE_COLORS: Record<RunGrade, string> = {
+  green: 'var(--good)',
+  yellow: 'var(--warn)',
+  red: 'var(--bad)',
+  purple: 'var(--accent)',
+};
+
+const GRADE_WASHES: Record<RunGrade, string> = {
+  green: 'var(--good-soft)',
+  yellow: 'var(--warn-soft)',
+  red: 'var(--bad-soft)',
+  purple: 'var(--accent-soft)',
+};
+
+function gradeColor(grade: RunGrade | null): string {
+  return grade ? GRADE_COLORS[grade] : 'var(--text)';
+}
+
+function gradeWash(grade: RunGrade | null): string {
+  return grade ? GRADE_WASHES[grade] : 'var(--surface-2)';
+}
+
 function formatClock(seconds: number): string {
   const whole = Math.ceil(seconds);
   if (whole < 60) return `${whole}s`;
@@ -936,6 +1088,7 @@ function Stat({ label, value }: { label: string; value: number }) {
 /** The global tally, optionally broken down by opening and side. */
 function Record({ record, perLine }: { record: PermadeathRecord; perLine: boolean }) {
   const lines = perLine ? lineRecords(record) : [];
+  const total = GRADES.reduce((sum, g) => sum + record.grades[g], 0);
   return (
     <>
       <div className="section">Record</div>
@@ -944,6 +1097,27 @@ function Record({ record, perLine }: { record: PermadeathRecord; perLine: boolea
         <Stat label="Runs" value={record.runs} />
         <Stat label="Lines completed" value={record.survivals} />
       </div>
+      {total > 0 && (
+        <div className="card" style={{ marginTop: 10 }}>
+          <div className="bar-stack">
+            {GRADES.filter((g) => record.grades[g] > 0).map((g) => (
+              <i
+                key={g}
+                style={{ background: GRADE_COLORS[g], flex: record.grades[g] }}
+                title={gradeLabel(g)}
+              />
+            ))}
+          </div>
+          <div className="row wrap gap-8" style={{ marginTop: 10 }}>
+            {GRADES.map((g) => (
+              <span className="pill" key={g}>
+                <i style={{ background: GRADE_COLORS[g] }} />
+                <b>{record.grades[g]}</b> {gradeLabel(g).toLowerCase()}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       {perLine && (
         <>
           <div className="section">By opening</div>
