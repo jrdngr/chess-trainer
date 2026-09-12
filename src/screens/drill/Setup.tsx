@@ -61,7 +61,7 @@ export function Setup({
           disabled={items.length === 0}
           onClick={() => onStart(prefs)}
         >
-          {items.length === 0 ? 'Nothing in scope' : 'Start drilling'}
+          {items.length === 0 ? 'Nothing in scope' : 'Start'}
         </button>
         <div className="note center">
           {items.length === 0

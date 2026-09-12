@@ -40,7 +40,7 @@ export function Setup({
           disabled={reps.length === 0}
           onClick={() => onStart(prefs)}
         >
-          {reps.length === 0 ? 'Add a repertoire first' : 'Set a trap'}
+          {reps.length === 0 ? 'Add a repertoire first' : 'Start'}
         </button>
         <div className="note center">
           Every trap comes from a position your own lines actually reach.

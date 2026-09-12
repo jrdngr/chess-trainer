@@ -106,7 +106,7 @@ export function Setup({
           onClick={() => onStart({ ...prefs, repertoireId: chosenId })}
         >
           {!blocked
-            ? 'Start run'
+            ? 'Start'
             : fromOpening
               ? 'Pick an opening first'
               : prefs.reverse

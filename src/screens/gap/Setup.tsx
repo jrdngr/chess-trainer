@@ -51,10 +51,12 @@ export function Setup({
 
       <div className="screen no-nav">
         <button className="btn primary block xl" onClick={() => onStart(prefs)}>
-          {count === 0 ? 'Check again' : count === 1 ? 'Fix 1 gap' : `Fix ${count} gaps`}
+          Start
         </button>
         <div className="note center">
-          A gap is a reply the database plays that your prep reaches and then stops short of.
+          {count === 0
+            ? 'Nothing unanswered at these settings.'
+            : `${count} ${count === 1 ? 'gap' : 'gaps'} — a reply the database plays that your prep reaches and then stops short of.`}
         </div>
 
         <Section title="How often played" />
