@@ -129,6 +129,17 @@ export function isPromotion(fen: string, from: Square, to: Square): boolean {
   return legalMoves(fen).some((m) => m.from === from && m.to === to && !!m.promotion);
 }
 
+/** The squares of the last move in a line, for highlighting on a board. */
+export function lastMoveOf(
+  sans: string[],
+  startFen = START_FEN,
+): { from: Square; to: Square } | null {
+  if (!sans.length) return null;
+  const { fens } = walkSan(sans.slice(0, -1), startFen);
+  const move = applySan(fens[fens.length - 1], sans[sans.length - 1]);
+  return move ? { from: move.from, to: move.to } : null;
+}
+
 export interface PositionStatus {
   check: boolean;
   checkmate: boolean;
@@ -166,12 +177,6 @@ export function coordsToSquare(file: number, rank: number): Square {
 export function isLightSquare(square: Square): boolean {
   const { file, rank } = squareToCoords(square);
   return (file + rank) % 2 === 1;
-}
-
-/** "1. e4 c5 2. Nf3" style numbering for a single move in a line. */
-export function moveNumberLabel(fen: string, withBlackDots = true): string {
-  const n = fullmoveNumber(fen);
-  return fenTurn(fen) === 'w' ? `${n}.` : withBlackDots ? `${n}...` : '';
 }
 
 /** Render a SAN sequence as a numbered move string starting from `startFen`. */

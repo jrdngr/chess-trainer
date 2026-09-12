@@ -8,7 +8,7 @@ import {
   setNote,
   setPreferred,
 } from '../model/repertoire';
-import { allItems, branchItems, cardId, type TrainingItem } from '../model/session';
+import { allItems, cardId, type TrainingItem } from '../model/session';
 import { createCard, review } from '../model/srs';
 import type {
   Card,
@@ -20,43 +20,41 @@ import type {
   Settings,
 } from '../model/types';
 import {
+  DEFAULT_PREFS,
   EMPTY_RECORD,
   normalizeRecord,
   recordRun,
+  type PermadeathPrefs,
   type PermadeathRecord,
   type RunOutcome,
 } from '../model/permadeath';
-import { cloudAvailable, readCloud, writeCloud, type CloudStatus } from './cloud';
+import { cloudAvailable, readCloud, writeCloud, type CloudStatus, type WriteResult } from './cloud';
 import { clearState, debounce, loadState, probeStorage, saveState, type StorageSupport } from './db';
 import { buildSeedRepertoires } from './seed';
 
 export const DEFAULT_SETTINGS: Settings = {
-  boardOrientationFollowsRepertoire: true,
   showCoordinates: true,
   engineEnabled: true,
-  showEvalInTraining: false,
   newCardsPerSession: 8,
   maxSessionLength: 25,
   playOpponentReplies: true,
-  confirmMoves: false,
-  pieceSet: 'classic',
   boardTheme: 'slate',
   hapticFeedback: true,
   lichessUsername: '',
   chesscomUsername: '',
   cloudSync: true,
-  permadeathColor: 'random',
-  permadeathSource: 'repertoire',
-  permadeathRepertoire: '',
-  permadeathOpening: '',
   favoriteOpenings: [],
-  permadeathReverse: false,
-  permadeathWeakFirst: false,
-  permadeathClock: 'off',
-  permadeathHints: 0,
-  permadeathPerLine: false,
-  permadeathExtended: false,
+  permadeath: { ...DEFAULT_PREFS },
 };
+
+/** Saved settings over the defaults, one level deep, so a new field never comes back undefined. */
+function mergeSettings(saved: Partial<Settings> | undefined): Settings {
+  return {
+    ...DEFAULT_SETTINGS,
+    ...saved,
+    permadeath: { ...DEFAULT_PREFS, ...saved?.permadeath },
+  };
+}
 
 /**
  * Bump when the seeded repertoires change shape or content. A saved state from
@@ -94,14 +92,12 @@ interface StoreState extends PersistedState {
   annotate: (repId: string, nodeId: string, note: string) => void;
   reorder: (repId: string, nodeId: string, delta: number) => void;
   addRepertoire: (name: string, color: Color) => string;
-  renameRepertoire: (repId: string, name: string) => void;
-  deleteRepertoire: (repId: string) => void;
 
   grade: (item: TrainingItem, grade: Grade, playedSan: string | null, correct: boolean) => void;
   ensureCard: (item: TrainingItem) => Card;
-  forgetCards: (keys: string[]) => void;
 
   setSettings: (patch: Partial<Settings>) => void;
+  setPermadeath: (patch: Partial<PermadeathPrefs>) => void;
   setImportedGames: (games: ImportedGame[]) => void;
 
   /** Log a finished permadeath run, globally and against its own opening. */
@@ -155,6 +151,43 @@ const persist = debounce((state: StoreState) => {
   void saveState(persistedFrom(state));
 }, 250);
 
+/** A saved state is only usable if it exists and was written by this schema. */
+function usable(saved: PersistedState | null | undefined): PersistedState | null {
+  return saved?.repertoires && saved.version === SCHEMA_VERSION ? saved : null;
+}
+
+function statusAfterWrite(result: WriteResult): CloudStatus {
+  if (result.ok) return { kind: 'synced', lastSyncedAt: Date.now() };
+  if (result.reason === 'unavailable') return { kind: 'unavailable' };
+  if (result.reason === 'too-large') return { kind: 'too-large', bytes: result.bytes ?? 0 };
+  return { kind: 'error', message: result.message ?? 'Sync failed' };
+}
+
+/** Review one card and log it; shared by training and permadeath. */
+function reviewed(
+  state: StoreState,
+  card: Card,
+  gradeValue: Grade,
+  entry: Pick<ReviewLogEntry, 'correct' | 'playedSan' | 'expectedSan'>,
+): Pick<PersistedState, 'cards' | 'log'> {
+  const now = Date.now();
+  const { card: next } = review(card, gradeValue, now);
+  return {
+    cards: { ...state.cards, [card.id]: next },
+    log: [
+      ...state.log.slice(-499),
+      {
+        ...entry,
+        cardId: card.id,
+        at: now,
+        grade: gradeValue,
+        intervalBefore: card.interval,
+        intervalAfter: next.interval,
+      },
+    ],
+  };
+}
+
 export const useStore = create<StoreState>((set, get) => {
   /**
    * Push well after the user stops interacting. Held back until the first
@@ -170,10 +203,7 @@ export const useStore = create<StoreState>((set, get) => {
     if (state.cloud.kind === 'unavailable') return;
     set({ cloud: { kind: 'syncing' } });
     void writeCloud(syncableFrom(state), state.updatedAt).then((result) => {
-      if (result.ok) set({ cloud: { kind: 'synced', lastSyncedAt: Date.now() } });
-      else if (result.reason === 'unavailable') set({ cloud: { kind: 'unavailable' } });
-      else if (result.reason === 'too-large') set({ cloud: { kind: 'too-large', bytes: result.bytes ?? 0 } });
-      else set({ cloud: { kind: 'error', message: result.message ?? 'Sync failed' } });
+      set({ cloud: statusAfterWrite(result) });
     });
   }, 4000);
 
@@ -198,14 +228,13 @@ export const useStore = create<StoreState>((set, get) => {
     async init() {
       const storage = await probeStorage();
       const saved = await loadState<PersistedState>();
-      const usableLocal = saved?.repertoires && saved.version === SCHEMA_VERSION ? saved : null;
+      const usableLocal = usable(saved);
 
       // Read the account copy before deciding anything. When local storage is
       // blocked — which is the normal case inside the artifact sandbox — this
       // is the only place the user's progress exists.
       const remote = cloudAvailable() ? await readCloud<PersistedState>() : null;
-      const usableRemote =
-        remote && remote.state?.repertoires && remote.state.version === SCHEMA_VERSION ? remote : null;
+      const usableRemote = remote && usable(remote.state) ? remote : null;
 
       const localAt = usableLocal?.updatedAt ?? 0;
       const remoteAt = usableRemote?.updatedAt ?? 0;
@@ -216,7 +245,7 @@ export const useStore = create<StoreState>((set, get) => {
           ...chosen,
           permadeath: normalizeRecord(chosen.permadeath),
           updatedAt: Math.max(localAt, remoteAt),
-          settings: { ...DEFAULT_SETTINGS, ...chosen.settings },
+          settings: mergeSettings(chosen.settings),
           storage,
           ready: true,
           cloud: usableRemote
@@ -229,7 +258,7 @@ export const useStore = create<StoreState>((set, get) => {
         // Nothing anywhere, or a save that predates the current seed data.
         set({
           ...emptyPersisted(),
-          settings: { ...DEFAULT_SETTINGS, ...(saved?.settings ?? {}) },
+          settings: mergeSettings(saved?.settings),
           storage,
           ready: true,
         });
@@ -251,14 +280,14 @@ export const useStore = create<StoreState>((set, get) => {
       const remote = await readCloud<PersistedState>();
       const local = get();
 
-      if (remote?.state?.repertoires && remote.state.version === SCHEMA_VERSION && remote.updatedAt > local.updatedAt) {
+      if (remote && usable(remote.state) && remote.updatedAt > local.updatedAt) {
         // Another device is ahead. Whole-state last-write-wins: right for one
         // person on two devices, and honest about not merging concurrent edits.
         set({
           ...remote.state,
           permadeath: normalizeRecord(remote.state.permadeath),
           importedGames: local.importedGames,
-          settings: { ...DEFAULT_SETTINGS, ...remote.state.settings },
+          settings: mergeSettings(remote.state.settings),
           updatedAt: remote.updatedAt,
           ready: true,
           cloud: { kind: 'synced', lastSyncedAt: Date.now() },
@@ -268,10 +297,7 @@ export const useStore = create<StoreState>((set, get) => {
       }
 
       const result = await writeCloud(syncableFrom(get()), get().updatedAt);
-      if (result.ok) set({ cloud: { kind: 'synced', lastSyncedAt: Date.now() } });
-      else if (result.reason === 'unavailable') set({ cloud: { kind: 'unavailable' } });
-      else if (result.reason === 'too-large') set({ cloud: { kind: 'too-large', bytes: result.bytes ?? 0 } });
-      else set({ cloud: { kind: 'error', message: result.message ?? 'Sync failed' } });
+      set({ cloud: statusAfterWrite(result) });
     },
 
     async resetAll() {
@@ -318,22 +344,6 @@ export const useStore = create<StoreState>((set, get) => {
       return rep.id;
     },
 
-    renameRepertoire(repId, name) {
-      updateRep(repId, (rep) => ({ ...rep, name }));
-    },
-
-    deleteRepertoire(repId) {
-      const { [repId]: _removed, ...rest } = get().repertoires;
-      const cards = Object.fromEntries(
-        Object.entries(get().cards).filter(([, c]) => c.repertoireId !== repId),
-      );
-      commit({
-        repertoires: rest,
-        repertoireOrder: get().repertoireOrder.filter((id) => id !== repId),
-        cards,
-      });
-    },
-
     ensureCard(item) {
       const existing = get().cards[item.cardId];
       if (existing) return existing;
@@ -344,33 +354,19 @@ export const useStore = create<StoreState>((set, get) => {
 
     grade(item, gradeValue, playedSan, correct) {
       const state = get();
-      const card = state.cards[item.cardId] ?? createCard(item.cardId, item.repertoireId, item.key, item.fen);
-      const now = Date.now();
-      const { card: next } = review(card, gradeValue, now);
-      const entry: ReviewLogEntry = {
-        cardId: item.cardId,
-        at: now,
-        grade: gradeValue,
-        correct,
-        playedSan,
-        expectedSan: item.expected.find((e) => e.preferred)?.san ?? item.expected[0]?.san ?? '',
-        intervalBefore: card.interval,
-        intervalAfter: next.interval,
-      };
-      commit({
-        cards: { ...state.cards, [item.cardId]: next },
-        log: [...state.log.slice(-499), entry],
-      });
-    },
-
-    forgetCards(keys) {
-      const cards = { ...get().cards };
-      for (const key of keys) delete cards[key];
-      commit({ cards });
+      const card =
+        state.cards[item.cardId] ?? createCard(item.cardId, item.repertoireId, item.key, item.fen);
+      const expectedSan = item.expected.find((e) => e.preferred)?.san ?? item.expected[0]?.san ?? '';
+      commit(reviewed(state, card, gradeValue, { correct, playedSan, expectedSan }));
     },
 
     setSettings(patch) {
       commit({ settings: { ...get().settings, ...patch } });
+    },
+
+    setPermadeath(patch) {
+      const settings = get().settings;
+      commit({ settings: { ...settings, permadeath: { ...settings.permadeath, ...patch } } });
     },
 
     setImportedGames(games) {
@@ -386,24 +382,7 @@ export const useStore = create<StoreState>((set, get) => {
       const id = cardId(repertoireId, key);
       const state = get();
       const card = state.cards[id] ?? createCard(id, repertoireId, key, fen);
-      const now = Date.now();
-      const { card: next } = review(card, 'again', now);
-      commit({
-        cards: { ...state.cards, [id]: next },
-        log: [
-          ...state.log.slice(-499),
-          {
-            cardId: id,
-            at: now,
-            grade: 'again',
-            correct: false,
-            playedSan: played,
-            expectedSan: expected,
-            intervalBefore: card.interval,
-            intervalAfter: next.interval,
-          },
-        ],
-      });
+      commit(reviewed(state, card, 'again', { correct: false, playedSan: played, expectedSan: expected }));
     },
   };
 });
@@ -425,16 +404,3 @@ export function itemsFor(rep: Repertoire): TrainingItem[] {
   return items;
 }
 
-export function allTrainingItems(state: StoreState): TrainingItem[] {
-  return repertoireList(state).flatMap(itemsFor);
-}
-
-export function itemsForBranch(rep: Repertoire, nodeId: string): TrainingItem[] {
-  return branchItems(rep, nodeId);
-}
-
-export function cardFor(state: StoreState, item: TrainingItem): Card | undefined {
-  return state.cards[item.cardId];
-}
-
-export { cardId };

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AddLineSheet } from '../components/AddLineSheet';
 import { Board } from '../components/Board';
-import { Empty, IconButton, Icons, Sheet, toast } from '../components/ui';
+import { AppBar, Empty, IconButton, Icons, Section, Segmented, Sheet, toast } from '../components/ui';
 
 import {
   analyseAgainstRepertoire,
@@ -36,8 +36,6 @@ export function ImportScreen({ onBack }: ImportScreenProps) {
   const [error, setError] = useState<{ message: string; blocked: boolean } | null>(null);
   const [pgnOpen, setPgnOpen] = useState(false);
   const [pgnText, setPgnText] = useState('');
-  const [finding, setFinding] = useState<Finding | null>(null);
-  const [addSans, setAddSans] = useState<string[] | null>(null);
 
   const games = state.importedGames;
 
@@ -84,47 +82,24 @@ export function ImportScreen({ onBack }: ImportScreenProps) {
   };
 
   if (step === 'games' && games.length) {
-    return (
-      <GameReview
-        games={games}
-        onBack={() => setStep('source')}
-        onExit={onBack}
-        onOpenFinding={setFinding}
-        finding={finding}
-        onCloseFinding={() => setFinding(null)}
-        onAdd={(sans) => {
-          setFinding(null);
-          setAddSans(sans);
-        }}
-        addSans={addSans}
-        onCloseAdd={() => setAddSans(null)}
-      />
-    );
+    return <GameReview games={games} onBack={() => setStep('source')} onExit={onBack} />;
   }
 
   const sourceName = source === 'lichess' ? 'Lichess' : 'Chess.com';
 
   return (
     <>
-      <div className="appbar compact">
-        <IconButton label="Back" onClick={onBack}>
-          <Icons.back size={20} />
-        </IconButton>
-        <div className="appbar-title">
-          <div className="line">Import games</div>
-        </div>
-        <span style={{ width: 38 }} />
-      </div>
+      <AppBar title="Import games" onBack={onBack} />
 
       <div className="screen no-nav">
-        <div className="segmented">
-          <button className={source === 'lichess' ? 'active' : ''} onClick={() => setSource('lichess')}>
-            Lichess
-          </button>
-          <button className={source === 'chesscom' ? 'active' : ''} onClick={() => setSource('chesscom')}>
-            Chess.com
-          </button>
-        </div>
+        <Segmented
+          value={source}
+          options={[
+            { value: 'lichess', label: 'Lichess' },
+            { value: 'chesscom', label: 'Chess.com' },
+          ]}
+          onChange={setSource}
+        />
 
         <div className="spacer sm" />
         <input
@@ -152,7 +127,7 @@ export function ImportScreen({ onBack }: ImportScreenProps) {
           </div>
         )}
 
-        <div className="section">Or</div>
+        <Section title="Or" />
         <div className="list">
           <button className="list-row" onClick={() => setPgnOpen(true)}>
             <span className="grow title">Paste PGN</span>
@@ -205,28 +180,23 @@ function GameReview({
   games,
   onBack,
   onExit,
-  onOpenFinding,
-  finding,
-  onCloseFinding,
-  onAdd,
-  addSans,
-  onCloseAdd,
 }: {
   games: ImportedGame[];
   onBack: () => void;
   onExit: () => void;
-  onOpenFinding: (f: Finding) => void;
-  finding: Finding | null;
-  onCloseFinding: () => void;
-  onAdd: (sans: string[]) => void;
-  addSans: string[] | null;
-  onCloseAdd: () => void;
 }) {
   const state = useStore();
   const reps = repertoireList(state);
   const [repId, setRepId] = useState(reps[0]?.id ?? '');
   const rep = state.repertoires[repId] ?? reps[0] ?? null;
   const [kind, setKind] = useState<'gap' | 'deviation' | null>(null);
+  const [finding, setFinding] = useState<Finding | null>(null);
+  const [addSans, setAddSans] = useState<string[] | null>(null);
+
+  const add = (sans: string[]) => {
+    setFinding(null);
+    setAddSans(sans);
+  };
 
   const tree = useMemo(
     () => (rep ? buildPlayerTree(games, rep.color) : null),
@@ -246,27 +216,26 @@ function GameReview({
 
   return (
     <>
-      <div className="appbar compact">
-        <IconButton label="Back" onClick={onExit}>
-          <Icons.back size={20} />
-        </IconButton>
-        <div className="appbar-title">
-          <div className="line">Your games</div>
-          <div className="sub">{games.length} imported</div>
-        </div>
-        <IconButton label="Import again" onClick={onBack}>
-          <Icons.download size={20} />
-        </IconButton>
-      </div>
+      <AppBar
+        title="Your games"
+        subtitle={`${games.length} imported`}
+        onBack={onExit}
+        actions={
+          <IconButton label="Import again" onClick={onBack}>
+            <Icons.download size={20} />
+          </IconButton>
+        }
+      />
 
       <div className="screen no-nav">
-        <div className="segmented">
-          {reps.map((r) => (
-            <button key={r.id} className={r.id === rep?.id ? 'active' : ''} onClick={() => setRepId(r.id)}>
-              <span className="truncate" style={{ display: 'block' }}>{displayName(r.name)}</span>
-            </button>
-          ))}
-        </div>
+        <Segmented
+          value={rep?.id ?? ''}
+          options={reps.map((r) => ({
+            value: r.id,
+            label: <span className="truncate" style={{ display: 'block' }}>{displayName(r.name)}</span>,
+          }))}
+          onChange={setRepId}
+        />
 
         <div className="spacer sm" />
 
@@ -287,16 +256,16 @@ function GameReview({
           </div>
         )}
 
-        <div className="section">
-          <div className="segmented" style={{ width: '100%' }}>
-            <button className={activeKind === 'gap' ? 'active' : ''} onClick={() => setKind('gap')}>
-              Gaps · {gapCount}
-            </button>
-            <button className={activeKind === 'deviation' ? 'active' : ''} onClick={() => setKind('deviation')}>
-              Deviations · {deviationCount}
-            </button>
-          </div>
-        </div>
+        <div className="spacer" />
+        <Segmented
+          value={activeKind}
+          options={[
+            { value: 'gap', label: `Gaps · ${gapCount}` },
+            { value: 'deviation', label: `Deviations · ${deviationCount}` },
+          ]}
+          onChange={setKind}
+        />
+        <div className="spacer sm" />
 
         {shown.length === 0 && (
           <Empty title={activeKind === 'gap' ? 'No gaps' : 'No deviations'} hint="Import more games to find more" />
@@ -304,7 +273,7 @@ function GameReview({
 
         <div className="stack">
           {shown.slice(0, 25).map((f) => (
-            <button key={`${f.kind}-${f.key}`} className="card tap" onClick={() => onOpenFinding(f)}>
+            <button key={`${f.kind}-${f.key}`} className="card tap" onClick={() => setFinding(f)}>
               <div className="row between">
                 <span className="movetext truncate grow" style={{ lineHeight: 1.4 }}>{f.lineText}</span>
                 <span className="chip">{f.games}×</span>
@@ -327,7 +296,7 @@ function GameReview({
         </div>
       </div>
 
-      <Sheet open={!!finding} onClose={onCloseFinding} title={finding?.kind === 'gap' ? 'Gap' : 'Deviation'}>
+      <Sheet open={!!finding} onClose={() => setFinding(null)} title={finding?.kind === 'gap' ? 'Gap' : 'Deviation'}>
         {finding && (
           <>
             <div className="movetext" style={{ marginBottom: 10 }}>{finding.lineText}</div>
@@ -340,49 +309,47 @@ function GameReview({
             />
             <div className="spacer sm" />
             <div className="list">
-              <div className="list-row" style={{ minHeight: 44 }}>
-                <span className="grow muted small">Games</span>
-                <span style={{ fontWeight: 600 }}>{finding.games}</span>
+              <div className="list-row kv">
+                <span className="k">Games</span>
+                <span className="v">{finding.games}</span>
               </div>
-              <div className="list-row" style={{ minHeight: 44 }}>
-                <span className="grow muted small">Played</span>
-                <span style={{ fontWeight: 600 }}>
+              <div className="list-row kv">
+                <span className="k">Played</span>
+                <span className="v">
                   {finding.played.map((p) => `${p.san} ×${p.count}`).join(', ') || '—'}
                 </span>
               </div>
               {finding.expected.length > 0 && (
-                <div className="list-row" style={{ minHeight: 44 }}>
-                  <span className="grow muted small">Repertoire</span>
-                  <span style={{ fontWeight: 600, color: 'var(--good)' }}>{finding.expected.join(', ')}</span>
+                <div className="list-row kv">
+                  <span className="k">Repertoire</span>
+                  <span className="v" style={{ color: 'var(--good)' }}>{finding.expected.join(', ')}</span>
                 </div>
               )}
-              <div className="list-row" style={{ minHeight: 44 }}>
-                <span className="grow muted small">Score</span>
-                <span style={{ fontWeight: 600 }} className="num">
+              <div className="list-row kv">
+                <span className="k">Score</span>
+                <span className="v num">
                   {finding.results.wins}W {finding.results.draws}D {finding.results.losses}L
                 </span>
               </div>
             </div>
             <div className="spacer" />
-            <button className="btn primary block" onClick={() => onAdd(findingToLine(finding))}>
-              <Icons.plus size={18} /> Add {finding.played[0]?.san ?? 'line'}
-            </button>
-            {finding.expected.length > 0 && (
-              <button
-                className="btn block"
-                style={{ marginTop: 8 }}
-                onClick={() => onAdd([...finding.path, finding.expected[0]])}
-              >
-                Drill {finding.expected[0]} instead
+            <div className="actions">
+              <button className="btn primary block" onClick={() => add(findingToLine(finding))}>
+                <Icons.plus size={18} /> Add {finding.played[0]?.san ?? 'line'}
               </button>
-            )}
+              {finding.expected.length > 0 && (
+                <button className="btn block" onClick={() => add([...finding.path, finding.expected[0]])}>
+                  Drill {finding.expected[0]} instead
+                </button>
+              )}
+            </div>
           </>
         )}
       </Sheet>
 
       <AddLineSheet
         open={!!addSans}
-        onClose={onCloseAdd}
+        onClose={() => setAddSans(null)}
         sans={addSans ?? []}
         source="games"
         title="Add to repertoire"

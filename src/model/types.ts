@@ -1,4 +1,5 @@
 import type { Color } from '../chess/core';
+import type { PermadeathPrefs } from './permadeath';
 
 export type MoveSource = 'seed' | 'manual' | 'reference' | 'pgn' | 'games';
 
@@ -130,38 +131,19 @@ export interface ImportedGame {
 }
 
 export interface Settings {
-  boardOrientationFollowsRepertoire: boolean;
   showCoordinates: boolean;
   engineEnabled: boolean;
-  showEvalInTraining: boolean;
   newCardsPerSession: number;
   maxSessionLength: number;
+  /** Play the opponent's reply after a correct answer and ask the next move. */
   playOpponentReplies: boolean;
-  confirmMoves: boolean;
-  pieceSet: 'classic' | 'flat';
   boardTheme: 'slate' | 'walnut' | 'ocean';
   hapticFeedback: boolean;
   lichessUsername: string;
   chesscomUsername: string;
   /** Opt in to copying state to your Claude account for other devices. */
   cloudSync: boolean;
-  permadeathColor: 'w' | 'b' | 'random';
-  permadeathSource: 'repertoire' | 'book' | 'opening';
-  /** A single repertoire to draw permadeath lines from, or '' for all of them. */
-  permadeathRepertoire: string;
-  /** The named opening a permadeath run walks into, for the opening source. */
-  permadeathOpening: string;
   /** Openings starred for quick picking, by their move-order id. */
   favoriteOpenings: string[];
-  /** Play the side your repertoire prepares against. */
-  permadeathReverse: boolean;
-  /** Draw lines you answer badly more often than lines you know cold. */
-  permadeathWeakFirst: boolean;
-  permadeathClock: 'off' | 'move10' | 'move30' | 'run180';
-  /** Hints available per run. */
-  permadeathHints: number;
-  /** Break the permadeath record down by opening and side. */
-  permadeathPerLine: boolean;
-  /** Carry a permadeath run on past the prep, with the engine calling blunders. */
-  permadeathExtended: boolean;
+  permadeath: PermadeathPrefs;
 }

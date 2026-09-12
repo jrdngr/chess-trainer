@@ -6,7 +6,7 @@ import { ImportScreen } from './screens/ImportScreen';
 import { RepertoireScreen } from './screens/RepertoireScreen';
 import { SettingsSheet } from './screens/SettingsSheet';
 import { TrainHome } from './screens/TrainHome';
-import { PermadeathSession } from './screens/PermadeathSession';
+import { PermadeathScreen } from './screens/permadeath/PermadeathScreen';
 import { TrainSession } from './screens/TrainSession';
 import type { TrainingItem } from './model/session';
 import { countDue } from './model/srs';
@@ -30,38 +30,6 @@ export default function App() {
     void init();
   }, [init]);
 
-  if (!ready) {
-    return (
-      <div className="app">
-        <div className="screen no-nav" style={{ display: 'grid', placeItems: 'center' }}>
-          <div className="spinner" />
-        </div>
-      </div>
-    );
-  }
-
-  if (permadeath) {
-    return (
-      <>
-        <PermadeathSession onExit={() => setPermadeath(false)} />
-        <ToastHost />
-      </>
-    );
-  }
-
-  if (session) {
-    return (
-      <>
-        <TrainSession
-          queue={session.queue}
-          title={session.title}
-          onExit={() => setSession(null)}
-        />
-        <ToastHost />
-      </>
-    );
-  }
-
   const startSession = (queue: TrainingItem[], title: string) => {
     if (!queue.length) return;
     setSession({ queue, title });
@@ -69,71 +37,79 @@ export default function App() {
 
   const dueCount = countDue(Object.values(cards)).due;
 
-  if (importing) {
-    return (
-      <div className="app">
-        <ImportScreen onBack={() => setImporting(false)} />
-        <ToastHost />
-      </div>
-    );
-  }
+  /** Screens that take over the whole app, with no tab bar underneath. */
+  const overlay = !ready ? (
+    <div className="screen no-nav" style={{ display: 'grid', placeItems: 'center' }}>
+      <div className="spinner" />
+    </div>
+  ) : permadeath ? (
+    <PermadeathScreen onExit={() => setPermadeath(false)} />
+  ) : session ? (
+    <TrainSession queue={session.queue} title={session.title} onExit={() => setSession(null)} />
+  ) : importing ? (
+    <ImportScreen onBack={() => setImporting(false)} />
+  ) : null;
 
   return (
     <div className="app">
-      {tab === 'train' && (
-        <TrainHome
-          onStart={startSession}
-          onStartPermadeath={() => setPermadeath(true)}
-          onOpenSettings={() => setSettingsOpen(true)}
-        />
-      )}
-      {tab === 'repertoire' && (
-        <RepertoireScreen
-          onStart={startSession}
-          onImport={() => setImporting(true)}
-          onExploreFrom={(sans) => {
-            setExplorePath(sans);
-            setTab('explore');
-          }}
-        />
-      )}
-      {tab === 'explore' && (
-        <ExploreScreen
-          initialPath={explorePath}
-          onConsumedInitial={() => setExplorePath(undefined)}
-        />
-      )}
-      {tab === 'analysis' && <AnalysisScreen />}
+      {overlay ?? (
+        <>
+          {tab === 'train' && (
+            <TrainHome
+              onStart={startSession}
+              onStartPermadeath={() => setPermadeath(true)}
+              onOpenSettings={() => setSettingsOpen(true)}
+            />
+          )}
+          {tab === 'repertoire' && (
+            <RepertoireScreen
+              onStart={startSession}
+              onImport={() => setImporting(true)}
+              onExploreFrom={(sans) => {
+                setExplorePath(sans);
+                setTab('explore');
+              }}
+            />
+          )}
+          {tab === 'explore' && (
+            <ExploreScreen
+              initialPath={explorePath}
+              onConsumedInitial={() => setExplorePath(undefined)}
+            />
+          )}
+          {tab === 'analysis' && <AnalysisScreen />}
 
-      <nav className="nav">
-        <NavButton
-          label="Train"
-          active={tab === 'train'}
-          badge={dueCount}
-          onClick={() => setTab('train')}
-          icon={<Icons.train filled={tab === 'train'} />}
-        />
-        <NavButton
-          label="Repertoire"
-          active={tab === 'repertoire'}
-          onClick={() => setTab('repertoire')}
-          icon={<Icons.tree filled={tab === 'repertoire'} />}
-        />
-        <NavButton
-          label="Explore"
-          active={tab === 'explore'}
-          onClick={() => setTab('explore')}
-          icon={<Icons.book filled={tab === 'explore'} />}
-        />
-        <NavButton
-          label="Analysis"
-          active={tab === 'analysis'}
-          onClick={() => setTab('analysis')}
-          icon={<Icons.chart filled={tab === 'analysis'} />}
-        />
-      </nav>
+          <nav className="nav">
+            <NavButton
+              label="Train"
+              active={tab === 'train'}
+              badge={dueCount}
+              onClick={() => setTab('train')}
+              icon={<Icons.train filled={tab === 'train'} />}
+            />
+            <NavButton
+              label="Repertoire"
+              active={tab === 'repertoire'}
+              onClick={() => setTab('repertoire')}
+              icon={<Icons.tree filled={tab === 'repertoire'} />}
+            />
+            <NavButton
+              label="Explore"
+              active={tab === 'explore'}
+              onClick={() => setTab('explore')}
+              icon={<Icons.book filled={tab === 'explore'} />}
+            />
+            <NavButton
+              label="Analysis"
+              active={tab === 'analysis'}
+              onClick={() => setTab('analysis')}
+              icon={<Icons.chart filled={tab === 'analysis'} />}
+            />
+          </nav>
 
-      <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+          <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+        </>
+      )}
       <ToastHost />
     </div>
   );

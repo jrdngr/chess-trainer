@@ -4,4 +4,4 @@ dist-artifact
 .DS_Store
 *.local
 .vite
-dist-artifact
+*.tsbuildinfo

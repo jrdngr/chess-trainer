@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Icons, Sheet, toast } from './ui';
+import { Icons, Section, Sheet, toast } from './ui';
 import { START_FEN, walkSan } from '../chess/core';
 import { displayName } from '../model/repertoire';
 import { repertoireList, useStore } from '../store/useStore';
@@ -96,16 +96,13 @@ export function AddLineSheet({
 
   return (
     <Sheet open={open} onClose={onClose} title={title}>
-      <div className="section" style={{ marginTop: 0 }}>
-        <span>Line</span>
-        <span className="faint">Tap a move to trim</span>
-      </div>
+      <Section title="Line" aside="Tap a move to trim" />
       <div className="card" style={{ padding: '10px 12px' }}>
         <div className="strip wrapped">
           {sans.map((san, i) => (
             <button
               key={i}
-              className={`mv${i === effectiveDepth - 1 ? ' current' : ''}${i >= effectiveDepth ? ' future' : ''}`}
+              className={`mv${i === effectiveDepth - 1 ? ' current' : ''}${i >= effectiveDepth ? ' ghost' : ''}`}
               onClick={() => setDepth(i + 1)}
             >
               {i % 2 === 0 && <span className="n">{i / 2 + 1}.</span>}
@@ -115,7 +112,7 @@ export function AddLineSheet({
         </div>
       </div>
 
-      <div className="section">Repertoire</div>
+      <Section title="Repertoire" />
       <div className="list">
         {reps.map((rep) => (
           <button key={rep.id} className="list-row" onClick={() => setRepId(rep.id)}>

@@ -19,7 +19,7 @@ npm run dev          # http://localhost:5173, also served on your LAN IP
 full-screen, chrome-free app.
 
 ```bash
-npm test             # 161 tests: chess rules, tree, SRS, PGN, analysis, seed data
+npm test             # 248 tests: chess rules, tree, SRS, PGN, analysis, permadeath, seed data
 npm run typecheck
 npm run build        # production build into dist/
 npm run artifact     # repackage dist/ for publishing as a Claude Artifact
@@ -53,8 +53,10 @@ names it while you play — no opening name, no move list, no explore. Dying is
 what buys you the reveal, which names the variation, gives its ECO code and
 prints the line in full, including how it would have gone on.
 
-The setup screen decides the run. Everything past the first two rows is off by
-default; the plain mode is a line from your repertoire, no clock, no help.
+The setup screen decides the run, with **Start run** pinned to the bottom so it
+is always a tap away however far down the options you are. Everything past the
+first two sections is off by default; the plain mode is a line from your
+repertoire, no clock, no help. Choices are remembered between runs.
 
 - **Play as** — White, Black, or random.
 - **Lines** — your repertoire, one named opening, or the whole reference
@@ -139,9 +141,9 @@ played on the clipboard — not the continuation — for pasting somewhere.
 The mistake's red and green squares are shown only on that one position, so
 stepping away does not leave stale marks behind.
 
-A line played out in full offers **Continue in extended mode** above **Play
-from here**, which is the better continuation of the two: it carries the *run*
-on rather than starting a friendly game, so the score keeps counting and a
+A line played out in full offers **Continue in extended mode** above **New run**
+and **Play from here**. It is the better continuation of the two: it carries the
+*run* on rather than starting a friendly game, so the score keeps counting and a
 blunder still ends it. Logging that run again amends the entry the completed
 line already made instead of counting a second run — and reaching the end of a
 line is a fact, so carrying on past it and blundering does not unmake it. It is
@@ -301,12 +303,21 @@ top of `src/styles.css`; the board palettes and highlights in
 src/
   chess/       rules, position keys, PGN parsing with variations
   model/       repertoire tree, SRS, session building, reference index,
-               game analysis, seed data
+               game analysis, permadeath rules, seed data
   engine/      Stockfish worker + heuristic fallback behind one interface
-  store/       zustand store, IndexedDB persistence, seed loading
-  components/  board, pieces, explorer, sheets, icons
+  store/       zustand store, IndexedDB persistence, cloud sync, seed loading
+  components/  board, pieces, explorer, sheets, icons, and the shared
+               controls (app bar, toggles, segmented rows, move strip)
   screens/     Train, Repertoire, Explore, Analysis, Import, Settings
+  screens/permadeath/
+               setup, the live run, the reveal, play-on, the record, and
+               the clock and engine-referee hooks
 ```
+
+Screens are built from a small set of shared pieces in `components/ui.tsx` —
+`AppBar`, `Section`, `Toggle`, `Stepper`, `Segmented`, `ChoiceRow`, `Strip` —
+so a new screen has nothing to invent. Layout comes from utility classes in
+`styles.css` (`.actions`, `.note`, `.footer`, `.mt-*`) rather than inline styles.
 
 The board is hand-written rather than pulled from a library: tap-tap and drag
 both work, legal moves show as dots, captures as rings, pieces animate between

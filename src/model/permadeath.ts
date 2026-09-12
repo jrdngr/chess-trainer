@@ -307,6 +307,14 @@ export const DEFAULT_OPTIONS: PermadeathOptions = {
   extended: false,
 };
 
+/** What the setup screen remembers between runs: the options, plus how the record is shown. */
+export interface PermadeathPrefs extends PermadeathOptions {
+  /** Break the record down by opening and side. */
+  perLine: boolean;
+}
+
+export const DEFAULT_PREFS: PermadeathPrefs = { ...DEFAULT_OPTIONS, perLine: false };
+
 /* ── runs ───────────────────────────────────────────────────────────────── */
 
 export interface Run {
@@ -501,8 +509,6 @@ export function startRepertoireRun(
     .filter((c) => c.lines.length > 0);
   if (!candidates.length) return null;
 
-  // Repertoire first, then a line within it, so a big repertoire cannot crowd
-  // out the others however popular its lines are.
   // Repertoire first and evenly, so a big one cannot crowd out the others
   // however popular its lines are; the line within it is drawn on its odds.
   const picked = candidates[Math.floor(rand() * candidates.length)];

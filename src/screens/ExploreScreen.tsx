@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { AddLineSheet } from '../components/AddLineSheet';
 import { Board } from '../components/Board';
 import { ExplorerPanel } from '../components/ExplorerPanel';
-import { Empty, IconButton, Icons, MoveStrip, Sheet } from '../components/ui';
-import { applySan, fenTurn, sansToMoveText, START_FEN, walkSan, type LegalMove } from '../chess/core';
+import { Empty, IconButton, Icons, MoveStrip, Section, Segmented, Sheet } from '../components/ui';
+import { applySan, fenTurn, lastMoveOf, sansToMoveText, START_FEN, walkSan, type LegalMove } from '../chess/core';
 import { openingNameForPath } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
 import { BOOK_LINES } from '../model/seed/bookLines';
-import type { BookLine, ReferenceGame } from '../model/types';
+import type { BookLine, ReferenceGame, Repertoire, RepMove } from '../model/types';
 import { repertoireList, useStore } from '../store/useStore';
 import { childrenOf, displayName, fenAt } from '../model/repertoire';
 
@@ -49,18 +49,8 @@ export function ExploreScreen({ initialPath, onConsumedInitial }: ExploreScreenP
   const repMoves = useMemo(() => {
     const out: { repId: string; name: string; sans: string[] }[] = [];
     for (const rep of repertoireList(state)) {
-      let nodeId: string | null = null;
-      let ok = true;
-      for (const san of visible) {
-        const child: { id: string } | undefined = childrenOf(rep, nodeId).find((k) => k.san === san);
-        if (!child) {
-          ok = false;
-          break;
-        }
-        nodeId = child.id;
-      }
-      if (!ok) continue;
-      if (fenAt(rep, nodeId) !== fen) continue;
+      const nodeId = nodeAlong(rep, visible);
+      if (nodeId === undefined || fenAt(rep, nodeId) !== fen) continue;
       out.push({ repId: rep.id, name: rep.name, sans: childrenOf(rep, nodeId).map((k) => k.san) });
     }
     return out;
@@ -122,14 +112,17 @@ export function ExploreScreen({ initialPath, onConsumedInitial }: ExploreScreenP
         <MoveStrip sans={sans} cursor={cursor} onSeek={setCursor} hint="Play a move" />
         <div className="spacer sm" />
 
-        <div className="segmented">
-          <button className={tab === 'explorer' ? 'active' : ''} onClick={() => setTab('explorer')}>
-            Moves
-          </button>
-          <button className={tab === 'book' ? 'active' : ''} onClick={() => setTab('book')}>
-            Lines{relevantBookLines.length ? ` · ${relevantBookLines.length}` : ''}
-          </button>
-        </div>
+        <Segmented
+          value={tab}
+          options={[
+            { value: 'explorer', label: 'Moves' },
+            {
+              value: 'book',
+              label: `Lines${relevantBookLines.length ? ` · ${relevantBookLines.length}` : ''}`,
+            },
+          ]}
+          onChange={setTab}
+        />
 
         <div className="spacer sm" />
 
@@ -143,7 +136,7 @@ export function ExploreScreen({ initialPath, onConsumedInitial }: ExploreScreenP
               onPickGame={setGame}
             />
             {repMoves.length > 0 && (
-              <div className="list" style={{ marginTop: 10 }}>
+              <div className="list mt-8">
                 {repMoves.map((r) => (
                   <div key={r.repId} className="list-row" style={{ minHeight: 46 }}>
                     <span className={`side ${state.repertoires[r.repId]?.color ?? 'w'}`} />
@@ -155,8 +148,7 @@ export function ExploreScreen({ initialPath, onConsumedInitial }: ExploreScreenP
             )}
             {visible.length > 0 && (
               <button
-                className="btn primary block"
-                style={{ marginTop: 12 }}
+                className="btn primary block mt-12"
                 onClick={() => setAddLine({ sans: visible, title: 'Add to repertoire' })}
               >
                 <Icons.plus size={18} /> Add to repertoire
@@ -265,7 +257,7 @@ function BookLineSheet({
           <div className="card movetext">{sansToMoveText(line.moves)}</div>
           {line.ideas && (
             <>
-              <div className="section">Ideas</div>
+              <Section title="Ideas" />
               <div className="list">
                 {line.ideas.map((idea, i) => (
                   <div key={i} className="list-row small muted" style={{ minHeight: 44 }}>
@@ -290,9 +282,13 @@ function BookLineSheet({
   );
 }
 
-function lastMoveOf(sans: string[]) {
-  if (!sans.length) return null;
-  const { fens } = walkSan(sans.slice(0, -1));
-  const move = applySan(fens[fens.length - 1], sans[sans.length - 1]);
-  return move ? { from: move.from, to: move.to } : null;
+/** The node reached by following `sans` down a repertoire, or undefined if it leaves the tree. */
+function nodeAlong(rep: Repertoire, sans: string[]): string | null | undefined {
+  let nodeId: string | null = null;
+  for (const san of sans) {
+    const child: RepMove | undefined = childrenOf(rep, nodeId).find((k) => k.san === san);
+    if (!child) return undefined;
+    nodeId = child.id;
+  }
+  return nodeId;
 }

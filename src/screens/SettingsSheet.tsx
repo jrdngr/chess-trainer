@@ -1,8 +1,13 @@
 import { useState } from 'react';
-import { Sheet, toast } from '../components/ui';
+import { Section, Segmented, Sheet, Stepper, toast, Toggle } from '../components/ui';
 import { describeStatus } from '../store/cloud';
 import { useStore } from '../store/useStore';
 import type { Settings } from '../model/types';
+
+const THEMES = (['slate', 'walnut', 'ocean'] as const).map((value) => ({
+  value,
+  label: value[0].toUpperCase() + value.slice(1),
+}));
 
 export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const settings = useStore((s) => s.settings);
@@ -24,11 +29,6 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
           on={settings.playOpponentReplies}
           onToggle={toggle('playOpponentReplies')}
         />
-        <Toggle
-          label="Engine eval while training"
-          on={settings.showEvalInTraining}
-          onToggle={toggle('showEvalInTraining')}
-        />
         <Stepper
           label="New per session"
           value={settings.newCardsPerSession}
@@ -47,31 +47,29 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
         />
       </div>
 
-      <div className="section">Board</div>
+      <Section title="Board" />
       <div className="list">
         <div className="list-row" style={{ display: 'block' }}>
-          <div className="segmented">
-            {(['slate', 'walnut', 'ocean'] as const).map((theme) => (
-              <button
-                key={theme}
-                className={settings.boardTheme === theme ? 'active' : ''}
-                onClick={() => setSettings({ boardTheme: theme })}
-                style={{ textTransform: 'capitalize' }}
-              >
-                {theme}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            value={settings.boardTheme}
+            options={THEMES}
+            onChange={(boardTheme) => setSettings({ boardTheme })}
+          />
         </div>
         <Toggle label="Coordinates" on={settings.showCoordinates} onToggle={toggle('showCoordinates')} />
         <Toggle label="Haptics" on={settings.hapticFeedback} onToggle={toggle('hapticFeedback')} />
-        <Toggle label="Stockfish" on={settings.engineEnabled} onToggle={toggle('engineEnabled')} />
+        <Toggle
+          label="Engine in Analysis"
+          hint="Stockfish, with a built-in evaluator as fallback"
+          on={settings.engineEnabled}
+          onToggle={toggle('engineEnabled')}
+        />
       </div>
 
-      <div className="section">Sync</div>
+      <Section title="Sync" />
       <SyncRows />
 
-      <div className="section">Data</div>
+      <Section title="Data" />
       <div className="list">
         <button
           className="list-row"
@@ -112,6 +110,7 @@ function SyncRows() {
   const syncNow = useStore((s) => s.syncNow);
   const [busy, setBusy] = useState(false);
   const unavailable = cloud.kind === 'unavailable';
+  const syncing = busy || cloud.kind === 'syncing';
 
   const status = !enabled
     ? storage.any
@@ -121,6 +120,12 @@ function SyncRows() {
       ? 'Not available here'
       : describeStatus(cloud);
 
+  const sync = async () => {
+    setBusy(true);
+    await syncNow();
+    setBusy(false);
+  };
+
   return (
     <div className="list">
       <Toggle
@@ -128,86 +133,24 @@ function SyncRows() {
         hint={status}
         on={enabled}
         onToggle={async () => {
-          const next = !enabled;
-          setSettings({ cloudSync: next });
-          if (next) {
-            setBusy(true);
-            await syncNow();
-            setBusy(false);
-          }
+          setSettings({ cloudSync: !enabled });
+          if (!enabled) await sync();
         }}
       />
       {enabled && !unavailable && (
         <button
           className="list-row"
-          disabled={busy || cloud.kind === 'syncing'}
+          disabled={syncing}
           onClick={async () => {
-            setBusy(true);
-            await syncNow();
-            setBusy(false);
+            await sync();
             toast('Synced');
           }}
         >
           <span className="grow title" style={{ color: 'var(--accent)' }}>
-            {busy || cloud.kind === 'syncing' ? 'Syncing…' : 'Sync now'}
+            {syncing ? 'Syncing…' : 'Sync now'}
           </span>
         </button>
       )}
-    </div>
-  );
-}
-
-function Toggle({
-  label,
-  hint,
-  on,
-  onToggle,
-}: {
-  label: string;
-  hint?: string;
-  on: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button className="list-row" onClick={onToggle}>
-      <span className="grow">
-        <div className="title">{label}</div>
-        {hint && <div className="meta">{hint}</div>}
-      </span>
-      <span className={`switch${on ? ' on' : ''}`}>
-        <i />
-      </span>
-    </button>
-  );
-}
-
-function Stepper({
-  label,
-  value,
-  min,
-  max,
-  step,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  onChange: (n: number) => void;
-}) {
-  return (
-    <div className="list-row">
-      <span className="grow title">{label}</span>
-      <div className="stepper">
-        <button onClick={() => onChange(Math.max(min, value - step))} aria-label="Decrease">
-          −
-        </button>
-        <span>{value}</span>
-        <button onClick={() => onChange(Math.min(max, value + step))} aria-label="Increase">
-          +
-        </button>
-      </div>
     </div>
   );
 }

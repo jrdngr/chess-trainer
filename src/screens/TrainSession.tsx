@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../components/Board';
 import { ExplorerPanel } from '../components/ExplorerPanel';
-import { haptic, IconButton, Icons, Sheet } from '../components/ui';
+import { AppBar, haptic, Icons, Sheet } from '../components/ui';
 import { applySan, sansToMoveText, type LegalMove, type Square } from '../chess/core';
 import { openingNameForPath } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
@@ -155,16 +155,8 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
     const r = 60;
     const c = 2 * Math.PI * r;
     return (
-      <div className="app">
-        <div className="appbar compact">
-          <IconButton label="Close" onClick={onExit}>
-            <Icons.close size={20} />
-          </IconButton>
-          <div className="appbar-title">
-            <div className="line">Done</div>
-          </div>
-          <span style={{ width: 38 }} />
-        </div>
+      <>
+        <AppBar title="Done" onClose={onExit} />
         <div className="screen no-nav">
           <div className="done-ring">
             <svg width="132" height="132" viewBox="0 0 132 132">
@@ -205,7 +197,7 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
             Done
           </button>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -218,19 +210,17 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
   const alternatives = item.expected.filter((e) => !e.preferred).map((e) => e.san);
 
   return (
-    <div className="app">
-      <div className="appbar compact">
-        <IconButton label="End session" onClick={onExit}>
-          <Icons.close size={20} />
-        </IconButton>
-        <div className="appbar-title">
-          <div className="line">{opening?.name ?? title}</div>
-          <div className="sub">{displayName(item.repertoireName)}</div>
-        </div>
-        <span className="num muted small" style={{ minWidth: 38, textAlign: 'right' }}>
-          {Math.min(index + 1, queue.length)}/{queue.length}
-        </span>
-      </div>
+    <>
+      <AppBar
+        title={opening?.name ?? title}
+        subtitle={displayName(item.repertoireName)}
+        onClose={onExit}
+        actions={
+          <span className="num muted small appbar-gap" style={{ textAlign: 'right' }}>
+            {Math.min(index + 1, queue.length)}/{queue.length}
+          </span>
+        }
+      />
 
       <div className="progress-track" style={{ margin: '0 16px 10px' }}>
         <div className="progress-fill" style={{ width: `${progress}%` }} />
@@ -273,9 +263,7 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
               </button>
             </div>
             {showMoves && (
-              <div className="card movetext" style={{ marginTop: 10 }}>
-                {sansToMoveText(item.pathSans) || 'Start'}
-              </div>
+              <div className="card movetext mt-8">{sansToMoveText(item.pathSans) || 'Start'}</div>
             )}
           </>
         )}
@@ -288,9 +276,7 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
               {playedEntry?.preferred === false && <span className="chip good">alternative</span>}
             </div>
             {playedEntry?.note && (
-              <div className="card small muted" style={{ marginTop: 8 }}>
-                {playedEntry.note}
-              </div>
+              <div className="card small muted mt-8">{playedEntry.note}</div>
             )}
             <div className="spacer" />
             <div className="grades">
@@ -310,7 +296,7 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
               <span className="ico"><Icons.cross size={14} /></span>
               Wrong
             </div>
-            <div className="compare" style={{ marginTop: 8 }}>
+            <div className="compare mt-8">
               <div className="good">
                 <div className="k">Repertoire</div>
                 <div className="v">{answer?.preferred?.san}</div>
@@ -321,7 +307,7 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
               </div>
             </div>
             {(alternatives.length > 0 || answer?.preferred?.note) && (
-              <div className="card small muted" style={{ marginTop: 10 }}>
+              <div className="card small muted mt-8">
                 {answer?.preferred?.note}
                 {alternatives.length > 0 && (
                   <div className={answer?.preferred?.note ? 'mt-8 faint' : 'faint'}>
@@ -332,9 +318,7 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
             )}
 
             {revealLine && (
-              <div className="card movetext" style={{ marginTop: 10 }}>
-                {sansToMoveText(item.continuation, item.fen)}
-              </div>
+              <div className="card movetext mt-8">{sansToMoveText(item.continuation, item.fen)}</div>
             )}
 
             <div className="spacer" />
@@ -371,6 +355,6 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
           onPlay={() => setExplore(false)}
         />
       </Sheet>
-    </div>
+    </>
   );
 }

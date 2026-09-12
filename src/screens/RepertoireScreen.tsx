@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Board } from '../components/Board';
 import { ExplorerPanel } from '../components/ExplorerPanel';
-import { Empty, IconButton, Icons, Sheet, toast } from '../components/ui';
-import { fenTurn, sansToMoveText, type LegalMove } from '../chess/core';
+import { AppBar, Empty, IconButton, Icons, Section, Sheet, Strip, toast } from '../components/ui';
+import { fenTurn, lastMoveOf, sansToMoveText, type LegalMove } from '../chess/core';
 import { childrenOf, displayName, fenAt, pathTo, subtreeIds } from '../model/repertoire';
 import { lookup, openingNameForPath } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
@@ -38,15 +38,20 @@ export function RepertoireScreen({ onStart, onImport, onExploreFrom }: Repertoir
 
   return (
     <>
-      <div className="appbar">
-        <h1>Repertoire</h1>
-        <IconButton label="Import" onClick={onImport}>
-          <Icons.download size={20} />
-        </IconButton>
-        <IconButton label="New repertoire" onClick={() => setCreating(true)}>
-          <Icons.plus size={20} />
-        </IconButton>
-      </div>
+      <AppBar
+        large
+        title="Repertoire"
+        actions={
+          <>
+            <IconButton label="Import" onClick={onImport}>
+              <Icons.download size={20} />
+            </IconButton>
+            <IconButton label="New repertoire" onClick={() => setCreating(true)}>
+              <Icons.plus size={20} />
+            </IconButton>
+          </>
+        }
+      />
 
       <div className="screen">
         {reps.length === 0 && <Empty title="No repertoires" hint="Create one or import your games" />}
@@ -200,21 +205,16 @@ function RepertoireBrowser({
 
   return (
     <>
-      <div className="appbar compact">
-        <IconButton label="Back" onClick={onBack}>
-          <Icons.back size={20} />
-        </IconButton>
-        <div className="appbar-title">
-          <div className="line">{opening?.name ?? name}</div>
-          <div className="sub">
-            {opening?.eco ? `${opening.eco} · ` : ''}
-            {opening ? name : `${Object.keys(rep.nodes).length} moves`}
-          </div>
-        </div>
-        <IconButton label="Reference" onClick={() => setShowReference(true)}>
-          <Icons.book size={20} />
-        </IconButton>
-      </div>
+      <AppBar
+        title={opening?.name ?? name}
+        subtitle={`${opening?.eco ? `${opening.eco} · ` : ''}${opening ? name : `${Object.keys(rep.nodes).length} moves`}`}
+        onBack={onBack}
+        actions={
+          <IconButton label="Reference" onClick={() => setShowReference(true)}>
+            <Icons.book size={20} />
+          </IconButton>
+        }
+      />
 
       <div className="screen">
         <Board
@@ -222,31 +222,28 @@ function RepertoireBrowser({
           orientation={rep.color}
           onMove={onBoardMove}
           movableFor="both"
-          lastMove={path.length ? { from: lastFrom(path), to: lastTo(path) } : null}
+          lastMove={lastMoveOf(pathSans)}
           showCoordinates={state.settings.showCoordinates}
           theme={state.settings.boardTheme}
         />
 
         <div className="spacer sm" />
 
-        <div className="strip">
-          <button className={`mv${nodeId === null ? ' current' : ''}`} onClick={() => setNodeId(null)}>
-            Start
-          </button>
-          {path.map((node, i) => (
-            <button
-              key={node.id}
-              className={`mv${node.id === nodeId ? ' current' : ''}`}
-              onClick={() => setNodeId(node.id)}
-            >
-              {i % 2 === 0 && <span className="n">{i / 2 + 1}.</span>}
-              {node.san}
-            </button>
-          ))}
-        </div>
+        <Strip
+          items={path.map((node, i) => ({
+            san: node.san,
+            label: i % 2 === 0 ? `${i / 2 + 1}.` : undefined,
+            current: node.id === nodeId,
+            seek: i + 1,
+          }))}
+          cursor={path.length}
+          max={path.length}
+          onSeek={(n) => setNodeId(n === 0 ? null : (path[n - 1]?.id ?? null))}
+          hint="Play a move"
+        />
 
         {pendingMove && (
-          <div className="card accent row between" style={{ marginTop: 10 }}>
+          <div className="card accent row between mt-8">
             <div className="grow">
               <div style={{ fontWeight: 700 }}>Add {pendingMove.san}?</div>
               <div className="tiny muted">{ourTurn ? 'Your move' : 'Opponent reply'}</div>
@@ -262,10 +259,7 @@ function RepertoireBrowser({
           </div>
         )}
 
-        <div className="section">
-          <span>{ourTurn ? 'Your move' : 'Replies'}</span>
-          {kids.length > 0 && <span className="faint">{kids.length}</span>}
-        </div>
+        <Section title={ourTurn ? 'Your move' : 'Replies'} aside={kids.length || undefined} />
 
         {kids.length === 0 && (
           <Empty title={ourTurn ? 'No move here' : 'No replies'} hint="Play a move to add it" />
@@ -289,10 +283,7 @@ function RepertoireBrowser({
 
         {refEntry && refEntry.moves.length > 0 && (
           <>
-            <div className="section">
-              <span>Book</span>
-              <span className="faint">Tap to add</span>
-            </div>
+            <Section title="Book" aside="Tap to add" />
             <ExplorerPanel
               fen={fen}
               path={pathSans}
@@ -418,7 +409,7 @@ function NodeMenu({
   const [note, setNote] = useState('');
   const [editingNote, setEditingNote] = useState(false);
 
-  if (!node) return <Sheet open={false} onClose={onClose}>{null}</Sheet>;
+  if (!node) return null;
 
   const ourMove = fenTurn(node.fenBefore) === rep.color;
   const siblings = childrenOf(rep, node.parentId);
@@ -537,13 +528,4 @@ function NodeMenu({
       )}
     </Sheet>
   );
-}
-
-function lastFrom(path: RepMove[]) {
-  const last = path[path.length - 1];
-  return last.uci.slice(0, 2) as never;
-}
-function lastTo(path: RepMove[]) {
-  const last = path[path.length - 1];
-  return last.uci.slice(2, 4) as never;
 }

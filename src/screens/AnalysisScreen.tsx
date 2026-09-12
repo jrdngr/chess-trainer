@@ -3,7 +3,7 @@ import { AddLineSheet } from '../components/AddLineSheet';
 import { Board } from '../components/Board';
 import { ExplorerPanel } from '../components/ExplorerPanel';
 import { IconButton, Icons, MoveStrip, Sheet, toast } from '../components/ui';
-import { applySan, applyUci, positionStatus, sansToMoveText, START_FEN, walkSan, type LegalMove } from '../chess/core';
+import { applySan, applyUci, lastMoveOf, positionStatus, sansToMoveText, START_FEN, walkSan, type LegalMove } from '../chess/core';
 import { mainline, parsePgn, toPgn, wrapPgn } from '../chess/pgn';
 import { formatScore, winFraction } from '../engine/types';
 import { useEngine } from '../engine/useEngine';
@@ -36,6 +36,10 @@ export function AnalysisScreen() {
   const best = sanLines[0];
   const fraction = winFraction(best);
   const opening = useMemo(() => openingNameForPath(referenceIndex(), visible), [visible]);
+  const bestArrow = useMemo(() => {
+    const move = settings.engineEnabled && best?.pv[0] ? applyUci(fen, best.pv[0]) : null;
+    return move ? [{ from: move.from, to: move.to }] : [];
+  }, [settings.engineEnabled, best, fen]);
 
   const play = (san: string) => {
     const move = applySan(fen, san);
@@ -122,21 +126,14 @@ export function AnalysisScreen() {
           lastMove={lastMoveOf(visible)}
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
-          arrows={
-            settings.engineEnabled && best?.pv[0]
-              ? (() => {
-                  const move = applyUci(fen, best.pv[0]);
-                  return move ? [{ from: move.from, to: move.to }] : [];
-                })()
-              : []
-          }
+          arrows={bestArrow}
         />
 
         <div className="spacer sm" />
         <MoveStrip sans={sans} cursor={cursor} onSeek={setCursor} hint="Play a move" />
 
         {status.gameOver && (
-          <div className="card center" style={{ marginTop: 10, fontWeight: 700 }}>
+          <div className="card center mt-8" style={{ fontWeight: 700 }}>
             {status.checkmate ? 'Checkmate' : status.stalemate ? 'Stalemate' : 'Draw'}
           </div>
         )}
@@ -228,9 +225,3 @@ export function AnalysisScreen() {
   );
 }
 
-function lastMoveOf(sans: string[]) {
-  if (!sans.length) return null;
-  const { fens } = walkSan(sans.slice(0, -1));
-  const move = applySan(fens[fens.length - 1], sans[sans.length - 1]);
-  return move ? { from: move.from, to: move.to } : null;
-}

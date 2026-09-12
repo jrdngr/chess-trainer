@@ -41,8 +41,6 @@ export interface BoardProps {
   dimmed?: boolean;
 }
 
-const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-
 interface Placed {
   key: string;
   square: Square;
@@ -376,5 +374,3 @@ export function Board({
     </div>
   );
 }
-
-export { FILES };

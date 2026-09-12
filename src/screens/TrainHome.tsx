@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { IconButton, Icons, Sheet } from '../components/ui';
+import { AppBar, IconButton, Icons, Section, Sheet } from '../components/ui';
 import { lineRecords } from '../model/permadeath';
 import { displayName } from '../model/repertoire';
 import { buildSession, type TrainingItem } from '../model/session';
@@ -85,12 +85,15 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
 
   return (
     <>
-      <div className="appbar">
-        <h1>Train</h1>
-        <IconButton label="Settings" onClick={onOpenSettings}>
-          <Icons.gear size={20} />
-        </IconButton>
-      </div>
+      <AppBar
+        large
+        title="Train"
+        actions={
+          <IconButton label="Settings" onClick={onOpenSettings}>
+            <Icons.gear size={20} />
+          </IconButton>
+        }
+      />
 
       <div className="screen">
         <StorageWarning />
@@ -121,16 +124,27 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
           </button>
         </div>
 
-        <div className="section">Permadeath</div>
-        <div className="hero">
-          <div className="big">{permadeath.runs === 0 ? '\u2014' : permadeath.best}</div>
-          <div className="lbl">
-            {permadeath.runs === 0
-              ? 'One secret line. One mistake.'
-              : `${permadeath.best === 1 ? 'move' : 'moves'} deep at your best`}
+        <Section title="Permadeath" />
+        <button className="card tap" onClick={onStartPermadeath}>
+          <div className="row between">
+            <span className="grow">
+              <div className="title">
+                {permadeath.runs === 0
+                  ? 'One secret line. One mistake.'
+                  : `${permadeath.best} ${permadeath.best === 1 ? 'move' : 'moves'} deep at your best`}
+              </div>
+              <div className="meta">
+                {permadeath.runs === 0
+                  ? 'Play a line from your prep until the first slip'
+                  : strongest
+                    ? `Deepest in the ${strongest.label}`
+                    : `${permadeath.runs} ${permadeath.runs === 1 ? 'run' : 'runs'}`}
+              </div>
+            </span>
+            <Icons.chevron size={18} />
           </div>
           {permadeath.runs > 0 && (
-            <div className="pills">
+            <div className="pills mt-12">
               <span className="pill">
                 <b>{permadeath.runs}</b> {permadeath.runs === 1 ? 'run' : 'runs'}
               </span>
@@ -142,32 +156,16 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
               </span>
             </div>
           )}
-          {strongest && (
-            <div className="faint tiny" style={{ marginTop: 12 }}>
-              Deepest in the {strongest.label} \u2014 {strongest.best}{' '}
-              {strongest.best === 1 ? 'move' : 'moves'}
-            </div>
-          )}
-          <button
-            className="btn primary block xl"
-            style={{ marginTop: 18 }}
-            onClick={onStartPermadeath}
-          >
-            {permadeath.runs === 0 ? 'Start a run' : 'New run'}
-          </button>
-        </div>
+        </button>
 
-        <div className="section">Repertoires</div>
+        <Section title="Repertoires" />
         <div className="list">
           {perRep.map((entry) => (
             <RepertoireRow key={entry.rep.id} entry={entry} onOpen={() => setPick(entry)} />
           ))}
         </div>
 
-        <div className="section">
-          <span>This week</span>
-          <span className="faint">{week.reduce((a, b) => a + b, 0)} reviews</span>
-        </div>
+        <Section title="This week" aside={`${week.reduce((a, b) => a + b, 0)} reviews`} />
         <div className="card">
           <div className="forecast">
             {week.map((count, i) => (
@@ -183,10 +181,10 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
           </div>
         </div>
 
-        <div className="section">
-          <span>Mastery</span>
-          <span className="faint">{ret === null ? `${totalItems} positions` : `${Math.round(ret * 100)}% recall`}</span>
-        </div>
+        <Section
+          title="Mastery"
+          aside={ret === null ? `${totalItems} positions` : `${Math.round(ret * 100)}% recall`}
+        />
         <div className="card">
           <div className="bar-stack">
             <i style={{ width: `${pct(mastery.mature, totalItems)}%`, background: 'var(--good)' }} />
@@ -194,7 +192,7 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
             <i style={{ width: `${pct(mastery.learning, totalItems)}%`, background: 'var(--warn)' }} />
             <i style={{ width: `${pct(unseenTotal, totalItems)}%`, background: 'var(--surface-3)' }} />
           </div>
-          <div className="row wrap" style={{ gap: 8, marginTop: 12 }}>
+          <div className="pills mt-12">
             <span className="pill"><i style={{ background: 'var(--good)' }} /><b>{mastery.mature}</b> mature</span>
             <span className="pill"><i style={{ background: '#7dd3fc' }} /><b>{mastery.young}</b> young</span>
             <span className="pill"><i style={{ background: 'var(--warn)' }} /><b>{mastery.learning}</b> learning</span>
