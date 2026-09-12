@@ -16,7 +16,7 @@ import { getEngine } from '../../engine/useEngine';
 import { formatScore, winFraction, type EngineSnapshot } from '../../engine/types';
 import { chooseMove, levelById, openingLine, type GameResult } from '../../model/play';
 import type { PlayPrefs } from '../../model/modes';
-import { openingNameForPath } from '../../model/reference';
+import { deepestNameForColor, openingNameForPath } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
 import { childrenOf, displayName, fenAt } from '../../model/repertoire';
 import { positionKey } from '../../chess/core';
@@ -198,8 +198,11 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
     }
     let repId = target?.id;
     if (!repId) {
-      const name = opening?.name ?? (color === 'w' ? 'White' : 'Black');
-      repId = addRepertoire(name, color);
+      // Named from the side you played: a Black repertoire called "Queen's Pawn
+      // Opening" is named after what your opponent did.
+      const named = deepestNameForColor(index, line, color)?.name;
+      const side = color === 'w' ? 'White' : 'Black';
+      repId = addRepertoire(`${side} — ${named ?? side}`, color);
     }
     const { added } = addLine(repId, line, 'games');
     setSaved(true);

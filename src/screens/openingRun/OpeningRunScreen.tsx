@@ -24,7 +24,7 @@ import {
   type OpeningRunOptions,
   type Run,
 } from '../../model/openingRun';
-import { deepestName } from '../../model/reference';
+import { deepestName, deepestNameForColor, openingById } from '../../model/reference';
 import { displayName, hasLine } from '../../model/repertoire';
 import { referenceIndex } from '../../model/referenceIndex';
 import { mulberry32 } from '../../model/session';
@@ -99,6 +99,24 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
     endRun(outcomeOf(ended, completed));
   };
 
+  /**
+   * What to call a repertoire this run is about to create.
+   *
+   * An opening run has the answer already: you chose the opening, so that is
+   * its name, whatever the few moves you survived of it happen to be called. A
+   * book run has no such choice, so the line is named from the side you played
+   * — a Black repertoire called "Queen's Pawn Opening" describes what your
+   * opponent did.
+   *
+   * The side is stored in the name and stripped for display, which is the
+   * convention the rest of the app already reads.
+   */
+  const newName = (ended: Run, line: string[]): string => {
+    const chosen = ended.openingId ? openingById(index, ended.openingId) : null;
+    const named = chosen?.name ?? deepestNameForColor(index, line, ended.color)?.name;
+    return `${ended.color === 'w' ? 'White' : 'Black'} — ${named ?? ended.sourceLabel}`;
+  };
+
   /** Where a run's line would go, and whether there is anything to put there. */
   const keepTarget = (ended: Run) => {
     if (!canKeepLine(ended.source)) return null;
@@ -127,14 +145,10 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
     const target = keepTarget(ended);
     if (!target) return null;
     const { line, existing } = target;
-    // Name a new repertoire after the line actually kept, not the line the run
-    // was walking: surviving three moves of a French does not make this the
-    // Winawer Poisoned Pawn, however deep the target went.
-    const named = deepestName(index, line);
-    const repId = existing?.id ?? addRepertoire(named?.name ?? ended.sourceLabel, ended.color);
+    const name = existing?.name ?? newName(ended, line);
+    const repId = existing?.id ?? addRepertoire(name, ended.color);
     const { added } = addToRep(repId, line, 'reference');
-    const rep = existing ?? { name: named?.name ?? ended.sourceLabel };
-    return { name: displayName(rep.name), added };
+    return { name: displayName(name), added };
   };
 
   /** End the run here. `ended` may carry state the run picked up on the way out. */

@@ -3,6 +3,8 @@ import { applySan, positionKey, walkSan, START_FEN } from '../chess/core';
 import {
   buildReferenceIndex,
   buildRefTree,
+  deepestName,
+  deepestNameForColor,
   formatGameCount,
   lookup,
   openingNameForPath,
@@ -153,5 +155,37 @@ describe('transposed positions', () => {
     const sans = lookup(index, fen)?.moves.map((m) => m.san) ?? [];
     expect(sans.length).toBeGreaterThanOrEqual(4);
     expect(sans).toEqual(expect.arrayContaining(['Nf3', 'f3', 'Be2']));
+  });
+});
+
+describe('naming a line from one side', () => {
+  const index = referenceIndex();
+
+  it('prefers a name earned by the side that is asking', () => {
+    // 1.e4 c5 has a name at both plies: "King's Pawn Opening" after e4 is
+    // White's, "Sicilian Defence" after c5 is Black's.
+    expect(deepestNameForColor(index, ['e4', 'c5'], 'b')?.name).toBe('Sicilian Defence');
+    expect(deepestNameForColor(index, ['e4', 'c5'], 'w')?.name).not.toBe('Sicilian Defence');
+  });
+
+  it('falls back to the other side rather than giving no name', () => {
+    // Nothing names 1.d4 Nf6 from Black's side, so White's name is better than
+    // nothing — but it must still be the deepest one available.
+    const black = deepestNameForColor(index, ['d4', 'Nf6'], 'b');
+    expect(black).not.toBeNull();
+    expect(black?.name).toBe(deepestName(index, ['d4', 'Nf6'])?.name);
+  });
+
+  it('goes as deep as the line allows', () => {
+    const line = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6'.split(' ');
+    expect(deepestNameForColor(index, line, 'b')?.name).toContain("King's Indian");
+  });
+
+  it('returns nothing for a line that leaves the book at once', () => {
+    expect(deepestNameForColor(index, ['a3', 'h6', 'a4'], 'w')).toBeNull();
+  });
+
+  it('stops at an illegal move rather than throwing', () => {
+    expect(() => deepestNameForColor(index, ['e4', 'e4', 'e4'], 'w')).not.toThrow();
   });
 });

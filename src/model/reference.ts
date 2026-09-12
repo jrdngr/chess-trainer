@@ -1,4 +1,4 @@
-import { applySan, positionKey, START_FEN } from '../chess/core';
+import { applySan, positionKey, START_FEN, type Color } from '../chess/core';
 import type { ExplorerEntry, ExplorerMove, ReferenceGame } from './types';
 
 /**
@@ -299,6 +299,42 @@ export function deepestName(
     if (named) best = { ...named, ply };
   }
   return best;
+}
+
+/**
+ * The deepest name on this line that describes the given side's opening.
+ *
+ * Openings are named from one side or the other: "Sicilian Defence" names what
+ * Black did, "Queen's Pawn Opening" what White did. A name attaches at the ply
+ * of the move that earned it, so preferring names landing just after this
+ * colour moved is what keeps a Black repertoire from being called after White's
+ * first move. Where the line has no such name, the deepest one of either side
+ * is still better than nothing.
+ */
+export function deepestNameForColor(
+  index: ReferenceIndex,
+  sans: string[],
+  color: Color,
+  startFen = START_FEN,
+): NamedLine | null {
+  let fen = startFen;
+  let any: NamedLine | null = null;
+  let mine: NamedLine | null = null;
+  const root = index.names.get(positionKey(fen));
+  if (root) any = { ...root, ply: 0 };
+  let ply = 0;
+  for (const san of sans) {
+    const move = applySan(fen, san);
+    if (!move) break;
+    fen = move.after;
+    ply += 1;
+    const named = index.names.get(positionKey(fen));
+    if (!named) continue;
+    any = { ...named, ply };
+    // White's moves are the odd plies, Black's the even ones.
+    if ((ply % 2 === 1) === (color === 'w')) mine = { ...named, ply };
+  }
+  return mine ?? any;
 }
 
 /** Deepest opening name on the path to a position — "Sicilian Defence: Najdorf". */
