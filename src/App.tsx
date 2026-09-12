@@ -5,11 +5,12 @@ import { ExploreScreen } from './screens/ExploreScreen';
 import { ImportScreen } from './screens/ImportScreen';
 import { RepertoireScreen } from './screens/RepertoireScreen';
 import { SettingsSheet } from './screens/SettingsSheet';
-import { HomeScreen } from './screens/HomeScreen';
+import { HomeScreen, type ModeId } from './screens/HomeScreen';
 import { OpeningRunScreen } from './screens/openingRun/OpeningRunScreen';
 import { PunishScreen } from './screens/punish/PunishScreen';
 import { GapScreen } from './screens/gap/GapScreen';
-import { DrillSession } from './screens/DrillSession';
+import { DrillScreen } from './screens/drill/DrillScreen';
+import { DrillSession } from './screens/drill/DrillSession';
 import type { SessionMode, TrainingItem } from './model/session';
 import { countDue } from './model/srs';
 import { useStore } from './store/useStore';
@@ -27,9 +28,7 @@ export default function App() {
     mode: SessionMode;
     title: string;
   } | null>(null);
-  const [openingRun, setOpeningRun] = useState(false);
-  const [punish, setPunish] = useState(false);
-  const [gap, setGap] = useState(false);
+  const [mode, setMode] = useState<ModeId | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [explorePath, setExplorePath] = useState<string[] | undefined>();
@@ -50,12 +49,14 @@ export default function App() {
     <div className="screen no-nav" style={{ display: 'grid', placeItems: 'center' }}>
       <div className="spinner" />
     </div>
-  ) : openingRun ? (
-    <OpeningRunScreen onExit={() => setOpeningRun(false)} />
-  ) : punish ? (
-    <PunishScreen onExit={() => setPunish(false)} />
-  ) : gap ? (
-    <GapScreen onExit={() => setGap(false)} />
+  ) : mode === 'drill' ? (
+    <DrillScreen onExit={() => setMode(null)} />
+  ) : mode === 'openingRun' ? (
+    <OpeningRunScreen onExit={() => setMode(null)} />
+  ) : mode === 'punish' ? (
+    <PunishScreen onExit={() => setMode(null)} />
+  ) : mode === 'gap' ? (
+    <GapScreen onExit={() => setMode(null)} />
   ) : session ? (
     <DrillSession
       items={session.items}
@@ -74,9 +75,7 @@ export default function App() {
           {tab === 'home' && (
             <HomeScreen
               onStart={startSession}
-              onStartOpeningRun={() => setOpeningRun(true)}
-              onStartPunish={() => setPunish(true)}
-              onStartGap={() => setGap(true)}
+              onOpenMode={setMode}
               onOpenSettings={() => setSettingsOpen(true)}
             />
           )}

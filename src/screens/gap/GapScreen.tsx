@@ -6,13 +6,13 @@ import { formatGameCount, movePercent, totalGamesAt, lookup } from '../../model/
 import { referenceIndex } from '../../model/referenceIndex';
 import { displayName } from '../../model/repertoire';
 import { candidateAnswers, findGaps, type Gap } from '../../model/gaps';
+import type { GapPrefs } from '../../model/modes';
 import { repertoireList, useStore } from '../../store/useStore';
+import { Setup } from './Setup';
 
 export interface GapScreenProps {
   onExit: () => void;
 }
-
-const THRESHOLDS = [3, 1, 0.2];
 
 /**
  * Gap: replies the world plays that your repertoire has no answer to.
@@ -22,23 +22,47 @@ const THRESHOLDS = [3, 1, 0.2];
  * the gap stop existing.
  */
 export function GapScreen({ onExit }: GapScreenProps) {
+  const [prefs, setPrefs] = useState<GapPrefs | null>(null);
+  if (!prefs) return <Setup onStart={setPrefs} onExit={onExit} />;
+  return <Filling prefs={prefs} onExit={() => setPrefs(null)} />;
+}
+
+function Filling({ prefs, onExit }: { prefs: GapPrefs; onExit: () => void }) {
   const state = useStore();
   const reps = repertoireList(state);
   const addLine = useStore((s) => s.addLine);
   const index = referenceIndex();
 
-  const [minShare, setMinShare] = useState(THRESHOLDS[1]);
+  const minShare = prefs.minShare;
   const [open, setOpen] = useState<Gap | null>(null);
 
-  const gaps = useMemo(
-    () => reps.flatMap((rep) => findGaps(rep, index, { minShare })),
-    [reps, index, minShare],
-  );
+  const gaps = useMemo(() => {
+    const found = reps
+      .filter((rep) => !prefs.repertoireId || rep.id === prefs.repertoireId)
+      .flatMap((rep) => findGaps(rep, index, { minShare, maxPly: prefs.maxPly }));
+    // findGaps already sorts shallow-and-popular; "most played" reorders it
+    // outright, which surfaces a deep mainline over a shallow oddity.
+    return prefs.sort === 'popular' ? [...found].sort((a, b) => b.games - a.games) : found;
+  }, [reps, index, minShare, prefs.maxPly, prefs.repertoireId, prefs.sort]);
 
   const fix = (gap: Gap, answer: string) => {
     addLine(gap.repertoireId, [...gap.path, gap.san, answer], 'manual');
     setOpen(null);
     toast(`${answer} added`);
+  };
+
+  /** One tap either fills the gap with the book's choice or asks which. */
+  const choose = (gap: Gap) => {
+    if (!prefs.quickFix) {
+      setOpen(gap);
+      return;
+    }
+    const best = candidateAnswers(index, gap.after, 1)[0];
+    if (!best) {
+      setOpen(gap);
+      return;
+    }
+    fix(gap, best.san);
   };
 
   return (
@@ -50,24 +74,13 @@ export function GapScreen({ onExit }: GapScreenProps) {
       />
 
       <div className="screen no-nav">
-        <div className="segmented">
-          {THRESHOLDS.map((value) => (
-            <button
-              key={value}
-              className={minShare === value ? 'active' : ''}
-              onClick={() => setMinShare(value)}
-            >
-              {value >= 1 ? `${value}% and up` : 'Anything played'}
-            </button>
-          ))}
-        </div>
-
         {gaps.length === 0 ? (
           <div className="empty">
             <div className="t">Nothing missing</div>
             <div className="h">
               Your repertoire answers every reply the database plays here, down to {minShare}% of
-              games. Gaps appear as you add lines of your own.
+              games, within {Math.ceil(prefs.maxPly / 2)} moves. Gaps appear as you add lines of
+              your own.
             </div>
           </div>
         ) : (
@@ -78,7 +91,7 @@ export function GapScreen({ onExit }: GapScreenProps) {
                 <button
                   className="list-row"
                   key={`${gap.repertoireId}-${gap.path.join('')}-${gap.san}`}
-                  onClick={() => setOpen(gap)}
+                  onClick={() => choose(gap)}
                 >
                   <span className="grow" style={{ minWidth: 0 }}>
                     <div className="title">
@@ -96,7 +109,7 @@ export function GapScreen({ onExit }: GapScreenProps) {
             </div>
             {gaps.length > 40 && (
               <div className="note center">
-                Showing the 40 shallowest. Fix these and the rest move up.
+                Showing 40 of {gaps.length}. Fix these and the rest move up.
               </div>
             )}
           </>

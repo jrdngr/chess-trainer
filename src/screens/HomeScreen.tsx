@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { AppBar, IconButton, Icons, Section, Sheet } from '../components/ui';
 import { findGaps } from '../model/gaps';
-import { lineRecords } from '../model/openingRun';
+import { GRADES, gradeLabel, type RunGrade } from '../model/openingRun';
 import { referenceIndex } from '../model/referenceIndex';
 import { displayName } from '../model/repertoire';
 import type { SessionMode, TrainingItem } from '../model/session';
@@ -9,11 +9,12 @@ import { countDue, DAY, forecast, masteryBuckets, retention } from '../model/srs
 import { itemsFor, repertoireList, useStore } from '../store/useStore';
 import type { Repertoire } from '../model/types';
 
+export type ModeId = 'drill' | 'openingRun' | 'punish' | 'gap';
+
 export interface HomeScreenProps {
+  /** Launching one repertoire straight into a session, from the sheet below. */
   onStart: (items: TrainingItem[], mode: SessionMode, title: string) => void;
-  onStartOpeningRun: () => void;
-  onStartPunish: () => void;
-  onStartGap: () => void;
+  onOpenMode: (mode: ModeId) => void;
   onOpenSettings: () => void;
 }
 
@@ -28,23 +29,12 @@ interface RepEntry {
   mastery: ReturnType<typeof masteryBuckets>;
 }
 
-export function HomeScreen({
-  onStart,
-  onStartOpeningRun,
-  onStartPunish,
-  onStartGap,
-  onOpenSettings,
-}: HomeScreenProps) {
+export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenProps) {
   const state = useStore();
   const reps = repertoireList(state);
   const now = Date.now();
   const [pick, setPick] = useState<RepEntry | null>(null);
   const openingRun = state.openingRun;
-  /** The opening you have gone deepest in — the one stat worth naming. */
-  const strongest = useMemo(() => {
-    const best = lineRecords(openingRun)[0];
-    return best && best.best > 0 ? best : null;
-  }, [openingRun]);
 
   const perRep = useMemo<RepEntry[]>(
     () =>
@@ -63,15 +53,11 @@ export function HomeScreen({
   const totalItems = perRep.reduce((s, r) => s + r.total, 0);
   const totalDue = perRep.reduce((s, r) => s + r.counts.due, 0);
   const totalUnseen = perRep.reduce((s, r) => s + r.unseen, 0);
-  const learning = perRep.reduce((s, r) => s + r.counts.learning, 0);
   const mastery = masteryBuckets(allCards);
   const ret = retention(allCards);
   const week = forecast(allCards, 7, now);
+  const weekTotal = week.reduce((a, b) => a + b, 0);
   const maxWeek = Math.max(1, ...week);
-
-  const startAll = () => {
-    onStart(perRep.flatMap((r) => r.items), 'due', 'Review');
-  };
 
   const startRep = (entry: RepEntry, mode: Mode) => {
     setPick(null);
@@ -80,14 +66,32 @@ export function HomeScreen({
 
   // What is waiting, not what one sitting will cover — a session runs until you
   // stop it.
-  const readyCount = totalDue + Math.min(totalUnseen, state.settings.newCardsPerSession);
+  const readyCount = totalDue + Math.min(totalUnseen, state.settings.drill.newPerSession);
   const unseenTotal = totalItems - allCards.length + mastery.unseen;
 
   /** Replies the database plays that nothing in the repertoire answers. */
+  const gapPrefs = state.settings.gap;
   const gapCount = useMemo(
-    () => perRep.reduce((sum, entry) => sum + findGaps(entry.rep, referenceIndex()).length, 0),
-    [perRep],
+    () =>
+      perRep.reduce(
+        (sum, entry) =>
+          sum +
+          findGaps(entry.rep, referenceIndex(), {
+            minShare: gapPrefs.minShare,
+            maxPly: gapPrefs.maxPly,
+          }).length,
+        0,
+      ),
+    [perRep, gapPrefs.minShare, gapPrefs.maxPly],
   );
+  /**
+   * Gaps against the breadth of the prep they sit in. A repertoire with two
+   * holes in four hundred positions should not read the same as one with two
+   * holes in six.
+   */
+  const coverage = totalItems > 0 ? totalItems / (totalItems + gapCount) : 1;
+
+  const punish = state.punish;
 
   return (
     <>
@@ -103,94 +107,87 @@ export function HomeScreen({
       <div className="screen">
         <StorageWarning />
 
-        <Section title="Drill" />
-        <div className="hero">
-          <div className="big">{readyCount}</div>
-          <div className="lbl">
-            {readyCount === 0
-              ? totalItems > 0
-                ? `All clear · next ${nextDueText(allCards, now)}`
-                : 'Nothing to drill yet'
-              : readyCount === 1
-                ? 'position ready'
-                : 'positions ready'}
-          </div>
-          <div className="pills">
-            <span className="pill"><i style={{ background: 'var(--accent)' }} /><b>{totalDue}</b> due</span>
-            <span className="pill"><i style={{ background: 'var(--text-3)' }} /><b>{totalUnseen}</b> new</span>
-            <span className="pill"><i style={{ background: 'var(--warn)' }} /><b>{learning}</b> learning</span>
-          </div>
-          <button
-            className="btn primary block xl"
-            style={{ marginTop: 18 }}
-            onClick={startAll}
-            disabled={readyCount === 0}
-          >
-            Start session
-          </button>
-        </div>
-
-        <Section title="Opening Run" />
-        <div className="hero">
-          {/* A dash at 56px reads as a stray rule, so an unplayed mode just
-              leads with its line. */}
-          {openingRun.runs > 0 && <div className="big">{openingRun.best}</div>}
-          <div className="lbl" style={openingRun.runs === 0 ? { marginTop: 0 } : undefined}>
-            {openingRun.runs === 0
-              ? 'One secret line. One mistake.'
-              : `${openingRun.best === 1 ? 'move' : 'moves'} deep at your best`}
-          </div>
-          {openingRun.runs > 0 && (
-            <div className="pills">
-              <span className="pill">
-                <b>{openingRun.runs}</b> {openingRun.runs === 1 ? 'run' : 'runs'}
-              </span>
-              <span className="pill">
-                <b>{openingRun.survivals}</b> completed
-              </span>
-              <span className="pill">
-                last <b>{openingRun.lastDepth}</b>
-              </span>
-            </div>
-          )}
-          {strongest && (
-            <div className="faint tiny" style={{ marginTop: 12 }}>
-              Deepest in the {strongest.label} — {strongest.best}{' '}
-              {strongest.best === 1 ? 'move' : 'moves'}
-            </div>
-          )}
-          <button
-            className="btn primary block xl"
-            style={{ marginTop: 18 }}
-            onClick={onStartOpeningRun}
-          >
-            {openingRun.runs === 0 ? 'Start a run' : 'New run'}
-          </button>
-        </div>
-
-        <Section title="Punish" />
-        <div className="hero">
-          <div className="lbl" style={{ marginTop: 0 }}>
-            They leave the book with a move that drops material. Take it.
-          </div>
-          <button className="btn primary block xl" style={{ marginTop: 18 }} onClick={onStartPunish}>
-            Set a trap
-          </button>
-        </div>
-
-        <Section title="Gap" aside={gapCount > 0 ? `${gapCount}` : undefined} />
-        <div className="hero">
-          <div className="big">{gapCount}</div>
-          <div className="lbl">
-            {gapCount === 0
-              ? 'every reply answered'
-              : gapCount === 1
-                ? 'reply you cannot meet'
-                : 'replies you cannot meet'}
-          </div>
-          <button className="btn primary block xl" style={{ marginTop: 18 }} onClick={onStartGap}>
-            {gapCount === 0 ? 'Check again' : 'Fill them in'}
-          </button>
+        <div className="mode-grid">
+          <Tile
+            name="Drill"
+            tag={
+              readyCount > 0
+                ? { text: `${readyCount} ready`, tone: 'accent' }
+                : { text: 'clear', tone: 'good' }
+            }
+            sub={
+              totalItems === 0
+                ? 'Nothing prepared yet'
+                : weekTotal > 0
+                  ? `${weekTotal} ${weekTotal === 1 ? 'review' : 'reviews'} this week`
+                  : allCards.length === 0
+                    ? `${totalItems} positions waiting`
+                    : `Next ${nextDueText(allCards, now)}`
+            }
+            art={<Sparkline values={week} />}
+            onClick={() => onOpenMode('drill')}
+          />
+          <Tile
+            name="Opening Run"
+            tag={
+              openingRun.runs > 0
+                ? { text: `best ${openingRun.best}` }
+                : { text: 'new', tone: 'accent' }
+            }
+            sub={
+              openingRun.runs === 0
+                ? 'One line. One mistake.'
+                : `${openingRun.runs} ${openingRun.runs === 1 ? 'run' : 'runs'} · ${openingRun.survivals} completed`
+            }
+            art={<GradeBar grades={openingRun.grades} />}
+            onClick={() => onOpenMode('openingRun')}
+          />
+          <Tile
+            name="Punish"
+            tag={
+              punish.seen > 0
+                ? { text: `${Math.round((punish.solved / punish.seen) * 100)}%` }
+                : { text: 'new', tone: 'accent' }
+            }
+            sub={
+              punish.seen === 0
+                ? 'They blunder. Take it.'
+                : `${punish.solved} of ${punish.seen} sprung · best ${punish.best}`
+            }
+            art={
+              <Gauge
+                parts={[
+                  {
+                    width: punish.seen ? (punish.solved / punish.seen) * 100 : 0,
+                    color: 'var(--good)',
+                  },
+                ]}
+              />
+            }
+            onClick={() => onOpenMode('punish')}
+          />
+          <Tile
+            name="Gap"
+            tag={
+              gapCount === 0
+                ? { text: 'clear', tone: 'good' }
+                : { text: `${gapCount}`, tone: 'warn' }
+            }
+            sub={
+              gapCount === 0
+                ? 'Every reply answered.'
+                : `${gapCount} ${gapCount === 1 ? 'reply' : 'replies'} you cannot meet`
+            }
+            art={
+              <Gauge
+                parts={[
+                  { width: coverage * 100, color: 'var(--good)' },
+                  { width: (1 - coverage) * 100, color: 'var(--warn)' },
+                ]}
+              />
+            }
+            onClick={() => onOpenMode('gap')}
+          />
         </div>
 
         <Section title="Repertoires" />
@@ -200,7 +197,7 @@ export function HomeScreen({
           ))}
         </div>
 
-        <Section title="This week" aside={`${week.reduce((a, b) => a + b, 0)} reviews`} />
+        <Section title="This week" aside={`${weekTotal} reviews`} />
         <div className="card">
           <div className="forecast">
             {week.map((count, i) => (
@@ -264,6 +261,113 @@ export function HomeScreen({
         )}
       </Sheet>
     </>
+  );
+}
+
+/* ── the grid ───────────────────────────────────────────────────────────── */
+
+interface Tag {
+  text: string;
+  tone?: 'accent' | 'good' | 'warn';
+}
+
+/**
+ * One mode as a square.
+ *
+ * The name says what it is, the tag says where you stand, and the graphic at
+ * the foot says it again in a shape you can read without counting. Tapping it
+ * opens that mode's own setup screen.
+ */
+function Tile({
+  name,
+  tag,
+  sub,
+  art,
+  onClick,
+}: {
+  name: string;
+  tag: Tag;
+  sub: string;
+  art: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button className="mode-tile" onClick={onClick}>
+      <div className="head">
+        <span className="name">{name}</span>
+        <span className={`tag${tag.tone ? ` ${tag.tone}` : ''}`}>{tag.text}</span>
+      </div>
+      <div className="fill" />
+      <div className="art">{art}</div>
+      <div className="sub">{sub}</div>
+    </button>
+  );
+}
+
+/** A segmented bar. Parts are percentages of the whole width. */
+function Gauge({ parts }: { parts: { width: number; color: string }[] }) {
+  return (
+    <span className="gauge">
+      {parts.map((part, i) => (
+        <i key={i} style={{ width: `${Math.max(0, part.width)}%`, background: part.color }} />
+      ))}
+    </span>
+  );
+}
+
+/** How runs have ended, in the four colours the grades already use. */
+function GradeBar({ grades }: { grades: Record<RunGrade, number> }) {
+  const total = GRADES.reduce((sum, grade) => sum + grades[grade], 0);
+  if (total === 0) {
+    return <Gauge parts={[{ width: 100, color: 'var(--surface-3)' }]} />;
+  }
+  return (
+    <span className="gauge" title={GRADES.map((g) => `${gradeLabel(g)} ${grades[g]}`).join(' · ')}>
+      {GRADES.map((grade) => (
+        <i
+          key={grade}
+          style={{ width: `${(grades[grade] / total) * 100}%`, background: GRADE_COLORS[grade] }}
+        />
+      ))}
+    </span>
+  );
+}
+
+const GRADE_COLORS: Record<RunGrade, string> = {
+  green: 'var(--good)',
+  yellow: 'var(--warn)',
+  red: 'var(--bad)',
+  purple: 'var(--accent)',
+};
+
+/**
+ * The week's reviews as a line.
+ *
+ * A flat schedule would draw a flat line through the middle of the box rather
+ * than along the floor, so an all-zero week is drawn at the bottom instead.
+ */
+function Sparkline({ values }: { values: number[] }) {
+  const max = Math.max(...values);
+  const last = values.length - 1;
+  const points = values
+    .map((value, i) => {
+      const x = last === 0 ? 0 : (i / last) * 100;
+      const y = max === 0 ? 23 : 23 - (value / max) * 20;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+  return (
+    <svg className="spark" viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true">
+      <polyline
+        points={points}
+        fill="none"
+        stroke="var(--accent)"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
   );
 }
 

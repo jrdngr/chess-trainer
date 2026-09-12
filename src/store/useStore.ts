@@ -20,6 +20,15 @@ import type {
   Settings,
 } from '../model/types';
 import {
+  DEFAULT_DRILL,
+  DEFAULT_GAP,
+  DEFAULT_PUNISH,
+  EMPTY_PUNISH_RECORD,
+  normalizePunishRecord,
+  recordPunish,
+  type PunishRecord,
+} from '../model/modes';
+import {
   DEFAULT_PREFS,
   EMPTY_RECORD,
   normalizeRecord,
@@ -35,8 +44,6 @@ import { buildSeedRepertoires } from './seed';
 export const DEFAULT_SETTINGS: Settings = {
   showCoordinates: true,
   engineEnabled: true,
-  newCardsPerSession: 8,
-  playOpponentReplies: true,
   boardTheme: 'slate',
   hapticFeedback: true,
   lichessUsername: '',
@@ -44,6 +51,9 @@ export const DEFAULT_SETTINGS: Settings = {
   cloudSync: true,
   favoriteOpenings: [],
   openingRun: { ...DEFAULT_PREFS },
+  drill: { ...DEFAULT_DRILL },
+  punish: { ...DEFAULT_PUNISH },
+  gap: { ...DEFAULT_GAP },
 };
 
 /**
@@ -62,6 +72,9 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
     ...DEFAULT_SETTINGS,
     ...known,
     openingRun: { ...DEFAULT_PREFS, ...known.openingRun },
+    drill: { ...DEFAULT_DRILL, ...known.drill },
+    punish: { ...DEFAULT_PUNISH, ...known.punish },
+    gap: { ...DEFAULT_GAP, ...known.gap },
   };
 }
 
@@ -72,8 +85,9 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
  * likely to change.
  *
  * 4: permadeath became openingRun, settings and records included.
+ * 5: each mode keeps its own options; Punish keeps a record.
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 interface PersistedState {
   version: number;
@@ -86,6 +100,7 @@ interface PersistedState {
   settings: Settings;
   importedGames: ImportedGame[];
   openingRun: OpeningRunRecord;
+  punish: PunishRecord;
 }
 
 interface StoreState extends PersistedState {
@@ -110,10 +125,17 @@ interface StoreState extends PersistedState {
 
   setSettings: (patch: Partial<Settings>) => void;
   setOpeningRunPrefs: (patch: Partial<OpeningRunPrefs>) => void;
+  /** Patch one mode's own options, without touching the rest of settings. */
+  setModePrefs: <K extends 'drill' | 'punish' | 'gap'>(
+    mode: K,
+    patch: Partial<Settings[K]>,
+  ) => void;
   setImportedGames: (games: ImportedGame[]) => void;
 
   /** Log a finished openingRun run, globally and against its own opening. */
   endOpeningRun: (outcome: RunOutcome) => void;
+  /** Log one Punish puzzle, solved or missed. */
+  endPunish: (solved: boolean) => void;
   /**
    * The move that ended a run. Only the miss touches the schedule: correct
    * moves in a run are primed by the ones before them, so crediting them would
@@ -134,6 +156,7 @@ function emptyPersisted(): PersistedState {
     settings: { ...DEFAULT_SETTINGS },
     importedGames: [],
     openingRun: { ...EMPTY_RECORD },
+    punish: { ...EMPTY_PUNISH_RECORD },
   };
 }
 
@@ -148,6 +171,7 @@ function persistedFrom(state: StoreState): PersistedState {
     settings: state.settings,
     importedGames: state.importedGames,
     openingRun: state.openingRun,
+    punish: state.punish,
   };
 }
 
@@ -256,6 +280,7 @@ export const useStore = create<StoreState>((set, get) => {
         set({
           ...chosen,
           openingRun: normalizeRecord(chosen.openingRun),
+          punish: normalizePunishRecord(chosen.punish),
           updatedAt: Math.max(localAt, remoteAt),
           settings: mergeSettings(chosen.settings),
           storage,
@@ -298,6 +323,7 @@ export const useStore = create<StoreState>((set, get) => {
         set({
           ...remote.state,
           openingRun: normalizeRecord(remote.state.openingRun),
+          punish: normalizePunishRecord(remote.state.punish),
           importedGames: local.importedGames,
           settings: mergeSettings(remote.state.settings),
           updatedAt: remote.updatedAt,
@@ -381,12 +407,21 @@ export const useStore = create<StoreState>((set, get) => {
       commit({ settings: { ...settings, openingRun: { ...settings.openingRun, ...patch } } });
     },
 
+    setModePrefs(mode, patch) {
+      const settings = get().settings;
+      commit({ settings: { ...settings, [mode]: { ...settings[mode], ...patch } } });
+    },
+
     setImportedGames(games) {
       commit({ importedGames: games });
     },
 
     endOpeningRun(outcome) {
       commit({ openingRun: recordRun(get().openingRun, outcome) });
+    },
+
+    endPunish(solved) {
+      commit({ punish: recordPunish(get().punish, solved) });
     },
 
     missedInOpeningRun(repertoireId, fen, played, expected) {

@@ -1,5 +1,6 @@
 import type { Color } from '../chess/core';
 import type { OpeningRunPrefs } from './openingRun';
+import type { DrillPrefs, GapPrefs, PunishPrefs } from './modes';
 
 export type MoveSource = 'seed' | 'manual' | 'reference' | 'pgn' | 'games';
 
@@ -130,12 +131,15 @@ export interface ImportedGame {
   url?: string;
 }
 
+/**
+ * App-wide settings: the board, the device, the account.
+ *
+ * Nothing here changes how a mode plays. Each mode keeps its own options under
+ * its own key, edited on that mode's setup screen.
+ */
 export interface Settings {
   showCoordinates: boolean;
   engineEnabled: boolean;
-  newCardsPerSession: number;
-  /** Play the opponent's reply after a correct answer and ask the next move. */
-  playOpponentReplies: boolean;
   boardTheme: 'slate' | 'walnut' | 'ocean';
   hapticFeedback: boolean;
   lichessUsername: string;
@@ -145,4 +149,7 @@ export interface Settings {
   /** Openings starred for quick picking, by their move-order id. */
   favoriteOpenings: string[];
   openingRun: OpeningRunPrefs;
+  drill: DrillPrefs;
+  punish: PunishPrefs;
+  gap: GapPrefs;
 }

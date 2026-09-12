@@ -230,3 +230,28 @@ export function checkAnswer(item: TrainingItem, playedSan: string): AnswerCheck 
   const matched = item.expected.find((e) => e.san === playedSan);
   return { correct: !!matched, matched, preferred };
 }
+
+/**
+ * How badly a position has gone, highest first.
+ *
+ * Lapses count double: forgetting something you had learned is a sharper
+ * signal than never having got it right. A position you have never been asked
+ * scores zero, so unseen material sits between what you keep missing and what
+ * you reliably know.
+ */
+export function weakness(item: TrainingItem, cards: Record<string, Card>): number {
+  const card = cards[item.cardId];
+  if (!card) return 0;
+  return card.lapses * 2 + card.incorrect - card.correct;
+}
+
+/** Reorder a queue so the positions you get wrong come first. */
+export function weakestFirst(
+  items: TrainingItem[],
+  cards: Record<string, Card>,
+): TrainingItem[] {
+  return items
+    .map((item, i) => ({ item, i, score: weakness(item, cards) }))
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map((x) => x.item);
+}

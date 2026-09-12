@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Section, Segmented, Sheet, Stepper, toast, Toggle } from '../components/ui';
+import { Section, Segmented, Sheet, toast, Toggle } from '../components/ui';
 import { describeStatus } from '../store/cloud';
 import { useStore } from '../store/useStore';
 import type { Settings } from '../model/types';
@@ -21,26 +21,7 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
 
   return (
     <Sheet open={open} onClose={onClose} title="Settings">
-      <div className="section" style={{ marginTop: 0 }}>Training</div>
-      <div className="list">
-        <Toggle
-          label="Follow the line"
-          hint="Keep going after a correct move"
-          on={settings.playOpponentReplies}
-          onToggle={toggle('playOpponentReplies')}
-        />
-        <Stepper
-          label="New per session"
-          value={settings.newCardsPerSession}
-          min={0}
-          max={40}
-          step={2}
-          onChange={(newCardsPerSession) => setSettings({ newCardsPerSession })}
-        />
-
-      </div>
-
-      <Section title="Board" />
+      <div className="section" style={{ marginTop: 0 }}>Board</div>
       <div className="list">
         <div className="list-row" style={{ display: 'block' }}>
           <Segmented
@@ -51,12 +32,19 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
         </div>
         <Toggle label="Coordinates" on={settings.showCoordinates} onToggle={toggle('showCoordinates')} />
         <Toggle label="Haptics" on={settings.hapticFeedback} onToggle={toggle('hapticFeedback')} />
+      </div>
+
+      <Section title="Engine" />
+      <div className="list">
         <Toggle
-          label="Engine in Analysis"
-          hint="Stockfish, with a built-in evaluator as fallback"
+          label="Run Stockfish"
+          hint="Used by Analysis and by Drill's explanations, with a built-in evaluator as fallback"
           on={settings.engineEnabled}
           onToggle={toggle('engineEnabled')}
         />
+      </div>
+      <div className="note">
+        How each mode plays is set on that mode's own screen.
       </div>
 
       <Section title="Sync" />

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Board } from '../components/Board';
-import { ExplorerPanel } from '../components/ExplorerPanel';
-import { AppBar, haptic, Icons, Sheet, Strip, type StripItem } from '../components/ui';
+import { Board } from '../../components/Board';
+import { ExplorerPanel } from '../../components/ExplorerPanel';
+import { AppBar, haptic, Icons, Sheet, Strip, type StripItem } from '../../components/ui';
 import {
   applySan,
   fenTurn,
@@ -11,33 +11,46 @@ import {
   type Color,
   type LegalMove,
   type Square,
-} from '../chess/core';
-import type { BoardTheme } from '../components/Board';
-import { formatScore } from '../engine/types';
-import { useEngine } from '../engine/useEngine';
-import { openingNameForPath } from '../model/reference';
-import { referenceIndex } from '../model/referenceIndex';
-import { displayName } from '../model/repertoire';
+} from '../../chess/core';
+import type { BoardTheme } from '../../components/Board';
+import { formatScore } from '../../engine/types';
+import { useEngine } from '../../engine/useEngine';
+import { openingNameForPath } from '../../model/reference';
+import { referenceIndex } from '../../model/referenceIndex';
+import { displayName } from '../../model/repertoire';
 import {
   buildSession,
   checkAnswer,
   extraPractice,
   mulberry32,
+  weakestFirst,
   type SessionMode,
   type TrainingItem,
-} from '../model/session';
-import type { Grade } from '../model/types';
-import { useStore } from '../store/useStore';
+} from '../../model/session';
+import { DEFAULT_DRILL, type DrillPrefs } from '../../model/modes';
+import type { Card, Grade } from '../../model/types';
+import { useStore } from '../../store/useStore';
 
 export interface DrillSessionProps {
   /** Everything in scope. The session draws from this for as long as you want. */
   items: TrainingItem[];
   mode: SessionMode;
   title: string;
+  /** The mode's own options. Sessions launched from a repertoire use defaults. */
+  prefs?: Partial<DrillPrefs>;
   onExit: () => void;
 }
 
 type Phase = 'ask' | 'correct' | 'wrong';
+
+/** The queue, in the order the mode asks for. */
+function order(
+  batch: TrainingItem[],
+  cards: Record<string, Card>,
+  weakFirst: boolean,
+): TrainingItem[] {
+  return weakFirst ? weakestFirst(batch, cards) : batch;
+}
 
 /** How many positions to line up at a time, and when to line up more. */
 const BATCH = 20;
@@ -58,24 +71,30 @@ const GRADE_LABELS: Record<Grade, string> = {
   easy: 'Easy',
 };
 
-export function DrillSession({ items, mode, title, onExit }: DrillSessionProps) {
+export function DrillSession({ items, mode, title, prefs, onExit }: DrillSessionProps) {
+  const options: DrillPrefs = { ...DEFAULT_DRILL, ...prefs };
   const settings = useStore((s) => s.settings);
   const cards = useStore((s) => s.cards);
   const repertoires = useStore((s) => s.repertoires);
   const grade = useStore((s) => s.grade);
   const ensureCard = useStore((s) => s.ensureCard);
 
-  const maxNew = settings.newCardsPerSession;
+  const maxNew = options.newPerSession;
+  const weakFirst = options.weakFirst;
   const startedAt = useRef(Date.now());
   const shuffler = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
   const [queue, setQueue] = useState<TrainingItem[]>(() =>
-    buildSession(items, cards, {
-      mode,
-      now: Date.now(),
-      maxItems: BATCH,
-      maxNew,
-      seed: Math.floor(Date.now() / 60000),
-    }),
+    order(
+      buildSession(items, cards, {
+        mode,
+        now: Date.now(),
+        maxItems: BATCH,
+        maxNew,
+        seed: Math.floor(Date.now() / 60000),
+      }),
+      cards,
+      weakFirst,
+    ),
   );
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('ask');
@@ -122,10 +141,10 @@ export function DrillSession({ items, mode, title, onExit }: DrillSessionProps) 
               shuffler.current,
               (id) => ahead.has(id) || taken.has(id),
             );
-      const batch = [...scheduled, ...filler];
+      const batch = order([...scheduled, ...filler], cards, weakFirst);
       return batch.length ? [...current, ...batch] : current;
     });
-  }, [stopped, items, cards, mode, maxNew, index, queue.length]);
+  }, [stopped, items, cards, mode, maxNew, weakFirst, index, queue.length]);
 
   useEffect(() => {
     if (item) ensureCard(item);
@@ -176,7 +195,7 @@ export function DrillSession({ items, mode, title, onExit }: DrillSessionProps) 
 
   /** The next decision point down this line, when following the line through. */
   const followUp = useMemo(() => {
-    if (!item || !settings.playOpponentReplies) return null;
+    if (!item || !options.followLine) return null;
     const rep = repertoires[item.repertoireId];
     if (!rep) return null;
     const [mine, reply] = item.continuation;
@@ -188,7 +207,7 @@ export function DrillSession({ items, mode, title, onExit }: DrillSessionProps) 
     return items.find(
       (candidate) => candidate.fen === afterReply.after && candidate.cardId !== item.cardId,
     );
-  }, [item, items, repertoires, settings.playOpponentReplies]);
+  }, [item, items, repertoires, options.followLine]);
 
   const requeue = () => {
     if (!item) return;
@@ -419,9 +438,11 @@ export function DrillSession({ items, mode, title, onExit }: DrillSessionProps) 
             </div>
             <div className="spacer" />
             <div className="row gap-8">
-              <button className="btn soft grow" onClick={() => setWhy(true)}>
-                Why?
-              </button>
+              {options.explain && (
+                <button className="btn soft grow" onClick={() => setWhy(true)}>
+                  Why?
+                </button>
+              )}
               <button className="btn soft grow" onClick={() => setRevealLine((v) => !v)}>
                 {revealLine ? 'Hide line' : 'Show line'}
               </button>

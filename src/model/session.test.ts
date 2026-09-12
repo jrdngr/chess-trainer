@@ -10,6 +10,8 @@ import {
   interleave,
   mulberry32,
   shuffle,
+  weakestFirst,
+  weakness,
 } from './session';
 import { createCard, DAY } from './srs';
 import type { Card } from './types';
@@ -204,5 +206,40 @@ describe('keeping an endless session stocked', () => {
     const a = extraPractice(items, {}, 5, mulberry32(1)).map((i) => i.cardId);
     const b = extraPractice(items, {}, 5, mulberry32(2)).map((i) => i.cardId);
     expect(a.join()).not.toBe(b.join());
+  });
+});
+
+describe('weakest first', () => {
+  const rep = blackRepertoire();
+  const items = allItems([rep]);
+
+  function scored(item: TrainingItem, patch: Partial<Card>): Card {
+    return { ...createCard(item.cardId, rep.id, item.key, item.fen, T0), ...patch };
+  }
+
+  it('scores an unseen position at zero', () => {
+    expect(weakness(items[0], {})).toBe(0);
+  });
+
+  it('counts a lapse for more than a single wrong answer', () => {
+    const lapsed = { [items[0].cardId]: scored(items[0], { lapses: 1 }) };
+    const wrong = { [items[0].cardId]: scored(items[0], { incorrect: 1 }) };
+    expect(weakness(items[0], lapsed)).toBeGreaterThan(weakness(items[0], wrong));
+  });
+
+  it('puts what you keep missing ahead of what you know', () => {
+    const cards: Record<string, Card> = {
+      [items[0].cardId]: scored(items[0], { correct: 9, incorrect: 0 }),
+      [items[1].cardId]: scored(items[1], { correct: 1, incorrect: 4, lapses: 2 }),
+      [items[2].cardId]: scored(items[2], { correct: 3, incorrect: 1 }),
+    };
+    const ordered = weakestFirst(items.slice(0, 3), cards);
+    expect(ordered[0].cardId).toBe(items[1].cardId);
+    expect(ordered[2].cardId).toBe(items[0].cardId);
+  });
+
+  it('leaves equally weak positions in the order they arrived', () => {
+    const ordered = weakestFirst(items, {});
+    expect(ordered.map((i) => i.cardId)).toEqual(items.map((i) => i.cardId));
   });
 });
