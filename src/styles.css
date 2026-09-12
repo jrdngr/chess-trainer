@@ -35,6 +35,9 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --nav-height: 60px;
+  /* How much bigger the pieces are drawn than the square they sit in. One
+     number so the board and the piece you are dragging stay in proportion. */
+  --piece-scale: 1.25;
 
   --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', Roboto,
     'Helvetica Neue', Arial, sans-serif;

@@ -63,6 +63,10 @@
   transition: left 0.16s cubic-bezier(0.3, 0.9, 0.4, 1), top 0.16s cubic-bezier(0.3, 0.9, 0.4, 1);
   z-index: 3;
   padding: 3.5%;
+  /* Scaled about the centre of the square, so the piece grows without moving.
+     The glyphs do not reach the edges of their own viewBox, so this stays
+     inside the square well past 1.25. */
+  transform: scale(var(--piece-scale, 1));
 }
 .board .piece.dragging { opacity: 0.28; transition: none; }
 
@@ -98,7 +102,8 @@
   position: fixed;
   z-index: 60;
   pointer-events: none;
-  transform: scale(1.18);
+  /* The lift when you pick a piece up, on top of the board's own scale. */
+  transform: scale(calc(1.18 * var(--piece-scale, 1)));
   filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.55));
 }
 
