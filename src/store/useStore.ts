@@ -19,7 +19,13 @@ import type {
   ReviewLogEntry,
   Settings,
 } from '../model/types';
-import { EMPTY_RECORD, recordRun, type PermadeathRecord } from '../model/permadeath';
+import {
+  EMPTY_RECORD,
+  normalizeRecord,
+  recordRun,
+  type PermadeathRecord,
+  type RunOutcome,
+} from '../model/permadeath';
 import { cloudAvailable, readCloud, writeCloud, type CloudStatus } from './cloud';
 import { clearState, debounce, loadState, probeStorage, saveState, type StorageSupport } from './db';
 import { buildSeedRepertoires } from './seed';
@@ -41,6 +47,12 @@ export const DEFAULT_SETTINGS: Settings = {
   cloudSync: true,
   permadeathColor: 'random',
   permadeathSource: 'repertoire',
+  permadeathRepertoire: '',
+  permadeathReverse: false,
+  permadeathWeakFirst: false,
+  permadeathClock: 'off',
+  permadeathHints: 0,
+  permadeathPerLine: false,
 };
 
 /**
@@ -89,8 +101,8 @@ interface StoreState extends PersistedState {
   setSettings: (patch: Partial<Settings>) => void;
   setImportedGames: (games: ImportedGame[]) => void;
 
-  /** Log a finished permadeath run. */
-  endPermadeathRun: (depth: number, completed: boolean) => void;
+  /** Log a finished permadeath run, globally and against its own opening. */
+  endPermadeathRun: (outcome: RunOutcome) => void;
   /**
    * The move that ended a run. Only the miss touches the schedule: correct
    * moves in a run are primed by the ones before them, so crediting them would
@@ -199,7 +211,7 @@ export const useStore = create<StoreState>((set, get) => {
       if (chosen) {
         set({
           ...chosen,
-          permadeath: chosen.permadeath ?? { ...EMPTY_RECORD },
+          permadeath: normalizeRecord(chosen.permadeath),
           updatedAt: Math.max(localAt, remoteAt),
           settings: { ...DEFAULT_SETTINGS, ...chosen.settings },
           storage,
@@ -241,7 +253,7 @@ export const useStore = create<StoreState>((set, get) => {
         // person on two devices, and honest about not merging concurrent edits.
         set({
           ...remote.state,
-          permadeath: remote.state.permadeath ?? { ...EMPTY_RECORD },
+          permadeath: normalizeRecord(remote.state.permadeath),
           importedGames: local.importedGames,
           settings: { ...DEFAULT_SETTINGS, ...remote.state.settings },
           updatedAt: remote.updatedAt,
@@ -362,8 +374,8 @@ export const useStore = create<StoreState>((set, get) => {
       commit({ importedGames: games });
     },
 
-    endPermadeathRun(depth, completed) {
-      commit({ permadeath: recordRun(get().permadeath, depth, completed) });
+    endPermadeathRun(outcome) {
+      commit({ permadeath: recordRun(get().permadeath, outcome) });
     },
 
     missedInPermadeath(repertoireId, fen, played, expected) {

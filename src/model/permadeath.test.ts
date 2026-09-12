@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { fenTurn, walkSan } from '../chess/core';
+import { fenTurn, positionKey, walkSan } from '../chess/core';
 import {
+  beginRun,
   bookSource,
+  clockDescription,
+  clockLabel,
+  clockSpec,
+  CLOCK_MODES,
+  DEFAULT_OPTIONS,
+  lineWeakness,
+  takeHint,
+  timeOut,
+  weaknessFromCards,
   continuation,
   EMPTY_RECORD,
   fullLine,
@@ -13,6 +23,9 @@ import {
   play,
   playableRepertoires,
   playedIsLegal,
+  lineRecords,
+  normalizeRecord,
+  outcomeOf,
   recordRun,
   repertoireSource,
   resolveColor,
@@ -20,13 +33,14 @@ import {
   startBookRun,
   startRepertoireRun,
   type LineSource,
+  type Weakness,
   type Run,
 } from './permadeath';
 import { addLine, createRepertoire, displayName } from './repertoire';
 import { referenceIndex } from './referenceIndex';
-import { mulberry32 } from './session';
+import { cardId, mulberry32 } from './session';
 import { buildSeedRepertoires } from '../store/seed';
-import type { Repertoire } from './types';
+import type { Card, Repertoire } from './types';
 
 const rand = () => 0.5;
 const index = referenceIndex();
@@ -279,13 +293,325 @@ describe('naming the line at the end of a run', () => {
 });
 
 describe('the record', () => {
+  const outcome = (depth: number, completed: boolean, key = 'rep:a:w') => ({
+    key,
+    label: 'Queen\u2019s Gambit',
+    color: 'w' as const,
+    depth,
+    completed,
+  });
+
   it('tracks runs, best depth and survivals', () => {
     let record = EMPTY_RECORD;
-    record = recordRun(record, 6, false, 1000);
-    expect(record).toEqual({ runs: 1, best: 6, lastDepth: 6, lastAt: 1000, survivals: 0 });
-    record = recordRun(record, 3, false, 2000);
+    record = recordRun(record, outcome(6, false), 1000);
+    expect(record.runs).toBe(1);
     expect(record.best).toBe(6);
-    record = recordRun(record, 9, true, 3000);
-    expect(record).toEqual({ runs: 3, best: 9, lastDepth: 9, lastAt: 3000, survivals: 1 });
+    expect(record.lastAt).toBe(1000);
+    record = recordRun(record, outcome(3, false), 2000);
+    expect(record.best).toBe(6);
+    expect(record.lastDepth).toBe(3);
+    record = recordRun(record, outcome(9, true), 3000);
+    expect(record.runs).toBe(3);
+    expect(record.best).toBe(9);
+    expect(record.survivals).toBe(1);
+  });
+
+  it('keeps a separate best for each opening and side', () => {
+    let record = EMPTY_RECORD;
+    record = recordRun(record, outcome(12, false, 'rep:a:w'), 1000);
+    record = recordRun(record, outcome(4, true, 'book:b'), 2000);
+    record = recordRun(record, outcome(7, false, 'book:b'), 3000);
+
+    expect(record.best).toBe(12);
+    expect(record.byLine['rep:a:w'].best).toBe(12);
+    expect(record.byLine['rep:a:w'].runs).toBe(1);
+    expect(record.byLine['book:b']).toMatchObject({ best: 7, runs: 2, survivals: 1 });
+  });
+
+  it('sorts the breakdown by best run', () => {
+    let record = EMPTY_RECORD;
+    record = recordRun(record, outcome(3, false, 'rep:a:w'), 1000);
+    record = recordRun(record, outcome(11, false, 'rep:b:b'), 2000);
+    expect(lineRecords(record).map((l) => l.key)).toEqual(['rep:b:b', 'rep:a:w']);
+  });
+
+  it('reads a record saved before per-opening bests existed', () => {
+    const old = { runs: 4, best: 9, lastDepth: 2, lastAt: 10, survivals: 1 };
+    const fixed = normalizeRecord(old);
+    expect(fixed.best).toBe(9);
+    expect(fixed.byLine).toEqual({});
+    expect(recordRun(fixed, outcome(5, false), 20).byLine['rep:a:w'].best).toBe(5);
+  });
+
+  it('files a run under its opening and the side actually played', () => {
+    const reps = buildSeedRepertoires();
+    const run = startRepertoireRun(reps, 'b', { seed: 5, reverse: true })!;
+    const filed = outcomeOf(run, false);
+    expect(filed.key).toBe(`rep:${run.repertoireId}:b`);
+    expect(filed.label).toMatch(/reversed/);
+    expect(outcomeOf({ ...run, reverse: false }, false).label).not.toMatch(/reversed/);
   });
 });
+
+describe('restricting a run to one opening', () => {
+  const reps = buildSeedRepertoires();
+
+  it('draws only from the chosen repertoire', () => {
+    const wanted = reps.find((r) => r.color === 'b')!;
+    for (let seed = 0; seed < 12; seed += 1) {
+      const run = startRepertoireRun(reps, 'b', { seed, repertoireId: wanted.id });
+      expect(run?.repertoireId).toBe(wanted.id);
+    }
+  });
+
+  it('draws from every repertoire of that colour when none is chosen', () => {
+    const black = reps.filter((r) => r.color === 'b');
+    expect(black.length).toBeGreaterThan(1);
+    const seen = new Set<string>();
+    for (let seed = 0; seed < 40; seed += 1) {
+      const run = startRepertoireRun(reps, 'b', { seed });
+      if (run?.repertoireId) seen.add(run.repertoireId);
+    }
+    expect(seen.size).toBe(black.length);
+  });
+
+  it('refuses a repertoire that does not play the chosen colour', () => {
+    const white = reps.find((r) => r.color === 'w')!;
+    expect(startRepertoireRun(reps, 'b', { seed: 1, repertoireId: white.id })).toBeNull();
+  });
+
+  it('lists only the repertoires an option set can actually use', () => {
+    const white = reps.find((r) => r.color === 'w')!;
+    expect(playableRepertoires(reps, 'w').map((r) => r.id)).toEqual([white.id]);
+    expect(playableRepertoires(reps, 'w', { repertoireId: white.id })).toHaveLength(1);
+    expect(playableRepertoires(reps, 'b', { repertoireId: white.id })).toHaveLength(0);
+    expect(playableRepertoires(reps, 'random')).toHaveLength(reps.length);
+  });
+});
+
+describe('playing the other side', () => {
+  const reps = buildSeedRepertoires();
+
+  it('puts you on the side the repertoire prepares against', () => {
+    for (let seed = 0; seed < 10; seed += 1) {
+      const run = startRepertoireRun(reps, 'w', { seed, reverse: true })!;
+      expect(run).not.toBeNull();
+      const rep = reps.find((r) => r.id === run.repertoireId)!;
+      // A Black repertoire, played from White's side of the board.
+      expect(rep.color).toBe('b');
+      expect(run.color).toBe('w');
+      expect(run.reverse).toBe(true);
+    }
+  });
+
+  it('judges the opponent moves the repertoire prepares for', () => {
+    // A Black repertoire answering 1.d4; reversed, you are the White player and
+    // 1.d4 is the move that keeps you alive.
+    const rep = createRepertoire('Black — King’s Indian', 'b', 'rep_kid');
+    const built = addLine(rep, ['d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7'], 'seed').rep;
+    const run = startRepertoireRun([built], 'w', { seed: 1, reverse: true, minDecisions: 3 })!;
+    const source = repertoireSource(built);
+
+    expect(run.color).toBe('w');
+    expect(movesHere(source, run)).toEqual(['d4']);
+    expect(play(source, run, 'e4').ok).toBe(false);
+    const after = play(source, run, 'd4');
+    expect(after.ok).toBe(true);
+  });
+
+  it('has nothing to offer when no repertoire plays the other colour', () => {
+    const only = whiteRep();
+    // Reversed, playing White needs a Black repertoire — and there is none.
+    expect(startRepertoireRun([only], 'w', { seed: 1, reverse: true })).toBeNull();
+    expect(startRepertoireRun([only], 'b', { seed: 1, reverse: true })).not.toBeNull();
+  });
+
+  it('plays a reversed run out to the end of the line', () => {
+    const run = startRepertoireRun(reps, 'w', { seed: 3, reverse: true })!;
+    const rep = reps.find((r) => r.id === run.repertoireId)!;
+    const source = repertoireSource(rep);
+    const done = finish(source, run);
+    expect(done.over).toBe(false);
+    expect(playedIsLegal(done)).toBe(true);
+    expect(done.survived).toBeGreaterThan(0);
+  });
+});
+
+describe('targeting weak spots', () => {
+  const reps = buildSeedRepertoires();
+  const rep = reps.find((r) => r.color === 'w')!;
+
+  function lapsedCard(key: string, repertoireId: string): Card {
+    return {
+      id: cardId(repertoireId, key),
+      repertoireId,
+      key,
+      fen: '',
+      stage: 'review',
+      step: 0,
+      interval: 1,
+      ease: 1.3,
+      reps: 8,
+      lapses: 6,
+      correct: 1,
+      incorrect: 7,
+      due: 0,
+      lastReviewed: 1,
+      createdAt: 1,
+    };
+  }
+
+  it('rates a lapsed position above one never seen, and both above a solid one', () => {
+    const solid: Card = {
+      ...lapsedCard('solid', rep.id),
+      ease: 2.9,
+      lapses: 0,
+      correct: 9,
+      incorrect: 0,
+      due: Date.now() + 9e8,
+    };
+    const weakness = weaknessFromCards({
+      [cardId(rep.id, 'bad')]: lapsedCard('bad', rep.id),
+      [cardId(rep.id, 'solid')]: solid,
+    });
+    expect(weakness(rep.id, 'bad')).toBeGreaterThan(weakness(rep.id, 'unseen'));
+    expect(weakness(rep.id, 'unseen')).toBeGreaterThan(weakness(rep.id, 'solid'));
+  });
+
+  it('averages the appetite over the positions the line asks about', () => {
+    const weakness: Weakness = (_id, key) => (key === 'hot' ? 7 : 1);
+    expect(lineWeakness(rep.id, ['hot', 'hot'], weakness)).toBe(7);
+    expect(lineWeakness(rep.id, ['hot', 'cold'], weakness)).toBe(4);
+    expect(lineWeakness(rep.id, [], weakness)).toBe(1);
+  });
+
+  it('draws the line you are bad at far more often than the one you know', () => {
+    // Two lines with nothing in common after move one, so the weighting cannot
+    // leak between them.
+    let two = createRepertoire('White \u2014 Two lines', 'w', 'rep_two');
+    const weak = ['d4', 'd5', 'c4', 'e6', 'Nc3', 'Nf6', 'Bg5', 'Be7'];
+    const known = ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6', 'Ba4', 'Nf6'];
+    two = addLine(two, weak, 'seed').rep;
+    two = addLine(two, known, 'seed').rep;
+
+    // Everything past the opening move of the weak line is a sore spot.
+    const { fens } = walkSan(weak);
+    const sore = new Set(fens.filter((_, i) => i % 2 === 0).slice(1).map(positionKey));
+    const weakness: Weakness = (_id, key) => (sore.has(key) ? 40 : 1);
+
+    let biased = 0;
+    let plain = 0;
+    for (let seed = 0; seed < 60; seed += 1) {
+      if (startsWith(startRepertoireRun([two], 'w', { seed, weakness }), weak)) biased += 1;
+      if (startsWith(startRepertoireRun([two], 'w', { seed }), weak)) plain += 1;
+    }
+    expect(plain).toBeGreaterThan(15);
+    expect(plain).toBeLessThan(45);
+    expect(biased).toBeGreaterThan(50);
+  });
+
+  it('weights the draw only when the option is on', () => {
+    let two = createRepertoire('White \u2014 Two lines', 'w', 'rep_two');
+    const weak = ['d4', 'd5', 'c4', 'e6', 'Nc3', 'Nf6', 'Bg5', 'Be7'];
+    two = addLine(two, weak, 'seed').rep;
+    two = addLine(two, ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6', 'Ba4', 'Nf6'], 'seed').rep;
+    const { fens } = walkSan(weak);
+    const sore = new Set(fens.filter((_, i) => i % 2 === 0).slice(1).map(positionKey));
+    const weakness: Weakness = (_id, key) => (sore.has(key) ? 40 : 1);
+
+    let on = 0;
+    let off = 0;
+    for (let seed = 0; seed < 40; seed += 1) {
+      const a = beginRun({ reps: [two], index, color: 'w', seed, weakFirst: true, weakness });
+      const b = beginRun({ reps: [two], index, color: 'w', seed, weakness });
+      if (startsWith(a?.run ?? null, weak)) on += 1;
+      if (startsWith(b?.run ?? null, weak)) off += 1;
+    }
+    expect(on).toBeGreaterThan(off);
+  });
+});
+
+describe('the clock', () => {
+  it('describes each budget as either per move or per run', () => {
+    expect(clockSpec('off')).toEqual({ perMove: null, perRun: null });
+    expect(clockSpec('move10')).toEqual({ perMove: 10, perRun: null });
+    expect(clockSpec('move30')).toEqual({ perMove: 30, perRun: null });
+    expect(clockSpec('run180')).toEqual({ perMove: null, perRun: 180 });
+  });
+
+  it('labels every mode it offers', () => {
+    for (const mode of CLOCK_MODES) {
+      expect(clockLabel(mode)).toBeTruthy();
+      expect(clockDescription(mode).length).toBeGreaterThan(10);
+    }
+  });
+
+  it('ends the run where it stands, with no move played', () => {
+    const rep = whiteRep();
+    const source = repertoireSource(rep);
+    const started = startRepertoireRun([rep], 'w', { seed: 1 })!;
+    const moved = play(source, started, 'd4').run;
+    const dead = timeOut(moved);
+    expect(dead.over).toBe(true);
+    expect(dead.survived).toBe(moved.survived);
+    expect(dead.played).toEqual(moved.played);
+  });
+});
+
+describe('hints', () => {
+  const rep = whiteRep();
+  const source = repertoireSource(rep);
+
+  it('spends one from the budget and names the square the move starts on', () => {
+    const run = startRepertoireRun([rep], 'w', { seed: 1, hints: 1 })!;
+    const taken = takeHint(source, run)!;
+    expect(taken.from).toBe('d2');
+    expect(taken.san).toBe('d4');
+    expect(taken.run.hints).toBe(0);
+    expect(taken.run.hintsUsed).toBe(1);
+  });
+
+  it('gives nothing away once the budget is gone', () => {
+    const run = startRepertoireRun([rep], 'w', { seed: 1, hints: 0 })!;
+    expect(takeHint(source, run)).toBeNull();
+  });
+
+  it('does not touch the score', () => {
+    const run = startRepertoireRun([rep], 'w', { seed: 1, hints: 3 })!;
+    const taken = takeHint(source, run)!;
+    expect(taken.run.survived).toBe(run.survived);
+    expect(taken.run.fen).toBe(run.fen);
+  });
+
+  it('carries the budget from the options into the run', () => {
+    const started = beginRun({ reps: [rep], index, color: 'w', seed: 1, hints: 3 })!;
+    expect(started.run.hints).toBe(3);
+    const book = beginRun({ reps: [rep], index, kind: 'book', color: 'w', seed: 1, hints: 1 })!;
+    expect(book.run.hints).toBe(1);
+  });
+});
+
+describe('defaults', () => {
+  it('turns every extra off', () => {
+    expect(DEFAULT_OPTIONS).toMatchObject({
+      repertoireId: '',
+      reverse: false,
+      weakFirst: false,
+      clock: 'off',
+      hints: 0,
+    });
+  });
+
+  it('leaves a run unconstrained when nothing is chosen', () => {
+    const reps = buildSeedRepertoires();
+    const started = beginRun({ ...DEFAULT_OPTIONS, reps, index, seed: 2 })!;
+    expect(started.run.hints).toBe(0);
+    expect(started.run.reverse).toBe(false);
+  });
+});
+
+/** Did the run draw the line starting with these moves? */
+function startsWith(run: Run | null, sans: string[]): boolean {
+  if (!run) return false;
+  return sans.every((san, i) => run.target[i] === san);
+}

@@ -1,8 +1,16 @@
-import { applySan, fenTurn, positionKey, sansToMoveText, START_FEN, type Color } from '../chess/core';
+import {
+  applySan,
+  fenTurn,
+  positionKey,
+  sansToMoveText,
+  START_FEN,
+  type Color,
+  type Square,
+} from '../chess/core';
 import { deepestName, lookup, type ReferenceIndex } from './reference';
 import { childrenOf, displayName, fenAt, leafLines, pathTo } from './repertoire';
-import { mulberry32 } from './session';
-import type { Repertoire } from './types';
+import { cardId, mulberry32 } from './session';
+import type { Card, RepMove, Repertoire } from './types';
 
 /**
  * Permadeath: one secret line, played until the first mistake ends the run.
@@ -26,11 +34,18 @@ export interface LineSource {
   weightsAt(fen: string): { san: string; weight: number }[];
 }
 
+export function other(color: Color): Color {
+  return color === 'w' ? 'b' : 'w';
+}
+
 /* ── sources ────────────────────────────────────────────────────────────── */
 
 /**
  * One repertoire, indexed by position so transpositions behave the way they do
  * in training: the same position reached two ways offers the same moves.
+ *
+ * Every position in the tree is indexed, the opponent's included — that is what
+ * lets a reversed run judge the side you prepared *against*.
  */
 export function repertoireSource(rep: Repertoire): LineSource {
   const byPosition = new Map<string, string[]>();
@@ -72,6 +87,87 @@ export function bookSource(index: ReferenceIndex, color: Color): LineSource {
   };
 }
 
+/* ── options ────────────────────────────────────────────────────────────── */
+
+export type ColorChoice = Color | 'random';
+
+/** How long you get, and whether the budget is per move or per run. */
+export type ClockMode = 'off' | 'move10' | 'move30' | 'run180';
+
+export interface ClockSpec {
+  /** Seconds for each of your own moves, or null. */
+  perMove: number | null;
+  /** Seconds for the whole run, or null. */
+  perRun: number | null;
+}
+
+export const CLOCK_MODES: ClockMode[] = ['off', 'move10', 'move30', 'run180'];
+
+export function clockSpec(mode: ClockMode): ClockSpec {
+  switch (mode) {
+    case 'move10':
+      return { perMove: 10, perRun: null };
+    case 'move30':
+      return { perMove: 30, perRun: null };
+    case 'run180':
+      return { perMove: null, perRun: 180 };
+    default:
+      return { perMove: null, perRun: null };
+  }
+}
+
+export function clockLabel(mode: ClockMode): string {
+  switch (mode) {
+    case 'move10':
+      return '10s';
+    case 'move30':
+      return '30s';
+    case 'run180':
+      return '3 min';
+    default:
+      return 'Off';
+  }
+}
+
+export function clockDescription(mode: ClockMode): string {
+  switch (mode) {
+    case 'move10':
+      return '10 seconds for each of your moves. Running out ends the run.';
+    case 'move30':
+      return '30 seconds for each of your moves. Running out ends the run.';
+    case 'run180':
+      return 'Three minutes for the whole run, counting only your own thinking.';
+    default:
+      return 'Take as long as you like.';
+  }
+}
+
+export const HINT_BUDGETS = [0, 1, 3];
+
+/** Everything the setup screen decides, in one place. */
+export interface PermadeathOptions {
+  kind: SourceKind;
+  color: ColorChoice;
+  /** A single repertoire to draw from, or '' for every one that fits. */
+  repertoireId: string;
+  /** Play the side your repertoire prepares *against*. */
+  reverse: boolean;
+  /** Draw lines you answer badly more often than lines you know cold. */
+  weakFirst: boolean;
+  clock: ClockMode;
+  hints: number;
+}
+
+export const DEFAULT_OPTIONS: PermadeathOptions = {
+  kind: 'repertoire',
+  color: 'random',
+  repertoireId: '',
+  reverse: false,
+  weakFirst: false,
+  clock: 'off',
+  hints: 0,
+};
+
 /* ── runs ───────────────────────────────────────────────────────────────── */
 
 export interface Run {
@@ -79,6 +175,8 @@ export interface Run {
   sourceLabel: string;
   /** Which repertoire the line came from, for repertoire runs. */
   repertoireId?: string;
+  /** True when you are playing the side the repertoire prepares against. */
+  reverse: boolean;
   color: Color;
   fen: string;
   played: string[];
@@ -87,21 +185,109 @@ export interface Run {
   over: boolean;
   /** Remaining moves of the line chosen up front, driving opponent replies. */
   target: string[];
+  /** Hints left to spend. */
+  hints: number;
+  /** Hints spent, shown on the reveal so a deep run stays honest. */
+  hintsUsed: number;
 }
+
+/** How a run ended. Time is a real cause of death, not a technicality. */
+export type DeathCause = 'move' | 'time';
 
 export interface RunOptions {
   /** Skip lines that ask fewer than this many moves of the user. */
   minDecisions?: number;
   seed?: number;
+  /** Draw only from this repertoire. */
+  repertoireId?: string;
+  reverse?: boolean;
+  /** Positions you answer badly, scored — see `weaknessFromCards`. */
+  weakness?: Weakness | null;
+  hints?: number;
 }
 
-function decisionsIn(color: Color, sans: string[]): number {
-  return sans.filter((_, i) => (i % 2 === 0) === (color === 'w')).length;
+/** The moves of a line that are yours to find. */
+function yourMoves(color: Color, path: RepMove[]): RepMove[] {
+  return path.filter((node) => fenTurn(node.fenBefore) === color);
 }
 
-/** Repertoires that can host a run for this colour. */
-export function playableRepertoires(reps: Repertoire[], color: Color | 'random'): Repertoire[] {
-  return reps.filter((rep) => (color === 'random' ? true : rep.color === color));
+/* ── picking a line you are bad at ──────────────────────────────────────── */
+
+/** How badly each position wants practice, keyed by repertoire and position. */
+export type Weakness = (repertoireId: string, key: string) => number;
+
+/**
+ * Turn the review schedule into a practice appetite.
+ *
+ * A position you have lapsed on, answered wrong, or let go overdue is worth
+ * more than one you have never seen, which in turn is worth more than one you
+ * have answered right three times running. The numbers are only ever compared
+ * against each other, so their scale does not matter.
+ */
+export function weaknessFromCards(cards: Record<string, Card>, now = Date.now()): Weakness {
+  return (repertoireId, key) => {
+    const card = cards[cardId(repertoireId, key)];
+    // Never studied: worth seeing, but not the emergency a lapse is.
+    if (!card) return 1.5;
+    let score = 1;
+    score += card.lapses * 1.2;
+    score += Math.max(0, 2.5 - card.ease) * 2;
+    if (card.stage === 'learning') score += 1;
+    if (card.due <= now) score += 1;
+    const answered = card.correct + card.incorrect;
+    if (answered > 0) score += (card.incorrect / answered) * 2;
+    return score;
+  };
+}
+
+/**
+ * The mean appetite over the positions a line asks you about.
+ *
+ * Keys come straight off the repertoire tree, which already stores the position
+ * key of every move — so weighting the whole repertoire costs no chess.
+ */
+export function lineWeakness(repertoireId: string, keys: string[], weakness: Weakness): number {
+  if (!keys.length) return 1;
+  let sum = 0;
+  for (const key of keys) sum += weakness(repertoireId, key);
+  return sum / keys.length;
+}
+
+function pickWeighted<T>(items: T[], weight: (item: T) => number, rand: () => number): T {
+  const total = items.reduce((sum, item) => sum + Math.max(0, weight(item)), 0);
+  if (total <= 0) return items[Math.floor(rand() * items.length)];
+  let roll = rand() * total;
+  for (const item of items) {
+    roll -= Math.max(0, weight(item));
+    if (roll <= 0) return item;
+  }
+  return items[items.length - 1];
+}
+
+/* ── starting ───────────────────────────────────────────────────────────── */
+
+export interface PoolOptions {
+  reverse?: boolean;
+  repertoireId?: string;
+}
+
+/**
+ * Repertoires that can host a run for this colour.
+ *
+ * A reversed run sits you on the other side of the board, so it needs a
+ * repertoire of the opposite colour to the one you asked to play.
+ */
+export function playableRepertoires(
+  reps: Repertoire[],
+  color: ColorChoice,
+  opts: PoolOptions = {},
+): Repertoire[] {
+  const wanted = color === 'random' ? null : opts.reverse ? other(color) : color;
+  return reps.filter(
+    (rep) =>
+      (wanted === null || rep.color === wanted) &&
+      (!opts.repertoireId || rep.id === opts.repertoireId),
+  );
 }
 
 /**
@@ -110,61 +296,91 @@ export function playableRepertoires(reps: Repertoire[], color: Color | 'random')
  */
 export function startRepertoireRun(
   reps: Repertoire[],
-  color: Color | 'random',
+  color: ColorChoice,
   opts: RunOptions = {},
 ): Run | null {
   const minDecisions = opts.minDecisions ?? 4;
+  const reverse = opts.reverse ?? false;
   const rand = mulberry32(opts.seed ?? Math.floor(Math.random() * 2 ** 31));
 
-  const candidates = playableRepertoires(reps, color)
-    .map((rep) => ({
-      rep,
-      lines: leafLines(rep).filter((l) => decisionsIn(rep.color, l.sans) >= minDecisions),
-    }))
+  const weakness = opts.weakness ?? null;
+  const candidates = playableRepertoires(reps, color, {
+    reverse,
+    repertoireId: opts.repertoireId,
+  })
+    .map((rep) => {
+      const side = reverse ? other(rep.color) : rep.color;
+      const lines = leafLines(rep)
+        .map((line) => {
+          const path = pathTo(rep, line.tipId);
+          const keys = yourMoves(side, path).map((node) => node.key);
+          return {
+            path,
+            keys,
+            weight: weakness ? lineWeakness(rep.id, keys, weakness) : 1,
+          };
+        })
+        .filter((line) => line.keys.length >= minDecisions);
+      return { rep, side, lines };
+    })
     .filter((c) => c.lines.length > 0);
   if (!candidates.length) return null;
 
   // Repertoire first, line second, so a big repertoire cannot crowd out the
-  // others.
-  const picked = candidates[Math.floor(rand() * candidates.length)];
-  const line = picked.lines[Math.floor(rand() * picked.lines.length)];
+  // others. Weighting applies within a repertoire as well as across them.
+  const picked = weakness
+    ? pickWeighted(
+        candidates,
+        (c) => c.lines.reduce((sum, l) => sum + l.weight, 0) / c.lines.length,
+        rand,
+      )
+    : candidates[Math.floor(rand() * candidates.length)];
+  const line = weakness
+    ? pickWeighted(picked.lines, (l) => l.weight, rand)
+    : picked.lines[Math.floor(rand() * picked.lines.length)];
 
   return {
     source: 'repertoire',
     sourceLabel: displayName(picked.rep.name),
     repertoireId: picked.rep.id,
-    color: picked.rep.color,
+    reverse,
+    color: picked.side,
     fen: START_FEN,
     played: [],
     survived: 0,
     over: false,
-    target: pathTo(picked.rep, line.tipId).map((n) => n.san),
+    target: line.path.map((n) => n.san),
+    hints: opts.hints ?? 0,
+    hintsUsed: 0,
   };
 }
 
 /** Start a run in the book. There is no line to draw: the book is the line. */
 export function startBookRun(
   index: ReferenceIndex,
-  color: Color | 'random',
+  color: ColorChoice,
   opts: RunOptions = {},
 ): Run | null {
   const rand = mulberry32(opts.seed ?? Math.floor(Math.random() * 2 ** 31));
-  const side: Color = color === 'random' ? (rand() < 0.5 ? 'w' : 'b') : color;
+  const side = resolveColor(color, rand);
   if (!lookup(index, START_FEN)?.moves.length) return null;
   return {
     source: 'book',
     sourceLabel: 'Book',
+    reverse: false,
     color: side,
     fen: START_FEN,
     played: [],
     survived: 0,
     over: false,
     target: [],
+    hints: opts.hints ?? 0,
+    hintsUsed: 0,
   };
 }
 
 /** Resolve "random" once, up front, so the rest of a run is deterministic. */
-export function resolveColor(color: Color | 'random', rand: () => number): Color {
+export function resolveColor(color: ColorChoice, rand: () => number): Color {
   return color === 'random' ? (rand() < 0.5 ? 'w' : 'b') : color;
 }
 
@@ -203,6 +419,33 @@ export function play(source: LineSource, run: Run, san: string): Judgement {
       survived: run.survived + 1,
       target,
     },
+  };
+}
+
+/** The clock running out. Ends the run where it stands, with nothing played. */
+export function timeOut(run: Run): Run {
+  return { ...run, over: true };
+}
+
+/**
+ * Spend a hint: the square the move starts from, never where it lands.
+ *
+ * Knowing the piece narrows a position without answering it — you still have to
+ * know where it belongs, which is the part worth remembering.
+ */
+export function takeHint(
+  source: LineSource,
+  run: Run,
+): { run: Run; from: Square; san: string } | null {
+  if (run.hints <= 0) return null;
+  const best = source.movesAt(run.fen)[0];
+  if (!best) return null;
+  const move = applySan(run.fen, best);
+  if (!move) return null;
+  return {
+    run: { ...run, hints: run.hints - 1, hintsUsed: run.hintsUsed + 1 },
+    from: move.from,
+    san: best,
   };
 }
 
@@ -309,26 +552,31 @@ export function lineName(
 
 /* ── starting a run ─────────────────────────────────────────────────────── */
 
-export type ColorChoice = Color | 'random';
-
-export interface BeginOptions {
-  kind: SourceKind;
+export interface BeginOptions extends Partial<PermadeathOptions> {
   reps: Repertoire[];
   index: ReferenceIndex;
-  color: ColorChoice;
   seed?: number;
   minDecisions?: number;
+  weakness?: Weakness | null;
 }
 
 /** Everything a run needs, or null when the options cannot produce one. */
 export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } | null {
-  if (opts.kind === 'book') {
-    const run = startBookRun(opts.index, opts.color, { seed: opts.seed });
+  const kind = opts.kind ?? DEFAULT_OPTIONS.kind;
+  const color = opts.color ?? DEFAULT_OPTIONS.color;
+  const hints = opts.hints ?? DEFAULT_OPTIONS.hints;
+
+  if (kind === 'book') {
+    const run = startBookRun(opts.index, color, { seed: opts.seed, hints });
     return run ? { run, source: bookSource(opts.index, run.color) } : null;
   }
-  const run = startRepertoireRun(opts.reps, opts.color, {
+  const run = startRepertoireRun(opts.reps, color, {
     seed: opts.seed,
     minDecisions: opts.minDecisions,
+    repertoireId: opts.repertoireId,
+    reverse: opts.reverse,
+    weakness: opts.weakFirst ? (opts.weakness ?? null) : null,
+    hints,
   });
   if (!run) return null;
   const rep = opts.reps.find((r) => r.id === run.repertoireId);
@@ -336,6 +584,16 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
 }
 
 /* ── record ─────────────────────────────────────────────────────────────── */
+
+/** A running total for one opening, on one side of the board. */
+export interface LineRecord {
+  label: string;
+  color: Color;
+  runs: number;
+  best: number;
+  survivals: number;
+  lastAt: number;
+}
 
 export interface PermadeathRecord {
   runs: number;
@@ -345,6 +603,8 @@ export interface PermadeathRecord {
   lastAt: number | null;
   /** Runs that reached the end of the line. */
   survivals: number;
+  /** Per opening and side, so a Sicilian best does not hide behind a KID one. */
+  byLine: Record<string, LineRecord>;
 }
 
 export const EMPTY_RECORD: PermadeathRecord = {
@@ -353,20 +613,66 @@ export const EMPTY_RECORD: PermadeathRecord = {
   lastDepth: 0,
   lastAt: null,
   survivals: 0,
+  byLine: {},
 };
 
-export function recordRun(
-  record: PermadeathRecord,
-  depth: number,
-  completed: boolean,
-  at = Date.now(),
-): PermadeathRecord {
+/** A saved record from before per-opening bests existed is still a record. */
+export function normalizeRecord(record: Partial<PermadeathRecord> | undefined): PermadeathRecord {
+  if (!record) return { ...EMPTY_RECORD };
+  return { ...EMPTY_RECORD, ...record, byLine: record.byLine ?? {} };
+}
+
+export interface RunOutcome {
+  key: string;
+  label: string;
+  color: Color;
+  depth: number;
+  completed: boolean;
+}
+
+/** Which bucket a run counts towards: the opening, and the side you played. */
+export function outcomeOf(run: Run, completed: boolean): RunOutcome {
+  const key =
+    run.source === 'book' ? `book:${run.color}` : `rep:${run.repertoireId ?? ''}:${run.color}`;
   return {
-    runs: record.runs + 1,
-    best: Math.max(record.best, depth),
-    lastDepth: depth,
-    lastAt: at,
-    survivals: record.survivals + (completed ? 1 : 0),
+    key,
+    label: run.reverse ? `${run.sourceLabel} (reversed)` : run.sourceLabel,
+    color: run.color,
+    depth: run.survived,
+    completed,
   };
 }
 
+export function recordRun(
+  record: PermadeathRecord,
+  outcome: RunOutcome,
+  at = Date.now(),
+): PermadeathRecord {
+  const base = normalizeRecord(record);
+  const previous = base.byLine[outcome.key];
+  return {
+    runs: base.runs + 1,
+    best: Math.max(base.best, outcome.depth),
+    lastDepth: outcome.depth,
+    lastAt: at,
+    survivals: base.survivals + (outcome.completed ? 1 : 0),
+    byLine: {
+      ...base.byLine,
+      [outcome.key]: {
+        label: outcome.label,
+        color: outcome.color,
+        runs: (previous?.runs ?? 0) + 1,
+        best: Math.max(previous?.best ?? 0, outcome.depth),
+        survivals: (previous?.survivals ?? 0) + (outcome.completed ? 1 : 0),
+        lastAt: at,
+      },
+    },
+  };
+}
+
+/** Per-opening records, deepest first — what the breakdown shows. */
+export function lineRecords(record: PermadeathRecord): (LineRecord & { key: string })[] {
+  return Object.entries(normalizeRecord(record).byLine)
+    .map(([key, value]) => ({ ...value, key }))
+    .sort((a, b) => b.best - a.best || b.runs - a.runs);
+}

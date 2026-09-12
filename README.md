@@ -47,6 +47,40 @@ and 10 minutes, ease from 1.3 up, halved interval after a lapse, no interval
 fuzz. `review()` is pure and deterministic, so the whole algorithm can be
 swapped without touching the UI.
 
+### Permadeath
+One line, drawn in secret, played until your first mistake. Nothing on screen
+names it while you play — no opening name, no move list, no explore. Dying is
+what buys you the reveal, which names the variation, gives its ECO code and
+prints the line in full, including how it would have gone on.
+
+The setup screen decides the run. Everything past the first two rows is off by
+default; the plain mode is a line from your repertoire, no clock, no help.
+
+- **Play as** — White, Black, or random.
+- **Lines** — your repertoire, or the whole reference database. Book is the
+  more forgiving of the two: any move somebody has played here keeps you alive,
+  and the opponent replies in proportion to how often each move is played.
+- **Opening** — narrow the draw to one repertoire instead of all of them.
+  Picking one settles which side you are on, so the colour follows it.
+- **Clock** — 10 or 30 seconds a move, or three minutes for the whole run. Only
+  your own thinking is charged; the opponent's reply is free. Running out ends
+  the run exactly like a wrong move does.
+- **Hints** — a budget of one or three for the run. A hint names the square the
+  move starts from and never where it lands, so it narrows the position without
+  answering it. Hints spent are shown on the reveal.
+- **Target weak spots** — bias the draw toward lines you get wrong, have lapsed
+  on, or have let fall overdue, read straight off the review schedule.
+- **Play the other side** — sit on the side your repertoire prepares *against*,
+  and stay alive by knowing what your opponent is meant to do. A reversed run
+  is judged on positions that are not your decision points, so it is kept out
+  of the review schedule entirely.
+- **Per-opening records** — a separate best for each opening and side, rather
+  than one number across everything.
+
+Only the move that ends a run touches the schedule, graded `again`. The correct
+moves before it are primed by the ones before them, so crediting them would
+inflate intervals on weaker evidence than an isolated review gives.
+
 ### Repertoire
 Three seeded repertoires built around what you actually play — the **Queen's
 Gambit** with White, and the **King's Indian** (vs 1.d4) and **Sicilian Dragon**

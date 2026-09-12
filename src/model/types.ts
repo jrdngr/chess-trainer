@@ -147,4 +147,15 @@ export interface Settings {
   cloudSync: boolean;
   permadeathColor: 'w' | 'b' | 'random';
   permadeathSource: 'repertoire' | 'book';
+  /** A single repertoire to draw permadeath lines from, or '' for all of them. */
+  permadeathRepertoire: string;
+  /** Play the side your repertoire prepares against. */
+  permadeathReverse: boolean;
+  /** Draw lines you answer badly more often than lines you know cold. */
+  permadeathWeakFirst: boolean;
+  permadeathClock: 'off' | 'move10' | 'move30' | 'run180';
+  /** Hints available per run. */
+  permadeathHints: number;
+  /** Break the permadeath record down by opening and side. */
+  permadeathPerLine: boolean;
 }
