@@ -1,6 +1,6 @@
 import type { Color } from '../chess/core';
 import type { OpeningRunPrefs } from './openingRun';
-import type { DrillPrefs, GapPrefs, PunishPrefs } from './modes';
+import type { DrillPrefs, GapPrefs, RepairPrefs } from './modes';
 
 export type MoveSource = 'seed' | 'manual' | 'reference' | 'pgn' | 'games';
 
@@ -150,6 +150,6 @@ export interface Settings {
   favoriteOpenings: string[];
   openingRun: OpeningRunPrefs;
   drill: DrillPrefs;
-  punish: PunishPrefs;
+  repair: RepairPrefs;
   gap: GapPrefs;
 }

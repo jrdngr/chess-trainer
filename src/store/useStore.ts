@@ -22,11 +22,11 @@ import type {
 import {
   DEFAULT_DRILL,
   DEFAULT_GAP,
-  DEFAULT_PUNISH,
-  EMPTY_PUNISH_RECORD,
-  normalizePunishRecord,
-  recordPunish,
-  type PunishRecord,
+  DEFAULT_REPAIR,
+  EMPTY_REPAIR_RECORD,
+  normalizeRepairRecord,
+  recordRepair,
+  type RepairRecord,
 } from '../model/modes';
 import {
   DEFAULT_PREFS,
@@ -52,7 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
   favoriteOpenings: [],
   openingRun: { ...DEFAULT_PREFS },
   drill: { ...DEFAULT_DRILL },
-  punish: { ...DEFAULT_PUNISH },
+  repair: { ...DEFAULT_REPAIR },
   gap: { ...DEFAULT_GAP },
 };
 
@@ -73,7 +73,7 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
     ...known,
     openingRun: { ...DEFAULT_PREFS, ...known.openingRun },
     drill: { ...DEFAULT_DRILL, ...known.drill },
-    punish: { ...DEFAULT_PUNISH, ...known.punish },
+    repair: { ...DEFAULT_REPAIR, ...known.repair },
     gap: { ...DEFAULT_GAP, ...known.gap },
   };
 }
@@ -86,8 +86,9 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
  *
  * 4: permadeath became openingRun, settings and records included.
  * 5: each mode keeps its own options; Punish keeps a record.
+ * 6: Punish became Repair, which is built from imported games.
  */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 interface PersistedState {
   version: number;
@@ -100,7 +101,7 @@ interface PersistedState {
   settings: Settings;
   importedGames: ImportedGame[];
   openingRun: OpeningRunRecord;
-  punish: PunishRecord;
+  repair: RepairRecord;
 }
 
 interface StoreState extends PersistedState {
@@ -126,7 +127,7 @@ interface StoreState extends PersistedState {
   setSettings: (patch: Partial<Settings>) => void;
   setOpeningRunPrefs: (patch: Partial<OpeningRunPrefs>) => void;
   /** Patch one mode's own options, without touching the rest of settings. */
-  setModePrefs: <K extends 'drill' | 'punish' | 'gap'>(
+  setModePrefs: <K extends 'drill' | 'repair' | 'gap'>(
     mode: K,
     patch: Partial<Settings[K]>,
   ) => void;
@@ -134,14 +135,26 @@ interface StoreState extends PersistedState {
 
   /** Log a finished openingRun run, globally and against its own opening. */
   endOpeningRun: (outcome: RunOutcome) => void;
-  /** Log one Punish puzzle, solved or missed. */
-  endPunish: (solved: boolean) => void;
+  /** Log one Repair item: answered correctly, or given a move. */
+  endRepair: (outcome: { relearned?: boolean; added?: boolean }) => void;
   /**
    * The move that ended a run. Only the miss touches the schedule: correct
    * moves in a run are primed by the ones before them, so crediting them would
    * inflate intervals on evidence weaker than an isolated review.
    */
   missedInOpeningRun: (repertoireId: string, fen: string, played: string, expected: string) => void;
+  /**
+   * An answer given in Repair. Unlike a run, this is one isolated position with
+   * nothing priming it, so it is worth the same as a review: right earns a
+   * normal pass, wrong is a lapse.
+   */
+  repairedPosition: (
+    repertoireId: string,
+    fen: string,
+    played: string,
+    expected: string,
+    correct: boolean,
+  ) => void;
 }
 
 function emptyPersisted(): PersistedState {
@@ -156,7 +169,7 @@ function emptyPersisted(): PersistedState {
     settings: { ...DEFAULT_SETTINGS },
     importedGames: [],
     openingRun: { ...EMPTY_RECORD },
-    punish: { ...EMPTY_PUNISH_RECORD },
+    repair: { ...EMPTY_REPAIR_RECORD },
   };
 }
 
@@ -171,7 +184,7 @@ function persistedFrom(state: StoreState): PersistedState {
     settings: state.settings,
     importedGames: state.importedGames,
     openingRun: state.openingRun,
-    punish: state.punish,
+    repair: state.repair,
   };
 }
 
@@ -280,7 +293,7 @@ export const useStore = create<StoreState>((set, get) => {
         set({
           ...chosen,
           openingRun: normalizeRecord(chosen.openingRun),
-          punish: normalizePunishRecord(chosen.punish),
+          repair: normalizeRepairRecord(chosen.repair),
           updatedAt: Math.max(localAt, remoteAt),
           settings: mergeSettings(chosen.settings),
           storage,
@@ -323,7 +336,7 @@ export const useStore = create<StoreState>((set, get) => {
         set({
           ...remote.state,
           openingRun: normalizeRecord(remote.state.openingRun),
-          punish: normalizePunishRecord(remote.state.punish),
+          repair: normalizeRepairRecord(remote.state.repair),
           importedGames: local.importedGames,
           settings: mergeSettings(remote.state.settings),
           updatedAt: remote.updatedAt,
@@ -420,8 +433,8 @@ export const useStore = create<StoreState>((set, get) => {
       commit({ openingRun: recordRun(get().openingRun, outcome) });
     },
 
-    endPunish(solved) {
-      commit({ punish: recordPunish(get().punish, solved) });
+    endRepair(outcome) {
+      commit({ repair: recordRepair(get().repair, outcome) });
     },
 
     missedInOpeningRun(repertoireId, fen, played, expected) {
@@ -430,6 +443,20 @@ export const useStore = create<StoreState>((set, get) => {
       const state = get();
       const card = state.cards[id] ?? createCard(id, repertoireId, key, fen);
       commit(reviewed(state, card, 'again', { correct: false, playedSan: played, expectedSan: expected }));
+    },
+
+    repairedPosition(repertoireId, fen, played, expected, correct) {
+      const key = positionKey(fen);
+      const id = cardId(repertoireId, key);
+      const state = get();
+      const card = state.cards[id] ?? createCard(id, repertoireId, key, fen);
+      commit(
+        reviewed(state, card, correct ? 'good' : 'again', {
+          correct,
+          playedSan: played,
+          expectedSan: expected,
+        }),
+      );
     },
   };
 });

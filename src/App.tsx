@@ -7,7 +7,7 @@ import { RepertoireScreen } from './screens/RepertoireScreen';
 import { SettingsSheet } from './screens/SettingsSheet';
 import { HomeScreen, type ModeId } from './screens/HomeScreen';
 import { OpeningRunScreen } from './screens/openingRun/OpeningRunScreen';
-import { PunishScreen } from './screens/punish/PunishScreen';
+import { RepairScreen } from './screens/repair/RepairScreen';
 import { GapScreen } from './screens/gap/GapScreen';
 import { DrillScreen } from './screens/drill/DrillScreen';
 import { DrillSession } from './screens/drill/DrillSession';
@@ -53,8 +53,14 @@ export default function App() {
     <DrillScreen onExit={() => setMode(null)} />
   ) : mode === 'openingRun' ? (
     <OpeningRunScreen onExit={() => setMode(null)} />
-  ) : mode === 'punish' ? (
-    <PunishScreen onExit={() => setMode(null)} />
+  ) : mode === 'repair' ? (
+    <RepairScreen
+      onImport={() => {
+        setMode(null);
+        setImporting(true);
+      }}
+      onExit={() => setMode(null)}
+    />
   ) : mode === 'gap' ? (
     <GapScreen onExit={() => setMode(null)} />
   ) : session ? (

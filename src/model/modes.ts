@@ -1,4 +1,5 @@
 import type { Color } from '../chess/core';
+import type { RepairKind, RepairSort } from './repair';
 import type { SessionMode } from './session';
 
 /**
@@ -58,45 +59,46 @@ export function drawDescription(draw: DrillDraw): string {
   }
 }
 
-/* ── Punish ─────────────────────────────────────────────────────────────── */
+/* ── Repair ─────────────────────────────────────────────────────────────── */
 
-/** How much material a trap has to win to be worth setting. */
-export const GAIN_STEPS = [2, 3, 5] as const;
-/** How deep into the opening traps are drawn from, in plies. */
-export const PUNISH_DEPTHS = [8, 16, 24] as const;
-/** Seconds on the clock when Punish is timed. */
-export const PUNISH_SECONDS = 20;
+/** How many of your games must have reached a position before it counts. */
+export const GAME_THRESHOLDS = [1, 2, 3] as const;
 
-export interface PunishPrefs {
-  /** '' — draw across every repertoire. */
+export interface RepairPrefs {
+  /** '' — every repertoire. */
   repertoireId: string;
-  minGain: number;
-  maxPly: number;
-  /** Name the opening in the bar. Off makes every trap arrive unannounced. */
-  nameOpening: boolean;
-  /** Say which move was the mistake. Off means you have to spot it yourself. */
-  announce: boolean;
-  /** A countdown per puzzle. Running out counts as a miss. */
-  timed: boolean;
+  kinds: 'both' | RepairKind;
+  minGames: number;
+  /** Only positions from games you went on to lose. */
+  lossesOnly: boolean;
+  sort: RepairSort;
 }
 
-export const DEFAULT_PUNISH: PunishPrefs = {
+export const DEFAULT_REPAIR: RepairPrefs = {
   repertoireId: '',
-  minGain: 2,
-  maxPly: 16,
-  nameOpening: true,
-  announce: true,
-  timed: false,
+  kinds: 'both',
+  minGames: 2,
+  lossesOnly: false,
+  sort: 'common',
 };
 
-export function gainLabel(gain: number): string {
-  if (gain >= 5) return 'A rook or more';
-  if (gain >= 3) return 'A piece or more';
-  return 'Any material';
+export function kindLabel(kind: RepairKind): string {
+  return kind === 'offprep' ? 'Off prep' : 'Unprepared';
 }
 
-export function depthLabel(ply: number): string {
-  return `${Math.ceil(ply / 2)} moves`;
+export function kindDescription(kinds: RepairPrefs['kinds']): string {
+  switch (kinds) {
+    case 'offprep':
+      return 'Positions where you had a move prepared and played something else. These have a right answer.';
+    case 'unprepared':
+      return 'Positions you keep reaching with nothing prepared. These need a decision, not an answer.';
+    default:
+      return 'Both: the moves you forgot, and the positions you never prepared for.';
+  }
+}
+
+export function gamesLabel(n: number): string {
+  return n === 1 ? 'Any game' : `${n}+ games`;
 }
 
 /* ── Gap ────────────────────────────────────────────────────────────────── */
@@ -129,28 +131,30 @@ export function shareLabel(share: number): string {
   return share >= 1 ? `${share}% and up` : 'Anything played';
 }
 
-/* ── Punish's running record ────────────────────────────────────────────── */
+/* ── Repair's running record ────────────────────────────────────────────── */
 
-export interface PunishRecord {
+export interface RepairRecord {
+  /** Off-prep positions answered correctly. */
+  relearned: number;
+  /** Unprepared positions given a move. */
+  added: number;
+  /** Items looked at, right or wrong. */
   seen: number;
-  solved: number;
-  /** Longest run of traps sprung without a miss. */
-  best: number;
-  streak: number;
 }
 
-export const EMPTY_PUNISH_RECORD: PunishRecord = { seen: 0, solved: 0, best: 0, streak: 0 };
+export const EMPTY_REPAIR_RECORD: RepairRecord = { relearned: 0, added: 0, seen: 0 };
 
-export function recordPunish(record: PunishRecord, solved: boolean): PunishRecord {
-  const streak = solved ? record.streak + 1 : 0;
+export function recordRepair(
+  record: RepairRecord,
+  outcome: { relearned?: boolean; added?: boolean },
+): RepairRecord {
   return {
     seen: record.seen + 1,
-    solved: record.solved + (solved ? 1 : 0),
-    streak,
-    best: Math.max(record.best, streak),
+    relearned: record.relearned + (outcome.relearned ? 1 : 0),
+    added: record.added + (outcome.added ? 1 : 0),
   };
 }
 
-export function normalizePunishRecord(record: Partial<PunishRecord> | undefined): PunishRecord {
-  return { ...EMPTY_PUNISH_RECORD, ...(record ?? {}) };
+export function normalizeRepairRecord(record: Partial<RepairRecord> | undefined): RepairRecord {
+  return { ...EMPTY_REPAIR_RECORD, ...(record ?? {}) };
 }

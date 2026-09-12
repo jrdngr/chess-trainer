@@ -1,6 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { AppBar, IconButton, Icons, Section, Sheet } from '../components/ui';
+import { measureCoverage } from '../model/gameAnalysis';
 import { findGaps } from '../model/gaps';
+import { buildRepairs } from '../model/repair';
 import { GRADES, gradeLabel, type RunGrade } from '../model/openingRun';
 import { referenceIndex } from '../model/referenceIndex';
 import { displayName } from '../model/repertoire';
@@ -9,7 +11,7 @@ import { countDue, DAY, forecast, masteryBuckets, retention } from '../model/srs
 import { itemsFor, repertoireList, useStore } from '../store/useStore';
 import type { Repertoire } from '../model/types';
 
-export type ModeId = 'drill' | 'openingRun' | 'punish' | 'gap';
+export type ModeId = 'drill' | 'openingRun' | 'repair' | 'gap';
 
 export interface HomeScreenProps {
   /** Launching one repertoire straight into a session, from the sheet below. */
@@ -91,7 +93,29 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
    */
   const coverage = totalItems > 0 ? totalItems / (totalItems + gapCount) : 1;
 
-  const punish = state.punish;
+  /**
+   * What your own games disagree with your prep about, and how much of your
+   * real play the prep covered at all.
+   */
+  const repairPrefs = state.settings.repair;
+  const repairCount = useMemo(
+    () =>
+      buildRepairs(state.importedGames, reps, {
+        repertoireId: repairPrefs.repertoireId,
+        kinds: repairPrefs.kinds,
+        minGames: repairPrefs.minGames,
+        lossesOnly: repairPrefs.lossesOnly,
+      }).length,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [state.importedGames, reps, repairPrefs],
+  );
+  const inPrep = useMemo(() => {
+    const totals = reps.map((rep) => measureCoverage(state.importedGames, rep));
+    const games = totals.reduce((sum, c) => sum + c.games, 0);
+    if (!games) return 0;
+    return totals.reduce((sum, c) => sum + c.inPrep, 0) / games;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.importedGames, reps]);
 
   return (
     <>
@@ -137,23 +161,23 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
             onClick={() => onOpenMode('openingRun')}
           />
           <Tile
-            name="Punish"
+            name="Repair"
             tag={
-              punish.seen > 0
-                ? { text: `${Math.round((punish.solved / punish.seen) * 100)}%` }
-                : { text: 'new', tone: 'accent' }
+              state.importedGames.length === 0
+                ? { text: 'import', tone: 'accent' }
+                : repairCount > 0
+                  ? { text: `${repairCount}`, tone: 'warn' }
+                  : { text: 'clear', tone: 'good' }
             }
             art={
               <Gauge
                 parts={[
-                  {
-                    width: punish.seen ? (punish.solved / punish.seen) * 100 : 0,
-                    color: 'var(--good)',
-                  },
+                  { width: inPrep * 100, color: 'var(--good)' },
+                  { width: (1 - inPrep) * 100, color: 'var(--warn)' },
                 ]}
               />
             }
-            onClick={() => onOpenMode('punish')}
+            onClick={() => onOpenMode('repair')}
           />
           <Tile
             name="Gap"
