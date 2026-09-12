@@ -115,16 +115,15 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
                 ? { text: `${readyCount} ready`, tone: 'accent' }
                 : { text: 'clear', tone: 'good' }
             }
-            sub={
-              totalItems === 0
-                ? 'Nothing prepared yet'
-                : weekTotal > 0
-                  ? `${weekTotal} ${weekTotal === 1 ? 'review' : 'reviews'} this week`
-                  : allCards.length === 0
-                    ? `${totalItems} positions waiting`
-                    : `Next ${nextDueText(allCards, now)}`
+            art={
+              <Gauge
+                parts={[
+                  { width: pct(mastery.mature, totalItems), color: 'var(--good)' },
+                  { width: pct(mastery.young, totalItems), color: '#7dd3fc' },
+                  { width: pct(mastery.learning, totalItems), color: 'var(--warn)' },
+                ]}
+              />
             }
-            art={<Sparkline values={week} />}
             onClick={() => onOpenMode('drill')}
           />
           <Tile
@@ -133,11 +132,6 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
               openingRun.runs > 0
                 ? { text: `best ${openingRun.best}` }
                 : { text: 'new', tone: 'accent' }
-            }
-            sub={
-              openingRun.runs === 0
-                ? 'One line. One mistake.'
-                : `${openingRun.runs} ${openingRun.runs === 1 ? 'run' : 'runs'} · ${openingRun.survivals} completed`
             }
             art={<GradeBar grades={openingRun.grades} />}
             onClick={() => onOpenMode('openingRun')}
@@ -148,11 +142,6 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
               punish.seen > 0
                 ? { text: `${Math.round((punish.solved / punish.seen) * 100)}%` }
                 : { text: 'new', tone: 'accent' }
-            }
-            sub={
-              punish.seen === 0
-                ? 'They blunder. Take it.'
-                : `${punish.solved} of ${punish.seen} sprung · best ${punish.best}`
             }
             art={
               <Gauge
@@ -172,11 +161,6 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
               gapCount === 0
                 ? { text: 'clear', tone: 'good' }
                 : { text: `${gapCount}`, tone: 'warn' }
-            }
-            sub={
-              gapCount === 0
-                ? 'Every reply answered.'
-                : `${gapCount} ${gapCount === 1 ? 'reply' : 'replies'} you cannot meet`
             }
             art={
               <Gauge
@@ -281,13 +265,11 @@ interface Tag {
 function Tile({
   name,
   tag,
-  sub,
   art,
   onClick,
 }: {
   name: string;
   tag: Tag;
-  sub: string;
   art: ReactNode;
   onClick: () => void;
 }) {
@@ -299,7 +281,6 @@ function Tile({
       </div>
       <div className="fill" />
       <div className="art">{art}</div>
-      <div className="sub">{sub}</div>
     </button>
   );
 }
@@ -339,37 +320,6 @@ const GRADE_COLORS: Record<RunGrade, string> = {
   red: 'var(--bad)',
   purple: 'var(--accent)',
 };
-
-/**
- * The week's reviews as a line.
- *
- * A flat schedule would draw a flat line through the middle of the box rather
- * than along the floor, so an all-zero week is drawn at the bottom instead.
- */
-function Sparkline({ values }: { values: number[] }) {
-  const max = Math.max(...values);
-  const last = values.length - 1;
-  const points = values
-    .map((value, i) => {
-      const x = last === 0 ? 0 : (i / last) * 100;
-      const y = max === 0 ? 23 : 23 - (value / max) * 20;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
-  return (
-    <svg className="spark" viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true">
-      <polyline
-        points={points}
-        fill="none"
-        stroke="var(--accent)"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
-  );
-}
 
 /** When nothing can persist, say so instead of quietly forgetting. */
 function StorageWarning() {
@@ -434,13 +384,4 @@ function pct(n: number, total: number) {
 
 function dayLabel(ts: number) {
   return new Date(ts).toLocaleDateString(undefined, { weekday: 'narrow' });
-}
-
-function nextDueText(cards: { due: number }[], now: number) {
-  const future = cards.map((c) => c.due).filter((d) => d > now).sort((a, b) => a - b);
-  if (!future.length) return 'later';
-  const delta = future[0] - now;
-  if (delta < 3600_000) return `in ${Math.max(1, Math.round(delta / 60000))} min`;
-  if (delta < DAY) return `in ${Math.round(delta / 3600_000)} h`;
-  return `in ${Math.round(delta / DAY)} d`;
 }
