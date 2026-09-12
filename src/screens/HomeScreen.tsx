@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { AppBar, IconButton, Icons, Section, Sheet } from '../components/ui';
+import { findGaps } from '../model/gaps';
 import { lineRecords } from '../model/openingRun';
+import { referenceIndex } from '../model/referenceIndex';
 import { displayName } from '../model/repertoire';
 import type { SessionMode, TrainingItem } from '../model/session';
 import { countDue, DAY, forecast, masteryBuckets, retention } from '../model/srs';
@@ -10,6 +12,8 @@ import type { Repertoire } from '../model/types';
 export interface HomeScreenProps {
   onStart: (items: TrainingItem[], mode: SessionMode, title: string) => void;
   onStartOpeningRun: () => void;
+  onStartPunish: () => void;
+  onStartGap: () => void;
   onOpenSettings: () => void;
 }
 
@@ -24,7 +28,13 @@ interface RepEntry {
   mastery: ReturnType<typeof masteryBuckets>;
 }
 
-export function HomeScreen({ onStart, onStartOpeningRun, onOpenSettings }: HomeScreenProps) {
+export function HomeScreen({
+  onStart,
+  onStartOpeningRun,
+  onStartPunish,
+  onStartGap,
+  onOpenSettings,
+}: HomeScreenProps) {
   const state = useStore();
   const reps = repertoireList(state);
   const now = Date.now();
@@ -73,6 +83,12 @@ export function HomeScreen({ onStart, onStartOpeningRun, onOpenSettings }: HomeS
   const readyCount = totalDue + Math.min(totalUnseen, state.settings.newCardsPerSession);
   const unseenTotal = totalItems - allCards.length + mastery.unseen;
 
+  /** Replies the database plays that nothing in the repertoire answers. */
+  const gapCount = useMemo(
+    () => perRep.reduce((sum, entry) => sum + findGaps(entry.rep, referenceIndex()).length, 0),
+    [perRep],
+  );
+
   return (
     <>
       <AppBar
@@ -116,8 +132,10 @@ export function HomeScreen({ onStart, onStartOpeningRun, onOpenSettings }: HomeS
 
         <Section title="Opening Run" />
         <div className="hero">
-          <div className="big">{openingRun.runs === 0 ? '\u2014' : openingRun.best}</div>
-          <div className="lbl">
+          {/* A dash at 56px reads as a stray rule, so an unplayed mode just
+              leads with its line. */}
+          {openingRun.runs > 0 && <div className="big">{openingRun.best}</div>}
+          <div className="lbl" style={openingRun.runs === 0 ? { marginTop: 0 } : undefined}>
             {openingRun.runs === 0
               ? 'One secret line. One mistake.'
               : `${openingRun.best === 1 ? 'move' : 'moves'} deep at your best`}
@@ -147,6 +165,31 @@ export function HomeScreen({ onStart, onStartOpeningRun, onOpenSettings }: HomeS
             onClick={onStartOpeningRun}
           >
             {openingRun.runs === 0 ? 'Start a run' : 'New run'}
+          </button>
+        </div>
+
+        <Section title="Punish" />
+        <div className="hero">
+          <div className="lbl" style={{ marginTop: 0 }}>
+            They leave the book with a move that drops material. Take it.
+          </div>
+          <button className="btn primary block xl" style={{ marginTop: 18 }} onClick={onStartPunish}>
+            Set a trap
+          </button>
+        </div>
+
+        <Section title="Gap" aside={gapCount > 0 ? `${gapCount}` : undefined} />
+        <div className="hero">
+          <div className="big">{gapCount}</div>
+          <div className="lbl">
+            {gapCount === 0
+              ? 'every reply answered'
+              : gapCount === 1
+                ? 'reply you cannot meet'
+                : 'replies you cannot meet'}
+          </div>
+          <button className="btn primary block xl" style={{ marginTop: 18 }} onClick={onStartGap}>
+            {gapCount === 0 ? 'Check again' : 'Fill them in'}
           </button>
         </div>
 

@@ -19,7 +19,7 @@ npm run dev          # http://localhost:5173, also served on your LAN IP
 full-screen, chrome-free app.
 
 ```bash
-npm test             # 256 tests: chess rules, tree, SRS, PGN, analysis, opening runs, seed data
+npm test             # 283 tests: chess rules, tree, SRS, PGN, analysis, opening runs, seed data
 npm run typecheck
 npm run build        # production build into dist/
 npm run artifact     # repackage dist/ for publishing as a Claude Artifact
@@ -189,6 +189,45 @@ Only the move that ends a run touches the schedule, graded `again`. The correct
 moves before it are primed by the ones before them, so crediting them would
 inflate intervals on weaker evidence than an isolated review gives.
 
+### Punish
+The opponent leaves the book with a move that drops material, and you take it.
+Every puzzle comes from a position your own repertoire reaches, so the trap is
+one you could actually be offered rather than a position from nowhere.
+
+The mode is static and material-only on purpose. "They blundered, win the piece"
+is a claim that can be checked exactly — count what a capture takes, less what
+the recapture takes back — so a puzzle is either sound or it is not generated.
+An engine would find deeper punishments, but the answer would then depend on how
+long it was allowed to think, and a puzzle whose answer moves is worse than a
+simple one that is always right.
+
+Two rules keep them worth solving. Only captures and checks are considered: a
+player about to go wrong goes wrong on a move they had a reason to play, not by
+dropping a bishop on an empty square. And the punishment has to land on the
+square they just moved to, so the mistake is *this* move rather than something
+already wrong with the position — which also makes the answer easy to state.
+What the blunder won is subtracted from what the punishment wins, or every even
+trade would look like a windfall: `Bxc3+ bxc3` is bishop for knight, not a
+three-pawn gift.
+
+Positions are visited in a shuffled order favouring the opening, and the search
+stops at the first sound puzzle — about 25ms, rather than the four seconds a
+whole repertoire takes.
+
+### Gap
+Replies the database plays that your repertoire has no answer to, each one a
+row you can fix by picking a move from the book. Picking adds their move and
+your answer to the repertoire, so it turns up in Drill.
+
+A gap is only counted where preparation exists and stops short of one of the
+opponent's choices. Where a line simply ends there is nothing to disagree with —
+that is prep running out, not prep contradicting itself.
+
+The seeded repertoires have no gaps at any threshold, which is the coverage
+guarantee holding rather than the mode failing; `coverage.test.ts` runs the same
+`findGaps` and would fail first if one appeared. It has work to do the moment
+you add lines of your own.
+
 ### Repertoire
 Three seeded repertoires built around what you actually play — the **Queen's
 Gambit** with White, and the **King's Indian** (vs 1.d4) and **Sicilian Dragon**
@@ -329,7 +368,7 @@ top of `src/styles.css`; the board palettes and highlights in
 src/
   chess/       rules, position keys, PGN parsing with variations
   model/       repertoire tree, SRS, session building, reference index,
-               game analysis, opening-run rules, seed data
+               game analysis, opening-run rules, punish, gaps, seed data
   engine/      Stockfish worker + heuristic fallback behind one interface
   store/       zustand store, IndexedDB persistence, cloud sync, seed loading
   components/  board, pieces, explorer, sheets, icons, and the shared
@@ -340,8 +379,8 @@ src/
                the clock and engine-referee hooks
 ```
 
-Drill and Opening Run sit side by side on the home screen as two equal modes,
-each with its own hero and its own start button. That screen has no title of
+Drill, Opening Run, Punish and Gap sit one after another on the home screen as
+equal modes, each with its own hero and its own start button. That screen has no title of
 its own — naming it after either mode would have been wrong, and naming it
 "Home" said nothing the tab bar was not already saying. The bar stays for the
 settings button and the safe area.

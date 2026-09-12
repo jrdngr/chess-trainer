@@ -7,6 +7,8 @@ import { RepertoireScreen } from './screens/RepertoireScreen';
 import { SettingsSheet } from './screens/SettingsSheet';
 import { HomeScreen } from './screens/HomeScreen';
 import { OpeningRunScreen } from './screens/openingRun/OpeningRunScreen';
+import { PunishScreen } from './screens/punish/PunishScreen';
+import { GapScreen } from './screens/gap/GapScreen';
 import { DrillSession } from './screens/DrillSession';
 import type { SessionMode, TrainingItem } from './model/session';
 import { countDue } from './model/srs';
@@ -25,7 +27,9 @@ export default function App() {
     mode: SessionMode;
     title: string;
   } | null>(null);
-  const [openingRun, setOpeningRunPrefs] = useState(false);
+  const [openingRun, setOpeningRun] = useState(false);
+  const [punish, setPunish] = useState(false);
+  const [gap, setGap] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [explorePath, setExplorePath] = useState<string[] | undefined>();
@@ -47,7 +51,11 @@ export default function App() {
       <div className="spinner" />
     </div>
   ) : openingRun ? (
-    <OpeningRunScreen onExit={() => setOpeningRunPrefs(false)} />
+    <OpeningRunScreen onExit={() => setOpeningRun(false)} />
+  ) : punish ? (
+    <PunishScreen onExit={() => setPunish(false)} />
+  ) : gap ? (
+    <GapScreen onExit={() => setGap(false)} />
   ) : session ? (
     <DrillSession
       items={session.items}
@@ -66,7 +74,9 @@ export default function App() {
           {tab === 'home' && (
             <HomeScreen
               onStart={startSession}
-              onStartOpeningRun={() => setOpeningRunPrefs(true)}
+              onStartOpeningRun={() => setOpeningRun(true)}
+              onStartPunish={() => setPunish(true)}
+              onStartGap={() => setGap(true)}
               onOpenSettings={() => setSettingsOpen(true)}
             />
           )}
