@@ -106,17 +106,6 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.02em; }
   padding: 4px 16px calc(var(--nav-height) + var(--safe-bottom) + 28px);
 }
 .screen.no-nav { padding-bottom: calc(var(--safe-bottom) + 20px); }
-/* Leaves room for a pinned footer button. */
-.screen.with-footer { padding-bottom: calc(var(--safe-bottom) + 96px); }
-
-/* A call to action pinned to the bottom of a screen, above the content. */
-.footer {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  padding: 18px 16px calc(var(--safe-bottom) + 14px);
-  background: linear-gradient(to top, var(--bg) 60%, rgba(13, 13, 16, 0));
-  z-index: 20;
-}
 
 /* ── nav ───────────────────────────────────────────────────────────────── */
 .nav {

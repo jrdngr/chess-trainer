@@ -53,9 +53,9 @@ names it while you play — no opening name, no move list, no explore. Dying is
 what buys you the reveal, which names the variation, gives its ECO code and
 prints the line in full, including how it would have gone on.
 
-The setup screen decides the run, with **Start run** pinned to the bottom so it
-is always a tap away however far down the options you are. Everything past the
-first two sections is off by default; the plain mode is a line from your
+The setup screen decides the run. **Start run** sits at the top, above the
+options, so the common case — same rules as last time — is one tap. Everything
+past the first two sections is off by default; the plain mode is a line from your
 repertoire, no clock, no help. Choices are remembered between runs.
 
 - **Play as** — White, Black, or random.
@@ -317,7 +317,7 @@ src/
 Screens are built from a small set of shared pieces in `components/ui.tsx` —
 `AppBar`, `Section`, `Toggle`, `Stepper`, `Segmented`, `ChoiceRow`, `Strip` —
 so a new screen has nothing to invent. Layout comes from utility classes in
-`styles.css` (`.actions`, `.note`, `.footer`, `.mt-*`) rather than inline styles.
+`styles.css` (`.actions`, `.note`, `.mt-*`) rather than inline styles.
 
 The board is hand-written rather than pulled from a library: tap-tap and drag
 both work, legal moves show as dots, captures as rings, pieces animate between

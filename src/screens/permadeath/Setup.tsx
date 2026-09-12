@@ -35,9 +35,10 @@ const COLORS: { value: ColorChoice; label: string }[] = [
 ];
 
 /**
- * The screen that decides a run. Everything past the first two sections is off
- * by default; the plain mode is a line from your repertoire, no clock, no help.
- * Choices are remembered between runs.
+ * The screen that decides a run. Start sits at the top, above the options, so
+ * the common case — same rules as last time — is one tap. Everything past the
+ * first two sections is off by default; the plain mode is a line from your
+ * repertoire, no clock, no help. Choices are remembered between runs.
  */
 export function Setup({
   onStart,
@@ -98,7 +99,21 @@ export function Setup({
     <>
       <AppBar title="Permadeath" subtitle="One secret line. One mistake." onClose={onExit} />
 
-      <div className="screen no-nav with-footer">
+      <div className="screen no-nav">
+        <button
+          className="btn primary block xl"
+          disabled={blocked}
+          onClick={() => onStart({ ...prefs, repertoireId: chosenId })}
+        >
+          {!blocked
+            ? 'Start run'
+            : fromOpening
+              ? 'Pick an opening first'
+              : prefs.reverse
+                ? 'Nothing to play against'
+                : 'No lines for that colour'}
+        </button>
+
         <Section title="Play as" />
         <Segmented value={prefs.color} options={COLORS} onChange={(color) => setPermadeath({ color })} />
 
@@ -254,22 +269,6 @@ export function Setup({
         )}
 
         {record.runs > 0 && <Record record={record} perLine={prefs.perLine} />}
-      </div>
-
-      <div className="footer">
-        <button
-          className="btn primary block xl"
-          disabled={blocked}
-          onClick={() => onStart({ ...prefs, repertoireId: chosenId })}
-        >
-          {!blocked
-            ? 'Start run'
-            : fromOpening
-              ? 'Pick an opening first'
-              : prefs.reverse
-                ? 'Nothing to play against'
-                : 'No lines for that colour'}
-        </button>
       </div>
 
       <OpeningPicker
