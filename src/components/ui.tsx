@@ -125,6 +125,10 @@ export function IconButton({
  * The bar at the top of a screen. Large-title screens pass `large`; pushed
  * screens pass `onBack` (a chevron) or `onClose` (a cross). When there is a
  * back button but nothing on the right, a blank keeps the title centred.
+ *
+ * The title is optional: a screen whose sections name themselves does not need
+ * the bar to repeat one of them, and a bar with only its actions in it still
+ * holds the safe area and keeps them where the thumb expects.
  */
 export function AppBar({
   title,
@@ -134,7 +138,7 @@ export function AppBar({
   onClose,
   actions,
 }: {
-  title: ReactNode;
+  title?: ReactNode;
   subtitle?: ReactNode;
   large?: boolean;
   onBack?: () => void;
@@ -153,7 +157,9 @@ export function AppBar({
   return (
     <div className={`appbar${large ? '' : ' compact'}`}>
       {leading}
-      {large ? (
+      {title === undefined ? (
+        <span className="grow" />
+      ) : large ? (
         <h1>{title}</h1>
       ) : (
         <div className="appbar-title">

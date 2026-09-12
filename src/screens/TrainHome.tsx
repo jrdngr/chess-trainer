@@ -77,7 +77,6 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
     <>
       <AppBar
         large
-        title="Home"
         actions={
           <IconButton label="Settings" onClick={onOpenSettings}>
             <Icons.gear size={20} />

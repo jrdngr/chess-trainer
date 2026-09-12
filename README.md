@@ -345,7 +345,10 @@ src/
 ```
 
 Drill and Opening Run sit side by side on the home screen as two equal modes,
-each with its own hero and its own start button.
+each with its own hero and its own start button. That screen has no title of
+its own — naming it after either mode would have been wrong, and naming it
+"Home" said nothing the tab bar was not already saying. The bar stays for the
+settings button and the safe area.
 
 Screens are built from a small set of shared pieces in `components/ui.tsx` —
 `AppBar`, `Section`, `Toggle`, `Stepper`, `Segmented`, `ChoiceRow`, `Strip` —
