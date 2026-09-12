@@ -53,6 +53,7 @@ export const DEFAULT_SETTINGS: Settings = {
   permadeathClock: 'off',
   permadeathHints: 0,
   permadeathPerLine: false,
+  permadeathExtended: false,
 };
 
 /**

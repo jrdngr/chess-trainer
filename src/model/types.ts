@@ -158,4 +158,6 @@ export interface Settings {
   permadeathHints: number;
   /** Break the permadeath record down by opening and side. */
   permadeathPerLine: boolean;
+  /** Carry a permadeath run on past the prep, with the engine calling blunders. */
+  permadeathExtended: boolean;
 }

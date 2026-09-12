@@ -241,6 +241,12 @@ export interface PermadeathOptions {
   weakFirst: boolean;
   clock: ClockMode;
   hints: number;
+  /**
+   * Carry on past the end of the prep, with the engine calling blunders.
+   * A line that stops the moment the setup is done is anticlimactic; this turns
+   * the rest of it into a game you can still lose.
+   */
+  extended: boolean;
 }
 
 export const DEFAULT_OPTIONS: PermadeathOptions = {
@@ -251,11 +257,14 @@ export const DEFAULT_OPTIONS: PermadeathOptions = {
   weakFirst: false,
   clock: 'off',
   hints: 0,
+  extended: false,
 };
 
 /* ── runs ───────────────────────────────────────────────────────────────── */
 
 export interface Run {
+  /** Distinguishes one run from the next, so a run can be amended in place. */
+  id: string;
   source: SourceKind;
   sourceLabel: string;
   /** Which repertoire the line came from, for repertoire runs. */
@@ -274,10 +283,16 @@ export interface Run {
   hints: number;
   /** Hints spent, shown on the reveal so a deep run stays honest. */
   hintsUsed: number;
+  /**
+   * How many plies had been played when the prep ran out, or null while the run
+   * is still inside the book. Set once and never cleared: everything after it
+   * was judged by the engine rather than by the repertoire.
+   */
+  prepEnded: number | null;
 }
 
-/** How a run ended. Time is a real cause of death, not a technicality. */
-export type DeathCause = 'move' | 'time';
+/** How a run ended. Time and a blunder are as real as leaving your prep. */
+export type DeathCause = 'move' | 'time' | 'blunder';
 
 export interface RunOptions {
   /** Skip lines that ask fewer than this many moves of the user. */
@@ -295,6 +310,13 @@ export interface RunOptions {
    * often as on the lines you will actually face.
    */
   index?: ReferenceIndex | null;
+}
+
+let runCounter = 0;
+
+function newRunId(): string {
+  runCounter += 1;
+  return `run${runCounter}-${Date.now().toString(36)}`;
 }
 
 /** The moves of a line that are yours to find. */
@@ -429,6 +451,7 @@ export function startRepertoireRun(
   const line = pickWeighted(picked.lines, (l) => l.weight, rand);
 
   return {
+    id: newRunId(),
     source: 'repertoire',
     sourceLabel: displayName(picked.rep.name),
     repertoireId: picked.rep.id,
@@ -441,6 +464,7 @@ export function startRepertoireRun(
     target: line.path.map((n) => n.san),
     hints: opts.hints ?? 0,
     hintsUsed: 0,
+    prepEnded: null,
   };
 }
 
@@ -454,6 +478,7 @@ export function startBookRun(
   const side = resolveColor(color, rand);
   if (!lookup(index, START_FEN)?.moves.length) return null;
   return {
+    id: newRunId(),
     source: 'book',
     sourceLabel: 'Book',
     reverse: false,
@@ -465,6 +490,7 @@ export function startBookRun(
     target: [],
     hints: opts.hints ?? 0,
     hintsUsed: 0,
+    prepEnded: null,
   };
 }
 
@@ -570,9 +596,87 @@ export function opponentReply(source: LineSource, run: Run, rand: () => number):
   return { ...run, fen: move.after, played: [...run.played, san] };
 }
 
-/** True when the line has been played out with no mistake left to make. */
+/* ── extended mode ──────────────────────────────────────────────────────── */
+
+/**
+ * How much you may drop, in centipawns, before a move counts as a blunder.
+ *
+ * Generous on purpose. Past the prep there is no single right move, and a mode
+ * that ends your run over a quarter of a pawn would be judging taste rather
+ * than blunders.
+ */
+export const BLUNDER_LIMIT = 80;
+
+/**
+ * How much a move cost, in centipawns from your own point of view.
+ *
+ * Both scores come from the engine in White's frame: `before` is the position
+ * you were about to move in, `after` the position you left behind. A positive
+ * result means you gave something up.
+ */
+export function evalLoss(color: Color, before: number, after: number): number {
+  return color === 'w' ? before - after : after - before;
+}
+
+export interface EvalVerdict {
+  ok: boolean;
+  /** Centipawns dropped. Never negative — finding better than the engine is not a loss. */
+  lost: number;
+}
+
+/** Judge a move once the prep has run out. */
+export function judgeByEval(
+  color: Color,
+  before: number,
+  after: number,
+  limit = BLUNDER_LIMIT,
+): EvalVerdict {
+  const lost = Math.max(0, evalLoss(color, before, after));
+  return { ok: lost <= limit, lost };
+}
+
+/** Hand a run over to the engine: everything from here is judged on eval. */
+export function extend(run: Run): Run {
+  return run.prepEnded === null ? { ...run, prepEnded: run.played.length } : run;
+}
+
+/** True once the run is being judged by the engine rather than by the prep. */
+export function isExtended(run: Run): boolean {
+  return run.prepEnded !== null;
+}
+
+/** Your own moves played past the end of the prep. */
+export function extendedMoves(run: Run): number {
+  if (run.prepEnded === null) return 0;
+  const past = run.played.length - run.prepEnded;
+  return Math.max(0, Math.ceil(past / 2));
+}
+
+/** Record one accepted move in extended play, with the opponent's reply. */
+export function playExtended(run: Run, san: string, reply: string | null): Run {
+  const sans = reply ? [san, reply] : [san];
+  let fen = run.fen;
+  for (const move of sans) {
+    const applied = applySan(fen, move);
+    if (!applied) return { ...run, over: true };
+    fen = applied.after;
+  }
+  return {
+    ...run,
+    fen,
+    played: [...run.played, ...sans],
+    survived: run.survived + 1,
+  };
+}
+
+/**
+ * True when the prep has been played out with no mistake left to make.
+ *
+ * A run already handed to the engine is never complete this way: past the prep
+ * there is always another move, and only a blunder or the game itself ends it.
+ */
 export function isComplete(source: LineSource, run: Run): boolean {
-  return !run.over && source.movesAt(run.fen).length === 0;
+  return !run.over && !isExtended(run) && source.movesAt(run.fen).length === 0;
 }
 
 /** How the line would have gone on from here. */
@@ -699,6 +803,11 @@ export interface PermadeathRecord {
   survivals: number;
   /** Per opening and side, so a Sicilian best does not hide behind a KID one. */
   byLine: Record<string, LineRecord>;
+  /**
+   * What the last logged run was, so a run carried on past its prep updates its
+   * own entry instead of counting twice.
+   */
+  last?: { id: string; key: string; completed: boolean };
 }
 
 export const EMPTY_RECORD: PermadeathRecord = {
@@ -717,6 +826,8 @@ export function normalizeRecord(record: Partial<PermadeathRecord> | undefined): 
 }
 
 export interface RunOutcome {
+  /** The run this came from, so carrying a run on amends it. */
+  id: string;
   key: string;
   label: string;
   color: Color;
@@ -729,6 +840,7 @@ export function outcomeOf(run: Run, completed: boolean): RunOutcome {
   const key =
     run.source === 'book' ? `book:${run.color}` : `rep:${run.repertoireId ?? ''}:${run.color}`;
   return {
+    id: run.id,
     key,
     label: run.reverse ? `${run.sourceLabel} (reversed)` : run.sourceLabel,
     color: run.color,
@@ -737,27 +849,43 @@ export function outcomeOf(run: Run, completed: boolean): RunOutcome {
   };
 }
 
+/**
+ * Log a finished run.
+ *
+ * Logging the same run twice amends it rather than counting it again: a run that
+ * reaches the end of its prep is logged there, and may then be carried on into
+ * extended play and finish deeper. The count stays at one run and the deeper
+ * score replaces the shallower one — `best` only ever grows, so taking the
+ * maximum is right either way.
+ *
+ * Reaching the end of a line is a fact, so carrying the run on past it and
+ * blundering does not unmake it: a completed line stays counted.
+ */
 export function recordRun(
   record: PermadeathRecord,
   outcome: RunOutcome,
   at = Date.now(),
 ): PermadeathRecord {
   const base = normalizeRecord(record);
+  const amend = base.last?.id === outcome.id && base.last.key === outcome.key;
+  const alreadyCounted = amend && !!base.last?.completed;
+  const addSurvival = outcome.completed && !alreadyCounted ? 1 : 0;
   const previous = base.byLine[outcome.key];
   return {
-    runs: base.runs + 1,
+    runs: base.runs + (amend ? 0 : 1),
     best: Math.max(base.best, outcome.depth),
     lastDepth: outcome.depth,
     lastAt: at,
-    survivals: base.survivals + (outcome.completed ? 1 : 0),
+    survivals: base.survivals + addSurvival,
+    last: { id: outcome.id, key: outcome.key, completed: outcome.completed || alreadyCounted },
     byLine: {
       ...base.byLine,
       [outcome.key]: {
         label: outcome.label,
         color: outcome.color,
-        runs: (previous?.runs ?? 0) + 1,
+        runs: (previous?.runs ?? 0) + (amend ? 0 : 1),
         best: Math.max(previous?.best ?? 0, outcome.depth),
-        survivals: (previous?.survivals ?? 0) + (outcome.completed ? 1 : 0),
+        survivals: (previous?.survivals ?? 0) + addSurvival,
         lastAt: at,
       },
     },

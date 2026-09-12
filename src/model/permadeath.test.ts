@@ -7,7 +7,14 @@ import {
   clockLabel,
   clockSpec,
   CLOCK_MODES,
+  BLUNDER_LIMIT,
   DEFAULT_OPTIONS,
+  evalLoss,
+  extend,
+  extendedMoves,
+  isExtended,
+  judgeByEval,
+  playExtended,
   lineOdds,
   lineWeakness,
   takeHint,
@@ -298,7 +305,9 @@ describe('naming the line at the end of a run', () => {
 });
 
 describe('the record', () => {
-  const outcome = (depth: number, completed: boolean, key = 'rep:a:w') => ({
+  let ids = 0;
+  const outcome = (depth: number, completed: boolean, key = 'rep:a:w', id = `r${(ids += 1)}`) => ({
+    id,
     key,
     label: 'Queen\u2019s Gambit',
     color: 'w' as const,
@@ -352,6 +361,7 @@ describe('the record', () => {
     const reps = buildSeedRepertoires();
     const run = startRepertoireRun(reps, 'b', { seed: 5, reverse: true })!;
     const filed = outcomeOf(run, false);
+    expect(filed.id).toBe(run.id);
     expect(filed.key).toBe(`rep:${run.repertoireId}:b`);
     expect(filed.label).toMatch(/reversed/);
     expect(outcomeOf({ ...run, reverse: false }, false).label).not.toMatch(/reversed/);
@@ -739,12 +749,14 @@ describe('what counts as staying in your repertoire', () => {
       reverse: false,
       color: 'b',
       fen: walkSan(sans).fens[sans.length],
+      id: 'probe',
       played: sans,
       survived: 0,
       over: false,
       target: [],
       hints: 0,
       hintsUsed: 0,
+      prepEnded: null,
     };
   }
 
@@ -767,5 +779,127 @@ describe('what counts as staying in your repertoire', () => {
 
     const elsewhere = at(['d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4', 'd6', 'f3', 'O-O', 'Be3', 'e5', 'd5']);
     expect(movesHere(source, elsewhere)).toContain('Nh5');
+  });
+});
+
+describe('extended mode', () => {
+  const rep = whiteRep();
+  const source = repertoireSource(rep);
+
+  it('is off by default', () => {
+    expect(DEFAULT_OPTIONS.extended).toBe(false);
+    const run = startRepertoireRun([rep], 'w', { seed: 1 })!;
+    expect(isExtended(run)).toBe(false);
+    expect(run.prepEnded).toBeNull();
+  });
+
+  it('ends a run at the edge of the prep until the engine takes over', () => {
+    const run = finish(source, startRepertoireRun([rep], 'w', { seed: 1 })!);
+    expect(isComplete(source, run)).toBe(true);
+    // Handed over, the same position is no longer the end of anything.
+    const carried = extend(run);
+    expect(isExtended(carried)).toBe(true);
+    expect(isComplete(source, carried)).toBe(false);
+    expect(carried.prepEnded).toBe(run.played.length);
+  });
+
+  it('remembers where the prep ended, once', () => {
+    const run = extend({ ...startRepertoireRun([rep], 'w', { seed: 1 })!, played: ['d4', 'd5'] });
+    expect(run.prepEnded).toBe(2);
+    expect(extend({ ...run, played: ['d4', 'd5', 'c4', 'e6'] }).prepEnded).toBe(2);
+  });
+
+  it('measures a loss from your own side of the board', () => {
+    // White is a pawn up before, level after: White dropped a pawn.
+    expect(evalLoss('w', 100, 0)).toBe(100);
+    // The same swing helps Black, so Black lost nothing.
+    expect(evalLoss('b', 100, 0)).toBe(-100);
+    // Black a pawn up (−100) drifting to level is Black's loss.
+    expect(evalLoss('b', -100, 0)).toBe(100);
+    expect(evalLoss('w', -100, 0)).toBe(-100);
+  });
+
+  it('allows an inaccuracy and stops a blunder', () => {
+    // The threshold is generous on purpose; past the prep there is no one move.
+    expect(BLUNDER_LIMIT).toBeGreaterThanOrEqual(50);
+    expect(judgeByEval('w', 20, 20 - BLUNDER_LIMIT).ok).toBe(true);
+    expect(judgeByEval('w', 20, 20 - BLUNDER_LIMIT - 1).ok).toBe(false);
+    expect(judgeByEval('w', 20, 0).ok).toBe(true);
+    expect(judgeByEval('w', 20, -50).ok).toBe(true);
+    expect(judgeByEval('w', 20, -60).ok).toBe(true);
+    expect(judgeByEval('w', 20, -61).ok).toBe(false);
+    expect(judgeByEval('w', 20, -61).lost).toBe(81);
+    expect(judgeByEval('b', -20, 300).ok).toBe(false);
+  });
+
+  it('never counts finding better than the engine as a loss', () => {
+    expect(judgeByEval('w', 10, 400)).toEqual({ ok: true, lost: 0 });
+    expect(judgeByEval('b', 10, -400)).toEqual({ ok: true, lost: 0 });
+  });
+
+  it('takes your move and the reply together, scoring one move', () => {
+    const start = extend(startRepertoireRun([rep], 'w', { seed: 1 })!);
+    const next = playExtended(start, 'd4', 'd5');
+    expect(next.played).toEqual(['d4', 'd5']);
+    expect(next.survived).toBe(start.survived + 1);
+    expect(playedIsLegal(next)).toBe(true);
+    expect(fenTurn(next.fen)).toBe('w');
+  });
+
+  it('accepts a last move with no reply when the game is over', () => {
+    const start = extend(startRepertoireRun([rep], 'w', { seed: 1 })!);
+    const next = playExtended(start, 'd4', null);
+    expect(next.played).toEqual(['d4']);
+    expect(fenTurn(next.fen)).toBe('b');
+  });
+
+  it('refuses to apply a move that is not legal', () => {
+    const start = extend(startRepertoireRun([rep], 'w', { seed: 1 })!);
+    expect(playExtended(start, 'e5', null).over).toBe(true);
+  });
+
+  it('counts only your own moves as being past the prep', () => {
+    const base = startRepertoireRun([rep], 'w', { seed: 1 })!;
+    const carried = extend({ ...base, played: ['d4', 'd5'] });
+    expect(extendedMoves(carried)).toBe(0);
+    expect(extendedMoves({ ...carried, played: ['d4', 'd5', 'c4'] })).toBe(1);
+    expect(extendedMoves({ ...carried, played: ['d4', 'd5', 'c4', 'e6'] })).toBe(1);
+    expect(extendedMoves({ ...carried, played: ['d4', 'd5', 'c4', 'e6', 'Nc3'] })).toBe(2);
+    expect(extendedMoves(base)).toBe(0);
+  });
+
+  it('amends the record instead of counting a carried-on run twice', () => {
+    const run = startRepertoireRun([rep], 'w', { seed: 1 })!;
+    // The line is played out and logged.
+    let record = recordRun(EMPTY_RECORD, outcomeOf({ ...run, survived: 4 }, true), 1000);
+    expect(record).toMatchObject({ runs: 1, best: 4, survivals: 1 });
+
+    // Carried on, it goes deeper and then blunders — still one run, and the
+    // line it already finished stays finished.
+    record = recordRun(record, outcomeOf({ ...extend(run), survived: 11 }, false), 2000);
+    expect(record).toMatchObject({ runs: 1, best: 11, survivals: 1, lastDepth: 11 });
+    expect(record.byLine[outcomeOf(run, false).key]).toMatchObject({
+      runs: 1,
+      best: 11,
+      survivals: 1,
+    });
+
+    // Amending twice more does not stack survivals either.
+    record = recordRun(record, outcomeOf({ ...extend(run), survived: 14 }, true), 2500);
+    expect(record).toMatchObject({ runs: 1, best: 14, survivals: 1 });
+
+    // A genuinely new run still counts as one.
+    const other = startRepertoireRun([rep], 'w', { seed: 2 })!;
+    expect(other.id).not.toBe(run.id);
+    record = recordRun(record, outcomeOf({ ...other, survived: 3 }, false), 3000);
+    expect(record).toMatchObject({ runs: 2, best: 14, survivals: 1 });
+  });
+
+  it('reads a record saved before runs had an identity', () => {
+    const old = { runs: 2, best: 5, lastDepth: 5, lastAt: 9, survivals: 1, byLine: {} };
+    const fixed = normalizeRecord(old);
+    expect(fixed.last).toBeUndefined();
+    // With nothing to amend, the next run counts as its own.
+    expect(recordRun(fixed, { id: 'x', key: 'k', label: 'L', color: 'w', depth: 2, completed: false }).runs).toBe(3);
   });
 });

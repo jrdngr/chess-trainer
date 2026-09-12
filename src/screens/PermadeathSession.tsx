@@ -22,8 +22,14 @@ import {
   CLOCK_MODES,
   HINT_BUDGETS,
   fullLine,
+  extend,
+  extendedMoves,
   isComplete,
+  isExtended,
   isUsersTurn,
+  judgeByEval,
+  playExtended,
+  BLUNDER_LIMIT,
   lineName,
   lineRecords,
   movesHere,
@@ -55,6 +61,15 @@ export interface PermadeathSessionProps {
 }
 
 type Phase = 'setup' | 'playing' | 'dead' | 'survived' | 'playon';
+
+/** Your move past the prep, held until the engine has scored it. */
+interface Pending {
+  /** The position you moved in. */
+  from: string;
+  san: string;
+  /** The position you left behind. */
+  after: string;
+}
 
 /** A game carried on past the end of a line, against the engine. */
 interface PlayOn {
@@ -89,20 +104,29 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
       weakFirst: settings.permadeathWeakFirst,
       clock: settings.permadeathClock,
       hints: settings.permadeathHints,
+      extended: settings.permadeathExtended,
     }),
     [settings],
   );
 
   const [phase, setPhase] = useState<Phase>('setup');
   const [game, setGame] = useState<{ source: LineSource; run: Run } | null>(null);
-  const [death, setDeath] = useState<{ cause: DeathCause; played?: string; expected: string[] } | null>(
-    null,
-  );
+  const [death, setDeath] = useState<{
+    cause: DeathCause;
+    played?: string;
+    expected: string[];
+    /** Centipawns dropped, for a blunder. */
+    lost?: number;
+  } | null>(null);
   const [thinking, setThinking] = useState(false);
   const [hintSquare, setHintSquare] = useState<Square | null>(null);
   /** Where the post-mortem board is looking. Meaningless while the run is live. */
   const [cursor, setCursor] = useState(0);
   const [playOn, setPlayOn] = useState<PlayOn | null>(null);
+  /** A move played past the prep, waiting on the engine's verdict. */
+  const [pending, setPending] = useState<Pending | null>(null);
+  /** The engine's read on the position you are about to move in. */
+  const [baseline, setBaseline] = useState<{ fen: string; cp: number } | null>(null);
   const picker = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
   const settled = useRef(false);
 
@@ -111,6 +135,7 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
   const myTurn = run ? isUsersTurn(run) : false;
   const over = phase === 'dead' || phase === 'survived';
   const playing = phase === 'playon';
+  const extended = !!run && isExtended(run);
 
   /* ── clock ─────────────────────────────────────────────────────────────
    * Only your own thinking is charged, so the opponent's beat is free. A
@@ -123,7 +148,7 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
   const expire = useRef<() => void>(() => {});
 
   useEffect(() => {
-    if (phase !== 'playing' || !myTurn || thinking || budget.current === null) return;
+    if (phase !== 'playing' || !myTurn || thinking || pending || budget.current === null) return;
     if (spec.perMove !== null) budget.current = spec.perMove;
     const from = budget.current;
     const startedAt = Date.now();
@@ -141,7 +166,7 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
       // Charge only the time actually spent on this turn.
       budget.current = Math.max(0, from - (Date.now() - startedAt) / 1000);
     };
-  }, [phase, myTurn, thinking, spec.perMove]);
+  }, [phase, myTurn, thinking, !!pending, spec.perMove]);
 
   const finish = (ended: Run, completed: boolean) => {
     settled.current = true;
@@ -159,7 +184,7 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
 
   // The opponent answers on its own, after a beat.
   useEffect(() => {
-    if (!source || !run || phase !== 'playing' || myTurn || run.over) return;
+    if (!source || !run || phase !== 'playing' || myTurn || run.over || extended) return;
     if (movesHere(source, run).length === 0) return;
     setThinking(true);
     const timer = setTimeout(() => {
@@ -167,28 +192,52 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
       setGame((g) => (g ? { ...g, run: opponentReply(g.source, g.run, picker.current) } : g));
     }, 420);
     return () => clearTimeout(timer);
-  }, [source, run, myTurn, phase]);
+  }, [source, run, myTurn, phase, extended]);
 
   /**
    * Lines finish on the user's own move, so the position that ends a run is the
    * opponent's turn with nothing left — checking whose turn it is would miss it.
    */
+  /**
+   * The prep running out ends the run — unless extended mode is on, in which
+   * case the engine takes over the judging and the run carries on.
+   */
   useEffect(() => {
     if (!source || !run || phase !== 'playing' || settled.current) return;
-    if (isComplete(source, run)) {
-      setPhase('survived');
-      finish(run, true);
+    if (!isComplete(source, run)) return;
+    if (options.extended) {
+      setGame({ source, run: extend(run) });
+      return;
     }
-  }, [source, run, phase]);
+    setPhase('survived');
+    finish(run, true);
+  }, [source, run, phase, options.extended]);
 
-  /* ── playing on ────────────────────────────────────────────────────────
-   * The engine is the whole point of this mode, so it runs whether or not
-   * evaluations are switched on elsewhere. A short fixed think keeps replies
-   * quick on the asm.js build; the heuristic engine covers the case where no
-   * worker can start at all.
+  /* ── the engine ────────────────────────────────────────────────────────
+   * Used by two modes: playing on after a run, and extended play inside one.
+   * It runs whether or not evaluations are switched on elsewhere — that setting
+   * is about seeing numbers during recall, and here the engine is the referee.
+   * A short fixed think keeps it quick on the asm.js build, and the heuristic
+   * engine covers the case where no worker can start at all.
+   *
+   * In extended play it is asked about two positions in turn: the one you are
+   * about to move in, which gives the score your move is measured against, and
+   * the one you leave behind, which gives both the verdict and the reply.
    */
-  const { snapshot } = useEngine(playing ? (playOn?.fen ?? null) : null, {
-    enabled: playing,
+  const gameOverNow = extended && run ? positionStatus(run.fen).gameOver : false;
+  const probeFen = playing
+    ? (playOn?.fen ?? null)
+    : extended && run && !run.over && !gameOverNow
+      ? pending
+        ? baseline?.fen === pending.from
+          ? pending.after
+          : pending.from
+        : isUsersTurn(run)
+          ? run.fen
+          : null
+      : null;
+  const { snapshot } = useEngine(probeFen, {
+    enabled: playing || extended,
     movetime: 700,
     multiPv: 1,
     debounceMs: 120,
@@ -206,6 +255,56 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
     if (!move) return;
     setPlayOn({ ...playOn, fen: move.after, sans: [...playOn.sans, move.san] });
   }, [playing, playOn, engineTurn, finished?.gameOver, snapshot]);
+
+  /** Keep the score your next move will be measured against. */
+  useEffect(() => {
+    if (!extended || !run || snapshot.thinking) return;
+    const line = snapshot.lines[0];
+    if (!snapshot.fen || !line || line.cp === null) return;
+    if (snapshot.fen === run.fen && baseline?.fen !== run.fen) {
+      setBaseline({ fen: run.fen, cp: line.cp });
+    }
+    if (pending && snapshot.fen === pending.from && baseline?.fen !== pending.from) {
+      setBaseline({ fen: pending.from, cp: line.cp });
+    }
+  }, [extended, run, pending, snapshot, baseline?.fen]);
+
+  /** Score the move you played, and let the engine answer if it stands. */
+  useEffect(() => {
+    if (!extended || !run || !source || !pending || settled.current) return;
+    if (baseline?.fen !== pending.from) return;
+    if (snapshot.fen !== pending.after || snapshot.thinking) return;
+    const line = snapshot.lines[0];
+    if (!line) return;
+
+    // A forced mate against you reads as a huge swing; take it as one.
+    const after = line.cp ?? (line.mate !== null ? (line.mate > 0 ? 10_000 : -10_000) : null);
+    if (after === null) return;
+    const verdict = judgeByEval(run.color, baseline.cp, after);
+    setPending(null);
+
+    if (!verdict.ok) {
+      if (settings.hapticFeedback) haptic([22, 60, 22]);
+      setDeath({ cause: 'blunder', played: pending.san, expected: [], lost: verdict.lost });
+      setGame({ source, run: { ...run, over: true } });
+      setPhase('dead');
+      finish(run, false);
+      return;
+    }
+
+    if (settings.hapticFeedback) haptic(10);
+    const replyUci = positionStatus(pending.after).gameOver ? null : (line.pv[0] ?? null);
+    const reply = replyUci ? applyUci(pending.after, replyUci)?.san ?? null : null;
+    setGame({ source, run: playExtended(run, pending.san, reply) });
+  }, [extended, run, source, pending, baseline, snapshot]);
+
+  /** Extended play ends with the game, not with the prep. */
+  useEffect(() => {
+    if (!extended || !run || !source || phase !== 'playing' || settled.current) return;
+    if (!gameOverNow) return;
+    setPhase('survived');
+    finish(run, true);
+  }, [extended, run, source, phase, gameOverNow]);
 
   /** A hint belongs to one position only. */
   useEffect(() => {
@@ -323,6 +422,8 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
     settled.current = false;
     setDeath(null);
     setHintSquare(null);
+    setPending(null);
+    setBaseline(null);
     const fresh = clockSpec(next.clock);
     budget.current = fresh.perRun ?? fresh.perMove;
     setShown(budget.current);
@@ -346,6 +447,11 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
 
   const onMove = (move: LegalMove) => {
     if (phase !== 'playing' || !myTurn) return;
+    if (extended) {
+      // Held until the engine has scored it; the board shows it meanwhile.
+      if (!pending) setPending({ from: run.fen, san: move.san, after: move.after });
+      return;
+    }
     const result = play(source, run, move.san);
     if (result.ok) {
       if (settings.hapticFeedback) haptic(10);
@@ -371,6 +477,24 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
     if (settings.hapticFeedback) haptic(8);
     setHintSquare(taken.from);
     setGame({ source, run: taken.run });
+  };
+
+  /**
+   * Carry a finished line on under extended rules.
+   *
+   * The run itself continues — the score keeps counting and a blunder still ends
+   * it — so this is offered only where the prep ran out rather than where you
+   * went wrong. Logging it again amends the entry the completed line already
+   * made instead of counting a second run.
+   */
+  const continueExtended = () => {
+    if (!run || !source) return;
+    settled.current = false;
+    setDeath(null);
+    setPending(null);
+    setBaseline(null);
+    setGame({ source, run: extend(run) });
+    setPhase('playing');
   };
 
   /** Carry the game on from whatever the post-mortem board is showing. */
@@ -525,6 +649,9 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
 
   const survivedLabel = run.survived === 1 ? '1 move' : `${run.survived} moves`;
   const urgent = shown !== null && shown <= 5;
+  const past = extendedMoves(run);
+  const liveScore =
+    baseline?.fen === run.fen ? formatScore({ cp: baseline.cp, mate: null }) : null;
 
   return (
     <div className="app">
@@ -536,6 +663,11 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
           <div className="line">Permadeath</div>
           {over && <div className="sub">{phase === 'survived' ? 'Survived' : 'Run over'}</div>}
         </div>
+        {!over && extended && (
+          <span className="chip accent" style={{ minWidth: 44, justifyContent: 'center' }}>
+            {liveScore === null ? '…' : liveScore}
+          </span>
+        )}
         {!over && shown !== null && (
           <span
             className={`chip${urgent ? ' bad' : ''} num`}
@@ -579,18 +711,24 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
           <>
             <div className="prompt">
               <div className="who">
-                {thinking ? <span className="spinner" /> : <span className={`side ${run.color}`} />}
-                {thinking ? 'Reply' : 'Your move'}
+                {thinking || pending ? (
+                  <span className="spinner" />
+                ) : (
+                  <span className={`side ${run.color}`} />
+                )}
+                {pending ? 'Judging' : thinking ? 'Reply' : 'Your move'}
               </div>
               <div className="ctx">
                 {hintSquare
                   ? `The move starts on ${hintSquare}`
-                  : run.reverse
-                    ? 'Play the side your repertoire prepares against'
-                    : 'One mistake ends the run'}
+                  : extended
+                    ? 'Past your prep — the engine is calling blunders now'
+                    : run.reverse
+                      ? 'Play the side your repertoire prepares against'
+                      : 'One mistake ends the run'}
               </div>
             </div>
-            {run.hints > 0 && (
+            {run.hints > 0 && !extended && (
               <>
                 <div className="spacer sm" />
                 <button
@@ -615,8 +753,18 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
               Line complete
             </div>
             <div className="center muted small" style={{ marginTop: 2 }}>
-              You played the whole line — {survivedLabel} without a slip. That is as far as{' '}
-              {run.source === 'book' ? 'the book' : 'your prep'} goes.
+              {past > 0 ? (
+                <>
+                  {survivedLabel} without a slip, {past} of them past{' '}
+                  {run.source === 'book' ? 'the book' : 'your prep'} — the game itself ran out
+                  before you did.
+                </>
+              ) : (
+                <>
+                  You played the whole line — {survivedLabel} without a slip. That is as far as{' '}
+                  {run.source === 'book' ? 'the book' : 'your prep'} goes.
+                </>
+              )}
             </div>
           </>
         )}
@@ -627,31 +775,42 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
               <span className="ico">
                 <Icons.cross size={18} />
               </span>
-              {death.cause === 'time' ? 'Out of time' : 'Run over'}
+              {death.cause === 'time'
+                ? 'Out of time'
+                : death.cause === 'blunder'
+                  ? 'Blunder'
+                  : 'Run over'}
             </div>
             <div className="compare" style={{ marginTop: 10 }}>
               <div className="good">
-                <div className="k">{run.source === 'book' ? 'Book' : 'Repertoire'}</div>
-                <div className="v">{death.expected[0] ?? '—'}</div>
+                <div className="k">
+                  {death.cause === 'blunder'
+                    ? 'Cost'
+                    : run.source === 'book'
+                      ? 'Book'
+                      : 'Repertoire'}
+                </div>
+                <div className="v">
+                  {death.cause === 'blunder'
+                    ? `−${((death.lost ?? 0) / 100).toFixed(2)}`
+                    : (death.expected[0] ?? '—')}
+                </div>
               </div>
               <div className={death.cause === 'time' ? '' : 'bad'}>
-                <div className="k">{death.cause === 'time' ? 'You played' : 'You played'}</div>
+                <div className="k">You played</div>
                 <div className="v">{death.played ?? '—'}</div>
               </div>
             </div>
             <div className="center faint tiny" style={{ marginTop: 8 }}>
-              {death.expected.length > 1 ? (
-                <>
-                  Any of these would have counted: {death.expected.slice(0, 6).join(', ')}
-                  {death.expected.length > 6 ? '…' : ''}
-                </>
-              ) : death.expected.length === 1 ? (
-                run.source === 'book'
-                  ? 'The only move the database has ever seen here.'
-                  : 'The only move you have prepared here — your repertoire is one move wide at this position.'
-              ) : (
-                'Nothing is prepared here.'
-              )}
+              {death.cause === 'blunder'
+                ? `Past your prep the engine allows a drop of ${(BLUNDER_LIMIT / 100).toFixed(2)} before calling it a blunder.`
+                : death.expected.length > 1
+                  ? `Any of these would have counted: ${death.expected.slice(0, 6).join(', ')}${death.expected.length > 6 ? '…' : ''}`
+                  : death.expected.length === 1
+                    ? run.source === 'book'
+                      ? 'The only move the database has ever seen here.'
+                      : 'The only move you have prepared here — your repertoire is one move wide at this position.'
+                    : 'Nothing is prepared here.'}
             </div>
           </>
         )}
@@ -659,13 +818,29 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
         {over && (
           <>
             <div className="spacer" />
-            <button className="btn accent block xl" onClick={beginPlayOn}>
+            {phase === 'survived' && (
+              <>
+                <button className="btn accent block xl" onClick={continueExtended}>
+                  <Icons.bolt size={18} />
+                  Continue in extended mode
+                </button>
+                <div className="center faint tiny" style={{ marginTop: 6 }}>
+                  The prep is done, so the engine takes over the judging. Keep going while your
+                  moves stay sound — the run continues and your score keeps counting.
+                </div>
+                <div className="spacer sm" />
+              </>
+            )}
+            <button
+              className={`btn block xl${phase === 'survived' ? '' : ' accent'}`}
+              onClick={beginPlayOn}
+            >
               <Icons.play size={18} />
               Play from here
             </button>
             <div className="center faint tiny" style={{ marginTop: 6 }}>
-              Take the position on the board on against the engine. Nothing you do there
-              counts against your record.
+              Take the position on the board on against the engine, with nothing at stake.
+              Nothing you do there counts against your record.
             </div>
 
             <div className="section">The line</div>
@@ -678,7 +853,10 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
                   <div className="faint tiny" style={{ marginTop: 2 }}>
                     {named?.specific ? `${run.sourceLabel} · ` : ''}
                     {run.reverse ? 'reversed · ' : ''}
-                    {phase === 'survived' ? 'played in full' : `${run.survived} correct`}
+                    {phase === 'survived' && past === 0
+                      ? 'played in full'
+                      : `${run.survived} correct`}
+                    {past > 0 ? ` · ${past} past prep` : ''}
                     {run.hintsUsed > 0
                       ? ` · ${run.hintsUsed} hint${run.hintsUsed === 1 ? '' : 's'}`
                       : ''}
@@ -805,6 +983,7 @@ type SettingsPatch = {
   permadeathClock?: ClockMode;
   permadeathHints?: number;
   permadeathPerLine?: boolean;
+  permadeathExtended?: boolean;
 };
 
 interface SetupProps {
@@ -971,6 +1150,12 @@ function Setup({ options, reps, record, perLine, onChange, onStart, onExit }: Se
             </>
           )}
           <Toggle
+            label="Extended mode"
+            hint="When the prep runs out, keep going while the engine calls your moves sound"
+            on={options.extended}
+            onToggle={() => onChange({ permadeathExtended: !options.extended })}
+          />
+          <Toggle
             label="Per-opening records"
             hint="Keep a separate best for each opening and side"
             on={perLine}
@@ -985,6 +1170,13 @@ function Setup({ options, reps, record, perLine, onChange, onStart, onExit }: Se
               : options.reverse
                 ? 'You play the side your repertoire answers. Staying alive means knowing what your opponent is meant to do — the run ends on any move you have not prepared for.'
                 : 'A line is drawn from your repertoire. Any move you have prepared from a position counts — the run ends the moment you leave your own prep.'}
+            {options.extended && (
+              <div style={{ marginTop: 8 }}>
+                In extended mode the run does not stop there: the engine takes over and you
+                survive as long as your moves do not drop more than{' '}
+                {(BLUNDER_LIMIT / 100).toFixed(2)}.
+              </div>
+            )}
           </div>
         </div>
 

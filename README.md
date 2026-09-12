@@ -74,6 +74,14 @@ default; the plain mode is a line from your repertoire, no clock, no help.
   and stay alive by knowing what your opponent is meant to do. A reversed run
   is judged on positions that are not your decision points, so it is kept out
   of the review schedule entirely.
+- **Extended mode** — the run does not stop when the prep does. The engine takes
+  over the judging and you survive as long as your moves stay sound, so a line
+  that ends the moment the setup is complete becomes a game you can still lose.
+  A move that drops more than 0.80 ends the run as a blunder; the threshold is
+  generous on purpose, because past the prep there is no single right move and a
+  mode that ended a run over a quarter of a pawn would be judging taste. Your
+  own moves keep counting towards the score, the header shows the live
+  evaluation, and hints are not offered — there is no prepared move to point at.
 - **Per-opening records** — a separate best for each opening and side, rather
   than one number across everything.
 
@@ -101,6 +109,15 @@ and the rest of the line in grey. **Copy the moves I played** puts the game as
 played on the clipboard — not the continuation — for pasting somewhere.
 The mistake's red and green squares are shown only on that one position, so
 stepping away does not leave stale marks behind.
+
+A line played out in full offers **Continue in extended mode** above **Play
+from here**, which is the better continuation of the two: it carries the *run*
+on rather than starting a friendly game, so the score keeps counting and a
+blunder still ends it. Logging that run again amends the entry the completed
+line already made instead of counting a second run — and reaching the end of a
+line is a fact, so carrying on past it and blundering does not unmake it. It is
+offered only where the prep ran out, not where you went wrong: there the run
+ended because of a mistake, and there is still prep to learn.
 
 **Play from here** carries the position on the board on against the engine —
 Stockfish if its worker starts, the heuristic evaluator otherwise. This is the
