@@ -1,4 +1,5 @@
 import { applySan, fenTurn, sansToMoveText, type Color } from '../chess/core';
+import { deepestName, type ReferenceIndex } from './reference';
 import { childrenOf, displayName, fenAt, leafLines, pathTo } from './repertoire';
 import { mulberry32 } from './session';
 import type { RepMove, Repertoire } from './types';
@@ -193,6 +194,32 @@ export function playedIsLegal(run: Run): boolean {
 }
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+export interface LineName {
+  name: string;
+  eco?: string;
+  /** False when the database only knew the opening in general terms. */
+  specific: boolean;
+}
+
+/**
+ * What to call the line once the run is over.
+ *
+ * The database names a position by the deepest entry on its path, so a line
+ * that transposes into the King's Indian through an unusual move order can come
+ * back as "Queen's Pawn Opening" — technically right and no use to anyone. When
+ * the match is that shallow, the repertoire's own name is the better label.
+ */
+export function lineName(
+  index: ReferenceIndex,
+  rep: Repertoire,
+  run: Run,
+  minPly = 4,
+): LineName {
+  const found = deepestName(index, fullLine(rep, run));
+  if (found && found.ply >= minPly) return { name: found.name, eco: found.eco, specific: true };
+  return { name: run.repertoireName, eco: found?.eco, specific: false };
+}
 
 /* ── record ─────────────────────────────────────────────────────────────── */
 

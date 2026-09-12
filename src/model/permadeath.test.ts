@@ -3,6 +3,8 @@ import { fenTurn, walkSan } from '../chess/core';
 import {
   continuation,
   currentFen,
+  fullLine,
+  lineName,
   EMPTY_RECORD,
   expectedMoves,
   isComplete,
@@ -16,6 +18,7 @@ import {
 } from './permadeath';
 import { addLine, createRepertoire } from './repertoire';
 import { mulberry32 } from './session';
+import { referenceIndex } from './referenceIndex';
 import { buildSeedRepertoires } from '../store/seed';
 import type { Repertoire } from './types';
 
@@ -216,6 +219,71 @@ describe('runs against the seeded repertoires', () => {
       expect(playedIsLegal(run)).toBe(true);
       expect(run.survived).toBeGreaterThanOrEqual(4);
     }
+  });
+});
+
+describe('naming the line at the end of a run', () => {
+  const reps = buildSeedRepertoires();
+  const index = referenceIndex();
+
+  function finish(seed: number) {
+    const run0 = startRun(reps, { seed })!;
+    const rep = reps.find((r) => r.id === run0.repertoireId)!;
+    let run = run0;
+    const pick = mulberry32(seed + 1);
+    let guard = 0;
+    while (!run.over && !isComplete(rep, run) && guard < 80) {
+      guard += 1;
+      if (isUsersTurn(rep, run)) run = play(rep, run, expectedMoves(rep, run)[0].san).run;
+      else run = opponentReply(rep, run, pick);
+    }
+    return { rep, run };
+  }
+
+  it('never labels a line with a name so generic it says nothing', () => {
+    const generic = /^(King's|Queen's) Pawn Opening$|^Réti Opening$|^English Opening$|^Queen's Pawn Opening$/;
+    const bad: string[] = [];
+    for (let seed = 0; seed < 40; seed += 1) {
+      const { rep, run } = finish(seed);
+      const label = lineName(index, rep, run);
+      if (generic.test(label.name)) bad.push(`${label.name} <- ${fullLine(rep, run).slice(0, 8).join(' ')}`);
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it('falls back to the repertoire when the database only knows the opening vaguely', () => {
+    const { rep, run } = finish(0);
+    // A depth no real variation reaches forces the fallback path.
+    const label = lineName(index, rep, run, 99);
+    expect(label.specific).toBe(false);
+    expect(label.name).toBe(run.repertoireName);
+  });
+
+  it('names the variation, not just the opening', () => {
+    const specific = new Set<string>();
+    let named = 0;
+    for (let seed = 0; seed < 40; seed += 1) {
+      const { rep, run } = finish(seed);
+      const label = lineName(index, rep, run);
+      specific.add(label.name);
+      if (label.specific) named += 1;
+    }
+    // Most runs should get a real variation name, not the fallback.
+    expect(named / 40).toBeGreaterThan(0.95);
+    // Distinct variations, not one blanket label per repertoire.
+    expect(specific.size).toBeGreaterThan(6);
+    expect([...specific].some((n) => /Mar del Plata|Yugoslav|Botvinnik|Sämisch|Benoni/.test(n))).toBe(true);
+  });
+
+  it('names a run that ended early the same way', () => {
+    const run0 = startRun(reps, { seed: 3 })!;
+    const rep = reps.find((r) => r.id === run0.repertoireId)!;
+    // Die on the very first decision; the line is still named in full.
+    let run = run0;
+    if (!isUsersTurn(rep, run)) run = opponentReply(rep, run, () => 0.5);
+    const dead = play(rep, run, 'Na3').ok ? null : play(rep, run, 'Na3');
+    const target = dead && !dead.ok ? dead.run : run;
+    expect(lineName(index, rep, target).name.length).toBeGreaterThan(3);
   });
 });
 

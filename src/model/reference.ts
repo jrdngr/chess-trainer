@@ -173,22 +173,46 @@ export function buildReferenceIndex(opts: BuildIndexOptions): ReferenceIndex {
   return { entries, names, totalGames: opts.totalGames, gameCount: opts.games.length };
 }
 
+/** A name, plus how deep into the line it was recognised. */
+export interface NamedLine extends OpeningName {
+  /** Plies matched. 1 is "Queen's Pawn Opening"; 8 is a real variation. */
+  ply: number;
+}
+
+/**
+ * Deepest opening name on the path to a position, with the depth it matched
+ * at. The depth matters: a line the database only recognises at ply 1 has been
+ * named "Queen's Pawn Opening", which is true and useless.
+ */
+export function deepestName(
+  index: ReferenceIndex,
+  sans: string[],
+  startFen = START_FEN,
+): NamedLine | null {
+  let fen = startFen;
+  const root = index.names.get(positionKey(fen));
+  let best: NamedLine | null = root ? { ...root, ply: 0 } : null;
+  sans.forEach(() => undefined);
+  let ply = 0;
+  for (const san of sans) {
+    const move = applySan(fen, san);
+    if (!move) break;
+    fen = move.after;
+    ply += 1;
+    const named = index.names.get(positionKey(fen));
+    if (named) best = { ...named, ply };
+  }
+  return best;
+}
+
 /** Deepest opening name on the path to a position — "Sicilian Defence: Najdorf". */
 export function openingNameForPath(
   index: ReferenceIndex,
   sans: string[],
   startFen = START_FEN,
 ): OpeningName | null {
-  let fen = startFen;
-  let best: OpeningName | null = index.names.get(positionKey(fen)) ?? null;
-  for (const san of sans) {
-    const move = applySan(fen, san);
-    if (!move) break;
-    fen = move.after;
-    const named = index.names.get(positionKey(fen));
-    if (named) best = named;
-  }
-  return best;
+  const found = deepestName(index, sans, startFen);
+  return found ? { eco: found.eco, name: found.name } : null;
 }
 
 export function lookup(index: ReferenceIndex, fen: string): ExplorerEntry | null {

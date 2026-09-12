@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../components/Board';
 import { haptic, IconButton, Icons } from '../components/ui';
 import { applySan, type LegalMove, type Square } from '../chess/core';
+import { referenceIndex } from '../model/referenceIndex';
 import {
   currentFen,
   expectedMoves,
+  lineName,
   isComplete,
   isUsersTurn,
   opponentReply,
@@ -71,6 +73,16 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
       endRun(run.survived, true);
     }
   }, [rep, run, phase, endRun]);
+
+  /**
+   * The line gets its real name once the run is over — the opening and ECO
+   * code for the whole secret line, not just the repertoire it came from.
+   * Computed only when the run ends, so nothing can leak mid-run.
+   */
+  const named = useMemo(() => {
+    if (!rep || !run || phase === 'playing') return null;
+    return lineName(referenceIndex(), rep, run);
+  }, [rep, run, phase]);
 
   const lastMove = useMemo(() => {
     if (!run || run.played.length === 0) return null;
@@ -225,12 +237,19 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
           <>
             <div className="section">The line</div>
             <div className="card">
-              <div className="row between" style={{ marginBottom: 8 }}>
-                <span className="chip">{run.repertoireName}</span>
-                <span className="faint tiny">
-                  {phase === 'survived' ? 'played in full' : `${run.survived} correct`}
+              <div className="row between" style={{ gap: 10 }}>
+                <span className="grow" style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 16, letterSpacing: '-0.01em' }}>
+                    {named?.name ?? run.repertoireName}
+                  </div>
+                  <div className="faint tiny" style={{ marginTop: 2 }}>
+                    {named?.specific ? `${run.repertoireName} · ` : ''}
+                    {phase === 'survived' ? 'played in full' : `${run.survived} correct`}
+                  </div>
                 </span>
+                {named?.eco && <span className="chip">{named.eco}</span>}
               </div>
+              <div className="divider" />
               <div className="movetext">{revealText(rep, run)}</div>
             </div>
 
