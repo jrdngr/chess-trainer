@@ -1,6 +1,10 @@
 import type { Color } from '../chess/core';
+import type { ColorChoice } from './openingRun';
+import { DEFAULT_LEVEL } from './play';
 import type { RepairKind, RepairSort } from './repair';
 import type { SessionMode } from './session';
+
+export { LEVELS, levelById, OPENING_PLIES } from './play';
 
 /**
  * What each mode remembers between visits.
@@ -100,6 +104,32 @@ export function kindDescription(kinds: RepairPrefs['kinds']): string {
 export function gamesLabel(n: number): string {
   return n === 1 ? 'Any game' : `${n}+ games`;
 }
+
+/* ── Play ───────────────────────────────────────────────────────────────── */
+
+export interface PlayPrefs {
+  color: ColorChoice;
+  /** One of LEVELS. */
+  level: string;
+  /** Write the opening into a repertoire when the game ends. */
+  save: boolean;
+  /** '' — whichever repertoire fits the colour played. */
+  repertoireId: string;
+  /** Say so the moment you leave your own prep. */
+  warnOffBook: boolean;
+  showEval: boolean;
+  takeBacks: boolean;
+}
+
+export const DEFAULT_PLAY: PlayPrefs = {
+  color: 'w',
+  level: DEFAULT_LEVEL,
+  save: true,
+  repertoireId: '',
+  warnOffBook: true,
+  showEval: false,
+  takeBacks: true,
+};
 
 /* ── Gap ────────────────────────────────────────────────────────────────── */
 

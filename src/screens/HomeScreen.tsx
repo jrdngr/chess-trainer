@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { AppBar, IconButton, Icons, Section, Sheet } from '../components/ui';
 import { measureCoverage } from '../model/gameAnalysis';
 import { findGaps } from '../model/gaps';
+import { levelById } from '../model/play';
 import { buildRepairs } from '../model/repair';
 import { GRADES, gradeLabel, type RunGrade } from '../model/openingRun';
 import { referenceIndex } from '../model/referenceIndex';
@@ -11,7 +12,7 @@ import { countDue, DAY, forecast, masteryBuckets, retention } from '../model/srs
 import { itemsFor, repertoireList, useStore } from '../store/useStore';
 import type { Repertoire } from '../model/types';
 
-export type ModeId = 'drill' | 'openingRun' | 'repair' | 'gap';
+export type ModeId = 'drill' | 'openingRun' | 'repair' | 'gap' | 'play';
 
 export interface HomeScreenProps {
   /** Launching one repertoire straight into a session, from the sheet below. */
@@ -105,9 +106,10 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
         kinds: repairPrefs.kinds,
         minGames: repairPrefs.minGames,
         lossesOnly: repairPrefs.lossesOnly,
+        mistakes: state.mistakes,
       }).length,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state.importedGames, reps, repairPrefs],
+    [state.importedGames, state.mistakes, reps, repairPrefs],
   );
   const inPrep = useMemo(() => {
     const totals = reps.map((rep) => measureCoverage(state.importedGames, rep));
@@ -135,9 +137,11 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
           <Tile
             name="Drill"
             tag={
-              readyCount > 0
-                ? { text: `${readyCount} ready`, tone: 'accent' }
-                : { text: 'clear', tone: 'good' }
+              totalItems === 0
+                ? { text: 'empty' }
+                : readyCount > 0
+                  ? { text: `${readyCount} ready`, tone: 'accent' }
+                  : { text: 'clear', tone: 'good' }
             }
             art={
               <Gauge
@@ -163,7 +167,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
           <Tile
             name="Repair"
             tag={
-              state.importedGames.length === 0
+              state.importedGames.length === 0 && state.mistakes.length === 0
                 ? { text: 'import', tone: 'accent' }
                 : repairCount > 0
                   ? { text: `${repairCount}`, tone: 'warn' }
@@ -171,10 +175,14 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
             }
             art={
               <Gauge
-                parts={[
-                  { width: inPrep * 100, color: 'var(--good)' },
-                  { width: (1 - inPrep) * 100, color: 'var(--warn)' },
-                ]}
+                parts={
+                  state.importedGames.length === 0
+                    ? []
+                    : [
+                        { width: inPrep * 100, color: 'var(--good)' },
+                        { width: (1 - inPrep) * 100, color: 'var(--warn)' },
+                      ]
+                }
               />
             }
             onClick={() => onOpenMode('repair')}
@@ -182,28 +190,60 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
           <Tile
             name="Gap"
             tag={
-              gapCount === 0
-                ? { text: 'clear', tone: 'good' }
-                : { text: `${gapCount}`, tone: 'warn' }
+              totalItems === 0
+                ? { text: 'empty' }
+                : gapCount === 0
+                  ? { text: 'clear', tone: 'good' }
+                  : { text: `${gapCount}`, tone: 'warn' }
             }
             art={
               <Gauge
-                parts={[
-                  { width: coverage * 100, color: 'var(--good)' },
-                  { width: (1 - coverage) * 100, color: 'var(--warn)' },
-                ]}
+                parts={
+                  totalItems === 0
+                    ? []
+                    : [
+                        { width: coverage * 100, color: 'var(--good)' },
+                        { width: (1 - coverage) * 100, color: 'var(--warn)' },
+                      ]
+                }
               />
             }
             onClick={() => onOpenMode('gap')}
           />
+          {/* Play is where a repertoire comes from, so it spans the row rather
+              than sitting alone in a corner of it. */}
+          <Tile
+            wide
+            name="Play"
+            tag={
+              totalItems === 0
+                ? { text: 'start here', tone: 'accent' }
+                : { text: levelById(state.settings.play.level).name }
+            }
+            art={
+              <div className="faint tiny">
+                {totalItems === 0
+                  ? 'A game against the engine. Keep the opening.'
+                  : 'Play a game, keep what you played.'}
+              </div>
+            }
+            onClick={() => onOpenMode('play')}
+          />
         </div>
 
         <Section title="Repertoires" />
-        <div className="list">
-          {perRep.map((entry) => (
-            <RepertoireRow key={entry.rep.id} entry={entry} onOpen={() => setPick(entry)} />
-          ))}
-        </div>
+        {perRep.length === 0 ? (
+          <div className="card small muted">
+            Nothing prepared yet. Play a game and save the opening, or survive a line in Opening
+            Run — both write into a repertoire, and everything else here works from it.
+          </div>
+        ) : (
+          <div className="list">
+            {perRep.map((entry) => (
+              <RepertoireRow key={entry.rep.id} entry={entry} onOpen={() => setPick(entry)} />
+            ))}
+          </div>
+        )}
 
         <Section title="This week" aside={`${weekTotal} reviews`} />
         <div className="card">
@@ -290,15 +330,18 @@ function Tile({
   name,
   tag,
   art,
+  wide,
   onClick,
 }: {
   name: string;
   tag: Tag;
   art: ReactNode;
+  /** Spans both columns, for a mode that is an action rather than a queue. */
+  wide?: boolean;
   onClick: () => void;
 }) {
   return (
-    <button className="mode-tile" onClick={onClick}>
+    <button className={`mode-tile${wide ? ' wide' : ''}`} onClick={onClick}>
       <div className="head">
         <span className="name">{name}</span>
         <span className={`tag${tag.tone ? ` ${tag.tone}` : ''}`}>{tag.text}</span>

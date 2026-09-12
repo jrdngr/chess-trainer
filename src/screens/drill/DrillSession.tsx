@@ -78,6 +78,7 @@ export function DrillSession({ items, mode, title, prefs, onExit }: DrillSession
   const repertoires = useStore((s) => s.repertoires);
   const grade = useStore((s) => s.grade);
   const ensureCard = useStore((s) => s.ensureCard);
+  const logMistake = useStore((s) => s.logMistake);
 
   const maxNew = options.newPerSession;
   const weakFirst = options.weakFirst;
@@ -174,6 +175,17 @@ export function DrillSession({ items, mode, title, prefs, onExit }: DrillSession
       // A wrong answer is always a lapse; grade it immediately so the user can
       // spend their attention on understanding rather than on a button.
       grade(item, 'again', move.san, false);
+      // And it is a real mistake at a real position, so Repair should be able
+      // to come back to it later.
+      logMistake({
+        source: 'drill',
+        repertoireId: item.repertoireId,
+        key: item.key,
+        fen: item.fen,
+        path: item.pathSans,
+        played: move.san,
+        expected: item.expected.find((e) => e.preferred)?.san ?? item.expected[0]?.san ?? '',
+      });
     }
   };
 

@@ -702,3 +702,7 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .done-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
 
 .strip.wrapped { flex-wrap: wrap; overflow: visible; min-height: 0; }
+
+/* A mode that is an action rather than a queue takes the whole row, and does
+   not have to be square to say so. */
+.mode-tile.wide { grid-column: 1 / -1; aspect-ratio: auto; min-height: 92px; }

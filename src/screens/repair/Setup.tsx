@@ -17,6 +17,14 @@ const KINDS: { value: RepairPrefs['kinds']; label: string }[] = [
   { value: 'unprepared', label: 'Unprepared' },
 ];
 
+/** Where the evidence comes from, said in the bar. */
+function subtitle(games: number, mistakes: number): string {
+  const parts: string[] = [];
+  if (games) parts.push(`${games} games`);
+  if (mistakes) parts.push(`${mistakes} ${mistakes === 1 ? 'slip' : 'slips'} in the app`);
+  return parts.join(' · ');
+}
+
 const SORTS: { value: RepairPrefs['sort']; label: string }[] = [
   { value: 'common', label: 'Most often' },
   { value: 'costly', label: 'Most costly' },
@@ -54,8 +62,10 @@ export function Setup({
         minGames: prefs.minGames,
         lossesOnly: prefs.lossesOnly,
         sort: prefs.sort,
+        mistakes: state.mistakes,
       }),
-    [games, reps, prefs.repertoireId, prefs.kinds, prefs.minGames, prefs.lossesOnly, prefs.sort],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [games, state.mistakes, reps, prefs],
   );
 
   /**
@@ -87,7 +97,7 @@ export function Setup({
     );
   }, [games, reps, prefs.repertoireId]);
 
-  if (games.length === 0) {
+  if (games.length === 0 && state.mistakes.length === 0) {
     return (
       <>
         <AppBar title="Repair" subtitle="Fix what your own games got wrong." onClose={onExit} />
@@ -117,7 +127,7 @@ export function Setup({
     <>
       <AppBar
         title="Repair"
-        subtitle={`${games.length} games imported`}
+        subtitle={subtitle(games.length, state.mistakes.length)}
         onClose={onExit}
         actions={
           <button className="icon-btn plain" aria-label="Import more games" onClick={onImport}>

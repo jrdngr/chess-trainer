@@ -10,6 +10,7 @@ import { OpeningRunScreen } from './screens/openingRun/OpeningRunScreen';
 import { RepairScreen } from './screens/repair/RepairScreen';
 import { GapScreen } from './screens/gap/GapScreen';
 import { DrillScreen } from './screens/drill/DrillScreen';
+import { PlayScreen } from './screens/play/PlayScreen';
 import { DrillSession } from './screens/drill/DrillSession';
 import type { SessionMode, TrainingItem } from './model/session';
 import { countDue } from './model/srs';
@@ -63,6 +64,8 @@ export default function App() {
     />
   ) : mode === 'gap' ? (
     <GapScreen onExit={() => setMode(null)} />
+  ) : mode === 'play' ? (
+    <PlayScreen onExit={() => setMode(null)} />
   ) : session ? (
     <DrillSession
       items={session.items}

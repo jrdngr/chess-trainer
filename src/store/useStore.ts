@@ -22,6 +22,7 @@ import type {
 import {
   DEFAULT_DRILL,
   DEFAULT_GAP,
+  DEFAULT_PLAY,
   DEFAULT_REPAIR,
   EMPTY_REPAIR_RECORD,
   normalizeRepairRecord,
@@ -37,9 +38,9 @@ import {
   type OpeningRunRecord,
   type RunOutcome,
 } from '../model/openingRun';
+import { addMistake, type Mistake } from '../model/mistakes';
 import { cloudAvailable, readCloud, writeCloud, type CloudStatus, type WriteResult } from './cloud';
 import { clearState, debounce, loadState, probeStorage, saveState, type StorageSupport } from './db';
-import { buildSeedRepertoires } from './seed';
 
 export const DEFAULT_SETTINGS: Settings = {
   showCoordinates: true,
@@ -53,6 +54,7 @@ export const DEFAULT_SETTINGS: Settings = {
   openingRun: { ...DEFAULT_PREFS },
   drill: { ...DEFAULT_DRILL },
   repair: { ...DEFAULT_REPAIR },
+  play: { ...DEFAULT_PLAY },
   gap: { ...DEFAULT_GAP },
 };
 
@@ -74,6 +76,7 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
     openingRun: { ...DEFAULT_PREFS, ...known.openingRun },
     drill: { ...DEFAULT_DRILL, ...known.drill },
     repair: { ...DEFAULT_REPAIR, ...known.repair },
+    play: { ...DEFAULT_PLAY, ...known.play },
     gap: { ...DEFAULT_GAP, ...known.gap },
   };
 }
@@ -87,8 +90,9 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
  * 4: permadeath became openingRun, settings and records included.
  * 5: each mode keeps its own options; Punish keeps a record.
  * 6: Punish became Repair, which is built from imported games.
+ * 7: no seeded repertoires — everyone starts empty and builds their own.
  */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 interface PersistedState {
   version: number;
@@ -102,6 +106,8 @@ interface PersistedState {
   importedGames: ImportedGame[];
   openingRun: OpeningRunRecord;
   repair: RepairRecord;
+  /** Mistakes made inside the app, for Repair to ask about later. */
+  mistakes: Mistake[];
 }
 
 interface StoreState extends PersistedState {
@@ -127,7 +133,7 @@ interface StoreState extends PersistedState {
   setSettings: (patch: Partial<Settings>) => void;
   setOpeningRunPrefs: (patch: Partial<OpeningRunPrefs>) => void;
   /** Patch one mode's own options, without touching the rest of settings. */
-  setModePrefs: <K extends 'drill' | 'repair' | 'gap'>(
+  setModePrefs: <K extends 'drill' | 'repair' | 'gap' | 'play'>(
     mode: K,
     patch: Partial<Settings[K]>,
   ) => void;
@@ -137,6 +143,10 @@ interface StoreState extends PersistedState {
   endOpeningRun: (outcome: RunOutcome) => void;
   /** Log one Repair item: answered correctly, or given a move. */
   endRepair: (outcome: { relearned?: boolean; added?: boolean }) => void;
+  /** Remember a move the user got wrong somewhere in the app. */
+  logMistake: (mistake: Omit<Mistake, 'id' | 'at'>) => void;
+  /** Forget one, once it has been repaired. */
+  clearMistake: (id: string) => void;
   /**
    * The move that ended a run. Only the miss touches the schedule: correct
    * moves in a run are primed by the ones before them, so crediting them would
@@ -157,19 +167,28 @@ interface StoreState extends PersistedState {
   ) => void;
 }
 
+/**
+ * A new install has no repertoires at all.
+ *
+ * Seeded lines made the first screen look busy, but they were somebody else's
+ * openings: Drill asked about a Queen's Gambit nobody had chosen, and Repair
+ * compared real games against prep the player had never agreed to. You now
+ * build the repertoire by playing — Play saves the openings from your games,
+ * Opening Run adds the lines you survive, and Gap fills what they leave out.
+ */
 function emptyPersisted(): PersistedState {
-  const reps = buildSeedRepertoires();
   return {
     version: SCHEMA_VERSION,
     updatedAt: Date.now(),
-    repertoires: Object.fromEntries(reps.map((r) => [r.id, r])),
-    repertoireOrder: reps.map((r) => r.id),
+    repertoires: {},
+    repertoireOrder: [],
     cards: {},
     log: [],
     settings: { ...DEFAULT_SETTINGS },
     importedGames: [],
     openingRun: { ...EMPTY_RECORD },
     repair: { ...EMPTY_REPAIR_RECORD },
+    mistakes: [],
   };
 }
 
@@ -185,6 +204,7 @@ function persistedFrom(state: StoreState): PersistedState {
     importedGames: state.importedGames,
     openingRun: state.openingRun,
     repair: state.repair,
+    mistakes: state.mistakes,
   };
 }
 
@@ -294,6 +314,7 @@ export const useStore = create<StoreState>((set, get) => {
           ...chosen,
           openingRun: normalizeRecord(chosen.openingRun),
           repair: normalizeRepairRecord(chosen.repair),
+          mistakes: chosen.mistakes ?? [],
           updatedAt: Math.max(localAt, remoteAt),
           settings: mergeSettings(chosen.settings),
           storage,
@@ -337,6 +358,7 @@ export const useStore = create<StoreState>((set, get) => {
           ...remote.state,
           openingRun: normalizeRecord(remote.state.openingRun),
           repair: normalizeRepairRecord(remote.state.repair),
+          mistakes: remote.state.mistakes ?? [],
           importedGames: local.importedGames,
           settings: mergeSettings(remote.state.settings),
           updatedAt: remote.updatedAt,
@@ -437,12 +459,30 @@ export const useStore = create<StoreState>((set, get) => {
       commit({ repair: recordRepair(get().repair, outcome) });
     },
 
+    logMistake(mistake) {
+      commit({ mistakes: addMistake(get().mistakes, mistake) });
+    },
+
+    clearMistake(id) {
+      commit({ mistakes: get().mistakes.filter((m) => m.id !== id) });
+    },
+
     missedInOpeningRun(repertoireId, fen, played, expected) {
       const key = positionKey(fen);
       const id = cardId(repertoireId, key);
       const state = get();
       const card = state.cards[id] ?? createCard(id, repertoireId, key, fen);
-      commit(reviewed(state, card, 'again', { correct: false, playedSan: played, expectedSan: expected }));
+      commit({
+        ...reviewed(state, card, 'again', { correct: false, playedSan: played, expectedSan: expected }),
+        mistakes: addMistake(state.mistakes, {
+          source: 'openingRun',
+          repertoireId,
+          key,
+          fen,
+          played,
+          expected,
+        }),
+      });
     },
 
     repairedPosition(repertoireId, fen, played, expected, correct) {
@@ -450,13 +490,16 @@ export const useStore = create<StoreState>((set, get) => {
       const id = cardId(repertoireId, key);
       const state = get();
       const card = state.cards[id] ?? createCard(id, repertoireId, key, fen);
-      commit(
-        reviewed(state, card, correct ? 'good' : 'again', {
+      commit({
+        ...reviewed(state, card, correct ? 'good' : 'again', {
           correct,
           playedSan: played,
           expectedSan: expected,
         }),
-      );
+        // Getting it right retires the logged mistake; getting it wrong leaves
+        // it standing so Repair offers it again.
+        mistakes: correct ? state.mistakes.filter((m) => m.key !== key) : state.mistakes,
+      });
     },
   };
 });

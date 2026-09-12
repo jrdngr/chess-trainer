@@ -1,5 +1,6 @@
-import { positionKey, type Color } from '../chess/core';
+import { fenTurn, positionKey, sansToMoveText, type Color } from '../chess/core';
 import { analyseAgainstRepertoire, buildPlayerTree, type Finding } from './gameAnalysis';
+import { recentMistakes, type Mistake, type MistakeSource } from './mistakes';
 import type { ImportedGame, Repertoire } from './types';
 
 /**
@@ -21,10 +22,14 @@ import type { ImportedGame, Repertoire } from './types';
 
 export type RepairKind = 'offprep' | 'unprepared';
 
+/** Where the evidence came from. */
+export type RepairSource = 'games' | MistakeSource;
+
 export interface RepairItem {
   /** Stable across rebuilds, so a fixed item can be skipped. */
   id: string;
   kind: RepairKind;
+  source: RepairSource;
   repertoireId: string;
   /** The side you were playing — always this repertoire's colour. */
   color: Color;
@@ -48,6 +53,8 @@ export interface RepairItem {
 export type RepairSort = 'common' | 'costly';
 
 export interface RepairOptions {
+  /** Mistakes made in the app, merged in alongside the imported games. */
+  mistakes?: Mistake[];
   /** '' — every repertoire. */
   repertoireId?: string;
   kinds?: 'both' | RepairKind;
@@ -114,6 +121,7 @@ export function buildRepairs(
       const item: RepairItem = {
         id: `${rep.id}#${finding.key}#${kind}`,
         kind,
+        source: 'games',
         repertoireId: rep.id,
         color: rep.color,
         key: finding.key,
@@ -132,6 +140,15 @@ export function buildRepairs(
       item.weight = finding.games * (kind === 'offprep' ? 1.5 : 1) * (1 + costOf(item));
       out.push(item);
     }
+  }
+
+  for (const item of fromMistakes(opts.mistakes ?? [], reps, opts)) {
+    // A position already found in the archive keeps the archive's figures —
+    // those cover every game, not just the one that logged the mistake.
+    if (out.some((existing) => existing.key === item.key && existing.repertoireId === item.repertoireId)) {
+      continue;
+    }
+    out.push(item);
   }
 
   const sorted = out.sort((a, b) =>
@@ -203,4 +220,52 @@ export function openingMismatch(
     };
   }
   return null;
+}
+
+/**
+ * Repairs from mistakes made inside the app.
+ *
+ * A logged mistake is one position, seen once, with a known right answer, so it
+ * is always an `offprep` item. It is weighted as if it had happened in a couple
+ * of games: recent enough to matter, not so heavy that one slip in Drill
+ * outranks a line you have lost with four times.
+ */
+function fromMistakes(
+  log: Mistake[],
+  reps: Repertoire[],
+  opts: RepairOptions,
+): RepairItem[] {
+  if (!log.length) return [];
+  if (opts.kinds && opts.kinds !== 'both' && opts.kinds !== 'offprep') return [];
+  // A mistake carries no result, so it cannot satisfy a losses-only filter.
+  if (opts.lossesOnly) return [];
+
+  const byId = new Map(reps.map((rep) => [rep.id, rep]));
+  const out: RepairItem[] = [];
+
+  for (const mistake of recentMistakes(log, opts.repertoireId || undefined)) {
+    const rep = byId.get(mistake.repertoireId);
+    if (!rep) continue;
+    if (!mistake.expected) continue;
+    // Only ask about positions it is still this player's turn in.
+    if (fenTurn(mistake.fen) !== rep.color) continue;
+    const path = mistake.path ?? [];
+    out.push({
+      id: `${rep.id}#${mistake.key}#mistake`,
+      kind: 'offprep',
+      source: mistake.source,
+      repertoireId: rep.id,
+      color: rep.color,
+      key: mistake.key,
+      fen: mistake.fen,
+      path,
+      lineText: path.length ? sansToMoveText(path) : 'From a position you reached',
+      games: 1,
+      results: { wins: 0, draws: 0, losses: 0 },
+      played: [{ san: mistake.played, count: 1 }],
+      expected: [mistake.expected],
+      weight: 2.5,
+    });
+  }
+  return out;
 }

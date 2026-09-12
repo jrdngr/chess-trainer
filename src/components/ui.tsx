@@ -310,16 +310,18 @@ export interface StripItem {
  */
 export function Strip({
   items,
-  cursor,
-  max,
+  cursor = 0,
+  max = 0,
   onSeek,
   hint,
 }: {
   items: StripItem[];
-  cursor: number;
+  cursor?: number;
   /** Highest cursor position the forward arrow can reach. */
-  max: number;
-  onSeek: (n: number) => void;
+  max?: number;
+  /** Omit to render the moves without navigation — a game in progress has
+      nowhere to scrub to. */
+  onSeek?: (n: number) => void;
   hint?: string;
 }) {
   const strip = useRef<HTMLDivElement>(null);
@@ -339,28 +341,34 @@ export function Strip({
 
   return (
     <div className="strip-wrap">
-      <IconButton label="Start" onClick={() => onSeek(0)} disabled={cursor === 0}>
-        <Icons.first size={18} />
-      </IconButton>
-      <IconButton label="Back" onClick={() => onSeek(cursor - 1)} disabled={cursor === 0}>
-        <Icons.prev size={18} />
-      </IconButton>
+      {onSeek && (
+        <>
+          <IconButton label="Start" onClick={() => onSeek(0)} disabled={cursor === 0}>
+            <Icons.first size={18} />
+          </IconButton>
+          <IconButton label="Back" onClick={() => onSeek(cursor - 1)} disabled={cursor === 0}>
+            <Icons.prev size={18} />
+          </IconButton>
+        </>
+      )}
       <div className="strip" ref={strip}>
         {items.length === 0 && hint && <span className="hint">{hint}</span>}
         {items.map((item, i) => (
           <button
             key={i}
             className={`mv${item.current ? ' current' : ''}${item.tone ? ` ${item.tone}` : ''}`}
-            onClick={() => item.seek !== undefined && onSeek(item.seek)}
+            onClick={() => item.seek !== undefined && onSeek?.(item.seek)}
           >
             {item.label && <span className="n">{item.label}</span>}
             {item.san}
           </button>
         ))}
       </div>
-      <IconButton label="Forward" onClick={() => onSeek(cursor + 1)} disabled={cursor >= max}>
-        <Icons.next size={18} />
-      </IconButton>
+      {onSeek && (
+        <IconButton label="Forward" onClick={() => onSeek(cursor + 1)} disabled={cursor >= max}>
+          <Icons.next size={18} />
+        </IconButton>
+      )}
     </div>
   );
 }
