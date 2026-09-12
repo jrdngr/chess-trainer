@@ -90,7 +90,7 @@ export default function App() {
 
           <nav className="nav">
             <NavButton
-              label="Train"
+              label="Home"
               active={tab === 'train'}
               badge={dueCount}
               onClick={() => setTab('train')}

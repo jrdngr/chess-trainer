@@ -97,7 +97,7 @@ export function Setup({
 
   return (
     <>
-      <AppBar title="Permadeath" subtitle="One secret line. One mistake." onClose={onExit} />
+      <AppBar title="Opening Run" subtitle="One secret line. One mistake." onClose={onExit} />
 
       <div className="screen no-nav">
         <button

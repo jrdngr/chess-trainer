@@ -19,7 +19,7 @@ npm run dev          # http://localhost:5173, also served on your LAN IP
 full-screen, chrome-free app.
 
 ```bash
-npm test             # 248 tests: chess rules, tree, SRS, PGN, analysis, permadeath, seed data
+npm test             # 256 tests: chess rules, tree, SRS, PGN, analysis, opening runs, seed data
 npm run typecheck
 npm run build        # production build into dist/
 npm run artifact     # repackage dist/ for publishing as a Claude Artifact
@@ -27,7 +27,7 @@ npm run artifact     # repackage dist/ for publishing as a Claude Artifact
 
 ## What is in here
 
-### Train
+### Drill
 The main loop. A position appears with the side to move, you play a move on
 the board, and it is checked against your repertoire.
 
@@ -73,7 +73,11 @@ and 10 minutes, ease from 1.3 up, halved interval after a lapse, no interval
 fuzz. `review()` is pure and deterministic, so the whole algorithm can be
 swapped without touching the UI.
 
-### Permadeath
+### Opening Run
+*Called `permadeath` throughout the code: the mode was renamed after the model,
+the store keys and the saved records were written, and renaming those would
+throw away everyone's saved progress for a word.*
+
 One line, drawn in secret, played until your first mistake. Nothing on screen
 names it while you play — no opening name, no move list, no explore. Dying is
 what buys you the reveal, which names the variation, gives its ECO code and
@@ -340,7 +344,7 @@ src/
                the clock and engine-referee hooks
 ```
 
-Train and Permadeath sit side by side on the Train screen as two equal modes,
+Drill and Opening Run sit side by side on the home screen as two equal modes,
 each with its own hero and its own start button.
 
 Screens are built from a small set of shared pieces in `components/ui.tsx` —

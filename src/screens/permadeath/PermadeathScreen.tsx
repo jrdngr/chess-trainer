@@ -293,7 +293,7 @@ export function PermadeathScreen({ onExit }: { onExit: () => void }) {
   return (
     <>
       <AppBar
-        title="Permadeath"
+        title="Opening Run"
         onClose={onExit}
         actions={
           <div className="row gap-6">

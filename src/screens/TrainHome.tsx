@@ -77,7 +77,7 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
     <>
       <AppBar
         large
-        title="Train"
+        title="Home"
         actions={
           <IconButton label="Settings" onClick={onOpenSettings}>
             <Icons.gear size={20} />
@@ -88,13 +88,14 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
       <div className="screen">
         <StorageWarning />
 
+        <Section title="Drill" />
         <div className="hero">
           <div className="big">{readyCount}</div>
           <div className="lbl">
             {readyCount === 0
               ? totalItems > 0
                 ? `All clear · next ${nextDueText(allCards, now)}`
-                : 'Nothing to train yet'
+                : 'Nothing to drill yet'
               : readyCount === 1
                 ? 'position ready'
                 : 'positions ready'}
@@ -114,7 +115,7 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
           </button>
         </div>
 
-        <Section title="Permadeath" />
+        <Section title="Opening Run" />
         <div className="hero">
           <div className="big">{permadeath.runs === 0 ? '\u2014' : permadeath.best}</div>
           <div className="lbl">
@@ -137,7 +138,7 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
           )}
           {strongest && (
             <div className="faint tiny" style={{ marginTop: 12 }}>
-              Deepest in the {strongest.label} \u2014 {strongest.best}{' '}
+              Deepest in the {strongest.label} — {strongest.best}{' '}
               {strongest.best === 1 ? 'move' : 'moves'}
             </div>
           )}

@@ -165,7 +165,7 @@ export function Reveal({
   return (
     <>
       <AppBar
-        title="Permadeath"
+        title="Opening Run"
         subtitle={survived ? 'Survived' : 'Run over'}
         onClose={onExit}
         actions={<span className="chip num wide">{run.survived}</span>}
