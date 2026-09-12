@@ -266,9 +266,7 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
         </IconButton>
         <div className="appbar-title">
           <div className="line">Permadeath</div>
-          <div className="sub">
-            {phase === 'survived' ? 'Survived' : phase === 'dead' ? 'Run over' : 'Secret line'}
-          </div>
+          {over && <div className="sub">{phase === 'survived' ? 'Survived' : 'Run over'}</div>}
         </div>
         {!over && shown !== null && (
           <span
