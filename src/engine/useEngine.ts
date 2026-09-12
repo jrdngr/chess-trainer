@@ -77,7 +77,8 @@ export function useEngine(fen: string | null, opts: UseEngineOptions) {
     return snapshot.lines.map((line) => {
       const sans: string[] = [];
       let cursor = snapshot.fen!;
-      for (const uci of line.pv.slice(0, 10)) {
+      // Long enough for a caller to show several moves a side and slice it down.
+      for (const uci of line.pv.slice(0, 24)) {
         const move = applyUci(cursor, uci);
         if (!move) break;
         sans.push(move.san);

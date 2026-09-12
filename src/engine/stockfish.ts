@@ -10,6 +10,20 @@ import type { Engine, EngineLimits, EngineLine, EngineSnapshot } from './types';
  */
 const ENGINE_URL = `${import.meta.env.BASE_URL}engine/stockfish.js`;
 
+const UCI_MOVE = /^[a-h][1-8][a-h][1-8][qrbn]?$/;
+
+/**
+ * The fuller of two variations for the same line.
+ *
+ * Only when they start with the same move: once the engine changes its mind
+ * about what to play, the variation it printed for the old move describes a
+ * position that is no longer on offer, however long it is.
+ */
+function fuller(previous: string[], next: string[]): string[] {
+  if (previous[0] !== next[0]) return next;
+  return previous.length > next.length ? previous : next;
+}
+
 interface Pending {
   fen: string;
   onUpdate: (snap: EngineSnapshot) => void;
@@ -40,6 +54,10 @@ export function createStockfishEngine(): Engine {
   const handleLine = (text: string) => {
     if (text.startsWith('info')) {
       if (!text.includes(' pv ')) return;
+      // Aspiration-window reports carry a stub principal variation and a score
+      // that is only a bound. Taking one as the answer is how a deep search
+      // ends up claiming it found two moves.
+      if (/\b(lowerbound|upperbound)\b/.test(text)) return;
       const mpMatch = /multipv (\d+)/.exec(text);
       const dMatch = /depth (\d+)/.exec(text);
       const nMatch = /nodes (\d+)/.exec(text);
@@ -51,6 +69,23 @@ export function createStockfishEngine(): Engine {
       const d = dMatch ? Number(dMatch[1]) : 0;
       if (dMatch) depth = Math.max(depth, d);
       if (nMatch) nodes = Number(nMatch[1]);
+      // This build prints its own fields after the variation ("… bmc 0.14"),
+      // so keep only what actually looks like a move.
+      const pv = pvMatch[1].trim().split(/\s+/).filter((token) => UCI_MOVE.test(token));
+      if (!pv.length) return;
+
+      const seen = lines.get(multipv);
+      if (seen && seen.depth > d) return;
+
+      // The score always comes from the deepest line. The variation does not
+      // always: a line is cut wherever the search met a hash hit, so the last
+      // thing printed at the final depth can be two moves long while the
+      // iteration before it ran fifteen. Keeping the fullest one seen — and
+      // only letting a stub replace it when there is nothing better — is the
+      // difference between showing a refutation and showing its first move.
+      const stub = pv.length < 4;
+      const keep = !seen ? pv : d > seen.depth && !stub ? pv : fuller(seen.pv, pv);
+
       // Stockfish reports from the side to move; normalise to White's view.
       const whiteToMove = current?.fen.split(' ')[1] !== 'b';
       const sign = whiteToMove ? 1 : -1;
@@ -59,7 +94,7 @@ export function createStockfishEngine(): Engine {
         depth: d,
         cp: cpMatch ? sign * Number(cpMatch[1]) : null,
         mate: mateMatch ? sign * Number(mateMatch[1]) : null,
-        pv: pvMatch[1].trim().split(/\s+/),
+        pv: keep,
       });
       emit(true);
     } else if (text.startsWith('bestmove')) {

@@ -558,9 +558,12 @@ function WhySheet({
     );
   }, [open, probe, snapshot, sanLines, played.after]);
 
-  /** Your move, then how the engine says it gets punished. */
+  /**
+   * Your move, then how the engine says it gets punished — five moves a side,
+   * which is enough to see an idea through rather than just the first hit.
+   */
   const line = useMemo(
-    () => (found.played ? [played.san, ...found.played.sans.slice(0, 8)] : [played.san]),
+    () => (found.played ? [played.san, ...found.played.sans.slice(0, 9)] : [played.san]),
     [found.played, played.san],
   );
   const fens = useMemo(() => walkSan(line, fen).fens, [line, fen]);
