@@ -83,6 +83,15 @@ forward to see how it was meant to continue, or back to see how you got there.
 The mistake's red and green squares are shown only on that one position, so
 stepping away does not leave stale marks behind.
 
+**Play from here** carries the position on the board on against the engine —
+Stockfish if its worker starts, the heuristic evaluator otherwise. This is the
+answer to a line that stops just as it gets interesting: repertoire prep ends
+where prep ends, and the honest continuation is a game, not more prep. You keep
+your own colour, the engine answers with a short fixed think, moves can be taken
+back a pair at a time, and nothing that happens there touches your record or
+your schedule. The engine runs here whether or not evaluations are switched on
+elsewhere — playing on *is* the engine.
+
 Only the move that ends a run touches the schedule, graded `again`. The correct
 moves before it are primed by the ones before them, so crediting them would
 inflate intervals on weaker evidence than an isolated review gives.

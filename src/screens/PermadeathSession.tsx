@@ -1,7 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../components/Board';
 import { haptic, IconButton, Icons, MoveStrip } from '../components/ui';
-import { applySan, walkSan, type LegalMove, type Square } from '../chess/core';
+import {
+  applySan,
+  applyUci,
+  fenTurn,
+  positionStatus,
+  sansToMoveText,
+  walkSan,
+  type LegalMove,
+  type Square,
+} from '../chess/core';
+import { formatScore } from '../engine/types';
+import { useEngine } from '../engine/useEngine';
 import { referenceIndex } from '../model/referenceIndex';
 import {
   beginRun,
@@ -43,7 +54,15 @@ export interface PermadeathSessionProps {
   onExit: () => void;
 }
 
-type Phase = 'setup' | 'playing' | 'dead' | 'survived';
+type Phase = 'setup' | 'playing' | 'dead' | 'survived' | 'playon';
+
+/** A game carried on past the end of a line, against the engine. */
+interface PlayOn {
+  /** The position the continuation started from. */
+  from: string;
+  fen: string;
+  sans: string[];
+}
 
 /**
  * One secret line, played until the first mistake.
@@ -83,6 +102,7 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
   const [hintSquare, setHintSquare] = useState<Square | null>(null);
   /** Where the post-mortem board is looking. Meaningless while the run is live. */
   const [cursor, setCursor] = useState(0);
+  const [playOn, setPlayOn] = useState<PlayOn | null>(null);
   const picker = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
   const settled = useRef(false);
 
@@ -90,6 +110,7 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
   const run = game?.run ?? null;
   const myTurn = run ? isUsersTurn(run) : false;
   const over = phase === 'dead' || phase === 'survived';
+  const playing = phase === 'playon';
 
   /* ── clock ─────────────────────────────────────────────────────────────
    * Only your own thinking is charged, so the opponent's beat is free. A
@@ -159,6 +180,32 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
       finish(run, true);
     }
   }, [source, run, phase]);
+
+  /* ── playing on ────────────────────────────────────────────────────────
+   * The engine is the whole point of this mode, so it runs whether or not
+   * evaluations are switched on elsewhere. A short fixed think keeps replies
+   * quick on the asm.js build; the heuristic engine covers the case where no
+   * worker can start at all.
+   */
+  const { snapshot } = useEngine(playing ? (playOn?.fen ?? null) : null, {
+    enabled: playing,
+    movetime: 700,
+    multiPv: 1,
+    debounceMs: 120,
+  });
+  const engineTurn = !!playOn && !!run && fenTurn(playOn.fen) !== run.color;
+  const finished = playOn ? positionStatus(playOn.fen) : null;
+
+  useEffect(() => {
+    if (!playing || !playOn || !engineTurn || finished?.gameOver) return;
+    // A stopped search reports back under its old position, so check the fen.
+    if (snapshot.fen !== playOn.fen || snapshot.thinking) return;
+    const best = snapshot.lines[0]?.pv[0];
+    if (!best) return;
+    const move = applyUci(playOn.fen, best);
+    if (!move) return;
+    setPlayOn({ ...playOn, fen: move.after, sans: [...playOn.sans, move.san] });
+  }, [playing, playOn, engineTurn, finished?.gameOver, snapshot]);
 
   /** A hint belongs to one position only. */
   useEffect(() => {
@@ -281,10 +328,133 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
     setGame({ source, run: taken.run });
   };
 
+  /** Carry the game on from whatever the post-mortem board is showing. */
+  const beginPlayOn = () => {
+    setPlayOn({ from: shownFen, fen: shownFen, sans: [] });
+    setPhase('playon');
+  };
+
+  /** Back to the line, leaving the cursor where it was. */
+  const endPlayOn = () => {
+    setPlayOn(null);
+    setPhase(death ? 'dead' : 'survived');
+  };
+
+  /**
+   * Undo your move and the engine's reply together.
+   *
+   * Only offered when it is your turn and you have actually moved, so the last
+   * two plies are always the engine's reply and the move of yours that drew it.
+   */
+  const takeBack = () => {
+    if (!playOn) return;
+    const keep = playOn.sans.slice(0, -2);
+    setPlayOn({ ...playOn, fen: walkSan(keep, playOn.from).fens[keep.length], sans: keep });
+  };
+
+  const onPlayOnMove = (move: LegalMove) => {
+    if (!playOn || engineTurn || finished?.gameOver) return;
+    if (settings.hapticFeedback) haptic(10);
+    setPlayOn({ ...playOn, fen: move.after, sans: [...playOn.sans, move.san] });
+  };
+
   const seek = (n: number) => {
     if (!review) return;
     setCursor(Math.max(0, Math.min(review.sans.length, n)));
   };
+
+  if (playing && playOn) {
+    const fens = walkSan(playOn.sans, playOn.from).fens;
+    const yourMoves = playOn.sans.filter((_, i) => fenTurn(fens[i]) === run.color).length;
+    const previous = fens[playOn.sans.length - 1];
+    const played = playOn.sans.length ? applySan(previous, playOn.sans[playOn.sans.length - 1]) : null;
+    const best = snapshot.fen === playOn.fen ? snapshot.lines[0] : undefined;
+    const result = !finished?.gameOver
+      ? null
+      : finished.checkmate
+        ? fenTurn(playOn.fen) === run.color
+          ? 'Checkmate — you lost'
+          : 'Checkmate — you won'
+        : finished.stalemate
+          ? 'Stalemate'
+          : 'Drawn';
+
+    return (
+      <div className="app">
+        <div className="appbar compact">
+          <IconButton label="Back to the line" onClick={endPlayOn}>
+            <Icons.back size={20} />
+          </IconButton>
+          <div className="appbar-title">
+            <div className="line">Playing on</div>
+            <div className="sub">{run.sourceLabel}</div>
+          </div>
+          <span className="chip num" style={{ minWidth: 52, justifyContent: 'center' }}>
+            {best ? formatScore(best) : '—'}
+          </span>
+        </div>
+
+        <div className="screen no-nav">
+          <Board
+            fen={playOn.fen}
+            orientation={run.color}
+            interactive={!engineTurn && !finished?.gameOver}
+            movableFor={run.color}
+            onMove={onPlayOnMove}
+            lastMove={played ? { from: played.from, to: played.to } : null}
+            showCoordinates={settings.showCoordinates}
+            theme={settings.boardTheme}
+            dimmed={!!finished?.gameOver}
+          />
+
+          <div className="spacer" />
+
+          {result ? (
+            <div className={`verdict ${finished?.checkmate && fenTurn(playOn.fen) !== run.color ? 'ok' : 'no'}`}>
+              <span className="ico">
+                {finished?.checkmate && fenTurn(playOn.fen) !== run.color ? (
+                  <Icons.check size={18} />
+                ) : (
+                  <Icons.cross size={18} />
+                )}
+              </span>
+              {result}
+            </div>
+          ) : (
+            <div className="prompt">
+              <div className="who">
+                {engineTurn ? <span className="spinner" /> : <span className={`side ${run.color}`} />}
+                {engineTurn ? 'Thinking' : 'Your move'}
+              </div>
+              <div className="ctx">Nothing here counts against your record</div>
+            </div>
+          )}
+
+          {playOn.sans.length > 0 && (
+            <>
+              <div className="section">From the end of the line</div>
+              <div className="card">
+                <div className="movetext">{sansToMoveText(playOn.sans, playOn.from)}</div>
+              </div>
+            </>
+          )}
+
+          <div className="spacer" />
+          <button
+            className="btn block"
+            disabled={yourMoves === 0 || engineTurn}
+            onClick={takeBack}
+          >
+            <Icons.prev size={18} />
+            Take back
+          </button>
+          <button className="btn plain block" style={{ marginTop: 8 }} onClick={endPlayOn}>
+            Back to the line
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const survivedLabel = run.survived === 1 ? '1 move' : `${run.survived} moves`;
   const urgent = shown !== null && shown <= 5;
@@ -378,7 +548,8 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
               Line complete
             </div>
             <div className="center muted small" style={{ marginTop: 2 }}>
-              You played the whole line — {survivedLabel} without a slip.
+              You played the whole line — {survivedLabel} without a slip. That is as far as{' '}
+              {run.source === 'book' ? 'the book' : 'your prep'} goes.
             </div>
           </>
         )}
@@ -412,6 +583,16 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
 
         {over && (
           <>
+            <div className="spacer" />
+            <button className="btn accent block xl" onClick={beginPlayOn}>
+              <Icons.play size={18} />
+              Play from here
+            </button>
+            <div className="center faint tiny" style={{ marginTop: 6 }}>
+              Take the position on the board on against the engine. Nothing you do there
+              counts against your record.
+            </div>
+
             <div className="section">The line</div>
             <div className="card">
               <div className="row between" style={{ gap: 10 }}>
