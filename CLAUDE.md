@@ -1,12 +1,14 @@
 # Claude notes for this repo
 
-## Always republish the artifact after a change
+## Republish the artifact before handing the turn back
 
 This project is published as a Claude Artifact, and the live page is the thing
 people actually look at. A change that only exists in the repo is not done.
 
-After **every** change to app code, styles, or assets — not just at the end of a
-long session — republish:
+Batching is fine — republish once per batch of changes, not after every edit.
+What matters is that the artifact is current at the end of every turn: never
+finish a reply having changed app code, styles, or assets without republishing
+first.
 
 ```bash
 npm run build && npm run artifact
