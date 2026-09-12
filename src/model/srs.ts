@@ -143,6 +143,14 @@ export function review(
         delay = steps[nextStep] * MINUTE;
       }
     }
+  } else if (now < card.due) {
+    // Practised ahead of schedule. Getting it right early is not evidence the
+    // interval was too short, so the card keeps the date it already had — an
+    // endless session cannot push your whole deck into next month. Getting it
+    // wrong still counts, through the branch above.
+    stage = 'review';
+    step = 0;
+    delay = card.due - now;
   } else {
     const prev = Math.max(card.interval, 1);
     if (grade === 'hard') interval = clampInterval(prev * cfg.hardMultiplier, cfg);
@@ -159,7 +167,7 @@ export function review(
   };
 }
 
-/** What each button will do, for labelling Again / Hard / Good / Easy. */
+/** What each button will do. Kept for tests and for anyone adding a preview back. */
 export function gradePreview(
   card: Card,
   now = Date.now(),

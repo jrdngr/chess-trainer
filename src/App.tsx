@@ -8,7 +8,7 @@ import { SettingsSheet } from './screens/SettingsSheet';
 import { TrainHome } from './screens/TrainHome';
 import { PermadeathScreen } from './screens/permadeath/PermadeathScreen';
 import { TrainSession } from './screens/TrainSession';
-import type { TrainingItem } from './model/session';
+import type { SessionMode, TrainingItem } from './model/session';
 import { countDue } from './model/srs';
 import { useStore } from './store/useStore';
 
@@ -20,7 +20,11 @@ export default function App() {
   const cards = useStore((s) => s.cards);
 
   const [tab, setTab] = useState<Tab>('train');
-  const [session, setSession] = useState<{ queue: TrainingItem[]; title: string } | null>(null);
+  const [session, setSession] = useState<{
+    items: TrainingItem[];
+    mode: SessionMode;
+    title: string;
+  } | null>(null);
   const [permadeath, setPermadeath] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -30,9 +34,9 @@ export default function App() {
     void init();
   }, [init]);
 
-  const startSession = (queue: TrainingItem[], title: string) => {
-    if (!queue.length) return;
-    setSession({ queue, title });
+  const startSession = (items: TrainingItem[], mode: SessionMode, title: string) => {
+    if (!items.length) return;
+    setSession({ items, mode, title });
   };
 
   const dueCount = countDue(Object.values(cards)).due;
@@ -45,7 +49,12 @@ export default function App() {
   ) : permadeath ? (
     <PermadeathScreen onExit={() => setPermadeath(false)} />
   ) : session ? (
-    <TrainSession queue={session.queue} title={session.title} onExit={() => setSession(null)} />
+    <TrainSession
+      items={session.items}
+      mode={session.mode}
+      title={session.title}
+      onExit={() => setSession(null)}
+    />
   ) : importing ? (
     <ImportScreen onBack={() => setImporting(false)} />
   ) : null;

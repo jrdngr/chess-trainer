@@ -37,14 +37,7 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
           step={2}
           onChange={(newCardsPerSession) => setSettings({ newCardsPerSession })}
         />
-        <Stepper
-          label="Session length"
-          value={settings.maxSessionLength}
-          min={5}
-          max={80}
-          step={5}
-          onChange={(maxSessionLength) => setSettings({ maxSessionLength })}
-        />
+
       </div>
 
       <Section title="Board" />

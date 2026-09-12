@@ -157,3 +157,49 @@ describe('queue summaries', () => {
     expect(f).toHaveLength(7);
   });
 });
+
+describe('practising ahead of schedule', () => {
+  const now = 1_000_000_000;
+
+  function settled(): Card {
+    // A review card with a real interval, due in three days.
+    let card = createCard('c', 'rep', 'key', 'fen', now - 20 * DAY);
+    for (const grade of ['good', 'good', 'good'] as const) {
+      card = review(card, grade, now - 10 * DAY).card;
+    }
+    return { ...card, stage: 'review', interval: 10, due: now + 3 * DAY, lapses: 0 };
+  }
+
+  it('leaves the date alone when a correct answer comes early', () => {
+    const card = settled();
+    for (const grade of ['hard', 'good', 'easy'] as const) {
+      const next = review(card, grade, now).card;
+      expect(next.due, grade).toBe(card.due);
+      expect(next.interval, grade).toBe(card.interval);
+      expect(next.reps).toBe(card.reps + 1);
+      expect(next.correct).toBe(card.correct + 1);
+    }
+  });
+
+  it('still pulls the card in when an early answer is wrong', () => {
+    const card = settled();
+    const next = review(card, 'again', now).card;
+    expect(next.due).toBeLessThan(card.due);
+    expect(next.stage).toBe('learning');
+    expect(next.lapses).toBe(card.lapses + 1);
+  });
+
+  it('schedules normally once the card is actually due', () => {
+    const card = { ...settled(), due: now - 1 };
+    const next = review(card, 'good', now).card;
+    expect(next.interval).toBeGreaterThan(card.interval);
+    expect(next.due).toBeGreaterThan(now);
+  });
+
+  it('does not hold back a card still in learning', () => {
+    const card = createCard('c', 'rep', 'key', 'fen', now);
+    const next = review(card, 'good', now).card;
+    expect(next.due).toBeGreaterThan(now);
+    expect(next.stage).toBe('learning');
+  });
+});

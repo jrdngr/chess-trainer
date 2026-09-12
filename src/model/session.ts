@@ -170,6 +170,31 @@ export function buildSession(
   return interleave(head, tail).slice(0, maxItems);
 }
 
+/**
+ * What to practise once nothing is due.
+ *
+ * A session that never ends has to have something to serve after the schedule
+ * is clear. Least recently practised first is the honest order: it is the
+ * material you have looked at least lately, and answering it early cannot push
+ * the schedule out — `review()` holds an early card's date where it is.
+ */
+export function extraPractice(
+  items: TrainingItem[],
+  cards: Record<string, Card>,
+  count: number,
+  rand: () => number,
+  skip: (cardId: string) => boolean = () => false,
+): TrainingItem[] {
+  const pool = items
+    .filter((item) => !skip(item.cardId))
+    .map((item) => ({ item, seen: cards[item.cardId]?.lastReviewed ?? 0 }))
+    .sort((a, b) => a.seen - b.seen);
+  // Take a generous slice of the stalest material, then shuffle it, so a long
+  // session does not serve the same run of positions in the same order.
+  const slice = pool.slice(0, Math.max(count, Math.min(pool.length, count * 3)));
+  return shuffle(slice, rand).slice(0, count).map((x) => x.item);
+}
+
 /** Spread `b` evenly through `a` rather than appending it. */
 export function interleave<T>(a: T[], b: T[]): T[] {
   if (!b.length) return a;

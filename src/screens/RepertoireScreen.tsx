@@ -6,13 +6,13 @@ import { fenTurn, lastMoveOf, sansToMoveText, type LegalMove } from '../chess/co
 import { childrenOf, displayName, fenAt, pathTo, subtreeIds } from '../model/repertoire';
 import { lookup, openingNameForPath } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
-import { branchItems, type TrainingItem } from '../model/session';
+import { branchItems, type SessionMode, type TrainingItem } from '../model/session';
 import { describeDue } from '../model/srs';
 import type { Card, RepMove, Repertoire } from '../model/types';
 import { repertoireList, useStore } from '../store/useStore';
 
 export interface RepertoireScreenProps {
-  onStart: (queue: TrainingItem[], title: string) => void;
+  onStart: (items: TrainingItem[], mode: SessionMode, title: string) => void;
   onImport: () => void;
   onExploreFrom: (sans: string[]) => void;
 }
@@ -150,7 +150,7 @@ function RepertoireBrowser({
 }: {
   rep: Repertoire;
   onBack: () => void;
-  onStart: (queue: TrainingItem[], title: string) => void;
+  onStart: (items: TrainingItem[], mode: SessionMode, title: string) => void;
   onExploreFrom: (sans: string[]) => void;
 }) {
   const state = useStore();
@@ -200,7 +200,7 @@ function RepertoireBrowser({
       toast('Nothing to train');
       return;
     }
-    onStart(items.slice(0, 40), opening?.name ?? name);
+    onStart(items, 'branch', opening?.name ?? name);
   };
 
   return (
@@ -319,7 +319,7 @@ function RepertoireBrowser({
         }}
         onTrain={(items, title) => {
           setMenuFor(null);
-          onStart(items, title);
+          onStart(items, 'branch', title);
         }}
       />
 

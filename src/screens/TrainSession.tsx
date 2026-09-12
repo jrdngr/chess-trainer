@@ -6,27 +6,65 @@ import { applySan, sansToMoveText, type LegalMove, type Square } from '../chess/
 import { openingNameForPath } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
 import { displayName } from '../model/repertoire';
-import { checkAnswer, type TrainingItem } from '../model/session';
-import { gradePreview } from '../model/srs';
+import {
+  buildSession,
+  checkAnswer,
+  extraPractice,
+  mulberry32,
+  type SessionMode,
+  type TrainingItem,
+} from '../model/session';
 import type { Grade } from '../model/types';
 import { useStore } from '../store/useStore';
 
 export interface TrainSessionProps {
-  queue: TrainingItem[];
+  /** Everything in scope. The session draws from this for as long as you want. */
+  items: TrainingItem[];
+  mode: SessionMode;
   title: string;
   onExit: () => void;
 }
 
 type Phase = 'ask' | 'correct' | 'wrong';
 
-export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessionProps) {
+/** How many positions to line up at a time, and when to line up more. */
+const BATCH = 20;
+const REFILL_AT = 6;
+
+/**
+ * What each button says.
+ *
+ * The stored grades are Anki's, but "again" and "good" are the names of buttons
+ * in a spaced-repetition app, not descriptions of what just happened in your
+ * head. These are: you didn't really know it, you got there, you knew it, it
+ * was instant.
+ */
+const GRADE_LABELS: Record<Grade, string> = {
+  again: 'Guessed',
+  hard: 'Hard',
+  good: 'Knew it',
+  easy: 'Easy',
+};
+
+export function TrainSession({ items, mode, title, onExit }: TrainSessionProps) {
   const settings = useStore((s) => s.settings);
   const cards = useStore((s) => s.cards);
   const repertoires = useStore((s) => s.repertoires);
   const grade = useStore((s) => s.grade);
   const ensureCard = useStore((s) => s.ensureCard);
 
-  const [queue, setQueue] = useState(initialQueue);
+  const maxNew = settings.newCardsPerSession;
+  const startedAt = useRef(Date.now());
+  const shuffler = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
+  const [queue, setQueue] = useState<TrainingItem[]>(() =>
+    buildSession(items, cards, {
+      mode,
+      now: Date.now(),
+      maxItems: BATCH,
+      maxNew,
+      seed: Math.floor(Date.now() / 60000),
+    }),
+  );
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('ask');
   const [played, setPlayed] = useState<LegalMove | null>(null);
@@ -34,16 +72,47 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
   const [showMoves, setShowMoves] = useState(false);
   const [explore, setExplore] = useState(false);
   const [stats, setStats] = useState({ answered: 0, correct: 0 });
-  const startedAt = useRef(Date.now());
+  const [stopped, setStopped] = useState(false);
 
   const item = queue[index];
-  const done = index >= queue.length;
+  const done = stopped;
 
   const card = item ? cards[item.cardId] : undefined;
-  const preview = useMemo(
-    () => (card ? gradePreview(card) : { again: '1m', hard: '1m', good: '10m', easy: '4d' }),
-    [card],
-  );
+  /** True once the schedule is clear and this is practice, not a review. */
+  const extra = !!card && card.stage === 'review' && card.due > Date.now();
+
+  /**
+   * Keep the queue stocked. Scheduled work first; when the schedule is clear,
+   * the stalest positions, so the session only ends when you end it.
+   */
+  useEffect(() => {
+    if (stopped || !items.length) return;
+    if (queue.length - index > REFILL_AT) return;
+    setQueue((current) => {
+      const ahead = new Set(current.slice(index).map((i) => i.cardId));
+      const now = Date.now();
+      const scheduled = buildSession(items, cards, {
+        mode,
+        now,
+        maxItems: BATCH,
+        maxNew,
+        seed: now,
+      }).filter((i) => !ahead.has(i.cardId));
+      const taken = new Set(scheduled.map((i) => i.cardId));
+      const filler =
+        scheduled.length >= BATCH
+          ? []
+          : extraPractice(
+              items,
+              cards,
+              BATCH - scheduled.length,
+              shuffler.current,
+              (id) => ahead.has(id) || taken.has(id),
+            );
+      const batch = [...scheduled, ...filler];
+      return batch.length ? [...current, ...batch] : current;
+    });
+  }, [stopped, items, cards, mode, maxNew, index, queue.length]);
 
   useEffect(() => {
     if (item) ensureCard(item);
@@ -103,10 +172,10 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
     if (!afterMine) return null;
     const afterReply = applySan(afterMine.after, reply);
     if (!afterReply) return null;
-    return queue
-      .concat(initialQueue)
-      .find((candidate) => candidate.fen === afterReply.after && candidate.cardId !== item.cardId);
-  }, [item, queue, initialQueue, repertoires, settings.playOpponentReplies]);
+    return items.find(
+      (candidate) => candidate.fen === afterReply.after && candidate.cardId !== item.cardId,
+    );
+  }, [item, items, repertoires, settings.playOpponentReplies]);
 
   const requeue = () => {
     if (!item) return;
@@ -115,6 +184,12 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
       next.splice(Math.min(q.length, index + 4), 0, item);
       return next;
     });
+  };
+
+  /** End the session. Answering nothing at all just leaves. */
+  const stop = () => {
+    if (stats.answered === 0) onExit();
+    else setStopped(true);
   };
 
   const onGrade = (value: Grade) => {
@@ -156,7 +231,7 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
     const c = 2 * Math.PI * r;
     return (
       <>
-        <AppBar title="Done" onClose={onExit} />
+        <AppBar title="Session over" onClose={onExit} />
         <div className="screen no-nav">
           <div className="done-ring">
             <svg width="132" height="132" viewBox="0 0 132 132">
@@ -196,6 +271,13 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
           <button className="btn primary block xl" onClick={onExit}>
             Done
           </button>
+          <button
+            className="btn plain block"
+            style={{ marginTop: 8 }}
+            onClick={() => setStopped(false)}
+          >
+            Keep going
+          </button>
         </div>
       </>
     );
@@ -205,7 +287,6 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
 
   const side = item.orientation === 'white' ? 'w' : 'b';
   const sideLabel = side === 'w' ? 'White' : 'Black';
-  const progress = ((index + (phase === 'ask' ? 0 : 1)) / queue.length) * 100;
   const playedEntry = item.expected.find((e) => e.san === played?.san);
   const alternatives = item.expected.filter((e) => !e.preferred).map((e) => e.san);
 
@@ -214,17 +295,14 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
       <AppBar
         title={opening?.name ?? title}
         subtitle={displayName(item.repertoireName)}
-        onClose={onExit}
+        onClose={stop}
         actions={
           <span className="num muted small appbar-gap" style={{ textAlign: 'right' }}>
-            {Math.min(index + 1, queue.length)}/{queue.length}
+            {stats.answered}
+            {stats.answered > 0 ? ` \u00b7 ${Math.round((stats.correct / stats.answered) * 100)}%` : ''}
           </span>
         }
       />
-
-      <div className="progress-track" style={{ margin: '0 16px 10px' }}>
-        <div className="progress-fill" style={{ width: `${progress}%` }} />
-      </div>
 
       <div className="screen no-nav">
         <Board
@@ -251,6 +329,7 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
               <div className="ctx">
                 Move {Math.floor(item.pathSans.length / 2) + 1}
                 {item.expected.length > 1 ? ` · ${item.expected.length} options` : ''}
+                {extra ? ' · extra practice' : ''}
               </div>
             </div>
             <div className="spacer" />
@@ -260,6 +339,9 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
               </button>
               <button className="btn soft grow" onClick={() => setExplore(true)}>
                 Explore
+              </button>
+              <button className="btn soft grow" onClick={stop}>
+                Stop
               </button>
             </div>
             {showMoves && (
@@ -282,10 +364,12 @@ export function TrainSession({ queue: initialQueue, title, onExit }: TrainSessio
             <div className="grades">
               {(['again', 'hard', 'good', 'easy'] as Grade[]).map((g) => (
                 <button key={g} className={g} onClick={() => onGrade(g)}>
-                  <span style={{ textTransform: 'capitalize' }}>{g}</span>
-                  <span className="when">{preview[g]}</span>
+                  {GRADE_LABELS[g]}
                 </button>
               ))}
+            </div>
+            <div className="center faint tiny" style={{ marginTop: 8 }}>
+              How well did you know it?
             </div>
           </>
         )}

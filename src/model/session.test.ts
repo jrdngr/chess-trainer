@@ -6,12 +6,14 @@ import {
   buildSession,
   cardId,
   checkAnswer,
+  extraPractice,
   interleave,
   mulberry32,
   shuffle,
 } from './session';
 import { createCard, DAY } from './srs';
 import type { Card } from './types';
+import type { TrainingItem } from './session';
 
 const T0 = 1_700_000_000_000;
 
@@ -142,5 +144,65 @@ describe('queue helpers', () => {
     const b = shuffle([1, 2, 3, 4, 5], mulberry32(3));
     expect(a).toEqual(b);
     expect(a.sort()).toEqual([1, 2, 3, 4, 5]);
+  });
+});
+
+describe('keeping an endless session stocked', () => {
+  const rand = mulberry32(7);
+
+  /** A repertoire wide enough to draw distinct batches from. */
+  function pool(): TrainingItem[] {
+    let rep = createRepertoire('Black vs e4', 'b', 'rep_pool');
+    rep = addLine(rep, ['e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'Nf6', 'Nc3', 'a6'], 'seed').rep;
+    rep = addLine(rep, ['e4', 'c5', 'Nc3', 'Nc6', 'g3', 'g6'], 'seed').rep;
+    rep = addLine(rep, ['e4', 'c5', 'c3', 'Nf6', 'e5', 'Nd5'], 'seed').rep;
+    rep = addLine(rep, ['e4', 'c5', 'Bc4', 'e6', 'Nf3', 'd5'], 'seed').rep;
+    return allItems([rep]);
+  }
+
+  it('serves the least recently practised first', () => {
+    const items = pool();
+    const cards: Record<string, Card> = {};
+    items.forEach((item, i) => {
+      cards[item.cardId] = {
+        ...createCard(item.cardId, item.repertoireId, item.key, item.fen, 0),
+        lastReviewed: i * 1000,
+      };
+    });
+    const half = Math.floor(items.length / 2);
+    const stale = new Set(items.slice(0, half).map((i) => i.cardId));
+    // Across many draws, the half you have looked at least often comes up far
+    // more than the half you just did.
+    let staleHits = 0;
+    let freshHits = 0;
+    for (let seed = 0; seed < 60; seed += 1) {
+      for (const drawn of extraPractice(items, cards, 2, mulberry32(seed))) {
+        if (stale.has(drawn.cardId)) staleHits += 1;
+        else freshHits += 1;
+      }
+    }
+    expect(staleHits).toBeGreaterThan(freshHits * 2);
+  });
+
+  it('always finds something while any position is in scope', () => {
+    const items = pool();
+    expect(extraPractice(items, {}, 5, rand).length).toBe(5);
+    expect(extraPractice(items, {}, 500, rand).length).toBe(items.length);
+    expect(extraPractice([], {}, 5, rand)).toEqual([]);
+  });
+
+  it('leaves out what is already queued', () => {
+    const items = pool();
+    const skip = new Set(items.slice(0, 3).map((i) => i.cardId));
+    const batch = extraPractice(items, {}, 10, rand, (id) => skip.has(id));
+    expect(batch.length).toBe(items.length - 3);
+    expect(batch.every((i) => !skip.has(i.cardId))).toBe(true);
+  });
+
+  it('does not always serve the same order', () => {
+    const items = pool();
+    const a = extraPractice(items, {}, 5, mulberry32(1)).map((i) => i.cardId);
+    const b = extraPractice(items, {}, 5, mulberry32(2)).map((i) => i.cardId);
+    expect(a.join()).not.toBe(b.join());
   });
 });

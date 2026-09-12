@@ -36,7 +36,6 @@ export const DEFAULT_SETTINGS: Settings = {
   showCoordinates: true,
   engineEnabled: true,
   newCardsPerSession: 8,
-  maxSessionLength: 25,
   playOpponentReplies: true,
   boardTheme: 'slate',
   hapticFeedback: true,

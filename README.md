@@ -31,8 +31,12 @@ npm run artifact     # repackage dist/ for publishing as a Claude Artifact
 The main loop. A position appears with the side to move, you play a move on
 the board, and it is checked against your repertoire.
 
-- Right: **Correct** plus Again / Hard / Good / Easy, each labelled with when
-  the position comes back.
+- Right: **Correct** plus **Guessed / Hard / Knew it / Easy**. The stored grades
+  are Anki's, but "again" and "good" name buttons in a spaced-repetition app
+  rather than what just happened in your head; these say you did not really know
+  it, you got there, you knew it, it was instant. No "comes back in 4d" caption
+  under each one — the number is noise at the moment you are being asked how
+  well you knew something.
 - Wrong: your repertoire's move next to the one you played, with **Show line**
   (the continuation) and **Explore** (the reference database) one tap away. A
   wrong answer is graded `again` automatically — you spend your attention on
@@ -41,6 +45,19 @@ the board, and it is checked against your repertoire.
 - "Follow the line" (Settings, on by default) plays the opponent's reply and
   asks the next move in the same line, so you can compare line-running against
   pure position-by-position drilling.
+
+A session has no length. It keeps drawing positions until you stop it, with
+**Stop** next to Moves and Explore and the close button doing the same thing;
+stopping shows the summary rather than dumping you out, and **Keep going**
+resumes. Scheduled work comes first — due reviews, learning cards, then new
+material — and once the schedule is clear the session serves the positions you
+have looked at least recently, marked *extra practice* so you know where you
+are.
+
+That only works because answering early cannot push the schedule out: a correct
+answer on a card that is not due yet keeps the date it already had. Getting it
+wrong early still pulls it in. Without that, a long session would quietly
+scatter your whole deck into next month.
 
 Scheduling is a small SM-2 variant in `src/model/srs.ts`: learning steps of 1
 and 10 minutes, ease from 1.3 up, halved interval after a lapse, no interval

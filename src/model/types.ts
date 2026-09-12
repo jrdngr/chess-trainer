@@ -134,7 +134,6 @@ export interface Settings {
   showCoordinates: boolean;
   engineEnabled: boolean;
   newCardsPerSession: number;
-  maxSessionLength: number;
   /** Play the opponent's reply after a correct answer and ask the next move. */
   playOpponentReplies: boolean;
   boardTheme: 'slate' | 'walnut' | 'ocean';

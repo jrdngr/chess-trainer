@@ -2,13 +2,13 @@ import { useMemo, useState } from 'react';
 import { AppBar, IconButton, Icons, Section, Sheet } from '../components/ui';
 import { lineRecords } from '../model/permadeath';
 import { displayName } from '../model/repertoire';
-import { buildSession, type TrainingItem } from '../model/session';
+import type { SessionMode, TrainingItem } from '../model/session';
 import { countDue, DAY, forecast, masteryBuckets, retention } from '../model/srs';
 import { itemsFor, repertoireList, useStore } from '../store/useStore';
 import type { Repertoire } from '../model/types';
 
 export interface TrainHomeProps {
-  onStart: (queue: TrainingItem[], title: string) => void;
+  onStart: (items: TrainingItem[], mode: SessionMode, title: string) => void;
   onStartPermadeath: () => void;
   onOpenSettings: () => void;
 }
@@ -59,28 +59,18 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
   const week = forecast(allCards, 7, now);
   const maxWeek = Math.max(1, ...week);
 
-  const sessionOpts = (mode: Mode) => ({
-    mode,
-    now,
-    maxItems: state.settings.maxSessionLength,
-    maxNew: state.settings.newCardsPerSession,
-    seed: Math.floor(now / 60000),
-  });
-
   const startAll = () => {
-    const items = perRep.flatMap((r) => r.items);
-    onStart(buildSession(items, state.cards, sessionOpts('due')), 'Review');
+    onStart(perRep.flatMap((r) => r.items), 'due', 'Review');
   };
 
   const startRep = (entry: RepEntry, mode: Mode) => {
     setPick(null);
-    onStart(buildSession(entry.items, state.cards, sessionOpts(mode)), displayName(entry.rep.name));
+    onStart(entry.items, mode, displayName(entry.rep.name));
   };
 
-  const readyCount = Math.min(
-    state.settings.maxSessionLength,
-    totalDue + Math.min(totalUnseen, state.settings.newCardsPerSession),
-  );
+  // What is waiting, not what one sitting will cover — a session runs until you
+  // stop it.
+  const readyCount = totalDue + Math.min(totalUnseen, state.settings.newCardsPerSession);
   const unseenTotal = totalItems - allCards.length + mastery.unseen;
 
   return (

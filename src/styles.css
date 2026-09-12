@@ -496,7 +496,6 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   font-size: 14px;
   transition: transform 0.08s;
 }
-.grades button .when { font-size: 11px; font-weight: 500; color: var(--text-3); font-variant-numeric: tabular-nums; }
 .grades button:active { transform: scale(0.96); }
 .grades button.again { color: var(--bad); }
 .grades button.easy { color: var(--good); }
