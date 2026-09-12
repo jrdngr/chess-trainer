@@ -206,8 +206,10 @@ export function TrainSession({ items, mode, title, onExit }: TrainSessionProps) 
   const highlights = useMemo(() => {
     const out: { square: Square; kind: 'good' | 'bad' | 'hint' }[] = [];
     if (phase === 'wrong' && played) {
+      // Green after red, so a square both moves share reads as the right one:
+      // the map keeps the last kind written for a square.
       out.push({ square: played.from, kind: 'bad' }, { square: played.to, kind: 'bad' });
-      if (revealLine && expectedMove) {
+      if (expectedMove) {
         out.push({ square: expectedMove.from, kind: 'good' }, { square: expectedMove.to, kind: 'good' });
       }
     }
@@ -215,7 +217,7 @@ export function TrainSession({ items, mode, title, onExit }: TrainSessionProps) 
       out.push({ square: played.from, kind: 'good' }, { square: played.to, kind: 'good' });
     }
     return out;
-  }, [phase, played, revealLine, expectedMove]);
+  }, [phase, played, expectedMove]);
 
   const boardFen = useMemo(() => {
     if (phase === 'ask' || !played) return item?.fen ?? '';
@@ -376,9 +378,21 @@ export function TrainSession({ items, mode, title, onExit }: TrainSessionProps) 
 
         {phase === 'wrong' && (
           <>
-            <div className="verdict no">
-              <span className="ico"><Icons.cross size={14} /></span>
-              Wrong
+            <div className="row between">
+              <div className="verdict no" style={{ padding: 0 }}>
+                <span className="ico"><Icons.cross size={14} /></span>
+                Wrong
+              </div>
+              <button
+                className="btn primary sm"
+                onClick={() => {
+                  requeue();
+                  advance();
+                }}
+              >
+                Continue
+                <Icons.next size={16} />
+              </button>
             </div>
             <div className="compare mt-8">
               <div className="good">
@@ -414,16 +428,6 @@ export function TrainSession({ items, mode, title, onExit }: TrainSessionProps) 
                 Explore
               </button>
             </div>
-            <div className="spacer sm" />
-            <button
-              className="btn primary block"
-              onClick={() => {
-                requeue();
-                advance();
-              }}
-            >
-              Continue
-            </button>
           </>
         )}
       </div>
