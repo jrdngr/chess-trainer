@@ -48,6 +48,8 @@ export const DEFAULT_SETTINGS: Settings = {
   permadeathColor: 'random',
   permadeathSource: 'repertoire',
   permadeathRepertoire: '',
+  permadeathOpening: '',
+  favoriteOpenings: [],
   permadeathReverse: false,
   permadeathWeakFirst: false,
   permadeathClock: 'off',

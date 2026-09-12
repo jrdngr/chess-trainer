@@ -58,11 +58,22 @@ export interface OpeningName {
   name: string;
 }
 
+/** One named opening: where it sits, and how often it is played. */
+export interface CatalogueEntry extends OpeningName {
+  /** The defining move order, space-joined — also the opening's id. */
+  id: string;
+  sans: string[];
+  /** Games in the sample that reached the position. */
+  games: number;
+}
+
 export interface ReferenceIndex {
   /** positionKey -> explorer entry */
   entries: Map<string, ExplorerEntry>;
   /** positionKey -> opening name */
   names: Map<string, OpeningName>;
+  /** Every named opening, most played first. */
+  catalogue: CatalogueEntry[];
   totalGames: number;
   gameCount: number;
 }
@@ -170,7 +181,63 @@ export function buildReferenceIndex(opts: BuildIndexOptions): ReferenceIndex {
     else entries.set(key, { key, moves: [], topGames: games });
   }
 
-  return { entries, names, totalGames: opts.totalGames, gameCount: opts.games.length };
+  // The catalogue: every named opening, with how often it is actually reached.
+  //
+  // Popularity is the count on the move that arrives at the position, or the
+  // games continuing from it, whichever is larger. The arriving count must come
+  // from the final ply and not an earlier one: a path that leaves the authored
+  // tree part way down is rare, and inheriting 1.d4's count would rank the
+  // Englund Gambit alongside the Queen's Pawn Opening.
+  const found: CatalogueEntry[] = [];
+  for (const [path, name] of Object.entries(opts.openingNames)) {
+    const sans = path.split(/\s+/).filter(Boolean);
+    // A one-move name is not an opening you would sit down to practise — it is
+    // the whole database with a first move, which this mode already offers.
+    if (sans.length < 2) continue;
+    let fen = startFen;
+    let arriving = 0;
+    let legal = true;
+    for (const san of sans) {
+      const parent = entries.get(positionKey(fen));
+      arriving = parent?.moves.find((m) => m.san === san)?.games ?? 0;
+      const move = applySan(fen, san);
+      if (!move) {
+        legal = false;
+        break;
+      }
+      fen = move.after;
+    }
+    if (!legal) continue;
+    const here = entries.get(positionKey(fen));
+    const games = Math.max(arriving, here ? here.moves.reduce((s, m) => s + m.games, 0) : 0);
+    found.push({ id: path, sans, eco: name.eco, name: name.name, games });
+  }
+
+  // One row per name: the data names a few positions the same way at different
+  // depths, and two identical rows in a picker are worse than one.
+  const byName = new Map<string, CatalogueEntry>();
+  for (const entry of found) {
+    const seen = byName.get(entry.name);
+    if (!seen || entry.games > seen.games || (entry.games === seen.games && entry.sans.length < seen.sans.length)) {
+      byName.set(entry.name, entry);
+    }
+  }
+  const catalogue = [...byName.values()].sort(
+    (a, b) => b.games - a.games || a.name.localeCompare(b.name),
+  );
+
+  return {
+    entries,
+    names,
+    catalogue,
+    totalGames: opts.totalGames,
+    gameCount: opts.games.length,
+  };
+}
+
+/** Look one opening up by its id — the space-joined move order. */
+export function openingById(index: ReferenceIndex, id: string): CatalogueEntry | null {
+  return index.catalogue.find((entry) => entry.id === id) ?? null;
 }
 
 /** A name, plus how deep into the line it was recognised. */

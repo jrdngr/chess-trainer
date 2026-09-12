@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../components/Board';
-import { copyText, haptic, IconButton, Icons, Strip, toast, type StripItem } from '../components/ui';
+import {
+  copyText,
+  haptic,
+  IconButton,
+  Icons,
+  Sheet,
+  Strip,
+  toast,
+  type StripItem,
+} from '../components/ui';
 import {
   applySan,
   applyUci,
@@ -13,6 +22,7 @@ import {
 } from '../chess/core';
 import { formatScore } from '../engine/types';
 import { useEngine } from '../engine/useEngine';
+import { formatGameCount, type CatalogueEntry } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
 import {
   beginRun,
@@ -100,6 +110,7 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
       kind: settings.permadeathSource,
       color: settings.permadeathColor,
       repertoireId: settings.permadeathRepertoire,
+      openingId: settings.permadeathOpening,
       reverse: settings.permadeathReverse,
       weakFirst: settings.permadeathWeakFirst,
       clock: settings.permadeathClock,
@@ -438,6 +449,7 @@ export function PermadeathSession({ onExit }: PermadeathSessionProps) {
         reps={reps}
         record={record}
         perLine={settings.permadeathPerLine}
+        favorites={settings.favoriteOpenings}
         onChange={(patch) => setSettings(patch)}
         onStart={start}
         onExit={onExit}
@@ -978,6 +990,8 @@ type SettingsPatch = {
   permadeathColor?: ColorChoice;
   permadeathSource?: SourceKind;
   permadeathRepertoire?: string;
+  permadeathOpening?: string;
+  favoriteOpenings?: string[];
   permadeathReverse?: boolean;
   permadeathWeakFirst?: boolean;
   permadeathClock?: ClockMode;
@@ -991,18 +1005,54 @@ interface SetupProps {
   reps: Repertoire[];
   record: PermadeathRecord;
   perLine: boolean;
+  favorites: string[];
   onChange: (patch: SettingsPatch) => void;
   onStart: (options: PermadeathOptions) => void;
   onExit: () => void;
 }
 
-function Setup({ options, reps, record, perLine, onChange, onStart, onExit }: SetupProps) {
+function Setup({
+  options,
+  reps,
+  record,
+  perLine,
+  favorites,
+  onChange,
+  onStart,
+  onExit,
+}: SetupProps) {
   const repertoire = options.kind === 'repertoire';
+  const byOpening = options.kind === 'opening';
+  const [browsing, setBrowsing] = useState(false);
+  const catalogue = referenceIndex().catalogue;
+
   const pool = playableRepertoires(reps, options.color, { reverse: options.reverse });
   // A repertoire the colour no longer allows quietly falls back to "any".
   const chosenId = pool.some((r) => r.id === options.repertoireId) ? options.repertoireId : '';
+  const starred = favorites
+    .map((id) => catalogue.find((entry) => entry.id === id))
+    .filter((entry): entry is CatalogueEntry => !!entry);
+  const chosenOpening = catalogue.find((entry) => entry.id === options.openingId) ?? null;
+  // A pick that was never starred still belongs on this screen, and first, so
+  // what the run will actually play is never hidden behind the full list.
+  const openingRows =
+    chosenOpening && !favorites.includes(chosenOpening.id) ? [chosenOpening, ...starred] : starred;
   const effective = { ...options, repertoireId: chosenId };
-  const blocked = repertoire && pool.length === 0;
+  const blocked =
+    (repertoire && pool.length === 0) || (byOpening && !chosenOpening);
+
+  const toggleFavorite = (id: string) => {
+    onChange({
+      favoriteOpenings: favorites.includes(id)
+        ? favorites.filter((f) => f !== id)
+        : [...favorites, id],
+    });
+  };
+
+  const pickOpening = (entry: CatalogueEntry) => {
+    onChange({ permadeathOpening: entry.id, permadeathSource: 'opening' });
+    setBrowsing(false);
+  };
 
   /** Picking an opening settles which side you are on, so say so. */
   const chooseRepertoire = (rep: Repertoire | null) => {
@@ -1031,7 +1081,13 @@ function Setup({ options, reps, record, perLine, onChange, onStart, onExit }: Se
 
       <div className="screen no-nav">
         <button className="btn primary block xl" disabled={blocked} onClick={() => onStart(effective)}>
-          {!blocked ? 'Start run' : options.reverse ? 'Nothing to play against' : 'No lines for that colour'}
+          {!blocked
+            ? 'Start run'
+            : byOpening
+              ? 'Pick an opening first'
+              : options.reverse
+                ? 'Nothing to play against'
+                : 'No lines for that colour'}
         </button>
 
         <div className="section">Play as</div>
@@ -1062,18 +1118,87 @@ function Setup({ options, reps, record, perLine, onChange, onStart, onExit }: Se
             </span>
             {repertoire && <Icons.check size={18} />}
           </button>
+          <button className="list-row" onClick={() => onChange({ permadeathSource: 'opening' })}>
+            <span className="grow" style={{ minWidth: 0 }}>
+              <div className="title">Openings</div>
+              <div className="meta truncate">
+                {chosenOpening
+                  ? chosenOpening.name
+                  : starred.length > 0
+                    ? `${starred.length} favourite${starred.length === 1 ? '' : 's'} — pick one below`
+                    : 'Pick one opening and play it out'}
+              </div>
+            </span>
+            {byOpening && <Icons.check size={18} />}
+          </button>
           <button className="list-row" onClick={() => onChange({ permadeathSource: 'book' })}>
             <span className="grow">
               <div className="title">Book</div>
               <div className="meta">Every line in the reference database</div>
             </span>
-            {!repertoire && <Icons.check size={18} />}
+            {options.kind === 'book' && <Icons.check size={18} />}
           </button>
         </div>
 
+        {byOpening && (
+          <>
+            <div className="section">
+              <span>Your openings</span>
+              {starred.length > 0 && <span className="faint tiny">star to keep, tap to pick</span>}
+            </div>
+            {openingRows.length === 0 ? (
+              <div className="card small muted">
+                No favourites yet. Open the full list and star the openings you want to
+                practise — they will show up here.
+              </div>
+            ) : (
+              <div className="list">
+                {openingRows.map((entry) => (
+                  <div className="list-row" key={entry.id}>
+                    <button
+                      className="grow row"
+                      style={{ minWidth: 0, gap: 10 }}
+                      onClick={() => pickOpening(entry)}
+                    >
+                      <span className="grow" style={{ minWidth: 0 }}>
+                        <div className="title truncate">{entry.name}</div>
+                        <div className="meta">
+                          {entry.eco} · {sansToMoveText(entry.sans)}
+                        </div>
+                      </span>
+                      {options.openingId === entry.id && <Icons.check size={18} />}
+                    </button>
+                    <button
+                      className="icon-btn plain"
+                      aria-label={`${favorites.includes(entry.id) ? 'Unstar' : 'Star'} ${entry.name}`}
+                      onClick={() => toggleFavorite(entry.id)}
+                    >
+                      <Icons.star size={18} filled={favorites.includes(entry.id)} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button className="btn sm block" style={{ marginTop: 8 }} onClick={() => setBrowsing(true)}>
+              <Icons.book size={16} />
+              All openings
+            </button>
+          </>
+        )}
+
+        <OpeningPicker
+          open={browsing}
+          onClose={() => setBrowsing(false)}
+          catalogue={catalogue}
+          favorites={favorites}
+          selected={options.openingId}
+          onPick={pickOpening}
+          onToggleFavorite={toggleFavorite}
+        />
+
         {repertoire && pool.length > 1 && (
           <>
-            <div className="section">Opening</div>
+            <div className="section">Which repertoire</div>
             <div className="list">
               <button className="list-row" onClick={() => chooseRepertoire(null)}>
                 <span className="grow">
@@ -1165,11 +1290,15 @@ function Setup({ options, reps, record, perLine, onChange, onStart, onExit }: Se
 
         <div className="card" style={{ marginTop: 12 }}>
           <div className="small muted">
-            {!repertoire
-              ? 'Any move played in the reference database keeps you alive, so the book forgives more than your repertoire does. It is a curated sample, not every game ever played.'
-              : options.reverse
+            {byOpening
+              ? chosenOpening
+                ? `The opponent walks you into the ${chosenOpening.name}, and its move order is the only thing that counts while you are still in it. After that the book takes over.`
+                : 'Pick an opening to play out. Its move order is the only thing that counts while you are still in it; after that the book takes over.'
+              : options.kind === 'book'
+                ? 'Any move played in the reference database keeps you alive, so the book forgives more than your repertoire does. It is a curated sample, not every game ever played.'
+                : options.reverse
                 ? 'You play the side your repertoire answers. Staying alive means knowing what your opponent is meant to do — the run ends on any move you have not prepared for.'
-                : 'A line is drawn from your repertoire. Any move you have prepared from a position counts — the run ends the moment you leave your own prep.'}
+                  : 'A line is drawn from your repertoire. Any move you have prepared from a position counts — the run ends the moment you leave your own prep.'}
             {options.extended && (
               <div style={{ marginTop: 8 }}>
                 In extended mode the run does not stop there: the engine takes over and you
@@ -1183,6 +1312,95 @@ function Setup({ options, reps, record, perLine, onChange, onStart, onExit }: Se
         {record.runs > 0 && <Record record={record} perLine={perLine} />}
       </div>
     </div>
+  );
+}
+
+/**
+ * The full catalogue, most played first, with favourites pulled to the top.
+ *
+ * Tapping a row picks the opening; the star keeps it on the setup screen so the
+ * list only has to be opened once.
+ */
+function OpeningPicker({
+  open,
+  onClose,
+  catalogue,
+  favorites,
+  selected,
+  onPick,
+  onToggleFavorite,
+}: {
+  open: boolean;
+  onClose: () => void;
+  catalogue: CatalogueEntry[];
+  favorites: string[];
+  selected: string;
+  onPick: (entry: CatalogueEntry) => void;
+  onToggleFavorite: (id: string) => void;
+}) {
+  const [query, setQuery] = useState('');
+
+  const rows = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    const matching = needle
+      ? catalogue.filter(
+          (entry) =>
+            entry.name.toLowerCase().includes(needle) ||
+            entry.eco.toLowerCase().startsWith(needle) ||
+            entry.sans.join(' ').toLowerCase().includes(needle),
+        )
+      : catalogue;
+    const starred = matching.filter((entry) => favorites.includes(entry.id));
+    const rest = matching.filter((entry) => !favorites.includes(entry.id));
+    return { starred, rest };
+  }, [catalogue, favorites, query]);
+
+  const row = (entry: CatalogueEntry) => (
+    <div className="list-row" key={entry.id}>
+      <button className="grow row" style={{ minWidth: 0, gap: 10 }} onClick={() => onPick(entry)}>
+        <span className="grow" style={{ minWidth: 0 }}>
+          <div className="title truncate">{entry.name}</div>
+          <div className="meta truncate">
+            {entry.eco} · {sansToMoveText(entry.sans)}
+            {entry.games > 0 ? ` · ${formatGameCount(entry.games)} games` : ''}
+          </div>
+        </span>
+        {selected === entry.id && <Icons.check size={18} />}
+      </button>
+      <button
+        className="icon-btn plain"
+        aria-label={`${favorites.includes(entry.id) ? 'Unstar' : 'Star'} ${entry.name}`}
+        onClick={() => onToggleFavorite(entry.id)}
+      >
+        <Icons.star size={18} filled={favorites.includes(entry.id)} />
+      </button>
+    </div>
+  );
+
+  return (
+    <Sheet open={open} onClose={onClose} title="All openings">
+      <input
+        className="field"
+        placeholder="Search by name, ECO or moves"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      {rows.starred.length > 0 && (
+        <>
+          <div className="section">Favourites</div>
+          <div className="list">{rows.starred.map(row)}</div>
+        </>
+      )}
+      <div className="section">
+        <span>{rows.starred.length > 0 ? 'Everything else' : 'Most played first'}</span>
+        <span className="faint tiny">{rows.rest.length}</span>
+      </div>
+      {rows.rest.length === 0 ? (
+        <div className="card small muted">Nothing matches that.</div>
+      ) : (
+        <div className="list">{rows.rest.map(row)}</div>
+      )}
+    </Sheet>
   );
 }
 

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { IconButton, Icons, Sheet } from '../components/ui';
+import { lineRecords } from '../model/permadeath';
 import { displayName } from '../model/repertoire';
 import { buildSession, type TrainingItem } from '../model/session';
 import { countDue, DAY, forecast, masteryBuckets, retention } from '../model/srs';
@@ -29,6 +30,11 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
   const now = Date.now();
   const [pick, setPick] = useState<RepEntry | null>(null);
   const permadeath = state.permadeath;
+  /** The opening you have gone deepest in — the one stat worth naming. */
+  const strongest = useMemo(() => {
+    const best = lineRecords(permadeath)[0];
+    return best && best.best > 0 ? best : null;
+  }, [permadeath]);
 
   const perRep = useMemo<RepEntry[]>(
     () =>
@@ -115,20 +121,41 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
           </button>
         </div>
 
-        <div className="section">Challenge</div>
-        <button className="card tap" onClick={onStartPermadeath}>
-          <div className="row">
-            <span className="grow">
-              <div style={{ fontWeight: 700, fontSize: 16 }}>Permadeath</div>
-              <div className="meta faint" style={{ fontSize: 13, marginTop: 2 }}>
-                {permadeath.runs === 0
-                  ? 'A secret line. One mistake ends it.'
-                  : `Best ${permadeath.best} \u00b7 ${permadeath.runs} ${permadeath.runs === 1 ? 'run' : 'runs'}${permadeath.survivals ? ` \u00b7 ${permadeath.survivals} completed` : ''}`}
-              </div>
-            </span>
-            <Icons.chevron size={18} />
+        <div className="section">Permadeath</div>
+        <div className="hero">
+          <div className="big">{permadeath.runs === 0 ? '\u2014' : permadeath.best}</div>
+          <div className="lbl">
+            {permadeath.runs === 0
+              ? 'One secret line. One mistake.'
+              : `${permadeath.best === 1 ? 'move' : 'moves'} deep at your best`}
           </div>
-        </button>
+          {permadeath.runs > 0 && (
+            <div className="pills">
+              <span className="pill">
+                <b>{permadeath.runs}</b> {permadeath.runs === 1 ? 'run' : 'runs'}
+              </span>
+              <span className="pill">
+                <b>{permadeath.survivals}</b> completed
+              </span>
+              <span className="pill">
+                last <b>{permadeath.lastDepth}</b>
+              </span>
+            </div>
+          )}
+          {strongest && (
+            <div className="faint tiny" style={{ marginTop: 12 }}>
+              Deepest in the {strongest.label} \u2014 {strongest.best}{' '}
+              {strongest.best === 1 ? 'move' : 'moves'}
+            </div>
+          )}
+          <button
+            className="btn primary block xl"
+            style={{ marginTop: 18 }}
+            onClick={onStartPermadeath}
+          >
+            {permadeath.runs === 0 ? 'Start a run' : 'New run'}
+          </button>
+        </div>
 
         <div className="section">Repertoires</div>
         <div className="list">

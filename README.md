@@ -57,9 +57,19 @@ The setup screen decides the run. Everything past the first two rows is off by
 default; the plain mode is a line from your repertoire, no clock, no help.
 
 - **Play as** — White, Black, or random.
-- **Lines** — your repertoire, or the whole reference database. Book is the
-  more forgiving of the two: any move somebody has played here keeps you alive,
-  and the opponent replies in proportion to how often each move is played.
+- **Lines** — your repertoire, one named opening, or the whole reference
+  database. Book is the most forgiving: any move somebody has played here keeps
+  you alive, and the opponent replies in proportion to how often each move is
+  played.
+- **Openings** — pick one opening and play it out. The opponent walks you into
+  it, and while you are still inside its move order that move order is the only
+  thing that counts, for both sides, because it is what makes the opening that
+  opening; past the end of it the book takes over. **All openings** lists all 163
+  named openings sorted by how often they are actually played, searchable by
+  name, ECO or moves. Starring one keeps it on the setup screen, and starred
+  openings sit at the top of the full list. Names that only say what the first
+  move was are left out: "King's Pawn Opening" is not an opening you sit down to
+  practise, it is the whole database with a first move, which Book already is.
 - **Opening** — narrow the draw to one repertoire instead of all of them.
   Picking one settles which side you are on, so the colour follows it.
 - **Clock** — 10 or 30 seconds a move, or three minutes for the whole run. Only

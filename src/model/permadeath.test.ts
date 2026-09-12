@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fenTurn, positionKey, walkSan } from '../chess/core';
+import { applySan, fenTurn, positionKey, START_FEN, walkSan } from '../chess/core';
 import {
   beginRun,
   bookSource,
@@ -14,7 +14,9 @@ import {
   extendedMoves,
   isExtended,
   judgeByEval,
+  openingSource,
   playExtended,
+  startOpeningRun,
   lineOdds,
   lineWeakness,
   takeHint,
@@ -45,7 +47,7 @@ import {
   type Run,
 } from './permadeath';
 import { addLine, createRepertoire, displayName, leafLines, pathTo } from './repertoire';
-import { lookup } from './reference';
+import { lookup, openingById } from './reference';
 import { referenceIndex } from './referenceIndex';
 import { cardId, mulberry32 } from './session';
 import { buildSeedRepertoires } from '../store/seed';
@@ -901,5 +903,113 @@ describe('extended mode', () => {
     expect(fixed.last).toBeUndefined();
     // With nothing to amend, the next run counts as its own.
     expect(recordRun(fixed, { id: 'x', key: 'k', label: 'L', color: 'w', depth: 2, completed: false }).runs).toBe(3);
+  });
+});
+
+describe('the opening catalogue', () => {
+  it('ranks openings by how often they are actually played', () => {
+    const { catalogue } = index;
+    expect(catalogue.length).toBeGreaterThan(100);
+    const names = catalogue.slice(0, 12).map((e) => e.name);
+    expect(names).toContain('Sicilian Defence');
+    expect(names).toContain("Queen's Gambit");
+    // Sorted, and a mainline beats a curiosity by a wide margin.
+    for (let i = 1; i < catalogue.length; i += 1) {
+      expect(catalogue[i - 1].games).toBeGreaterThanOrEqual(catalogue[i].games);
+    }
+    const sicilian = catalogue.find((e) => e.name === 'Sicilian Defence')!;
+    const wing = catalogue.find((e) => e.name === 'Sicilian: Wing Gambit')!;
+    expect(sicilian.games).toBeGreaterThan(wing.games * 10);
+  });
+
+  it('holds a legal move order for every entry', () => {
+    for (const entry of index.catalogue) {
+      expect(entry.sans.length).toBeGreaterThanOrEqual(2);
+      let fen = START_FEN;
+      for (const san of entry.sans) {
+        const move = applySan(fen, san);
+        expect(move, `${entry.name}: ${entry.sans.join(' ')}`).not.toBeNull();
+        fen = move!.after;
+      }
+    }
+  });
+
+  it('names each opening once', () => {
+    const names = index.catalogue.map((e) => e.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('leaves out names that only say what the first move was', () => {
+    const names = index.catalogue.map((e) => e.name);
+    expect(names).not.toContain("King's Pawn Opening");
+    expect(names).not.toContain("Queen's Pawn Opening");
+  });
+
+  it('finds an opening by its move order', () => {
+    const first = index.catalogue[0];
+    expect(openingById(index, first.id)).toEqual(first);
+    expect(openingById(index, 'e4 e4 e4')).toBeNull();
+  });
+});
+
+describe('running through one opening', () => {
+  const dragon = index.catalogue.find((e) => e.name.includes('Dragon'))!;
+
+  it('walks you into the opening and then hands over to the book', () => {
+    expect(dragon).toBeDefined();
+    const run = startOpeningRun(index, dragon, 'b', { seed: 1 })!;
+    expect(run.source).toBe('opening');
+    expect(run.openingId).toBe(dragon.id);
+    expect(run.target).toEqual(dragon.sans);
+
+    const source = openingSource(index, dragon, 'b');
+    // Inside the opening its own move order is the only thing that counts.
+    expect(movesHere(source, run)).toEqual([dragon.sans[0]]);
+    const wrong = play(source, run, dragon.sans[0] === 'e4' ? 'd4' : 'e4');
+    expect(wrong.ok).toBe(false);
+
+    // Played out, the judging is the book's — whatever the book happens to say.
+    const { fens } = walkSan(dragon.sans);
+    const end = fens[dragon.sans.length];
+    const book = bookSource(index, 'b');
+    expect(source.movesAt(end)).toEqual(book.movesAt(end));
+    expect(source.weightsAt(end)).toEqual(book.weightsAt(end));
+    // Inside the opening it is not the book's judgement but the opening's.
+    expect(source.movesAt(fens[1])).toEqual([dragon.sans[1]]);
+    expect(book.movesAt(fens[1]).length).toBeGreaterThan(1);
+  });
+
+  it('plays out legally from either side', () => {
+    for (const color of ['w', 'b'] as const) {
+      const run = startOpeningRun(index, dragon, color, { seed: 3 })!;
+      const source = openingSource(index, dragon, color);
+      expect(run.color).toBe(color);
+      const done = finish(source, run, 7);
+      expect(playedIsLegal(done)).toBe(true);
+      expect(done.played.slice(0, dragon.sans.length)).toEqual(dragon.sans);
+    }
+  });
+
+  it('is named after the opening you chose', () => {
+    const run = startOpeningRun(index, dragon, 'b', { seed: 2 })!;
+    const source = openingSource(index, dragon, 'b');
+    expect(source.label).toBe(dragon.name);
+    expect(lineName(index, source, run, 99).name).toBe(dragon.name);
+  });
+
+  it('files its record under the opening and side', () => {
+    const run = startOpeningRun(index, dragon, 'w', { seed: 4 })!;
+    expect(outcomeOf(run, false).key).toBe(`opening:${dragon.id}:w`);
+  });
+
+  it('refuses to begin without an opening chosen', () => {
+    expect(beginRun({ reps: [], index, kind: 'opening', openingId: '', seed: 1 })).toBeNull();
+    expect(beginRun({ reps: [], index, kind: 'opening', openingId: 'nonsense', seed: 1 })).toBeNull();
+    const ok = beginRun({ reps: [], index, kind: 'opening', openingId: dragon.id, color: 'b', seed: 1 });
+    expect(ok?.run.sourceLabel).toBe(dragon.name);
+  });
+
+  it('has no opening chosen by default', () => {
+    expect(DEFAULT_OPTIONS.openingId).toBe('');
   });
 });

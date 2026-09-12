@@ -146,9 +146,13 @@ export interface Settings {
   /** Opt in to copying state to your Claude account for other devices. */
   cloudSync: boolean;
   permadeathColor: 'w' | 'b' | 'random';
-  permadeathSource: 'repertoire' | 'book';
+  permadeathSource: 'repertoire' | 'book' | 'opening';
   /** A single repertoire to draw permadeath lines from, or '' for all of them. */
   permadeathRepertoire: string;
+  /** The named opening a permadeath run walks into, for the opening source. */
+  permadeathOpening: string;
+  /** Openings starred for quick picking, by their move-order id. */
+  favoriteOpenings: string[];
   /** Play the side your repertoire prepares against. */
   permadeathReverse: boolean;
   /** Draw lines you answer badly more often than lines you know cold. */

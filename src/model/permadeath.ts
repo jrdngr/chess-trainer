@@ -7,7 +7,13 @@ import {
   type Color,
   type Square,
 } from '../chess/core';
-import { deepestName, lookup, type ReferenceIndex } from './reference';
+import {
+  deepestName,
+  lookup,
+  openingById,
+  type CatalogueEntry,
+  type ReferenceIndex,
+} from './reference';
 import { childrenOf, displayName, fenAt, leafLines, pathTo } from './repertoire';
 import { cardId, mulberry32 } from './session';
 import type { Card, RepMove, Repertoire } from './types';
@@ -21,7 +27,7 @@ import type { Card, RepMove, Repertoire } from './types';
  * source asks whether you know your own prep; the book source asks whether you
  * can stay in theory at all.
  */
-export type SourceKind = 'repertoire' | 'book';
+export type SourceKind = 'repertoire' | 'book' | 'opening';
 
 export interface LineSource {
   kind: SourceKind;
@@ -172,6 +178,44 @@ export function bookSource(index: ReferenceIndex, color: Color): LineSource {
   };
 }
 
+/**
+ * One named opening, then the book.
+ *
+ * While the run is still inside the opening's move order, that move order is the
+ * only thing that counts — for both sides, because it is what makes the opening
+ * that opening. Past the end of it the book takes over and anything played in
+ * the database keeps you alive.
+ */
+export function openingSource(
+  index: ReferenceIndex,
+  opening: CatalogueEntry,
+  color: Color,
+): LineSource {
+  const book = bookSource(index, color);
+  const forced = new Map<string, string>();
+  let fen = START_FEN;
+  for (const san of opening.sans) {
+    const move = applySan(fen, san);
+    if (!move) break;
+    forced.set(positionKey(fen), san);
+    fen = move.after;
+  }
+  const onPath = (at: string) => forced.get(positionKey(at));
+  return {
+    kind: 'opening',
+    label: opening.name,
+    color,
+    movesAt: (at) => {
+      const only = onPath(at);
+      return only ? [only] : book.movesAt(at);
+    },
+    weightsAt: (at) => {
+      const only = onPath(at);
+      return only ? [{ san: only, weight: 1 }] : book.weightsAt(at);
+    },
+  };
+}
+
 /* ── options ────────────────────────────────────────────────────────────── */
 
 export type ColorChoice = Color | 'random';
@@ -235,6 +279,8 @@ export interface PermadeathOptions {
   color: ColorChoice;
   /** A single repertoire to draw from, or '' for every one that fits. */
   repertoireId: string;
+  /** The named opening to run through, for the opening source. */
+  openingId: string;
   /** Play the side your repertoire prepares *against*. */
   reverse: boolean;
   /** Draw lines you answer badly more often than lines you know cold. */
@@ -253,6 +299,7 @@ export const DEFAULT_OPTIONS: PermadeathOptions = {
   kind: 'repertoire',
   color: 'random',
   repertoireId: '',
+  openingId: '',
   reverse: false,
   weakFirst: false,
   clock: 'off',
@@ -269,6 +316,8 @@ export interface Run {
   sourceLabel: string;
   /** Which repertoire the line came from, for repertoire runs. */
   repertoireId?: string;
+  /** Which named opening was chosen, for opening runs. */
+  openingId?: string;
   /** True when you are playing the side the repertoire prepares against. */
   reverse: boolean;
   color: Color;
@@ -488,6 +537,37 @@ export function startBookRun(
     survived: 0,
     over: false,
     target: [],
+    hints: opts.hints ?? 0,
+    hintsUsed: 0,
+    prepEnded: null,
+  };
+}
+
+/**
+ * Start a run through a named opening. The opening's own move order is the
+ * target, so the opponent walks you into it before the book takes over.
+ */
+export function startOpeningRun(
+  index: ReferenceIndex,
+  opening: CatalogueEntry,
+  color: ColorChoice,
+  opts: RunOptions = {},
+): Run | null {
+  const rand = mulberry32(opts.seed ?? Math.floor(Math.random() * 2 ** 31));
+  const side = resolveColor(color, rand);
+  if (!lookup(index, START_FEN)?.moves.length) return null;
+  return {
+    id: newRunId(),
+    source: 'opening',
+    sourceLabel: opening.name,
+    openingId: opening.id,
+    reverse: false,
+    color: side,
+    fen: START_FEN,
+    played: [],
+    survived: 0,
+    over: false,
+    target: opening.sans,
     hints: opts.hints ?? 0,
     hintsUsed: 0,
     prepEnded: null,
@@ -763,6 +843,12 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
   const color = opts.color ?? DEFAULT_OPTIONS.color;
   const hints = opts.hints ?? DEFAULT_OPTIONS.hints;
 
+  if (kind === 'opening') {
+    const opening = openingById(opts.index, opts.openingId ?? '');
+    if (!opening) return null;
+    const run = startOpeningRun(opts.index, opening, color, { seed: opts.seed, hints });
+    return run ? { run, source: openingSource(opts.index, opening, run.color) } : null;
+  }
   if (kind === 'book') {
     const run = startBookRun(opts.index, color, { seed: opts.seed, hints });
     return run ? { run, source: bookSource(opts.index, run.color) } : null;
@@ -838,7 +924,11 @@ export interface RunOutcome {
 /** Which bucket a run counts towards: the opening, and the side you played. */
 export function outcomeOf(run: Run, completed: boolean): RunOutcome {
   const key =
-    run.source === 'book' ? `book:${run.color}` : `rep:${run.repertoireId ?? ''}:${run.color}`;
+    run.source === 'book'
+      ? `book:${run.color}`
+      : run.source === 'opening'
+        ? `opening:${run.openingId ?? ''}:${run.color}`
+        : `rep:${run.repertoireId ?? ''}:${run.color}`;
   return {
     id: run.id,
     key,
