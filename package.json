@@ -1,23 +1,32 @@
 {
-  "name": "svelte-app",
-  "version": "1.0.0",
+  "name": "chess-repertoire-trainer",
   "private": true,
+  "version": "0.1.0",
+  "type": "module",
   "scripts": {
-    "build": "rollup -c",
-    "dev": "rollup -c -w",
-    "start": "sirv public --no-clear"
-  },
-  "devDependencies": {
-    "@rollup/plugin-commonjs": "^17.0.0",
-    "@rollup/plugin-node-resolve": "^11.0.0",
-    "rollup": "^2.3.4",
-    "rollup-plugin-css-only": "^3.1.0",
-    "rollup-plugin-livereload": "^2.0.0",
-    "rollup-plugin-svelte": "^7.0.0",
-    "rollup-plugin-terser": "^7.0.0",
-    "svelte": "^3.0.0"
+    "dev": "vite --host",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "artifact": "node scripts/build-artifact.mjs"
   },
   "dependencies": {
-    "sirv-cli": "^1.0.0"
+    "chess.js": "^1.4.0",
+    "idb-keyval": "^6.2.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "stockfish": "^10.0.2",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.0",
+    "vitest": "^2.1.0"
   }
 }
