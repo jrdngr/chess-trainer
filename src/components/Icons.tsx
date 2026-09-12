@@ -12,7 +12,7 @@ const s = (p: IconProps) => ({
 });
 
 export const Icons = {
-  train: (p: IconProps = {}) => (
+  home: (p: IconProps = {}) => (
     <svg {...s(p)}>
       <path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H13z" fill={p.filled ? 'currentColor' : 'none'} />
     </svg>

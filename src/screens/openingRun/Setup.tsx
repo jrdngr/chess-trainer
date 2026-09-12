@@ -18,9 +18,9 @@ import {
   other,
   playableRepertoires,
   type ColorChoice,
-  type PermadeathOptions,
-  type PermadeathPrefs,
-} from '../../model/permadeath';
+  type OpeningRunOptions,
+  type OpeningRunPrefs,
+} from '../../model/openingRun';
 import { formatGameCount, type CatalogueEntry } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
 import { displayName } from '../../model/repertoire';
@@ -44,16 +44,16 @@ export function Setup({
   onStart,
   onExit,
 }: {
-  onStart: (options: PermadeathOptions) => void;
+  onStart: (options: OpeningRunOptions) => void;
   onExit: () => void;
 }) {
   const state = useStore();
-  const setPermadeath = useStore((s) => s.setPermadeath);
+  const setOpeningRunPrefs = useStore((s) => s.setOpeningRunPrefs);
   const setSettings = useStore((s) => s.setSettings);
   const reps = repertoireList(state);
-  const prefs = state.settings.permadeath;
+  const prefs = state.settings.openingRun;
   const favorites = state.settings.favoriteOpenings;
-  const record = state.permadeath;
+  const record = state.openingRun;
   const catalogue = referenceIndex().catalogue;
   const [browsing, setBrowsing] = useState(false);
 
@@ -82,17 +82,17 @@ export function Setup({
   };
 
   const pickOpening = (entry: CatalogueEntry) => {
-    setPermadeath({ openingId: entry.id, kind: 'opening' });
+    setOpeningRunPrefs({ openingId: entry.id, kind: 'opening' });
     setBrowsing(false);
   };
 
   /** Picking a repertoire settles which side you are on, so the colour follows it. */
   const chooseRepertoire = (rep: Repertoire | null) => {
     if (!rep) {
-      setPermadeath({ repertoireId: '' });
+      setOpeningRunPrefs({ repertoireId: '' });
       return;
     }
-    setPermadeath({ repertoireId: rep.id, color: prefs.reverse ? other(rep.color) : rep.color });
+    setOpeningRunPrefs({ repertoireId: rep.id, color: prefs.reverse ? other(rep.color) : rep.color });
   };
 
   return (
@@ -115,7 +115,7 @@ export function Setup({
         </button>
 
         <Section title="Play as" />
-        <Segmented value={prefs.color} options={COLORS} onChange={(color) => setPermadeath({ color })} />
+        <Segmented value={prefs.color} options={COLORS} onChange={(color) => setOpeningRunPrefs({ color })} />
 
         <Section title="Lines" />
         <div className="list">
@@ -129,7 +129,7 @@ export function Setup({
                   : 'No repertoire for that colour'
             }
             selected={fromRepertoire}
-            onSelect={() => setPermadeath({ kind: 'repertoire' })}
+            onSelect={() => setOpeningRunPrefs({ kind: 'repertoire' })}
           />
           <ChoiceRow
             title="One opening"
@@ -141,13 +141,13 @@ export function Setup({
                   : 'Pick an opening and play it out'
             }
             selected={fromOpening}
-            onSelect={() => setPermadeath({ kind: 'opening' })}
+            onSelect={() => setOpeningRunPrefs({ kind: 'opening' })}
           />
           <ChoiceRow
             title="Book"
             meta="Every line in the reference database"
             selected={prefs.kind === 'book'}
-            onSelect={() => setPermadeath({ kind: 'book' })}
+            onSelect={() => setOpeningRunPrefs({ kind: 'book' })}
           />
         </div>
         <div className="note">{sourceNote(prefs, chosenOpening)}</div>
@@ -211,7 +211,7 @@ export function Setup({
         <Segmented
           value={prefs.clock}
           options={CLOCK_MODES.map((mode) => ({ value: mode, label: clockLabel(mode) }))}
-          onChange={(clock) => setPermadeath({ clock })}
+          onChange={(clock) => setOpeningRunPrefs({ clock })}
         />
         <div className="note">{clockDescription(prefs.clock)}</div>
 
@@ -222,7 +222,7 @@ export function Setup({
             value: String(n),
             label: n === 0 ? 'None' : `${n} hint${n === 1 ? '' : 's'}`,
           }))}
-          onChange={(n) => setPermadeath({ hints: Number(n) })}
+          onChange={(n) => setOpeningRunPrefs({ hints: Number(n) })}
         />
         <div className="note">
           {prefs.hints === 0
@@ -238,13 +238,13 @@ export function Setup({
                 label="Target weak spots"
                 hint="Draw lines you get wrong or have let lapse more often"
                 on={prefs.weakFirst}
-                onToggle={() => setPermadeath({ weakFirst: !prefs.weakFirst })}
+                onToggle={() => setOpeningRunPrefs({ weakFirst: !prefs.weakFirst })}
               />
               <Toggle
                 label="Play the other side"
                 hint="Sit on the side your repertoire prepares against"
                 on={prefs.reverse}
-                onToggle={() => setPermadeath({ reverse: !prefs.reverse, repertoireId: '' })}
+                onToggle={() => setOpeningRunPrefs({ reverse: !prefs.reverse, repertoireId: '' })}
               />
             </>
           )}
@@ -252,13 +252,13 @@ export function Setup({
             label="Extended mode"
             hint="When the prep runs out, keep going while the engine calls your moves sound"
             on={prefs.extended}
-            onToggle={() => setPermadeath({ extended: !prefs.extended })}
+            onToggle={() => setOpeningRunPrefs({ extended: !prefs.extended })}
           />
           <Toggle
             label="Per-opening records"
             hint="Keep a separate best for each opening and side"
             on={prefs.perLine}
-            onToggle={() => setPermadeath({ perLine: !prefs.perLine })}
+            onToggle={() => setOpeningRunPrefs({ perLine: !prefs.perLine })}
           />
         </div>
         {prefs.extended && (
@@ -285,7 +285,7 @@ export function Setup({
 }
 
 /** What the chosen source means for the run, in a sentence. */
-function sourceNote(prefs: PermadeathPrefs, opening: CatalogueEntry | null): string {
+function sourceNote(prefs: OpeningRunPrefs, opening: CatalogueEntry | null): string {
   switch (prefs.kind) {
     case 'opening':
       return opening

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { clockSpec, type ClockMode } from '../../model/permadeath';
+import { clockSpec, type ClockMode } from '../../model/openingRun';
 
 /**
  * The run's clock. Only your own thinking is charged, so the opponent's beat

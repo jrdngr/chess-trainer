@@ -5,27 +5,27 @@ import { ExploreScreen } from './screens/ExploreScreen';
 import { ImportScreen } from './screens/ImportScreen';
 import { RepertoireScreen } from './screens/RepertoireScreen';
 import { SettingsSheet } from './screens/SettingsSheet';
-import { TrainHome } from './screens/TrainHome';
-import { PermadeathScreen } from './screens/permadeath/PermadeathScreen';
-import { TrainSession } from './screens/TrainSession';
+import { HomeScreen } from './screens/HomeScreen';
+import { OpeningRunScreen } from './screens/openingRun/OpeningRunScreen';
+import { DrillSession } from './screens/DrillSession';
 import type { SessionMode, TrainingItem } from './model/session';
 import { countDue } from './model/srs';
 import { useStore } from './store/useStore';
 
-type Tab = 'train' | 'repertoire' | 'explore' | 'analysis';
+type Tab = 'home' | 'repertoire' | 'explore' | 'analysis';
 
 export default function App() {
   const ready = useStore((s) => s.ready);
   const init = useStore((s) => s.init);
   const cards = useStore((s) => s.cards);
 
-  const [tab, setTab] = useState<Tab>('train');
+  const [tab, setTab] = useState<Tab>('home');
   const [session, setSession] = useState<{
     items: TrainingItem[];
     mode: SessionMode;
     title: string;
   } | null>(null);
-  const [permadeath, setPermadeath] = useState(false);
+  const [openingRun, setOpeningRunPrefs] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [explorePath, setExplorePath] = useState<string[] | undefined>();
@@ -46,10 +46,10 @@ export default function App() {
     <div className="screen no-nav" style={{ display: 'grid', placeItems: 'center' }}>
       <div className="spinner" />
     </div>
-  ) : permadeath ? (
-    <PermadeathScreen onExit={() => setPermadeath(false)} />
+  ) : openingRun ? (
+    <OpeningRunScreen onExit={() => setOpeningRunPrefs(false)} />
   ) : session ? (
-    <TrainSession
+    <DrillSession
       items={session.items}
       mode={session.mode}
       title={session.title}
@@ -63,10 +63,10 @@ export default function App() {
     <div className="app">
       {overlay ?? (
         <>
-          {tab === 'train' && (
-            <TrainHome
+          {tab === 'home' && (
+            <HomeScreen
               onStart={startSession}
-              onStartPermadeath={() => setPermadeath(true)}
+              onStartOpeningRun={() => setOpeningRunPrefs(true)}
               onOpenSettings={() => setSettingsOpen(true)}
             />
           )}
@@ -91,10 +91,10 @@ export default function App() {
           <nav className="nav">
             <NavButton
               label="Home"
-              active={tab === 'train'}
+              active={tab === 'home'}
               badge={dueCount}
-              onClick={() => setTab('train')}
-              icon={<Icons.train filled={tab === 'train'} />}
+              onClick={() => setTab('home')}
+              icon={<Icons.home filled={tab === 'home'} />}
             />
             <NavButton
               label="Repertoire"

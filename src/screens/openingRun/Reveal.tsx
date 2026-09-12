@@ -22,7 +22,7 @@ import {
   type DeathCause,
   type LineSource,
   type Run,
-} from '../../model/permadeath';
+} from '../../model/openingRun';
 import { referenceIndex } from '../../model/referenceIndex';
 import { useStore } from '../../store/useStore';
 import { GRADE_TONES, Record } from './Record';
@@ -66,7 +66,7 @@ export function Reveal({
   onContinueExtended,
 }: RevealProps) {
   const settings = useStore((s) => s.settings);
-  const record = useStore((s) => s.permadeath);
+  const record = useStore((s) => s.openingRun);
   const survived = death === null;
   const grade = gradeOf(run, survived);
   const past = extendedMoves(run);
@@ -283,7 +283,7 @@ export function Reveal({
           Copy the moves I played
         </button>
 
-        <Record record={record} perLine={settings.permadeath.perLine} />
+        <Record record={record} perLine={settings.openingRun.perLine} />
 
         <div className="spacer" />
         <button className="btn plain block" onClick={onChangeOptions}>

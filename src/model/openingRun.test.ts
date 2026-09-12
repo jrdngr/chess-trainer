@@ -50,7 +50,7 @@ import {
   type LineSource,
   type Weakness,
   type Run,
-} from './permadeath';
+} from './openingRun';
 import { addLine, createRepertoire, displayName, leafLines, pathTo } from './repertoire';
 import { lookup, openingById } from './reference';
 import { referenceIndex } from './referenceIndex';

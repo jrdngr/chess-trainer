@@ -24,10 +24,10 @@ import {
   EMPTY_RECORD,
   normalizeRecord,
   recordRun,
-  type PermadeathPrefs,
-  type PermadeathRecord,
+  type OpeningRunPrefs,
+  type OpeningRunRecord,
   type RunOutcome,
-} from '../model/permadeath';
+} from '../model/openingRun';
 import { cloudAvailable, readCloud, writeCloud, type CloudStatus, type WriteResult } from './cloud';
 import { clearState, debounce, loadState, probeStorage, saveState, type StorageSupport } from './db';
 import { buildSeedRepertoires } from './seed';
@@ -43,24 +43,37 @@ export const DEFAULT_SETTINGS: Settings = {
   chesscomUsername: '',
   cloudSync: true,
   favoriteOpenings: [],
-  permadeath: { ...DEFAULT_PREFS },
+  openingRun: { ...DEFAULT_PREFS },
 };
 
-/** Saved settings over the defaults, one level deep, so a new field never comes back undefined. */
+/**
+ * Saved settings over the defaults, one level deep, so a new field never comes
+ * back undefined.
+ *
+ * Only keys the app still has survive: a setting that has been renamed or
+ * dropped would otherwise ride along in saved state forever, unread and
+ * confusing to anyone who opens the file later.
+ */
 function mergeSettings(saved: Partial<Settings> | undefined): Settings {
+  const known = Object.fromEntries(
+    Object.entries(saved ?? {}).filter(([key]) => key in DEFAULT_SETTINGS),
+  ) as Partial<Settings>;
   return {
     ...DEFAULT_SETTINGS,
-    ...saved,
-    permadeath: { ...DEFAULT_PREFS, ...saved?.permadeath },
+    ...known,
+    openingRun: { ...DEFAULT_PREFS, ...known.openingRun },
   };
 }
 
 /**
- * Bump when the seeded repertoires change shape or content. A saved state from
- * an older schema is discarded rather than migrated — this is a prototype, and
- * the seed data is the thing most likely to change.
+ * Bump when the seeded repertoires change shape or content, or when the saved
+ * shape itself changes. A saved state from an older schema is discarded rather
+ * than migrated — this is a prototype, and the seed data is the thing most
+ * likely to change.
+ *
+ * 4: permadeath became openingRun, settings and records included.
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 interface PersistedState {
   version: number;
@@ -72,7 +85,7 @@ interface PersistedState {
   log: ReviewLogEntry[];
   settings: Settings;
   importedGames: ImportedGame[];
-  permadeath: PermadeathRecord;
+  openingRun: OpeningRunRecord;
 }
 
 interface StoreState extends PersistedState {
@@ -96,17 +109,17 @@ interface StoreState extends PersistedState {
   ensureCard: (item: TrainingItem) => Card;
 
   setSettings: (patch: Partial<Settings>) => void;
-  setPermadeath: (patch: Partial<PermadeathPrefs>) => void;
+  setOpeningRunPrefs: (patch: Partial<OpeningRunPrefs>) => void;
   setImportedGames: (games: ImportedGame[]) => void;
 
-  /** Log a finished permadeath run, globally and against its own opening. */
-  endPermadeathRun: (outcome: RunOutcome) => void;
+  /** Log a finished openingRun run, globally and against its own opening. */
+  endOpeningRun: (outcome: RunOutcome) => void;
   /**
    * The move that ended a run. Only the miss touches the schedule: correct
    * moves in a run are primed by the ones before them, so crediting them would
    * inflate intervals on evidence weaker than an isolated review.
    */
-  missedInPermadeath: (repertoireId: string, fen: string, played: string, expected: string) => void;
+  missedInOpeningRun: (repertoireId: string, fen: string, played: string, expected: string) => void;
 }
 
 function emptyPersisted(): PersistedState {
@@ -120,7 +133,7 @@ function emptyPersisted(): PersistedState {
     log: [],
     settings: { ...DEFAULT_SETTINGS },
     importedGames: [],
-    permadeath: { ...EMPTY_RECORD },
+    openingRun: { ...EMPTY_RECORD },
   };
 }
 
@@ -134,7 +147,7 @@ function persistedFrom(state: StoreState): PersistedState {
     log: state.log,
     settings: state.settings,
     importedGames: state.importedGames,
-    permadeath: state.permadeath,
+    openingRun: state.openingRun,
   };
 }
 
@@ -162,7 +175,7 @@ function statusAfterWrite(result: WriteResult): CloudStatus {
   return { kind: 'error', message: result.message ?? 'Sync failed' };
 }
 
-/** Review one card and log it; shared by training and permadeath. */
+/** Review one card and log it; shared by training and openingRun. */
 function reviewed(
   state: StoreState,
   card: Card,
@@ -242,7 +255,7 @@ export const useStore = create<StoreState>((set, get) => {
       if (chosen) {
         set({
           ...chosen,
-          permadeath: normalizeRecord(chosen.permadeath),
+          openingRun: normalizeRecord(chosen.openingRun),
           updatedAt: Math.max(localAt, remoteAt),
           settings: mergeSettings(chosen.settings),
           storage,
@@ -284,7 +297,7 @@ export const useStore = create<StoreState>((set, get) => {
         // person on two devices, and honest about not merging concurrent edits.
         set({
           ...remote.state,
-          permadeath: normalizeRecord(remote.state.permadeath),
+          openingRun: normalizeRecord(remote.state.openingRun),
           importedGames: local.importedGames,
           settings: mergeSettings(remote.state.settings),
           updatedAt: remote.updatedAt,
@@ -363,20 +376,20 @@ export const useStore = create<StoreState>((set, get) => {
       commit({ settings: { ...get().settings, ...patch } });
     },
 
-    setPermadeath(patch) {
+    setOpeningRunPrefs(patch) {
       const settings = get().settings;
-      commit({ settings: { ...settings, permadeath: { ...settings.permadeath, ...patch } } });
+      commit({ settings: { ...settings, openingRun: { ...settings.openingRun, ...patch } } });
     },
 
     setImportedGames(games) {
       commit({ importedGames: games });
     },
 
-    endPermadeathRun(outcome) {
-      commit({ permadeath: recordRun(get().permadeath, outcome) });
+    endOpeningRun(outcome) {
+      commit({ openingRun: recordRun(get().openingRun, outcome) });
     },
 
-    missedInPermadeath(repertoireId, fen, played, expected) {
+    missedInOpeningRun(repertoireId, fen, played, expected) {
       const key = positionKey(fen);
       const id = cardId(repertoireId, key);
       const state = get();

@@ -19,9 +19,9 @@ import {
   takeHint,
   weaknessFromCards,
   type LineSource,
-  type PermadeathOptions,
+  type OpeningRunOptions,
   type Run,
-} from '../../model/permadeath';
+} from '../../model/openingRun';
 import { deepestName } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
 import { mulberry32 } from '../../model/session';
@@ -51,20 +51,20 @@ interface OffPrep {
 }
 
 /**
- * Permadeath: one secret line, played until the first mistake.
+ * OpeningRun: one secret line, played until the first mistake.
  *
  * This screen owns the run and its rules — the opponent's replies, the clock,
  * hints, stepping out of prep, and the engine as referee once the prep runs
  * out. Nothing on screen names the line while it is live; the reveal is the
  * reward for dying, and lives in its own screen.
  */
-export function PermadeathScreen({ onExit }: { onExit: () => void }) {
+export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
   const state = useStore();
   const reps = repertoireList(state);
   const { settings, cards } = state;
-  const prefs = settings.permadeath;
-  const endRun = useStore((s) => s.endPermadeathRun);
-  const missed = useStore((s) => s.missedInPermadeath);
+  const prefs = settings.openingRun;
+  const endRun = useStore((s) => s.endOpeningRun);
+  const missed = useStore((s) => s.missedInOpeningRun);
   const addToRep = useStore((s) => s.addLine);
   const index = referenceIndex();
 
@@ -167,7 +167,7 @@ export function PermadeathScreen({ onExit }: { onExit: () => void }) {
   /** A hint belongs to one position only. */
   useEffect(() => setHintSquare(null), [run?.fen]);
 
-  const start = (options: PermadeathOptions) => {
+  const start = (options: OpeningRunOptions) => {
     const started = beginRun({ ...options, reps, index, weakness: weaknessFromCards(cards) });
     if (!started) return;
     settled.current = false;

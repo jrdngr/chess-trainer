@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { applyUci, positionStatus, type LegalMove } from '../../chess/core';
 import { formatScore, type EngineLine } from '../../engine/types';
 import { useEngine } from '../../engine/useEngine';
-import { isUsersTurn, judgeByEval, type Run } from '../../model/permadeath';
+import { isUsersTurn, judgeByEval, type Run } from '../../model/openingRun';
 
 /** Your move past the prep, held until the engine has scored it. */
 export interface Pending {

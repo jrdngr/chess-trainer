@@ -1,5 +1,5 @@
 import type { Color } from '../chess/core';
-import type { PermadeathPrefs } from './permadeath';
+import type { OpeningRunPrefs } from './openingRun';
 
 export type MoveSource = 'seed' | 'manual' | 'reference' | 'pgn' | 'games';
 
@@ -144,5 +144,5 @@ export interface Settings {
   cloudSync: boolean;
   /** Openings starred for quick picking, by their move-order id. */
   favoriteOpenings: string[];
-  permadeath: PermadeathPrefs;
+  openingRun: OpeningRunPrefs;
 }

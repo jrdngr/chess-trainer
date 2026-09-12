@@ -74,10 +74,6 @@ fuzz. `review()` is pure and deterministic, so the whole algorithm can be
 swapped without touching the UI.
 
 ### Opening Run
-*Called `permadeath` throughout the code: the mode was renamed after the model,
-the store keys and the saved records were written, and renaming those would
-throw away everyone's saved progress for a word.*
-
 One line, drawn in secret, played until your first mistake. Nothing on screen
 names it while you play — no opening name, no move list, no explore. Dying is
 what buys you the reveal, which names the variation, gives its ECO code and
@@ -333,13 +329,13 @@ top of `src/styles.css`; the board palettes and highlights in
 src/
   chess/       rules, position keys, PGN parsing with variations
   model/       repertoire tree, SRS, session building, reference index,
-               game analysis, permadeath rules, seed data
+               game analysis, opening-run rules, seed data
   engine/      Stockfish worker + heuristic fallback behind one interface
   store/       zustand store, IndexedDB persistence, cloud sync, seed loading
   components/  board, pieces, explorer, sheets, icons, and the shared
                controls (app bar, toggles, segmented rows, move strip)
-  screens/     Train, Repertoire, Explore, Analysis, Import, Settings
-  screens/permadeath/
+  screens/     Home, Drill, Repertoire, Explore, Analysis, Import, Settings
+  screens/openingRun/
                setup, the live run, the reveal, play-on, the record, and
                the clock and engine-referee hooks
 ```

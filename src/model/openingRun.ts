@@ -19,7 +19,7 @@ import { cardId, mulberry32 } from './session';
 import type { Card, RepMove, Repertoire } from './types';
 
 /**
- * Permadeath: one secret line, played until the first mistake ends the run.
+ * OpeningRun: one secret line, played until the first mistake ends the run.
  *
  * Both modes run on the same engine. A `LineSource` answers two questions about
  * a position — which moves count as staying in, and how the opponent replies —
@@ -274,7 +274,7 @@ export function clockDescription(mode: ClockMode): string {
 export const HINT_BUDGETS = [0, 1, 3];
 
 /** Everything the setup screen decides, in one place. */
-export interface PermadeathOptions {
+export interface OpeningRunOptions {
   kind: SourceKind;
   color: ColorChoice;
   /** A single repertoire to draw from, or '' for every one that fits. */
@@ -295,7 +295,7 @@ export interface PermadeathOptions {
   extended: boolean;
 }
 
-export const DEFAULT_OPTIONS: PermadeathOptions = {
+export const DEFAULT_OPTIONS: OpeningRunOptions = {
   kind: 'repertoire',
   color: 'random',
   repertoireId: '',
@@ -308,12 +308,12 @@ export const DEFAULT_OPTIONS: PermadeathOptions = {
 };
 
 /** What the setup screen remembers between runs: the options, plus how the record is shown. */
-export interface PermadeathPrefs extends PermadeathOptions {
+export interface OpeningRunPrefs extends OpeningRunOptions {
   /** Break the record down by opening and side. */
   perLine: boolean;
 }
 
-export const DEFAULT_PREFS: PermadeathPrefs = { ...DEFAULT_OPTIONS, perLine: false };
+export const DEFAULT_PREFS: OpeningRunPrefs = { ...DEFAULT_OPTIONS, perLine: false };
 
 /* ── runs ───────────────────────────────────────────────────────────────── */
 
@@ -903,7 +903,7 @@ export function lineName(
 
 /* ── starting a run ─────────────────────────────────────────────────────── */
 
-export interface BeginOptions extends Partial<PermadeathOptions> {
+export interface BeginOptions extends Partial<OpeningRunOptions> {
   reps: Repertoire[];
   index: ReferenceIndex;
   seed?: number;
@@ -953,7 +953,7 @@ export interface LineRecord {
   lastAt: number;
 }
 
-export interface PermadeathRecord {
+export interface OpeningRunRecord {
   runs: number;
   /** Deepest run, counted in the user's own correct moves. */
   best: number;
@@ -972,7 +972,7 @@ export interface PermadeathRecord {
   grades: Record<RunGrade, number>;
 }
 
-export const EMPTY_RECORD: PermadeathRecord = {
+export const EMPTY_RECORD: OpeningRunRecord = {
   runs: 0,
   best: 0,
   lastDepth: 0,
@@ -983,7 +983,7 @@ export const EMPTY_RECORD: PermadeathRecord = {
 };
 
 /** A saved record from before per-opening bests existed is still a record. */
-export function normalizeRecord(record: Partial<PermadeathRecord> | undefined): PermadeathRecord {
+export function normalizeRecord(record: Partial<OpeningRunRecord> | undefined): OpeningRunRecord {
   if (!record) return { ...EMPTY_RECORD, grades: { ...EMPTY_RECORD.grades } };
   return {
     ...EMPTY_RECORD,
@@ -1036,10 +1036,10 @@ export function outcomeOf(run: Run, completed: boolean): RunOutcome {
  * blundering does not unmake it: a completed line stays counted.
  */
 export function recordRun(
-  record: PermadeathRecord,
+  record: OpeningRunRecord,
   outcome: RunOutcome,
   at = Date.now(),
-): PermadeathRecord {
+): OpeningRunRecord {
   const base = normalizeRecord(record);
   const amend = base.last?.id === outcome.id && base.last.key === outcome.key;
   const alreadyCounted = amend && !!base.last?.completed;
@@ -1085,7 +1085,7 @@ function amendGrades(
 }
 
 /** Per-opening records, deepest first — what the breakdown shows. */
-export function lineRecords(record: PermadeathRecord): (LineRecord & { key: string })[] {
+export function lineRecords(record: OpeningRunRecord): (LineRecord & { key: string })[] {
   return Object.entries(normalizeRecord(record).byLine)
     .map(([key, value]) => ({ ...value, key }))
     .sort((a, b) => b.best - a.best || b.runs - a.runs);

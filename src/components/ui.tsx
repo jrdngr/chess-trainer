@@ -306,7 +306,7 @@ export interface StripItem {
 /**
  * A scrolling row of moves with a cursor and arrows, shared by every board
  * screen. Callers hand over already-decorated items, which is what lets the
- * permadeath post-mortem colour the move that ended a run.
+ * openingRun post-mortem colour the move that ended a run.
  */
 export function Strip({
   items,

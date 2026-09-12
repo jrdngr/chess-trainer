@@ -3,9 +3,9 @@ import {
   GRADES,
   gradeLabel,
   lineRecords,
-  type PermadeathRecord,
+  type OpeningRunRecord,
   type RunGrade,
-} from '../../model/permadeath';
+} from '../../model/openingRun';
 
 /** The colour each grade is drawn in, on the record bar and its legend. */
 export const GRADE_COLORS: Record<RunGrade, string> = {
@@ -33,7 +33,7 @@ function Stat({ label, value }: { label: string; value: number }) {
 }
 
 /** The global tally, optionally broken down by opening and side. */
-export function Record({ record, perLine }: { record: PermadeathRecord; perLine: boolean }) {
+export function Record({ record, perLine }: { record: OpeningRunRecord; perLine: boolean }) {
   const lines = perLine ? lineRecords(record) : [];
   const total = GRADES.reduce((sum, g) => sum + record.grades[g], 0);
   return (

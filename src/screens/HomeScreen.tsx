@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react';
 import { AppBar, IconButton, Icons, Section, Sheet } from '../components/ui';
-import { lineRecords } from '../model/permadeath';
+import { lineRecords } from '../model/openingRun';
 import { displayName } from '../model/repertoire';
 import type { SessionMode, TrainingItem } from '../model/session';
 import { countDue, DAY, forecast, masteryBuckets, retention } from '../model/srs';
 import { itemsFor, repertoireList, useStore } from '../store/useStore';
 import type { Repertoire } from '../model/types';
 
-export interface TrainHomeProps {
+export interface HomeScreenProps {
   onStart: (items: TrainingItem[], mode: SessionMode, title: string) => void;
-  onStartPermadeath: () => void;
+  onStartOpeningRun: () => void;
   onOpenSettings: () => void;
 }
 
@@ -24,17 +24,17 @@ interface RepEntry {
   mastery: ReturnType<typeof masteryBuckets>;
 }
 
-export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainHomeProps) {
+export function HomeScreen({ onStart, onStartOpeningRun, onOpenSettings }: HomeScreenProps) {
   const state = useStore();
   const reps = repertoireList(state);
   const now = Date.now();
   const [pick, setPick] = useState<RepEntry | null>(null);
-  const permadeath = state.permadeath;
+  const openingRun = state.openingRun;
   /** The opening you have gone deepest in — the one stat worth naming. */
   const strongest = useMemo(() => {
-    const best = lineRecords(permadeath)[0];
+    const best = lineRecords(openingRun)[0];
     return best && best.best > 0 ? best : null;
-  }, [permadeath]);
+  }, [openingRun]);
 
   const perRep = useMemo<RepEntry[]>(
     () =>
@@ -116,22 +116,22 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
 
         <Section title="Opening Run" />
         <div className="hero">
-          <div className="big">{permadeath.runs === 0 ? '\u2014' : permadeath.best}</div>
+          <div className="big">{openingRun.runs === 0 ? '\u2014' : openingRun.best}</div>
           <div className="lbl">
-            {permadeath.runs === 0
+            {openingRun.runs === 0
               ? 'One secret line. One mistake.'
-              : `${permadeath.best === 1 ? 'move' : 'moves'} deep at your best`}
+              : `${openingRun.best === 1 ? 'move' : 'moves'} deep at your best`}
           </div>
-          {permadeath.runs > 0 && (
+          {openingRun.runs > 0 && (
             <div className="pills">
               <span className="pill">
-                <b>{permadeath.runs}</b> {permadeath.runs === 1 ? 'run' : 'runs'}
+                <b>{openingRun.runs}</b> {openingRun.runs === 1 ? 'run' : 'runs'}
               </span>
               <span className="pill">
-                <b>{permadeath.survivals}</b> completed
+                <b>{openingRun.survivals}</b> completed
               </span>
               <span className="pill">
-                last <b>{permadeath.lastDepth}</b>
+                last <b>{openingRun.lastDepth}</b>
               </span>
             </div>
           )}
@@ -144,9 +144,9 @@ export function TrainHome({ onStart, onStartPermadeath, onOpenSettings }: TrainH
           <button
             className="btn primary block xl"
             style={{ marginTop: 18 }}
-            onClick={onStartPermadeath}
+            onClick={onStartOpeningRun}
           >
-            {permadeath.runs === 0 ? 'Start a run' : 'New run'}
+            {openingRun.runs === 0 ? 'Start a run' : 'New run'}
           </button>
         </div>
 

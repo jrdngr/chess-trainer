@@ -29,7 +29,7 @@ import {
 import type { Grade } from '../model/types';
 import { useStore } from '../store/useStore';
 
-export interface TrainSessionProps {
+export interface DrillSessionProps {
   /** Everything in scope. The session draws from this for as long as you want. */
   items: TrainingItem[];
   mode: SessionMode;
@@ -58,7 +58,7 @@ const GRADE_LABELS: Record<Grade, string> = {
   easy: 'Easy',
 };
 
-export function TrainSession({ items, mode, title, onExit }: TrainSessionProps) {
+export function DrillSession({ items, mode, title, onExit }: DrillSessionProps) {
   const settings = useStore((s) => s.settings);
   const cards = useStore((s) => s.cards);
   const repertoires = useStore((s) => s.repertoires);

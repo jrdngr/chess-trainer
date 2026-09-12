@@ -192,12 +192,12 @@ function RepertoireBrowser({
     toast(`${pendingMove.san} added`);
   };
 
-  const trainBranch = () => {
+  const drillBranch = () => {
     const items = nodeId
       ? branchItems(rep, nodeId)
       : branchItems(rep, childrenOf(rep, null)[0]?.id ?? '');
     if (!items.length) {
-      toast('Nothing to train');
+      toast('Nothing to drill');
       return;
     }
     onStart(items, 'branch', opening?.name ?? name);
@@ -303,8 +303,8 @@ function RepertoireBrowser({
           <button className="btn soft grow" onClick={() => onExploreFrom(pathSans)}>
             Explore
           </button>
-          <button className="btn primary grow" onClick={trainBranch}>
-            <Icons.train size={18} filled /> Train
+          <button className="btn primary grow" onClick={drillBranch}>
+            <Icons.home size={18} filled /> Drill
           </button>
         </div>
       </div>
@@ -317,7 +317,7 @@ function RepertoireBrowser({
           setMenuFor(null);
           setNodeId(id);
         }}
-        onTrain={(items, title) => {
+        onDrill={(items, title) => {
           setMenuFor(null);
           onStart(items, 'branch', title);
         }}
@@ -393,13 +393,13 @@ function NodeMenu({
   nodeId,
   onClose,
   onNavigate,
-  onTrain,
+  onDrill,
 }: {
   rep: Repertoire;
   nodeId: string | null;
   onClose: () => void;
   onNavigate: (id: string) => void;
-  onTrain: (items: TrainingItem[], title: string) => void;
+  onDrill: (items: TrainingItem[], title: string) => void;
 }) {
   const prefer = useStore((s) => s.preferMove);
   const annotate = useStore((s) => s.annotate);
@@ -467,14 +467,14 @@ function NodeMenu({
               onClick={() => {
                 const items = branchItems(rep, node.id);
                 if (!items.length) {
-                  toast('Nothing to train');
+                  toast('Nothing to drill');
                   return;
                 }
-                onTrain(items.slice(0, 40), node.san);
+                onDrill(items.slice(0, 40), node.san);
               }}
             >
               <span className="grow">
-                <div className="title">Train branch</div>
+                <div className="title">Drill branch</div>
                 <div className="meta">{below} moves</div>
               </span>
               <Icons.chevron size={18} />
