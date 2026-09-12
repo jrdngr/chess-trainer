@@ -145,4 +145,6 @@ export interface Settings {
   chesscomUsername: string;
   /** Opt in to copying state to your Claude account for other devices. */
   cloudSync: boolean;
+  permadeathColor: 'w' | 'b' | 'random';
+  permadeathSource: 'repertoire' | 'book';
 }

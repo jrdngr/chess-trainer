@@ -39,6 +39,8 @@ export const DEFAULT_SETTINGS: Settings = {
   lichessUsername: '',
   chesscomUsername: '',
   cloudSync: true,
+  permadeathColor: 'random',
+  permadeathSource: 'repertoire',
 };
 
 /**
