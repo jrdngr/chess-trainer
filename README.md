@@ -46,9 +46,10 @@ the board, and it is checked against your repertoire.
   repertoire" is a fact, not a reason, so the engine plays the position on from
   the move you made and shows the reply that punishes it, beside what the
   prepared move was worth. The refutation is a line on a board you can step
-  through rather than a verdict — five moves a side — and the footer says which
-  engine gave it and at what depth, because a shallow opinion should look like
-  one.
+  through rather than a verdict — five moves a side. The only words are the ones
+  the board cannot say for itself: that the line is still coming, or that there
+  is nothing forced to come. The footer says which engine gave it and at what
+  depth, because a shallow opinion should look like one.
 - No engine evaluations during recall by default. This is memory retrieval.
 - "Follow the line" (Settings, on by default) plays the opponent's reply and
   asks the next move in the same line, so you can compare line-running against

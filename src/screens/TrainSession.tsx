@@ -612,13 +612,15 @@ function WhySheet({
       <div className="spacer sm" />
       <Strip items={items} cursor={at} max={line.length} onSeek={setCursor} />
 
-      <div className="center faint tiny" style={{ marginTop: 8 }}>
-        {!found.played
-          ? 'Playing it out…'
-          : found.played.sans.length === 0
-            ? 'The engine finds nothing forced here — this one is a matter of plan, not tactics.'
-            : `${side === 'w' ? 'Black' : 'White'} answers ${found.played.sans[0]}. Step through to see where it goes.`}
-      </div>
+      {/* Only what the strip cannot say for itself: that it is still coming, or
+          that there is nothing to come. */}
+      {(!found.played || found.played.sans.length === 0) && (
+        <div className="center faint tiny" style={{ marginTop: 8 }}>
+          {!found.played
+            ? 'Playing it out…'
+            : 'The engine finds nothing forced here — this one is a matter of plan, not tactics.'}
+        </div>
+      )}
       {found.played && (
         <div className="center faint tiny" style={{ marginTop: 6 }}>
           {backend === 'stockfish' ? 'Stockfish' : 'Rough estimate'} at depth{' '}
