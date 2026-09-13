@@ -93,6 +93,13 @@ inside the selection:
 - **Need** is how loudly the work asks: cards due, holes in the prep, positions
   your games disagree with, prep no run has tested. Each saturates, so two
   hundred due cards are not ten times louder than twenty.
+- **Readiness** gates Growth. Holes in an opening only ask at full voice once
+  the prep around them is held: a position counts as held when its card has
+  graduated, is not due, and has a review interval of a week or more. Half
+  held is a quarter of the voice; an opening still being drilled asks at a
+  tenth at most, so it is grown now and then rather than never. An opening
+  with no prep yet is ready, which is how a new repertoire gets its first
+  lines.
 - **Staleness** is how long that opening has gone without that mode, measured
   against the other candidates rather than the clock. Candidates never played
   are all equally stale.
