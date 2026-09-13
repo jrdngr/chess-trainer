@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { BarList, LineChart } from '../components/charts';
+import { MilestoneBar } from '../components/ScoreBar';
 import { ColorSquare } from '../components/Selection';
 import { AppBar, Icons, Section, Segmented } from '../components/ui';
 import { sansToMoveText } from '../chess/core';
@@ -147,20 +148,10 @@ function Tier({ stats, depth }: { stats: NodeStats; depth: number }) {
 
 /** Where a score stands on its ladder, and the colours already held. */
 function Ladder({ milestone }: { milestone: ReturnType<typeof milestoneOf> }) {
+  const toGo = milestone.ceiling - Math.round(milestone.progress * (milestone.ceiling - milestone.floor) + milestone.floor);
   return (
     <div className="milestone-bar">
-      <div className="head">
-        <span className="tier">
-          <i style={{ background: milestone.next.color }} />
-          {milestone.heldLabel ? `${milestone.heldLabel} → ${milestone.nextLabel}` : `Toward ${milestone.nextLabel}`}
-        </span>
-        <span className="num">
-          {milestone.ceiling - Math.round(milestone.progress * (milestone.ceiling - milestone.floor) + milestone.floor)} to go
-        </span>
-      </div>
-      <div className="track">
-        <div className="fill" style={{ width: `${milestone.progress * 100}%`, background: milestone.next.color }} />
-      </div>
+      <MilestoneBar milestone={milestone} centre={<span className="num">{toGo} to go</span>} />
       <div className="ladder" aria-hidden>
         {MILESTONES.map((tier, i) => (
           <i key={tier.name} className={i < milestone.reached ? 'held' : ''} style={{ background: tier.color }} />

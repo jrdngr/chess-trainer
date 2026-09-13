@@ -3,6 +3,42 @@ import { milestoneOf } from '../model/scoring';
 import { haptic } from './ui';
 import { useStore } from '../store/useStore';
 
+/** What a ladder shows before its first colour is held. */
+const START = { name: 'Start', color: '#4b4b55' };
+
+/**
+ * The milestone bar, the same everywhere it appears: the colour held on the
+ * left, the colour being worked toward on the right, each a dot with its
+ * name above it, and the bar between them filled in the colour held.
+ */
+export function MilestoneBar({
+  milestone,
+  centre,
+}: {
+  milestone: ReturnType<typeof milestoneOf>;
+  /** Whatever belongs between the two names: the total, the points just earned. */
+  centre?: React.ReactNode;
+}) {
+  const held = milestone.held ?? START;
+  const heldLabel = milestone.heldLabel ?? START.name;
+  return (
+    <div className="milestone">
+      <div className="names">
+        <span className="name">{heldLabel}</span>
+        <span className="centre">{centre}</span>
+        <span className="name">{milestone.nextLabel}</span>
+      </div>
+      <div className="rail">
+        <i className="dot" style={{ background: held.color, boxShadow: `0 0 8px ${held.color}` }} />
+        <span className="track">
+          <span className="fill" style={{ width: `${milestone.progress * 100}%`, background: held.color }} />
+        </span>
+        <i className="dot" style={{ background: milestone.next.color, boxShadow: `0 0 8px ${milestone.next.color}` }} />
+      </div>
+    </div>
+  );
+}
+
 /** How long the bar stays after points land; longer for a milestone. */
 const SHOW_MS = 2600;
 const MILESTONE_MS = 4200;
@@ -48,8 +84,7 @@ export function ScoreBar() {
 
   const milestone = milestoneOf(displayTotal);
   const reached = feed.milestone;
-  const label = celebrating && reached ? `${reached.heldLabel}!` : milestone.nextLabel;
-  const color = celebrating && reached ? reached.held?.color : milestone.next.color;
+  const color = celebrating && reached ? reached.held?.color : (milestone.held ?? START).color;
 
   return (
     <div
@@ -58,17 +93,15 @@ export function ScoreBar() {
       aria-live="polite"
       onClick={() => shown && openStats('')}
     >
-      <div className="head">
-        <span className="tier">
-          <i />
-          {label}
-        </span>
-        <span className="gain num">{feed.points > 0 ? `+${feed.points}` : ''}</span>
-        <span className="total num">{displayTotal}</span>
-      </div>
-      <div className="track">
-        <div className="fill" style={{ width: `${milestone.progress * 100}%` }} />
-      </div>
+      <MilestoneBar
+        milestone={celebrating && reached ? reached : milestone}
+        centre={
+          <>
+            <span className="gain num">{feed.points > 0 ? `+${feed.points}` : ''}</span>
+            <span className="total num">{displayTotal}</span>
+          </>
+        }
+      />
     </div>
   );
 }
@@ -82,22 +115,8 @@ export function ScoreStrip() {
   const openStats = useStore((s) => s.openStats);
   const milestone = milestoneOf(total);
   return (
-    <button
-      className="score-strip"
-      style={{ ['--tier' as string]: milestone.next.color }}
-      onClick={() => openStats('')}
-      aria-label="Score and stats"
-    >
-      <span className="head">
-        <span className="tier">
-          <i />
-          {milestone.heldLabel ? `${milestone.heldLabel} · toward ${milestone.nextLabel}` : `Toward ${milestone.nextLabel}`}
-        </span>
-        <span className="total num">{total}</span>
-      </span>
-      <span className="track">
-        <span className="fill" style={{ width: `${milestone.progress * 100}%` }} />
-      </span>
+    <button className="score-strip" onClick={() => openStats('')} aria-label="Score and stats">
+      <MilestoneBar milestone={milestone} centre={<span className="total num">{total}</span>} />
     </button>
   );
 }

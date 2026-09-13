@@ -817,16 +817,21 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   pointer-events: none;
 }
 .score-bar.shown { transform: translate(-50%, 0); opacity: 1; }
-.score-bar .head { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; }
-.score-bar .tier { display: inline-flex; align-items: center; gap: 7px; color: var(--tier); flex: 1; min-width: 0; }
-.score-bar .tier i { width: 10px; height: 10px; border-radius: 50%; background: var(--tier); box-shadow: 0 0 10px var(--tier); }
-.score-bar .gain { color: var(--good); font-size: 15px; animation: gainPop 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
-.score-bar .total { font-size: 15px; color: var(--text); min-width: 40px; text-align: right; }
-.score-bar .track { height: 8px; border-radius: 4px; background: var(--surface-3); overflow: hidden; margin-top: 8px; }
-.score-bar .fill { height: 100%; background: var(--tier); border-radius: 4px; transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1); box-shadow: 0 0 12px var(--tier); }
+.score-bar .gain { color: var(--good); font-size: 15px; font-weight: 800; animation: gainPop 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+.score-bar .total { font-size: 15px; font-weight: 800; color: var(--text); }
 .score-bar.celebrate { animation: celebrate 0.9s ease-out; }
 .score-bar.celebrate .fill { width: 100% !important; animation: fillFlash 0.8s ease-out 2; }
-.score-bar.celebrate .tier { font-size: 15px; }
+
+/* The milestone bar: the colour held on the left, the next on the right. */
+.milestone { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.milestone .names { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 700; color: var(--text-2); }
+.milestone .names .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.milestone .names .name:last-child { text-align: right; }
+.milestone .names .centre { display: inline-flex; align-items: baseline; gap: 8px; color: var(--text); font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.milestone .rail { display: flex; align-items: center; gap: 8px; }
+.milestone .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.milestone .track { flex: 1; height: 8px; border-radius: 4px; background: var(--surface-3); overflow: hidden; display: block; }
+.milestone .fill { display: block; height: 100%; border-radius: 4px; transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
 @keyframes gainPop { from { transform: scale(1.6); opacity: 0; } }
 @keyframes celebrate {
   0% { transform: translate(-50%, 0) scale(1); }
@@ -981,11 +986,7 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 
 /* ── stats ─────────────────────────────────────────────────────────────── */
 .milestone-bar { display: flex; flex-direction: column; gap: 6px; }
-.milestone-bar .head { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 600; color: var(--text-2); }
-.milestone-bar .head .tier { display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
-.milestone-bar .head .tier i { width: 9px; height: 9px; border-radius: 50%; }
-.milestone-bar .track { height: 10px; border-radius: 5px; background: var(--surface-3); overflow: hidden; }
-.milestone-bar .fill { height: 100%; border-radius: 5px; transition: width 0.4s; }
+.milestone-bar .milestone .centre { color: var(--text-2); font-size: 12.5px; font-weight: 600; }
 .ladder { display: flex; gap: 3px; margin-top: 8px; }
 .ladder i { flex: 1; height: 6px; border-radius: 3px; opacity: 0.25; }
 .ladder i.held { opacity: 1; }
@@ -1008,12 +1009,7 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   transition: background 0.12s, transform 0.08s;
 }
 .score-strip:active { background: var(--surface-2); transform: scale(0.99); }
-.score-strip .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 700; }
-.score-strip .tier { display: inline-flex; align-items: center; gap: 7px; color: var(--text-2); min-width: 0; }
-.score-strip .tier i { width: 9px; height: 9px; border-radius: 50%; background: var(--tier); box-shadow: 0 0 8px var(--tier); flex: none; }
-.score-strip .total { font-size: 16px; color: var(--text); }
-.score-strip .track { display: block; height: 8px; border-radius: 4px; background: var(--surface-3); overflow: hidden; }
-.score-strip .fill { display: block; height: 100%; border-radius: 4px; background: var(--tier); transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+.score-strip .total { font-size: 16px; }
 
 /* ── the mode's name, arriving ─────────────────────────────────────────── */
 .mode-intro {
