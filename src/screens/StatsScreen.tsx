@@ -92,7 +92,7 @@ export function StatsScreen({ target, onConsumedTarget }: { target?: string; onC
             )}
           </div>
           <div className="spacer" />
-          <Ladder milestone={milestone} />
+          <Ladder milestone={milestone} score={stats.score} />
         </div>
 
         <Section title="Window" />
@@ -147,11 +147,17 @@ function Tier({ stats, depth }: { stats: NodeStats; depth: number }) {
 }
 
 /** Where a score stands on its ladder, and the colours already held. */
-function Ladder({ milestone }: { milestone: ReturnType<typeof milestoneOf> }) {
-  const toGo = milestone.ceiling - Math.round(milestone.progress * (milestone.ceiling - milestone.floor) + milestone.floor);
+function Ladder({ milestone, score }: { milestone: ReturnType<typeof milestoneOf>; score: number }) {
   return (
     <div className="milestone-bar">
-      <MilestoneBar milestone={milestone} centre={<span className="num">{toGo} to go</span>} />
+      <MilestoneBar
+        milestone={milestone}
+        centre={
+          <span className="num">
+            {score}/{milestone.ceiling}
+          </span>
+        }
+      />
       <div className="ladder" aria-hidden>
         {MILESTONES.map((tier, i) => (
           <i key={tier.name} className={i < milestone.reached ? 'held' : ''} style={{ background: tier.color }} />
@@ -249,7 +255,7 @@ function OpeningPage({
             )}
           </div>
           <div className="spacer" />
-          <Ladder milestone={milestone} />
+          <Ladder milestone={milestone} score={stats.score} />
         </div>
 
         <div className="row gap-8 mt-12">

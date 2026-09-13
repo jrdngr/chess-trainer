@@ -98,7 +98,9 @@ export function ScoreBar() {
         centre={
           <>
             <span className="gain num">{feed.points > 0 ? `+${feed.points}` : ''}</span>
-            <span className="total num">{displayTotal}</span>
+            <span className="total num">
+              {displayTotal}/{milestone.ceiling}
+            </span>
           </>
         }
       />
@@ -116,7 +118,14 @@ export function ScoreStrip() {
   const milestone = milestoneOf(total);
   return (
     <button className="score-strip" onClick={() => openStats('')} aria-label="Score and stats">
-      <MilestoneBar milestone={milestone} centre={<span className="total num">{total}</span>} />
+      <MilestoneBar
+        milestone={milestone}
+        centre={
+          <span className="total num">
+            {total}/{milestone.ceiling}
+          </span>
+        }
+      />
     </button>
   );
 }
