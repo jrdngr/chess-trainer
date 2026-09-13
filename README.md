@@ -11,6 +11,10 @@ tab keeps the record.
 This is a **UX prototype**, not a product. It exists to answer questions about
 what the eventual native app should be.
 
+**[Play it here.](https://claude.ai/code/artifact/8909c26a-7c93-47bc-9547-a426307eecd2)**
+The live page is a published Claude Artifact, republished from `dist-artifact/`
+whenever the app changes.
+
 ## Goals and direction
 
 **Flexibility across lines is the point.** Other trainers make you pick a line
