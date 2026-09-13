@@ -255,6 +255,7 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
           dimmed={!!over}
+          captured
         />
 
         <div className="spacer" />

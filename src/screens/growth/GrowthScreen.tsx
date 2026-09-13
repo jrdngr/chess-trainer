@@ -11,6 +11,7 @@ import {
   growthRows,
   lineFor,
   MAX_ADDS,
+  movesToDraw,
   nextHole,
   optionsAt,
   preparedHere,
@@ -107,7 +108,18 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
     [phase, index, run.fen],
   );
 
+  /** The moves drawn on the board, which are also the only ones playable on it. */
+  const shown = useMemo(
+    () => (phase === 'hole' ? movesToDraw(index, run.fen) : []),
+    [phase, index, run.fen],
+  );
+
   const onMove = (move: LegalMove) => {
+    if (phase === 'hole') {
+      // The board only offers the drawn moves, and taking one is the choice.
+      if (shown.some((drawn) => drawn.san === move.san)) choose(move.san);
+      return;
+    }
     if (phase !== 'walking' || !isUsersTurn(run)) return;
     const next = advance(tree, run, move.san);
     if (!next) {
@@ -214,8 +226,10 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
         <Board
           fen={run.fen}
           orientation={run.color}
-          interactive={phase === 'walking' && isUsersTurn(run)}
+          interactive={(phase === 'walking' && isUsersTurn(run)) || phase === 'hole'}
           movableFor={run.color}
+          allowed={phase === 'hole' ? shown.map((move) => move.san) : undefined}
+          arrows={shown.map((move) => ({ from: move.from, to: move.to }))}
           onMove={onMove}
           // The green highlight below stands in for the usual last-move tint on
           // the move that was just added, so the two do not compete.
@@ -231,6 +245,7 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
           dimmed={phase === 'lost'}
+          captured
         />
 
         <div className="spacer sm" />

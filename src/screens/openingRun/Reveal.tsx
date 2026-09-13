@@ -209,6 +209,7 @@ export function Reveal({
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
           dimmed={atDeath}
+          captured
         />
 
         <div className="spacer sm" />

@@ -7,6 +7,7 @@ import {
   isPromotion,
   kingSquare,
   legalMoves,
+  material,
   piecesFromFen,
   plyOf,
   positionKey,
@@ -109,5 +110,34 @@ describe('board helpers', () => {
   it('renders move text starting from black', () => {
     const fen = walkSan(['e4']).fens.at(-1)!;
     expect(sansToMoveText(['c5', 'Nf3'], fen)).toBe('1... c5 2. Nf3');
+  });
+});
+
+describe('material', () => {
+  it('has nothing taken and nobody ahead at the start', () => {
+    const { byWhite, byBlack, lead } = material(START_FEN);
+    expect(byWhite).toEqual([]);
+    expect(byBlack).toEqual([]);
+    expect(lead).toBe(0);
+  });
+
+  it('reads what is missing off the board, pawns first', () => {
+    // White is a knight and a pawn up: Black has lost N + 2P, White 1P.
+    const { byWhite, byBlack, lead } = material('rnbqkb1r/pp3ppp/8/8/8/8/PP3PPP/RNBQKBNR w KQkq - 0 1');
+    expect(byWhite).toEqual(['p', 'p', 'p', 'n']);
+    expect(byBlack).toEqual(['p', 'p', 'p']);
+    expect(lead).toBe(3);
+  });
+
+  it('counts the lead from the pieces actually on the board', () => {
+    // A queen each side and nothing else: level, whatever the captures read.
+    expect(material('4k3/8/8/8/8/8/8/3QK3 w - - 0 1').lead).toBe(9);
+    expect(material('3qk3/8/8/8/8/8/8/3QK3 w - - 0 1').lead).toBe(0);
+    // A promoted queen is worth a queen, not the pawn it used to be.
+    expect(material('Q3k3/8/8/8/8/8/8/3QK3 w - - 0 1').lead).toBe(18);
+  });
+
+  it('names the side ahead by the sign of the lead', () => {
+    expect(material('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKB1R w KQkq - 0 1').lead).toBe(-3);
   });
 });

@@ -127,6 +127,7 @@ export function AnalysisScreen() {
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
           arrows={bestArrow}
+          captured
         />
 
         <div className="spacer sm" />

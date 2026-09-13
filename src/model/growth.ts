@@ -1,4 +1,4 @@
-import { applySan, fenTurn, positionKey, type Color } from '../chess/core';
+import { applySan, fenTurn, positionKey, type Color, type Square } from '../chess/core';
 import { deepestName, lookup, totalGamesAt, type ReferenceIndex } from './reference';
 import { childrenOf, fenAt } from './repertoire';
 import type { ExplorerMove, RepMove, Repertoire } from './types';
@@ -358,6 +358,32 @@ export function optionsAt(
   limit = 4,
 ): (ExplorerMove & { share: number })[] {
   return popularReplies(index, fen, 0).slice(0, limit);
+}
+
+/**
+ * The moves worth drawing on the board: the best one for each of a few pieces.
+ *
+ * Arrows rather than a ranking, because two moves of the same piece draw two
+ * arrows out of one square and read as a single choice. Once a piece has its
+ * arrow the rest of its moves are skipped, and the book list is read further
+ * down than the buttons go to find another piece — what makes an arrow useful
+ * is a piece you can see it leaving, not where the move happens to rank.
+ */
+export function movesToDraw(
+  index: ReferenceIndex,
+  fen: string,
+  count = 3,
+): { san: string; from: Square; to: Square }[] {
+  const out: { san: string; from: Square; to: Square }[] = [];
+  const pieces = new Set<Square>();
+  for (const option of popularReplies(index, fen, 0)) {
+    const move = applySan(fen, option.san);
+    if (!move || pieces.has(move.from)) continue;
+    pieces.add(move.from);
+    out.push({ san: option.san, from: move.from, to: move.to });
+    if (out.length === count) break;
+  }
+  return out;
 }
 
 /** The line a chosen move writes into the repertoire. */

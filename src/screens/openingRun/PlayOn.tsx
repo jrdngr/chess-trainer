@@ -94,6 +94,7 @@ export function PlayOn({
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
           dimmed={status.gameOver}
+          captured
         />
 
         <div className="spacer" />

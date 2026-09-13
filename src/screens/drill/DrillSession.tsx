@@ -360,6 +360,7 @@ export function DrillSession({ items, mode, title, prefs, onExit }: DrillSession
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
           dimmed={phase === 'wrong'}
+          captured
         />
 
         <div className="spacer" />

@@ -162,6 +162,7 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
           dimmed={phase === 'wrong'}
+          captured
         />
 
         <div className="spacer" />

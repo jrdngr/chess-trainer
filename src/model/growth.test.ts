@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { positionKey } from '../chess/core';
+import { applySan, positionKey, START_FEN } from '../chess/core';
 import {
   advance,
   answerHole,
@@ -10,6 +10,7 @@ import {
   isUsersTurn,
   lineFor,
   MAX_ADDS,
+  movesToDraw,
   nextHole,
   optionsAt,
   preparedHere,
@@ -314,5 +315,44 @@ describe('answering a hole', () => {
     // A position the database has never seen has no reply to give.
     const nowhere = { ...run, fen: '8/8/4k3/8/8/4K3/8/8 b - - 0 1' };
     expect(nextHole(index, nowhere)).toBeNull();
+  });
+});
+
+describe('the moves drawn on the board', () => {
+  it('draws three, one for each of three different pieces', () => {
+    const drawn = movesToDraw(index, START_FEN);
+    expect(drawn).toHaveLength(3);
+    expect(new Set(drawn.map((m) => m.from)).size).toBe(3);
+    for (const move of drawn) {
+      const played = applySan(START_FEN, move.san)!;
+      expect(played.from).toBe(move.from);
+      expect(played.to).toBe(move.to);
+    }
+  });
+
+  it('keeps only the best move of any one piece', () => {
+    const replies = optionsAt(index, START_FEN, 24);
+    const drawn = movesToDraw(index, START_FEN);
+    for (const move of drawn) {
+      // Nothing the book likes better leaves the same square.
+      const better = replies
+        .slice(0, replies.findIndex((r) => r.san === move.san))
+        .map((r) => applySan(START_FEN, r.san)!.from);
+      expect(better).not.toContain(move.from);
+    }
+  });
+
+  it('reaches past the best moves to find a third piece', () => {
+    // 1.e4 and 1.d4 are the two most played first moves by a distance, and the
+    // third arrow is whatever the best move of some other piece is.
+    const drawn = movesToDraw(index, START_FEN);
+    expect(drawn[2]).toBeDefined();
+    expect(drawn[2].from).not.toBe(drawn[0].from);
+    expect(drawn[2].from).not.toBe(drawn[1].from);
+  });
+
+  it('draws fewer when the book has fewer to offer, and none off the book', () => {
+    expect(movesToDraw(index, START_FEN, 1)).toHaveLength(1);
+    expect(movesToDraw(index, '8/8/4k3/8/8/4K3/8/8 w - - 0 1')).toEqual([]);
   });
 });

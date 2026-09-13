@@ -3,6 +3,7 @@ import {
   coordsToSquare,
   kingSquare,
   legalMoves,
+  material,
   piecesFromFen,
   positionStatus,
   squareToCoords,
@@ -39,6 +40,14 @@ export interface BoardProps {
   theme?: BoardTheme;
   /** Renders the board slightly dimmed (e.g. while the answer is revealed). */
   dimmed?: boolean;
+  /** Show what has been taken, and who is ahead, above the board. */
+  captured?: boolean;
+  /**
+   * Only these moves, in SAN, may be played. Everything else stops being
+   * pickable — the pieces do not lift and no targets are drawn — which is what
+   * makes a board that offers a choice of a few moves rather than the position.
+   */
+  allowed?: string[];
 }
 
 interface Placed {
@@ -93,6 +102,8 @@ export function Board({
   showCoordinates = true,
   theme = 'slate',
   dimmed = false,
+  captured = false,
+  allowed,
 }: BoardProps) {
   const [selected, setSelected] = useState<Square | null>(null);
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
@@ -110,7 +121,16 @@ export function Board({
     setPromotion(null);
   }, [fen]);
 
-  const moves = useMemo(() => (interactive ? legalMoves(fen) : []), [fen, interactive]);
+  const allowedKey = allowed?.join(' ');
+  const moves = useMemo(() => {
+    if (!interactive) return [];
+    const legal = legalMoves(fen);
+    if (allowedKey === undefined) return legal;
+    const only = new Set(allowedKey ? allowedKey.split(' ') : []);
+    return legal.filter((move) => only.has(move.san));
+    // The list is compared by its contents, so a caller need not memoise it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fen, interactive, allowedKey]);
   const status = useMemo(() => positionStatus(fen), [fen]);
   const turn: Color = fen.split(' ')[1] === 'b' ? 'b' : 'w';
   const allowedSide = movableFor === 'both' ? null : (movableFor ?? turn);
@@ -232,145 +252,191 @@ export function Board({
   const dragRect = boardRef.current?.getBoundingClientRect();
 
   return (
-    <div className={`board-wrap${dimmed ? ' dimmed' : ''}`}>
-      <div
-        className={`board theme-${theme}`}
-        ref={boardRef}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-      >
-        {squares.map((square) => {
-          const { file, rank } = squareToCoords(square);
-          const light = (file + rank) % 2 === 1;
-          const hl = highlightMap.get(square);
-          const classes = [
-            'sq',
-            light ? 'light' : 'dark',
-            lastMove && (lastMove.from === square || lastMove.to === square) ? 'last' : '',
-            selected === square ? 'selected' : '',
-            checkSquare === square ? 'check' : '',
-            hl ? `hl-${hl}` : '',
-          ]
-            .filter(Boolean)
-            .join(' ');
-          return (
-            <div
-              key={square}
-              className={classes}
-              style={styleFor(square)}
-              onPointerDown={(e) => handlePointerDown(e, square)}
-            >
-              {showCoordinates && square[1] === (orientation === 'w' ? '1' : '8') && (
-                <span className="coord file">{square[0]}</span>
-              )}
-              {showCoordinates && square[0] === (orientation === 'w' ? 'a' : 'h') && (
-                <span className="coord rank">{square[1]}</span>
-              )}
-            </div>
-          );
-        })}
+    <>
+      {captured && <Captured fen={fen} orientation={orientation} />}
+      <div className={`board-wrap${dimmed ? ' dimmed' : ''}`}>
+        <div
+          className={`board theme-${theme}`}
+          ref={boardRef}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+        >
+          {squares.map((square) => {
+            const { file, rank } = squareToCoords(square);
+            const light = (file + rank) % 2 === 1;
+            const hl = highlightMap.get(square);
+            const classes = [
+              'sq',
+              light ? 'light' : 'dark',
+              lastMove && (lastMove.from === square || lastMove.to === square) ? 'last' : '',
+              selected === square ? 'selected' : '',
+              checkSquare === square ? 'check' : '',
+              hl ? `hl-${hl}` : '',
+            ]
+              .filter(Boolean)
+              .join(' ');
+            return (
+              <div
+                key={square}
+                className={classes}
+                style={styleFor(square)}
+                onPointerDown={(e) => handlePointerDown(e, square)}
+              >
+                {showCoordinates && square[1] === (orientation === 'w' ? '1' : '8') && (
+                  <span className="coord file">{square[0]}</span>
+                )}
+                {showCoordinates && square[0] === (orientation === 'w' ? 'a' : 'h') && (
+                  <span className="coord rank">{square[1]}</span>
+                )}
+              </div>
+            );
+          })}
 
-        {placed.map((p) => (
+          {placed.map((p) => (
+            <div
+              key={p.key}
+              className={`piece${dragging === p.square ? ' dragging' : ''}`}
+              style={styleFor(p.square)}
+            >
+              <Piece type={p.type} color={p.color} />
+            </div>
+          ))}
+
+          {[...targets.keys()].map((square) => {
+            const isCapture = placed.some((p) => p.square === square);
+            return (
+              <div
+                key={`t-${square}`}
+                className={`target${isCapture ? ' capture' : ''}`}
+                style={styleFor(square)}
+                onPointerDown={(e) => handlePointerDown(e, square)}
+              >
+                <i />
+              </div>
+            );
+          })}
+
+          {arrows.length > 0 && (
+            <svg className="arrows" viewBox="0 0 8 8">
+              <defs>
+                <marker id="ah" markerWidth="3" markerHeight="3" refX="1.6" refY="1.5" orient="auto">
+                  <path d="M0,0 L3,1.5 L0,3 z" fill="currentColor" />
+                </marker>
+              </defs>
+              {arrows.map((a, i) => {
+                const f = squareToCoords(a.from);
+                const t = squareToCoords(a.to);
+                const fx = (orientation === 'w' ? f.file : 7 - f.file) + 0.5;
+                const fy = (orientation === 'w' ? 7 - f.rank : f.rank) + 0.5;
+                const tx = (orientation === 'w' ? t.file : 7 - t.file) + 0.5;
+                const ty = (orientation === 'w' ? 7 - t.rank : t.rank) + 0.5;
+                return (
+                  <line
+                    key={i}
+                    x1={fx}
+                    y1={fy}
+                    x2={tx}
+                    y2={ty}
+                    stroke={a.color ?? 'var(--accent)'}
+                    color={a.color ?? 'var(--accent)'}
+                    strokeWidth={0.13}
+                    strokeLinecap="round"
+                    markerEnd="url(#ah)"
+                    opacity={0.85}
+                  />
+                );
+              })}
+            </svg>
+          )}
+        </div>
+
+        {dragPos && dragRect && (
           <div
-            key={p.key}
-            className={`piece${dragging === p.square ? ' dragging' : ''}`}
-            style={styleFor(p.square)}
+            className="drag-layer"
+            style={{
+              left: dragPos.x - dragRect.width / 16,
+              top: dragPos.y - dragRect.width / 16 - dragRect.width / 22,
+              width: dragRect.width / 8,
+              height: dragRect.width / 8,
+            }}
           >
-            <Piece type={p.type} color={p.color} />
+            {(() => {
+              const p = placed.find((q) => q.square === dragPos.square);
+              return p ? <Piece type={p.type} color={p.color} /> : null;
+            })()}
           </div>
-        ))}
+        )}
 
-        {[...targets.keys()].map((square) => {
-          const isCapture = placed.some((p) => p.square === square);
-          return (
-            <div
-              key={`t-${square}`}
-              className={`target${isCapture ? ' capture' : ''}`}
-              style={styleFor(square)}
-              onPointerDown={(e) => handlePointerDown(e, square)}
-            >
-              <i />
+        {promotion && (
+          <div className="promo-backdrop" onPointerDown={() => setPromotion(null)}>
+            <div className="promo" onPointerDown={(e) => e.stopPropagation()}>
+              <div className="promo-title">Promote to</div>
+              <div className="promo-row">
+                {(['q', 'r', 'b', 'n'] as PieceType[]).map((t) => (
+                  <button
+                    key={t}
+                    className="promo-btn"
+                    onClick={() => {
+                      const move = moves.find(
+                        (m) => m.from === promotion.from && m.to === promotion.to && m.promotion === t,
+                      );
+                      setPromotion(null);
+                      setSelected(null);
+                      if (move) onMove?.(move);
+                    }}
+                  >
+                    <Piece type={t} color={turn} />
+                  </button>
+                ))}
+              </div>
             </div>
-          );
-        })}
-
-        {arrows.length > 0 && (
-          <svg className="arrows" viewBox="0 0 8 8">
-            <defs>
-              <marker id="ah" markerWidth="3" markerHeight="3" refX="1.6" refY="1.5" orient="auto">
-                <path d="M0,0 L3,1.5 L0,3 z" fill="currentColor" />
-              </marker>
-            </defs>
-            {arrows.map((a, i) => {
-              const f = squareToCoords(a.from);
-              const t = squareToCoords(a.to);
-              const fx = (orientation === 'w' ? f.file : 7 - f.file) + 0.5;
-              const fy = (orientation === 'w' ? 7 - f.rank : f.rank) + 0.5;
-              const tx = (orientation === 'w' ? t.file : 7 - t.file) + 0.5;
-              const ty = (orientation === 'w' ? 7 - t.rank : t.rank) + 0.5;
-              return (
-                <line
-                  key={i}
-                  x1={fx}
-                  y1={fy}
-                  x2={tx}
-                  y2={ty}
-                  stroke={a.color ?? 'var(--accent)'}
-                  color={a.color ?? 'var(--accent)'}
-                  strokeWidth={0.13}
-                  strokeLinecap="round"
-                  markerEnd="url(#ah)"
-                  opacity={0.85}
-                />
-              );
-            })}
-          </svg>
+          </div>
         )}
       </div>
+    </>
+  );
+}
 
-      {dragPos && dragRect && (
-        <div
-          className="drag-layer"
-          style={{
-            left: dragPos.x - dragRect.width / 16,
-            top: dragPos.y - dragRect.width / 16 - dragRect.width / 22,
-            width: dragRect.width / 8,
-            height: dragRect.width / 8,
-          }}
-        >
-          {(() => {
-            const p = placed.find((q) => q.square === dragPos.square);
-            return p ? <Piece type={p.type} color={p.color} /> : null;
-          })()}
-        </div>
-      )}
+/**
+ * What has come off the board, and who is ahead by how much.
+ *
+ * One row above the board rather than a side each: the pieces you have taken
+ * sit next to the pieces they have taken, so the trade is read at a glance on a
+ * phone, and the lead is named by colour — "+3 white" — because a minus sign in
+ * front of a number leaves you working out whose number it is.
+ */
+export function Captured({ fen, orientation }: { fen: string; orientation: Color }) {
+  const { byWhite, byBlack, lead } = useMemo(() => material(fen), [fen]);
+  // Yours first, wherever you are sitting.
+  const mine = orientation === 'w' ? byWhite : byBlack;
+  const theirs = orientation === 'w' ? byBlack : byWhite;
+  const taken = orientation === 'w' ? 'b' : 'w';
+  const ahead = lead === 0 ? null : lead > 0 ? 'white' : 'black';
 
-      {promotion && (
-        <div className="promo-backdrop" onPointerDown={() => setPromotion(null)}>
-          <div className="promo" onPointerDown={(e) => e.stopPropagation()}>
-            <div className="promo-title">Promote to</div>
-            <div className="promo-row">
-              {(['q', 'r', 'b', 'n'] as PieceType[]).map((t) => (
-                <button
-                  key={t}
-                  className="promo-btn"
-                  onClick={() => {
-                    const move = moves.find(
-                      (m) => m.from === promotion.from && m.to === promotion.to && m.promotion === t,
-                    );
-                    setPromotion(null);
-                    setSelected(null);
-                    if (move) onMove?.(move);
-                  }}
-                >
-                  <Piece type={t} color={turn} />
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+  return (
+    <div className="captured">
+      <Taken pieces={mine} color={taken} />
+      {mine.length > 0 && theirs.length > 0 && <span className="captured-gap" />}
+      <Taken pieces={theirs} color={orientation} />
+      <span className="grow" />
+      {ahead && (
+        <span className={`chip ${ahead === 'white' ? 'w' : 'b'}`}>
+          +{Math.abs(lead)} {ahead}
+        </span>
       )}
     </div>
+  );
+}
+
+function Taken({ pieces, color }: { pieces: PieceType[]; color: Color }) {
+  return (
+    <>
+      {pieces.map((type, i) => (
+        <span className="captured-piece" key={`${type}${i}`}>
+          <Piece type={type} color={color} size={18} />
+        </span>
+      ))}
+    </>
   );
 }

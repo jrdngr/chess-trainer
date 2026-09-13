@@ -409,6 +409,7 @@ export function OpeningRunScreen({ auto, onExit }: { auto?: boolean; onExit: () 
           highlights={hintSquare ? [{ square: hintSquare, kind: 'hint' }] : []}
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
+          captured
         />
 
         <div className="spacer" />

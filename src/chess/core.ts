@@ -57,6 +57,50 @@ export function piecesFromFen(fen: string): Piece[] {
   return out;
 }
 
+/** What a piece is worth, for the material count. */
+export const PIECE_VALUES: Record<PieceType, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+
+/** One full side, in the order captures read best: pawns first, queen last. */
+const FULL_SIDE: PieceType[] = ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p', 'n', 'n', 'b', 'b', 'r', 'r', 'q'];
+
+export interface Material {
+  /** Black pieces White has taken. */
+  byWhite: PieceType[];
+  /** White pieces Black has taken. */
+  byBlack: PieceType[];
+  /** Points White is ahead by. Negative means Black is. */
+  lead: number;
+}
+
+/**
+ * What has come off the board, and who is ahead.
+ *
+ * The captures are read backwards from what is left against a full set, which
+ * is how every board does it and is only ever wrong about promotions — an extra
+ * queen reads as a missing pawn. The lead is counted from the pieces actually
+ * on the board instead, so a promotion counts for what it is really worth.
+ */
+export function material(fen: string): Material {
+  const pieces = piecesFromFen(fen);
+  const left = { w: [] as PieceType[], b: [] as PieceType[] };
+  let lead = 0;
+  for (const piece of pieces) {
+    left[piece.color].push(piece.type);
+    lead += (piece.color === 'w' ? 1 : -1) * PIECE_VALUES[piece.type];
+  }
+  const taken = (side: PieceType[]): PieceType[] => {
+    const rest = [...side];
+    const out: PieceType[] = [];
+    for (const type of FULL_SIDE) {
+      const at = rest.indexOf(type);
+      if (at === -1) out.push(type);
+      else rest.splice(at, 1);
+    }
+    return out;
+  };
+  return { byWhite: taken(left.b), byBlack: taken(left.w), lead };
+}
+
 export function legalMoves(fen: string): LegalMove[] {
   const chess = new Chess(fen);
   return chess.moves({ verbose: true }).map(toLegalMove);
