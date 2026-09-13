@@ -132,7 +132,9 @@ export function OpeningPicker({
   const here = nodeById(tree, at);
   const trail = ancestorsOf(tree, here.id);
 
-  const children = useMemo(() => orderedChildren(here, starred), [here, starred]);
+  // Starred openings have their own section above, so the levels themselves
+  // stay in popularity order.
+  const children = useMemo(() => orderedChildren(here, []), [here]);
   const matches = useMemo(() => search(tree, query, starred), [tree, query, starred]);
   /**
    * Everything starred anywhere under this level, so a starred variation is at
@@ -228,7 +230,7 @@ export function OpeningPicker({
             <>
               <Section
                 title={here.depth === 0 ? 'First moves' : here.depth === 1 ? 'Openings' : 'Variations'}
-                aside="starred first, then most played"
+                aside="most played first"
               />
               <div className="list">{children.map((node) => row(node, false))}</div>
             </>

@@ -59,8 +59,8 @@ The opening is picked from a tree. The root is *any opening*. Under it sit the
 first moves, ordered by how often they are played; under each first move the
 families; under each family its variations, as deep as the book's names go.
 Most branches are three deep. The Najdorf branch is five. Any level can be
-selected, and any level can be starred, which lifts it to the top of its level
-in the picker and lifts it in the engine.
+selected, and any level can be starred: starred openings lead every level of
+the picker in their own section, and a star lifts an opening in the engine.
 
 Nesting follows the moves first and the book's family names second, so the
 Fianchetto King's Indian files under the King's Indian even though its move
