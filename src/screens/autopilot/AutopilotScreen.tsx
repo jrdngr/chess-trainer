@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icons } from '../../components/ui';
 import { ColorSquare } from '../../components/Selection';
 import { GAME_SIZE, type GamePlan, type GameSummary } from '../../model/autopilot';
@@ -44,6 +44,7 @@ export function AutopilotScreen({ onExit, onImport }: { onExit: () => void; onIm
 
   return (
     <>
+      <ModeIntro key={round} name={MODE_NAMES[pick.mode]} />
       {pick.mode === 'run' && <OpeningRunScreen {...props} />}
       {pick.mode === 'drill' && <DrillScreen {...props} limit={GAME_SIZE.drill} />}
       {pick.mode === 'growth' && <GrowthScreen {...props} />}
@@ -52,6 +53,42 @@ export function AutopilotScreen({ onExit, onImport }: { onExit: () => void; onIm
       )}
       {over && next && <NextBar earned={over.score} perfect={over.perfect} next={next} onNext={advance} />}
     </>
+  );
+}
+
+/**
+ * The mode's name, large over the board as a game begins, then carried up
+ * into its place in the app bar. The real title is underneath the whole
+ * time, so the name lands where it will stay.
+ */
+function ModeIntro({ name }: { name: string }) {
+  const [shown, setShown] = useState(true);
+  /** Where the app bar's title actually sits, measured once the screen is up. */
+  const [land, setLand] = useState<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    // Measured just before the name sets off rather than on mount: the bar's
+    // clock and chips arrive with the first move, and shift the title.
+    const measure = window.setTimeout(() => {
+      const title = document.querySelector('.appbar .appbar-title .line');
+      if (!title) return;
+      const box = title.getBoundingClientRect();
+      setLand({ x: box.left + box.width / 2, y: box.top + box.height / 2 });
+    }, 700);
+    const timer = window.setTimeout(() => setShown(false), 1500);
+    return () => {
+      window.clearTimeout(measure);
+      window.clearTimeout(timer);
+    };
+  }, []);
+  if (!shown) return null;
+  return (
+    <div
+      className="mode-intro"
+      style={land ? { ['--land-x' as string]: `${land.x}px`, ['--land-y' as string]: `${land.y}px` } : undefined}
+      aria-hidden
+    >
+      <span>{name}</span>
+    </div>
   );
 }
 

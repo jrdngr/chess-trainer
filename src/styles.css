@@ -1010,3 +1010,32 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .score-strip .total { font-size: 16px; color: var(--text); }
 .score-strip .track { display: block; height: 8px; border-radius: 4px; background: var(--surface-3); overflow: hidden; }
 .score-strip .fill { display: block; height: 100%; border-radius: 4px; background: var(--tier); transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* ── the mode's name, arriving ─────────────────────────────────────────── */
+.mode-intro {
+  --land-x: 50%;
+  --land-y: calc(var(--safe-top) + 21px);
+  position: fixed;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  z-index: 65;
+  pointer-events: none;
+  font-size: 52px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.95), 0 0 60px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  animation: modeIntro 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes modeIntro {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  55% { opacity: 1; left: 50%; top: 42%; font-size: 52px; letter-spacing: -0.03em; text-shadow: 0 4px 24px rgba(0, 0, 0, 0.95), 0 0 60px rgba(0, 0, 0, 0.9); }
+  90% { opacity: 1; left: var(--land-x); top: var(--land-y); font-size: 17px; letter-spacing: -0.01em; text-shadow: 0 0 0 rgba(0, 0, 0, 0), 0 0 0 rgba(0, 0, 0, 0); }
+  100% { opacity: 0; left: var(--land-x); top: var(--land-y); font-size: 17px; text-shadow: 0 0 0 rgba(0, 0, 0, 0), 0 0 0 rgba(0, 0, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mode-intro { animation-duration: 0.6s; }
+}
