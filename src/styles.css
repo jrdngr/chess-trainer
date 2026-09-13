@@ -379,7 +379,7 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
-  z-index: 50;
+  z-index: 100;
   animation: fade 0.18s ease-out;
 }
 .sheet {
@@ -389,7 +389,7 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   margin: 0 auto;
   background: #141418;
   border-radius: 24px 24px 0 0;
-  z-index: 51;
+  z-index: 101;
   max-height: 90dvh;
   display: flex;
   flex-direction: column;
@@ -410,6 +410,20 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 
 @keyframes fade { from { opacity: 0; } }
 @keyframes slideUp { from { transform: translateY(100%); } }
+/* The pickers come down from the top, over everything, tab bar included. */
+.sheet.from-top {
+  top: 0;
+  bottom: auto;
+  border-radius: 0 0 24px 24px;
+  max-height: 88dvh;
+  padding-top: calc(var(--safe-top) + 6px);
+  padding-bottom: 0;
+  animation: slideDown 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+.sheet.from-top .sheet-head { padding-top: 10px; }
+.sheet.from-top .sheet-grip-zone { padding: 6px 0 10px; }
+@keyframes slideDown { from { transform: translateY(-100%); } }
 
 /* ── explorer ──────────────────────────────────────────────────────────── */
 .exp-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px 8px; }

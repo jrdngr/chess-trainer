@@ -81,7 +81,7 @@ export function ColorPicker({ open, onClose }: { open: boolean; onClose: () => v
   const selection = useStore((s) => s.settings.selection);
   const setSelection = useStore((s) => s.setSelection);
   return (
-    <Sheet open={open} onClose={onClose} title="Play as">
+    <Sheet open={open} onClose={onClose} title="Play as" from="top">
       <div className="list">
         {CHOICES.map((choice) => (
           <ChoiceRow
@@ -134,6 +134,17 @@ export function OpeningPicker({
 
   const children = useMemo(() => orderedChildren(here, starred), [here, starred]);
   const matches = useMemo(() => search(tree, query, starred), [tree, query, starred]);
+  /**
+   * Everything starred anywhere under this level, so a starred variation is at
+   * the top of the picker wherever it was starred from — not only at its own
+   * level, three taps down.
+   */
+  const starredHere = useMemo(() => {
+    const stars = new Set(starred);
+    return descendantsOf(here)
+      .filter((node) => stars.has(node.id))
+      .sort((a, b) => a.depth - b.depth || b.games - a.games || a.name.localeCompare(b.name));
+  }, [here, starred]);
 
   const choose = (node: OpeningNode) => {
     setSelection({ opening: node.id });
@@ -156,7 +167,7 @@ export function OpeningPicker({
   );
 
   return (
-    <Sheet open={open} onClose={onClose} title="Opening">
+    <Sheet open={open} onClose={onClose} title="Opening" from="top">
       <input
         className="field"
         placeholder="Search by name, ECO or moves"
@@ -192,6 +203,14 @@ export function OpeningPicker({
             ))}
           </div>
 
+          {starredHere.length > 0 && (
+            <>
+              <Section title="Starred" aside={starredHere.length} />
+              <div className="list">{starredHere.map((node) => row(node, true))}</div>
+            </>
+          )}
+
+          <Section title={here.depth === 0 ? 'Everything' : 'This level'} />
           <div className="list">
             <ChoiceRow
               title={here.depth === 0 ? 'Any opening' : `All of ${here.name}`}

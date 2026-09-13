@@ -9,10 +9,12 @@ export interface SheetProps {
   onClose: () => void;
   title?: ReactNode;
   actions?: ReactNode;
+  /** Slide down from the top instead of up from the bottom. Dragging up closes it. */
+  from?: 'bottom' | 'top';
   children: ReactNode;
 }
 
-export function Sheet({ open, onClose, title, actions, children }: SheetProps) {
+export function Sheet({ open, onClose, title, actions, from = 'bottom', children }: SheetProps) {
   const startY = useRef<number | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -25,37 +27,50 @@ export function Sheet({ open, onClose, title, actions, children }: SheetProps) {
 
   if (!open) return null;
 
+  // A top sheet closes by dragging up; a bottom sheet by dragging down.
+  const sign = from === 'top' ? -1 : 1;
+  const grip = (
+    <div
+      className="sheet-grip-zone"
+      onPointerDown={(e) => {
+        startY.current = e.clientY;
+      }}
+      onPointerMove={(e) => {
+        if (startY.current === null || !sheetRef.current) return;
+        const dy = Math.max(0, sign * (e.clientY - startY.current));
+        sheetRef.current.style.transform = `translateY(${sign * dy}px)`;
+      }}
+      onPointerUp={(e) => {
+        if (startY.current === null || !sheetRef.current) return;
+        const dy = sign * (e.clientY - startY.current);
+        sheetRef.current.style.transform = '';
+        startY.current = null;
+        if (dy > 90) onClose();
+      }}
+    >
+      <div className="sheet-grip" />
+    </div>
+  );
+  const head = (title || actions || from === 'top') && (
+    <div className="sheet-head">
+      {typeof title === 'string' ? <h3 className="truncate">{title}</h3> : title}
+      {actions}
+      {from === 'top' && (
+        <IconButton label="Close" onClick={onClose}>
+          <Icons.close size={20} />
+        </IconButton>
+      )}
+    </div>
+  );
+
   return (
     <>
       <div className="sheet-backdrop" onPointerDown={onClose} />
-      <div className="sheet" ref={sheetRef}>
-        <div
-          className="sheet-grip-zone"
-          onPointerDown={(e) => {
-            startY.current = e.clientY;
-          }}
-          onPointerMove={(e) => {
-            if (startY.current === null || !sheetRef.current) return;
-            const dy = Math.max(0, e.clientY - startY.current);
-            sheetRef.current.style.transform = `translateY(${dy}px)`;
-          }}
-          onPointerUp={(e) => {
-            if (startY.current === null || !sheetRef.current) return;
-            const dy = e.clientY - startY.current;
-            sheetRef.current.style.transform = '';
-            startY.current = null;
-            if (dy > 90) onClose();
-          }}
-        >
-          <div className="sheet-grip" />
-        </div>
-        {(title || actions) && (
-          <div className="sheet-head">
-            {typeof title === 'string' ? <h3 className="truncate">{title}</h3> : title}
-            {actions}
-          </div>
-        )}
+      <div className={`sheet${from === 'top' ? ' from-top' : ''}`} ref={sheetRef}>
+        {from === 'bottom' && grip}
+        {head}
         <div className="sheet-body">{children}</div>
+        {from === 'top' && grip}
       </div>
     </>
   );
