@@ -134,7 +134,8 @@ prep), yellow (finished, having left it), red (a move nobody plays), purple
 
 Dying buys the reveal: the line named, the board a replay of the whole line
 parked on the position that ended it, the mistake in red beside the prepared
-move in green. Save line writes what you survived into your repertoire.
+move in green. Whatever you survived is written into your repertoire, every
+run: a line you have played through is a line you play.
 
 Options: clock (off, 10s, 30s a move), hints (the square a move starts from,
 never where it lands), target weak spots, extended mode (past the prep, the

@@ -149,9 +149,13 @@ export function OpeningRunScreen({
   /** Points banked this run, for the reveal. */
   const [earned, setEarned] = useState(0);
 
+  /** What the run wrote into the repertoire, for the reveal. */
+  const [saved, setSaved] = useState<{ name: string; added: number } | null>(null);
+
   const finish = (ended: Run, completed: boolean) => {
     settled.current = true;
     endRun(outcomeOf(ended, completed));
+    setSaved(keepLine(ended));
     let bonus = 0;
     if (completed && !isExtended(ended)) {
       bonus += POINTS.run.finish + (ended.leftPrep ? 0 : POINTS.run.green);
@@ -204,36 +208,19 @@ export function OpeningRunScreen({
     return named ?? ended.sourceLabel;
   };
 
-  /** Where a run's line would go, and whether there is anything to put there. */
-  const keepTarget = (ended: Run) => {
-    const line = lineToKeep(ended);
-    if (!line.length) return null;
-    return { line, existing: reps.find((rep) => rep.color === ended.color) ?? null };
-  };
-
   /**
-   * Has this run's line already been written? Checked rather than discovered on
-   * tap, so replaying a line you have kept shows Saved from the start.
-   */
-  const alreadyKept = (ended: Run): boolean => {
-    const target = keepTarget(ended);
-    return !!target?.existing && hasLine(target.existing, target.line);
-  };
-
-  /**
-   * Write what the run survived into the repertoire, when asked to.
-   *
-   * Offered at the end rather than done automatically: a book run can hand you
-   * any opening in the book, and keeping all of them builds a wide, shallow
-   * repertoire rather than a coherent one.
+   * Write what the run survived into the repertoire. Always: a line you have
+   * played through is a line you play, which is the whole idea of the app.
    *
    * It joins the one tree for the side you played, whatever the opening. The
-   * opening is only what the moves are called once they are in there.
+   * opening is only what the moves are called once they are in there. Returns
+   * what was written, or null when the run survived nothing worth keeping.
    */
   const keepLine = (ended: Run): { name: string; added: number } | null => {
-    const target = keepTarget(ended);
-    if (!target) return null;
-    const { line } = target;
+    const line = lineToKeep(ended);
+    if (!line.length) return null;
+    const existing = reps.find((rep) => rep.color === ended.color) ?? null;
+    if (existing && hasLine(existing, line)) return { name: openingOf(ended, line), added: 0 };
     const repId = ensureRepertoire(ended.color);
     const { added } = addToRep(repId, line, 'reference');
     return { name: openingOf(ended, line), added };
@@ -319,6 +306,7 @@ export function OpeningRunScreen({
     settled.current = false;
     gameLogged.current = false;
     setEarned(0);
+    setSaved(null);
     setDeath(null);
     setOffPrep(null);
     referee.reset();
@@ -357,9 +345,7 @@ export function OpeningRunScreen({
         death={phase === 'dead' ? death : null}
         earned={earned}
         auto={!!planned}
-        canSaveLine={!!keepTarget(run)}
-        alreadySaved={alreadyKept(run)}
-        onSaveLine={() => keepLine(run)}
+        saved={saved}
         onExit={onExit}
         onNewRun={again}
         onChangeOptions={() => setPhase('setup')}

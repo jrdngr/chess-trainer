@@ -45,12 +45,8 @@ export interface RevealProps {
   earned: number;
   /** Autopilot owns what happens next, so the run offers nothing of its own. */
   auto?: boolean;
-  /** This run produced a line worth offering to keep. */
-  canSaveLine: boolean;
-  /** That line is already in the repertoire, so there is nothing to add. */
-  alreadySaved: boolean;
-  /** Write the line into your repertoire; returns the opening it landed in. */
-  onSaveLine: () => { name: string; added: number } | null;
+  /** What the run wrote into the repertoire: the opening, and how many moves were new. */
+  saved: { name: string; added: number } | null;
   onExit: () => void;
   onNewRun: () => void;
   onChangeOptions: () => void;
@@ -71,9 +67,7 @@ export function Reveal({
   death,
   earned,
   auto,
-  canSaveLine,
-  alreadySaved,
-  onSaveLine,
+  saved,
   onExit,
   onNewRun,
   onChangeOptions,
@@ -94,14 +88,6 @@ export function Reveal({
 
   /** Where the board is looking; starts where the run ended. */
   const [cursor, setCursor] = useState(line.deathPly);
-  const [saved, setSaved] = useState(false);
-
-  const keep = () => {
-    const result = onSaveLine();
-    if (!result) return;
-    setSaved(true);
-    toast(result.added > 0 ? `Saved to ${result.name}` : `Already in ${result.name}`);
-  };
   useEffect(() => setCursor(line.deathPly), [line.deathPly]);
   const seek = (n: number) => setCursor(Math.max(0, Math.min(line.sans.length, n)));
 
@@ -174,22 +160,9 @@ export function Reveal({
     }
   };
 
-  /**
-   * Shared by both endings, which differ in everything but this.
-   *
-   * Saving is offered rather than done: a book run can hand you any opening in
-   * the database, and keeping every one of them builds a wide, shallow
-   * repertoire instead of a coherent one. Deciding at the end, having seen the
-   * line, is the only point at which that judgement can be made.
-   */
-  const kept = saved || alreadySaved;
+  /** Shared by both endings, which differ in everything but this. */
   const actions = (
     <div className="row gap-8">
-      {canSaveLine && (
-        <button className="btn sm" disabled={kept} onClick={keep}>
-          {kept ? 'Saved' : 'Save line'}
-        </button>
-      )}
       {!auto && (
         <button className="btn primary sm" onClick={onNewRun}>
           New run
@@ -296,6 +269,11 @@ export function Reveal({
                 {survived && past === 0 ? 'played in full' : `${run.survived} correct`}
                 {past > 0 ? ` · ${past} past prep` : ''}
                 {run.hintsUsed > 0 ? ` · ${run.hintsUsed} hint${run.hintsUsed === 1 ? '' : 's'}` : ''}
+                {saved
+                  ? saved.added > 0
+                    ? ` · ${saved.added} move${saved.added === 1 ? '' : 's'} saved to your repertoire`
+                    : ' · already in your repertoire'
+                  : ''}
               </div>
             </span>
             {named.eco && <span className="chip">{named.eco}</span>}
