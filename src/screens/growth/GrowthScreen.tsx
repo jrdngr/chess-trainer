@@ -116,11 +116,10 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
     if (settings.hapticFeedback) haptic(10);
   };
 
+  /** The move just chosen, so the board can show it played rather than pending. */
+  const addedMove = useMemo(() => (added ? applySan(run.fen, added) : null), [added, run.fen]);
   /** The position the new move leads to — where a carry-on game would start. */
-  const afterAdded = useMemo(
-    () => (added ? (applySan(run.fen, added)?.after ?? null) : null),
-    [added, run.fen],
-  );
+  const afterAdded = addedMove?.after ?? null;
 
   const choose = (san: string) => {
     addLine(row.repertoireId, lineFor(run, san), 'reference');
@@ -132,11 +131,19 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
     toast(`${san} added`);
   };
 
-  const strip: StripItem[] = run.path.map((san, i) => ({
+  // The new move joins the line as soon as it is chosen, so the strip reads the
+  // same as the board behind it.
+  const shownPath = added && addedMove ? [...run.path, added] : run.path;
+  const strip: StripItem[] = shownPath.map((san, i) => ({
     san,
     label: i % 2 === 0 ? `${Math.floor(i / 2) + 1}.` : undefined,
-    tone: (i % 2 === 0) === (run.color === 'w') ? 'mine' : 'theirs',
-    current: i === run.path.length - 1,
+    tone:
+      i === run.path.length && addedMove
+        ? 'good'
+        : (i % 2 === 0) === (run.color === 'w')
+          ? 'mine'
+          : 'theirs',
+    current: i === shownPath.length - 1,
   }));
 
   if (playFrom) {
@@ -178,19 +185,29 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
 
       <div className="screen no-nav">
         <Board
-          fen={run.fen}
+          fen={addedMove ? addedMove.after : run.fen}
           orientation={run.color}
           interactive={phase === 'walking' && isUsersTurn(run)}
           movableFor={run.color}
           onMove={onMove}
-          lastMove={lastMoveOf(run.path)}
+          // The green highlight below stands in for the usual last-move tint on
+          // the move that was just added, so the two do not compete.
+          lastMove={addedMove ? null : lastMoveOf(run.path)}
+          highlights={
+            addedMove
+              ? [
+                  { square: addedMove.from, kind: 'good' },
+                  { square: addedMove.to, kind: 'good' },
+                ]
+              : []
+          }
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
           dimmed={phase === 'lost'}
         />
 
         <div className="spacer sm" />
-        {run.path.length > 0 && <Strip items={strip} />}
+        {shownPath.length > 0 && <Strip items={strip} />}
         <div className="spacer sm" />
 
         {phase === 'walking' && (
