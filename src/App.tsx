@@ -72,10 +72,6 @@ export default function App() {
     </div>
   ) : mode?.id === 'autopilot' ? (
     <AutopilotScreen
-      onImport={() => {
-        setMode(null);
-        setImporting(true);
-      }}
       // Leaving Autopilot is the only way a session ends, and it lands on
       // Stats: what the play added up to is the thing to look at next.
       onExit={() => {

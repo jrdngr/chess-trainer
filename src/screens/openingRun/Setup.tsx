@@ -4,6 +4,9 @@ import {
   clockLabel,
   CLOCK_MODES,
   HINT_BUDGETS,
+  NEW_MOVE_BUDGETS,
+  steerLabel,
+  STEERS,
   type OpeningRunOptions,
 } from '../../model/openingRun';
 import { useStore } from '../../store/useStore';
@@ -13,7 +16,9 @@ import { Record } from './Record';
  * The screen that decides a run. Start sits at the top, above the options, so
  * the common case — same rules as last time — is one tap. The side and the
  * opening are the global selection above it; everything here is off by
- * default, and the plain run is a line in your opening, no clock, no help.
+ * default, and the plain run is a popular line in your opening, nothing
+ * added, no clock, no help. Autopilot sets the same two levers — what the
+ * opponent steers toward, and how many moves a run may add — for itself.
  */
 export function Setup({
   onStart,
@@ -37,6 +42,35 @@ export function Setup({
           Start
         </button>
 
+        <Section title="Steer toward" />
+        <Segmented
+          value={prefs.steer}
+          options={STEERS.map((steer) => ({ value: steer, label: steerLabel(steer) }))}
+          onChange={(steer) => setOpeningRunPrefs({ steer })}
+        />
+        <div className="note">
+          {prefs.steer === 'weak'
+            ? 'Lines through positions you get wrong, have let lapse, or lost in your own games.'
+            : prefs.steer === 'gaps'
+              ? 'The opponent walks you to a reply you have no answer to.'
+              : 'Your lines, as often as you would actually meet them.'}
+        </div>
+
+        <Section title="New moves" />
+        <Segmented
+          value={String(prefs.newMoves)}
+          options={NEW_MOVE_BUDGETS.map((n) => ({
+            value: String(n),
+            label: n === 0 ? 'None' : `${n} move${n === 1 ? '' : 's'}`,
+          }))}
+          onChange={(n) => setOpeningRunPrefs({ newMoves: Number(n) })}
+        />
+        <div className="note">
+          {prefs.newMoves === 0
+            ? 'A run is complete where your prep ends.'
+            : 'Where your prep ends, the book is offered and the move you choose becomes prep.'}
+        </div>
+
         <Section title="Clock" />
         <Segmented
           value={prefs.clock}
@@ -56,12 +90,6 @@ export function Setup({
 
         <Section title="Extras" />
         <div className="list">
-          <Toggle
-            label="Target weak spots"
-            hint="Draw lines you get wrong or have let lapse more often"
-            on={prefs.weakFirst}
-            onToggle={() => setOpeningRunPrefs({ weakFirst: !prefs.weakFirst })}
-          />
           <Toggle
             label="Extended mode"
             hint="When the prep runs out, keep going while the engine calls your moves sound"

@@ -6,7 +6,6 @@ import { openingTree } from '../model/openingTree';
 import { itemsInRegion, lineInRegion, regionOf, repertoiresIn } from '../model/selection';
 import { measureCoverage } from '../model/gameAnalysis';
 import { growthRows } from '../model/growth';
-import { MODE_NAMES } from '../model/recommend';
 import { streak } from '../model/scoring';
 import { recommendNow } from '../store/recommendation';
 import { levelById } from '../model/play';
@@ -151,7 +150,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
             <span className="kicker">Autopilot</span>
             <span className="name">Play</span>
             <span className="first truncate">
-              First up: {MODE_NAMES[first.mode]} · {first.opening.name}
+              First up: {first.opening.name}
             </span>
           </span>
           {days > 0 && (

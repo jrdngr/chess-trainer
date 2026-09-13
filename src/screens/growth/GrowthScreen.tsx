@@ -8,7 +8,6 @@ import {
   atHole,
   enterHole,
   isUsersTurn,
-  growthRows,
   lineFor,
   MAX_ADDS,
   movesToDraw,
@@ -24,71 +23,29 @@ import { formatGameCount } from '../../model/reference';
 import { POINTS } from '../../model/scoring';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
-import { regionOf, repertoiresIn } from '../../model/selection';
-import type { GamePlan, GameSummary } from '../../model/autopilot';
 import { selectionText } from '../../components/Selection';
-import { repertoireList, useStore } from '../../store/useStore';
+import { useStore } from '../../store/useStore';
 import { PlayOn } from '../openingRun/PlayOn';
 import { Lobby } from './Lobby';
 
 export interface GrowthScreenProps {
-  /** Skip the lobby and extend the worst hole — started automatically. */
-  auto?: boolean;
-  /** What Autopilot decided: the side, and the opening to grow. */
-  plan?: GamePlan;
-  /** One run is over, with what it earned. */
-  onGameOver?: (summary: GameSummary) => void;
   onExit: () => void;
 }
 
-export function GrowthScreen({ auto, plan, onGameOver, onExit }: GrowthScreenProps) {
-  const state = useStore();
-  // The lobby's own order: shallowest hole first, because that is the one the
-  // most games fall into. An automatic start takes the top of the same list.
-  const [row, setRow] = useState<GrowthRow | null>(() => {
-    if (!auto) return null;
-    const tree = openingTree(referenceIndex());
-    const selection = state.settings.selection;
-    const color = plan?.color ?? selection.color;
-    const node = plan ? nodeById(tree, plan.steer) : regionOf(tree, selection);
-    return (
-      growthRows(repertoiresIn(repertoireList(state), color), tree.index, {
-        ...state.settings.growth,
-        starred: state.settings.favoriteOpenings,
-        region: { tree, node },
-      })[0] ?? null
-    );
-  });
+export function GrowthScreen({ onExit }: GrowthScreenProps) {
+  const [row, setRow] = useState<GrowthRow | null>(null);
   if (!row) return <Lobby onStart={setRow} onNoWork={onExit} onExit={onExit} />;
-  // A run nobody chose has no lobby to fall back to.
-  return (
-    <Run
-      row={row}
-      auto={auto}
-      onGameOver={onGameOver}
-      onExit={() => (auto ? onExit() : setRow(null))}
-    />
-  );
+  return <Run row={row} onExit={() => setRow(null)} />;
 }
 
 type Phase = 'walking' | 'hole' | 'answered' | 'done' | 'lost';
 
-function Run({
-  row,
-  auto,
-  onGameOver,
-  onExit,
-}: {
-  row: GrowthRow;
-  auto?: boolean;
-  onGameOver?: (summary: GameSummary) => void;
-  onExit: () => void;
-}) {
+function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
   const state = useStore();
   const settings = state.settings;
   const addLine = useStore((s) => s.addLine);
   const earn = useStore((s) => s.earn);
-  const endGame = useStore((s) => s.endGame);
+  const endRound = useStore((s) => s.endRound);
   /** Points this run has banked. */
   const [earned, setEarned] = useState(0);
   const logged = useRef(false);
@@ -211,23 +168,21 @@ function Run({
 
   const addedSans = added.map((ply) => run.path[ply]).filter(Boolean);
 
-  /** One run is one game, logged the first time it is over. */
+  /** One run is one round, logged the first time it is over. */
   useEffect(() => {
     if ((phase !== 'done' && phase !== 'lost') || logged.current) return;
     logged.current = true;
     const tree = openingTree(index);
     const region = nodeById(tree, settings.selection.opening);
-    const summary = {
-      mode: 'growth' as const,
+    endRound({
+      mode: 'growth',
       openingId: deepestNodeWithin(tree, region, run.path).id,
       color: run.color,
       score: earned,
       answered: 0,
       correct: 0,
       perfect: added.length >= MAX_ADDS,
-    };
-    endGame(summary);
-    onGameOver?.(summary);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -337,12 +292,10 @@ function Run({
                 <span className="ico"><Icons.cross size={14} /></span>
                 Not your prep
               </div>
-              {!auto && (
-                <button className="btn primary sm" onClick={onExit}>
-                  Back
-                  <Icons.next size={16} />
-                </button>
-              )}
+              <button className="btn primary sm" onClick={onExit}>
+                Back
+                <Icons.next size={16} />
+              </button>
             </div>
             <div className="compare mt-8">
               <div className="good">
@@ -410,12 +363,10 @@ function Run({
                 {addedSans.length === 1 ? `${addedSans[0]} added` : `${addedSans.length} moves added`}
                 {earned > 0 && <span className="chip good">+{earned}</span>}
               </div>
-              {!auto && (
-                <button className="btn primary sm" onClick={onExit}>
-                  New run
-                  <Icons.next size={16} />
-                </button>
-              )}
+              <button className="btn primary sm" onClick={onExit}>
+                New run
+                <Icons.next size={16} />
+              </button>
             </div>
             <Section title="The line now" />
             <div className="card">

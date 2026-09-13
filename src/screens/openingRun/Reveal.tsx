@@ -268,6 +268,7 @@ export function Reveal({
                 {named.specific ? `${run.sourceLabel} · ` : ''}
                 {survived && past === 0 ? 'played in full' : `${run.survived} correct`}
                 {past > 0 ? ` · ${past} past prep` : ''}
+                {run.added > 0 ? ` · ${run.added} move${run.added === 1 ? '' : 's'} added` : ''}
                 {run.hintsUsed > 0 ? ` · ${run.hintsUsed} hint${run.hintsUsed === 1 ? '' : 's'}` : ''}
                 {saved
                   ? saved.added > 0

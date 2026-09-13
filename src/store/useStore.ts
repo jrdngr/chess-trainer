@@ -47,8 +47,8 @@ import {
   EMPTY_SCORE,
   milestoneOf,
   normalizeScore,
-  recordGame,
-  type GameRecord,
+  recordRound,
+  type RoundRecord,
   type Milestone,
   type ScoreEvent,
   type ScoreState,
@@ -204,17 +204,21 @@ interface StoreState extends PersistedState {
   endRepair: (outcome: { relearned?: boolean; added?: boolean }) => void;
   /** Bank points for one event, credited to the openings its line goes through. */
   earn: (event: Omit<ScoreEvent, 'at'>) => number;
-  /** Count a finished game against its opening. */
-  endGame: (game: Omit<GameRecord, 'at'>) => void;
+  /** Count a finished round against its opening. */
+  endRound: (round: Omit<RoundRecord, 'at'>) => void;
   /** Remember a move the user got wrong somewhere in the app. */
   logMistake: (mistake: Omit<Mistake, 'id' | 'at'>) => void;
   /** Forget one, once it has been repaired. */
   clearMistake: (id: string) => void;
   /**
-   * The move that ended a run. Only the miss touches the schedule: correct
-   * moves in a run are primed by the ones before them, so crediting them would
-   * inflate intervals on evidence weaker than an isolated review.
+   * A correct move in a run, on a position your prep has an answer to. It is
+   * a review: graded by how long it took where the position already has a
+   * card, and a plain pass where this is the first time it has been asked.
+   * Run and Drill share one schedule, so what a run has shown you know is not
+   * asked again until it is due.
    */
+  answeredInOpeningRun: (repertoireId: string, fen: string, played: string, grade: Grade) => void;
+  /** The move that ended a run: a lapse, and a mistake for Repair. */
   missedInOpeningRun: (repertoireId: string, fen: string, played: string, expected: string) => void;
   /**
    * An answer given in Repair. Unlike a run, this is one isolated position with
@@ -644,8 +648,8 @@ export const useStore = create<StoreState>((set, get) => {
       return event.points;
     },
 
-    endGame(game) {
-      commit({ score: recordGame(get().score, openingTree(referenceIndex()), { ...game, at: Date.now() }) });
+    endRound(round) {
+      commit({ score: recordRound(get().score, openingTree(referenceIndex()), { ...round, at: Date.now() }) });
     },
 
     logMistake(mistake) {
@@ -654,6 +658,21 @@ export const useStore = create<StoreState>((set, get) => {
 
     clearMistake(id) {
       commit({ mistakes: get().mistakes.filter((m) => m.id !== id) });
+    },
+
+    answeredInOpeningRun(repertoireId, fen, played, gradeValue) {
+      const key = positionKey(fen);
+      const id = cardId(repertoireId, key);
+      const state = get();
+      const existing = state.cards[id];
+      const card = existing ?? createCard(id, repertoireId, key, fen);
+      commit(
+        reviewed(state, card, existing ? gradeValue : 'good', {
+          correct: true,
+          playedSan: played,
+          expectedSan: played,
+        }),
+      );
     },
 
     missedInOpeningRun(repertoireId, fen, played, expected) {

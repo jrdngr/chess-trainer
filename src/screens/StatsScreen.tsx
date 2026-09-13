@@ -77,7 +77,7 @@ export function StatsScreen({ target, onConsumedTarget }: { target?: string; onC
           <div className="lbl">points</div>
           <div className="pills">
             <span className="pill">
-              <b>{games(stats)}</b> {games(stats) === 1 ? 'game' : 'games'}
+              <b>{rounds(stats)}</b> {rounds(stats) === 1 ? 'round' : 'rounds'}
             </span>
             {daysPlayed > 0 && (
               <span className="pill">
@@ -135,8 +135,8 @@ export function StatsScreen({ target, onConsumedTarget }: { target?: string; onC
   );
 }
 
-function games(stats: NodeStats): number {
-  return SCORE_MODES.reduce((sum, mode) => sum + stats.byMode[mode].games, 0);
+function rounds(stats: NodeStats): number {
+  return SCORE_MODES.reduce((sum, mode) => sum + stats.byMode[mode].rounds, 0);
 }
 
 /** The colour an opening holds, as a dot. */
@@ -236,7 +236,7 @@ function OpeningPage({
           </div>
           <div className="pills">
             <span className="pill">
-              <b>{games(stats)}</b> {games(stats) === 1 ? 'game' : 'games'}
+              <b>{rounds(stats)}</b> {rounds(stats) === 1 ? 'round' : 'rounds'}
             </span>
             {acc !== null && (
               <span className="pill">
@@ -278,13 +278,13 @@ function OpeningPage({
               <BarList
                 rows={fav.siblings.slice(0, 6).map((s) => ({
                   label: s.node.name,
-                  value: s.games,
+                  value: s.rounds,
                   highlight: s.node.id === node.id,
                 }))}
                 color="var(--warn)"
                 formatValue={(n) => `${n}`}
               />
-              <div className="note">Games in the last 30 days, among the openings you have played here.</div>
+              <div className="note">Rounds in the last 30 days, among the openings you have played here.</div>
             </div>
           </>
         )}
@@ -302,7 +302,7 @@ function OpeningPage({
               <div className="list-row kv" key={mode}>
                 <span className="k grow">{MODE_NAMES[mode]}</span>
                 <span className="meta">
-                  {tally.games === 1 ? '1 game' : `${tally.games} games`}
+                  {tally.rounds === 1 ? '1 round' : `${tally.rounds} rounds`}
                   {tally.answered ? ` · ${Math.round((tally.correct / tally.answered) * 100)}%` : ''}
                 </span>
                 <span className="v num" style={{ minWidth: 40, textAlign: 'right' }}>{tally.score}</span>

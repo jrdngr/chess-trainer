@@ -6,9 +6,8 @@ import { candidateAnswers } from '../../model/gaps';
 import type { RepairPrefs } from '../../model/modes';
 import { formatGameCount, movePercent, lookup, totalGamesAt } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
-import { nodeById, openingTree } from '../../model/openingTree';
+import { openingTree } from '../../model/openingTree';
 import { POINTS } from '../../model/scoring';
-import type { GamePlan, GameSummary } from '../../model/autopilot';
 import { lineInRegion, regionOf, repertoiresIn } from '../../model/selection';
 import { selectionText } from '../../components/Selection';
 import { buildRepairs, fixCandidates, isRepaired, lineFor, type RepairItem } from '../../model/repair';
@@ -16,61 +15,32 @@ import { repertoireList, useStore } from '../../store/useStore';
 import { Setup } from './Setup';
 
 export interface RepairScreenProps {
-  /** Skip setup and work through the saved options — Next Up started this. */
-  auto?: boolean;
-  /** Stop after this many items, as one game of an automatic session. */
-  limit?: number;
-  /** What Autopilot decided: the side, and the opening to repair. */
-  plan?: GamePlan;
-  onGameOver?: (summary: GameSummary) => void;
   onImport: () => void;
   onExit: () => void;
 }
 
-export function RepairScreen({ auto, limit, plan, onGameOver, onImport, onExit }: RepairScreenProps) {
-  const saved = useStore((s) => s.settings.repair);
-  const [prefs, setPrefs] = useState<RepairPrefs | null>(() => (auto ? saved : null));
+export function RepairScreen({ onImport, onExit }: RepairScreenProps) {
+  const [prefs, setPrefs] = useState<RepairPrefs | null>(null);
   if (!prefs) return <Setup onStart={setPrefs} onImport={onImport} onExit={onExit} />;
-  // A queue nobody set up has no setup screen to fall back to.
-  return (
-    <Working
-      prefs={prefs}
-      limit={limit}
-      plan={plan}
-      onGameOver={onGameOver}
-      onExit={() => (auto ? onExit() : setPrefs(null))}
-    />
-  );
+  return <Working prefs={prefs} onExit={() => setPrefs(null)} />;
 }
 
 type Phase = 'ask' | 'right' | 'wrong' | 'choose';
 
-function Working({
-  prefs,
-  limit,
-  plan,
-  onGameOver,
-  onExit,
-}: {
-  prefs: RepairPrefs;
-  limit?: number;
-  plan?: GamePlan;
-  onGameOver?: (summary: GameSummary) => void;
-  onExit: () => void;
-}) {
+function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) {
   const state = useStore();
   const addLine = useStore((s) => s.addLine);
   const endRepair = useStore((s) => s.endRepair);
   const repaired = useStore((s) => s.repairedPosition);
   const earn = useStore((s) => s.earn);
-  const endGame = useStore((s) => s.endGame);
+  const endRound = useStore((s) => s.endRound);
   const logged = useRef(false);
   const settings = state.settings;
   const selection = settings.selection;
-  const reps = repertoiresIn(repertoireList(state), plan?.color ?? selection.color);
+  const reps = repertoiresIn(repertoireList(state), selection.color);
   const index = referenceIndex();
   const tree = openingTree(index);
-  const region = plan ? nodeById(tree, plan.steer) : regionOf(tree, selection);
+  const region = regionOf(tree, selection);
 
   /** Built once per visit: fixing an item changes the repertoire underneath. */
   const [queue] = useState<RepairItem[]>(() =>
@@ -84,8 +54,7 @@ function Working({
       // number of positions and then opens onto nothing.
       mistakes: state.mistakes,
     })
-      .filter((item) => lineInRegion(tree, region, item.path))
-      .slice(0, limit ?? Infinity),
+      .filter((item) => lineInRegion(tree, region, item.path)),
   );
 
   const [at, setAt] = useState(0);
@@ -95,21 +64,19 @@ function Working({
 
   const item = queue[at];
 
-  /** The visit is one game, logged when the queue runs out or on leaving. */
+  /** The visit is one round, logged when the queue runs out or on leaving. */
   const log = () => {
     if (logged.current || done.relearned + done.added + done.wrong === 0) return;
     logged.current = true;
-    const summary = {
-      mode: 'repair' as const,
+    endRound({
+      mode: 'repair',
       openingId: region.id,
       color: queue[0]?.color ?? 'w',
       score: done.earned,
       answered: done.relearned + done.wrong,
       correct: done.relearned,
       perfect: done.wrong === 0 && done.relearned + done.added >= 3,
-    };
-    endGame(summary);
-    onGameOver?.(summary);
+    });
   };
   useEffect(() => {
     if (!item) log();
@@ -197,11 +164,9 @@ function Working({
               </span>
             </div>
           </div>
-          {!limit && (
-            <button className="btn primary block xl mt-16" onClick={leave}>
-              Back to options
-            </button>
-          )}
+          <button className="btn primary block xl mt-16" onClick={leave}>
+            Back to options
+          </button>
         </div>
       </>
     );

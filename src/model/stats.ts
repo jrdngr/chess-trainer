@@ -74,10 +74,10 @@ export function rollingAccuracy(stats: NodeStats, days: number, now = Date.now()
   return out;
 }
 
-/** Games in the last `days` days. */
-export function recentGames(stats: NodeStats, days: number, now = Date.now()): number {
+/** Rounds in the last `days` days. */
+export function recentRounds(stats: NodeStats, days: number, now = Date.now()): number {
   let total = 0;
-  for (let back = days - 1; back >= 0; back -= 1) total += stats.days[dayKey(dayStart(now, back))]?.games ?? 0;
+  for (let back = days - 1; back >= 0; back -= 1) total += stats.days[dayKey(dayStart(now, back))]?.rounds ?? 0;
   return total;
 }
 
@@ -85,13 +85,13 @@ export function recentGames(stats: NodeStats, days: number, now = Date.now()): n
 
 export interface Sibling {
   node: OpeningNode;
-  games: number;
-  /** Of the games among these siblings. */
+  rounds: number;
+  /** Of the rounds among these siblings. */
   share: number;
 }
 
 /**
- * How an opening ranks against its siblings by games played lately: "your
+ * How an opening ranks against its siblings by rounds played lately: "your
  * second favourite Sicilian". Siblings that have never been played are left
  * out — a rank among a hundred untouched variations says nothing.
  */
@@ -107,11 +107,11 @@ export function favouriteness(
   const parent = node.parentId === null ? null : nodeById(tree, node.parentId);
   const pool = parent ? parent.children : tree.root.children;
   const siblings = pool
-    .map((sibling) => ({ node: sibling, games: recentGames(nodeStats(score, sibling.id), days, now), share: 0 }))
-    .filter((sibling) => sibling.games > 0)
-    .sort((a, b) => b.games - a.games || a.node.name.localeCompare(b.node.name));
-  const total = siblings.reduce((sum, sibling) => sum + sibling.games, 0);
-  for (const sibling of siblings) sibling.share = total ? sibling.games / total : 0;
+    .map((sibling) => ({ node: sibling, rounds: recentRounds(nodeStats(score, sibling.id), days, now), share: 0 }))
+    .filter((sibling) => sibling.rounds > 0)
+    .sort((a, b) => b.rounds - a.rounds || a.node.name.localeCompare(b.node.name));
+  const total = siblings.reduce((sum, sibling) => sum + sibling.rounds, 0);
+  for (const sibling of siblings) sibling.share = total ? sibling.rounds / total : 0;
   const rank = siblings.findIndex((sibling) => sibling.node.id === id);
   if (rank < 0) return null;
   return { rank: rank + 1, of: siblings.length, siblings, parent };

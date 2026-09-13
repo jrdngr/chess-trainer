@@ -25,14 +25,13 @@ import {
   type TrainingItem,
 } from '../../model/session';
 import { DEFAULT_DRILL, type DrillPrefs } from '../../model/modes';
-import { createCard } from '../../model/srs';
+import { createCard, gradeForTime } from '../../model/srs';
 import { clockSeconds } from '../../model/openingRun';
 import { comboBonus, POINTS, speedBonus } from '../../model/scoring';
 import type { Card, Grade } from '../../model/types';
 import { useStore } from '../../store/useStore';
 import { ClockHud, useMoveClock } from '../../components/Clock';
 import { selectionText } from '../../components/Selection';
-import type { GameSummary } from '../../model/autopilot';
 
 export interface DrillSessionProps {
   /** Everything in scope. The session draws from this for as long as you want. */
@@ -41,14 +40,8 @@ export interface DrillSessionProps {
   title: string;
   /** The mode's own options. Sessions launched from a repertoire use defaults. */
   prefs?: Partial<DrillPrefs>;
-  /**
-   * Stop after this many answers, as one game of an automatic session; the
-   * session then reports rather than offering to keep going.
-   */
-  limit?: number;
-  /** The opening the game is credited to; the selection's, unless steered. */
+  /** The opening the round is credited to; the selection's by default. */
   openingId?: string;
-  onGameOver?: (summary: GameSummary) => void;
   onExit: () => void;
 }
 
@@ -62,17 +55,6 @@ function order(
   weakFirst: boolean,
 ): TrainingItem[] {
   return weakFirst ? weakestFirst(batch, cards) : batch;
-}
-
-/**
- * The grade a correct answer earns by how long it took: under three seconds
- * it was instant, under eight you knew it, past that you got there. Never
- * "guessed" — that is a fact about your head, not about the clock.
- */
-export function gradeForTime(seconds: number): Grade {
-  if (seconds < 3) return 'easy';
-  if (seconds < 8) return 'good';
-  return 'hard';
 }
 
 /** The speed bonus read at the moment of the move rather than the last tick. */
@@ -107,9 +89,7 @@ export function DrillSession({
   mode,
   title,
   prefs,
-  limit,
   openingId,
-  onGameOver,
   onExit,
 }: DrillSessionProps) {
   const options: DrillPrefs = { ...DEFAULT_DRILL, ...prefs };
@@ -121,7 +101,7 @@ export function DrillSession({
   const ensureCard = useStore((s) => s.ensureCard);
   const logMistake = useStore((s) => s.logMistake);
   const earn = useStore((s) => s.earn);
-  const endGame = useStore((s) => s.endGame);
+  const endRound = useStore((s) => s.endRound);
 
   const maxNew = options.newPerSession;
   const weakFirst = options.weakFirst;
@@ -167,21 +147,19 @@ export function DrillSession({
     active: phase === 'ask' && !!item && !explore && !showMoves,
   });
 
-  /** Count the session as one game, against the opening it was played in. */
+  /** Count the session as one round, against the opening it was played in. */
   const log = () => {
     if (logged.current || stats.answered === 0) return;
     logged.current = true;
-    const summary = {
-      mode: 'drill' as const,
+    endRound({
+      mode: 'drill',
       openingId: openingId ?? settings.selection.opening,
       color: item?.orientation === 'black' ? ('b' as const) : ('w' as const),
       score: stats.earned,
       answered: stats.answered,
       correct: stats.correct,
       perfect: stats.correct === stats.answered && stats.answered >= 5,
-    };
-    endGame(summary);
-    onGameOver?.(summary);
+    });
   };
 
   const card = item ? cards[item.cardId] : undefined;
@@ -345,14 +323,6 @@ export function DrillSession({
     }
   };
 
-  /** A limited session ends itself once the last answer has been dealt with. */
-  useEffect(() => {
-    if (!limit || phase !== 'ask' || stats.answered < limit || stopped) return;
-    log();
-    setStopped(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [limit, phase, stats.answered, stopped]);
-
   /** Change the grade of the last correct answer. Guessed also brings it back soon. */
   const onRegrade = (value: Grade) => {
     if (!last || value === last.grade) return;
@@ -434,20 +404,16 @@ export function DrillSession({
             </div>
           </div>
           <div className="spacer" />
-          {!limit && (
-            <button className="btn primary block xl" onClick={onExit}>
-              Done
-            </button>
-          )}
-          {!limit && (
-            <button
-              className="btn plain block"
-              style={{ marginTop: 8 }}
-              onClick={() => setStopped(false)}
-            >
-              Keep going
-            </button>
-          )}
+          <button className="btn primary block xl" onClick={onExit}>
+            Done
+          </button>
+          <button
+            className="btn plain block"
+            style={{ marginTop: 8 }}
+            onClick={() => setStopped(false)}
+          >
+            Keep going
+          </button>
         </div>
       </>
     );
@@ -468,9 +434,7 @@ export function DrillSession({
         actions={
           <span className="row gap-6">
             {phase === 'ask' && <ClockHud clock={clock} />}
-            <span className="chip num wide">
-              {limit ? `${stats.answered}/${limit}` : stats.answered}
-            </span>
+            <span className="chip num wide">{stats.answered}</span>
           </span>
         }
       />

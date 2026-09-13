@@ -7,8 +7,10 @@ import {
   type Color,
   type Square,
 } from '../chess/core';
+import { findHoles, optionsAt, type Hole } from './growth';
 import { deepestName, lookup, type ReferenceIndex } from './reference';
 import { insideRegion, lineStatus, approachKeys, type OpeningNode, type OpeningTree } from './openingTree';
+import type { RepairItem } from './repair';
 import { childrenOf, fenAt, leafLines, pathTo } from './repertoire';
 import { cardId, mulberry32 } from './session';
 import type { Card, RepMove, Repertoire } from './types';
@@ -22,7 +24,9 @@ import type { Card, RepMove, Repertoire } from './types';
  * The opponent replies in proportion to how often each move is played, but
  * only with moves that keep the game inside the region; on the way in, only
  * moves the book can still get there from. Past the end of the book your prep
- * is the only referee, and past the end of the prep the run is complete.
+ * is the only referee. At the end of the prep the run is complete — unless it
+ * has moves left to add, in which case the book's replies are offered and the
+ * one you choose becomes prep.
  *
  * A `LineSource` answers those questions about a position, and everything
  * else (judging, revealing, scoring) is shared.
@@ -235,12 +239,44 @@ export function clockLabel(mode: ClockMode): string {
 export const HINT_BUDGETS = [0, 1, 3];
 
 /**
+ * What the opponent steers you toward: the line drawn up front.
+ *
+ *   popular — your lines by how often you would actually meet them.
+ *   weak    — the same, tilted hard toward positions you answer badly, have
+ *             let lapse, or got wrong in your own games.
+ *   gaps    — a reply you have no answer to, so the run reaches the edge of
+ *             the prep and offers the book.
+ */
+export type Steer = 'popular' | 'weak' | 'gaps';
+
+export const STEERS: Steer[] = ['popular', 'weak', 'gaps'];
+
+export function steerLabel(steer: Steer): string {
+  switch (steer) {
+    case 'weak':
+      return 'Weak spots';
+    case 'gaps':
+      return 'Gaps';
+    default:
+      return 'Popular';
+  }
+}
+
+/** How many moves a run may add at the edge of the prep. */
+export const NEW_MOVE_BUDGETS = [0, 1, 3];
+
+/**
  * What the setup screen decides. The colour and the opening are global and
  * live in the selection, not here.
  */
 export interface OpeningRunOptions {
-  /** Draw lines you answer badly more often than lines you know cold. */
-  weakFirst: boolean;
+  steer: Steer;
+  /**
+   * Moves the run may add. Where your prep runs out — on your move, with the
+   * book still going — the book's replies are offered and the one you choose
+   * is written into the repertoire; with none left the run is complete there.
+   */
+  newMoves: number;
   clock: ClockMode;
   hints: number;
   /**
@@ -252,7 +288,8 @@ export interface OpeningRunOptions {
 }
 
 export const DEFAULT_OPTIONS: OpeningRunOptions = {
-  weakFirst: false,
+  steer: 'popular',
+  newMoves: 0,
   clock: 'off',
   hints: 0,
   extended: false,
@@ -290,6 +327,10 @@ export interface Run {
   hints: number;
   /** Hints spent, shown on the reveal so a deep run stays honest. */
   hintsUsed: number;
+  /** Moves the run may still add at the edge of the prep. */
+  newMoves: number;
+  /** Moves it has added. */
+  added: number;
   /**
    * How many plies had been played when the prep ran out, or null while the run
    * is still inside the book. Set once and never cleared: everything after it
@@ -329,12 +370,25 @@ export type Weakness = (repertoireId: string, key: string) => number;
  * have answered right three times running. The numbers are only ever compared
  * against each other, so their scale does not matter.
  */
-export function weaknessFromCards(cards: Record<string, Card>, now = Date.now()): Weakness {
+export function weaknessFromCards(
+  cards: Record<string, Card>,
+  /** Positions your own games got wrong, which want repeating whatever the schedule says. */
+  slips: Pick<RepairItem, 'kind' | 'repertoireId' | 'key' | 'games'>[] = [],
+  now = Date.now(),
+): Weakness {
+  const slipped = new Map<string, number>();
+  for (const item of slips) {
+    if (item.kind !== 'offprep') continue;
+    const id = cardId(item.repertoireId, item.key);
+    slipped.set(id, (slipped.get(id) ?? 0) + item.games);
+  }
   return (repertoireId, key) => {
-    const card = cards[cardId(repertoireId, key)];
+    const id = cardId(repertoireId, key);
+    const card = cards[id];
+    const evidence = 2 * Math.min(3, slipped.get(id) ?? 0);
     // Never studied: worth seeing, but not the emergency a lapse is.
-    if (!card) return 1.5;
-    let score = 1;
+    if (!card) return 1.5 + evidence;
+    let score = 1 + evidence;
     score += card.lapses * 1.2;
     score += Math.max(0, 2.5 - card.ease) * 2;
     if (card.stage === 'learning') score += 1;
@@ -381,13 +435,17 @@ export interface BeginOptions extends Partial<OpeningRunOptions> {
    * one. The rule for staying alive is still the region's; only the opponent's
    * choice of line is narrowed.
    */
-  steer?: OpeningNode;
+  toward?: OpeningNode;
   color: ColorChoice;
   seed?: number;
   /** Skip lines that ask fewer than this many moves of the user. */
   minDecisions?: number;
   /** Positions you answer badly, scored — see `weaknessFromCards`. */
   weakness?: Weakness | null;
+  /** What counts as a hole worth steering toward. */
+  growth?: { minShare?: number; maxPly?: number };
+  /** How much more a hole is worth for the games you have lost in it — see `evidenceFor`. */
+  holeWeight?: (hole: Hole) => number;
 }
 
 /**
@@ -395,10 +453,12 @@ export interface BeginOptions extends Partial<OpeningRunOptions> {
  *
  * The line drawn up front only steers the opponent. It is one of your own
  * prepared lines through the region when you have any, drawn on how often you
- * would actually meet it (and on how badly you answer it, when asked); failing
- * that it is the region's own move order, so the opponent still walks you into
- * the opening you asked for. Any move that stays inside the region is accepted
- * at your own turn whichever line was drawn.
+ * would actually meet it (and on how badly you answer it, when asked); steered
+ * at gaps, it is the way to a reply you have no answer to, drawn on how often
+ * that reply is played and how early it comes. Failing either it is the
+ * region's own move order, so the opponent still walks you into the opening
+ * you asked for. Any move that stays inside the region is accepted at your own
+ * turn whichever line was drawn.
  *
  * Null only when the book is empty, which it never is.
  */
@@ -409,12 +469,16 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
   if (!lookup(tree.index, START_FEN)?.moves.length) return null;
   const rep = opts.reps.find((r) => r.color === side) ?? null;
   const source = regionSource(tree, node, rep, side);
-  const aim = opts.steer ?? node;
+  const aim = opts.toward ?? node;
 
+  const steer = opts.steer ?? DEFAULT_OPTIONS.steer;
   let target = aim.sans;
-  if (rep) {
+  const gap = rep && steer === 'gaps' ? drawHole(rep, tree, aim, opts, rand) : null;
+  if (gap) {
+    target = [...gap.path, gap.san];
+  } else if (rep) {
     const minDecisions = opts.minDecisions ?? 4;
-    const weakness = opts.weakFirst ? (opts.weakness ?? null) : null;
+    const weakness = steer === 'weak' ? (opts.weakness ?? null) : null;
     const inRegion = leafLines(rep)
       .filter((line) => lineStatus(tree, aim, line.sans) === 'reached')
       .map((line) => {
@@ -451,9 +515,33 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
     target,
     hints: opts.hints ?? DEFAULT_OPTIONS.hints,
     hintsUsed: 0,
+    newMoves: Math.max(0, opts.newMoves ?? DEFAULT_OPTIONS.newMoves),
+    added: 0,
     prepEnded: null,
   };
   return { source, run };
+}
+
+/**
+ * The hole to walk toward: drawn on how often its reply is played, how early
+ * it comes, and what your own games say about it. Null where the prep has no
+ * holes in the region, and the run falls back to a line through it.
+ */
+function drawHole(
+  rep: Repertoire,
+  tree: OpeningTree,
+  aim: OpeningNode,
+  opts: BeginOptions,
+  rand: () => number,
+): Hole | null {
+  const holes = findHoles(rep, tree.index, { ...opts.growth, region: { tree, node: aim } });
+  if (!holes.length) return null;
+  const evidence = opts.holeWeight ?? (() => 1);
+  return pickWeighted(
+    holes,
+    (hole) => (Math.max(hole.share, 0.1) * evidence(hole)) / (1 + hole.path.length / 3),
+    rand,
+  );
 }
 
 /** Resolve "random" once, up front, so the rest of a run is deterministic. */
@@ -737,6 +825,46 @@ export function playExtendedReply(run: Run, san: string): Run {
  */
 export function isComplete(source: LineSource, run: Run): boolean {
   return !run.over && !isExtended(run) && movesHere(source, run).length === 0;
+}
+
+/**
+ * True at the edge of the prep: your move, nothing prepared, the book still
+ * going. This is where a run completes, or — with moves left to add — where it
+ * offers the book.
+ *
+ * Never once the prep has been left: from there the book judges every move
+ * and nothing is added. And never for the engine: past the hand-over there is
+ * no prep to be at the edge of.
+ */
+export function atEdge(source: LineSource, run: Run): boolean {
+  if (run.over || run.leftPrep || isExtended(run) || !isUsersTurn(run)) return false;
+  return source.prepAt(run.fen).length === 0 && movesHere(source, run).length > 0;
+}
+
+/** What to offer at the edge: the book's replies, most played first. */
+export function edgeOptions(index: ReferenceIndex, fen: string, limit = 4) {
+  return optionsAt(index, fen, limit);
+}
+
+/**
+ * Take a move from the book at the edge of the prep.
+ *
+ * It is played and it spends one of the run's new moves, but it is not a move
+ * you found, so it counts for nothing: the score is moves survived. The drawn
+ * line stops steering — it led here and no further — and the opponent answers
+ * from the book.
+ */
+export function chooseAtEdge(run: Run, san: string): Run {
+  const move = applySan(run.fen, san);
+  if (!move || run.newMoves <= 0) return { ...run, over: true };
+  return {
+    ...run,
+    fen: move.after,
+    played: [...run.played, san],
+    newMoves: run.newMoves - 1,
+    added: run.added + 1,
+    target: [],
+  };
 }
 
 /** How the line would have gone on from here. */

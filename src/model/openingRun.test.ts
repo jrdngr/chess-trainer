@@ -1,15 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { applySan, fenTurn, positionKey, START_FEN, walkSan } from '../chess/core';
 import {
+  atEdge,
   beginRun,
   BLUNDER_LIMIT,
   bookHas,
+  chooseAtEdge,
   classify,
   clockLabel,
   clockSeconds,
   CLOCK_MODES,
   continuation,
   DEFAULT_OPTIONS,
+  edgeOptions,
   EMPTY_RECORD,
   evalLoss,
   extend,
@@ -28,6 +31,7 @@ import {
   lineToKeep,
   lineWeakness,
   movesHere,
+  NEW_MOVE_BUDGETS,
   normalizeRecord,
   opponentReply,
   outcomeOf,
@@ -40,6 +44,8 @@ import {
   resolveColor,
   revealText,
   staysInside,
+  steerLabel,
+  STEERS,
   takeHint,
   weaknessFromCards,
   type LineSource,
@@ -47,7 +53,7 @@ import {
   type Weakness,
 } from './openingRun';
 import { nodeById, openingTree } from './openingTree';
-import { addLine, createRepertoire, leafLines, pathTo } from './repertoire';
+import { addLine, createRepertoire, hasLine, leafLines, pathTo } from './repertoire';
 import { lookup } from './reference';
 import { referenceIndex } from './referenceIndex';
 import { cardId, mulberry32 } from './session';
@@ -363,6 +369,16 @@ describe('targeting weak spots', () => {
     expect(weakness(rep.id, 'unseen')).toBeGreaterThan(weakness(rep.id, 'solid'));
   });
 
+  it('counts what your games got wrong, on top of the schedule', () => {
+    const plain = weaknessFromCards({});
+    const slipped = weaknessFromCards({}, [{ kind: 'offprep', repertoireId: rep.id, key: 'k', games: 3 }]);
+    expect(slipped(rep.id, 'k')).toBeGreaterThan(plain(rep.id, 'k'));
+    expect(slipped(rep.id, 'other')).toBe(plain(rep.id, 'other'));
+    // Reaching it with nothing prepared is a hole, not a slip: not counted here.
+    const gap = weaknessFromCards({}, [{ kind: 'unprepared', repertoireId: rep.id, key: 'k', games: 3 }]);
+    expect(gap(rep.id, 'k')).toBe(plain(rep.id, 'k'));
+  });
+
   it('averages the appetite over the positions the line asks about', () => {
     const weakness: Weakness = (_id, key) => (key === 'hot' ? 7 : 1);
     expect(lineWeakness(rep.id, ['hot', 'hot'], weakness)).toBe(7);
@@ -383,7 +399,7 @@ describe('targeting weak spots', () => {
     let on = 0;
     let off = 0;
     for (let seed = 0; seed < 60; seed += 1) {
-      if (startsWeak(start([two], 'w', seed, any, { weakFirst: true, weakness }).run)) on += 1;
+      if (startsWeak(start([two], 'w', seed, any, { steer: 'weak', weakness }).run)) on += 1;
       if (startsWeak(start([two], 'w', seed, any, { weakness }).run)) off += 1;
     }
     expect(off).toBeGreaterThan(15);
@@ -425,8 +441,106 @@ describe('hints', () => {
 });
 
 describe('defaults', () => {
-  it('turns every extra off', () => {
-    expect(DEFAULT_OPTIONS).toEqual({ weakFirst: false, clock: 'off', hints: 0, extended: false });
+  it('turns every extra off: a popular line, nothing added', () => {
+    expect(DEFAULT_OPTIONS).toEqual({ steer: 'popular', newMoves: 0, clock: 'off', hints: 0, extended: false });
+    expect(NEW_MOVE_BUDGETS).toEqual([0, 1, 3]);
+    for (const steer of STEERS) expect(steerLabel(steer)).toBeTruthy();
+  });
+});
+
+describe('steering at gaps', () => {
+  /** A Spanish and nothing else: every other Black reply to 1.e4 is a hole. */
+  function spanish(): Repertoire {
+    return addLine(createRepertoire('White', 'w', 'rep_sp'), ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'], 'seed').rep;
+  }
+
+  it('walks the opponent to a reply you have no answer to', () => {
+    const rep = spanish();
+    const seen = new Set<string>();
+    for (let seed = 0; seed < 40; seed += 1) {
+      const { run } = start([rep], 'w', seed, any, { steer: 'gaps' });
+      expect(run.target.length).toBeGreaterThanOrEqual(2);
+      // Everything up to the reply is prep; the reply itself is not.
+      expect(hasLine(rep, run.target.slice(0, -1))).toBe(true);
+      expect(hasLine(rep, run.target)).toBe(false);
+      expect(run.target.length % 2).toBe(0);
+      seen.add(run.target.join(' '));
+    }
+    // Drawn, not fixed: more than one hole comes up.
+    expect(seen.size).toBeGreaterThan(1);
+  });
+
+  it('lets what your games say decide which hole', () => {
+    const rep = spanish();
+    const after = applySan(applySan(START_FEN, 'e4')!.after, 'c5')!.after;
+    const sicilian = positionKey(after);
+    for (let seed = 0; seed < 20; seed += 1) {
+      const { run } = start([rep], 'w', seed, any, {
+        steer: 'gaps',
+        holeWeight: (hole: { after: string }) => (positionKey(hole.after) === sicilian ? 1000 : 1),
+      });
+      expect(run.target).toEqual(['e4', 'c5']);
+    }
+  });
+
+  it('falls back to a line through the opening when there is nothing to walk to', () => {
+    // A region the prep never reaches has no holes inside it.
+    const { run } = start([spanish()], 'w', 1, byName('Sicilian Defence'), { steer: 'gaps' });
+    expect(run.target[0]).toBe('e4');
+    expect(run.target[1]).toBe('c5');
+  });
+});
+
+describe('the edge of the prep', () => {
+  /** One move of prep: after 1.e4 e5 White has nothing, and the book has plenty. */
+  function thin(): Repertoire {
+    return addLine(createRepertoire('White', 'w', 'rep_thin'), ['e4', 'e5'], 'seed').rep;
+  }
+
+  it('is your move, with nothing prepared and the book still going', () => {
+    const { source, run } = start([thin()], 'w', 1, any, { newMoves: 3 });
+    expect(atEdge(source, run)).toBe(false);
+    const played = play(source, run, 'e4').run;
+    // The opponent's turn is never the edge.
+    expect(atEdge(source, played)).toBe(false);
+    const edge = at(played, ['e4', 'e5']);
+    expect(atEdge(source, edge)).toBe(true);
+    expect(isComplete(source, edge)).toBe(false);
+    expect(atEdge(source, { ...edge, leftPrep: true })).toBe(false);
+    expect(atEdge(source, extend(edge))).toBe(false);
+    expect(atEdge(source, { ...edge, over: true })).toBe(false);
+  });
+
+  it('offers the book there, most played first', () => {
+    const { run } = start([thin()], 'w', 1, any);
+    const edge = at(run, ['e4', 'e5']);
+    const options = edgeOptions(index, edge.fen);
+    expect(options.length).toBeGreaterThan(1);
+    expect(options[0].san).toBe('Nf3');
+    expect(options[0].games).toBeGreaterThanOrEqual(options[1].games);
+  });
+
+  it('spends a new move on the choice and scores nothing for it', () => {
+    const { run } = start([thin()], 'w', 1, any, { newMoves: 2 });
+    const edge = at({ ...run, survived: 1 }, ['e4', 'e5']);
+    const chosen = chooseAtEdge(edge, 'Nf3');
+    expect(chosen.over).toBe(false);
+    expect(chosen.played).toEqual(['e4', 'e5', 'Nf3']);
+    expect(chosen.survived).toBe(1);
+    expect(chosen.newMoves).toBe(1);
+    expect(chosen.added).toBe(1);
+    expect(chosen.target).toEqual([]);
+    expect(playedIsLegal(chosen)).toBe(true);
+    expect(chooseAtEdge({ ...edge, newMoves: 0 }, 'Nf3').over).toBe(true);
+    expect(chooseAtEdge(edge, 'Ke2').over).toBe(false);
+    expect(chooseAtEdge(edge, 'Qh7').over).toBe(true);
+  });
+
+  it('starts with the budget it was given, and none by default', () => {
+    expect(start([thin()], 'w').run.newMoves).toBe(0);
+    expect(start([thin()], 'w', 1, any, { newMoves: 3 }).run.newMoves).toBe(3);
+    expect(start([thin()], 'w', 1, any, { newMoves: -2 }).run.newMoves).toBe(0);
+    expect(start([thin()], 'w').run.added).toBe(0);
   });
 });
 
@@ -637,7 +751,7 @@ describe('keeping what a run survived', () => {
     return {
       id: 'r', sourceLabel: 'Any opening', openingId: '', leftPrep: false, color: 'w',
       fen: START_FEN, played: [], survived: 0, over: true, target: [], hints: 0, hintsUsed: 0,
-      prepEnded: null, ...over,
+      newMoves: 0, added: 0, prepEnded: null, ...over,
     };
   }
 

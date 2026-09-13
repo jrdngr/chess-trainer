@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { applySan, positionKey, START_FEN } from '../chess/core';
 import { openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
 import { addLine, createRepertoire } from './repertoire';
@@ -6,21 +7,25 @@ import {
   BRAKE,
   candidates,
   cardStrength,
-  drillNeed,
   FUN,
   GROWTH_FLOOR,
-  growthNeed,
+  growNeed,
+  growthBudget,
   HELD_DAYS,
+  MAX_NEW_MOVES,
   readiness,
   rank,
   recommend,
-  repairNeed,
-  runNeed,
+  reviewNeed,
+  testNeed,
   recentCount,
   saturate,
+  weighHoles,
+  type Focus,
   type RecommendInput,
 } from './recommend';
-import { applyEvent, EMPTY_SCORE, recordGame, type ScoreMode, type ScoreState } from './scoring';
+import type { RepairItem } from './repair';
+import { EMPTY_SCORE, recordRound, type ScoreState } from './scoring';
 import { allItems } from './session';
 import { createCard } from './srs';
 import type { Card, Repertoire } from './types';
@@ -61,7 +66,7 @@ function heldCards(reps: Repertoire[]): Record<string, Card> {
   return cardsFor(reps, false, undefined, 3 * HELD_DAYS);
 }
 
-/** Every other position held for weeks, the rest due: Drill and Growth both have work. */
+/** Every other position held for weeks, the rest due: Review and Grow both have work. */
 function halfHeldCards(reps: Repertoire[]): Record<string, Card> {
   const held = heldCards(reps);
   const due = cardsFor(reps, true);
@@ -83,16 +88,25 @@ function input(patch: Partial<RecommendInput> = {}): RecommendInput {
     starred: [],
     newPerSession: 8,
     growth: { minShare: 1, maxPly: 18 },
-    recentModes: [],
+    recentFocuses: [],
     now: T,
     ...patch,
   };
 }
 
-function played(state: ScoreState, mode: ScoreMode, openingId: string, at: number): ScoreState {
-  return recordGame(state, tree, {
-    mode, openingId, color: 'w', score: 1, answered: 1, correct: 1, perfect: false, at,
+/** A round played: every Autopilot round is a Run. */
+function played(state: ScoreState, openingId: string, at: number): ScoreState {
+  return recordRound(state, tree, {
+    mode: 'run', openingId, color: 'w', score: 1, answered: 1, correct: 1, perfect: false, at,
   });
+}
+
+function repair(patch: Partial<RepairItem>): RepairItem {
+  return {
+    id: 'x', kind: 'offprep', source: 'games', repertoireId: 'r_w', color: 'w', key: '', fen: START_FEN,
+    path: [], lineText: '', games: 2, results: { wins: 0, draws: 0, losses: 2 }, played: [], expected: [],
+    weight: 1, ...patch,
+  };
 }
 
 describe('need', () => {
@@ -103,19 +117,19 @@ describe('need', () => {
   });
 
   it('rises with due cards and never runs away', () => {
-    expect(drillNeed(0, 0, 8)).toBe(0);
-    expect(drillNeed(2, 0, 8)).toBeLessThan(drillNeed(20, 0, 8));
-    expect(drillNeed(400, 0, 8)).toBeLessThanOrEqual(1);
-    expect(drillNeed(0, 30, 8)).toBeLessThan(drillNeed(20, 0, 8));
+    expect(reviewNeed(0, 0, 8)).toBe(0);
+    expect(reviewNeed(2, 0, 8)).toBeLessThan(reviewNeed(20, 0, 8));
+    expect(reviewNeed(400, 0, 8)).toBeLessThanOrEqual(1);
+    expect(reviewNeed(0, 30, 8)).toBeLessThan(reviewNeed(20, 0, 8));
   });
 
   it('costs a hole by how early and how often you fall into it', () => {
     const hole = (depth: number, share: number) => ({
       path: Array(depth).fill('x'), fen: '', san: 'e5', share, games: 1, after: '', nodeId: null,
     });
-    expect(growthNeed([])).toBe(0);
-    expect(growthNeed([hole(1, 30)])).toBeGreaterThan(growthNeed([hole(9, 30)]));
-    expect(growthNeed([hole(3, 30)])).toBeGreaterThan(growthNeed([hole(3, 2)]));
+    expect(growNeed([])).toBe(0);
+    expect(growNeed([hole(1, 30)])).toBeGreaterThan(growNeed([hole(9, 30)]));
+    expect(growNeed([hole(3, 30)])).toBeGreaterThan(growNeed([hole(3, 2)]));
   });
 
   it('holds a position only once it has graduated, is not due, and has lasted', () => {
@@ -141,10 +155,10 @@ describe('need', () => {
 
   it('quietens growth steeply while the prep is still being learned', () => {
     const holes = [{ path: ['x'], fen: '', san: 'e5', share: 30, games: 1, after: '', nodeId: null }];
-    const full = growthNeed(holes, 1);
-    const half = growthNeed(holes, 0.5);
-    const none = growthNeed(holes, 0);
-    expect(full).toBe(growthNeed(holes));
+    const full = growNeed(holes, 1);
+    const half = growNeed(holes, 0.5);
+    const none = growNeed(holes, 0);
+    expect(full).toBe(growNeed(holes));
     expect(half).toBeLessThan(full * 0.35);
     expect(half).toBeGreaterThan(none);
     // Never silent: a thin opening still gets grown now and then.
@@ -152,62 +166,67 @@ describe('need', () => {
     expect(none).toBeCloseTo(full * GROWTH_FLOOR, 5);
   });
 
-  it('weighs repairs by the worst and by how many', () => {
-    const item = (weight: number) => ({
-      id: `x${weight}`, kind: 'offprep' as const, source: 'games' as const, repertoireId: 'r', color: 'w' as const,
-      key: '', fen: '', path: [], lineText: '', games: 2, results: { wins: 0, draws: 0, losses: 2 },
-      played: [], expected: [], weight,
-    });
-    expect(repairNeed([])).toBe(0);
-    expect(repairNeed([item(1)])).toBeLessThan(repairNeed([item(6)]));
-    expect(repairNeed([item(1)])).toBeLessThan(repairNeed([item(1), item(1), item(1)]));
+  it('lets a round add more the better the prep is held', () => {
+    expect(growthBudget(1)).toBe(MAX_NEW_MOVES);
+    expect(growthBudget(0.5)).toBe(2);
+    expect(growthBudget(0)).toBe(1);
+    expect(growthBudget(0.9)).toBeGreaterThanOrEqual(growthBudget(0.5));
   });
 
-  it('always asks for a run, and harder for untested prep or a first run', () => {
-    expect(runNeed(0, true)).toBe(0.4);
-    expect(runNeed(0, false)).toBe(0.55);
-    expect(runNeed(20, true)).toBeGreaterThan(runNeed(2, true));
+  it('always asks for a test, and harder for untested prep or a first run', () => {
+    expect(testNeed(0, true)).toBe(0.4);
+    expect(testNeed(0, false)).toBe(0.55);
+    expect(testNeed(20, true)).toBeGreaterThan(testNeed(2, true));
+  });
+
+  it('weighs a hole up by the games you reached it with nothing', () => {
+    const after = applySan(applySan(START_FEN, 'e4')!.after, 'c5')!.after;
+    const hole = { path: ['e4'], fen: '', san: 'c5', share: 10, games: 1, after, nodeId: null };
+    expect(weighHoles([hole], [])[0].share).toBe(10);
+    const weighed = weighHoles([hole], [repair({ kind: 'unprepared', fen: after, games: 3 })]);
+    expect(weighed[0].share).toBe(40);
+    // A slip somewhere you had a move is not evidence for a hole.
+    expect(weighHoles([hole], [repair({ kind: 'offprep', fen: after, games: 3 })])[0].share).toBe(10);
   });
 });
 
 describe('ranking', () => {
-  const cand = (mode: ScoreMode, need: number, lastAt: number | null = null, openingId = '') => ({
-    mode, openingId, color: 'w' as const, need, work: 1, lastAt, starred: false,
+  const cand = (focus: Focus, need: number, lastAt: number | null = null, openingId = '') => ({
+    focus, openingId, color: 'w' as const, need, work: 1, lastAt, starred: false, newMoves: 0,
   });
 
-  it('weights fun and never lets it override a real need', () => {
-    expect(FUN.run).toBeGreaterThan(FUN.drill);
-    expect(FUN.drill).toBeGreaterThan(FUN.repair);
-    expect(FUN.repair).toBeGreaterThan(FUN.growth);
-    const ranked = rank([cand('run', 0.4), cand('growth', 0.4)], []);
-    expect(ranked[0].mode).toBe('run');
-    const loud = rank([cand('run', 0.4), cand('growth', 1)], []);
-    expect(loud[0].mode).toBe('growth');
+  it('tilts away from Grow and never lets that override a real need', () => {
+    expect(FUN.test).toBeGreaterThan(FUN.grow);
+    expect(FUN.review).toBeGreaterThan(FUN.grow);
+    const ranked = rank([cand('test', 0.4), cand('grow', 0.4)], []);
+    expect(ranked[0].focus).toBe('test');
+    const loud = rank([cand('test', 0.4), cand('grow', 1)], []);
+    expect(loud[0].focus).toBe('grow');
   });
 
-  it('brakes a mode by how much of the recent play it has been', () => {
-    expect(recentCount(['run', 'run', 'drill'], 'drill')).toBe(1);
-    expect(recentCount(['drill', 'run', 'run'], 'run')).toBe(2);
-    expect(recentCount(['run', 'run', 'run', 'run', 'run', 'run', 'drill'], 'run')).toBe(4);
-    expect(recentCount([], 'run')).toBe(0);
-    const fresh = rank([cand('run', 0.5), cand('drill', 0.5)], []);
-    expect(fresh[0].mode).toBe('run');
-    const braked = rank([cand('run', 0.5), cand('drill', 0.5)], ['run', 'drill', 'run']);
-    expect(braked[0].mode).toBe('drill');
-    // Taking turns is not an escape: a third mode still comes round.
-    const turns = rank([cand('run', 0.5), cand('growth', 0.5), cand('drill', 0.4)], ['run', 'growth', 'run', 'growth']);
-    expect(turns[0].mode).toBe('drill');
+  it('brakes a focus by how much of the recent play it has been', () => {
+    expect(recentCount(['test', 'test', 'review'], 'review')).toBe(1);
+    expect(recentCount(['review', 'test', 'test'], 'test')).toBe(2);
+    expect(recentCount(['test', 'test', 'test', 'test', 'test', 'test', 'review'], 'test')).toBe(4);
+    expect(recentCount([], 'test')).toBe(0);
+    const fresh = rank([cand('test', 0.5), cand('review', 0.5)], []);
+    expect(fresh[0].focus).toBe('test');
+    const braked = rank([cand('test', 0.5), cand('review', 0.5)], ['test', 'review', 'test']);
+    expect(braked[0].focus).toBe('review');
+    // Taking turns is not an escape: a third focus still comes round.
+    const turns = rank([cand('test', 0.5), cand('grow', 0.5), cand('review', 0.4)], ['test', 'grow', 'test', 'grow']);
+    expect(turns[0].focus).toBe('review');
     expect(BRAKE).toBeLessThan(1);
   });
 
   it('lifts what has been left longest', () => {
-    const ranked = rank([cand('drill', 0.5, T, 'a'), cand('drill', 0.5, T - 9 * DAY, 'b')], []);
+    const ranked = rank([cand('review', 0.5, T, 'a'), cand('review', 0.5, T - 9 * DAY, 'b')], []);
     expect(ranked[0].openingId).toBe('b');
   });
 
   it('lifts a starred opening', () => {
     const ranked = rank(
-      [{ ...cand('drill', 0.5, null, 'a') }, { ...cand('drill', 0.5, null, 'b'), starred: true }],
+      [{ ...cand('review', 0.5, null, 'a') }, { ...cand('review', 0.5, null, 'b'), starred: true }],
       [],
     );
     expect(ranked[0].openingId).toBe('b');
@@ -215,19 +234,27 @@ describe('ranking', () => {
 });
 
 describe('what gets recommended', () => {
-  it('sends a brand new install to Run in the selection', () => {
+  it('sends a brand new install to grow a first line in the selection', () => {
     const pick = recommend(input());
-    expect(pick.mode).toBe('run');
+    expect(pick.focus).toBe('grow');
+    expect(pick.newMoves).toBe(MAX_NEW_MOVES);
     expect(pick.opening.depth).toBe(0);
     expect(['w', 'b']).toContain(pick.color);
     const narrowed = recommend(input({ selection: { color: 'b', opening: NAJDORF } }));
-    expect(narrowed).toMatchObject({ mode: 'run', color: 'b' });
+    expect(narrowed).toMatchObject({ focus: 'grow', color: 'b' });
     expect(narrowed.opening.id).toBe(NAJDORF);
+  });
+
+  it('offers a side with no prep nothing but a Grow round', () => {
+    const reps = [rep('w', [`${NAJDORF} Be3 e5`])];
+    const black = candidates(input({ reps, selection: { color: 'b', opening: '' } }));
+    expect(black).toHaveLength(1);
+    expect(black[0]).toMatchObject({ focus: 'grow', openingId: '', color: 'b', newMoves: MAX_NEW_MOVES });
   });
 
   it('offers only openings the player has prep in, besides the selection itself', () => {
     const reps = [rep('w', [`${NAJDORF} Be3 e5`])];
-    const ids = new Set(candidates(input({ reps })).map((c) => c.openingId));
+    const ids = new Set(candidates(input({ reps, selection: { color: 'w', opening: '' } })).map((c) => c.openingId));
     expect(ids.has('')).toBe(true);
     expect(ids.has('e4')).toBe(true);
     expect(ids.has(NAJDORF)).toBe(true);
@@ -235,22 +262,32 @@ describe('what gets recommended', () => {
     expect(ids.has('e4 e5')).toBe(false);
   });
 
-  it('drills the variation whose cards are due, once Run has had its turn', () => {
+  it('never tests an opening with nothing prepared in it', () => {
+    const reps = [rep('w', [`${NAJDORF} Be3 e5`])];
+    const tests = candidates(input({ reps, selection: { color: 'w', opening: '' } })).filter((c) => c.focus === 'test');
+    expect(tests.length).toBeGreaterThan(0);
+    for (const c of tests) expect(['', 'e4', 'e4 c5', NAJDORF].includes(c.openingId) || c.openingId.startsWith('e4 c5')).toBe(true);
+    const empty = candidates(input({ reps, selection: { color: 'w', opening: 'd4' } }));
+    expect(empty.some((c) => c.focus === 'test')).toBe(false);
+  });
+
+  it('reviews the variation whose cards are due, once Test has had its turn', () => {
     const reps = [rep('w', [`${NAJDORF} Be3 e5 Nb3 Be6`, `${DRAGON} Be3 Bg7 f3 O-O`])];
     const cards = cardsFor(reps, true, (line) => line.includes('a6'));
     const quiet = cardsFor(reps, false, (line) => !line.includes('a6'));
     let score = EMPTY_SCORE;
-    // Run has just been played twice; every opening has had a run.
-    score = played(score, 'run', NAJDORF, T - 3);
-    score = played(score, 'run', DRAGON, T - 2);
-    // No holes worth filling, so the decision is Run against Drill.
+    // Rounds went through both lines, so nothing in them is staler than the rest.
+    score = played(score, `${NAJDORF} Be3`, T - 3);
+    score = played(score, `${DRAGON} Be3 Bg7 f3`, T - 2);
+    // No holes worth filling, so the decision is Test against Review.
     const pick = recommend(
       input({
         reps, cards: { ...cards, ...quiet }, score, selection: { color: 'w', opening: 'e4' },
-        recentModes: ['run', 'run', 'run', 'run', 'run'], growth: { minShare: 60, maxPly: 18 },
+        recentFocuses: ['test', 'test', 'test', 'test', 'test'], growth: { minShare: 60, maxPly: 18 },
       }),
     );
-    expect(pick.mode).toBe('drill');
+    expect(pick.focus).toBe('review');
+    expect(pick.newMoves).toBe(0);
     expect(pick.color).toBe('w');
     // The Najdorf holds the due cards; nothing deeper holds most of them.
     expect(pick.opening.id).toBe(NAJDORF);
@@ -261,20 +298,25 @@ describe('what gets recommended', () => {
     const cards = cardsFor(reps, true);
     const pick = recommend(
       input({
-        reps, cards, selection: { color: 'w', opening: 'e4' }, recentModes: ['run', 'run', 'run'],
+        reps, cards, selection: { color: 'w', opening: 'e4' }, recentFocuses: ['test', 'test', 'test'],
         growth: { minShare: 60, maxPly: 18 },
       }),
     );
-    expect(pick.mode).toBe('drill');
-    // Three variations each hold a third: the family keeps the game.
+    expect(pick.focus).toBe('review');
+    // Three variations each hold a third: the family keeps the round.
     expect(pick.opening.id).toBe('e4 c5');
   });
 
-  it('never offers a mode with nothing in it', () => {
-    const modes = new Set(candidates(input({ reps: [rep('w', ['e4 e5 Nf3 Nc6 Bb5'])] })).map((c) => c.mode));
-    expect(modes.has('repair')).toBe(false);
-    expect(modes.has('drill')).toBe(true);
-    expect(modes.has('run')).toBe(true);
+  it('counts a position your games got wrong as due', () => {
+    const reps = [rep('w', ['e4 e5 Nf3 Nc6 Bb5 a6 Ba4'])];
+    const cards = cardsFor(reps, false);
+    const before = candidates(input({ reps, cards, selection: { color: 'w', opening: '' } }));
+    const fen = applySan(applySan(START_FEN, 'e4')!.after, 'e5')!.after;
+    const slip = repair({ kind: 'offprep', fen, key: positionKey(fen), path: ['e4', 'e5'], games: 4 });
+    const after = candidates(input({ reps, cards, repairs: [slip], selection: { color: 'w', opening: '' } }));
+    const review = (list: typeof before) => list.find((c) => c.focus === 'review' && c.openingId === '');
+    expect(review(before)).toBeUndefined();
+    expect(review(after)?.need).toBeGreaterThan(0);
   });
 
   it('respects a fixed colour', () => {
@@ -282,49 +324,53 @@ describe('what gets recommended', () => {
     for (const c of candidates(input({ reps, selection: { color: 'b', opening: '' } }))) expect(c.color).toBe('b');
   });
 
-  it('rotates: every mode with work comes round given a few games', () => {
+  it('rotates: every focus with work comes round given a few rounds', () => {
     const reps = [rep('w', [`${NAJDORF} Be3 e5 Nb3 Be6`, `${DRAGON} Be3 Bg7 f3 O-O`])];
     const cards = halfHeldCards(reps);
     let score = EMPTY_SCORE;
-    const seen = new Set<ScoreMode>();
-    const recent: ScoreMode[] = [];
+    const seen = new Set<Focus>();
+    const recent: Focus[] = [];
     for (let i = 0; i < 12; i += 1) {
-      const pick = recommend(input({ reps, cards, score, recentModes: recent, selection: { color: 'w', opening: '' } }));
-      seen.add(pick.mode);
-      recent.push(pick.mode);
-      score = played(score, pick.mode, pick.opening.id, T + i);
-      score = applyEvent(score, tree, { mode: pick.mode, points: 1, line: pick.opening.sans, color: 'w', answered: true, correct: true, at: T + i });
+      const pick = recommend(input({ reps, cards, score, recentFocuses: recent, selection: { color: 'w', opening: '' } }));
+      seen.add(pick.focus);
+      recent.push(pick.focus);
+      score = played(score, pick.opening.id, T + i);
     }
-    expect(seen.has('run')).toBe(true);
-    expect(seen.has('drill')).toBe(true);
-    expect(seen.has('growth')).toBe(true);
-    expect(seen.size).toBe(3);
+    expect(seen.has('test')).toBe(true);
+    expect(seen.has('review')).toBe(true);
+    expect(seen.has('grow')).toBe(true);
   });
 
-  it('waits to grow an opening until its prep is held', () => {
+  it('waits to grow an opening until its prep is held, and adds more once it is', () => {
     const reps = [rep('w', [`${NAJDORF} Be3 e5 Nb3 Be6`, `${DRAGON} Be3 Bg7 f3 O-O`])];
     const play = (cards: Record<string, Card>) => {
       let score = EMPTY_SCORE;
-      const recent: ScoreMode[] = [];
-      let growths = 0;
+      const recent: Focus[] = [];
+      let grows = 0;
+      let budget = 0;
       for (let i = 0; i < 20; i += 1) {
-        const pick = recommend(input({ reps, cards, score, recentModes: recent, selection: { color: 'w', opening: '' } }));
-        if (pick.mode === 'growth') growths += 1;
-        recent.push(pick.mode);
-        score = played(score, pick.mode, pick.opening.id, T + i);
+        const pick = recommend(input({ reps, cards, score, recentFocuses: recent, selection: { color: 'w', opening: '' } }));
+        if (pick.focus === 'grow') {
+          grows += 1;
+          budget = Math.max(budget, pick.newMoves);
+        }
+        recent.push(pick.focus);
+        score = played(score, pick.opening.id, T + i);
       }
-      return growths;
+      return { grows, budget };
     };
     // Everything due: the same holes, but the prep is not ready to get wider.
     const learning = play(cardsFor(reps, true));
-    // Nothing seen yet is no better: unseen positions still need drilling.
+    // Nothing seen yet is no better: unseen positions still need reviewing.
     const unseen = play({});
-    // Held for weeks: the holes ask at full voice.
+    // Held for weeks: the holes ask at full voice, three moves at a time.
     const held = play(heldCards(reps));
-    expect(held).toBeGreaterThan(learning);
-    expect(held).toBeGreaterThan(unseen);
-    expect(learning).toBeLessThanOrEqual(2);
-    expect(unseen).toBeLessThanOrEqual(2);
+    expect(held.grows).toBeGreaterThan(learning.grows);
+    expect(held.grows).toBeGreaterThan(unseen.grows);
+    expect(held.budget).toBe(MAX_NEW_MOVES);
+    expect(learning.grows).toBeLessThanOrEqual(2);
+    expect(unseen.grows).toBeLessThanOrEqual(2);
+    if (learning.grows) expect(learning.budget).toBeLessThan(MAX_NEW_MOVES);
   });
 
   it('is stable: the same state always gives the same answer', () => {

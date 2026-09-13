@@ -1,31 +1,38 @@
 import type { Color } from '../chess/core';
-import type { ScoreMode } from './scoring';
+import type { Steer } from './openingRun';
+import type { Focus, Recommendation } from './recommend';
 
 /**
- * Autopilot: one game after another, each chosen by the recommendation
- * engine, without going back to Home in between.
+ * Autopilot: one round after another, each a Run on settings the
+ * recommendation engine chose, without going back to Home in between.
  *
- * A game is one round of a mode. Run has an obvious one — a line to its end
- * or its first mistake. The others are cut to a size that plays in a minute
- * or two, so the rhythm stays short games back to back.
+ * A round is one Run — a line to its end or its first mistake. The engine
+ * decides the opening, the colour and the focus; the focus is nothing the
+ * player is told, only the settings the round is played on.
  */
-export const GAME_SIZE = {
-  /** Answers in one Drill game, each answer in a followed line counting. */
-  drill: 5,
-  /** Items in one Repair game. */
-  repair: 5,
-} as const;
 
-/** What Autopilot decided a game should be. */
-export interface GamePlan {
+/** What each focus steers the opponent by. */
+export const STEER_FOR: Record<Focus, Steer> = { test: 'popular', review: 'weak', grow: 'gaps' };
+
+/** What Autopilot decided a round should be. */
+export interface RoundPlan {
   color: Color;
   /** The opening to steer toward: an opening tree node id inside the selection. */
   steer: string;
+  /** The Run settings the focus comes down to. */
+  options: { steer: Steer; newMoves: number };
 }
 
-/** What a game turned out to be, reported by the mode when it ends. */
-export interface GameSummary {
-  mode: ScoreMode;
+export function planFor(pick: Recommendation): RoundPlan {
+  return {
+    color: pick.color,
+    steer: pick.opening.id,
+    options: { steer: STEER_FOR[pick.focus], newMoves: pick.focus === 'grow' ? pick.newMoves : 0 },
+  };
+}
+
+/** What a round turned out to be, reported by the Run when it ends. */
+export interface RoundSummary {
   openingId: string;
   color: Color;
   score: number;

@@ -17,7 +17,7 @@ import {
   nodeStats,
   normalizeScore,
   POINTS,
-  recordGame,
+  recordRound,
   speedBonus,
   streak,
   type ScoreEvent,
@@ -153,7 +153,7 @@ describe('where points go', () => {
   it('files the day', () => {
     const at = new Date(2026, 8, 13, 9).getTime();
     const state = applyEvent(EMPTY_SCORE, tree, event({ at, points: 2 }));
-    expect(state.global.days[dayKey(at)]).toEqual({ score: 2, answered: 1, correct: 1, games: 0 });
+    expect(state.global.days[dayKey(at)]).toEqual({ score: 2, answered: 1, correct: 1, rounds: 0 });
     expect(nodeStats(state, 'e4').days[dayKey(at)]?.score).toBe(2);
   });
 
@@ -164,28 +164,28 @@ describe('where points go', () => {
   });
 });
 
-describe('games', () => {
+describe('rounds', () => {
   const at = new Date(2026, 8, 13, 9).getTime();
 
-  it('counts a game against its opening, the openings above it, and the total', () => {
-    const state = recordGame(EMPTY_SCORE, tree, {
+  it('counts a round against its opening, the openings above it, and the total', () => {
+    const state = recordRound(EMPTY_SCORE, tree, {
       mode: 'run', openingId: NAJDORF, color: 'w', score: 12, answered: 8, correct: 8, perfect: true, at,
     });
-    expect(state.games).toHaveLength(1);
-    expect(state.global.byMode.run.games).toBe(1);
-    expect(nodeStats(state, NAJDORF).byMode.run.games).toBe(1);
-    expect(nodeStats(state, 'e4 c5').byMode.run.games).toBe(1);
+    expect(state.rounds).toHaveLength(1);
+    expect(state.global.byMode.run.rounds).toBe(1);
+    expect(nodeStats(state, NAJDORF).byMode.run.rounds).toBe(1);
+    expect(nodeStats(state, 'e4 c5').byMode.run.rounds).toBe(1);
     expect(nodeStats(state, 'e4 c5').byMode.run.lastAt).toBe(at);
-    expect(nodeStats(state, 'e4 c5').byMode.drill.games).toBe(0);
+    expect(nodeStats(state, 'e4 c5').byMode.drill.rounds).toBe(0);
     expect(nodeStats(state, 'e4 c5').bestRun).toBe(8);
-    expect(state.global.days[dayKey(at)]?.games).toBe(1);
+    expect(state.global.days[dayKey(at)]?.rounds).toBe(1);
   });
 
-  it('counts the root game only on the total', () => {
-    const state = recordGame(EMPTY_SCORE, tree, {
+  it('counts the root round only on the total', () => {
+    const state = recordRound(EMPTY_SCORE, tree, {
       mode: 'drill', openingId: '', color: 'b', score: 5, answered: 10, correct: 9, perfect: false, at,
     });
-    expect(state.global.byMode.drill.games).toBe(1);
+    expect(state.global.byMode.drill.rounds).toBe(1);
     expect(Object.keys(state.nodes)).toEqual([]);
   });
 });
@@ -196,7 +196,7 @@ describe('streaks', () => {
   const played = (days: number[]) => {
     let state = EMPTY_SCORE;
     for (const back of days) {
-      state = recordGame(state, tree, {
+      state = recordRound(state, tree, {
         mode: 'run', openingId: '', color: 'w', score: 1, answered: 1, correct: 1, perfect: false,
         at: noon - back * DAY,
       });
@@ -221,7 +221,25 @@ describe('a saved record', () => {
     const fixed = normalizeScore({ total: 9, nodes: { e4: { score: 9 } as never } });
     expect(fixed.total).toBe(9);
     expect(fixed.global.score).toBe(0);
-    expect(fixed.nodes.e4.byMode.run.games).toBe(0);
-    expect(fixed.games).toEqual([]);
+    expect(fixed.nodes.e4.byMode.run.rounds).toBe(0);
+    expect(fixed.rounds).toEqual([]);
+  });
+
+  it('reads rounds that were saved as games', () => {
+    const round = { mode: 'run', openingId: '', color: 'w', score: 1, answered: 1, correct: 1, perfect: false, at: 5 };
+    const legacy = {
+      total: 1,
+      games: [round],
+      global: { byMode: { run: { games: 2, score: 1 } }, days: { '2026-09-13': { score: 1, answered: 1, correct: 1, games: 1 } } },
+      nodes: { e4: { byMode: { drill: { games: 3 } } } },
+    };
+    const fixed = normalizeScore(legacy as never);
+    expect(fixed.rounds).toEqual([round]);
+    expect(fixed.global.byMode.run.rounds).toBe(2);
+    expect(fixed.global.byMode.run.score).toBe(1);
+    expect(fixed.global.days['2026-09-13'].rounds).toBe(1);
+    expect(fixed.nodes.e4.byMode.drill.rounds).toBe(3);
+    expect('games' in fixed.global.byMode.run).toBe(false);
+    expect('games' in fixed.global.days['2026-09-13']).toBe(false);
   });
 });

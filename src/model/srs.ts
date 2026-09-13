@@ -261,3 +261,14 @@ export function forecast(cards: Card[], days = 7, now = Date.now()): number[] {
   }
   return out;
 }
+
+/**
+ * The grade a correct answer earns by how long it took: under three seconds
+ * it was instant, under eight you knew it, past that you got there. Never
+ * "guessed" — that is a fact about your head, not about the clock.
+ */
+export function gradeForTime(seconds: number): Grade {
+  if (seconds < 3) return 'easy';
+  if (seconds < 8) return 'good';
+  return 'hard';
+}

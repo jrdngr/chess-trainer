@@ -147,7 +147,7 @@ export function milestoneOf(score: number, multiplier = 1): Milestone {
 /* ── the record ─────────────────────────────────────────────────────────── */
 
 export interface ModeTally {
-  games: number;
+  rounds: number;
   score: number;
   answered: number;
   correct: number;
@@ -158,7 +158,7 @@ export interface DayTally {
   score: number;
   answered: number;
   correct: number;
-  games: number;
+  rounds: number;
 }
 
 /** Everything one opening — or the whole game — has earned. */
@@ -175,9 +175,13 @@ export interface NodeStats {
   days: Record<string, DayTally>;
 }
 
-export interface GameRecord {
+/**
+ * One round: a Run, a Drill session, a Growth run or a Repair sitting.
+ * A round rather than a game, because none of them is a game of chess.
+ */
+export interface RoundRecord {
   mode: ScoreMode;
-  /** The opening the game was credited to. */
+  /** The opening the round was credited to. */
   openingId: string;
   color: Color;
   score: number;
@@ -191,11 +195,11 @@ export interface ScoreState {
   total: number;
   global: NodeStats;
   nodes: Record<string, NodeStats>;
-  games: GameRecord[];
+  rounds: RoundRecord[];
 }
 
 function emptyTally(): ModeTally {
-  return { games: 0, score: 0, answered: 0, correct: 0, lastAt: null };
+  return { rounds: 0, score: 0, answered: 0, correct: 0, lastAt: null };
 }
 
 export function emptyNodeStats(): NodeStats {
@@ -211,20 +215,42 @@ export function emptyNodeStats(): NodeStats {
   };
 }
 
-export const EMPTY_SCORE: ScoreState = { total: 0, global: emptyNodeStats(), nodes: {}, games: [] };
+export const EMPTY_SCORE: ScoreState = { total: 0, global: emptyNodeStats(), nodes: {}, rounds: [] };
 
-export function normalizeScore(saved: Partial<ScoreState> | undefined): ScoreState {
-  const fix = (stats: Partial<NodeStats> | undefined): NodeStats => ({
-    ...emptyNodeStats(),
-    ...(stats ?? {}),
-    byMode: { ...emptyNodeStats().byMode, ...(stats?.byMode ?? {}) },
-    days: stats?.days ?? {},
-  });
+/** A saved tally from before rounds were called rounds. */
+type Legacy<T> = Partial<T> & { games?: number };
+
+/**
+ * Read a saved score, whatever it is missing. Rounds used to be saved as
+ * games, at every level, and a record kept for ever is read either way.
+ */
+export function normalizeScore(
+  saved: (Partial<ScoreState> & { games?: RoundRecord[] }) | undefined,
+): ScoreState {
+  const tally = (saved: Legacy<ModeTally> | undefined): ModeTally => {
+    const { games, ...rest } = saved ?? {};
+    return { ...emptyTally(), ...rest, rounds: saved?.rounds ?? games ?? 0 };
+  };
+  const day = (saved: Legacy<DayTally>): DayTally => {
+    const { games, ...rest } = saved;
+    return { score: 0, answered: 0, correct: 0, ...rest, rounds: saved.rounds ?? games ?? 0 };
+  };
+  const fix = (stats: Partial<NodeStats> | undefined): NodeStats => {
+    const empty = emptyNodeStats();
+    const byMode = { ...empty.byMode };
+    for (const mode of SCORE_MODES) byMode[mode] = tally(stats?.byMode?.[mode]);
+    return {
+      ...empty,
+      ...(stats ?? {}),
+      byMode,
+      days: Object.fromEntries(Object.entries(stats?.days ?? {}).map(([key, d]) => [key, day(d)])),
+    };
+  };
   return {
     total: saved?.total ?? 0,
     global: fix(saved?.global),
     nodes: Object.fromEntries(Object.entries(saved?.nodes ?? {}).map(([id, stats]) => [id, fix(stats)])),
-    games: saved?.games ?? [],
+    rounds: saved?.rounds ?? saved?.games ?? [],
   };
 }
 
@@ -262,7 +288,7 @@ export function creditedNodes(tree: OpeningTree, line: string[]): string[] {
 function tallyEvent(stats: NodeStats, event: ScoreEvent, own: boolean): NodeStats {
   const mode = stats.byMode[event.mode];
   const key = dayKey(event.at);
-  const day = stats.days[key] ?? { score: 0, answered: 0, correct: 0, games: 0 };
+  const day = stats.days[key] ?? { score: 0, answered: 0, correct: 0, rounds: 0 };
   const answered = event.answered ? 1 : 0;
   const correct = event.answered && event.correct ? 1 : 0;
   return {
@@ -309,33 +335,33 @@ export function applyEvent(state: ScoreState, tree: OpeningTree, event: ScoreEve
   };
 }
 
-function tallyGame(stats: NodeStats, game: GameRecord): NodeStats {
-  const mode = stats.byMode[game.mode];
-  const key = dayKey(game.at);
-  const day = stats.days[key] ?? { score: 0, answered: 0, correct: 0, games: 0 };
+function tallyRound(stats: NodeStats, round: RoundRecord): NodeStats {
+  const mode = stats.byMode[round.mode];
+  const key = dayKey(round.at);
+  const day = stats.days[key] ?? { score: 0, answered: 0, correct: 0, rounds: 0 };
   return {
     ...stats,
-    bestRun: game.mode === 'run' ? Math.max(stats.bestRun, game.correct) : stats.bestRun,
-    lastAt: game.at,
-    byMode: { ...stats.byMode, [game.mode]: { ...mode, games: mode.games + 1, lastAt: game.at } },
-    days: { ...stats.days, [key]: { ...day, games: day.games + 1 } },
+    bestRun: round.mode === 'run' ? Math.max(stats.bestRun, round.correct) : stats.bestRun,
+    lastAt: round.at,
+    byMode: { ...stats.byMode, [round.mode]: { ...mode, rounds: mode.rounds + 1, lastAt: round.at } },
+    days: { ...stats.days, [key]: { ...day, rounds: day.rounds + 1 } },
   };
 }
 
 /**
- * Log a finished game against the opening it was played in and every
+ * Log a finished round against the opening it was played in and every
  * opening above it. Points were credited move by move as they were earned;
- * this counts the game and remembers when.
+ * this counts the round and remembers when.
  */
-export function recordGame(state: ScoreState, tree: OpeningTree, game: GameRecord): ScoreState {
-  const credited = ancestorsOf(tree, game.openingId).map((node) => node.id);
+export function recordRound(state: ScoreState, tree: OpeningTree, round: RoundRecord): ScoreState {
+  const credited = ancestorsOf(tree, round.openingId).map((node) => node.id);
   const nodes = { ...state.nodes };
-  for (const id of credited) nodes[id] = tallyGame(nodes[id] ?? emptyNodeStats(), game);
+  for (const id of credited) nodes[id] = tallyRound(nodes[id] ?? emptyNodeStats(), round);
   return {
     ...state,
-    global: tallyGame(state.global, game),
+    global: tallyRound(state.global, round),
     nodes,
-    games: [...state.games, game],
+    rounds: [...state.rounds, round],
   };
 }
 
@@ -355,7 +381,7 @@ export function accuracy(stats: Pick<NodeStats, 'answered' | 'correct'>): number
  * yesterday, so a streak is not broken by not having played *yet* today.
  */
 export function streak(stats: NodeStats, now = Date.now()): number {
-  const played = new Set(Object.entries(stats.days).filter(([, day]) => day.games > 0).map(([key]) => key));
+  const played = new Set(Object.entries(stats.days).filter(([, day]) => day.rounds > 0).map(([key]) => key));
   const DAY = 86_400_000;
   let count = 0;
   let cursor = now;

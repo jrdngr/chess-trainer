@@ -5,6 +5,7 @@ import {
   DAY,
   describeDelay,
   forecast,
+  gradeForTime,
   gradePreview,
   isDue,
   masteryBuckets,
@@ -201,5 +202,16 @@ describe('practising ahead of schedule', () => {
     const next = review(card, 'good', now).card;
     expect(next.due).toBeGreaterThan(now);
     expect(next.stage).toBe('learning');
+  });
+});
+
+describe('grading by the clock', () => {
+  it('reads instant, known, and got there off the seconds, never guessed', () => {
+    expect(gradeForTime(0.5)).toBe('easy');
+    expect(gradeForTime(2.9)).toBe('easy');
+    expect(gradeForTime(3)).toBe('good');
+    expect(gradeForTime(7.9)).toBe('good');
+    expect(gradeForTime(8)).toBe('hard');
+    expect(gradeForTime(40)).toBe('hard');
   });
 });

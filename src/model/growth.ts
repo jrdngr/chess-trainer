@@ -132,6 +132,27 @@ export function findHoles(
   return holes.sort((a, b) => a.path.length - b.path.length || b.share - a.share);
 }
 
+/**
+ * How much more a hole is worth for what your own games say about it.
+ *
+ * A position you keep reaching with nothing prepared is a hole your games
+ * have already found for you. Each game you played into it adds a whole
+ * share's worth again, so a hole met three times asks four times as loudly
+ * as one met never.
+ */
+export function evidenceFor(
+  repairs: { kind: 'offprep' | 'unprepared'; fen: string; games: number }[],
+): (hole: Hole) => number {
+  const games = new Map<string, number>();
+  for (const item of repairs) {
+    if (item.kind !== 'unprepared') continue;
+    const key = positionKey(item.fen);
+    games.set(key, (games.get(key) ?? 0) + item.games);
+  }
+  if (!games.size) return () => 1;
+  return (hole) => 1 + (games.get(positionKey(hole.after)) ?? 0);
+}
+
 /** Book replies at a position that are played often enough to prepare for. */
 function popularReplies(
   index: ReferenceIndex,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
-import { applyEvent, EMPTY_SCORE, recordGame, type ScoreState } from './scoring';
+import { applyEvent, EMPTY_SCORE, recordRound, type ScoreState } from './scoring';
 import { cumulativeScore, dailyScore, favouriteness, niceTicks, rollingAccuracy, topOpenings } from './stats';
 
 const tree = openingTree(referenceIndex());
@@ -16,8 +16,8 @@ function earned(state: ScoreState, line: string, points: number, back: number, c
   });
 }
 
-function game(state: ScoreState, openingId: string, back: number): ScoreState {
-  return recordGame(state, tree, {
+function round(state: ScoreState, openingId: string, back: number): ScoreState {
+  return recordRound(state, tree, {
     mode: 'run', openingId, color: 'w', score: 1, answered: 1, correct: 1, perfect: false, at: noon - back * DAY,
   });
 }
@@ -53,9 +53,9 @@ describe('series', () => {
 describe('favouriteness', () => {
   it('ranks an opening among the siblings actually played', () => {
     let state = EMPTY_SCORE;
-    state = game(state, NAJDORF, 0);
-    state = game(state, NAJDORF, 1);
-    state = game(state, DRAGON, 0);
+    state = round(state, NAJDORF, 0);
+    state = round(state, NAJDORF, 1);
+    state = round(state, DRAGON, 0);
     const najdorf = favouriteness(tree, state, NAJDORF, 30, noon)!;
     expect(najdorf.rank).toBe(1);
     expect(najdorf.of).toBe(2);

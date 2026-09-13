@@ -1,5 +1,6 @@
 import type { Color } from '../chess/core';
-import { findHoles, rowUrgency, type Hole } from './growth';
+import { positionKey } from '../chess/core';
+import { evidenceFor, findHoles, rowUrgency, type Hole } from './growth';
 import {
   descendantsOf,
   nodeById,
@@ -16,28 +17,43 @@ import { isDue } from './srs';
 import type { Card, Repertoire } from './types';
 
 /**
- * What to do next: a mode, an opening inside the selection, and a colour.
+ * What the next round should be: an opening inside the selection, a colour,
+ * and a focus — the settings the Run is played on.
  *
- * Every candidate is one of those three things together, because the
+ * Every round under Autopilot is a Run. What changes between rounds is what
+ * the opponent steers you toward and whether the run may add to the
+ * repertoire, and that is the focus:
+ *
+ *   test    — lines drawn by how often you would meet them, nothing added.
+ *             Whether the prep holds up when nothing says what it is.
+ *   review  — lines drawn toward the positions you are worst at or due on,
+ *             nothing added. Repetition, where it is needed.
+ *   grow    — the opponent walks you to a reply you have no answer to, and
+ *             you choose one from the book, up to three a run.
+ *
+ * Every candidate is a focus, an opening and a colour together, because the
  * factors that decide it are per-opening factors. Need is how loudly the
- * work is asking — cards due, holes in the prep, positions your games
- * disagree with, prep no run has tested. Holes only ask loudly once the prep
- * around them is held: an opening still being drilled is not ready to get
- * wider. Staleness is how long that opening has gone without that mode,
- * measured against the other candidates rather than the clock. A star on the
- * opening or anything above it lifts it. Fun
- * tilts every decision toward Run and away from Growth without overriding
- * the one that matters most. And a brake cuts a mode's weight for every one
- * of the last few games it was, so a standing backlog cannot lock the
- * rotation into one mode and the most fun mode cannot run for ever.
+ * work is asking — cards due, holes in the prep, prep no run has tested.
+ * Holes only ask loudly once the prep around them is held: an opening still
+ * being drilled is not ready to get wider. Staleness is how long that
+ * opening has gone without a run, measured against the other candidates
+ * rather than the clock. A star on the opening or anything above it lifts
+ * it. Fun tilts away from Grow, whose pickers interrupt the run, without
+ * overriding the one that matters most. And a brake cuts a focus's weight
+ * for every one of the last few rounds it was, so a standing backlog cannot
+ * lock the session into one focus.
  *
  * Need is measured on everything inside a node, so a family always asks at
  * least as loudly as any of its variations. The winner is then narrowed
- * downward while a variation holds most of its parent's need, so a game is
+ * downward while a variation holds most of its parent's need, so a round is
  * steered to the variation that actually wants it and left at the family
  * when the need is spread thin.
  */
-export const FUN: Record<ScoreMode, number> = { run: 1, drill: 0.7, repair: 0.5, growth: 0.4 };
+export type Focus = 'test' | 'review' | 'grow';
+
+export const FOCUSES: Focus[] = ['test', 'review', 'grow'];
+
+export const FUN: Record<Focus, number> = { test: 1, review: 1, grow: 0.7 };
 
 /** How much a star is worth. */
 export const STAR = 1.6;
@@ -45,10 +61,10 @@ export const STAR = 1.6;
 /** How much the stalest candidate can outweigh the freshest. */
 export const STALENESS = 2;
 
-/** Each recent game of the same mode multiplies its weight by this. */
+/** Each recent round of the same focus multiplies its weight by this. */
 export const BRAKE = 0.6;
 
-/** How many recent games the brake looks back over. */
+/** How many recent rounds the brake looks back over. */
 export const BRAKE_WINDOW = 5;
 
 /** A variation is worth steering toward once it holds more than this share of its parent's work. */
@@ -57,11 +73,14 @@ export const NARROWING = 0.5;
 /** A review interval this long, in days, is a position fully held. */
 export const HELD_DAYS = 7;
 
-/** How loudly Growth can still ask when nothing in the opening is held yet. */
+/** How loudly Grow can still ask when nothing in the opening is held yet. */
 export const GROWTH_FLOOR = 0.1;
 
+/** The most moves one Grow round may add. */
+export const MAX_NEW_MOVES = 3;
+
 export interface Candidate {
-  mode: ScoreMode;
+  focus: Focus;
   openingId: string;
   color: Color;
   /** 0..1, how loudly this asks. */
@@ -70,14 +89,18 @@ export interface Candidate {
   work: number;
   lastAt: number | null;
   starred: boolean;
+  /** Moves a Grow round may add here; 0 for the other focuses. */
+  newMoves: number;
   /** need × staleness × star × fun × brake. Only comparable within one ranking. */
   score: number;
 }
 
 export interface Recommendation {
-  mode: ScoreMode;
+  focus: Focus;
   opening: OpeningNode;
   color: Color;
+  /** Moves the round may add to the repertoire. */
+  newMoves: number;
 }
 
 export interface RecommendInput {
@@ -91,8 +114,8 @@ export interface RecommendInput {
   starred: string[];
   newPerSession: number;
   growth: { minShare: number; maxPly: number };
-  /** Games most recently played, oldest first, for the brake. */
-  recentModes: ScoreMode[];
+  /** The focuses of the session's rounds so far, oldest first, for the brake. */
+  recentFocuses: Focus[];
   now?: number;
 }
 
@@ -116,7 +139,7 @@ function clamp(n: number): number {
  * Review debt. Cards that are due are the closest thing the app has to a
  * deadline, so they lead; unseen positions are worth doing but never urgent.
  */
-export function drillNeed(due: number, unseen: number, newPerSession: number): number {
+export function reviewNeed(due: number, unseen: number, newPerSession: number): number {
   const review = 0.9 * saturate(due, 24);
   const learn = 0.5 * saturate(Math.min(unseen, Math.max(newPerSession, 0)), 4);
   return clamp(Math.max(review, learn));
@@ -156,7 +179,7 @@ export function readiness(strengths: number[]): number {
  * all held asks at full strength. It never goes silent, so a thin opening is
  * still grown now and then rather than never.
  */
-export function growthNeed(holes: Hole[], ready = 1): number {
+export function growNeed(holes: Hole[], ready = 1): number {
   if (!holes.length) return 0;
   const depth = Math.min(...holes.map((hole) => hole.path.length));
   const topShare = Math.max(...holes.map((hole) => hole.share));
@@ -164,19 +187,24 @@ export function growthNeed(holes: Hole[], ready = 1): number {
   return clamp(rowUrgency(depth, topShare, holes.length) * gate);
 }
 
-/** What your own games disagree with your prep about. */
-export function repairNeed(items: RepairItem[]): number {
-  if (items.length === 0) return 0;
-  const worst = items.reduce((max, item) => Math.max(max, item.weight), 0);
-  return clamp(0.55 * saturate(worst, 5) + 0.45 * saturate(items.length, 8));
+/**
+ * How many moves a Grow round may add: more the better the prep is held.
+ *
+ * Three at a time to prep that is known is a line taking shape; three at a
+ * time to prep still being learned is three more things to forget.
+ */
+export function growthBudget(ready: number): number {
+  if (ready >= 0.75) return MAX_NEW_MOVES;
+  if (ready >= 0.4) return 2;
+  return 1;
 }
 
 /**
- * Run has no queue behind it: what it measures is whether the prep holds up
- * when nothing on screen says what it is. That is always worth asking, and
- * more so the more prep has been added since it was last asked here.
+ * A Test has no queue behind it: what it measures is whether the prep holds
+ * up when nothing on screen says what it is. That is always worth asking,
+ * and more so the more prep has been added since it was last asked here.
  */
-export function runNeed(untested: number, everRun: boolean): number {
+export function testNeed(untested: number, everRun: boolean): number {
   const base = 0.4 + 0.4 * saturate(untested, 10);
   return clamp(everRun ? base : Math.max(base, 0.55));
 }
@@ -184,14 +212,14 @@ export function runNeed(untested: number, everRun: boolean): number {
 /* ── ranking ────────────────────────────────────────────────────────────── */
 
 /**
- * How many of the last few games were this mode.
+ * How many of the last few rounds were this focus.
  *
- * Counted over a window rather than only consecutively: two modes taking
- * turns would never trip a consecutive brake, and would leave a third mode
+ * Counted over a window rather than only consecutively: two focuses taking
+ * turns would never trip a consecutive brake, and would leave a third focus
  * with real work waiting for ever.
  */
-export function recentCount(recentModes: ScoreMode[], mode: ScoreMode): number {
-  return recentModes.slice(-BRAKE_WINDOW).filter((m) => m === mode).length;
+export function recentCount(recentFocuses: Focus[], focus: Focus): number {
+  return recentFocuses.slice(-BRAKE_WINDOW).filter((f) => f === focus).length;
 }
 
 /**
@@ -201,27 +229,27 @@ export function recentCount(recentModes: ScoreMode[], mode: ScoreMode): number {
  * candidate nothing has been left longer than is the stalest, whether that is
  * an hour or a month. Candidates never played are all equally stale.
  */
-export function rank(list: Omit<Candidate, 'score'>[], recentModes: ScoreMode[]): Candidate[] {
+export function rank(list: Omit<Candidate, 'score'>[], recentFocuses: Focus[]): Candidate[] {
   const when = (c: Omit<Candidate, 'score'>) => c.lastAt ?? 0;
   const scored = list.map((cand) => {
     const staler = list.filter((other) => when(other) < when(cand)).length;
     const freshness = list.length < 2 ? 1 : 1 - staler / (list.length - 1);
-    const brake = BRAKE ** recentCount(recentModes, cand.mode);
+    const brake = BRAKE ** recentCount(recentFocuses, cand.focus);
     const score =
-      cand.need * (1 + STALENESS * freshness) * (cand.starred ? STAR : 1) * FUN[cand.mode] * brake;
+      cand.need * (1 + STALENESS * freshness) * (cand.starred ? STAR : 1) * FUN[cand.focus] * brake;
     return { ...cand, score };
   });
   return scored.sort(
     (a, b) =>
       b.score - a.score ||
       b.need - a.need ||
-      ORDER[a.mode] - ORDER[b.mode] ||
+      ORDER[a.focus] - ORDER[b.focus] ||
       a.openingId.localeCompare(b.openingId) ||
       a.color.localeCompare(b.color),
   );
 }
 
-const ORDER: Record<ScoreMode, number> = { run: 0, drill: 1, growth: 2, repair: 3 };
+const ORDER: Record<Focus, number> = { test: 0, review: 1, grow: 2 };
 
 /* ── candidates ─────────────────────────────────────────────────────────── */
 
@@ -261,13 +289,19 @@ function repMoves(rep: Repertoire): { sans: string[]; addedAt: number }[] {
   return out;
 }
 
+/** Holes with the evidence of your games folded into their share. */
+export function weighHoles(holes: Hole[], repairs: RepairItem[]): Hole[] {
+  const weight = evidenceFor(repairs);
+  return holes.map((hole) => ({ ...hole, share: hole.share * weight(hole) }));
+}
+
 /**
- * Every (mode, opening, colour) that could be started now, with its need.
+ * Every (focus, opening, colour) that could be started now, with its need.
  *
  * A candidate with nothing to work on is not offered at all: there is no
- * honest way to recommend Repair to someone who has imported no games. Run is
- * the exception and is always here for the selection itself, because the book
- * can hand out a line whether or not anything has been prepared.
+ * honest way to review an opening with no prep in it. A side with no prep at
+ * all is offered one thing, a Grow round in the selection, because the book
+ * can hand out a first line whether or not anything has been prepared.
  */
 export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
   const { tree, selection, score, starred } = input;
@@ -276,42 +310,56 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
   const out: Omit<Candidate, 'score'>[] = [];
   const now = input.now ?? Date.now();
 
-  const lastAt = (mode: ScoreMode, id: string) => nodeStats(score, id).byMode[mode].lastAt;
-  const everRun = score.global.byMode.run.games > 0;
-  const push = (mode: ScoreMode, node: OpeningNode, color: Color, need: number, work: number) => {
+  /**
+   * When this opening last had a round. A round is credited to the deepest
+   * opening it went through and everything above, so a family is fresh when
+   * any of its variations is, and a variation is fresh only when a round
+   * actually went through it.
+   */
+  const lastAt = (id: string) => nodeStats(score, id).byMode.run.lastAt;
+  const everRun = score.global.byMode.run.rounds > 0;
+  const push = (focus: Focus, node: OpeningNode, color: Color, need: number, work: number, newMoves = 0) => {
     if (need <= 0) return;
     out.push({
-      mode,
+      focus,
       openingId: node.id,
       color,
       need,
       work,
-      lastAt: lastAt(mode, node.id),
+      lastAt: lastAt(node.id),
       starred: starredWithin(tree, node.id, starred),
+      newMoves,
     });
   };
 
   for (const color of colorsOf(selection.color)) {
     const reps = input.reps.filter((rep) => rep.color === color);
+    if (!reps.length) {
+      push('grow', region, color, 0.5, 1, MAX_NEW_MOVES);
+      continue;
+    }
+    const repairs = input.repairs.filter((item) => item.color === color);
     const items = place(tree, nodes, allItems(reps), (item: TrainingItem) => item.pathSans);
     const moves = place(tree, nodes, reps.flatMap(repMoves), (m) => m.sans);
     const holes = place(
       tree,
       nodes,
-      reps.flatMap((rep) => findHoles(rep, tree.index, { ...input.growth, region: { tree, node: region } })),
+      weighHoles(
+        reps.flatMap((rep) => findHoles(rep, tree.index, { ...input.growth, region: { tree, node: region } })),
+        repairs,
+      ),
       (hole: Hole) => [...hole.path, hole.san],
     );
-    const repairs = place(
-      tree,
-      nodes,
-      input.repairs.filter((item) => item.color === color),
-      (item: RepairItem) => item.path,
+    // Positions your games got wrong where you had a move: they want
+    // repeating whatever the schedule says, so they count as due.
+    const slipped = new Set(
+      repairs.filter((item) => item.kind === 'offprep').map((item) => positionKey(item.fen)),
     );
 
     for (const node of nodes) {
       // Only openings the player actually has prep in, past the selection
       // itself: a hundred untouched variations would otherwise all ask for a
-      // Run at once, none of them for any reason the player would recognise.
+      // round at once, none of them for any reason the player would recognise.
       // "In" means past the position that names the opening — a first move
       // is on the way to everything and prep in nothing.
       const mine = reachedIn(moves, node);
@@ -319,7 +367,7 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
 
       const wanting = (item: TrainingItem) => {
         const card = input.cards[item.cardId];
-        return !card || isDue(card, now);
+        return !card || isDue(card, now) || slipped.has(item.key);
       };
       let due = 0;
       let unseen = 0;
@@ -327,49 +375,54 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
       for (const item of within(items, node)) {
         const card = input.cards[item.cardId];
         if (!card) unseen += 1;
-        else if (isDue(card, now)) due += 1;
+        else if (isDue(card, now) || slipped.has(item.key)) due += 1;
         strengths.push(cardStrength(card, now));
       }
       push(
-        'drill',
+        'review',
         node,
         color,
-        drillNeed(due, unseen, input.newPerSession),
+        reviewNeed(due, unseen, input.newPerSession),
         reachedIn(items, node).filter(wanting).length,
       );
+      const ready = readiness(strengths);
       push(
-        'growth',
+        'grow',
         node,
         color,
-        growthNeed(within(holes, node), readiness(strengths)),
+        growNeed(within(holes, node), ready),
         reachedIn(holes, node).length,
+        growthBudget(ready),
       );
-      push('repair', node, color, repairNeed(within(repairs, node)), reachedIn(repairs, node).length);
 
-      const since = lastAt('run', node.id) ?? 0;
-      const untested = mine.filter((m) => m.addedAt > since).length;
-      push('run', node, color, runNeed(untested, everRun), untested || mine.length);
+      if (mine.length) {
+        const since = lastAt(node.id) ?? 0;
+        const untested = mine.filter((m) => m.addedAt > since).length;
+        push('test', node, color, testNeed(untested, everRun), untested || mine.length);
+      }
     }
   }
   return out;
 }
 
 /**
- * The one thing to start. Never null: Run in the selection always qualifies.
+ * The one thing to start. Never null: with nothing prepared at all, a Grow
+ * round in the selection hands out a first line.
  *
  * The winner is narrowed while a variation inside it holds most of its need
- * for the same mode and colour, so a Drill asked for by one variation's due
- * cards is a Drill on that variation.
+ * for the same focus and colour, so a Review asked for by one variation's due
+ * cards is a Review on that variation.
  */
 export function recommend(input: RecommendInput): Recommendation {
-  const ranked = rank(candidates(input), input.recentModes);
+  const ranked = rank(candidates(input), input.recentFocuses);
   const tree = input.tree;
   let best = ranked[0];
   if (!best) {
     return {
-      mode: 'run',
+      focus: 'grow',
       opening: nodeById(tree, input.selection.opening),
       color: colorsOf(input.selection.color)[0],
+      newMoves: MAX_NEW_MOVES,
     };
   }
   for (;;) {
@@ -378,7 +431,7 @@ export function recommend(input: RecommendInput): Recommendation {
     const child = ranked
       .filter(
         (c) =>
-          c.mode === parent.mode &&
+          c.focus === parent.focus &&
           c.color === parent.color &&
           node.children.some((kid) => kid.id === c.openingId) &&
           c.work > parent.work * NARROWING,
@@ -387,7 +440,12 @@ export function recommend(input: RecommendInput): Recommendation {
     if (!child) break;
     best = child;
   }
-  return { mode: best.mode, opening: nodeById(tree, best.openingId), color: best.color };
+  return {
+    focus: best.focus,
+    opening: nodeById(tree, best.openingId),
+    color: best.color,
+    newMoves: best.newMoves,
+  };
 }
 
 export const MODE_NAMES: Record<ScoreMode, string> = {

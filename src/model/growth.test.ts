@@ -5,6 +5,7 @@ import {
   answerHole,
   atHole,
   enterHole,
+  evidenceFor,
   findHoles,
   growthRows,
   isUsersTurn,
@@ -400,5 +401,23 @@ describe('the moves drawn on the board', () => {
   it('draws fewer when the book has fewer to offer, and none off the book', () => {
     expect(movesToDraw(index, START_FEN, 1)).toHaveLength(1);
     expect(movesToDraw(index, '8/8/4k3/8/8/4K3/8/8 w - - 0 1')).toEqual([]);
+  });
+});
+
+describe('what your games say about a hole', () => {
+  const after = applySan(applySan(START_FEN, 'e4')!.after, 'c5')!.after;
+  const hole = { path: ['e4'], fen: applySan(START_FEN, 'e4')!.after, san: 'c5', share: 20, games: 9, after, nodeId: null };
+
+  it('weighs a hole by the games you reached it with nothing prepared', () => {
+    expect(evidenceFor([])(hole)).toBe(1);
+    const weigh = evidenceFor([
+      { kind: 'unprepared', fen: after, games: 3 },
+      { kind: 'unprepared', fen: after, games: 1 },
+      { kind: 'offprep', fen: after, games: 5 },
+      { kind: 'unprepared', fen: START_FEN, games: 7 },
+    ]);
+    expect(weigh(hole)).toBe(5);
+    expect(weigh({ ...hole, after: START_FEN })).toBe(8);
+    expect(weigh({ ...hole, after: applySan(START_FEN, 'd4')!.after })).toBe(1);
   });
 });
