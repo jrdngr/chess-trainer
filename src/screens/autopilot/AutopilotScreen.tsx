@@ -25,18 +25,32 @@ export function AutopilotScreen({ onExit, onImport }: { onExit: () => void; onIm
   const [over, setOver] = useState<GameSummary | null>(null);
   const [next, setNext] = useState<Recommendation | null>(null);
 
-  const gameOver = (summary: GameSummary) => {
-    setOver(summary);
-    // Decided now, while the reveal is still up, so the bar can say what it is.
-    setNext(recommendNow(useStore.getState()));
-  };
-
-  const advance = () => {
-    if (!next) return;
-    setPick(next);
+  const startNext = (upcoming: Recommendation) => {
+    setPick(upcoming);
     setNext(null);
     setOver(null);
     setRound((n) => n + 1);
+  };
+
+  /**
+   * A Run ends on its reveal, which is worth reading, so the next game waits
+   * on a tap. Every other mode ends on a summary nobody needs — the score bar
+   * has already said what it earned — so the next game simply starts. Growth
+   * gets a beat, since its ending shows a move worth a glance.
+   */
+  const gameOver = (summary: GameSummary) => {
+    const upcoming = recommendNow(useStore.getState());
+    if (summary.mode === 'run') {
+      setOver(summary);
+      setNext(upcoming);
+      return;
+    }
+    if (summary.mode === 'growth') window.setTimeout(() => startNext(upcoming), 900);
+    else startNext(upcoming);
+  };
+
+  const advance = () => {
+    if (next) startNext(next);
   };
 
   const plan: GamePlan = { color: pick.color, steer: pick.opening.id };

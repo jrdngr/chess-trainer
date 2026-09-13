@@ -75,10 +75,9 @@ anything inside is fair.
 ## Autopilot
 
 Autopilot plays one game after another. A game is one Run, five Drill answers,
-one Growth run, or five Repair items. When a game ends, a bar over the mode's
-own ending shows what it earned and names the next game — "Run · Sicilian:
-Najdorf" with the colour square — and one tap starts it. The mode's own
-ending stays on screen behind the bar, so a Run's reveal can still be read.
+one Growth run, or five Repair items. When a Run ends, a bar over its reveal
+shows what it earned and names the next game, and one tap starts it — the
+reveal is worth reading. Every other game moves straight on to the next.
 A session never ends on its own. Stop is the close button in the app bar, and
 stopping opens Stats. Play is not in the rotation; a full game breaks the
 rhythm and is one tap away by hand.
