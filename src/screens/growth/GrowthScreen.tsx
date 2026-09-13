@@ -4,11 +4,14 @@ import { AppBar, haptic, Icons, Section, Strip, toast, type StripItem } from '..
 import { applySan, lastMoveOf, sansToMoveText, type LegalMove } from '../../chess/core';
 import {
   advance,
+  answerHole,
   atHole,
   enterHole,
   isUsersTurn,
   growthRows,
   lineFor,
+  MAX_ADDS,
+  nextHole,
   optionsAt,
   preparedHere,
   startGrowth,
@@ -43,7 +46,7 @@ export function GrowthScreen({ auto, onExit }: GrowthScreenProps) {
   return <Run row={row} onExit={() => (auto ? onExit() : setRow(null))} />;
 }
 
-type Phase = 'walking' | 'hole' | 'added' | 'lost';
+type Phase = 'walking' | 'hole' | 'answered' | 'done' | 'lost';
 
 function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
   const state = useStore();
@@ -58,7 +61,10 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
   const [run, setRun] = useState<GrowthRun>(() => startGrowth(tree, row));
   const [phase, setPhase] = useState<Phase>('walking');
   const [wrong, setWrong] = useState<string | null>(null);
-  const [added, setAdded] = useState<string | null>(null);
+  /** Which plies of the line you added, so the strip can mark them. */
+  const [added, setAdded] = useState<number[]>([]);
+  /** The answer just chosen, until they reply to it — the board shows it green. */
+  const [answer, setAnswer] = useState<LegalMove | null>(null);
   const [thinking, setThinking] = useState(false);
   /** The position a carry-on game starts from, once one is asked for. */
   const [playFrom, setPlayFrom] = useState<string | null>(null);
@@ -116,34 +122,55 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
     if (settings.hapticFeedback) haptic(10);
   };
 
-  /** The move just chosen, so the board can show it played rather than pending. */
-  const addedMove = useMemo(() => (added ? applySan(run.fen, added) : null), [added, run.fen]);
-  /** The position the new move leads to — where a carry-on game would start. */
-  const afterAdded = addedMove?.after ?? null;
-
+  /**
+   * Take a move. The run walks on rather than ending: the answer is played, and
+   * unless this was the last one allowed, their commonest reply to it becomes
+   * the next thing to answer.
+   */
   const choose = (san: string) => {
+    const move = applySan(run.fen, san);
+    const next = move ? answerHole(run, san) : null;
+    if (!next) return;
     addLine(row.repertoireId, lineFor(run, san), 'reference');
     // A filled hole is what counts as having done Growth. Reaching one and
     // backing out is not work, and Next Up would stop offering the mode on it.
     noteActivity('growth');
-    setAdded(san);
-    setPhase('added');
+    setAdded((plies) => [...plies, run.path.length]);
+    setAnswer(move);
+    setRun(next);
+    setPhase(added.length + 1 >= MAX_ADDS ? 'done' : 'answered');
+    if (settings.hapticFeedback) haptic(10);
     toast(`${san} added`);
   };
 
-  // The new move joins the line as soon as it is chosen, so the strip reads the
-  // same as the board behind it.
-  const shownPath = added && addedMove ? [...run.path, added] : run.path;
-  const strip: StripItem[] = shownPath.map((san, i) => ({
+  /** Their reply to the move you just added, after a beat. */
+  useEffect(() => {
+    if (phase !== 'answered') return;
+    const timer = setTimeout(() => {
+      const hole = nextHole(index, run);
+      // The book knows nothing past here, so there is nothing left to answer.
+      if (!hole) {
+        setPhase('done');
+        return;
+      }
+      setAnswer(null);
+      setRun(enterHole(run, hole));
+      setPhase('hole');
+    }, 520);
+    return () => clearTimeout(timer);
+  }, [phase, run, index]);
+
+  const addedSans = added.map((ply) => run.path[ply]).filter(Boolean);
+
+  const strip: StripItem[] = run.path.map((san, i) => ({
     san,
     label: i % 2 === 0 ? `${Math.floor(i / 2) + 1}.` : undefined,
-    tone:
-      i === run.path.length && addedMove
-        ? 'good'
-        : (i % 2 === 0) === (run.color === 'w')
-          ? 'mine'
-          : 'theirs',
-    current: i === shownPath.length - 1,
+    tone: added.includes(i)
+      ? 'good'
+      : (i % 2 === 0) === (run.color === 'w')
+        ? 'mine'
+        : 'theirs',
+    current: i === run.path.length - 1,
   }));
 
   if (playFrom) {
@@ -185,19 +212,19 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
 
       <div className="screen no-nav">
         <Board
-          fen={addedMove ? addedMove.after : run.fen}
+          fen={run.fen}
           orientation={run.color}
           interactive={phase === 'walking' && isUsersTurn(run)}
           movableFor={run.color}
           onMove={onMove}
           // The green highlight below stands in for the usual last-move tint on
           // the move that was just added, so the two do not compete.
-          lastMove={addedMove ? null : lastMoveOf(run.path)}
+          lastMove={answer ? null : lastMoveOf(run.path)}
           highlights={
-            addedMove
+            answer
               ? [
-                  { square: addedMove.from, kind: 'good' },
-                  { square: addedMove.to, kind: 'good' },
+                  { square: answer.from, kind: 'good' },
+                  { square: answer.to, kind: 'good' },
                 ]
               : []
           }
@@ -207,7 +234,7 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
         />
 
         <div className="spacer sm" />
-        {shownPath.length > 0 && <Strip items={strip} />}
+        {run.path.length > 0 && <Strip items={strip} />}
         <div className="spacer sm" />
 
         {phase === 'walking' && (
@@ -215,6 +242,18 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
             <div className="who">
               <span className={`side ${isUsersTurn(run) ? run.color : other(run.color)}`} />
               {thinking ? 'Thinking…' : isUsersTurn(run) ? 'Your move' : 'Their move'}
+            </div>
+          </div>
+        )}
+
+        {phase === 'answered' && (
+          <div className="prompt">
+            <div className="who">
+              <span className={`side ${other(run.color)}`} />
+              Thinking…
+            </div>
+            <div className="ctx">
+              {added.length} of {MAX_ADDS} added
             </div>
           </div>
         )}
@@ -258,7 +297,10 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
               )}
             </div>
 
-            <Section title="Answer it" />
+            <Section
+              title="Answer it"
+              aside={added.length > 0 ? `${added.length} of ${MAX_ADDS} added` : undefined}
+            />
             {options.length === 0 ? (
               <div className="card small muted">
                 The database has nothing here. Add a move from the Repertoire screen instead.
@@ -278,15 +320,20 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
                 ))}
               </div>
             )}
+            {added.length > 0 && (
+              <button className="btn block mt-8" onClick={() => setPhase('done')}>
+                Stop here
+              </button>
+            )}
           </>
         )}
 
-        {phase === 'added' && (
+        {phase === 'done' && (
           <>
             <div className="row between">
               <div className="verdict ok" style={{ padding: 0 }}>
                 <span className="ico"><Icons.check size={16} /></span>
-                {added} added
+                {addedSans.length === 1 ? `${addedSans[0]} added` : `${addedSans.length} moves added`}
               </div>
               <button className="btn primary sm" onClick={onExit}>
                 New run
@@ -295,12 +342,9 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
             </div>
             <Section title="The line now" />
             <div className="card">
-              <div className="movetext">{sansToMoveText(lineFor(run, added ?? ''))}</div>
+              <div className="movetext">{sansToMoveText(run.path)}</div>
             </div>
-            <button
-              className="btn block mt-12"
-              onClick={() => setPlayFrom(afterAdded ?? run.fen)}
-            >
+            <button className="btn block mt-12" onClick={() => setPlayFrom(run.fen)}>
               <Icons.play size={18} />
               Play from here
             </button>

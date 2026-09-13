@@ -4,20 +4,30 @@ import { childrenOf, fenAt } from './repertoire';
 import type { ExplorerMove, RepMove, Repertoire } from './types';
 
 /**
- * Growth: the repertoire gets one move wider, every run.
+ * Growth: the repertoire gets wider, every run.
  *
  * The other modes all need a repertoire to work on — Drill asks about what is
- * in it, Repair compares games against it, Opening Run replays it. Growth is
- * where it comes from after the first line: you walk your own prep from move
- * one, the opponent steers toward the nearest thing you have no answer to, and
- * when it arrives you choose one move and the run ends.
+ * in it, Repair compares games against it, Run replays it. Growth is where it
+ * comes from after the first line: you walk your own prep from move one, the
+ * opponent steers toward the nearest thing you have no answer to, and when it
+ * arrives you choose an answer to it.
  *
- * One move per run is the whole point. It is small enough to finish in a few
- * taps, so the repertoire grows by repetition rather than by a long sitting.
+ * A run is a few moves at most — three — so it stays small enough to finish in
+ * a few taps and the repertoire grows by repetition rather than by a long
+ * sitting. Answering one move opens the next position for the same choice, and
+ * you can stop at any of them.
  */
 
 /** The least popular a reply can be and still be worth preparing for. */
 export const DEFAULT_MIN_SHARE = 1;
+/**
+ * How many moves one run may add.
+ *
+ * Three rather than one, so a line can be given a shape — their reply, your
+ * answer, their reply again — but still bounded, because the mode is meant to
+ * be finished rather than sat with.
+ */
+export const MAX_ADDS = 3;
 /** Past here, a line running out is play rather than a hole in the prep. */
 export const DEFAULT_MAX_PLY = 18;
 
@@ -303,6 +313,42 @@ export function enterHole(run: GrowthRun, hole: Hole): GrowthRun {
 export function atHole(rep: Repertoire, run: GrowthRun): boolean {
   if (run.hole) return true;
   return isUsersTurn(run) && childrenOf(rep, run.nodeId).length === 0;
+}
+
+/**
+ * Play your chosen answer. The run leaves the repertoire tree here.
+ *
+ * The move has just been written into the repertoire, but the run walks the
+ * copy of the tree it started with — deliberately, so adding cannot re-steer it
+ * mid-run — and that copy will never have it.
+ */
+export function answerHole(run: GrowthRun, san: string): GrowthRun | null {
+  const move = applySan(run.fen, san);
+  if (!move) return null;
+  return { ...run, path: [...run.path, san], fen: move.after, hole: null };
+}
+
+/**
+ * What they would play against the answer you just added, as the next hole.
+ *
+ * The book's most popular reply, since nothing steers any more: past the
+ * repertoire there is no target left to walk toward, and the commonest move is
+ * the one most worth having an answer to.
+ */
+export function nextHole(index: ReferenceIndex, run: GrowthRun): Hole | null {
+  const reply = popularReplies(index, run.fen, 0)[0];
+  if (!reply) return null;
+  const after = applySan(run.fen, reply.san);
+  if (!after) return null;
+  return {
+    path: run.path,
+    fen: run.fen,
+    san: reply.san,
+    share: reply.share,
+    games: reply.games,
+    after: after.after,
+    nodeId: null,
+  };
 }
 
 /** What to offer at the hole: the book's replies, most played first. */

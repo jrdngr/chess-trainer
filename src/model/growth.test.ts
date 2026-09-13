@@ -2,12 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { positionKey } from '../chess/core';
 import {
   advance,
+  answerHole,
   atHole,
   enterHole,
   findHoles,
   growthRows,
   isUsersTurn,
   lineFor,
+  MAX_ADDS,
+  nextHole,
   optionsAt,
   preparedHere,
   startGrowth,
@@ -230,5 +233,86 @@ describe('walking a run', () => {
     const line = lineFor(run, 'Nf3');
     // Their move has to be stored too, or the answer has no parent.
     expect(line).toEqual(['e4', reply.hole!.san, 'Nf3']);
+  });
+});
+
+describe('answering a hole', () => {
+  /** Walk a run to its first hole, the way the screen does. */
+  function toHole() {
+    const row = growthRows([white], index)[0];
+    let run = startGrowth(white, row);
+    for (let i = 0; i < 24 && !atHole(white, run); i += 1) {
+      if (isUsersTurn(run)) {
+        const mine = preparedHere(white, run);
+        if (!mine.length) break;
+        run = advance(white, run, mine[0].san)!;
+      } else {
+        const reply = steer(white, index, run)!;
+        if (reply.hole) {
+          run = enterHole(run, reply.hole);
+          break;
+        }
+        run = advance(white, run, reply.san)!;
+      }
+    }
+    return run;
+  }
+
+  it('plays your answer, leaving the hole behind', () => {
+    const run = toHole();
+    const san = optionsAt(index, run.fen)[0].san;
+    const answered = answerHole(run, san)!;
+    expect(answered.path).toEqual([...run.path, san]);
+    expect(answered.hole).toBeNull();
+    // Their turn again, which is what makes another hole possible.
+    expect(isUsersTurn(answered)).toBe(false);
+  });
+
+  it('refuses a move that is not legal in the position', () => {
+    expect(answerHole(toHole(), 'Qxh8')).toBeNull();
+  });
+
+  it('offers their commonest reply as the next hole to answer', () => {
+    const run = toHole();
+    const answered = answerHole(run, optionsAt(index, run.fen)[0].san)!;
+    const hole = nextHole(index, answered);
+    expect(hole).not.toBeNull();
+    // The most played move there, and nothing rarer.
+    const replies = optionsAt(index, answered.fen);
+    expect(hole!.san).toBe(replies[0].san);
+    expect(hole!.share).toBe(replies[0].share);
+
+    // Stepping into it leaves you to move, with the whole line behind you.
+    const next = enterHole(answered, hole!);
+    expect(next.path).toEqual([...answered.path, hole!.san]);
+    expect(isUsersTurn(next)).toBe(true);
+    expect(optionsAt(index, next.fen).length).toBeGreaterThan(0);
+  });
+
+  it('runs the loop to the cap, writing every answer into the line', () => {
+    let run = toHole();
+    const added: string[] = [];
+    while (added.length < MAX_ADDS) {
+      const san = optionsAt(index, run.fen)[0].san;
+      // What the screen writes into the repertoire at each step.
+      expect(lineFor(run, san)).toEqual([...run.path, san]);
+      run = answerHole(run, san)!;
+      added.push(san);
+      if (added.length === MAX_ADDS) break;
+      const hole = nextHole(index, run);
+      expect(hole).not.toBeNull();
+      run = enterHole(run, hole!);
+    }
+    expect(added).toHaveLength(3);
+    // Your three answers and the two replies between them.
+    expect(run.path.slice(-5)).toEqual([added[0], expect.any(String), added[1], expect.any(String), added[2]]);
+    expect(hasLine(white, run.path)).toBe(false);
+  });
+
+  it('has nothing to offer once the book runs out', () => {
+    const run = toHole();
+    // A position the database has never seen has no reply to give.
+    const nowhere = { ...run, fen: '8/8/4k3/8/8/4K3/8/8 b - - 0 1' };
+    expect(nextHole(index, nowhere)).toBeNull();
   });
 });

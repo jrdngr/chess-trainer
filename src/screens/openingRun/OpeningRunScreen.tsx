@@ -50,8 +50,6 @@ interface OffPrep {
   expected: string[];
   /** What the database calls the line your move leads into. */
   opening: string | null;
-  /** Whether this run produced a line worth keeping. */
-  addable: boolean;
 }
 
 /**
@@ -327,7 +325,6 @@ export function OpeningRunScreen({ auto, onExit }: { auto?: boolean; onExit: () 
         san: move.san,
         expected: result.expected,
         opening: named && named.ply >= 3 ? named.name : null,
-        addable: !!run.repertoireId,
       });
       setPhase('offprep');
       return;
@@ -340,11 +337,22 @@ export function OpeningRunScreen({ auto, onExit }: { auto?: boolean; onExit: () 
     }
   };
 
+  /**
+   * Where an out-of-prep move goes.
+   *
+   * A run drawn from the book or from one opening has no repertoire behind it,
+   * and a reversed run's repertoire is for the other side — so both get the tree
+   * for the side actually being played, the same one the reveal saves into,
+   * rather than having the offer withheld.
+   */
+  const repertoireForAdding = (): string =>
+    run.repertoireId && !run.reverse ? run.repertoireId : ensureRepertoire(run.color);
+
   /** Keep the move, and let the book judge the rest of the run. */
   const acceptOffPrep = (addToRepertoire: boolean) => {
     if (!offPrep) return;
-    if (addToRepertoire && run.repertoireId) {
-      addToRep(run.repertoireId, [...run.played, offPrep.san], 'manual');
+    if (addToRepertoire) {
+      addToRep(repertoireForAdding(), [...run.played, offPrep.san], 'manual');
       toast(`${offPrep.san} added`);
     }
     buzz(10);
@@ -426,16 +434,11 @@ export function OpeningRunScreen({ auto, onExit }: { auto?: boolean; onExit: () 
             </div>
             <div className="spacer" />
             <div className="actions">
-              {offPrep.addable && (
-                <button className="btn accent block xl" onClick={() => acceptOffPrep(true)}>
-                  <Icons.plus size={18} />
-                  Add {offPrep.san} and carry on
-                </button>
-              )}
-              <button
-                className={`btn block${offPrep.addable ? '' : ' accent xl'}`}
-                onClick={() => acceptOffPrep(false)}
-              >
+              <button className="btn accent block xl" onClick={() => acceptOffPrep(true)}>
+                <Icons.plus size={18} />
+                Add {offPrep.san} and carry on
+              </button>
+              <button className="btn block" onClick={() => acceptOffPrep(false)}>
                 Carry on without adding it
               </button>
               <button className="btn plain block" onClick={declineOffPrep}>

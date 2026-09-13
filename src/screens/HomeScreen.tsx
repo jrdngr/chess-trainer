@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { AppBar, IconButton, Icons, Section, Sheet } from '../components/ui';
+import { AppBar, Icons, Section, Sheet } from '../components/ui';
 import { measureCoverage } from '../model/gameAnalysis';
 import { growthRows } from '../model/growth';
 import { MODE_NAMES, nextUp, type Candidate } from '../model/nextUp';
@@ -144,14 +144,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
 
   return (
     <>
-      <AppBar
-        large
-        actions={
-          <IconButton label="Settings" onClick={onOpenSettings}>
-            <Icons.gear size={20} />
-          </IconButton>
-        }
-      />
+      <AppBar large />
 
       <div className="screen">
         <StorageWarning />
@@ -293,6 +286,10 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
             <span className="pill"><i style={{ background: 'var(--surface-3)' }} /><b>{unseenTotal}</b> unseen</span>
           </div>
         </div>
+
+        <button className="btn block mt-16" onClick={onOpenSettings}>
+          Settings
+        </button>
       </div>
 
       <Sheet open={!!pick} onClose={() => setPick(null)} title={pick ? displayName(pick.rep.name) : ''}>
