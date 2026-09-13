@@ -115,12 +115,13 @@ function popularReplies(
 /**
  * One opening with work available in it.
  *
- * Rows are grouped by the deepest opening name above each hole, so a White
- * repertoire that has answered 1...c5 and 1...e6 offers a Sicilian row and a
- * French one. Holes too shallow to sit under any name — an unanswered 1...e5,
- * or a Black repertoire that meets 1.e4 but not 1.d4 — fall into a row named
- * after the repertoire itself. Those are exactly the most urgent ones, so they
- * must never be the ones without a home.
+ * A row is named for the opening its holes lead *into*, not the one they sit
+ * in. That distinction is the whole usefulness of the lobby: a Black King's
+ * Indian repertoire that cannot meet 1.e4 has its most urgent holes at the very
+ * first move, and naming that row "King's Indian" — the repertoire it belongs
+ * to — promises a King's Indian and then hands you a Sicilian. Named for where
+ * they lead, the same holes become "King's Pawn Opening" and "English Opening",
+ * which is what you would actually be preparing against.
  */
 export interface GrowthRow {
   id: string;
@@ -130,6 +131,8 @@ export interface GrowthRow {
   eco?: string;
   /** Plies to the shallowest hole in this row — the urgency signal. */
   depth: number;
+  /** The share of the most played hole here, which is not always the first. */
+  topShare: number;
   holes: Hole[];
 }
 
@@ -143,13 +146,18 @@ export function growthRows(
   for (const rep of reps) {
     const byName = new Map<string, GrowthRow>();
     for (const hole of findHoles(rep, index, opts)) {
-      const named = deepestName(index, hole.path);
-      const name = named?.name ?? repertoireLabel(rep);
+      // Where their move leads. A move the book cannot name gets a row of its
+      // own, called after the move itself — filing 1.g3 under the name of the
+      // repertoire it interrupts is how "pick King's Indian, get a Sicilian"
+      // happened in the first place.
+      const named = deepestName(index, [...hole.path, hole.san]);
+      const name = named?.name ?? moveLabel(hole);
       const id = `${rep.id}#${name}`;
       const row = byName.get(id);
       if (row) {
         row.holes.push(hole);
         row.depth = Math.min(row.depth, hole.path.length);
+        row.topShare = Math.max(row.topShare, hole.share);
         continue;
       }
       byName.set(id, {
@@ -159,18 +167,24 @@ export function growthRows(
         name,
         eco: named?.eco,
         depth: hole.path.length,
+        topShare: hole.share,
         holes: [hole],
       });
     }
     rows.push(...byName.values());
   }
 
-  // Shallowest first: the shallower the hole, the more games fall into it.
-  return rows.sort((a, b) => a.depth - b.depth || b.holes.length - a.holes.length);
+  // Shallowest first: the shallower the hole, the more games fall into it. At
+  // equal depth the biggest hole wins, so the row that costs most games leads
+  // rather than whichever happened to be found first.
+  return rows.sort(
+    (a, b) => a.depth - b.depth || b.topShare - a.topShare || b.holes.length - a.holes.length,
+  );
 }
 
-function repertoireLabel(rep: Repertoire): string {
-  return rep.name.replace(/^\s*(white|black)\s*[—–\-:]\s*/i, '').trim() || rep.name;
+/** A move the book has no name for, called after the move itself: "vs 1.g3". */
+function moveLabel(hole: Hole): string {
+  return `vs ${Math.floor(hole.path.length / 2) + 1}.${hole.path.length % 2 === 0 ? '' : '..'}${hole.san}`;
 }
 
 /* ── the run ────────────────────────────────────────────────────────────── */

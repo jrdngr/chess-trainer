@@ -99,25 +99,57 @@ describe('the lobby', () => {
     expect(total).toBe(findHoles(white, index).length);
   });
 
-  it('files holes too shallow to have a name under the repertoire itself', () => {
-    // A Black repertoire that meets 1.d4 but not 1.e4 has its most urgent hole
-    // at ply 0, above any opening name. That must still be reachable.
+  it('names a row for where its holes lead, not where they sit', () => {
+    // The bug this replaced: a Black King's Indian repertoire that cannot meet
+    // 1.e4 had its first-move holes filed under "King's Indian", so picking
+    // that row promised a King's Indian and delivered a Sicilian.
     const rows = growthRows([black], index);
-    const root = rows.find((row) => row.depth === 0);
-    expect(root).toBeDefined();
-    expect(root!.name).toBe('Test');
+    const first = rows.find((row) => row.depth === 0);
+    expect(first).toBeDefined();
+    expect(first!.name).not.toBe('Test');
+    expect(first!.holes[0].san).toBe('e4');
+    expect(first!.name).toMatch(/King's Pawn/);
   });
 
-  it('names a row after the opening when there is one', () => {
-    const names = growthRows([white], index).map((row) => row.name);
-    expect(names.some((name) => /Sicilian/.test(name))).toBe(true);
+  it('names the deep rows after the variation they walk into', () => {
+    const names = growthRows([black], index).map((row) => row.name);
+    expect(names).toEqual(expect.arrayContaining(['KID: Sämisch Variation']));
   });
 
-  it('offers an empty Black repertoire every first move it cannot meet', () => {
+  it('leads with the hole that costs the most games', () => {
+    for (const rep of [white, black]) {
+      const rows = growthRows([rep], index);
+      for (let i = 1; i < rows.length; i += 1) {
+        const a = rows[i - 1];
+        const b = rows[i];
+        expect(a.depth).toBeLessThanOrEqual(b.depth);
+        if (a.depth === b.depth) expect(a.topShare).toBeGreaterThanOrEqual(b.topShare);
+      }
+    }
+  });
+
+  it('reports the biggest hole in a row, not merely the first', () => {
+    // A row can span depths, and the holes are stored shallowest first, so the
+    // most played one is not always at the front.
+    for (const row of growthRows([black], index)) {
+      expect(row.topShare).toBe(Math.max(...row.holes.map((hole) => hole.share)));
+    }
+  });
+
+  it('calls a move the book cannot name after the move itself', () => {
+    const names = growthRows([black], index).map((row) => row.name);
+    // 1.g3 has no opening name here, and must not borrow the repertoire's.
+    expect(names).toContain('vs 1.g3');
+    expect(names).not.toContain('King\u2019s Indian Defence');
+  });
+
+  it('offers an empty Black repertoire a row per first move it cannot meet', () => {
+    // One row per opening it would be answering, rather than one lump: the
+    // point of the lobby is choosing what to prepare against.
     const rows = growthRows([createRepertoire('Empty', 'b', 'e')], index);
-    expect(rows).toHaveLength(1);
-    expect(rows[0].depth).toBe(0);
-    expect(rows[0].holes.length).toBeGreaterThan(1);
+    expect(rows.length).toBeGreaterThan(1);
+    for (const row of rows) expect(row.depth).toBe(0);
+    expect(rows[0].holes[0].san).toBe('e4');
   });
 
   it('offers an empty White repertoire nothing, because there is nothing to answer', () => {

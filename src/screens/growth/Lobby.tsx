@@ -93,7 +93,7 @@ export function Lobby({
                     <div className="meta">
                       {depthLabel(row.depth)} ·{' '}
                       {row.holes.length === 1 ? '1 reply' : `${row.holes.length} replies`}{' '}
-                      unanswered · biggest {row.holes[0].san} {row.holes[0].share}%
+                      unanswered · up to {row.topShare}% of games
                     </div>
                   </span>
                   <Icons.chevron size={18} />
