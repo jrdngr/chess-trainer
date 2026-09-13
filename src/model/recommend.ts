@@ -21,9 +21,11 @@ import type { Card, Repertoire } from './types';
  * Every candidate is one of those three things together, because the
  * factors that decide it are per-opening factors. Need is how loudly the
  * work is asking — cards due, holes in the prep, positions your games
- * disagree with, prep no run has tested. Staleness is how long that opening
- * has gone without that mode, measured against the other candidates rather
- * than the clock. A star on the opening or anything above it lifts it. Fun
+ * disagree with, prep no run has tested. Holes only ask loudly once the prep
+ * around them is held: an opening still being drilled is not ready to get
+ * wider. Staleness is how long that opening has gone without that mode,
+ * measured against the other candidates rather than the clock. A star on the
+ * opening or anything above it lifts it. Fun
  * tilts every decision toward Run and away from Growth without overriding
  * the one that matters most. And a brake cuts a mode's weight for every one
  * of the last few games it was, so a standing backlog cannot lock the
@@ -51,6 +53,12 @@ export const BRAKE_WINDOW = 5;
 
 /** A variation is worth steering toward once it holds more than this share of its parent's work. */
 export const NARROWING = 0.5;
+
+/** A review interval this long, in days, is a position fully held. */
+export const HELD_DAYS = 7;
+
+/** How loudly Growth can still ask when nothing in the opening is held yet. */
+export const GROWTH_FLOOR = 0.1;
 
 export interface Candidate {
   mode: ScoreMode;
@@ -114,12 +122,46 @@ export function drillNeed(due: number, unseen: number, newPerSession: number): n
   return clamp(Math.max(review, learn));
 }
 
-/** How much a set of holes costs: the shallowest and most played one, and how many. */
-export function growthNeed(holes: Hole[]): number {
+/**
+ * How firmly one position is held, 0..1.
+ *
+ * Nothing until the card has graduated and is not waiting to be reviewed;
+ * from there, how long it has been trusted to stay known. A position seen
+ * once yesterday is not held the way one is that has come back right for
+ * a fortnight.
+ */
+export function cardStrength(card: Card | undefined, now: number): number {
+  if (!card || card.stage !== 'review' || isDue(card, now)) return 0;
+  return clamp(card.interval / HELD_DAYS);
+}
+
+/**
+ * How ready an opening is to grow: the mean strength of its positions.
+ *
+ * An opening with nothing in it yet is ready — there is nothing to drill
+ * first — which is what lets a new repertoire get its first lines at all.
+ */
+export function readiness(strengths: number[]): number {
+  if (!strengths.length) return 1;
+  return clamp(strengths.reduce((sum, s) => sum + s, 0) / strengths.length);
+}
+
+/**
+ * How much a set of holes costs: the shallowest and most played one, and how
+ * many — then how ready the prep around them is to take on more.
+ *
+ * Adding lines to an opening whose existing moves are still being learned
+ * makes more to drill, not a stronger repertoire, so the readiness gate is
+ * steep: half held is a quarter of the voice, and only prep that is nearly
+ * all held asks at full strength. It never goes silent, so a thin opening is
+ * still grown now and then rather than never.
+ */
+export function growthNeed(holes: Hole[], ready = 1): number {
   if (!holes.length) return 0;
   const depth = Math.min(...holes.map((hole) => hole.path.length));
   const topShare = Math.max(...holes.map((hole) => hole.share));
-  return clamp(rowUrgency(depth, topShare, holes.length));
+  const gate = GROWTH_FLOOR + (1 - GROWTH_FLOOR) * clamp(ready) ** 2;
+  return clamp(rowUrgency(depth, topShare, holes.length) * gate);
 }
 
 /** What your own games disagree with your prep about. */
@@ -281,10 +323,12 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
       };
       let due = 0;
       let unseen = 0;
+      const strengths: number[] = [];
       for (const item of within(items, node)) {
         const card = input.cards[item.cardId];
         if (!card) unseen += 1;
         else if (isDue(card, now)) due += 1;
+        strengths.push(cardStrength(card, now));
       }
       push(
         'drill',
@@ -293,7 +337,13 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
         drillNeed(due, unseen, input.newPerSession),
         reachedIn(items, node).filter(wanting).length,
       );
-      push('growth', node, color, growthNeed(within(holes, node)), reachedIn(holes, node).length);
+      push(
+        'growth',
+        node,
+        color,
+        growthNeed(within(holes, node), readiness(strengths)),
+        reachedIn(holes, node).length,
+      );
       push('repair', node, color, repairNeed(within(repairs, node)), reachedIn(repairs, node).length);
 
       const since = lastAt('run', node.id) ?? 0;

@@ -5,9 +5,13 @@ import { addLine, createRepertoire } from './repertoire';
 import {
   BRAKE,
   candidates,
+  cardStrength,
   drillNeed,
   FUN,
+  GROWTH_FLOOR,
   growthNeed,
+  HELD_DAYS,
+  readiness,
   rank,
   recommend,
   repairNeed,
@@ -37,13 +41,34 @@ function rep(color: 'w' | 'b', lines: string[], addedAt = T - 10 * DAY): Reperto
 }
 
 /** Every position in these repertoires as a card, due or not. */
-function cardsFor(reps: Repertoire[], due: boolean, only?: (line: string[]) => boolean): Record<string, Card> {
+function cardsFor(
+  reps: Repertoire[],
+  due: boolean,
+  only?: (line: string[]) => boolean,
+  interval = 3,
+): Record<string, Card> {
   const out: Record<string, Card> = {};
   for (const item of allItems(reps)) {
     if (only && !only(item.pathSans)) continue;
     const card = createCard(item.cardId, item.repertoireId, item.key, item.fen, T - DAY);
-    out[item.cardId] = { ...card, stage: 'review', interval: 3, due: due ? T - 1 : T + 5 * DAY };
+    out[item.cardId] = { ...card, stage: 'review', interval, due: due ? T - 1 : T + 5 * DAY };
   }
+  return out;
+}
+
+/** Every position as a card that has been held for weeks: prep ready to grow. */
+function heldCards(reps: Repertoire[]): Record<string, Card> {
+  return cardsFor(reps, false, undefined, 3 * HELD_DAYS);
+}
+
+/** Every other position held for weeks, the rest due: Drill and Growth both have work. */
+function halfHeldCards(reps: Repertoire[]): Record<string, Card> {
+  const held = heldCards(reps);
+  const due = cardsFor(reps, true);
+  const out: Record<string, Card> = {};
+  allItems(reps).forEach((item, i) => {
+    out[item.cardId] = i % 2 === 0 ? held[item.cardId] : due[item.cardId];
+  });
   return out;
 }
 
@@ -91,6 +116,40 @@ describe('need', () => {
     expect(growthNeed([])).toBe(0);
     expect(growthNeed([hole(1, 30)])).toBeGreaterThan(growthNeed([hole(9, 30)]));
     expect(growthNeed([hole(3, 30)])).toBeGreaterThan(growthNeed([hole(3, 2)]));
+  });
+
+  it('holds a position only once it has graduated, is not due, and has lasted', () => {
+    const card = createCard('c', 'r', 'k', '', T - DAY);
+    expect(cardStrength(undefined, T)).toBe(0);
+    expect(cardStrength({ ...card, stage: 'new' }, T)).toBe(0);
+    expect(cardStrength({ ...card, stage: 'learning', due: T + DAY }, T)).toBe(0);
+    expect(cardStrength({ ...card, stage: 'review', interval: 30, due: T - 1 }, T)).toBe(0);
+    const fresh = cardStrength({ ...card, stage: 'review', interval: 1, due: T + DAY }, T);
+    const held = cardStrength({ ...card, stage: 'review', interval: HELD_DAYS, due: T + DAY }, T);
+    expect(fresh).toBeGreaterThan(0);
+    expect(fresh).toBeLessThan(held);
+    expect(held).toBe(1);
+    expect(cardStrength({ ...card, stage: 'review', interval: 90, due: T + DAY }, T)).toBe(1);
+  });
+
+  it('is ready to grow when its prep is held, and when there is none yet', () => {
+    expect(readiness([])).toBe(1);
+    expect(readiness([1, 1, 1])).toBe(1);
+    expect(readiness([0, 0, 0])).toBe(0);
+    expect(readiness([1, 0])).toBe(0.5);
+  });
+
+  it('quietens growth steeply while the prep is still being learned', () => {
+    const holes = [{ path: ['x'], fen: '', san: 'e5', share: 30, games: 1, after: '', nodeId: null }];
+    const full = growthNeed(holes, 1);
+    const half = growthNeed(holes, 0.5);
+    const none = growthNeed(holes, 0);
+    expect(full).toBe(growthNeed(holes));
+    expect(half).toBeLessThan(full * 0.35);
+    expect(half).toBeGreaterThan(none);
+    // Never silent: a thin opening still gets grown now and then.
+    expect(none).toBeGreaterThan(0);
+    expect(none).toBeCloseTo(full * GROWTH_FLOOR, 5);
   });
 
   it('weighs repairs by the worst and by how many', () => {
@@ -225,7 +284,7 @@ describe('what gets recommended', () => {
 
   it('rotates: every mode with work comes round given a few games', () => {
     const reps = [rep('w', [`${NAJDORF} Be3 e5 Nb3 Be6`, `${DRAGON} Be3 Bg7 f3 O-O`])];
-    const cards = cardsFor(reps, true);
+    const cards = halfHeldCards(reps);
     let score = EMPTY_SCORE;
     const seen = new Set<ScoreMode>();
     const recent: ScoreMode[] = [];
@@ -240,6 +299,32 @@ describe('what gets recommended', () => {
     expect(seen.has('drill')).toBe(true);
     expect(seen.has('growth')).toBe(true);
     expect(seen.size).toBe(3);
+  });
+
+  it('waits to grow an opening until its prep is held', () => {
+    const reps = [rep('w', [`${NAJDORF} Be3 e5 Nb3 Be6`, `${DRAGON} Be3 Bg7 f3 O-O`])];
+    const play = (cards: Record<string, Card>) => {
+      let score = EMPTY_SCORE;
+      const recent: ScoreMode[] = [];
+      let growths = 0;
+      for (let i = 0; i < 20; i += 1) {
+        const pick = recommend(input({ reps, cards, score, recentModes: recent, selection: { color: 'w', opening: '' } }));
+        if (pick.mode === 'growth') growths += 1;
+        recent.push(pick.mode);
+        score = played(score, pick.mode, pick.opening.id, T + i);
+      }
+      return growths;
+    };
+    // Everything due: the same holes, but the prep is not ready to get wider.
+    const learning = play(cardsFor(reps, true));
+    // Nothing seen yet is no better: unseen positions still need drilling.
+    const unseen = play({});
+    // Held for weeks: the holes ask at full voice.
+    const held = play(heldCards(reps));
+    expect(held).toBeGreaterThan(learning);
+    expect(held).toBeGreaterThan(unseen);
+    expect(learning).toBeLessThanOrEqual(2);
+    expect(unseen).toBeLessThanOrEqual(2);
   });
 
   it('is stable: the same state always gives the same answer', () => {
