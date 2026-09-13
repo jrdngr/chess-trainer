@@ -27,8 +27,12 @@ import {
   type TrainingItem,
 } from '../../model/session';
 import { DEFAULT_DRILL, type DrillPrefs } from '../../model/modes';
+import { clockSeconds } from '../../model/openingRun';
+import { comboBonus, POINTS, speedBonus } from '../../model/scoring';
 import type { Card, Grade } from '../../model/types';
 import { useStore } from '../../store/useStore';
+import { ClockHud, useMoveClock } from '../../components/Clock';
+import { selectionText } from '../../components/Selection';
 
 export interface DrillSessionProps {
   /** Everything in scope. The session draws from this for as long as you want. */
@@ -37,6 +41,11 @@ export interface DrillSessionProps {
   title: string;
   /** The mode's own options. Sessions launched from a repertoire use defaults. */
   prefs?: Partial<DrillPrefs>;
+  /**
+   * Stop after this many answers, as one game of an automatic session; the
+   * session then reports rather than offering to keep going.
+   */
+  limit?: number;
   onExit: () => void;
 }
 
@@ -49,6 +58,11 @@ function order(
   weakFirst: boolean,
 ): TrainingItem[] {
   return weakFirst ? weakestFirst(batch, cards) : batch;
+}
+
+/** The speed bonus read at the moment of the move rather than the last tick. */
+function speedNow(elapsed: number, budget: number | null): number {
+  return speedBonus(elapsed, budget);
 }
 
 /** How many positions to line up at a time, and when to line up more. */
@@ -70,7 +84,7 @@ const GRADE_LABELS: Record<Grade, string> = {
   easy: 'Easy',
 };
 
-export function DrillSession({ items, mode, title, prefs, onExit }: DrillSessionProps) {
+export function DrillSession({ items, mode, title, prefs, limit, onExit }: DrillSessionProps) {
   const options: DrillPrefs = { ...DEFAULT_DRILL, ...prefs };
   const settings = useStore((s) => s.settings);
   const cards = useStore((s) => s.cards);
@@ -78,6 +92,8 @@ export function DrillSession({ items, mode, title, prefs, onExit }: DrillSession
   const grade = useStore((s) => s.grade);
   const ensureCard = useStore((s) => s.ensureCard);
   const logMistake = useStore((s) => s.logMistake);
+  const earn = useStore((s) => s.earn);
+  const endGame = useStore((s) => s.endGame);
 
   const maxNew = options.newPerSession;
   const weakFirst = options.weakFirst;
@@ -103,11 +119,34 @@ export function DrillSession({ items, mode, title, prefs, onExit }: DrillSession
   const [showMoves, setShowMoves] = useState(false);
   const [explore, setExplore] = useState(false);
   const [why, setWhy] = useState(false);
-  const [stats, setStats] = useState({ answered: 0, correct: 0 });
+  const [stats, setStats] = useState({ answered: 0, correct: 0, earned: 0, streak: 0 });
   const [stopped, setStopped] = useState(false);
+  /** Logged once, however the session ends. */
+  const logged = useRef(false);
 
   const item = queue[index];
   const done = stopped;
+
+  const clock = useMoveClock({
+    seconds: clockSeconds(options.clock),
+    turnKey: `${index}:${item?.cardId ?? ''}`,
+    active: phase === 'ask' && !!item && !explore && !showMoves,
+  });
+
+  /** Count the session as one game, against the opening it was played in. */
+  const log = () => {
+    if (logged.current || stats.answered === 0) return;
+    logged.current = true;
+    endGame({
+      mode: 'drill',
+      openingId: settings.selection.opening,
+      color: item?.orientation === 'black' ? 'b' : 'w',
+      score: stats.earned,
+      answered: stats.answered,
+      correct: stats.correct,
+      perfect: stats.correct === stats.answered && stats.answered >= 5,
+    });
+  };
 
   const card = item ? cards[item.cardId] : undefined;
   /** True once the schedule is clear and this is practice, not a review. */
@@ -168,7 +207,29 @@ export function DrillSession({ items, mode, title, prefs, onExit }: DrillSession
     const result = checkAnswer(item, move.san);
     setPlayed(move);
     setPhase(result.correct ? 'correct' : 'wrong');
-    setStats((s) => ({ answered: s.answered + 1, correct: s.correct + (result.correct ? 1 : 0) }));
+    // What this answer pays: the base, more for a card you had lapsed on, the
+    // speed bonus at the moment of the move, and the combo.
+    const streak = result.correct ? stats.streak + 1 : 0;
+    const points = result.correct
+      ? POINTS.drill.answer +
+        (card && card.lapses > 0 ? POINTS.drill.lapsed : 0) +
+        speedNow(clock.elapsedNow(), clock.budget) +
+        comboBonus(streak)
+      : 0;
+    earn({
+      mode: 'drill',
+      points,
+      line: [...item.pathSans, move.san],
+      color: item.orientation === 'black' ? 'b' : 'w',
+      answered: true,
+      correct: result.correct,
+    });
+    setStats((s) => ({
+      answered: s.answered + 1,
+      correct: s.correct + (result.correct ? 1 : 0),
+      earned: s.earned + points,
+      streak,
+    }));
     if (settings.hapticFeedback) haptic(result.correct ? 12 : [18, 50, 18]);
     if (!result.correct) {
       // A wrong answer is always a lapse; grade it immediately so the user can
@@ -232,8 +293,19 @@ export function DrillSession({ items, mode, title, prefs, onExit }: DrillSession
   /** End the session. Answering nothing at all just leaves. */
   const stop = () => {
     if (stats.answered === 0) onExit();
-    else setStopped(true);
+    else {
+      log();
+      setStopped(true);
+    }
   };
+
+  /** A limited session ends itself once the last answer has been dealt with. */
+  useEffect(() => {
+    if (!limit || phase !== 'ask' || stats.answered < limit || stopped) return;
+    log();
+    setStopped(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [limit, phase, stats.answered, stopped]);
 
   const onGrade = (value: Grade) => {
     if (!item) return;
@@ -296,7 +368,7 @@ export function DrillSession({ items, mode, title, prefs, onExit }: DrillSession
             <div className="pct">{accuracy}%</div>
           </div>
           <div className="center muted" style={{ marginTop: 14 }}>
-            {stats.correct} of {stats.answered} correct
+            {stats.correct} of {stats.answered} correct · +{stats.earned}
           </div>
           <div className="stat-grid" style={{ marginTop: 24 }}>
             <div className="stat">
@@ -316,13 +388,15 @@ export function DrillSession({ items, mode, title, prefs, onExit }: DrillSession
           <button className="btn primary block xl" onClick={onExit}>
             Done
           </button>
-          <button
-            className="btn plain block"
-            style={{ marginTop: 8 }}
-            onClick={() => setStopped(false)}
-          >
-            Keep going
-          </button>
+          {!limit && (
+            <button
+              className="btn plain block"
+              style={{ marginTop: 8 }}
+              onClick={() => setStopped(false)}
+            >
+              Keep going
+            </button>
+          )}
         </div>
       </>
     );
@@ -339,12 +413,14 @@ export function DrillSession({ items, mode, title, prefs, onExit }: DrillSession
     <>
       <AppBar
         title={opening?.name ?? title}
-        subtitle={item.orientation === 'white' ? 'as White' : 'as Black'}
+        subtitle={selectionText(side, settings.selection.opening)}
         onClose={stop}
         actions={
-          <span className="num muted small appbar-gap" style={{ textAlign: 'right' }}>
-            {stats.answered}
-            {stats.answered > 0 ? ` \u00b7 ${Math.round((stats.correct / stats.answered) * 100)}%` : ''}
+          <span className="row gap-6">
+            {phase === 'ask' && <ClockHud clock={clock} />}
+            <span className="chip num wide">
+              {limit ? `${stats.answered}/${limit}` : stats.answered}
+            </span>
           </span>
         }
       />

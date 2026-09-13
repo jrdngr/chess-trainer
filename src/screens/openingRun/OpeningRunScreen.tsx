@@ -35,7 +35,10 @@ import { PlayOn } from './PlayOn';
 import { Reveal, type Death } from './Reveal';
 import { Setup } from './Setup';
 import { useReferee } from './useReferee';
-import { formatClock, useRunClock } from './useRunClock';
+import { ClockHud, useMoveClock } from '../../components/Clock';
+import { clockSeconds } from '../../model/openingRun';
+import { comboBonus, POINTS } from '../../model/scoring';
+import { deepestNodeWithin } from '../../model/openingTree';
 
 type Phase = 'setup' | 'playing' | 'offprep' | 'dead' | 'survived' | 'playon';
 
@@ -90,6 +93,8 @@ export function OpeningRunScreen({
   const [planned] = useState<Partial<OpeningRunPrefs> | undefined>(() => plan);
   const prefs: OpeningRunPrefs = { ...settings.openingRun, ...planned };
   const endRun = useStore((s) => s.endOpeningRun);
+  const earn = useStore((s) => s.earn);
+  const endGame = useStore((s) => s.endGame);
   const missed = useStore((s) => s.missedInOpeningRun);
   const addToRep = useStore((s) => s.addLine);
   const ensureRepertoire = useStore((s) => s.ensureRepertoire);
@@ -135,9 +140,46 @@ export function OpeningRunScreen({
     if (settings.hapticFeedback) haptic(pattern);
   };
 
+  /** Points banked this run, for the reveal. */
+  const [earned, setEarned] = useState(0);
+
   const finish = (ended: Run, completed: boolean) => {
     settled.current = true;
     endRun(outcomeOf(ended, completed));
+    let bonus = 0;
+    if (completed && !isExtended(ended)) {
+      bonus += POINTS.run.finish + (ended.leftPrep ? 0 : POINTS.run.green);
+      earn({ mode: 'run', points: bonus, line: ended.played, color: ended.color, answered: false, correct: false });
+    }
+    setEarned((total) => total + bonus);
+    // A run carried on into extended play amends its record, not its game.
+    if (!gameLogged.current) {
+      gameLogged.current = true;
+      const region = nodeById(tree, ended.openingId);
+      endGame({
+        mode: 'run',
+        openingId: deepestNodeWithin(tree, region, ended.played).id,
+        color: ended.color,
+        score: earned + bonus,
+        answered: ended.survived + (completed ? 0 : 1),
+        correct: ended.survived,
+        perfect: completed && !ended.leftPrep,
+      });
+    }
+  };
+  const gameLogged = useRef(false);
+
+  /** A correct move of yours: the base, the speed bonus, and the combo. */
+  const credit = (after: Run) => {
+    const points =
+      POINTS.run.move + clock.bonus + comboBonus(after.survived);
+    earn({ mode: 'run', points, line: after.played, color: after.color, answered: true, correct: true });
+    setEarned((total) => total + points);
+  };
+
+  /** A miss: answered, worth nothing, and counted against the line. */
+  const debit = (ended: Run, san: string) => {
+    earn({ mode: 'run', points: 0, line: [...ended.played, san], color: ended.color, answered: true, correct: false });
   };
 
   /**
@@ -205,11 +247,14 @@ export function OpeningRunScreen({
     onVerdict: (verdict) => {
       if (!run || !source || settled.current) return;
       if (!verdict.ok) {
+        debit(run, verdict.san);
         die(run, { cause: 'blunder', played: verdict.san, expected: [], lost: verdict.lost });
         return;
       }
       buzz(10);
-      setGame({ source, run: playExtended(run, verdict.san, verdict.reply) });
+      const next = playExtended(run, verdict.san, verdict.reply);
+      credit({ ...next, played: [...run.played, verdict.san] });
+      setGame({ source, run: next });
     },
     onOpponentMove: (san) => {
       if (!run || !source || settled.current) return;
@@ -217,14 +262,10 @@ export function OpeningRunScreen({
     },
   });
 
-  const clock = useRunClock({
-    mode: prefs.clock,
-    runId: run?.id ?? null,
+  const clock = useMoveClock({
+    seconds: clockSeconds(prefs.clock),
+    turnKey: `${run?.id ?? ''}:${run?.played.length ?? 0}`,
     active: live && myTurn && !thinking && !referee.pending && !referee.replying,
-    onExpire: () => {
-      if (!run || !source || settled.current || !live) return;
-      die(run, { cause: 'time', expected: movesHere(source, run) });
-    },
   });
 
   // The opponent answers on its own, after a beat.
@@ -268,6 +309,8 @@ export function OpeningRunScreen({
   const begin = (started: Game | null) => {
     if (!started) return;
     settled.current = false;
+    gameLogged.current = false;
+    setEarned(0);
     setDeath(null);
     setOffPrep(null);
     referee.reset();
@@ -304,6 +347,7 @@ export function OpeningRunScreen({
         source={source}
         run={run}
         death={phase === 'dead' ? death : null}
+        earned={earned}
         canSaveLine={!!keepTarget(run)}
         alreadySaved={alreadyKept(run)}
         onSaveLine={() => keepLine(run)}
@@ -349,9 +393,11 @@ export function OpeningRunScreen({
     const result = play(source, run, move.san);
     if (result.ok) {
       buzz(10);
+      credit(result.run);
       setGame({ source, run: result.run });
       return;
     }
+    debit(run, move.san);
     die(run, { cause: 'move', played: result.played, expected: result.expected });
     // Only a position your prep has an answer to is a card on the schedule.
     if (run.repertoireId && source.prepAt(run.fen).length) {
@@ -371,7 +417,9 @@ export function OpeningRunScreen({
     }
     buzz(10);
     setOffPrep(null);
-    setGame({ source, run: leavePrep(run, offPrep.san) });
+    const next = leavePrep(run, offPrep.san);
+    credit(next);
+    setGame({ source, run: next });
     setPhase('playing');
   };
 
@@ -379,6 +427,7 @@ export function OpeningRunScreen({
   const declineOffPrep = () => {
     if (!offPrep) return;
     setOffPrep(null);
+    debit(run, offPrep.san);
     die({ ...run, leftPrep: true }, { cause: 'offprep', played: offPrep.san, expected: offPrep.expected });
     if (run.repertoireId) {
       missed(run.repertoireId, run.fen, offPrep.san, offPrep.expected[0] ?? '');
@@ -394,8 +443,6 @@ export function OpeningRunScreen({
     setGame({ source, run: taken.run });
   };
 
-  const urgent = clock !== null && clock <= 5;
-
   return (
     <>
       <AppBar
@@ -405,9 +452,7 @@ export function OpeningRunScreen({
         actions={
           <div className="row gap-6">
             {extended && <span className="chip accent wide">{referee.liveScore ?? '…'}</span>}
-            {clock !== null && (
-              <span className={`chip num wide${urgent ? ' bad' : ''}`}>{formatClock(clock)}</span>
-            )}
+            {live && myTurn && <ClockHud clock={clock} />}
             <span className={`chip num wide${run.leftPrep ? ' accent' : ''}`}>{run.survived}</span>
           </div>
         }

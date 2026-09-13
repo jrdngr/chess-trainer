@@ -43,6 +43,19 @@ import {
 import { addMistake, type Mistake } from '../model/mistakes';
 import { DEFAULT_SELECTION, type Selection } from '../model/selection';
 import {
+  applyEvent,
+  EMPTY_SCORE,
+  milestoneOf,
+  normalizeScore,
+  recordGame,
+  type GameRecord,
+  type Milestone,
+  type ScoreEvent,
+  type ScoreState,
+} from '../model/scoring';
+import { openingTree } from '../model/openingTree';
+import { referenceIndex } from '../model/referenceIndex';
+import {
   NO_ACTIVITY,
   normalizeActivity,
   noted,
@@ -126,11 +139,27 @@ interface PersistedState {
   mistakes: Mistake[];
   /** When each mode last did something, for Next Up to rotate on. */
   activity: Activity;
+  /** Points, per opening and in total, and every game played. */
+  score: ScoreState;
+}
+
+/**
+ * The last thing that earned points, for the score bar to react to.
+ *
+ * `seq` climbs with every event so the same total earned twice still reads
+ * as two events; `milestone` is set only on the event that crossed one.
+ */
+export interface ScoreFeed {
+  seq: number;
+  points: number;
+  total: number;
+  milestone: Milestone | null;
 }
 
 interface StoreState extends PersistedState {
   ready: boolean;
   cloud: CloudStatus;
+  feed: ScoreFeed;
   /** Which persistence backends actually work on this page. */
   storage: StorageSupport;
   syncNow: () => Promise<void>;
@@ -179,6 +208,10 @@ interface StoreState extends PersistedState {
    * their work, so only Growth — which has no record of its own — calls this.
    */
   noteActivity: (mode: ActivityMode) => void;
+  /** Bank points for one event, credited to the openings its line goes through. */
+  earn: (event: Omit<ScoreEvent, 'at'>) => number;
+  /** Count a finished game against its opening. */
+  endGame: (game: Omit<GameRecord, 'at'>) => void;
   /** Remember a move the user got wrong somewhere in the app. */
   logMistake: (mistake: Omit<Mistake, 'id' | 'at'>) => void;
   /** Forget one, once it has been repaired. */
@@ -226,6 +259,7 @@ function emptyPersisted(): PersistedState {
     repair: { ...EMPTY_REPAIR_RECORD },
     mistakes: [],
     activity: { ...NO_ACTIVITY },
+    score: normalizeScore(EMPTY_SCORE),
   };
 }
 
@@ -243,6 +277,7 @@ function persistedFrom(state: StoreState): PersistedState {
     repair: state.repair,
     mistakes: state.mistakes,
     activity: state.activity,
+    score: state.score,
   };
 }
 
@@ -359,6 +394,7 @@ export const useStore = create<StoreState>((set, get) => {
   return {
     ...emptyPersisted(),
     ready: false,
+    feed: { seq: 0, points: 0, total: 0, milestone: null },
     cloud: cloudAvailable() ? { kind: 'idle', lastSyncedAt: null } : { kind: 'unavailable' },
     storage: { localStorage: false, indexedDB: false, any: false },
 
@@ -384,6 +420,7 @@ export const useStore = create<StoreState>((set, get) => {
           repair: normalizeRepairRecord(chosen.repair),
           mistakes: chosen.mistakes ?? [],
           activity: normalizeActivity(chosen.activity),
+          score: normalizeScore(chosen.score),
           updatedAt: Math.max(localAt, remoteAt),
           settings: mergeSettings(chosen.settings),
           storage,
@@ -428,6 +465,7 @@ export const useStore = create<StoreState>((set, get) => {
           repair: normalizeRepairRecord(remote.state.repair),
           mistakes: remote.state.mistakes ?? [],
           activity: normalizeActivity(remote.state.activity),
+          score: normalizeScore(remote.state.score),
           importedGames: local.importedGames,
           settings: mergeSettings(remote.state.settings),
           updatedAt: remote.updatedAt,
@@ -586,6 +624,27 @@ export const useStore = create<StoreState>((set, get) => {
 
     noteActivity(mode) {
       commit({ activity: noted(get().activity, mode) });
+    },
+
+    earn(event) {
+      const state = get();
+      const before = milestoneOf(state.score.total);
+      const score = applyEvent(state.score, openingTree(referenceIndex()), { ...event, at: Date.now() });
+      const after = milestoneOf(score.total);
+      commit({
+        score,
+        feed: {
+          seq: state.feed.seq + 1,
+          points: event.points,
+          total: score.total,
+          milestone: after.reached > before.reached ? after : null,
+        },
+      });
+      return event.points;
+    },
+
+    endGame(game) {
+      commit({ score: recordGame(get().score, openingTree(referenceIndex()), { ...game, at: Date.now() }) });
     },
 
     logMistake(mistake) {

@@ -1,6 +1,7 @@
 import { AppBar, Section, Segmented, Stepper, Toggle } from '../../components/ui';
 import { SelectionBar } from '../../components/Selection';
 import { DRAW_LABELS, type DrillDraw, type DrillPrefs } from '../../model/modes';
+import { clockLabel, CLOCK_MODES } from '../../model/openingRun';
 import { itemsInRegion, regionOf, repertoiresIn } from '../../model/selection';
 import { openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
@@ -60,6 +61,13 @@ export function Setup({
           value={prefs.draw}
           options={DRAWS}
           onChange={(draw) => set({ draw: draw as DrillDraw })}
+        />
+
+        <Section title="Clock" />
+        <Segmented
+          value={prefs.clock}
+          options={CLOCK_MODES.map((mode) => ({ value: mode, label: clockLabel(mode) }))}
+          onChange={(clock) => set({ clock })}
         />
 
         <Section title="How it asks" />

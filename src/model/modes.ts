@@ -1,4 +1,5 @@
 import { DEFAULT_LEVEL } from './play';
+import type { ClockMode } from './openingRun';
 import type { RepairKind, RepairSort } from './repair';
 import type { SessionMode } from './session';
 
@@ -28,6 +29,8 @@ export interface DrillPrefs {
   weakFirst: boolean;
   /** Offer "Why is it wrong?" after a miss. */
   explain: boolean;
+  /** Seconds for each answer. Timing out only costs the speed bonus. */
+  clock: ClockMode;
 }
 
 export const DEFAULT_DRILL: DrillPrefs = {
@@ -36,6 +39,7 @@ export const DEFAULT_DRILL: DrillPrefs = {
   followLine: true,
   weakFirst: false,
   explain: true,
+  clock: 'off',
 };
 
 export const DRAW_LABELS: Record<DrillDraw, string> = {

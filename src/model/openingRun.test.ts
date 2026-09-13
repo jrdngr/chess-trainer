@@ -6,7 +6,7 @@ import {
   bookHas,
   classify,
   clockLabel,
-  clockSpec,
+  clockSeconds,
   CLOCK_MODES,
   continuation,
   DEFAULT_OPTIONS,
@@ -41,7 +41,6 @@ import {
   revealText,
   staysInside,
   takeHint,
-  timeOut,
   weaknessFromCards,
   type LineSource,
   type Run,
@@ -394,22 +393,14 @@ describe('targeting weak spots', () => {
 });
 
 describe('the clock', () => {
-  it('describes each budget as either per move or per run', () => {
-    expect(clockSpec('off')).toEqual({ perMove: null, perRun: null });
-    expect(clockSpec('move10')).toEqual({ perMove: 10, perRun: null });
-    expect(clockSpec('move30')).toEqual({ perMove: 30, perRun: null });
-    expect(clockSpec('run180')).toEqual({ perMove: null, perRun: 180 });
+  it('is a budget per move, or nothing', () => {
+    expect(clockSeconds('off')).toBeNull();
+    expect(clockSeconds('move10')).toBe(10);
+    expect(clockSeconds('move30')).toBe(30);
   });
 
   it('labels every mode it offers', () => {
     for (const mode of CLOCK_MODES) expect(clockLabel(mode)).toBeTruthy();
-  });
-
-  it('ends the run where it stands, with no move played', () => {
-    const { run } = start([whiteRep()], 'w');
-    const ended = timeOut(run);
-    expect(ended.over).toBe(true);
-    expect(ended.played).toEqual([]);
   });
 });
 

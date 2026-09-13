@@ -41,6 +41,8 @@ export interface RevealProps {
   run: Run;
   /** Null when the line was played out in full. */
   death: Death | null;
+  /** Points this run banked. */
+  earned: number;
   /** This run produced a line worth offering to keep. */
   canSaveLine: boolean;
   /** That line is already in the repertoire, so there is nothing to add. */
@@ -65,6 +67,7 @@ export function Reveal({
   source,
   run,
   death,
+  earned,
   canSaveLine,
   alreadySaved,
   onSaveLine,
@@ -197,7 +200,12 @@ export function Reveal({
         title={survived ? 'Survived' : 'Run over'}
         subtitle={selectionText(run.color, run.openingId)}
         onClose={onExit}
-        actions={<span className="chip num wide">{run.survived}</span>}
+        actions={
+          <span className="row gap-6">
+            <span className="chip good num wide">+{earned}</span>
+            <span className="chip num wide">{run.survived}</span>
+          </span>
+        }
       />
 
       <div className="screen no-nav">

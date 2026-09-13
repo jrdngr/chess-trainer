@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Icons, ToastHost } from './components/ui';
+import { ScoreBar } from './components/ScoreBar';
 import { AnalysisScreen } from './screens/AnalysisScreen';
 import { ExploreScreen } from './screens/ExploreScreen';
 import { ImportScreen } from './screens/ImportScreen';
@@ -142,6 +143,7 @@ export default function App() {
           <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
         </>
       )}
+      <ScoreBar />
       <ToastHost />
     </div>
   );

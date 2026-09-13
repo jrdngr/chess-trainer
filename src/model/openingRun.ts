@@ -204,28 +204,20 @@ export function lineOdds(
 
 export type ColorChoice = Color | 'random';
 
-/** How long you get, and whether the budget is per move or per run. */
-export type ClockMode = 'off' | 'move10' | 'move30' | 'run180';
+/** How long you get for each of your own moves. */
+export type ClockMode = 'off' | 'move10' | 'move30';
 
-export interface ClockSpec {
-  /** Seconds for each of your own moves, or null. */
-  perMove: number | null;
-  /** Seconds for the whole run, or null. */
-  perRun: number | null;
-}
+export const CLOCK_MODES: ClockMode[] = ['off', 'move10', 'move30'];
 
-export const CLOCK_MODES: ClockMode[] = ['off', 'move10', 'move30', 'run180'];
-
-export function clockSpec(mode: ClockMode): ClockSpec {
+/** Seconds per move, or null with the clock off. */
+export function clockSeconds(mode: ClockMode): number | null {
   switch (mode) {
     case 'move10':
-      return { perMove: 10, perRun: null };
+      return 10;
     case 'move30':
-      return { perMove: 30, perRun: null };
-    case 'run180':
-      return { perMove: null, perRun: 180 };
+      return 30;
     default:
-      return { perMove: null, perRun: null };
+      return null;
   }
 }
 
@@ -235,8 +227,6 @@ export function clockLabel(mode: ClockMode): string {
       return '10s';
     case 'move30':
       return '30s';
-    case 'run180':
-      return '3 min';
     default:
       return 'Off';
   }
@@ -518,11 +508,6 @@ export function play(source: LineSource, run: Run, san: string): Judgement {
       target,
     },
   };
-}
-
-/** The clock running out. Ends the run where it stands, with nothing played. */
-export function timeOut(run: Run): Run {
-  return { ...run, over: true };
 }
 
 /**

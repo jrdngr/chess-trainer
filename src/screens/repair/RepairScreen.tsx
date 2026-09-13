@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../../components/Board';
 import { AppBar, haptic, Icons, Section, toast } from '../../components/ui';
 import { applySan, sansToMoveText, type LegalMove, type Square } from '../../chess/core';
@@ -7,6 +7,7 @@ import { kindLabel, type RepairPrefs } from '../../model/modes';
 import { formatGameCount, movePercent, lookup, totalGamesAt } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
 import { openingTree } from '../../model/openingTree';
+import { POINTS } from '../../model/scoring';
 import { lineInRegion, regionOf, repertoiresIn } from '../../model/selection';
 import { selectionText } from '../../components/Selection';
 import { buildRepairs, fixCandidates, isRepaired, lineFor, type RepairItem } from '../../model/repair';
@@ -16,25 +17,30 @@ import { Setup } from './Setup';
 export interface RepairScreenProps {
   /** Skip setup and work through the saved options — Next Up started this. */
   auto?: boolean;
+  /** Stop after this many items, as one game of an automatic session. */
+  limit?: number;
   onImport: () => void;
   onExit: () => void;
 }
 
-export function RepairScreen({ auto, onImport, onExit }: RepairScreenProps) {
+export function RepairScreen({ auto, limit, onImport, onExit }: RepairScreenProps) {
   const saved = useStore((s) => s.settings.repair);
   const [prefs, setPrefs] = useState<RepairPrefs | null>(() => (auto ? saved : null));
   if (!prefs) return <Setup onStart={setPrefs} onImport={onImport} onExit={onExit} />;
   // A queue nobody set up has no setup screen to fall back to.
-  return <Working prefs={prefs} onExit={() => (auto ? onExit() : setPrefs(null))} />;
+  return <Working prefs={prefs} limit={limit} onExit={() => (auto ? onExit() : setPrefs(null))} />;
 }
 
 type Phase = 'ask' | 'right' | 'wrong' | 'choose';
 
-function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) {
+function Working({ prefs, limit, onExit }: { prefs: RepairPrefs; limit?: number; onExit: () => void }) {
   const state = useStore();
   const addLine = useStore((s) => s.addLine);
   const endRepair = useStore((s) => s.endRepair);
   const repaired = useStore((s) => s.repairedPosition);
+  const earn = useStore((s) => s.earn);
+  const endGame = useStore((s) => s.endGame);
+  const logged = useRef(false);
   const settings = state.settings;
   const selection = settings.selection;
   const reps = repertoiresIn(repertoireList(state), selection.color);
@@ -53,15 +59,40 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
       // the home screen counts them, so a queue built without them promises a
       // number of positions and then opens onto nothing.
       mistakes: state.mistakes,
-    }).filter((item) => lineInRegion(tree, region, item.path)),
+    })
+      .filter((item) => lineInRegion(tree, region, item.path))
+      .slice(0, limit ?? Infinity),
   );
 
   const [at, setAt] = useState(0);
   const [phase, setPhase] = useState<Phase>('ask');
   const [played, setPlayed] = useState<LegalMove | null>(null);
-  const [done, setDone] = useState({ relearned: 0, added: 0 });
+  const [done, setDone] = useState({ relearned: 0, added: 0, wrong: 0, earned: 0 });
 
   const item = queue[at];
+
+  /** The visit is one game, logged when the queue runs out or on leaving. */
+  const log = () => {
+    if (logged.current || done.relearned + done.added + done.wrong === 0) return;
+    logged.current = true;
+    endGame({
+      mode: 'repair',
+      openingId: region.id,
+      color: queue[0]?.color ?? 'w',
+      score: done.earned,
+      answered: done.relearned + done.wrong,
+      correct: done.relearned,
+      perfect: done.wrong === 0 && done.relearned + done.added >= 3,
+    });
+  };
+  useEffect(() => {
+    if (!item) log();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item]);
+  const leave = () => {
+    log();
+    onExit();
+  };
 
   const book = useMemo(
     () => (item ? candidateAnswers(index, item.fen, 5).map((m) => m.san) : []),
@@ -98,7 +129,13 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
     // real position, and getting it wrong is exactly what a lapse is.
     repaired(item.repertoireId, item.fen, move.san, item.expected[0] ?? '', right);
     endRepair({ relearned: right });
-    if (right) setDone((d) => ({ ...d, relearned: d.relearned + 1 }));
+    const points = right ? POINTS.repair.relearned : 0;
+    earn({ mode: 'repair', points, line: [...item.path, move.san], color: item.color, answered: true, correct: right });
+    setDone((d) =>
+      right
+        ? { ...d, relearned: d.relearned + 1, earned: d.earned + points }
+        : { ...d, wrong: d.wrong + 1 },
+    );
     if (settings.hapticFeedback) haptic(right ? 12 : [18, 50, 18]);
   };
 
@@ -106,7 +143,8 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
     if (!item) return;
     addLine(item.repertoireId, lineFor(item, san), 'manual');
     endRepair({ added: true });
-    setDone((d) => ({ ...d, added: d.added + 1 }));
+    earn({ mode: 'repair', points: POINTS.repair.added, line: lineFor(item, san), color: item.color, answered: false, correct: false });
+    setDone((d) => ({ ...d, added: d.added + 1, earned: d.earned + POINTS.repair.added }));
     toast(`${san} prepared`);
     next();
   };
@@ -114,7 +152,7 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
   if (!item) {
     return (
       <>
-        <AppBar title="Repair" onClose={onExit} />
+        <AppBar title="Repair" onClose={leave} />
         <div className="screen no-nav">
           <div className="hero" style={{ marginTop: 8 }}>
             <div className="big">{done.relearned + done.added}</div>
@@ -128,10 +166,13 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
               <span className="pill">
                 <b>{done.added}</b> added
               </span>
+              <span className="pill">
+                <b>+{done.earned}</b> points
+              </span>
             </div>
           </div>
-          <button className="btn primary block xl mt-16" onClick={onExit}>
-            Back to options
+          <button className="btn primary block xl mt-16" onClick={leave}>
+            {limit ? 'Done' : 'Back to options'}
           </button>
         </div>
       </>
@@ -146,7 +187,7 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
       <AppBar
         title={kindLabel(item.kind)}
         subtitle={selectionText(item.color, selection.opening)}
-        onClose={onExit}
+        onClose={leave}
         actions={
           <span className="num muted small appbar-gap" style={{ textAlign: 'right' }}>
             {at + 1}/{queue.length}

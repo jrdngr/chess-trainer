@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../../components/Board';
 import { AppBar, haptic, Icons, Section, Strip, toast, type StripItem } from '../../components/ui';
 import { applySan, lastMoveOf, sansToMoveText, type LegalMove } from '../../chess/core';
@@ -21,8 +21,9 @@ import {
   type GrowthRun,
 } from '../../model/growth';
 import { formatGameCount } from '../../model/reference';
+import { POINTS } from '../../model/scoring';
+import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
-import { openingTree } from '../../model/openingTree';
 import { regionOf, repertoiresIn } from '../../model/selection';
 import { selectionText } from '../../components/Selection';
 import { repertoireList, useStore } from '../../store/useStore';
@@ -63,6 +64,11 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
   const settings = state.settings;
   const addLine = useStore((s) => s.addLine);
   const noteActivity = useStore((s) => s.noteActivity);
+  const earn = useStore((s) => s.earn);
+  const endGame = useStore((s) => s.endGame);
+  /** Points this run has banked. */
+  const [earned, setEarned] = useState(0);
+  const logged = useRef(false);
   const index = referenceIndex();
   const rep = state.repertoires[row.repertoireId];
 
@@ -156,6 +162,8 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
     // A filled hole is what counts as having done Growth. Reaching one and
     // backing out is not work, and Next Up would stop offering the mode on it.
     noteActivity('growth');
+    earn({ mode: 'growth', points: POINTS.growth.added, line: lineFor(run, san), color: run.color, answered: false, correct: false });
+    setEarned((total) => total + POINTS.growth.added);
     setAdded((plies) => [...plies, run.path.length]);
     setAnswer(move);
     setRun(next);
@@ -182,6 +190,24 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
   }, [phase, run, index]);
 
   const addedSans = added.map((ply) => run.path[ply]).filter(Boolean);
+
+  /** One run is one game, logged the first time it is over. */
+  useEffect(() => {
+    if ((phase !== 'done' && phase !== 'lost') || logged.current) return;
+    logged.current = true;
+    const tree = openingTree(index);
+    const region = nodeById(tree, settings.selection.opening);
+    endGame({
+      mode: 'growth',
+      openingId: deepestNodeWithin(tree, region, run.path).id,
+      color: run.color,
+      score: earned,
+      answered: 0,
+      correct: 0,
+      perfect: added.length >= MAX_ADDS,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
   const strip: StripItem[] = run.path.map((san, i) => ({
     san,
@@ -358,6 +384,7 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
               <div className="verdict ok" style={{ padding: 0 }}>
                 <span className="ico"><Icons.check size={16} /></span>
                 {addedSans.length === 1 ? `${addedSans[0]} added` : `${addedSans.length} moves added`}
+                {earned > 0 && <span className="chip good">+{earned}</span>}
               </div>
               <button className="btn primary sm" onClick={onExit}>
                 New run
