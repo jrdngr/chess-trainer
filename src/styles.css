@@ -517,6 +517,7 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .grades button.again { color: var(--bad); }
 .grades button.easy { color: var(--good); }
 .grades button.selected { background: var(--surface-3); box-shadow: inset 0 0 0 2px var(--text); }
+.grades.sm button { min-height: 40px; font-size: 13px; border-radius: 11px; }
 
 /* ── mode grid ─────────────────────────────────────────────────────────── */
 /* Home is four square tiles. Each carries its own state so the grid answers
@@ -929,15 +930,13 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   align-items: center;
   padding: 0 14px;
   border-radius: 16px;
-  background: rgba(23, 23, 28, 0.96);
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5), inset 0 0 0 1px var(--line);
+  background: #000;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   min-width: 78px;
 }
 .next-bar .pts { font-size: 20px; font-weight: 800; color: var(--good); letter-spacing: -0.02em; }
 .next-bar .lbl { font-size: 10.5px; color: var(--text-3); font-weight: 600; }
-.next-bar.perfect .earned { background: var(--good); }
-.next-bar.perfect .pts { color: #052e16; }
-.next-bar.perfect .lbl { color: rgba(5, 46, 22, 0.7); }
+.next-bar.perfect .pts { text-shadow: 0 0 12px var(--good); }
 .next-bar .go {
   flex: 1;
   min-width: 0;
@@ -946,15 +945,15 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   gap: 10px;
   padding: 10px 14px;
   border-radius: 16px;
-  background: var(--text);
-  color: var(--ink);
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
+  background: #000;
+  color: var(--text);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   text-align: left;
-  transition: transform 0.08s;
+  transition: transform 0.08s, background 0.12s;
 }
-.next-bar .go:active { transform: scale(0.98); }
-.next-bar .go .kicker { display: block; font-size: 10.5px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; opacity: 0.55; }
-.next-bar .go .what { display: block; font-size: 15px; font-weight: 700; }
+.next-bar .go:active { transform: scale(0.98); background: var(--surface); }
+.next-bar .go .kicker { display: block; font-size: 10.5px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; color: var(--accent); }
+.next-bar .go .what { display: block; font-size: 17px; font-weight: 800; }
 @keyframes barUp { from { transform: translate(-50%, 24px); opacity: 0; } }
 
 /* ── charts ────────────────────────────────────────────────────────────── */

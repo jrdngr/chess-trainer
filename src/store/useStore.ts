@@ -179,6 +179,12 @@ interface StoreState extends PersistedState {
   removeRepertoire: (repId: string) => void;
 
   grade: (item: TrainingItem, grade: Grade, playedSan: string | null, correct: boolean) => void;
+  /**
+   * Change the grade just given: the card goes back to how it was before
+   * that review and is reviewed again with the new grade, and the log entry
+   * is replaced rather than joined.
+   */
+  regrade: (item: TrainingItem, before: Card, grade: Grade, playedSan: string | null) => void;
   ensureCard: (item: TrainingItem) => Card;
 
   setSettings: (patch: Partial<Settings>) => void;
@@ -566,6 +572,15 @@ export const useStore = create<StoreState>((set, get) => {
         state.cards[item.cardId] ?? createCard(item.cardId, item.repertoireId, item.key, item.fen);
       const expectedSan = item.expected.find((e) => e.preferred)?.san ?? item.expected[0]?.san ?? '';
       commit(reviewed(state, card, gradeValue, { correct, playedSan, expectedSan }));
+    },
+
+    regrade(item, before, gradeValue, playedSan) {
+      const state = get();
+      const expectedSan = item.expected.find((e) => e.preferred)?.san ?? item.expected[0]?.san ?? '';
+      const last = [...state.log].reverse().findIndex((entry) => entry.cardId === item.cardId);
+      const log = last < 0 ? state.log : state.log.filter((_, i) => i !== state.log.length - 1 - last);
+      const again = reviewed({ ...state, log }, before, gradeValue, { correct: true, playedSan, expectedSan });
+      commit(again);
     },
 
     setSettings(patch) {

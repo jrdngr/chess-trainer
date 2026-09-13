@@ -25,6 +25,7 @@ import {
   type TrainingItem,
 } from '../../model/session';
 import { DEFAULT_DRILL, type DrillPrefs } from '../../model/modes';
+import { createCard } from '../../model/srs';
 import { clockSeconds } from '../../model/openingRun';
 import { comboBonus, POINTS, speedBonus } from '../../model/scoring';
 import type { Card, Grade } from '../../model/types';
@@ -51,7 +52,7 @@ export interface DrillSessionProps {
   onExit: () => void;
 }
 
-type Phase = 'ask' | 'correct' | 'wrong';
+type Phase = 'ask' | 'wrong';
 
 /** The queue, in the order the mode asks for. */
 function order(
@@ -112,6 +113,7 @@ export function DrillSession({
   const cards = useStore((s) => s.cards);
   const repertoires = useStore((s) => s.repertoires);
   const grade = useStore((s) => s.grade);
+  const regrade = useStore((s) => s.regrade);
   const ensureCard = useStore((s) => s.ensureCard);
   const logMistake = useStore((s) => s.logMistake);
   const earn = useStore((s) => s.earn);
@@ -143,8 +145,12 @@ export function DrillSession({
   const [why, setWhy] = useState(false);
   const [stats, setStats] = useState({ answered: 0, correct: 0, earned: 0, streak: 0 });
   const [stopped, setStopped] = useState(false);
-  /** The grade a correct answer will get on Continue: read off the clock, changeable by hand. */
-  const [chosen, setChosen] = useState<Grade>('good');
+  /**
+   * The last correct answer, graded off the clock and already on the schedule.
+   * The grade buttons stay on screen for the next position and re-grade it,
+   * so the flow is move, move, move — with a way to say "I guessed that".
+   */
+  const [last, setLast] = useState<{ item: TrainingItem; before: Card; grade: Grade; played: string } | null>(null);
   /** Logged once, however the session ends. */
   const logged = useRef(false);
 
@@ -227,9 +233,8 @@ export function DrillSession({
     if (!item || phase !== 'ask') return;
     const result = checkAnswer(item, move.san);
     setPlayed(move);
-    setPhase(result.correct ? 'correct' : 'wrong');
+    if (!result.correct) setPhase('wrong');
     const took = clock.elapsedNow();
-    if (result.correct) setChosen(gradeForTime(took));
     // What this answer pays: the base, more for a card you had lapsed on, the
     // speed bonus at the moment of the move, and the combo.
     const streak = result.correct ? stats.streak + 1 : 0;
@@ -254,6 +259,16 @@ export function DrillSession({
       streak,
     }));
     if (settings.hapticFeedback) haptic(result.correct ? 12 : [18, 50, 18]);
+    if (result.correct) {
+      // Graded by the clock and straight on to the next position. The card is
+      // kept as it was, so the grade can still be changed from the next screen.
+      const auto = gradeForTime(took);
+      const before = card ?? createCard(item.cardId, item.repertoireId, item.key, item.fen);
+      grade(item, auto, move.san, true);
+      setLast({ item, before, grade: auto, played: move.san });
+      advance(followUp ?? undefined);
+      return;
+    }
     if (!result.correct) {
       // A wrong answer is always a lapse; grade it immediately so the user can
       // spend their attention on understanding rather than on a button.
@@ -330,15 +345,18 @@ export function DrillSession({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [limit, phase, stats.answered, stopped]);
 
-  const onGrade = (value: Grade) => {
-    if (!item) return;
-    grade(item, value, played?.san ?? null, true);
+  /** Change the grade of the last correct answer. Guessed also brings it back soon. */
+  const onRegrade = (value: Grade) => {
+    if (!last || value === last.grade) return;
+    regrade(last.item, last.before, value, last.played);
     if (value === 'again') {
-      requeue();
-      advance();
-      return;
+      setQueue((q) => {
+        const next = [...q];
+        next.splice(Math.min(q.length, index + 4), 0, last.item);
+        return next;
+      });
     }
-    advance(followUp ?? undefined);
+    setLast({ ...last, grade: value });
   };
 
   const highlights = useMemo(() => {
@@ -350,9 +368,6 @@ export function DrillSession({
       if (expectedMove) {
         out.push({ square: expectedMove.from, kind: 'good' }, { square: expectedMove.to, kind: 'good' });
       }
-    }
-    if (phase === 'correct' && played) {
-      out.push({ square: played.from, kind: 'good' }, { square: played.to, kind: 'good' });
     }
     return out;
   }, [phase, played, expectedMove]);
@@ -431,7 +446,6 @@ export function DrillSession({
 
   const side = item.orientation === 'white' ? 'w' : 'b';
   const sideLabel = side === 'w' ? 'White' : 'Black';
-  const playedEntry = item.expected.find((e) => e.san === played?.san);
   const alternatives = item.expected.filter((e) => !e.preferred).map((e) => e.san);
 
   return (
@@ -479,6 +493,24 @@ export function DrillSession({
                 {extra ? ' · extra practice' : ''}
               </div>
             </div>
+            {last && (
+              <>
+                <div className="spacer sm" />
+                <div className="note center">Last move{last.item.expected[0] ? ` · ${last.played}` : ''}</div>
+                <div className="grades sm mt-8">
+                  {(['again', 'hard', 'good', 'easy'] as Grade[]).map((g) => (
+                    <button
+                      key={g}
+                      className={`${g}${last.grade === g ? ' selected' : ''}`}
+                      aria-pressed={last.grade === g}
+                      onClick={() => onRegrade(g)}
+                    >
+                      {GRADE_LABELS[g]}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
             <div className="spacer" />
             <div className="row gap-8">
               <button className="btn soft grow" onClick={() => setShowMoves((v) => !v)}>
@@ -493,41 +525,6 @@ export function DrillSession({
             </div>
             {showMoves && (
               <div className="card movetext mt-8">{sansToMoveText(item.pathSans) || 'Start'}</div>
-            )}
-          </>
-        )}
-
-        {phase === 'correct' && (
-          <>
-            <div className="row between">
-              <div className="verdict ok" style={{ padding: 0 }}>
-                <span className="ico"><Icons.check size={16} /></span>
-                Correct
-                {playedEntry?.preferred === false && <span className="chip good">alternative</span>}
-              </div>
-              <button className="btn primary sm" onClick={() => onGrade(chosen)}>
-                Continue
-                <Icons.next size={16} />
-              </button>
-            </div>
-            <div className="spacer" />
-            {/* How well you knew it, read off the clock: instant, quick, or slow.
-                Guessed is never assumed — only you know that — so it is the one
-                grade that has to be chosen by hand. Tap another to change it. */}
-            <div className="grades">
-              {(['again', 'hard', 'good', 'easy'] as Grade[]).map((g) => (
-                <button
-                  key={g}
-                  className={`${g}${chosen === g ? ' selected' : ''}`}
-                  aria-pressed={chosen === g}
-                  onClick={() => setChosen(g)}
-                >
-                  {GRADE_LABELS[g]}
-                </button>
-              ))}
-            </div>
-            {playedEntry?.note && (
-              <div className="card small muted mt-16">{playedEntry.note}</div>
             )}
           </>
         )}

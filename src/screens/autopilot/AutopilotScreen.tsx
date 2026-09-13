@@ -55,7 +55,7 @@ export function AutopilotScreen({ onExit, onImport }: { onExit: () => void; onIm
   );
 }
 
-/** "Next: Drill · Sicilian: Najdorf", over the end of the last game. */
+/** "Next: Drill", over the end of the last game. */
 function NextBar({
   earned,
   perfect,
@@ -76,9 +76,7 @@ function NextBar({
       <button className="go" onClick={onNext}>
         <span className="grow" style={{ minWidth: 0 }}>
           <span className="kicker">Next</span>
-          <span className="what truncate">
-            {MODE_NAMES[next.mode]} · {next.opening.name}
-          </span>
+          <span className="what truncate">{MODE_NAMES[next.mode]}</span>
         </span>
         <ColorSquare choice={next.color} size={18} />
         <Icons.next size={20} />
