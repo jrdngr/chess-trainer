@@ -216,9 +216,6 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
               <span className={`side ${isUsersTurn(run) ? run.color : other(run.color)}`} />
               {thinking ? 'Thinking…' : isUsersTurn(run) ? 'Your move' : 'Their move'}
             </div>
-            <div className="ctx">
-              {isUsersTurn(run) ? 'Play your prepared move' : 'Walking toward the gap'}
-            </div>
           </div>
         )}
 
@@ -254,14 +251,14 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
                 <span className={`side ${run.color}`} />
                 {run.hole ? `They played ${run.hole.san}` : 'Your prep ends here'}
               </div>
-              <div className="ctx">
-                {run.hole
-                  ? `${run.hole.share}% of games · ${formatGameCount(run.hole.games)}`
-                  : 'Nothing prepared at this position'}
-              </div>
+              {run.hole && (
+                <div className="ctx">
+                  {run.hole.share}% of games · {formatGameCount(run.hole.games)}
+                </div>
+              )}
             </div>
 
-            <Section title="Answer it" aside="one move, then done" />
+            <Section title="Answer it" />
             {options.length === 0 ? (
               <div className="card small muted">
                 The database has nothing here. Add a move from the Repertoire screen instead.
@@ -307,9 +304,6 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
               <Icons.play size={18} />
               Play from here
             </button>
-            <div className="note">
-              Drill will start asking about it, and the next run goes one move further.
-            </div>
           </>
         )}
       </div>

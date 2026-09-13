@@ -806,11 +806,20 @@ export function isExtended(run: Run): boolean {
   return run.prepEnded !== null;
 }
 
-/** Your own moves played past the end of the prep. */
+/**
+ * Your own moves played past the end of the prep.
+ *
+ * Counted by whose ply each one is rather than from how many were played, since
+ * the handover can happen on either side's turn: a line that ends on your move
+ * leaves the opponent to move first, and their move is not one of yours.
+ */
 export function extendedMoves(run: Run): number {
   if (run.prepEnded === null) return 0;
-  const past = run.played.length - run.prepEnded;
-  return Math.max(0, Math.ceil(past / 2));
+  let mine = 0;
+  for (let ply = run.prepEnded; ply < run.played.length; ply += 1) {
+    if ((ply % 2 === 0) === (run.color === 'w')) mine += 1;
+  }
+  return mine;
 }
 
 /** Record one accepted move in extended play, with the opponent's reply. */
@@ -828,6 +837,20 @@ export function playExtended(run: Run, san: string, reply: string | null): Run {
     played: [...run.played, ...sans],
     survived: run.survived + 1,
   };
+}
+
+/**
+ * The opponent's move on its own, once the engine has chosen one.
+ *
+ * Extended play normally takes your move and their answer together, so this is
+ * only for the turn that starts it: a line ends on a move of yours, which hands
+ * the run to the engine with the opponent still to move. Their move earns
+ * nothing — the score counts moves you survived.
+ */
+export function playExtendedReply(run: Run, san: string): Run {
+  const applied = applySan(run.fen, san);
+  if (!applied) return { ...run, over: true };
+  return { ...run, fen: applied.after, played: [...run.played, san] };
 }
 
 /**

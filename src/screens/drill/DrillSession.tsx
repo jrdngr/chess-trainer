@@ -410,9 +410,6 @@ export function DrillSession({ items, mode, title, prefs, onExit }: DrillSession
                 </button>
               ))}
             </div>
-            <div className="center faint tiny" style={{ marginTop: 8 }}>
-              How well did you know it?
-            </div>
             {playedEntry?.note && (
               <div className="card small muted mt-16">{playedEntry.note}</div>
             )}

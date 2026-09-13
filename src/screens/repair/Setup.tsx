@@ -99,7 +99,7 @@ export function Setup({
   if (games.length === 0 && state.mistakes.length === 0) {
     return (
       <>
-        <AppBar title="Repair" subtitle="Fix what your own games got wrong." onClose={onExit} />
+        <AppBar title="Repair" onClose={onExit} />
         <div className="screen no-nav">
           <div className="empty">
             <div className="t">No games yet</div>

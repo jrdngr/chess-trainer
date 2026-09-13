@@ -283,5 +283,5 @@ export const MODE_NAMES: Record<NextUpMode, string> = {
   drill: 'Drill',
   growth: 'Growth',
   repair: 'Repair',
-  openingRun: 'Opening Run',
+  openingRun: 'Run',
 };

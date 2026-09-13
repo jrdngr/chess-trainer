@@ -28,7 +28,7 @@ export function Setup({
 
   return (
     <>
-      <AppBar title="Play" subtitle="A game against the engine." onClose={onExit} />
+      <AppBar title="Play" onClose={onExit} />
 
       <div className="screen no-nav">
         <button className="btn primary block xl" onClick={() => onStart(prefs)}>

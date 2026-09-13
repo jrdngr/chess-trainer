@@ -22,6 +22,7 @@ import {
   judgeByEval,
   openingSource,
   playExtended,
+  playExtendedReply,
   startOpeningRun,
   lineOdds,
   lineWeakness,
@@ -866,6 +867,32 @@ describe('extended mode', () => {
   it('refuses to apply a move that is not legal', () => {
     const start = extend(startRepertoireRun([rep], 'w', { seed: 1 })!);
     expect(playExtended(start, 'e5', null).over).toBe(true);
+  });
+
+  it('hands over with the opponent to move, since a line ends on yours', () => {
+    // The bug this guards: extended play that opens on their turn used to wait
+    // for a move from you, with the board yours to move and nothing to move.
+    const finished = finish(source, startRepertoireRun([rep], 'w', { seed: 1 })!);
+    const carried = extend(finished);
+    expect(isUsersTurn(carried)).toBe(false);
+  });
+
+  it('takes the opponent\'s move on its own, scoring nothing for it', () => {
+    const start = extend(play(source, startRepertoireRun([rep], 'w', { seed: 1 })!, 'd4').run);
+    expect(isUsersTurn(start)).toBe(false);
+    const next = playExtendedReply(start, 'd5');
+    expect(next.played).toEqual(['d4', 'd5']);
+    expect(next.survived).toBe(start.survived);
+    expect(isUsersTurn(next)).toBe(true);
+    expect(playedIsLegal(next)).toBe(true);
+    // Their move past the prep is not one of yours.
+    expect(extendedMoves(next)).toBe(0);
+    expect(extendedMoves(playExtended(next, 'c4', 'e6'))).toBe(1);
+  });
+
+  it('refuses an opponent move that is not legal', () => {
+    const start = extend(play(source, startRepertoireRun([rep], 'w', { seed: 1 })!, 'd4').run);
+    expect(playExtendedReply(start, 'd4').over).toBe(true);
   });
 
   it('counts only your own moves as being past the prep', () => {

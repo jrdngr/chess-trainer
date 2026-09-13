@@ -12,7 +12,6 @@ import {
 } from '../../components/ui';
 import { applySan, lastMoveOf, sansToMoveText, walkSan, type Square } from '../../chess/core';
 import {
-  BLUNDER_LIMIT,
   extendedMoves,
   fullLine,
   gradeOf,
@@ -168,9 +167,6 @@ export function Reveal({
     }
   };
 
-  const survivedLabel = run.survived === 1 ? '1 move' : `${run.survived} moves`;
-  const prep = run.source === 'book' ? 'the book' : 'your prep';
-
   /**
    * Shared by both endings, which differ in everything but this.
    *
@@ -197,7 +193,7 @@ export function Reveal({
   return (
     <>
       <AppBar
-        title="Opening Run"
+        title="Run"
         subtitle={survived ? 'Survived' : 'Run over'}
         onClose={onExit}
         actions={<span className="chip num wide">{run.survived}</span>}
@@ -217,7 +213,6 @@ export function Reveal({
 
         <div className="spacer sm" />
         <Strip items={strip} cursor={cursor} max={line.sans.length} onSeek={seek} />
-        <div className="note center">{whereYouAre(cursor, line.deathPly, survived)}</div>
         <div className="spacer" />
 
         {death ? (
@@ -247,49 +242,31 @@ export function Reveal({
                 <div className="v">{death.played ?? '—'}</div>
               </div>
             </div>
-            <div className="note center">{deathNote(death, run)}</div>
           </>
         ) : (
-          <>
-            <div className="row between">
-              <div className={`verdict ${GRADE_TONES[grade]}`} style={{ padding: 0 }}>
-                <span className="ico">
-                  <Icons.check size={18} />
-                </span>
-                {grade === 'yellow' ? 'Complete, out of prep' : 'Line complete'}
-              </div>
-              {actions}
+          <div className="row between">
+            <div className={`verdict ${GRADE_TONES[grade]}`} style={{ padding: 0 }}>
+              <span className="ico">
+                <Icons.check size={18} />
+              </span>
+              {grade === 'yellow' ? 'Complete, out of prep' : 'Line complete'}
             </div>
-            <div className="note center">
-              {past > 0
-                ? `${survivedLabel} without a slip, ${past} of them past ${prep} — the game itself ran out before you did.`
-                : `You played the whole line — ${survivedLabel} without a slip. That is as far as ${prep} goes.`}
-            </div>
-          </>
+            {actions}
+          </div>
         )}
 
         <div className="spacer" />
         <div className="actions">
           {survived && !isExtended(run) && (
-            <>
-              <button className="btn accent block xl" onClick={onContinueExtended}>
-                <Icons.bolt size={18} />
-                Continue in extended mode
-              </button>
-              <div className="note center" style={{ marginTop: -2 }}>
-                The prep is done, so the engine takes over the judging. The run continues and your
-                score keeps counting while your moves stay sound.
-              </div>
-            </>
+            <button className="btn accent block xl" onClick={onContinueExtended}>
+              <Icons.bolt size={18} />
+              Continue in extended mode
+            </button>
           )}
           <button className="btn block" onClick={() => onPlayOn(shownFen)}>
             <Icons.play size={18} />
             Play from here
           </button>
-          <div className="note center" style={{ marginTop: -2 }}>
-            Take the position on the board on against the engine. Nothing there counts against
-            your record.
-          </div>
         </div>
 
         <Section title="The line" />
@@ -338,32 +315,4 @@ function deathTitle(death: Death, leftPrep: boolean): string {
     default:
       return leftPrep ? 'Run over, out of prep' : 'Run over';
   }
-}
-
-function deathNote(death: Death, run: Run): string {
-  if (death.cause === 'offprep') {
-    return 'A real move, just not one you had prepared. Add it to your repertoire and it will not stop a run again.';
-  }
-  if (death.cause === 'blunder') {
-    return `Past your prep the engine allows a drop of ${(BLUNDER_LIMIT / 100).toFixed(2)} before calling it a blunder.`;
-  }
-  if (death.expected.length > 1) {
-    const shown = death.expected.slice(0, 6).join(', ');
-    return `Any of these would have counted: ${shown}${death.expected.length > 6 ? '…' : ''}`;
-  }
-  if (death.expected.length === 1) {
-    return run.source === 'book'
-      ? 'The only move the database has ever seen here.'
-      : 'The only move you have prepared here — your repertoire is one move wide at this position.';
-  }
-  return 'Nothing is prepared here.';
-}
-
-/** Where the post-mortem cursor sits, relative to the end of the run. */
-function whereYouAre(cursor: number, deathPly: number, survived: boolean): string {
-  if (cursor === deathPly) return survived ? 'The end of the line' : 'Where the run ended';
-  const distance = Math.abs(cursor - deathPly);
-  const moves = `${distance} move${distance === 1 ? '' : 's'}`;
-  const anchor = survived ? 'the end' : 'your mistake';
-  return cursor < deathPly ? `${moves} before ${anchor}` : `${moves} after ${anchor}`;
 }

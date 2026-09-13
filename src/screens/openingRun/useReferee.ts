@@ -29,37 +29,46 @@ function scoreOf(line: EngineLine): number | null {
  *
  * It is asked about two positions in turn: the one you are about to move in,
  * which gives the score your move is measured against, and the one you leave
- * behind, which gives both the verdict and the opponent's reply. It runs
- * whether or not evaluations are switched on elsewhere — that setting is about
- * seeing numbers during recall, and here the engine is the judge. A short fixed
- * think keeps it quick on the asm.js build.
+ * behind, which gives both the verdict and the opponent's reply. It also plays
+ * for the opponent when extended play opens on their turn, which is the usual
+ * case — a line ends on a move of yours. It runs whether or not evaluations are
+ * switched on elsewhere — that setting is about seeing numbers during recall,
+ * and here the engine is the judge. A short fixed think keeps it quick on the
+ * asm.js build.
  */
 export function useReferee({
   run,
   active,
   onVerdict,
+  onOpponentMove,
 }: {
   run: Run | null;
   active: boolean;
   onVerdict: (verdict: Verdict) => void;
+  /** Their move, when the handover leaves them to play. */
+  onOpponentMove: (san: string) => void;
 }) {
   const [pending, setPending] = useState<Pending | null>(null);
   /** The engine's read on the position you are about to move in. */
   const [baseline, setBaseline] = useState<{ fen: string; cp: number } | null>(null);
   const verdict = useRef(onVerdict);
   verdict.current = onVerdict;
+  const opponent = useRef(onOpponentMove);
+  opponent.current = onOpponentMove;
 
   const gameOver = run ? positionStatus(run.fen).gameOver : false;
-  const probeFen =
-    !active || !run || run.over || gameOver
-      ? null
-      : pending
-        ? baseline?.fen === pending.from
-          ? pending.after
-          : pending.from
-        : isUsersTurn(run)
-          ? run.fen
-          : null;
+  const judging = !!run && active && !run.over && !gameOver;
+  /** True while the engine is being asked for the opponent's move. */
+  const replying = judging && !pending && !isUsersTurn(run);
+  // Their turn is probed like yours — the position itself — for a move rather
+  // than for a baseline.
+  const probeFen = !judging
+    ? null
+    : pending
+      ? baseline?.fen === pending.from
+        ? pending.after
+        : pending.from
+      : run.fen;
   const { snapshot } = useEngine(probeFen, {
     enabled: active,
     movetime: 700,
@@ -96,8 +105,19 @@ export function useReferee({
     verdict.current({ san: pending.san, ok: true, reply });
   }, [active, run, pending, baseline, snapshot]);
 
+  /** Play for the opponent when the handover left them to move. */
+  useEffect(() => {
+    if (!replying || !run) return;
+    // A stopped search reports back under its old position, so check the fen.
+    if (snapshot.fen !== run.fen || snapshot.thinking) return;
+    const best = snapshot.lines[0]?.pv[0];
+    const move = best ? applyUci(run.fen, best) : null;
+    if (move) opponent.current(move.san);
+  }, [replying, run, snapshot]);
+
   return {
     pending,
+    replying,
     /** Hand a move to the referee; the board shows it meanwhile. */
     submit(move: LegalMove) {
       if (!run || pending) return;

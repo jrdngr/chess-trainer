@@ -160,7 +160,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
 
         <div className="mode-grid">
           <Tile
-            name="Opening Run"
+            name="Run"
             tag={
               openingRun.runs > 0
                 ? { text: `best ${openingRun.best}` }
@@ -241,11 +241,6 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
             wide
             name="Play"
             tag={{ text: levelById(state.settings.play.level).name }}
-            art={
-              <div className="faint tiny">
-                A full game against the engine. Keep the opening.
-              </div>
-            }
             onClick={() => onOpenMode('play')}
           />
         </div>
@@ -253,8 +248,8 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
         <Section title="Repertoire" />
         {perRep.length === 0 ? (
           <div className="card small muted">
-            Nothing prepared yet. Play a game and save the opening, or survive a line in Opening
-            Run — both write into your repertoire, and everything else here works from it.
+            Nothing prepared yet. Play a game and save the opening, or survive a line in Run —
+            both write into your repertoire, and everything else here works from it.
           </div>
         ) : (
           <div className="list">
@@ -378,7 +373,8 @@ function Tile({
 }: {
   name: string;
   tag: Tag;
-  art: ReactNode;
+  /** The gauge or bar under the name. Play has no queue to draw. */
+  art?: ReactNode;
   /** Spans both columns, for a mode that is an action rather than a queue. */
   wide?: boolean;
   onClick: () => void;
@@ -390,7 +386,7 @@ function Tile({
         <span className={`tag${tag.tone ? ` ${tag.tone}` : ''}`}>{tag.text}</span>
       </div>
       <div className="fill" />
-      <div className="art">{art}</div>
+      {art && <div className="art">{art}</div>}
     </button>
   );
 }

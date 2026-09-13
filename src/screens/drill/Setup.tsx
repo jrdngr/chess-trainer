@@ -40,7 +40,7 @@ export function Setup({
 
   return (
     <>
-      <AppBar title="Drill" subtitle="Answer until you want to stop." onClose={onExit} />
+      <AppBar title="Drill" onClose={onExit} />
 
       <div className="screen no-nav">
         <button

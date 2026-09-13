@@ -126,11 +126,6 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
               </span>
             </div>
           </div>
-          <div className="note center">
-            {queue.length === 0
-              ? 'Nothing matched these settings.'
-              : 'That is everything at these settings. Anything you added now turns up in Drill.'}
-          </div>
           <button className="btn primary block xl mt-16" onClick={onExit}>
             Back to options
           </button>
@@ -248,12 +243,6 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
         <Section title="How you got here" />
         <div className="card">
           <div className="movetext">{item.lineText}</div>
-        </div>
-
-        <div className="note">
-          {unprepared
-            ? `You reached this in ${item.games} ${item.games === 1 ? 'game' : 'games'} with nothing prepared. Picking a move writes it into your repertoire, so Drill will start asking about it.`
-            : `You played ${item.played.map((p) => `${p.san} ×${p.count}`).join(', ')} here. Your repertoire says ${item.expected.join(' or ')}.`}
         </div>
 
         {answered && item.path.length > 0 && (

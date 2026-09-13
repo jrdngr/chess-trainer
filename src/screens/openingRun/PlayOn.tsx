@@ -109,7 +109,6 @@ export function PlayOn({
               {engineTurn ? <span className="spinner" /> : <span className={`side ${color}`} />}
               {engineTurn ? 'Thinking' : 'Your move'}
             </div>
-            <div className="ctx">Nothing here counts against your record</div>
           </div>
         )}
 

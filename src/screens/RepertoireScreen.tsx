@@ -87,7 +87,7 @@ export function RepertoireScreen({ onStart, onImport, onExploreFrom }: Repertoir
         {sides.length === 0 && (
           <Empty
             title="No openings yet"
-            hint="Play a game and keep the opening, or survive a line in Opening Run. Both write into your repertoire."
+            hint="Play a game and keep the opening, or survive a line in Run. Both write into your repertoire."
           />
         )}
 

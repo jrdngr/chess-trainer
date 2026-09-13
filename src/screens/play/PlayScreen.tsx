@@ -286,11 +286,6 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
                 Save this opening
               </button>
             )}
-            {saved && (
-              <div className="note center">
-                Saved. It will turn up in Drill, and Gap will start looking for what it misses.
-              </div>
-            )}
           </>
         ) : (
           <div className="prompt">

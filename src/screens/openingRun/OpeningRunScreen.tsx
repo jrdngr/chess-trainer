@@ -18,6 +18,7 @@ import {
   outcomeOf,
   play,
   playExtended,
+  playExtendedReply,
   takeHint,
   weaknessFromCards,
   type LineSource,
@@ -186,12 +187,16 @@ export function OpeningRunScreen({ auto, onExit }: { auto?: boolean; onExit: () 
       buzz(10);
       setGame({ source, run: playExtended(run, verdict.san, verdict.reply) });
     },
+    onOpponentMove: (san) => {
+      if (!run || !source || settled.current) return;
+      setGame({ source, run: playExtendedReply(run, san) });
+    },
   });
 
   const clock = useRunClock({
     mode: prefs.clock,
     runId: run?.id ?? null,
-    active: live && myTurn && !thinking && !referee.pending,
+    active: live && myTurn && !thinking && !referee.pending && !referee.replying,
     onExpire: () => {
       if (!run || !source || settled.current || !live) return;
       die(run, { cause: 'time', expected: movesHere(source, run) });
@@ -372,7 +377,7 @@ export function OpeningRunScreen({ auto, onExit }: { auto?: boolean; onExit: () 
   return (
     <>
       <AppBar
-        title="Opening Run"
+        title="Run"
         onClose={onExit}
         actions={
           <div className="row gap-6">
@@ -408,11 +413,7 @@ export function OpeningRunScreen({ auto, onExit }: { auto?: boolean; onExit: () 
               </span>
               Out of prep
             </div>
-            <div className="center small muted">
-              <b>{offPrep.san}</b> is a real move
-              {offPrep.opening ? ` — the ${offPrep.opening}` : ''} — but it is not in your
-              repertoire here.
-            </div>
+            {offPrep.opening && <div className="center small muted">{offPrep.opening}</div>}
             <div className="compare mt-12">
               <div>
                 <div className="k">Your prep</div>
@@ -441,10 +442,6 @@ export function OpeningRunScreen({ auto, onExit }: { auto?: boolean; onExit: () 
                 End the run here
               </button>
             </div>
-            <div className="note center">
-              Carrying on hands the judging to the book, and the run is graded as an out-of-prep
-              one however it ends.
-            </div>
           </>
         )}
 
@@ -452,23 +449,16 @@ export function OpeningRunScreen({ auto, onExit }: { auto?: boolean; onExit: () 
           <>
             <div className="prompt">
               <div className="who">
-                {thinking || referee.pending ? (
+                {thinking || referee.pending || referee.replying ? (
                   <span className="spinner" />
                 ) : (
                   <span className={`side ${run.color}`} />
                 )}
-                {referee.pending ? 'Judging' : thinking ? 'Reply' : 'Your move'}
-              </div>
-              <div className="ctx">
-                {hintSquare
-                  ? `The move starts on ${hintSquare}`
-                  : extended
-                    ? 'Past your prep — the engine is calling blunders now'
-                    : run.leftPrep
-                      ? 'Out of your prep — the book is judging now'
-                      : run.reverse
-                        ? 'Play the side your repertoire prepares against'
-                        : 'One mistake ends the run'}
+                {referee.pending
+                  ? 'Judging'
+                  : thinking || referee.replying
+                    ? 'Reply'
+                    : 'Your move'}
               </div>
             </div>
             {run.hints > 0 && !extended && (

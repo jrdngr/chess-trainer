@@ -38,13 +38,13 @@ export function Lobby({
   if (reps.length === 0) {
     return (
       <>
-        <AppBar title="Growth" subtitle="One move wider, every run." onClose={onExit} />
+        <AppBar title="Growth" onClose={onExit} />
         <div className="screen no-nav">
           <div className="empty">
             <div className="t">Nothing to grow yet</div>
             <div className="h">
-              Growth extends prep you already have. Survive a line in Opening Run, or save
-              the opening from a game in Play, and it will have something to work on.
+              Growth extends prep you already have. Survive a line in Run, or save the opening
+              from a game in Play, and it will have something to work on.
             </div>
           </div>
           <button className="btn primary block xl" onClick={onNoWork}>
