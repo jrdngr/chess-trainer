@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_DRILL,
-  DEFAULT_GAP,
+  DEFAULT_GROWTH,
   DEFAULT_REPAIR,
   EMPTY_REPAIR_RECORD,
   gamesLabel,
@@ -12,10 +12,14 @@ import {
 } from './modes';
 
 describe('mode defaults', () => {
+  it('asks Growth for replies with a real following, not every oddity', () => {
+    expect(DEFAULT_GROWTH.minShare).toBe(1);
+    expect(DEFAULT_GROWTH.maxPly).toBe(18);
+  });
+
   it('starts every mode unnarrowed', () => {
     expect(DEFAULT_DRILL.repertoireId).toBe('');
     expect(DEFAULT_REPAIR.repertoireId).toBe('');
-    expect(DEFAULT_GAP.repertoireId).toBe('');
     expect(DEFAULT_DRILL.side).toBe('both');
     expect(DEFAULT_REPAIR.kinds).toBe('both');
   });
@@ -23,7 +27,6 @@ describe('mode defaults', () => {
   it('leaves the narrowing options off', () => {
     expect(DEFAULT_DRILL.weakFirst).toBe(false);
     expect(DEFAULT_REPAIR.lossesOnly).toBe(false);
-    expect(DEFAULT_GAP.quickFix).toBe(false);
   });
 
   it('asks for a position to have come up more than once', () => {

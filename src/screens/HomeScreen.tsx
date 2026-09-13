@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { AppBar, IconButton, Icons, Section, Sheet } from '../components/ui';
 import { measureCoverage } from '../model/gameAnalysis';
-import { findGaps } from '../model/gaps';
+import { findHoles } from '../model/growth';
 import { levelById } from '../model/play';
 import { buildRepairs } from '../model/repair';
 import { GRADES, gradeLabel, type RunGrade } from '../model/openingRun';
@@ -12,7 +12,7 @@ import { countDue, DAY, forecast, masteryBuckets, retention } from '../model/srs
 import { itemsFor, repertoireList, useStore } from '../store/useStore';
 import type { Repertoire } from '../model/types';
 
-export type ModeId = 'drill' | 'openingRun' | 'repair' | 'gap' | 'play';
+export type ModeId = 'drill' | 'openingRun' | 'repair' | 'growth' | 'play';
 
 export interface HomeScreenProps {
   /** Launching one repertoire straight into a session, from the sheet below. */
@@ -73,19 +73,19 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
   const unseenTotal = totalItems - allCards.length + mastery.unseen;
 
   /** Replies the database plays that nothing in the repertoire answers. */
-  const gapPrefs = state.settings.gap;
+  const growthPrefs = state.settings.growth;
   const gapCount = useMemo(
     () =>
       perRep.reduce(
         (sum, entry) =>
           sum +
-          findGaps(entry.rep, referenceIndex(), {
-            minShare: gapPrefs.minShare,
-            maxPly: gapPrefs.maxPly,
+          findHoles(entry.rep, referenceIndex(), {
+            minShare: growthPrefs.minShare,
+            maxPly: growthPrefs.maxPly,
           }).length,
         0,
       ),
-    [perRep, gapPrefs.minShare, gapPrefs.maxPly],
+    [perRep, growthPrefs.minShare, growthPrefs.maxPly],
   );
   /**
    * Gaps against the breadth of the prep they sit in. A repertoire with two
@@ -188,7 +188,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
             onClick={() => onOpenMode('repair')}
           />
           <Tile
-            name="Gap"
+            name="Growth"
             tag={
               totalItems === 0
                 ? { text: 'empty' }
@@ -208,7 +208,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
                 }
               />
             }
-            onClick={() => onOpenMode('gap')}
+            onClick={() => onOpenMode('growth')}
           />
           {/* Play is where a repertoire comes from, so it spans the row rather
               than sitting alone in a corner of it. */}

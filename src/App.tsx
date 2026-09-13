@@ -8,7 +8,7 @@ import { SettingsSheet } from './screens/SettingsSheet';
 import { HomeScreen, type ModeId } from './screens/HomeScreen';
 import { OpeningRunScreen } from './screens/openingRun/OpeningRunScreen';
 import { RepairScreen } from './screens/repair/RepairScreen';
-import { GapScreen } from './screens/gap/GapScreen';
+import { GrowthScreen } from './screens/growth/GrowthScreen';
 import { DrillScreen } from './screens/drill/DrillScreen';
 import { PlayScreen } from './screens/play/PlayScreen';
 import { DrillSession } from './screens/drill/DrillSession';
@@ -62,8 +62,8 @@ export default function App() {
       }}
       onExit={() => setMode(null)}
     />
-  ) : mode === 'gap' ? (
-    <GapScreen onExit={() => setMode(null)} />
+  ) : mode === 'growth' ? (
+    <GrowthScreen onExit={() => setMode(null)} />
   ) : mode === 'play' ? (
     <PlayScreen onExit={() => setMode(null)} />
   ) : session ? (

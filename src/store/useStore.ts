@@ -21,7 +21,7 @@ import type {
 } from '../model/types';
 import {
   DEFAULT_DRILL,
-  DEFAULT_GAP,
+  DEFAULT_GROWTH,
   DEFAULT_PLAY,
   DEFAULT_REPAIR,
   EMPTY_REPAIR_RECORD,
@@ -55,7 +55,7 @@ export const DEFAULT_SETTINGS: Settings = {
   drill: { ...DEFAULT_DRILL },
   repair: { ...DEFAULT_REPAIR },
   play: { ...DEFAULT_PLAY },
-  gap: { ...DEFAULT_GAP },
+  growth: { ...DEFAULT_GROWTH },
 };
 
 /**
@@ -77,7 +77,7 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
     drill: { ...DEFAULT_DRILL, ...known.drill },
     repair: { ...DEFAULT_REPAIR, ...known.repair },
     play: { ...DEFAULT_PLAY, ...known.play },
-    gap: { ...DEFAULT_GAP, ...known.gap },
+    growth: { ...DEFAULT_GROWTH, ...known.growth },
   };
 }
 
@@ -91,8 +91,9 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
  * 5: each mode keeps its own options; Punish keeps a record.
  * 6: Punish became Repair, which is built from imported games.
  * 7: no seeded repertoires — everyone starts empty and builds their own.
+ * 8: Gap became Growth, and keeps different options.
  */
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 interface PersistedState {
   version: number;
@@ -135,7 +136,7 @@ interface StoreState extends PersistedState {
   setSettings: (patch: Partial<Settings>) => void;
   setOpeningRunPrefs: (patch: Partial<OpeningRunPrefs>) => void;
   /** Patch one mode's own options, without touching the rest of settings. */
-  setModePrefs: <K extends 'drill' | 'repair' | 'gap' | 'play'>(
+  setModePrefs: <K extends 'drill' | 'repair' | 'growth' | 'play'>(
     mode: K,
     patch: Partial<Settings[K]>,
   ) => void;

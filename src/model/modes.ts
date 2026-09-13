@@ -131,31 +131,18 @@ export const DEFAULT_PLAY: PlayPrefs = {
   takeBacks: true,
 };
 
-/* ── Gap ────────────────────────────────────────────────────────────────── */
+/* ── Growth ─────────────────────────────────────────────────────────────── */
 
-/** How often a reply has to be played before a hole in the prep counts. */
+/** How often a reply has to be played before it is worth preparing for. */
 export const SHARE_STEPS = [3, 1, 0.2] as const;
-export const GAP_DEPTHS = [8, 12, 18] as const;
+export const GROWTH_DEPTHS = [8, 12, 18] as const;
 
-export type GapSort = 'shallow' | 'popular';
-
-export interface GapPrefs {
-  /** '' — every repertoire. */
-  repertoireId: string;
+export interface GrowthPrefs {
   minShare: number;
   maxPly: number;
-  sort: GapSort;
-  /** Tapping a gap adds the book's most played answer instead of asking. */
-  quickFix: boolean;
 }
 
-export const DEFAULT_GAP: GapPrefs = {
-  repertoireId: '',
-  minShare: 1,
-  maxPly: 18,
-  sort: 'shallow',
-  quickFix: false,
-};
+export const DEFAULT_GROWTH: GrowthPrefs = { minShare: 1, maxPly: 18 };
 
 export function shareLabel(share: number): string {
   return share >= 1 ? `${share}% and up` : 'Anything played';
