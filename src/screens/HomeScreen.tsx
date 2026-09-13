@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { AppBar, Icons, Section, Sheet } from '../components/ui';
+import { Icons, Section, Sheet } from '../components/ui';
 import { SelectionBar } from '../components/Selection';
+import { ScoreStrip } from '../components/ScoreBar';
 import { openingTree } from '../model/openingTree';
 import { itemsInRegion, lineInRegion, regionOf, repertoiresIn } from '../model/selection';
 import { measureCoverage } from '../model/gameAnalysis';
@@ -137,11 +138,10 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
 
   return (
     <>
-      <AppBar large />
-
-      <div className="screen">
+      <div className="screen home">
         <StorageWarning />
         <SelectionBar />
+        <ScoreStrip />
 
         <button className="autopilot" onClick={() => onOpenMode('autopilot')}>
           <span className="ico">

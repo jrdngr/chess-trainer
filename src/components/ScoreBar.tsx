@@ -72,3 +72,32 @@ export function ScoreBar() {
     </div>
   );
 }
+
+/**
+ * The score as it stands, for Home: the colour being worked toward, the fill
+ * to the next milestone, and the total. Tapping it opens Stats.
+ */
+export function ScoreStrip() {
+  const total = useStore((s) => s.score.total);
+  const openStats = useStore((s) => s.openStats);
+  const milestone = milestoneOf(total);
+  return (
+    <button
+      className="score-strip"
+      style={{ ['--tier' as string]: milestone.next.color }}
+      onClick={() => openStats('')}
+      aria-label="Score and stats"
+    >
+      <span className="head">
+        <span className="tier">
+          <i />
+          {milestone.heldLabel ? `${milestone.heldLabel} · toward ${milestone.nextLabel}` : `Toward ${milestone.nextLabel}`}
+        </span>
+        <span className="total num">{total}</span>
+      </span>
+      <span className="track">
+        <span className="fill" style={{ width: `${milestone.progress * 100}%` }} />
+      </span>
+    </button>
+  );
+}
