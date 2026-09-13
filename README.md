@@ -1,11 +1,35 @@
 # Repertoire Trainer
 
-A mobile-first chess opening repertoire trainer. Build a repertoire as a move
-tree, drill it position by position with spaced repetition, and explore
-reference theory without leaving the training loop.
+A mobile-first chess opening trainer built around one idea: you are never
+forced down a line. You pick a side and a region of the opening tree — the
+whole book, one first move, a family like the King's Indian, or a single
+variation — and every mode works inside it. A move keeps you alive if it is
+prepared or it is theory. Autopilot chooses the next game for you, points are
+credited to every opening a line goes through, and a Stats tab keeps the
+record.
 
 This is a **UX prototype**, not a product. It exists to answer questions about
 what the eventual native app should be.
+
+## Goals and direction
+
+**Flexibility across lines is the point.** Other trainers make you pick a line
+and then play its moves. This one lets you play your repertoire, or any move
+within the opening that leads to a valid line. That minimises the choices you
+have to make up front and makes it feel like a game rather than training.
+Everything below leans into it.
+
+**One selection, everywhere.** The side and the opening are chosen once, at the
+top of Home and every setup screen, and every mode honours them. Setup screens
+only hold what is specific to that mode.
+
+**Autopilot is the main loop.** A recommendation engine chooses a mode, an
+opening inside the selection and a colour, one game after another, with no
+trip back to Home in between. Modes stay selectable by hand.
+
+**Optimise for fun.** Run is the most fun, Drill less, Growth and Repair least.
+The engine tilts toward fun without ignoring need. Every mode pays points, the
+points climb a milestone ladder, and each opening keeps its own record.
 
 ## Run it
 
@@ -19,389 +43,231 @@ npm run dev          # http://localhost:5173, also served on your LAN IP
 full-screen, chrome-free app.
 
 ```bash
-npm test             # 283 tests: chess rules, tree, SRS, PGN, analysis, opening runs, seed data
+npm test             # chess rules, tree, SRS, PGN, analysis, runs, regions, scoring, the engine
 npm run typecheck
 npm run build        # production build into dist/
 npm run artifact     # repackage dist/ for publishing as a Claude Artifact
 ```
 
-## What is in here
+## The selection
+
+Two controls sit at the top of Home and every setup screen: a colour square
+(white, black, or a diagonally split square for random) and the opening. Live
+games show the selection as the app bar subtitle and do not let it change.
+
+The opening is picked from a tree. The root is *any opening*. Under it sit the
+first moves, ordered by how often they are played; under each first move the
+families; under each family its variations, as deep as the book's names go.
+Most branches are three deep. The Najdorf branch is five. Any level can be
+selected, and any level can be starred, which lifts it to the top of its level
+in the picker and lifts it in the engine.
+
+Nesting follows the moves first and the book's family names second, so the
+Fianchetto King's Indian files under the King's Indian even though its move
+order never passes through the position the book names.
+
+Selecting a node means *anything that goes through here*. That is judged on
+positions rather than move orders, so a transposition counts. Before the line
+reaches the position that names the opening it is *on the way*, and only moves
+the book can still reach the opening from are allowed; once it has reached it,
+anything inside is fair.
+
+## Autopilot
+
+Autopilot plays one game after another. A game is one Run, ten Drill answers,
+one Growth run, or five Repair items. When a game ends, a bar over the mode's
+own ending shows what it earned and names the next game — "Run · Sicilian:
+Najdorf" with the colour square — and one tap starts it. The mode's own
+ending stays on screen behind the bar, so a Run's reveal can still be read.
+Stop is the close button in the app bar, and stopping shows the session's
+tally: games, points, milestones crossed, openings touched. Play is not in the
+rotation; a full game breaks the rhythm and is one tap away by hand.
+
+Under Autopilot a Run or Drill is always on a ten-second clock, with no hints
+and no extended play.
+
+### The recommendation engine
+
+`src/model/recommend.ts` ranks every candidate of (mode, opening, colour)
+inside the selection:
+
+- **Need** is how loudly the work asks: cards due, holes in the prep, positions
+  your games disagree with, prep no run has tested. Each saturates, so two
+  hundred due cards are not ten times louder than twenty.
+- **Staleness** is how long that opening has gone without that mode, measured
+  against the other candidates rather than the clock. Candidates never played
+  are all equally stale.
+- **Star**: an opening that is starred, or sits inside one that is, is worth
+  1.6×.
+- **Fun**: Run 1.0, Drill 0.7, Repair 0.5, Growth 0.4.
+- **Brake**: for every one of the last five games that was this mode, its
+  weight is multiplied by 0.6. Counted over a window rather than consecutively,
+  so two modes taking turns still let a third come round.
+
+Score is need × staleness × star × fun × brake. Need is measured on
+everything inside an opening, so a family asks at least as loudly as any of
+its variations; the winner is then narrowed while a variation holds more than
+half of its parent's work, so a game lands on the variation that wants it and
+stays at the family when the need is spread thin. Only openings the player has
+prep inside are candidates, besides the selection itself, and Run in the
+selection always qualifies, so a brand new install gets a Run through the book.
+
+## Modes
+
+### Run
+One secret line, played until the first mistake. Inside the region, a move
+keeps you alive if it is in your repertoire or in the book. The opponent
+replies in proportion to how often each move is played, confined to the
+region; on the way in, confined to moves the book can still reach the opening
+from. Past the end of the book your prep is the only referee, and past the end
+of the prep the line is complete.
+
+Where you have prepared lines through the region, one is drawn to steer the
+opponent — weighted by how often you would actually meet it, and by how badly
+you answer it when "target weak spots" is on. Where you have none, the
+opponent walks you down the opening's own move order.
+
+A theory move that your prep does not have pauses the run: add it and carry
+on, carry on without adding it, or stop. Only a move nobody plays is a plain
+loss. That makes four endings, coloured apart: green (finished, never left
+prep), yellow (finished, having left it), red (a move nobody plays), purple
+(ended out of prep).
+
+Dying buys the reveal: the line named, the board a replay of the whole line
+parked on the position that ended it, the mistake in red beside the prepared
+move in green. Save line writes what you survived into your repertoire.
+
+Options: clock (off, 10s, 30s a move), hints (the square a move starts from,
+never where it lands), target weak spots, extended mode (past the prep, the
+engine judges and a blunder ends the run).
 
 ### Drill
-The main loop. A position appears with the side to move, you play a move on
-the board, and it is checked against your repertoire.
+Positions inside the region, drawn from the schedule: due first, then new,
+then extra practice. Right earns a grade of Guessed / Hard / Knew it / Easy;
+wrong is graded `again` automatically and offers **Why?**, **Show line** and
+**Explore**. "Follow the line" keeps going after a correct move. A session has
+no length by hand; under Autopilot it is ten answers.
 
-- Right: **Correct** plus **Guessed / Hard / Knew it / Easy**. The stored grades
-  are Anki's, but "again" and "good" name buttons in a spaced-repetition app
-  rather than what just happened in your head; these say you did not really know
-  it, you got there, you knew it, it was instant. No "comes back in 4d" caption
-  under each one — the number is noise at the moment you are being asked how
-  well you knew something.
-- Wrong: your repertoire's move next to the one you played, both drawn on the
-  board — yours in red, the prepared one in green — with **Why?**, **Show line**
-  (the continuation) and **Explore** (the reference database) one tap away. A
-  wrong answer is graded `again` automatically — you spend your attention on
-  understanding, not on a button.
-- **Why?** answers the question the red square does not. "It isn't in your
-  repertoire" is a fact, not a reason, so the engine plays the position on from
-  the move you made and shows the reply that punishes it, beside what the
-  prepared move was worth. The refutation is a line on a board you can step
-  through rather than a verdict — five moves a side. The only words are the ones
-  the board cannot say for itself: that the line is still coming, or that there
-  is nothing forced to come. The footer says which engine gave it and at what
-  depth, because a shallow opinion should look like one.
-- No engine evaluations during recall by default. This is memory retrieval.
-- "Follow the line" (Settings, on by default) plays the opponent's reply and
-  asks the next move in the same line, so you can compare line-running against
-  pure position-by-position drilling.
+Scheduling is a small SM-2 variant in `src/model/srs.ts`. Answering early
+never pushes a card out.
 
-A session has no length. It keeps drawing positions until you stop it, with
-**Stop** next to Moves and Explore and the close button doing the same thing;
-stopping shows the summary rather than dumping you out, and **Keep going**
-resumes. Scheduled work comes first — due reviews, learning cards, then new
-material — and once the schedule is clear the session serves the positions you
-have looked at least recently, marked *extra practice* so you know where you
-are.
+### Growth
+The opponent walks your own prep toward the nearest reply you have no answer
+to, and you choose one from the book. Up to three moves a run. Holes are only
+counted inside the region, and on the way into it.
 
-That only works because answering early cannot push the schedule out: a correct
-answer on a card that is not due yet keeps the date it already had. Getting it
-wrong early still pulls it in. Without that, a long session would quietly
-scatter your whole deck into next month.
+### Repair
+The positions your imported games got wrong, compared against the repertoire:
+off prep (you had a move and played another) and unprepared (you kept reaching
+it with nothing). Slips made in the app count too. Scoped to the region.
 
-Scheduling is a small SM-2 variant in `src/model/srs.ts`: learning steps of 1
-and 10 minutes, ease from 1.3 up, halved interval after a lapse, no interval
-fuzz. `review()` is pure and deterministic, so the whole algorithm can be
-swapped without touching the UI.
+### Play
+A game against the engine at a chosen strength. While the game is still on the
+selected opening's move order the engine plays that move order, so a game in
+the Najdorf is a Najdorf; past it the engine plays for itself. The opening can
+be saved into the repertoire when the game ends.
 
-### Opening Run
-One line, drawn in secret, played until your first mistake. Nothing on screen
-names it while you play — no opening name, no move list, no explore. Dying is
-what buys you the reveal, which names the variation, gives its ECO code and
-prints the line in full, including how it would have gone on.
+## Score
 
-The setup screen decides the run. **Start run** sits at the top, above the
-options, so the common case — same rules as last time — is one tap. Everything
-past the first two sections is off by default; the plain mode is a line from your
-repertoire, no clock, no help. Choices are remembered between runs.
+Points are reward, not assessment. Nothing is ever subtracted. All the numbers
+live in `POINTS` in `src/model/scoring.ts`.
 
-- **Play as** — White, Black, or random.
-- **Lines** — your repertoire, one named opening, or the whole reference
-  database. Book is the most forgiving: any move somebody has played here keeps
-  you alive, and the opponent replies in proportion to how often each move is
-  played.
-- **Openings** — pick one opening and play it out. The opponent walks you into
-  it, and while you are still inside its move order that move order is the only
-  thing that counts, for both sides, because it is what makes the opening that
-  opening; past the end of it the book takes over. **All openings** lists all 163
-  named openings sorted by how often they are actually played, searchable by
-  name, ECO or moves. Starring one keeps it on the setup screen, and starred
-  openings sit at the top of the full list. Names that only say what the first
-  move was are left out: "King's Pawn Opening" is not an opening you sit down to
-  practise, it is the whole database with a first move, which Book already is.
-- **Opening** — narrow the draw to one repertoire instead of all of them.
-  Picking one settles which side you are on, so the colour follows it.
-- **Clock** — 10 or 30 seconds a move, or three minutes for the whole run. Only
-  your own thinking is charged; the opponent's reply is free. Running out ends
-  the run exactly like a wrong move does.
-- **Hints** — a budget of one or three for the run. A hint names the square the
-  move starts from and never where it lands, so it narrows the position without
-  answering it. Hints spent are shown on the reveal.
-- **Target weak spots** — bias the draw toward lines you get wrong, have lapsed
-  on, or have let fall overdue, read straight off the review schedule.
-- **Play the other side** — sit on the side your repertoire prepares *against*,
-  and stay alive by knowing what your opponent is meant to do. A reversed run
-  is judged on positions that are not your decision points, so it is kept out
-  of the review schedule entirely.
-- **Extended mode** — the run does not stop when the prep does. The engine takes
-  over the judging and you survive as long as your moves stay sound, so a line
-  that ends the moment the setup is complete becomes a game you can still lose.
-  A move that drops more than 0.80 ends the run as a blunder; the threshold is
-  generous on purpose, because past the prep there is no single right move and a
-  mode that ended a run over a quarter of a pawn would be judging taste. Your
-  own moves keep counting towards the score, the header shows the live
-  evaluation, and hints are not offered — there is no prepared move to point at.
-- **Per-opening records** — a separate best for each opening and side, rather
-  than one number across everything.
+| Mode | Per action | Bonuses |
+|---|---|---|
+| Run | 1 per correct move | +5 finishing the line, +3 more for green; speed; combo |
+| Drill | 1 per correct answer | +1 on a card that had lapsed; speed; combo |
+| Growth | 5 per move added | |
+| Repair | 4 per position relearned, 2 per move given | |
 
-A line is drawn in proportion to how often you would actually meet it. Where
-the *opponent* chooses, the reference database decides: a King's Indian arrives
-through 1.d4 2.c4 far more often than through 1.b4, and weighting by that cuts
-runs that turn on a reply played less than 5% of the time from a quarter to a
-sixth. Where *you* choose between prepared alternatives the split is even, so a
-heavily branched mainline cannot swamp everything else — your own alternatives
-multiply lines without making a position any likelier to appear on a board. Rare
-sidelines keep a floor rather than vanishing: they are prep too.
+**Speed.** On a clock, a correct move earns +2 in the first half of the budget
+and +1 in the second. Running out costs nothing but the bonus: the clock parks
+at zero and the move is still yours to make. The clock and the bonus it is
+still worth sit together in the app bar, and shake when they reach nothing.
 
-Any move you have prepared from a position counts, not just the one the drawn
-line happens to continue.
+**Combo.** From the third correct move in a row in one game, +1 more each.
 
-Playing a move that is real theory but not in your prep is not a loss. The run
-pauses, names the line your move leads into, shows what your prep had instead,
-and offers three ways on: **add it to your repertoire and carry on**, carry on
-without adding it, or stop there. Carrying on keeps the move, keeps the score,
-and hands the judging to the book for the rest of the run — the prep is behind
-you, so the book is the only honest referee left. Only a move nobody has played
-is still a plain loss.
+**Where points go.** Every event credits the deepest opening its line goes
+through, every opening above it, and the global total. A Sämisch move scores
+for the Sämisch, the King's Indian, and 1.d4.
 
-That makes four endings rather than two, and they are coloured apart, because
-"learn this" and "you got that wrong" are different notes:
+**Milestones.** Infrared, red, orange, yellow, green, blue, indigo, violet,
+ultraviolet. The ladder is geometric (100 points, then ×1.6 each) and never
+ends: past ultraviolet the label counts on, "Ultraviolet II" and so on. A
+first move's ladder is four times a variation's, a family's twice, so a colour
+means the same amount of work at every level. A bar slides in at the top
+whenever points land, fills toward the next milestone in that milestone's
+colour, and celebrates when one is crossed. Tapping it opens Stats.
 
-| | |
-|---|---|
-| **Green** | finished the line, all of it inside your prep |
-| **Yellow** | finished, having stepped out of prep along the way |
-| **Red** | played a move that is neither prepared nor in the book |
-| **Purple** | the run ended out of prep |
+## Stats
 
-The record counts endings by grade and shows them as a bar, so a run of purple
-says something a run of red does not: the prep has gaps, not the recall.
+The Stats tab leads with the total, the daily streak, accuracy and the
+milestone ladder, then score as it climbed and a seven-day accuracy average
+over a chosen window, points by mode, and every opening with a score. Each
+opening has a page of the same shape, on its own ladder, plus its
+*favouriteness* — its rank among the siblings you have actually played, by
+games in the last thirty days — and the variations under it. Every row in the
+opening picker opens its page too. History is kept for ever.
 
-When a run ends, the board becomes a replay. Arrows and a tappable move strip
-walk the whole line, starting parked on the position that ended it — step
-forward to see how it was meant to continue, or back to see how you got there.
-The strip colours what happened: your own moves, the opponent's, the move that
-ended the run in red beside the prepared move in green (both carrying the same
-move number, which is nobody's notation but the only honest way to show a pair),
-and the rest of the line in grey. **Copy the moves I played** puts the game as
-played on the clipboard — not the continuation — for pasting somewhere.
-The mistake's red and green squares are shown only on that one position, so
-stepping away does not leave stale marks behind.
+## Repertoire
 
-A line played out in full offers **Continue in extended mode** above **New run**
-and **Play from here**. It is the better continuation of the two: it carries the
-*run* on rather than starting a friendly game, so the score keeps counting and a
-blunder still ends it. Logging that run again amends the entry the completed
-line already made instead of counting a second run — and reaching the end of a
-line is a fact, so carrying on past it and blundering does not unmake it. It is
-offered only where the prep ran out, not where you went wrong: there the run
-ended because of a mistake, and there is still prep to learn.
+One tree per colour. Openings are derived from the tree rather than stored:
+an opening is the region beginning where the book starts naming the position.
+Transpositions collapse to one card. Browse by playing moves; each move has a
+sheet to prefer it, note it, reorder it, train the branch, or delete it. The
+reference database sits under the move list.
 
-**Play from here** carries the position on the board on against the engine —
-Stockfish if its worker starts, the heuristic evaluator otherwise. This is the
-answer to a line that stops just as it gets interesting: repertoire prep ends
-where prep ends, and the honest continuation is a game, not more prep. You keep
-your own colour, the engine answers with a short fixed think, moves can be taken
-back a pair at a time, and nothing that happens there touches your record or
-your schedule. The engine runs here whether or not evaluations are switched on
-elsewhere — playing on *is* the engine.
+A new install starts empty. Play writes openings from your games, Run offers
+to keep the lines you survive, Growth fills what they leave out.
 
-Only the move that ends a run touches the schedule, graded `again`. The correct
-moves before it are primed by the ones before them, so crediting them would
-inflate intervals on weaker evidence than an isolated review gives.
+## Analysis
 
-### Punish
-The opponent leaves the book with a move that drops material, and you take it.
-Every puzzle comes from a position your own repertoire reaches, so the trap is
-one you could actually be offered rather than a position from nowhere.
+Board, engine lines, eval bar, PGN in and out, and the reference explorer
+underneath: move frequencies, results, opening names, a handful of master
+games, and the named book lines the app knows from the current position, each
+with a summary and ideas and one tap to add.
 
-The mode is static and material-only on purpose. "They blundered, win the piece"
-is a claim that can be checked exactly — count what a capture takes, less what
-the recapture takes back — so a puzzle is either sound or it is not generated.
-An engine would find deeper punishments, but the answer would then depend on how
-long it was allowed to think, and a puzzle whose answer moves is worse than a
-simple one that is always right.
+## Import your games
 
-Two rules keep them worth solving. Only captures and checks are considered: a
-player about to go wrong goes wrong on a move they had a reason to play, not by
-dropping a bishop on an empty square. And the punishment has to land on the
-square they just moved to, so the mistake is *this* move rather than something
-already wrong with the position — which also makes the answer easy to state.
-What the blunder won is subtracted from what the punishment wins, or every even
-trade would look like a windfall: `Bxc3+ bxc3` is bishop for knight, not a
-three-pawn gift.
-
-Positions are visited in a shuffled order favouring the opening, and the search
-stops at the first sound puzzle — about 25ms, rather than the four seconds a
-whole repertoire takes.
-
-### Gap
-Replies the database plays that your repertoire has no answer to, each one a
-row you can fix by picking a move from the book. Picking adds their move and
-your answer to the repertoire, so it turns up in Drill.
-
-A gap is only counted where preparation exists and stops short of one of the
-opponent's choices. Where a line simply ends there is nothing to disagree with —
-that is prep running out, not prep contradicting itself.
-
-The seeded repertoires have no gaps at any threshold, which is the coverage
-guarantee holding rather than the mode failing; `coverage.test.ts` runs the same
-`findGaps` and would fail first if one appeared. It has work to do the moment
-you add lines of your own.
-
-### Repertoire
-Three seeded repertoires built around what you actually play — the **Queen's
-Gambit** with White, and the **King's Indian** (vs 1.d4) and **Sicilian Dragon**
-(vs 1.e4) with Black.
-
-White answers 1...d5 with 2.c4 and covers the QGD (Exchange, with the minority
-attack), Slav, Semi-Slav (Botvinnik and Meran), QGA, Tarrasch, Chigorin, Albin
-and Baltic, plus every Indian defence after 1...Nf6: King's Indian, Grünfeld,
-Nimzo, Benoni, Benko, Budapest, Old Indian and the Dutch.
-
-Black answers 1.d4 with the King's Indian — Classical (Mar del Plata, Bayonet,
-Petrosian, Exchange, Gligorić), Sämisch, Averbakh, Four Pawns, Makogonov,
-Fianchetto, the London and Torre anti-KID set-ups, and the c4/Nf3/g3 move orders
-that transpose — and answers 1.e4 with the Sicilian Dragon: the Yugoslav Attack
-(including the Soltis main line and the 9.O-O-O ...d5 break), Classical,
-Levenfish, fianchetto, and every anti-Sicilian worth the name (Moscow, Alapin,
-Closed, Grand Prix, Smith-Morra, the King's Indian Attack and 2.c4).
-
-The Dragon is chosen deliberately: it is the King's Indian's structural cousin —
-same ...g6/...Bg7 fianchetto, same opposite-castling race logic — so the two
-halves of the Black repertoire reinforce each other.
-
-Within a repertoire there is exactly one move for you in any given position — a
-repertoire is a set of decisions, not a menu — and a test enforces it. All the
-breadth is on the opponent's side.
-
-**Coverage is checked, not claimed.** `src/model/seed/coverage.test.ts` walks
-every position the repertoire reaches where the opponent is to move and prep
-already exists, and fails if any reply played in ≥3% of reference games has no
-prepared answer. Positions are merged by key first, exactly as training does, so
-a line covered through one move order counts through all of them. A line simply
-ending is not a hole — that is prep running out, not prep disagreeing with
-itself.
-
-The opening position is checked per colour rather than per repertoire, so a
-Black repertoire is allowed to answer only 1.d4 as long as a sibling repertoire
-answers 1.e4. There are no accepted gaps left.
-
-Browse by playing moves on the board. Playing a move the tree does not have
-offers to add it. Each move has a sheet: make it the main move, note why you
-play it, reorder it, train just that branch, or delete the branch. Underneath
-the move list, the reference database shows what the book plays here — tap to
-add straight into the tree.
-
-Transpositions collapse: the same position reached two ways is one card, and
-both routes' moves are offered as valid answers.
-
-### Explore
-The reference database, as an opening explorer: move frequencies, win/draw/loss
-splits, opening names and ECO codes, and a handful of real master games.
-Twenty-eight named book lines — Mar del Plata, Bayonet, Sämisch, Fianchetto,
-Four Pawns, Averbakh, the KID Exchange, Slav main line, Meran, Botvinnik, QGA
-Classical, Tarrasch, Chigorin and more — each with a summary and the ideas
-behind it. **Add** lets you trim the line first — tap any move to set the cut-off,
-because usually you want the idea and not twenty plies of theory.
-
-### Analysis
-Board, move list, eval bar, three engine lines, PGN in and out. Real Stockfish
-(the asm.js build, in a Web Worker) with a small built-in evaluator as a
-fallback if the worker cannot start. Secondary to training on purpose.
-
-### Import your games
-**Repertoire → Import** pulls your recent games from Lichess or Chess.com and
-compares them against your repertoire:
-
-- **Gaps** — positions you reach often with nothing prepared
-- **Deviations** — positions where you played something other than your prep
-- **Coverage** — how many games stayed in book, and the average ply you left it
-
-Any finding can be added to the repertoire in one tap, and immediately enters
-the review queue.
-
-> **Network note.** The live API clients are real and work when the app runs
-> from a normal origin. A published Claude Artifact runs under a CSP that blocks
-> every cross-origin request, so the fetch fails there before it leaves the
-> page. Two offline paths cover it: **paste a PGN export** (same analysis
-> pipeline, no network) and a **bundled sample archive** of 60 generated games
-> so the flow is explorable anyway. The sample games are synthetic — they are
-> not anyone's real games.
+**Repertoire → Import** pulls recent games from Lichess or Chess.com, or a
+pasted PGN, and feeds Repair. A published Claude Artifact runs under a CSP
+that blocks cross-origin requests, so the live fetch fails there; pasting a
+PGN and a bundled synthetic sample archive both work anyway.
 
 ## Data
 
-**Where state actually lives depends on the viewer, and that matters.** Artifacts
-are framed with a sandbox that withholds `allow-same-origin`, so the frame's
-origin is opaque and touching `localStorage` or `indexedDB` throws
-`SecurityError` — not "returns empty", *throws*. A store that swallows that
-error keeps working and forgets everything on close, which is the worst possible
-failure for a trainer. So the app probes both backends at startup and treats the
-`db` runtime capability as the primary store when they are unavailable, which
-inside a published artifact is the normal case.
+State lives in IndexedDB (with a localStorage fallback) and, when the page runs
+as a published Artifact, in the `db` runtime capability against your Claude
+account — inside the artifact sandbox that is the only thing that persists.
+Startup reads the account copy before deciding anything. The document is
+gzipped and base64-encoded and capped at 256 KiB by the platform; the app says
+so in Settings when it overflows.
 
-The local store is IndexedDB via `idb-keyval`, with a localStorage fallback and
-an in-memory last resort. Reload-safe wherever it is allowed to run. Settings → Reset restores the
-seeded state. Saved state carries a schema version; when the seed data changes,
-an older save is discarded rather than migrated, and your settings are kept.
+Saved state carries a schema version. Version 0 is the fresh start: every
+earlier save, settings included, is discarded rather than migrated.
 
-**The account store.** When the page runs as a published Artifact it asks for
-the `db` runtime capability and keeps your state against your Claude account —
-both so a session started on a phone continues on a laptop, and because in the
-sandbox it is the only thing that persists at all. Startup reads the account copy
-*before* deciding anything, so a freshly seeded state can never overwrite real
-progress; pushes are held back until that reconcile completes.
-
-If neither backend works, the Train screen says **"Progress isn't being saved"**
-with a one-tap fix rather than quietly resetting.
-
-A db document holds at most 256 KiB and a fully-trained state is ~1.8 MB of JSON
-(mostly FENs, which repeat heavily), so the payload is gzipped via
-`CompressionStream` and base64-encoded — about 135 KiB in practice, and the size
-is checked before each write rather than discovered as a rejection. Imported
-games are deliberately left out of the sync: bulky, re-importable, and they would
-eat the headroom.
-
-Conflict handling is whole-state last-write-wins by timestamp. That is the right
-model for one person on two devices and honest about what it does not do: it
-does not merge two sessions reviewed concurrently. Settings shows the sync state
-and says so. Where the capability is absent — running locally, an older runtime,
-a viewer who declines — `claude.use('db')` resolves null and the app is local
-only, and the Sync row in Settings says so.
-
-The reference database is a small curated sample, authored as ~320 weighted
-paths in `src/model/seed/openingPaths.ts`, weighted towards the Queen's Gambit
-and King's Indian and folded into a tree at runtime, so
-the numbers are internally consistent: a move is never shown as more popular
-than the position it comes from. Every seeded line — repertoires, book lines,
-master games — is checked for legality by the test suite.
+The reference database is a small curated sample, authored as weighted paths
+in `src/model/seed/openingPaths.ts` and folded into a tree at runtime. Every
+seeded line is checked for legality by the tests.
 
 ## Design
 
 Dark, borderless surfaces on a near-black ground, one indigo accent, white
 primary buttons, iOS-style large titles and grouped lists. Tokens live at the
-top of `src/styles.css`; the board palettes and highlights in
-`src/components/board.css`. Copy is kept to a few words per element.
+top of `src/styles.css`. Charts are inline SVG: one series, one hue, a
+two-pixel line, hairline grid.
 
 ## Layout
 
 ```
 src/
   chess/       rules, position keys, PGN parsing with variations
-  model/       repertoire tree, SRS, session building, reference index,
-               game analysis, opening-run rules, punish, gaps, seed data
+  model/       opening tree and regions, selection, run rules, SRS, session
+               building, scoring and milestones, stats series, the
+               recommendation engine, growth, repair, reference index, seed data
   engine/      Stockfish worker + heuristic fallback behind one interface
-  store/       zustand store, IndexedDB persistence, cloud sync, seed loading
-  components/  board, pieces, explorer, sheets, icons, and the shared
-               controls (app bar, toggles, segmented rows, move strip)
-  screens/     Home, Drill, Repertoire, Explore, Analysis, Import, Settings
-  screens/openingRun/
-               setup, the live run, the reveal, play-on, the record, and
-               the clock and engine-referee hooks
+  store/       zustand store, IndexedDB persistence, cloud sync, the engine's input
+  components/  board, pieces, explorer, the selection bar and pickers, the
+               score bar, the move clock, charts, sheets, icons, shared controls
+  screens/     Home, Stats, Repertoire, Analysis, Import, Settings, and one
+               folder per mode: autopilot, openingRun, drill, growth, repair, play
 ```
-
-Drill, Opening Run, Punish and Gap sit one after another on the home screen as
-equal modes, each with its own hero and its own start button. That screen has no title of
-its own — naming it after either mode would have been wrong, and naming it
-"Home" said nothing the tab bar was not already saying. The bar stays for the
-settings button and the safe area.
-
-Screens are built from a small set of shared pieces in `components/ui.tsx` —
-`AppBar`, `Section`, `Toggle`, `Stepper`, `Segmented`, `ChoiceRow`, `Strip` —
-so a new screen has nothing to invent. Layout comes from utility classes in
-`styles.css` (`.actions`, `.note`, `.mt-*`) rather than inline styles.
-
-The board is hand-written rather than pulled from a library: tap-tap and drag
-both work, legal moves show as dots, captures as rings, pieces animate between
-squares, promotion is a sheet, and pieces are inline SVG so nothing is fetched
-at runtime.
-
-## Questions this prototype is meant to answer
-
-Position-by-position vs line-running. How much to show after a wrong answer.
-Whether Again/Hard/Good/Easy reads naturally for chess. Whether the reference
-database belongs in a bottom sheet or its own screen. Whether "add to
-repertoire" with a trim step is the right import gesture. When the engine should
-be available at all. How to communicate what is due, and what your coverage
-actually is.
-
-Nothing here is load-bearing. Change it.
