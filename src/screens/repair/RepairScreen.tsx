@@ -12,14 +12,18 @@ import { repertoireList, useStore } from '../../store/useStore';
 import { Setup } from './Setup';
 
 export interface RepairScreenProps {
+  /** Skip setup and work through the saved options — Next Up started this. */
+  auto?: boolean;
   onImport: () => void;
   onExit: () => void;
 }
 
-export function RepairScreen({ onImport, onExit }: RepairScreenProps) {
-  const [prefs, setPrefs] = useState<RepairPrefs | null>(null);
+export function RepairScreen({ auto, onImport, onExit }: RepairScreenProps) {
+  const saved = useStore((s) => s.settings.repair);
+  const [prefs, setPrefs] = useState<RepairPrefs | null>(() => (auto ? saved : null));
   if (!prefs) return <Setup onStart={setPrefs} onImport={onImport} onExit={onExit} />;
-  return <Working prefs={prefs} onExit={() => setPrefs(null)} />;
+  // A queue nobody set up has no setup screen to fall back to.
+  return <Working prefs={prefs} onExit={() => (auto ? onExit() : setPrefs(null))} />;
 }
 
 type Phase = 'ask' | 'right' | 'wrong' | 'choose';
@@ -41,6 +45,10 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
       minGames: prefs.minGames,
       lossesOnly: prefs.lossesOnly,
       sort: prefs.sort,
+      // The slips you made in the app count here too. Setup counts them, and
+      // the home screen counts them, so a queue built without them promises a
+      // number of positions and then opens onto nothing.
+      mistakes: state.mistakes,
     }),
   );
 

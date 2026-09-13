@@ -7,6 +7,7 @@ import {
   atHole,
   enterHole,
   isUsersTurn,
+  growthRows,
   lineFor,
   optionsAt,
   preparedHere,
@@ -18,18 +19,28 @@ import {
 import { formatGameCount } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
 import { displayName } from '../../model/repertoire';
-import { useStore } from '../../store/useStore';
+import { repertoireList, useStore } from '../../store/useStore';
 import { PlayOn } from '../openingRun/PlayOn';
 import { Lobby } from './Lobby';
 
 export interface GrowthScreenProps {
+  /** Skip the lobby and extend the worst hole — Next Up started this. */
+  auto?: boolean;
   onExit: () => void;
 }
 
-export function GrowthScreen({ onExit }: GrowthScreenProps) {
-  const [row, setRow] = useState<GrowthRow | null>(null);
+export function GrowthScreen({ auto, onExit }: GrowthScreenProps) {
+  const state = useStore();
+  // The lobby's own order: shallowest hole first, because that is the one the
+  // most games fall into. Next Up picks the top of the same list.
+  const [row, setRow] = useState<GrowthRow | null>(() =>
+    auto
+      ? (growthRows(repertoireList(state), referenceIndex(), state.settings.growth)[0] ?? null)
+      : null,
+  );
   if (!row) return <Lobby onStart={setRow} onNoWork={onExit} onExit={onExit} />;
-  return <Run row={row} onExit={() => setRow(null)} />;
+  // A run nobody chose has no lobby to fall back to.
+  return <Run row={row} onExit={() => (auto ? onExit() : setRow(null))} />;
 }
 
 type Phase = 'walking' | 'hole' | 'added' | 'lost';
@@ -38,6 +49,7 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
   const state = useStore();
   const settings = state.settings;
   const addLine = useStore((s) => s.addLine);
+  const noteActivity = useStore((s) => s.noteActivity);
   const index = referenceIndex();
   const rep = state.repertoires[row.repertoireId];
 
@@ -112,6 +124,9 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
 
   const choose = (san: string) => {
     addLine(row.repertoireId, lineFor(run, san), 'reference');
+    // A filled hole is what counts as having done Growth. Reaching one and
+    // backing out is not work, and Next Up would stop offering the mode on it.
+    noteActivity('growth');
     setAdded(san);
     setPhase('added');
     toast(`${san} added`);

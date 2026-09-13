@@ -61,7 +61,7 @@ interface OffPrep {
  * out. Nothing on screen names the line while it is live; the reveal is the
  * reward for dying, and lives in its own screen.
  */
-export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
+export function OpeningRunScreen({ auto, onExit }: { auto?: boolean; onExit: () => void }) {
   const state = useStore();
   const reps = repertoireList(state);
   const { settings, cards } = state;
@@ -72,8 +72,22 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
   const ensureRepertoire = useStore((s) => s.ensureRepertoire);
   const index = referenceIndex();
 
-  const [phase, setPhase] = useState<Phase>('setup');
-  const [game, setGame] = useState<Game | null>(null);
+  /** A run on these options, or null when they cannot produce a line. */
+  const open = (options: OpeningRunOptions): Game | null =>
+    beginRun({ ...options, reps, index, weakness: weaknessFromCards(cards) });
+
+  /**
+   * Next Up starts the run itself, before the first paint, so the setup screen
+   * it promised to skip never flashes on the way past. A repertoire run needs
+   * prep to draw from and a new install has none — which is exactly when a book
+   * line is the right thing to hand someone — so the fallback is the book
+   * rather than the screen the button was meant to save you from.
+   */
+  const [opened] = useState<Game | null>(() =>
+    auto ? (open(prefs) ?? open({ ...prefs, kind: 'book' })) : null,
+  );
+  const [phase, setPhase] = useState<Phase>(opened ? 'playing' : 'setup');
+  const [game, setGame] = useState<Game | null>(opened);
   const [death, setDeath] = useState<Death | null>(null);
   const [thinking, setThinking] = useState(false);
   const [hintSquare, setHintSquare] = useState<Square | null>(null);
@@ -222,8 +236,7 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
   /** A hint belongs to one position only. */
   useEffect(() => setHintSquare(null), [run?.fen]);
 
-  const start = (options: OpeningRunOptions) => {
-    const started = beginRun({ ...options, reps, index, weakness: weaknessFromCards(cards) });
+  const begin = (started: Game | null) => {
     if (!started) return;
     settled.current = false;
     setDeath(null);
@@ -232,6 +245,14 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
     setGame(started);
     setPhase('playing');
   };
+
+  const start = (options: OpeningRunOptions) => begin(open(options));
+
+  /**
+   * Another run on the same terms. An auto-started run keeps its book fallback:
+   * there is no setup screen behind it to go back and fix things on.
+   */
+  const again = () => (auto ? begin(open(prefs) ?? open({ ...prefs, kind: 'book' })) : start(prefs));
 
   if (phase === 'setup' || !run || !source) {
     return <Setup onStart={start} onExit={onExit} />;
@@ -261,7 +282,7 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
         alreadySaved={alreadyKept(run)}
         onSaveLine={() => keepLine(run)}
         onExit={onExit}
-        onNewRun={() => start(prefs)}
+        onNewRun={again}
         onChangeOptions={() => setPhase('setup')}
         onPlayOn={(fen) => {
           setPlayOnFrom(fen);

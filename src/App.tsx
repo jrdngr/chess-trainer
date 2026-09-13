@@ -29,7 +29,8 @@ export default function App() {
     mode: SessionMode;
     title: string;
   } | null>(null);
-  const [mode, setMode] = useState<ModeId | null>(null);
+  /** `auto` means Next Up started it: no setup screen, and leaving comes home. */
+  const [mode, setMode] = useState<{ id: ModeId; auto?: boolean } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [explorePath, setExplorePath] = useState<string[] | undefined>();
@@ -50,21 +51,22 @@ export default function App() {
     <div className="screen no-nav" style={{ display: 'grid', placeItems: 'center' }}>
       <div className="spinner" />
     </div>
-  ) : mode === 'drill' ? (
-    <DrillScreen onExit={() => setMode(null)} />
-  ) : mode === 'openingRun' ? (
-    <OpeningRunScreen onExit={() => setMode(null)} />
-  ) : mode === 'repair' ? (
+  ) : mode?.id === 'drill' ? (
+    <DrillScreen auto={mode.auto} onExit={() => setMode(null)} />
+  ) : mode?.id === 'openingRun' ? (
+    <OpeningRunScreen auto={mode.auto} onExit={() => setMode(null)} />
+  ) : mode?.id === 'repair' ? (
     <RepairScreen
+      auto={mode.auto}
       onImport={() => {
         setMode(null);
         setImporting(true);
       }}
       onExit={() => setMode(null)}
     />
-  ) : mode === 'growth' ? (
-    <GrowthScreen onExit={() => setMode(null)} />
-  ) : mode === 'play' ? (
+  ) : mode?.id === 'growth' ? (
+    <GrowthScreen auto={mode.auto} onExit={() => setMode(null)} />
+  ) : mode?.id === 'play' ? (
     <PlayScreen onExit={() => setMode(null)} />
   ) : session ? (
     <DrillSession
@@ -84,7 +86,7 @@ export default function App() {
           {tab === 'home' && (
             <HomeScreen
               onStart={startSession}
-              onOpenMode={setMode}
+              onOpenMode={(id, auto) => setMode({ id, auto })}
               onOpenSettings={() => setSettingsOpen(true)}
             />
           )}

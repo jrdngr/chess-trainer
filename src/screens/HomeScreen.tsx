@@ -1,7 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { AppBar, IconButton, Icons, Section, Sheet } from '../components/ui';
 import { measureCoverage } from '../model/gameAnalysis';
-import { findHoles } from '../model/growth';
+import { growthRows } from '../model/growth';
+import { MODE_NAMES, nextUp, type Candidate } from '../model/nextUp';
 import { levelById } from '../model/play';
 import { buildRepairs } from '../model/repair';
 import { GRADES, gradeLabel, type RunGrade } from '../model/openingRun';
@@ -17,7 +18,8 @@ export type ModeId = 'drill' | 'openingRun' | 'repair' | 'growth' | 'play';
 export interface HomeScreenProps {
   /** Launching one side's prep straight into a session, from the sheet below. */
   onStart: (items: TrainingItem[], mode: SessionMode, title: string) => void;
-  onOpenMode: (mode: ModeId) => void;
+  /** `auto` skips the mode's setup screen — Next Up has already decided. */
+  onOpenMode: (mode: ModeId, auto?: boolean) => void;
   onOpenSettings: () => void;
 }
 
@@ -72,21 +74,21 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
   const readyCount = totalDue + Math.min(totalUnseen, state.settings.drill.newPerSession);
   const unseenTotal = totalItems - allCards.length + mastery.unseen;
 
-  /** Replies the database plays that nothing in the repertoire answers. */
+  /**
+   * Replies the database plays that nothing in the repertoire answers, grouped
+   * the way Growth's own lobby groups them — so the count on the tile and the
+   * opening Next Up would start on are the same piece of work.
+   */
   const growthPrefs = state.settings.growth;
-  const gapCount = useMemo(
+  const growth = useMemo(
     () =>
-      perRep.reduce(
-        (sum, entry) =>
-          sum +
-          findHoles(entry.rep, referenceIndex(), {
-            minShare: growthPrefs.minShare,
-            maxPly: growthPrefs.maxPly,
-          }).length,
-        0,
-      ),
-    [perRep, growthPrefs.minShare, growthPrefs.maxPly],
+      growthRows(reps, referenceIndex(), {
+        minShare: growthPrefs.minShare,
+        maxPly: growthPrefs.maxPly,
+      }),
+    [reps, growthPrefs.minShare, growthPrefs.maxPly],
   );
+  const gapCount = growth.reduce((sum, row) => sum + row.holes.length, 0);
   /**
    * Gaps against the breadth of the prep they sit in. A repertoire with two
    * holes in four hundred positions should not read the same as one with two
@@ -99,7 +101,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
    * real play the prep covered at all.
    */
   const repairPrefs = state.settings.repair;
-  const repairCount = useMemo(
+  const repairs = useMemo(
     () =>
       buildRepairs(state.importedGames, reps, {
         repertoireId: repairPrefs.repertoireId,
@@ -107,10 +109,11 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
         minGames: repairPrefs.minGames,
         lossesOnly: repairPrefs.lossesOnly,
         mistakes: state.mistakes,
-      }).length,
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [state.importedGames, state.mistakes, reps, repairPrefs],
   );
+  const repairCount = repairs.length;
   const inPrep = useMemo(() => {
     const totals = reps.map((rep) => measureCoverage(state.importedGames, rep));
     const games = totals.reduce((sum, c) => sum + c.games, 0);
@@ -118,6 +121,26 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
     return totals.reduce((sum, c) => sum + c.inPrep, 0) / games;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.importedGames, reps]);
+
+  /**
+   * What to do next.
+   *
+   * The drill numbers here are scoped to the side you actually drill rather
+   * than to everything you have prepared, so the reason on the button and the
+   * session it starts are talking about the same cards.
+   */
+  const drillSide = state.settings.drill.side;
+  const drillScope = perRep.filter((e) => drillSide === 'both' || e.rep.color === drillSide);
+  const next = nextUp({
+    due: drillScope.reduce((sum, e) => sum + e.counts.due, 0),
+    unseen: drillScope.reduce((sum, e) => sum + e.unseen, 0),
+    newPerSession: state.settings.drill.newPerSession,
+    growth,
+    repairs,
+    reps,
+    openingRun,
+    activity: state.activity,
+  });
 
   return (
     <>
@@ -132,6 +155,8 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
 
       <div className="screen">
         <StorageWarning />
+
+        <NextUp pick={next} onStart={() => onOpenMode(next.mode, true)} />
 
         <div className="mode-grid">
           <Tile
@@ -303,6 +328,30 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
         )}
       </Sheet>
     </>
+  );
+}
+
+/**
+ * The one thing to do now.
+ *
+ * Everything under it is a choice; this is an answer. It names the mode it will
+ * start, so it is never a mystery box, says in one line why that one, and then
+ * starts it on the options you last used rather than sending you through a
+ * setup screen to agree with a decision that has already been made.
+ */
+function NextUp({ pick, onStart }: { pick: Candidate; onStart: () => void }) {
+  return (
+    <button className="next-up" onClick={onStart}>
+      <span className="ico">
+        <Icons.bolt size={20} />
+      </span>
+      <span className="grow">
+        <span className="kicker">Next Up</span>
+        <span className="name">{MODE_NAMES[pick.mode]}</span>
+        <span className="why truncate">{pick.reason}</span>
+      </span>
+      <Icons.chevron size={20} />
+    </button>
   );
 }
 

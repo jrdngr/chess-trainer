@@ -506,6 +506,44 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 /* ── mode grid ─────────────────────────────────────────────────────────── */
 /* Home is four square tiles. Each carries its own state so the grid answers
    "what is worth doing right now" without opening anything. */
+/* The recommended mode, above the grid of all of them. It is an answer rather
+   than a choice, so it is wide, warm, and says why it is the answer. */
+.next-up {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 13px 15px;
+  margin-bottom: 10px;
+  border-radius: var(--r-lg);
+  background: var(--accent-soft);
+  color: inherit;
+  text-align: left;
+  transition: filter 0.12s, transform 0.12s;
+}
+.next-up:active { transform: scale(0.985); filter: brightness(1.12); }
+.next-up .ico {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.next-up .kicker {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.next-up .name { display: block; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.next-up .why { display: block; font-size: 12.5px; color: var(--text-2); margin-top: 1px; }
+.next-up > svg { flex: none; color: var(--text-3); }
+
 .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .mode-tile {
   aspect-ratio: 1;

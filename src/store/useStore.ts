@@ -41,6 +41,13 @@ import {
   type RunOutcome,
 } from '../model/openingRun';
 import { addMistake, type Mistake } from '../model/mistakes';
+import {
+  NO_ACTIVITY,
+  normalizeActivity,
+  noted,
+  type Activity,
+  type ActivityMode,
+} from '../model/nextUp';
 import { cloudAvailable, readCloud, writeCloud, type CloudStatus, type WriteResult } from './cloud';
 import { clearState, debounce, loadState, probeStorage, saveState, type StorageSupport } from './db';
 
@@ -112,6 +119,8 @@ interface PersistedState {
   repair: RepairRecord;
   /** Mistakes made inside the app, for Repair to ask about later. */
   mistakes: Mistake[];
+  /** When each mode last did something, for Next Up to rotate on. */
+  activity: Activity;
 }
 
 interface StoreState extends PersistedState {
@@ -156,6 +165,13 @@ interface StoreState extends PersistedState {
   endOpeningRun: (outcome: RunOutcome) => void;
   /** Log one Repair item: answered correctly, or given a move. */
   endRepair: (outcome: { relearned?: boolean; added?: boolean }) => void;
+  /**
+   * Remember that a mode was just used, for Next Up's rotation.
+   *
+   * Drill and Repair stamp themselves from the actions that already record
+   * their work, so only Growth — which has no record of its own — calls this.
+   */
+  noteActivity: (mode: ActivityMode) => void;
   /** Remember a move the user got wrong somewhere in the app. */
   logMistake: (mistake: Omit<Mistake, 'id' | 'at'>) => void;
   /** Forget one, once it has been repaired. */
@@ -202,6 +218,7 @@ function emptyPersisted(): PersistedState {
     openingRun: { ...EMPTY_RECORD },
     repair: { ...EMPTY_REPAIR_RECORD },
     mistakes: [],
+    activity: { ...NO_ACTIVITY },
   };
 }
 
@@ -218,6 +235,7 @@ function persistedFrom(state: StoreState): PersistedState {
     openingRun: state.openingRun,
     repair: state.repair,
     mistakes: state.mistakes,
+    activity: state.activity,
   };
 }
 
@@ -358,6 +376,7 @@ export const useStore = create<StoreState>((set, get) => {
           openingRun: normalizeRecord(chosen.openingRun),
           repair: normalizeRepairRecord(chosen.repair),
           mistakes: chosen.mistakes ?? [],
+          activity: normalizeActivity(chosen.activity),
           updatedAt: Math.max(localAt, remoteAt),
           settings: mergeSettings(chosen.settings),
           storage,
@@ -402,6 +421,7 @@ export const useStore = create<StoreState>((set, get) => {
           openingRun: normalizeRecord(remote.state.openingRun),
           repair: normalizeRepairRecord(remote.state.repair),
           mistakes: remote.state.mistakes ?? [],
+          activity: normalizeActivity(remote.state.activity),
           importedGames: local.importedGames,
           settings: mergeSettings(remote.state.settings),
           updatedAt: remote.updatedAt,
@@ -510,7 +530,10 @@ export const useStore = create<StoreState>((set, get) => {
       const card =
         state.cards[item.cardId] ?? createCard(item.cardId, item.repertoireId, item.key, item.fen);
       const expectedSan = item.expected.find((e) => e.preferred)?.san ?? item.expected[0]?.san ?? '';
-      commit(reviewed(state, card, gradeValue, { correct, playedSan, expectedSan }));
+      commit({
+        ...reviewed(state, card, gradeValue, { correct, playedSan, expectedSan }),
+        activity: noted(state.activity, 'drill'),
+      });
     },
 
     setSettings(patch) {
@@ -536,7 +559,14 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     endRepair(outcome) {
-      commit({ repair: recordRepair(get().repair, outcome) });
+      commit({
+        repair: recordRepair(get().repair, outcome),
+        activity: noted(get().activity, 'repair'),
+      });
+    },
+
+    noteActivity(mode) {
+      commit({ activity: noted(get().activity, mode) });
     },
 
     logMistake(mistake) {
