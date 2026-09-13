@@ -263,7 +263,13 @@ export function steerLabel(steer: Steer): string {
 }
 
 /** How many moves a run may add at the edge of the prep. */
-export const NEW_MOVE_BUDGETS = [0, 1, 3];
+export const NEW_MOVE_BUDGETS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+
+/**
+ * How much a hole that widens the repertoire outweighs one that lengthens it,
+ * on an opening with no breadth at all. Fades to nothing as breadth arrives.
+ */
+export const BREADTH_TILT = 3;
 
 /**
  * What the setup screen decides. The colour and the opening are global and
@@ -444,6 +450,12 @@ export interface BeginOptions extends Partial<OpeningRunOptions> {
   weakness?: Weakness | null;
   /** What counts as a hole worth steering toward. */
   growth?: { minShare?: number; maxPly?: number };
+  /**
+   * How hard to tilt a gaps run toward widening the repertoire rather than
+   * lengthening it, 0..1 — how bare the opening is, see `thinness`. Zero, the
+   * default, draws holes on popularity and depth alone.
+   */
+  breadth?: number;
   /** How much more a hole is worth for the games you have lost in it — see `evidenceFor`. */
   holeWeight?: (hole: Hole) => number;
 }
@@ -524,8 +536,19 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
 
 /**
  * The hole to walk toward: drawn on how often its reply is played, how early
- * it comes, and what your own games say about it. Null where the prep has no
- * holes in the region, and the run falls back to a line through it.
+ * it comes, what your own games say about it, and — on a bare opening — on
+ * whether answering it would make the repertoire wider or only longer. Null
+ * where the prep has no holes in the region, and the run falls back to a line
+ * through it.
+ *
+ * The tilt is what stops a thin repertoire being fed back to itself. Left to
+ * popularity, the loudest hole is nearly always the tip of the one line you
+ * have: the book's main move at every ply is the most played thing on the
+ * board, so round after round walks the same opening and makes it one move
+ * longer. A hole you already answer some other reply to is a junction —
+ * answering it is a white reply you have never seen, which is the thing a
+ * repertoire this bare is short of. Once the opening is broad the tilt is
+ * zero and depth is worth having again.
  */
 function drawHole(
   rep: Repertoire,
@@ -537,9 +560,13 @@ function drawHole(
   const holes = findHoles(rep, tree.index, { ...opts.growth, region: { tree, node: aim } });
   if (!holes.length) return null;
   const evidence = opts.holeWeight ?? (() => 1);
+  const breadth = Math.max(0, Math.min(1, opts.breadth ?? 0));
   return pickWeighted(
     holes,
-    (hole) => (Math.max(hole.share, 0.1) * evidence(hole)) / (1 + hole.path.length / 3),
+    (hole) => {
+      const widen = hole.answered > 0 ? 1 + BREADTH_TILT * breadth : 1;
+      return (Math.max(hole.share, 0.1) * evidence(hole) * widen) / (1 + hole.path.length / 3);
+    },
     rand,
   );
 }

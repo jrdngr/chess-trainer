@@ -1,6 +1,14 @@
 import type { Color } from '../chess/core';
 import { positionKey } from '../chess/core';
-import { evidenceFor, findHoles, rowUrgency, type Hole } from './growth';
+import {
+  evidenceFor,
+  findCoverage,
+  findHoles,
+  rowUrgency,
+  thinness,
+  type Coverage,
+  type Hole,
+} from './growth';
 import {
   descendantsOf,
   nodeById,
@@ -29,13 +37,14 @@ import type { Card, Repertoire } from './types';
  *   review  — lines drawn toward the positions you are worst at or due on,
  *             nothing added. Repetition, where it is needed.
  *   grow    — the opponent walks you to a reply you have no answer to, and
- *             you choose one from the book, up to three a run.
+ *             you choose one from the book, a few moves a run.
  *
  * Every candidate is a focus, an opening and a colour together, because the
  * factors that decide it are per-opening factors. Need is how loudly the
  * work is asking — cards due, holes in the prep, prep no run has tested.
  * Holes only ask loudly once the prep around them is held: an opening still
- * being drilled is not ready to get wider. Staleness is how long that
+ * being drilled is not ready to get wider — unless it is barely an opening
+ * yet, and there is nothing there to drill first. Staleness is how long that
  * opening has gone without a run, measured against the other candidates
  * rather than the clock. A star on the opening or anything above it lifts
  * it. Fun tilts away from Grow, whose pickers interrupt the run, without
@@ -77,7 +86,7 @@ export const HELD_DAYS = 7;
 export const GROWTH_FLOOR = 0.1;
 
 /** The most moves one Grow round may add. */
-export const MAX_NEW_MOVES = 3;
+export const MAX_NEW_MOVES = 8;
 
 export interface Candidate {
   focus: Focus;
@@ -91,6 +100,8 @@ export interface Candidate {
   starred: boolean;
   /** Moves a Grow round may add here; 0 for the other focuses. */
   newMoves: number;
+  /** How bare this opening still is, 0..1 — see `thinness`. 0 unless Grow. */
+  thin: number;
   /** need × staleness × star × fun × brake. Only comparable within one ranking. */
   score: number;
 }
@@ -101,6 +112,12 @@ export interface Recommendation {
   color: Color;
   /** Moves the round may add to the repertoire. */
   newMoves: number;
+  /**
+   * How bare the opening still is, 0..1, and zero for the focuses that add
+   * nothing. A Grow round tilts toward widening the repertoire rather than
+   * lengthening it by this much — see `drawHole`.
+   */
+  thin: number;
 }
 
 export interface RecommendInput {
@@ -176,27 +193,46 @@ export function readiness(strengths: number[]): number {
  * Adding lines to an opening whose existing moves are still being learned
  * makes more to drill, not a stronger repertoire, so the readiness gate is
  * steep: half held is a quarter of the voice, and only prep that is nearly
- * all held asks at full strength. It never goes silent, so a thin opening is
- * still grown now and then rather than never.
+ * all held asks at full strength.
+ *
+ * Thinness lifts the floor that gate cannot go below, because the rule was
+ * never about an opening this bare. A repertoire with nothing in it is not
+ * prep being learned — it is prep that does not exist yet, and the openings it
+ * cannot meet will still be played against it whatever its cards say. So an
+ * opening with nothing in it asks at full voice however little of it is held.
+ *
+ * That lift is as steep as the gate it undoes, and for the same reason. An
+ * opening that answers half of what it meets is half prepared, not bare, and
+ * lifting the floor for it would buy breadth with the review the other half
+ * has earned. Only prep that barely exists gets to ignore the gate.
  */
-export function growNeed(holes: Hole[], ready = 1): number {
+export function growNeed(holes: Hole[], ready = 1, thin = 0): number {
   if (!holes.length) return 0;
   const depth = Math.min(...holes.map((hole) => hole.path.length));
   const topShare = Math.max(...holes.map((hole) => hole.share));
-  const gate = GROWTH_FLOOR + (1 - GROWTH_FLOOR) * clamp(ready) ** 2;
+  const floor = GROWTH_FLOOR + (1 - GROWTH_FLOOR) * clamp(thin) ** 2;
+  const gate = floor + (1 - floor) * clamp(ready) ** 2;
   return clamp(rowUrgency(depth, topShare, holes.length) * gate);
 }
 
 /**
- * How many moves a Grow round may add: more the better the prep is held.
+ * How many moves a Grow round may add: more the better the prep is held, or
+ * the barer the opening still is.
  *
- * Three at a time to prep that is known is a line taking shape; three at a
- * time to prep still being learned is three more things to forget.
+ * A budget is spent down one line — you answer at the edge of the prep, the
+ * book answers back, and your prep ends again — so this is how deep one round
+ * may take a line, not how wide. Eight at a time to prep that is known is a
+ * line taking shape; eight at a time to prep still being learned is eight more
+ * things to forget, which is why readiness earns it.
+ *
+ * Thinness earns it too, and for the opposite reason. The readiness rule was
+ * meant for a repertoire that exists: do not pile more on what you are still
+ * learning. An opening that answers almost nothing has nothing to pile onto,
+ * and a budget of one there is a repertoire that takes a hundred rounds to
+ * become playable.
  */
-export function growthBudget(ready: number): number {
-  if (ready >= 0.75) return MAX_NEW_MOVES;
-  if (ready >= 0.4) return 2;
-  return 1;
+export function growthBudget(ready: number, thin = 0): number {
+  return 1 + Math.round((MAX_NEW_MOVES - 1) * clamp(Math.max(ready, thin)));
 }
 
 /**
@@ -318,7 +354,15 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
    */
   const lastAt = (id: string) => nodeStats(score, id).byMode.run.lastAt;
   const everRun = score.global.byMode.run.rounds > 0;
-  const push = (focus: Focus, node: OpeningNode, color: Color, need: number, work: number, newMoves = 0) => {
+  const push = (
+    focus: Focus,
+    node: OpeningNode,
+    color: Color,
+    need: number,
+    work: number,
+    newMoves = 0,
+    thin = 0,
+  ) => {
     if (need <= 0) return;
     out.push({
       focus,
@@ -329,13 +373,14 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
       lastAt: lastAt(node.id),
       starred: starredWithin(tree, node.id, starred),
       newMoves,
+      thin,
     });
   };
 
   for (const color of colorsOf(selection.color)) {
     const reps = input.reps.filter((rep) => rep.color === color);
     if (!reps.length) {
-      push('grow', region, color, 0.5, 1, MAX_NEW_MOVES);
+      push('grow', region, color, 0.5, 1, MAX_NEW_MOVES, 1);
       continue;
     }
     const repairs = input.repairs.filter((item) => item.color === color);
@@ -349,6 +394,17 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
         repairs,
       ),
       (hole: Hole) => [...hole.path, hole.san],
+    );
+    // What the side already answers at each of the opponent's choices, placed
+    // like the holes are, so an opening's breadth is read off the positions
+    // inside it rather than by walking the repertoire again per node.
+    const coverage = place(
+      tree,
+      nodes,
+      reps.flatMap((rep) =>
+        findCoverage(rep, tree.index, { ...input.growth, region: { tree, node: region } }),
+      ),
+      (at: Coverage) => at.path,
     );
     // Positions your games got wrong where you had a move: they want
     // repeating whatever the schedule says, so they count as due.
@@ -386,13 +442,15 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
         reachedIn(items, node).filter(wanting).length,
       );
       const ready = readiness(strengths);
+      const thin = thinness(within(coverage, node));
       push(
         'grow',
         node,
         color,
-        growNeed(within(holes, node), ready),
+        growNeed(within(holes, node), ready, thin),
         reachedIn(holes, node).length,
-        growthBudget(ready),
+        growthBudget(ready, thin),
+        thin,
       );
 
       if (mine.length) {
@@ -423,6 +481,7 @@ export function recommend(input: RecommendInput): Recommendation {
       opening: nodeById(tree, input.selection.opening),
       color: colorsOf(input.selection.color)[0],
       newMoves: MAX_NEW_MOVES,
+      thin: 1,
     };
   }
   for (;;) {
@@ -445,6 +504,7 @@ export function recommend(input: RecommendInput): Recommendation {
     opening: nodeById(tree, best.openingId),
     color: best.color,
     newMoves: best.newMoves,
+    thin: best.thin,
   };
 }
 

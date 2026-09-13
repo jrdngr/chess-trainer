@@ -78,17 +78,45 @@ export interface Hole {
   after: string;
   /** The repertoire node the opponent moved from, or null at the root. */
   nodeId: string | null;
+  /**
+   * How many replies you already answer at that position.
+   *
+   * Zero is the tip of a line: your prep stops there and answering the hole
+   * makes it longer. More than zero is a junction you already meet one way,
+   * and answering the hole makes the repertoire wider instead — a different
+   * reply at a position you have seen before. Which of the two a run is
+   * steered to is the whole difference between a deep repertoire and a broad
+   * one, so the count travels with the hole.
+   */
+  answered: number;
 }
 
-/** Every unanswered reply in a repertoire, shallowest and most popular first. */
-export function findHoles(
+/**
+ * One position where the opponent chooses, as the walk finds it.
+ *
+ * Holes and coverage are two readings of the same walk — what you cannot meet,
+ * and how much of what they would play you can — so they are taken together
+ * rather than by walking the repertoire twice.
+ */
+interface Choice {
+  path: string[];
+  fen: string;
+  nodeId: string | null;
+  /** Book replies here worth preparing for, inside the region. */
+  replies: (ExplorerMove & { share: number })[];
+  /** The replies your prep answers. */
+  prepared: Set<string>;
+}
+
+/** Every position inside a repertoire where the opponent has the move. */
+function walkChoices(
   rep: Repertoire,
   index: ReferenceIndex,
-  opts: GrowthOptions = {},
-): Hole[] {
+  opts: GrowthOptions,
+  visit: (choice: Choice) => void,
+): void {
   const minShare = opts.minShare ?? DEFAULT_MIN_SHARE;
   const maxPly = opts.maxPly ?? DEFAULT_MAX_PLY;
-  const holes: Hole[] = [];
   const seen = new Set<string>();
   const region = opts.region;
   const wanted = (line: string[]) => !region || lineInRegion(region.tree, region.node, line);
@@ -102,22 +130,13 @@ export function findHoles(
       // because the walk is depth-first from the root.
       if (!seen.has(key)) {
         seen.add(key);
-        const prepared = new Set(kids.map((kid) => kid.san));
-        for (const move of popularReplies(index, fen, minShare)) {
-          if (prepared.has(move.san)) continue;
-          const after = applySan(fen, move.san);
-          if (!after) continue;
-          if (!wanted([...path, move.san])) continue;
-          holes.push({
-            path,
-            fen,
-            san: move.san,
-            share: move.share,
-            games: move.games,
-            after: after.after,
-            nodeId,
-          });
-        }
+        visit({
+          path,
+          fen,
+          nodeId,
+          replies: popularReplies(index, fen, minShare).filter((move) => wanted([...path, move.san])),
+          prepared: new Set(kids.map((kid) => kid.san)),
+        });
       }
     }
     if (path.length >= maxPly) return;
@@ -129,7 +148,116 @@ export function findHoles(
   };
 
   walk(null, []);
+}
+
+/** Every unanswered reply in a repertoire, shallowest and most popular first. */
+export function findHoles(
+  rep: Repertoire,
+  index: ReferenceIndex,
+  opts: GrowthOptions = {},
+): Hole[] {
+  const holes: Hole[] = [];
+  walkChoices(rep, index, opts, (choice) => {
+    for (const move of choice.replies) {
+      if (choice.prepared.has(move.san)) continue;
+      const after = applySan(choice.fen, move.san);
+      if (!after) continue;
+      holes.push({
+        path: choice.path,
+        fen: choice.fen,
+        san: move.san,
+        share: move.share,
+        games: move.games,
+        after: after.after,
+        nodeId: choice.nodeId,
+        answered: choice.prepared.size,
+      });
+    }
+  });
   return holes.sort((a, b) => a.path.length - b.path.length || b.share - a.share);
+}
+
+/* ── breadth ──────────────────────────────────────────────────────────── */
+
+/** How much of what the opponent would play, at one choice of theirs, you meet. */
+export interface Coverage {
+  /** Moves from the start to the position the opponent chooses in. */
+  path: string[];
+  /** The share of the book's replies there that you answer, 0..1. */
+  covered: number;
+  /**
+   * How much of a choice the position really is, 0..1: what is left once the
+   * one most played reply is taken out. A recapture nobody declines is not a
+   * place a repertoire can be broad or narrow, and answering it says nothing
+   * either way.
+   */
+  choice: number;
+}
+
+/** How much an opening's coverage at one depth counts: the first choices most. */
+function earliness(depth: number): number {
+  return 1 / (1 + depth / 3);
+}
+
+/** How much one of the opponent's choices counts toward how bare an opening is. */
+function coverageWeight(at: Coverage): number {
+  return earliness(at.path.length) * Math.max(at.choice, 0.05);
+}
+
+/**
+ * What you answer at each of the opponent's choices your prep passes through.
+ *
+ * Only the junctions: a position where you answer nothing at all is the tip of
+ * a line, and a line that has not been extended yet is not the same failing as
+ * a reply you have chosen never to meet. Counting tips would read a repertoire
+ * of twelve short lines as barer than one of a single long one, which is the
+ * wrong way round for every purpose this number has.
+ */
+export function findCoverage(
+  rep: Repertoire,
+  index: ReferenceIndex,
+  opts: GrowthOptions = {},
+): Coverage[] {
+  const out: Coverage[] = [];
+  walkChoices(rep, index, opts, (choice) => {
+    if (choice.prepared.size === 0) return;
+    const all = choice.replies.reduce((sum, move) => sum + move.share, 0);
+    if (all <= 0) return;
+    const met = choice.replies
+      .filter((move) => choice.prepared.has(move.san))
+      .reduce((sum, move) => sum + move.share, 0);
+    const top = Math.max(...choice.replies.map((move) => move.share));
+    out.push({ path: choice.path, covered: met / all, choice: 1 - top / all });
+  });
+  return out;
+}
+
+/**
+ * How bare an opening still is, 0..1.
+ *
+ * Not how much prep is in it — a King's Indian eighteen plies deep down one
+ * pawn storm is a great deal of prep and the narrowest repertoire there is,
+ * and the player meeting it will not play the storm. What is measured is how
+ * much of what the opponent would actually play you have an answer to, at
+ * each position where they choose, weighted toward the early ones — a reply
+ * unanswered at move three is met in every game, one unanswered at move
+ * twelve in almost none — and toward the ones that are a choice at all,
+ * because a forced recapture is not an opening met, however well it is
+ * prepared.
+ *
+ * An opening with nothing in it at all is as thin as it gets, which is what
+ * lets a new repertoire be given breadth from its first round rather than
+ * after its first line is held.
+ */
+export function thinness(coverage: Coverage[]): number {
+  let weighted = 0;
+  let total = 0;
+  for (const at of coverage) {
+    const weight = coverageWeight(at);
+    weighted += weight * (1 - at.covered);
+    total += weight;
+  }
+  return total > 0 ? Math.max(0, Math.min(1, weighted / total)) : 1;
 }
 
 /**
@@ -468,6 +596,8 @@ export function nextHole(index: ReferenceIndex, run: GrowthRun): Hole | null {
     games: reply.games,
     after: after.after,
     nodeId: null,
+    // The answer just added is the only thing here, and it is not a reply.
+    answered: 0,
   };
 }
 

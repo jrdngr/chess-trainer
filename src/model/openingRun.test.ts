@@ -443,7 +443,7 @@ describe('hints', () => {
 describe('defaults', () => {
   it('turns every extra off: a popular line, nothing added', () => {
     expect(DEFAULT_OPTIONS).toEqual({ steer: 'popular', newMoves: 0, clock: 'off', hints: 0, extended: false });
-    expect(NEW_MOVE_BUDGETS).toEqual([0, 1, 3]);
+    expect(NEW_MOVE_BUDGETS).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
     for (const steer of STEERS) expect(steerLabel(steer)).toBeTruthy();
   });
 });
@@ -481,6 +481,25 @@ describe('steering at gaps', () => {
       });
       expect(run.target).toEqual(['e4', 'c5']);
     }
+  });
+
+  it('leans toward a reply it has never met when the repertoire is bare', () => {
+    // A Spanish and nothing else. Its holes are of two shapes: 1...c5, 1...e6
+    // and the rest are junctions off 1.e4, a reply already answered one way;
+    // Black's third move is the tip, where the prep simply stops.
+    const rep = spanish();
+    const tips = (breadth: number) => {
+      let count = 0;
+      for (let seed = 0; seed < 60; seed += 1) {
+        const { run } = start([rep], 'w', seed, any, { steer: 'gaps', breadth });
+        if (run.target.length > 4) count += 1;
+      }
+      return count;
+    };
+    // Left to popularity the tip wins often: 3...a6 is the most played move on
+    // the board. Told the repertoire is bare, the round goes to a junction.
+    expect(tips(0)).toBeGreaterThan(0);
+    expect(tips(1)).toBeLessThan(tips(0));
   });
 
   it('falls back to a line through the opening when there is nothing to walk to', () => {

@@ -19,6 +19,13 @@ export interface RoundPlan {
   color: Color;
   /** The opening to steer toward: an opening tree node id inside the selection. */
   steer: string;
+  /**
+   * How bare that opening is, 0..1: how hard a Grow round leans toward a reply
+   * it has never met over one more move of the line it knows. Not a Run
+   * setting — nothing on the setup screen chooses it — so it travels beside
+   * them rather than among them.
+   */
+  breadth: number;
   /** The Run settings the focus comes down to. */
   options: { steer: Steer; newMoves: number };
 }
@@ -27,6 +34,7 @@ export function planFor(pick: Recommendation): RoundPlan {
   return {
     color: pick.color,
     steer: pick.opening.id,
+    breadth: pick.focus === 'grow' ? pick.thin : 0,
     options: { steer: STEER_FOR[pick.focus], newMoves: pick.focus === 'grow' ? pick.newMoves : 0 },
   };
 }

@@ -6,6 +6,7 @@ import {
   atHole,
   enterHole,
   evidenceFor,
+  findCoverage,
   findHoles,
   growthRows,
   isUsersTurn,
@@ -19,6 +20,7 @@ import {
   rowUrgency,
   startGrowth,
   steer,
+  thinness,
 } from './growth';
 import { referenceIndex } from './referenceIndex';
 import { addLine, createRepertoire, hasLine } from './repertoire';
@@ -57,6 +59,16 @@ describe('finding holes', () => {
     }
   });
 
+  it('says whether answering a hole would widen the prep or only lengthen it', () => {
+    const holes = findHoles(black, index);
+    // The root is a junction: 1.d4 is answered, 1.e4 and the rest are not.
+    const root = holes.find((hole) => hole.path.length === 0 && hole.san === 'e4');
+    expect(root?.answered).toBe(1);
+    // The tip: eight plies in, the prep stops and answers nothing at all.
+    const tip = holes.find((hole) => hole.path.length === 8);
+    expect(tip?.answered).toBe(0);
+  });
+
   it('never reports a reply the repertoire already answers', () => {
     for (const hole of findHoles(white, index)) {
       expect(hasLine(white, [...hole.path, hole.san])).toBe(false);
@@ -88,6 +100,80 @@ describe('finding holes', () => {
 
   it('finds nothing in an empty White repertoire, whose first move answers nothing', () => {
     expect(findHoles(createRepertoire('Empty', 'w', 'e'), index)).toEqual([]);
+  });
+});
+
+describe('how bare a repertoire is', () => {
+  /** A King's Indian and nothing else: one reply met at every junction. */
+  const kid = black;
+  /** The same opening met several ways, plus something against every first move. */
+  const broad = (() => {
+    let rep = createRepertoire('Broad', 'b', 'r_broad');
+    for (const line of [
+      'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6',
+      'd4 Nf6 c4 g6 Nf3 Bg7 g3 O-O',
+      'd4 Nf6 c4 g6 g3 Bg7 Bg2 O-O',
+      'd4 Nf6 c4 g6 f3 Bg7 e4 d6',
+      'd4 Nf6 c4 g6 Bf4 Bg7',
+      'd4 Nf6 c4 g6 h4 Bg7',
+      'd4 Nf6 Nf3 g6 g3 Bg7',
+      'd4 Nf6 Bg5 Ne4',
+      'd4 Nf6 Bf4 g6',
+      'd4 Nf6 Nc3 d5',
+      'd4 Nf6 e3 g6',
+      'd4 Nf6 g3 g6',
+      'e4 e5 Nf3 Nc6',
+      'c4 e5 Nc3 Nf6',
+      'Nf3 Nf6 g3 g6',
+      'g3 d5 Bg2 Nf6',
+      'b3 e5 Bb2 Nc6',
+      'f4 d5 Nf3 Nf6',
+      'Nc3 d5 e4 d4',
+      'b4 e5 Bb2 Bxb4',
+      'd3 e5 Nf3 Nc6',
+      'e3 d5 d4 Nf6',
+      'c3 e5 d4 exd4',
+      'h3 d5 d4 Nf6',
+      'a3 e5 e4 Nf6',
+    ]) {
+      rep = addLine(rep, line.split(' '), 'reference').rep;
+    }
+    return rep;
+  })();
+
+  it('reads a repertoire with nothing in it as as bare as it gets', () => {
+    expect(thinness(findCoverage(createRepertoire('Empty', 'b', 'r_e'), index))).toBe(1);
+    expect(thinness([])).toBe(1);
+  });
+
+  it('reads one deep line as barer than many shallow ones', () => {
+    const narrow = thinness(findCoverage(kid, index));
+    const wide = thinness(findCoverage(broad, index));
+    // Eight plies of prep, and an answer to one White reply at each junction.
+    expect(narrow).toBeGreaterThan(0.35);
+    expect(wide).toBeLessThan(narrow);
+    expect(wide).toBeLessThan(0.3);
+  });
+
+  it('weighs an early choice above a late one', () => {
+    const at = (depth: number, covered: number) => ({ path: Array(depth).fill('x'), covered, choice: 1 });
+    expect(thinness([at(0, 0), at(10, 1)])).toBeGreaterThan(thinness([at(0, 1), at(10, 0)]));
+  });
+
+  it('discounts a position the opponent has no real choice in', () => {
+    const forced = { path: ['x'], covered: 1, choice: 0 };
+    const open = { path: ['x'], covered: 0, choice: 1 };
+    // The recapture being answered barely counts against the open reply not.
+    expect(thinness([forced, open])).toBeGreaterThan(0.9);
+    expect(thinness([{ ...forced, choice: 1 }, open])).toBeCloseTo(0.5, 5);
+  });
+
+  it('ignores the tip of a line, which is depth missing rather than breadth', () => {
+    // One move of prep: after 1.d4 Black answers, and then nothing. The only
+    // junction is the root, so the tip cannot make the repertoire read wider.
+    const oneMove = addLine(createRepertoire('One', 'b', 'r_one'), ['d4', 'Nf6'], 'reference').rep;
+    const paths = findCoverage(oneMove, index).map((at) => at.path.join(' '));
+    expect(paths).toEqual(['']);
   });
 });
 
@@ -406,7 +492,7 @@ describe('the moves drawn on the board', () => {
 
 describe('what your games say about a hole', () => {
   const after = applySan(applySan(START_FEN, 'e4')!.after, 'c5')!.after;
-  const hole = { path: ['e4'], fen: applySan(START_FEN, 'e4')!.after, san: 'c5', share: 20, games: 9, after, nodeId: null };
+  const hole = { path: ['e4'], fen: applySan(START_FEN, 'e4')!.after, san: 'c5', share: 20, games: 9, after, nodeId: null, answered: 0 };
 
   it('weighs a hole by the games you reached it with nothing prepared', () => {
     expect(evidenceFor([])(hole)).toBe(1);

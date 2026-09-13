@@ -133,6 +133,7 @@ export function OpeningRunScreen({
       weakness: weaknessFromCards(cards, evidence),
       growth: settings.growth,
       holeWeight: evidenceFor(evidence),
+      breadth: planned?.breadth,
     });
 
   /**

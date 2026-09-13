@@ -59,16 +59,13 @@ export function Setup({
         <Section title="New moves" />
         <Segmented
           value={String(prefs.newMoves)}
-          options={NEW_MOVE_BUDGETS.map((n) => ({
-            value: String(n),
-            label: n === 0 ? 'None' : `${n} move${n === 1 ? '' : 's'}`,
-          }))}
+          options={NEW_MOVE_BUDGETS.map((n) => ({ value: String(n), label: String(n) }))}
           onChange={(n) => setOpeningRunPrefs({ newMoves: Number(n) })}
         />
         <div className="note">
           {prefs.newMoves === 0
-            ? 'A run is complete where your prep ends.'
-            : 'Where your prep ends, the book is offered and the move you choose becomes prep.'}
+            ? 'None: a run is complete where your prep ends.'
+            : `Where your prep ends, the book is offered and the move you choose becomes prep, up to ${prefs.newMoves} time${prefs.newMoves === 1 ? '' : 's'}.`}
         </div>
 
         <Section title="Clock" />

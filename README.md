@@ -101,8 +101,8 @@ inside the selection. A focus is a preset of Run settings:
 - **Review**: lines drawn toward the positions you answer badly, have let
   lapse, are due on, or got wrong in your own games; nothing added.
 - **Grow**: the opponent walks you to a reply you have no answer to and the
-  run offers the book, one to three moves depending on how well the prep
-  around them is held.
+  run offers the book, one to eight moves depending on how well the prep
+  around them is held and how bare the opening still is.
 
 Each candidate is scored:
 
@@ -116,8 +116,16 @@ Each candidate is scored:
   held is a quarter of the voice; an opening still being learned asks at a
   tenth at most, so it is grown now and then rather than never. An opening
   with no prep yet is ready, which is how a new repertoire gets its first
-  lines. Readiness also sets the budget: three new moves when the prep is
-  held, two when half held, one otherwise.
+  lines.
+- **Thinness** undoes that gate for an opening that barely exists, because the
+  readiness rule is about prep being learned and there is none here to learn.
+  It is not how much prep an opening holds — a King's Indian eighteen plies
+  deep down one pawn storm is a great deal of prep and the narrowest
+  repertoire there is — but how much of what the opponent would actually play
+  you answer, at each position where they have a real choice, weighted toward
+  the early ones. Between them, readiness and thinness set the budget: eight
+  new moves for prep that is held or an opening that is bare, one for an
+  opening that is neither.
 - **Staleness** is how long that opening has gone without a round, measured
   against the other candidates rather than the clock. Candidates never played
   are all equally stale.
@@ -168,18 +176,27 @@ prep), yellow (finished, having left it), red (a move nobody plays), purple
 Where the prep ends — your move, nothing prepared, the book still going — the
 run is complete, unless it has "new moves" left. Then it pauses and offers the
 book's replies, with how often each is played; the one you choose is written
-into the repertoire and the run carries on, up to three times a run. A chosen
-move earns nothing: the score is moves you found.
+into the repertoire and the run carries on, up to the run's budget of new
+moves. A chosen move earns nothing: the score is moves you found.
 
 Dying buys the reveal: the line named, the board a replay of the whole line
 parked on the position that ended it, the mistake in red beside the prepared
 move in green. Whatever you survived is written into your repertoire, every
 run: a line you have played through is a line you play.
 
-Options: steer toward (popular, weak spots, gaps), new moves (none, 1, 3),
-clock (off, 10s, 30s a move), hints (the square a move starts from, never
-where it lands), extended mode (past the prep, the engine judges and a blunder
-ends the run). Autopilot sets the first two for itself.
+Options: steer toward (popular, weak spots, gaps), new moves (0 to 8), clock
+(off, 10s, 30s a move), hints (the square a move starts from, never where it
+lands), extended mode (past the prep, the engine judges and a blunder ends the
+run). Autopilot sets the first two for itself.
+
+A gaps run draws the hole it walks to on how often that reply is played, how
+early it comes, what your own games say about it, and — on an opening
+Autopilot has judged bare — on whether answering it would make the repertoire
+wider or only longer. Left to popularity alone the loudest hole is nearly
+always the tip of the one line you have, and round after round walks the same
+opening and makes it a move longer; a hole you already answer some other reply
+to is a white try you have never seen, which is what a bare repertoire is
+short of.
 
 ### Drill
 Positions inside the region, drawn from the schedule: due first, then new,
@@ -193,7 +210,8 @@ never pushes a card out.
 
 ### Growth
 The opponent walks your own prep toward the nearest reply you have no answer
-to, and you choose one from the book. Up to three moves a run. Holes are only
+to, and you choose one from the book. Up to three moves a run — this mode's
+own cap, not the Run's budget. Holes are only
 counted inside the region, and on the way into it. This is the picker a Run
 opens at the edge of the prep, as a mode of its own.
 
