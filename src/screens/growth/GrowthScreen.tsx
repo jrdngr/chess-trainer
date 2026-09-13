@@ -269,7 +269,7 @@ function Run({
   return (
     <>
       <AppBar
-        title={row.name}
+        title="Growth"
         subtitle={selectionText(run.color, settings.selection.opening)}
         onClose={onExit}
         actions={

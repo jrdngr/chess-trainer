@@ -15,8 +15,6 @@ import {
 import type { BoardTheme } from '../../components/Board';
 import { formatScore } from '../../engine/types';
 import { useEngine } from '../../engine/useEngine';
-import { openingNameForPath } from '../../model/reference';
-import { referenceIndex } from '../../model/referenceIndex';
 import {
   buildSession,
   checkAnswer,
@@ -62,6 +60,17 @@ function order(
   weakFirst: boolean,
 ): TrainingItem[] {
   return weakFirst ? weakestFirst(batch, cards) : batch;
+}
+
+/**
+ * The grade a correct answer earns by how long it took: under three seconds
+ * it was instant, under eight you knew it, past that you got there. Never
+ * "guessed" — that is a fact about your head, not about the clock.
+ */
+export function gradeForTime(seconds: number): Grade {
+  if (seconds < 3) return 'easy';
+  if (seconds < 8) return 'good';
+  return 'hard';
 }
 
 /** The speed bonus read at the moment of the move rather than the last tick. */
@@ -134,6 +143,8 @@ export function DrillSession({
   const [why, setWhy] = useState(false);
   const [stats, setStats] = useState({ answered: 0, correct: 0, earned: 0, streak: 0 });
   const [stopped, setStopped] = useState(false);
+  /** The grade a correct answer will get on Continue: read off the clock, changeable by hand. */
+  const [chosen, setChosen] = useState<Grade>('good');
   /** Logged once, however the session ends. */
   const logged = useRef(false);
 
@@ -204,11 +215,6 @@ export function DrillSession({
     if (item) ensureCard(item);
   }, [item, ensureCard]);
 
-  const opening = useMemo(() => {
-    if (!item) return null;
-    return openingNameForPath(referenceIndex(), item.pathSans);
-  }, [item]);
-
   const answer = useMemo(() => (item && played ? checkAnswer(item, played.san) : null), [item, played]);
 
   const expectedMove = useMemo(() => {
@@ -222,13 +228,15 @@ export function DrillSession({
     const result = checkAnswer(item, move.san);
     setPlayed(move);
     setPhase(result.correct ? 'correct' : 'wrong');
+    const took = clock.elapsedNow();
+    if (result.correct) setChosen(gradeForTime(took));
     // What this answer pays: the base, more for a card you had lapsed on, the
     // speed bonus at the moment of the move, and the combo.
     const streak = result.correct ? stats.streak + 1 : 0;
     const points = result.correct
       ? POINTS.drill.answer +
         (card && card.lapses > 0 ? POINTS.drill.lapsed : 0) +
-        speedNow(clock.elapsedNow(), clock.budget) +
+        speedNow(took, clock.budget) +
         comboBonus(streak)
       : 0;
     earn({
@@ -429,7 +437,7 @@ export function DrillSession({
   return (
     <>
       <AppBar
-        title={opening?.name ?? title}
+        title={title}
         subtitle={selectionText(side, openingId ?? settings.selection.opening)}
         onClose={stop}
         actions={
@@ -491,15 +499,29 @@ export function DrillSession({
 
         {phase === 'correct' && (
           <>
-            <div className="verdict ok">
-              <span className="ico"><Icons.check size={16} /></span>
-              Correct
-              {playedEntry?.preferred === false && <span className="chip good">alternative</span>}
+            <div className="row between">
+              <div className="verdict ok" style={{ padding: 0 }}>
+                <span className="ico"><Icons.check size={16} /></span>
+                Correct
+                {playedEntry?.preferred === false && <span className="chip good">alternative</span>}
+              </div>
+              <button className="btn primary sm" onClick={() => onGrade(chosen)}>
+                Continue
+                <Icons.next size={16} />
+              </button>
             </div>
             <div className="spacer" />
+            {/* How well you knew it, read off the clock: instant, quick, or slow.
+                Guessed is never assumed — only you know that — so it is the one
+                grade that has to be chosen by hand. Tap another to change it. */}
             <div className="grades">
               {(['again', 'hard', 'good', 'easy'] as Grade[]).map((g) => (
-                <button key={g} className={g} onClick={() => onGrade(g)}>
+                <button
+                  key={g}
+                  className={`${g}${chosen === g ? ' selected' : ''}`}
+                  aria-pressed={chosen === g}
+                  onClick={() => setChosen(g)}
+                >
                   {GRADE_LABELS[g]}
                 </button>
               ))}

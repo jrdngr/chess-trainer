@@ -16,7 +16,7 @@ import { getEngine } from '../../engine/useEngine';
 import { formatScore, winFraction, type EngineSnapshot } from '../../engine/types';
 import { chooseMove, levelById, openingLine, type GameResult } from '../../model/play';
 import type { PlayPrefs } from '../../model/modes';
-import { openingNameForPath, specificNameForColor } from '../../model/reference';
+import { specificNameForColor } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
 import { lineStatus, nodeById, openingTree } from '../../model/openingTree';
 import { selectionText } from '../../components/Selection';
@@ -87,7 +87,6 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
 
   const status = useMemo(() => positionStatus(fen), [fen]);
   const myTurn = fenTurn(fen) === color && !over;
-  const opening = useMemo(() => openingNameForPath(index, moves), [index, moves]);
 
   /** Settle the game when the position is terminal. */
   useEffect(() => {
@@ -251,7 +250,7 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
   return (
     <>
       <AppBar
-        title={opening?.name ?? 'Play'}
+        title="Play"
         subtitle={`${level.name} · ${selectionText(color, selection.opening)}`}
         onClose={onExit}
         actions={

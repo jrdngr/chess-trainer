@@ -3,7 +3,7 @@ import { Board } from '../../components/Board';
 import { AppBar, haptic, Icons, Section, toast } from '../../components/ui';
 import { applySan, sansToMoveText, type LegalMove, type Square } from '../../chess/core';
 import { candidateAnswers } from '../../model/gaps';
-import { kindLabel, type RepairPrefs } from '../../model/modes';
+import type { RepairPrefs } from '../../model/modes';
 import { formatGameCount, movePercent, lookup, totalGamesAt } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
 import { nodeById, openingTree } from '../../model/openingTree';
@@ -213,7 +213,7 @@ function Working({
   return (
     <>
       <AppBar
-        title={kindLabel(item.kind)}
+        title="Repair"
         subtitle={selectionText(item.color, region.id)}
         onClose={leave}
         actions={

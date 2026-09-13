@@ -202,7 +202,7 @@ export function Reveal({
   return (
     <>
       <AppBar
-        title={survived ? 'Survived' : 'Run over'}
+        title="Run"
         subtitle={selectionText(run.color, run.openingId)}
         onClose={onExit}
         actions={

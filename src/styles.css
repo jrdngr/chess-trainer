@@ -516,6 +516,7 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .grades button:active { transform: scale(0.96); }
 .grades button.again { color: var(--bad); }
 .grades button.easy { color: var(--good); }
+.grades button.selected { background: var(--surface-3); box-shadow: inset 0 0 0 2px var(--text); }
 
 /* ── mode grid ─────────────────────────────────────────────────────────── */
 /* Home is four square tiles. Each carries its own state so the grid answers
