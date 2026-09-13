@@ -6,8 +6,9 @@ import { candidateAnswers } from '../../model/gaps';
 import { kindLabel, type RepairPrefs } from '../../model/modes';
 import { formatGameCount, movePercent, lookup, totalGamesAt } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
-import { openingTree } from '../../model/openingTree';
+import { nodeById, openingTree } from '../../model/openingTree';
 import { POINTS } from '../../model/scoring';
+import type { GamePlan, GameSummary } from '../../model/autopilot';
 import { lineInRegion, regionOf, repertoiresIn } from '../../model/selection';
 import { selectionText } from '../../components/Selection';
 import { buildRepairs, fixCandidates, isRepaired, lineFor, type RepairItem } from '../../model/repair';
@@ -19,21 +20,44 @@ export interface RepairScreenProps {
   auto?: boolean;
   /** Stop after this many items, as one game of an automatic session. */
   limit?: number;
+  /** What Autopilot decided: the side, and the opening to repair. */
+  plan?: GamePlan;
+  onGameOver?: (summary: GameSummary) => void;
   onImport: () => void;
   onExit: () => void;
 }
 
-export function RepairScreen({ auto, limit, onImport, onExit }: RepairScreenProps) {
+export function RepairScreen({ auto, limit, plan, onGameOver, onImport, onExit }: RepairScreenProps) {
   const saved = useStore((s) => s.settings.repair);
   const [prefs, setPrefs] = useState<RepairPrefs | null>(() => (auto ? saved : null));
   if (!prefs) return <Setup onStart={setPrefs} onImport={onImport} onExit={onExit} />;
   // A queue nobody set up has no setup screen to fall back to.
-  return <Working prefs={prefs} limit={limit} onExit={() => (auto ? onExit() : setPrefs(null))} />;
+  return (
+    <Working
+      prefs={prefs}
+      limit={limit}
+      plan={plan}
+      onGameOver={onGameOver}
+      onExit={() => (auto ? onExit() : setPrefs(null))}
+    />
+  );
 }
 
 type Phase = 'ask' | 'right' | 'wrong' | 'choose';
 
-function Working({ prefs, limit, onExit }: { prefs: RepairPrefs; limit?: number; onExit: () => void }) {
+function Working({
+  prefs,
+  limit,
+  plan,
+  onGameOver,
+  onExit,
+}: {
+  prefs: RepairPrefs;
+  limit?: number;
+  plan?: GamePlan;
+  onGameOver?: (summary: GameSummary) => void;
+  onExit: () => void;
+}) {
   const state = useStore();
   const addLine = useStore((s) => s.addLine);
   const endRepair = useStore((s) => s.endRepair);
@@ -43,10 +67,10 @@ function Working({ prefs, limit, onExit }: { prefs: RepairPrefs; limit?: number;
   const logged = useRef(false);
   const settings = state.settings;
   const selection = settings.selection;
-  const reps = repertoiresIn(repertoireList(state), selection.color);
+  const reps = repertoiresIn(repertoireList(state), plan?.color ?? selection.color);
   const index = referenceIndex();
   const tree = openingTree(index);
-  const region = regionOf(tree, selection);
+  const region = plan ? nodeById(tree, plan.steer) : regionOf(tree, selection);
 
   /** Built once per visit: fixing an item changes the repertoire underneath. */
   const [queue] = useState<RepairItem[]>(() =>
@@ -75,15 +99,17 @@ function Working({ prefs, limit, onExit }: { prefs: RepairPrefs; limit?: number;
   const log = () => {
     if (logged.current || done.relearned + done.added + done.wrong === 0) return;
     logged.current = true;
-    endGame({
-      mode: 'repair',
+    const summary = {
+      mode: 'repair' as const,
       openingId: region.id,
       color: queue[0]?.color ?? 'w',
       score: done.earned,
       answered: done.relearned + done.wrong,
       correct: done.relearned,
       perfect: done.wrong === 0 && done.relearned + done.added >= 3,
-    });
+    };
+    endGame(summary);
+    onGameOver?.(summary);
   };
   useEffect(() => {
     if (!item) log();
@@ -171,9 +197,11 @@ function Working({ prefs, limit, onExit }: { prefs: RepairPrefs; limit?: number;
               </span>
             </div>
           </div>
-          <button className="btn primary block xl mt-16" onClick={leave}>
-            {limit ? 'Done' : 'Back to options'}
-          </button>
+          {!limit && (
+            <button className="btn primary block xl mt-16" onClick={leave}>
+              Back to options
+            </button>
+          )}
         </div>
       </>
     );
@@ -186,7 +214,7 @@ function Working({ prefs, limit, onExit }: { prefs: RepairPrefs; limit?: number;
     <>
       <AppBar
         title={kindLabel(item.kind)}
-        subtitle={selectionText(item.color, selection.opening)}
+        subtitle={selectionText(item.color, region.id)}
         onClose={leave}
         actions={
           <span className="num muted small appbar-gap" style={{ textAlign: 'right' }}>

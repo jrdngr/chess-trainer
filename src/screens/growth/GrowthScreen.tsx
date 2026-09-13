@@ -25,45 +25,68 @@ import { POINTS } from '../../model/scoring';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { regionOf, repertoiresIn } from '../../model/selection';
+import type { GamePlan, GameSummary } from '../../model/autopilot';
 import { selectionText } from '../../components/Selection';
 import { repertoireList, useStore } from '../../store/useStore';
 import { PlayOn } from '../openingRun/PlayOn';
 import { Lobby } from './Lobby';
 
 export interface GrowthScreenProps {
-  /** Skip the lobby and extend the worst hole — Next Up started this. */
+  /** Skip the lobby and extend the worst hole — started automatically. */
   auto?: boolean;
+  /** What Autopilot decided: the side, and the opening to grow. */
+  plan?: GamePlan;
+  /** One run is over, with what it earned. */
+  onGameOver?: (summary: GameSummary) => void;
   onExit: () => void;
 }
 
-export function GrowthScreen({ auto, onExit }: GrowthScreenProps) {
+export function GrowthScreen({ auto, plan, onGameOver, onExit }: GrowthScreenProps) {
   const state = useStore();
   // The lobby's own order: shallowest hole first, because that is the one the
-  // most games fall into. Next Up picks the top of the same list.
+  // most games fall into. An automatic start takes the top of the same list.
   const [row, setRow] = useState<GrowthRow | null>(() => {
     if (!auto) return null;
     const tree = openingTree(referenceIndex());
     const selection = state.settings.selection;
+    const color = plan?.color ?? selection.color;
+    const node = plan ? nodeById(tree, plan.steer) : regionOf(tree, selection);
     return (
-      growthRows(repertoiresIn(repertoireList(state), selection.color), tree.index, {
+      growthRows(repertoiresIn(repertoireList(state), color), tree.index, {
         ...state.settings.growth,
         starred: state.settings.favoriteOpenings,
-        region: { tree, node: regionOf(tree, selection) },
+        region: { tree, node },
       })[0] ?? null
     );
   });
   if (!row) return <Lobby onStart={setRow} onNoWork={onExit} onExit={onExit} />;
   // A run nobody chose has no lobby to fall back to.
-  return <Run row={row} onExit={() => (auto ? onExit() : setRow(null))} />;
+  return (
+    <Run
+      row={row}
+      auto={auto}
+      onGameOver={onGameOver}
+      onExit={() => (auto ? onExit() : setRow(null))}
+    />
+  );
 }
 
 type Phase = 'walking' | 'hole' | 'answered' | 'done' | 'lost';
 
-function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
+function Run({
+  row,
+  auto,
+  onGameOver,
+  onExit,
+}: {
+  row: GrowthRow;
+  auto?: boolean;
+  onGameOver?: (summary: GameSummary) => void;
+  onExit: () => void;
+}) {
   const state = useStore();
   const settings = state.settings;
   const addLine = useStore((s) => s.addLine);
-  const noteActivity = useStore((s) => s.noteActivity);
   const earn = useStore((s) => s.earn);
   const endGame = useStore((s) => s.endGame);
   /** Points this run has banked. */
@@ -159,9 +182,6 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
     const next = move ? answerHole(run, san) : null;
     if (!next) return;
     addLine(row.repertoireId, lineFor(run, san), 'reference');
-    // A filled hole is what counts as having done Growth. Reaching one and
-    // backing out is not work, and Next Up would stop offering the mode on it.
-    noteActivity('growth');
     earn({ mode: 'growth', points: POINTS.growth.added, line: lineFor(run, san), color: run.color, answered: false, correct: false });
     setEarned((total) => total + POINTS.growth.added);
     setAdded((plies) => [...plies, run.path.length]);
@@ -197,15 +217,17 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
     logged.current = true;
     const tree = openingTree(index);
     const region = nodeById(tree, settings.selection.opening);
-    endGame({
-      mode: 'growth',
+    const summary = {
+      mode: 'growth' as const,
       openingId: deepestNodeWithin(tree, region, run.path).id,
       color: run.color,
       score: earned,
       answered: 0,
       correct: 0,
       perfect: added.length >= MAX_ADDS,
-    });
+    };
+    endGame(summary);
+    onGameOver?.(summary);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -315,10 +337,12 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
                 <span className="ico"><Icons.cross size={14} /></span>
                 Not your prep
               </div>
-              <button className="btn primary sm" onClick={onExit}>
-                Back
-                <Icons.next size={16} />
-              </button>
+              {!auto && (
+                <button className="btn primary sm" onClick={onExit}>
+                  Back
+                  <Icons.next size={16} />
+                </button>
+              )}
             </div>
             <div className="compare mt-8">
               <div className="good">
@@ -386,10 +410,12 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
                 {addedSans.length === 1 ? `${addedSans[0]} added` : `${addedSans.length} moves added`}
                 {earned > 0 && <span className="chip good">+{earned}</span>}
               </div>
-              <button className="btn primary sm" onClick={onExit}>
-                New run
-                <Icons.next size={16} />
-              </button>
+              {!auto && (
+                <button className="btn primary sm" onClick={onExit}>
+                  New run
+                  <Icons.next size={16} />
+                </button>
+              )}
             </div>
             <Section title="The line now" />
             <div className="card">

@@ -5,13 +5,9 @@ import { openingTree } from '../model/openingTree';
 import { itemsInRegion, lineInRegion, regionOf, repertoiresIn } from '../model/selection';
 import { measureCoverage } from '../model/gameAnalysis';
 import { growthRows } from '../model/growth';
-import {
-  MODE_NAMES,
-  nextUp,
-  planFor,
-  type Candidate,
-  type NextUpPlan,
-} from '../model/nextUp';
+import { MODE_NAMES } from '../model/recommend';
+import { streak } from '../model/scoring';
+import { recommendNow } from '../store/recommendation';
 import { levelById } from '../model/play';
 import { buildRepairs } from '../model/repair';
 import { GRADES, gradeLabel, type RunGrade } from '../model/openingRun';
@@ -22,17 +18,12 @@ import { countDue, DAY, forecast, masteryBuckets, retention } from '../model/srs
 import { itemsFor, repertoireList, useStore } from '../store/useStore';
 import type { Repertoire } from '../model/types';
 
-export type ModeId = 'drill' | 'openingRun' | 'repair' | 'growth' | 'play';
+export type ModeId = 'drill' | 'openingRun' | 'repair' | 'growth' | 'play' | 'autopilot';
 
 export interface HomeScreenProps {
   /** Launching one side's prep straight into a session, from the sheet below. */
   onStart: (items: TrainingItem[], mode: SessionMode, title: string) => void;
-  /**
-   * `auto` skips the mode's setup screen — Next Up has already decided. `plan`
-   * carries the options it decided, which outrank what the mode remembers and
-   * last until the player comes back here.
-   */
-  onOpenMode: (mode: ModeId, auto?: boolean, plan?: NextUpPlan) => void;
+  onOpenMode: (mode: ModeId) => void;
   onOpenSettings: () => void;
 }
 
@@ -140,26 +131,9 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.importedGames, reps]);
 
-  /**
-   * What to do next.
-   *
-   * The drill numbers here are scoped to the side you actually drill rather
-   * than to everything you have prepared, so the reason on the button and the
-   * session it starts are talking about the same cards.
-   */
-  const drillScope = perRep;
-  const input = {
-    due: drillScope.reduce((sum, e) => sum + e.counts.due, 0),
-    unseen: drillScope.reduce((sum, e) => sum + e.unseen, 0),
-    newPerSession: state.settings.drill.newPerSession,
-    preferredDraw: state.settings.drill.draw,
-    growth,
-    repairs,
-    reps,
-    openingRun,
-    activity: state.activity,
-  };
-  const next = nextUp(input);
+  /** What Autopilot would start with, said on its button. */
+  const first = useMemo(() => recommendNow(state), [state]);
+  const days = streak(state.score.global);
 
   return (
     <>
@@ -169,7 +143,25 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
         <StorageWarning />
         <SelectionBar />
 
-        <NextUp pick={next} onStart={() => onOpenMode(next.mode, true, planFor(next.mode, input))} />
+        <button className="autopilot" onClick={() => onOpenMode('autopilot')}>
+          <span className="ico">
+            <Icons.bolt size={22} />
+          </span>
+          <span className="grow" style={{ minWidth: 0 }}>
+            <span className="kicker">Autopilot</span>
+            <span className="name">Play</span>
+            <span className="first truncate">
+              First up: {MODE_NAMES[first.mode]} · {first.opening.name}
+            </span>
+          </span>
+          {days > 0 && (
+            <span className="chip warn streak">
+              {days}
+              {days === 1 ? ' day' : ' days'}
+            </span>
+          )}
+          <Icons.chevron size={20} />
+        </button>
 
         <div className="mode-grid">
           <Tile
@@ -340,30 +332,6 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
         )}
       </Sheet>
     </>
-  );
-}
-
-/**
- * The one thing to do now.
- *
- * Everything under it is a choice; this is an answer. It names the mode it will
- * start, so it is never a mystery box, and then starts it on the options you
- * last used rather than sending you through a setup screen to agree with a
- * decision that has already been made. The tiles below carry the counts, so
- * arguing the case here would only be saying twice what they already show.
- */
-function NextUp({ pick, onStart }: { pick: Candidate; onStart: () => void }) {
-  return (
-    <button className="next-up" onClick={onStart}>
-      <span className="ico">
-        <Icons.bolt size={20} />
-      </span>
-      <span className="grow">
-        <span className="kicker">Next Up</span>
-        <span className="name">{MODE_NAMES[pick.mode]}</span>
-      </span>
-      <Icons.chevron size={20} />
-    </button>
   );
 }
 

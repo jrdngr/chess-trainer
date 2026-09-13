@@ -12,8 +12,8 @@ import { RepairScreen } from './screens/repair/RepairScreen';
 import { GrowthScreen } from './screens/growth/GrowthScreen';
 import { DrillScreen } from './screens/drill/DrillScreen';
 import { PlayScreen } from './screens/play/PlayScreen';
+import { AutopilotScreen } from './screens/autopilot/AutopilotScreen';
 import { DrillSession } from './screens/drill/DrillSession';
-import type { NextUpPlan } from './model/nextUp';
 import type { SessionMode, TrainingItem } from './model/session';
 import { countDue } from './model/srs';
 import { useStore } from './store/useStore';
@@ -31,10 +31,7 @@ export default function App() {
     mode: SessionMode;
     title: string;
   } | null>(null);
-  /** `auto` means Next Up started it: no setup screen, and leaving comes home. */
-  const [mode, setMode] = useState<{ id: ModeId; auto?: boolean; plan?: NextUpPlan } | null>(
-    null,
-  );
+  const [mode, setMode] = useState<{ id: ModeId } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [explorePath, setExplorePath] = useState<string[] | undefined>();
@@ -55,13 +52,20 @@ export default function App() {
     <div className="screen no-nav" style={{ display: 'grid', placeItems: 'center' }}>
       <div className="spinner" />
     </div>
+  ) : mode?.id === 'autopilot' ? (
+    <AutopilotScreen
+      onImport={() => {
+        setMode(null);
+        setImporting(true);
+      }}
+      onExit={() => setMode(null)}
+    />
   ) : mode?.id === 'drill' ? (
-    <DrillScreen auto={mode.auto} plan={mode.plan?.drill} onExit={() => setMode(null)} />
+    <DrillScreen onExit={() => setMode(null)} />
   ) : mode?.id === 'openingRun' ? (
-    <OpeningRunScreen auto={mode.auto} plan={mode.plan?.openingRun} onExit={() => setMode(null)} />
+    <OpeningRunScreen onExit={() => setMode(null)} />
   ) : mode?.id === 'repair' ? (
     <RepairScreen
-      auto={mode.auto}
       onImport={() => {
         setMode(null);
         setImporting(true);
@@ -69,7 +73,7 @@ export default function App() {
       onExit={() => setMode(null)}
     />
   ) : mode?.id === 'growth' ? (
-    <GrowthScreen auto={mode.auto} onExit={() => setMode(null)} />
+    <GrowthScreen onExit={() => setMode(null)} />
   ) : mode?.id === 'play' ? (
     <PlayScreen onExit={() => setMode(null)} />
   ) : session ? (
@@ -90,7 +94,7 @@ export default function App() {
           {tab === 'home' && (
             <HomeScreen
               onStart={startSession}
-              onOpenMode={(id, auto, plan) => setMode({ id, auto, plan })}
+              onOpenMode={(id) => setMode({ id })}
               onOpenSettings={() => setSettingsOpen(true)}
             />
           )}

@@ -39,6 +39,7 @@ import { ClockHud, useMoveClock } from '../../components/Clock';
 import { clockSeconds } from '../../model/openingRun';
 import { comboBonus, POINTS } from '../../model/scoring';
 import { deepestNodeWithin } from '../../model/openingTree';
+import type { GamePlan, GameSummary } from '../../model/autopilot';
 
 type Phase = 'setup' | 'playing' | 'offprep' | 'dead' | 'survived' | 'playon';
 
@@ -67,15 +68,17 @@ interface OffPrep {
 export function OpeningRunScreen({
   auto,
   plan,
+  onGameOver,
   onExit,
 }: {
   auto?: boolean;
   /**
-   * Options the recommendation decided. They outrank the saved ones and hold
-   * for every run in this visit: the reasoning that chose a colour has not
-   * changed between the first run and the second, so neither should the colour.
+   * What Autopilot decided: the side, and the opening to walk toward. It
+   * holds for the whole visit, and an automatic run is always on the clock,
+   * with no hints and no extended play.
    */
-  plan?: Partial<OpeningRunPrefs>;
+  plan?: GamePlan;
+  onGameOver?: (summary: GameSummary) => void;
   onExit: () => void;
 }) {
   const state = useStore();
@@ -90,8 +93,10 @@ export function OpeningRunScreen({
    * pinned, so every run this visit is on the same terms and none of it is
    * written back as though the player had chosen it.
    */
-  const [planned] = useState<Partial<OpeningRunPrefs> | undefined>(() => plan);
-  const prefs: OpeningRunPrefs = { ...settings.openingRun, ...planned };
+  const [planned] = useState<GamePlan | undefined>(() => plan);
+  const prefs: OpeningRunPrefs = planned
+    ? { ...settings.openingRun, clock: 'move10', hints: 0, extended: false }
+    : settings.openingRun;
   const endRun = useStore((s) => s.endOpeningRun);
   const earn = useStore((s) => s.earn);
   const endGame = useStore((s) => s.endGame);
@@ -109,7 +114,8 @@ export function OpeningRunScreen({
       tree,
       reps,
       node: nodeById(tree, selection.opening),
-      color: selection.color,
+      steer: planned ? nodeById(tree, planned.steer) : undefined,
+      color: planned?.color ?? selection.color,
       weakness: weaknessFromCards(cards),
     });
 
@@ -156,15 +162,17 @@ export function OpeningRunScreen({
     if (!gameLogged.current) {
       gameLogged.current = true;
       const region = nodeById(tree, ended.openingId);
-      endGame({
-        mode: 'run',
+      const summary = {
+        mode: 'run' as const,
         openingId: deepestNodeWithin(tree, region, ended.played).id,
         color: ended.color,
         score: earned + bonus,
         answered: ended.survived + (completed ? 0 : 1),
         correct: ended.survived,
         perfect: completed && !ended.leftPrep,
-      });
+      };
+      endGame(summary);
+      onGameOver?.(summary);
     }
   };
   const gameLogged = useRef(false);
@@ -348,6 +356,7 @@ export function OpeningRunScreen({
         run={run}
         death={phase === 'dead' ? death : null}
         earned={earned}
+        auto={!!planned}
         canSaveLine={!!keepTarget(run)}
         alreadySaved={alreadyKept(run)}
         onSaveLine={() => keepLine(run)}

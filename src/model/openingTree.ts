@@ -355,3 +355,52 @@ export function deepestNodeWithin(
     ? deepest
     : within;
 }
+
+/**
+ * Which of several regions a line belongs to, from one walk of the line.
+ *
+ * `lineStatus` answers for one node; the recommendation engine asks for every
+ * node under the selection at once, for every line in the repertoire, and
+ * walking the line once per node would be the slow part of the whole app.
+ */
+export function regionsOf(
+  tree: OpeningTree,
+  nodes: OpeningNode[],
+  sans: string[],
+): Map<string, LineStatus> {
+  const out = new Map<string, LineStatus>();
+  const keys: string[] = [];
+  let fen = START_FEN;
+  let legal = true;
+  for (const san of sans) {
+    const move = applySan(fen, san);
+    if (!move) {
+      legal = false;
+      break;
+    }
+    fen = move.after;
+    keys.push(positionKey(fen));
+  }
+  const last = keys[keys.length - 1] ?? positionKey(START_FEN);
+  for (const node of nodes) {
+    if (node.depth === 0) {
+      out.set(node.id, 'reached');
+      continue;
+    }
+    if (!legal) {
+      out.set(node.id, 'outside');
+      continue;
+    }
+    const at = keys.indexOf(node.key);
+    if (at >= 0) {
+      // Reached, provided every position before it was on the way.
+      const approach = approachKeys(tree, node);
+      const clean = keys.slice(0, at).every((key) => approach.has(key));
+      out.set(node.id, clean ? 'reached' : 'outside');
+      continue;
+    }
+    const approach = approachKeys(tree, node);
+    out.set(node.id, keys.every((key) => approach.has(key)) && (keys.length === 0 || approach.has(last)) ? 'onWay' : 'outside');
+  }
+  return out;
+}

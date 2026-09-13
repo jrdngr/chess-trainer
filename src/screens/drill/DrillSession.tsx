@@ -33,6 +33,7 @@ import type { Card, Grade } from '../../model/types';
 import { useStore } from '../../store/useStore';
 import { ClockHud, useMoveClock } from '../../components/Clock';
 import { selectionText } from '../../components/Selection';
+import type { GameSummary } from '../../model/autopilot';
 
 export interface DrillSessionProps {
   /** Everything in scope. The session draws from this for as long as you want. */
@@ -46,6 +47,9 @@ export interface DrillSessionProps {
    * session then reports rather than offering to keep going.
    */
   limit?: number;
+  /** The opening the game is credited to; the selection's, unless steered. */
+  openingId?: string;
+  onGameOver?: (summary: GameSummary) => void;
   onExit: () => void;
 }
 
@@ -84,7 +88,16 @@ const GRADE_LABELS: Record<Grade, string> = {
   easy: 'Easy',
 };
 
-export function DrillSession({ items, mode, title, prefs, limit, onExit }: DrillSessionProps) {
+export function DrillSession({
+  items,
+  mode,
+  title,
+  prefs,
+  limit,
+  openingId,
+  onGameOver,
+  onExit,
+}: DrillSessionProps) {
   const options: DrillPrefs = { ...DEFAULT_DRILL, ...prefs };
   const settings = useStore((s) => s.settings);
   const cards = useStore((s) => s.cards);
@@ -137,15 +150,17 @@ export function DrillSession({ items, mode, title, prefs, limit, onExit }: Drill
   const log = () => {
     if (logged.current || stats.answered === 0) return;
     logged.current = true;
-    endGame({
-      mode: 'drill',
-      openingId: settings.selection.opening,
-      color: item?.orientation === 'black' ? 'b' : 'w',
+    const summary = {
+      mode: 'drill' as const,
+      openingId: openingId ?? settings.selection.opening,
+      color: item?.orientation === 'black' ? ('b' as const) : ('w' as const),
       score: stats.earned,
       answered: stats.answered,
       correct: stats.correct,
       perfect: stats.correct === stats.answered && stats.answered >= 5,
-    });
+    };
+    endGame(summary);
+    onGameOver?.(summary);
   };
 
   const card = item ? cards[item.cardId] : undefined;
@@ -385,9 +400,11 @@ export function DrillSession({ items, mode, title, prefs, limit, onExit }: Drill
             </div>
           </div>
           <div className="spacer" />
-          <button className="btn primary block xl" onClick={onExit}>
-            Done
-          </button>
+          {!limit && (
+            <button className="btn primary block xl" onClick={onExit}>
+              Done
+            </button>
+          )}
           {!limit && (
             <button
               className="btn plain block"
@@ -413,7 +430,7 @@ export function DrillSession({ items, mode, title, prefs, limit, onExit }: Drill
     <>
       <AppBar
         title={opening?.name ?? title}
-        subtitle={selectionText(side, settings.selection.opening)}
+        subtitle={selectionText(side, openingId ?? settings.selection.opening)}
         onClose={stop}
         actions={
           <span className="row gap-6">

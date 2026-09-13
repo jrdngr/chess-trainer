@@ -43,6 +43,8 @@ export interface RevealProps {
   death: Death | null;
   /** Points this run banked. */
   earned: number;
+  /** Autopilot owns what happens next, so the run offers nothing of its own. */
+  auto?: boolean;
   /** This run produced a line worth offering to keep. */
   canSaveLine: boolean;
   /** That line is already in the repertoire, so there is nothing to add. */
@@ -68,6 +70,7 @@ export function Reveal({
   run,
   death,
   earned,
+  auto,
   canSaveLine,
   alreadySaved,
   onSaveLine,
@@ -187,10 +190,12 @@ export function Reveal({
           {kept ? 'Saved' : 'Save line'}
         </button>
       )}
-      <button className="btn primary sm" onClick={onNewRun}>
-        New run
-        <Icons.next size={16} />
-      </button>
+      {!auto && (
+        <button className="btn primary sm" onClick={onNewRun}>
+          New run
+          <Icons.next size={16} />
+        </button>
+      )}
     </div>
   );
 
@@ -266,18 +271,20 @@ export function Reveal({
         )}
 
         <div className="spacer" />
-        <div className="actions">
-          {survived && !isExtended(run) && (
-            <button className="btn accent block xl" onClick={onContinueExtended}>
-              <Icons.bolt size={18} />
-              Continue in extended mode
+        {!auto && (
+          <div className="actions">
+            {survived && !isExtended(run) && (
+              <button className="btn accent block xl" onClick={onContinueExtended}>
+                <Icons.bolt size={18} />
+                Continue in extended mode
+              </button>
+            )}
+            <button className="btn block" onClick={() => onPlayOn(shownFen)}>
+              <Icons.play size={18} />
+              Play from here
             </button>
-          )}
-          <button className="btn block" onClick={() => onPlayOn(shownFen)}>
-            <Icons.play size={18} />
-            Play from here
-          </button>
-        </div>
+          </div>
+        )}
 
         <Section title="The line" />
         <div className="card">
@@ -302,12 +309,16 @@ export function Reveal({
         </button>
 
 
-        <Record record={record} />
-
-        <div className="spacer" />
-        <button className="btn plain block" onClick={onChangeOptions}>
-          Change options
-        </button>
+        {!auto && (
+          <>
+            <Record record={record} />
+            <div className="spacer" />
+            <button className="btn plain block" onClick={onChangeOptions}>
+              Change options
+            </button>
+          </>
+        )}
+        {auto && <div style={{ height: 96 }} />}
       </div>
     </>
   );

@@ -376,6 +376,12 @@ export interface BeginOptions extends Partial<OpeningRunOptions> {
   reps: Repertoire[];
   /** The region to run in. */
   node: OpeningNode;
+  /**
+   * An opening inside the region to walk toward, when something has decided
+   * one. The rule for staying alive is still the region's; only the opponent's
+   * choice of line is narrowed.
+   */
+  steer?: OpeningNode;
   color: ColorChoice;
   seed?: number;
   /** Skip lines that ask fewer than this many moves of the user. */
@@ -403,13 +409,14 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
   if (!lookup(tree.index, START_FEN)?.moves.length) return null;
   const rep = opts.reps.find((r) => r.color === side) ?? null;
   const source = regionSource(tree, node, rep, side);
+  const aim = opts.steer ?? node;
 
-  let target = node.sans;
+  let target = aim.sans;
   if (rep) {
     const minDecisions = opts.minDecisions ?? 4;
     const weakness = opts.weakFirst ? (opts.weakness ?? null) : null;
     const inRegion = leafLines(rep)
-      .filter((line) => lineStatus(tree, node, line.sans) === 'reached')
+      .filter((line) => lineStatus(tree, aim, line.sans) === 'reached')
       .map((line) => {
         const path = pathTo(rep, line.tipId);
         return { tipId: line.tipId, sans: line.sans, keys: yourMoves(side, path).map((n) => n.key) };

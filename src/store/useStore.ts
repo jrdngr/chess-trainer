@@ -55,13 +55,6 @@ import {
 } from '../model/scoring';
 import { openingTree } from '../model/openingTree';
 import { referenceIndex } from '../model/referenceIndex';
-import {
-  NO_ACTIVITY,
-  normalizeActivity,
-  noted,
-  type Activity,
-  type ActivityMode,
-} from '../model/nextUp';
 import { cloudAvailable, readCloud, writeCloud, type CloudStatus, type WriteResult } from './cloud';
 import { clearState, debounce, loadState, probeStorage, saveState, type StorageSupport } from './db';
 
@@ -137,8 +130,6 @@ interface PersistedState {
   repair: RepairRecord;
   /** Mistakes made inside the app, for Repair to ask about later. */
   mistakes: Mistake[];
-  /** When each mode last did something, for Next Up to rotate on. */
-  activity: Activity;
   /** Points, per opening and in total, and every game played. */
   score: ScoreState;
 }
@@ -201,13 +192,6 @@ interface StoreState extends PersistedState {
   endOpeningRun: (outcome: RunOutcome) => void;
   /** Log one Repair item: answered correctly, or given a move. */
   endRepair: (outcome: { relearned?: boolean; added?: boolean }) => void;
-  /**
-   * Remember that a mode was just used, for Next Up's rotation.
-   *
-   * Drill and Repair stamp themselves from the actions that already record
-   * their work, so only Growth — which has no record of its own — calls this.
-   */
-  noteActivity: (mode: ActivityMode) => void;
   /** Bank points for one event, credited to the openings its line goes through. */
   earn: (event: Omit<ScoreEvent, 'at'>) => number;
   /** Count a finished game against its opening. */
@@ -258,7 +242,6 @@ function emptyPersisted(): PersistedState {
     openingRun: { ...EMPTY_RECORD },
     repair: { ...EMPTY_REPAIR_RECORD },
     mistakes: [],
-    activity: { ...NO_ACTIVITY },
     score: normalizeScore(EMPTY_SCORE),
   };
 }
@@ -276,7 +259,6 @@ function persistedFrom(state: StoreState): PersistedState {
     openingRun: state.openingRun,
     repair: state.repair,
     mistakes: state.mistakes,
-    activity: state.activity,
     score: state.score,
   };
 }
@@ -419,7 +401,6 @@ export const useStore = create<StoreState>((set, get) => {
           openingRun: normalizeRecord(chosen.openingRun),
           repair: normalizeRepairRecord(chosen.repair),
           mistakes: chosen.mistakes ?? [],
-          activity: normalizeActivity(chosen.activity),
           score: normalizeScore(chosen.score),
           updatedAt: Math.max(localAt, remoteAt),
           settings: mergeSettings(chosen.settings),
@@ -464,7 +445,6 @@ export const useStore = create<StoreState>((set, get) => {
           openingRun: normalizeRecord(remote.state.openingRun),
           repair: normalizeRepairRecord(remote.state.repair),
           mistakes: remote.state.mistakes ?? [],
-          activity: normalizeActivity(remote.state.activity),
           score: normalizeScore(remote.state.score),
           importedGames: local.importedGames,
           settings: mergeSettings(remote.state.settings),
@@ -574,10 +554,7 @@ export const useStore = create<StoreState>((set, get) => {
       const card =
         state.cards[item.cardId] ?? createCard(item.cardId, item.repertoireId, item.key, item.fen);
       const expectedSan = item.expected.find((e) => e.preferred)?.san ?? item.expected[0]?.san ?? '';
-      commit({
-        ...reviewed(state, card, gradeValue, { correct, playedSan, expectedSan }),
-        activity: noted(state.activity, 'drill'),
-      });
+      commit(reviewed(state, card, gradeValue, { correct, playedSan, expectedSan }));
     },
 
     setSettings(patch) {
@@ -616,14 +593,7 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     endRepair(outcome) {
-      commit({
-        repair: recordRepair(get().repair, outcome),
-        activity: noted(get().activity, 'repair'),
-      });
-    },
-
-    noteActivity(mode) {
-      commit({ activity: noted(get().activity, mode) });
+      commit({ repair: recordRepair(get().repair, outcome) });
     },
 
     earn(event) {
@@ -631,14 +601,19 @@ export const useStore = create<StoreState>((set, get) => {
       const before = milestoneOf(state.score.total);
       const score = applyEvent(state.score, openingTree(referenceIndex()), { ...event, at: Date.now() });
       const after = milestoneOf(score.total);
+      // A miss is recorded for the record but earns nothing, and the bar only
+      // comes out for something earned.
       commit({
         score,
-        feed: {
-          seq: state.feed.seq + 1,
-          points: event.points,
-          total: score.total,
-          milestone: after.reached > before.reached ? after : null,
-        },
+        feed:
+          event.points > 0
+            ? {
+                seq: state.feed.seq + 1,
+                points: event.points,
+                total: score.total,
+                milestone: after.reached > before.reached ? after : null,
+              }
+            : state.feed,
       });
       return event.points;
     },
