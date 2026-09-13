@@ -94,14 +94,16 @@ export function drillPressure(due: number, unseen: number, newPerSession: number
  * move nine costs almost none of them.
  */
 export function growthPressure(rows: GrowthRow[]): number {
-  const top = rows[0];
-  if (!top) return 0;
-  const early = 1 / (1 + top.depth / 3);
-  const played = saturate(top.topShare, 5);
+  if (!rows.length) return 0;
+  // Urgency rather than score: a star says which opening the player means to
+  // play, which is a reason to lift a row inside Growth and not a reason to
+  // push Growth ahead of Drill. `rowUrgency` is the one definition of how badly
+  // a hole wants filling, so the lobby's order and this ranking cannot drift.
+  const worst = rows.reduce((max, row) => Math.max(max, row.urgency), 0);
   // Breadth counts for a little. A dozen openings to extend is a thinner
   // repertoire than one, even when the worst hole in each is the same.
   const breadth = 1 + 0.05 * Math.min(rows.length - 1, 4);
-  return clamp(1.5 * early * played * breadth);
+  return clamp(worst * breadth);
 }
 
 /**

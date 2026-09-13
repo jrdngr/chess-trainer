@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GrowthRow, Hole } from './growth';
-import { growthRows } from './growth';
+import { growthRows, rowUrgency } from './growth';
 import { EMPTY_RECORD, type OpeningRunRecord } from './openingRun';
 import { referenceIndex } from './referenceIndex';
 import { addLine, createRepertoire } from './repertoire';
@@ -39,6 +39,7 @@ const hole = (): Hole => ({
 });
 
 function row(depth: number, topShare: number, name = 'Sicilian Defence', holes = 1): GrowthRow {
+  const urgency = rowUrgency(depth, topShare, holes);
   return {
     id: `${name}#${depth}`,
     repertoireId: 'r_w',
@@ -46,6 +47,9 @@ function row(depth: number, topShare: number, name = 'Sicilian Defence', holes =
     name,
     depth,
     topShare,
+    starred: false,
+    urgency,
+    score: urgency,
     holes: Array.from({ length: holes }, hole),
   };
 }

@@ -14,6 +14,8 @@ import {
   nextHole,
   optionsAt,
   preparedHere,
+  recommended,
+  rowUrgency,
   startGrowth,
   steer,
 } from './growth';
@@ -89,12 +91,23 @@ describe('finding holes', () => {
 });
 
 describe('the lobby', () => {
-  it('puts the shallowest opening at the top', () => {
+  it('puts the row most worth doing at the top', () => {
     const rows = growthRows([white], index);
     expect(rows.length).toBeGreaterThan(1);
     for (let i = 1; i < rows.length; i += 1) {
-      expect(rows[i - 1].depth).toBeLessThanOrEqual(rows[i].depth);
+      expect(rows[i - 1].score).toBeGreaterThanOrEqual(rows[i].score);
     }
+    expect(recommended(rows)).toBe(rows[0]);
+    expect(recommended([])).toBeNull();
+  });
+
+  it('scores a shallow hole above a deep one played just as often', () => {
+    // Depth is the urgency: a reply you cannot meet at move one costs a share
+    // of every game, the same reply at move nine costs almost none.
+    expect(rowUrgency(0, 20, 1)).toBeGreaterThan(rowUrgency(8, 20, 1));
+    expect(rowUrgency(2, 40, 1)).toBeGreaterThan(rowUrgency(2, 5, 1));
+    expect(rowUrgency(2, 20, 6)).toBeGreaterThan(rowUrgency(2, 20, 1));
+    expect(rowUrgency(4, 0, 1)).toBe(0);
   });
 
   it('gives every hole exactly one row', () => {
@@ -115,19 +128,52 @@ describe('the lobby', () => {
     expect(first!.name).toMatch(/King's Pawn/);
   });
 
-  it('names the deep rows after the variation they walk into', () => {
+  it('files every variation under the family it belongs to', () => {
+    // One row per variation is an accurate reading of the prep and an unusable
+    // way to choose: a thin King's Indian produced Sämisch, Smyslov and Bf4
+    // System as three separate rows, all of them a King's Indian.
     const names = growthRows([black], index).map((row) => row.name);
-    expect(names).toEqual(expect.arrayContaining(['KID: Sämisch Variation']));
+    expect(names).toContain("King's Indian Defence");
+    for (const name of names) expect(name).not.toMatch(/^KID: /);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('keeps the family row pointing at every hole it absorbed', () => {
+    const rows = growthRows([black], index);
+    const kid = rows.find((row) => row.name === "King's Indian Defence")!;
+    const total = growthRows([black], index).reduce((sum, row) => sum + row.holes.length, 0);
+    expect(kid.holes.length).toBeGreaterThan(1);
+    expect(total).toBe(findHoles(black, index).length);
+  });
+
+  it('lifts an opening the player starred without letting it jump the queue', () => {
+    // Starring says which openings they mean to play. It is a reason to lift a
+    // row, not a reason to call a deep variation more urgent than a first move
+    // they cannot meet at all.
+    const plain = growthRows([black], index);
+    const kidLine = "d4 Nf6 c4 g6 Nc3 Bg7 e4";
+    const lifted = growthRows([black], index, { starred: [kidLine] });
+    const before = plain.find((row) => row.name === "King's Indian Defence")!;
+    const after = lifted.find((row) => row.name === "King's Indian Defence")!;
+    expect(before.starred).toBe(false);
+    expect(after.starred).toBe(true);
+    expect(after.score).toBeGreaterThan(before.score);
+    expect(after.urgency).toBe(before.urgency);
+    expect(after.score).toBeLessThanOrEqual(1);
+  });
+
+  it('stars only the rows inside the opening that was starred', () => {
+    const rows = growthRows([black], index, { starred: ['d4 Nf6 c4 g6 Nc3 Bg7 e4'] });
+    for (const row of rows) {
+      if (row.name !== "King's Indian Defence") expect(row.starred).toBe(false);
+    }
   });
 
   it('leads with the hole that costs the most games', () => {
     for (const rep of [white, black]) {
       const rows = growthRows([rep], index);
       for (let i = 1; i < rows.length; i += 1) {
-        const a = rows[i - 1];
-        const b = rows[i];
-        expect(a.depth).toBeLessThanOrEqual(b.depth);
-        if (a.depth === b.depth) expect(a.topShare).toBeGreaterThanOrEqual(b.topShare);
+        expect(rows[i - 1].score).toBeGreaterThanOrEqual(rows[i].score);
       }
     }
   });

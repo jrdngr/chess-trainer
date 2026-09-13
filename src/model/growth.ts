@@ -1,5 +1,12 @@
 import { applySan, fenTurn, positionKey, type Color, type Square } from '../chess/core';
-import { deepestName, lookup, totalGamesAt, type ReferenceIndex } from './reference';
+import {
+  familyName,
+  lookup,
+  namesAlong,
+  totalGamesAt,
+  type NamedLine,
+  type ReferenceIndex,
+} from './reference';
 import { childrenOf, fenAt } from './repertoire';
 import type { ExplorerMove, RepMove, Repertoire } from './types';
 
@@ -34,6 +41,12 @@ export const DEFAULT_MAX_PLY = 18;
 export interface GrowthOptions {
   minShare?: number;
   maxPly?: number;
+  /**
+   * Openings the player starred, as catalogue ids — the space-joined move order
+   * that defines each one. Starring is how they say which openings they mean to
+   * play, so it lifts those rows rather than reordering anything silently.
+   */
+  starred?: string[];
 }
 
 /**
@@ -123,15 +136,19 @@ function popularReplies(
 /* ── the lobby ──────────────────────────────────────────────────────────── */
 
 /**
- * One opening with work available in it.
+ * One opening family with work available in it.
  *
  * A row is named for the opening its holes lead *into*, not the one they sit
  * in. That distinction is the whole usefulness of the lobby: a Black King's
  * Indian repertoire that cannot meet 1.e4 has its most urgent holes at the very
  * first move, and naming that row "King's Indian" — the repertoire it belongs
- * to — promises a King's Indian and then hands you a Sicilian. Named for where
- * they lead, the same holes become "King's Pawn Opening" and "English Opening",
- * which is what you would actually be preparing against.
+ * to — promises a King's Indian and then hands you a Sicilian.
+ *
+ * It is the *family* it leads into, not the exact variation. Named to the ply,
+ * a thin King's Indian produces a dozen rows — Sämisch, Four Pawns, Averbakh,
+ * Petrosian — which is an accurate reading of the prep and an unusable way to
+ * choose what to do next. All of them are a King's Indian, and that is the
+ * choice the player is actually making.
  */
 export interface GrowthRow {
   id: string;
@@ -143,7 +160,62 @@ export interface GrowthRow {
   depth: number;
   /** The share of the most played hole here, which is not always the first. */
   topShare: number;
+  /** The player starred this opening, or something inside it. */
+  starred: boolean;
+  /** How badly this wants doing, 0..1, before the player's own preference. */
+  urgency: number;
+  /** Urgency with starring folded in. Orders the list and picks Recommended. */
+  score: number;
   holes: Hole[];
+}
+
+/** How much a star is worth against raw urgency. */
+export const STAR_BOOST = 1.6;
+
+/**
+ * How badly one row wants doing, 0..1.
+ *
+ * Depth dominates: the shallower a hole, the larger the share of your games
+ * that fall into it, and an unanswered first move is a different order of
+ * problem from a missing tenth. How often the reply is actually played scales
+ * that, so a rare sideline at move two does not outrank a mainline at move
+ * four. Breadth counts for a little — a family with six unanswered replies is
+ * thinner than one with a single gap.
+ */
+export function rowUrgency(depth: number, topShare: number, holes: number): number {
+  const early = 1 / (1 + depth / 3);
+  const played = topShare <= 0 ? 0 : topShare / (topShare + 5);
+  const breadth = 1 + 0.05 * Math.min(holes - 1, 4);
+  return Math.max(0, Math.min(1, 1.5 * early * played * breadth));
+}
+
+/**
+ * The family heading for a line.
+ *
+ * The shallowest name that says something, which is the first one past the
+ * opening move: every line through 1.d4 is a "Queen's Pawn Opening", so that
+ * heading groups a Black repertoire into one row and answers nothing. Where a
+ * line has no name past the first move — an unanswered 1.e4 has nowhere deeper
+ * to go — the first-move name is all there is, and it is still the right
+ * heading for it.
+ *
+ * Walking positions rather than splitting names on ":" is what makes this work
+ * for the book's abbreviations: "KID: Sämisch Variation" would give the family
+ * "KID", where the position it passes through at move four is named "King's
+ * Indian Defence".
+ */
+function family(index: ReferenceIndex, sans: string[]): NamedLine | null {
+  const names = namesAlong(index, sans);
+  const found = names.find((named) => named.ply >= 2) ?? names[names.length - 1];
+  if (!found) return null;
+  return { ...found, name: familyName(index, found.name) };
+}
+
+/** Is this line inside one of the openings the player starred? */
+function isStarred(starred: string[][], sans: string[]): boolean {
+  return starred.some(
+    (fav) => fav.length > 0 && fav.length <= sans.length && fav.every((san, i) => sans[i] === san),
+  );
 }
 
 export function growthRows(
@@ -151,16 +223,17 @@ export function growthRows(
   index: ReferenceIndex,
   opts: GrowthOptions = {},
 ): GrowthRow[] {
+  const starred = (opts.starred ?? []).map((id) => id.split(/\s+/).filter(Boolean));
   const rows: GrowthRow[] = [];
 
   for (const rep of reps) {
     const byName = new Map<string, GrowthRow>();
     for (const hole of findHoles(rep, index, opts)) {
-      // Where their move leads. A move the book cannot name gets a row of its
-      // own, called after the move itself — filing 1.g3 under the name of the
-      // repertoire it interrupts is how "pick King's Indian, get a Sicilian"
-      // happened in the first place.
-      const named = deepestName(index, [...hole.path, hole.san]);
+      const line = [...hole.path, hole.san];
+      // A move the book cannot name anywhere gets a row of its own, called
+      // after the move itself — filing 1.g3 under the name of the repertoire it
+      // interrupts is how "pick King's Indian, get a Sicilian" happened.
+      const named = family(index, line);
       const name = named?.name ?? moveLabel(hole);
       const id = `${rep.id}#${name}`;
       const row = byName.get(id);
@@ -168,6 +241,7 @@ export function growthRows(
         row.holes.push(hole);
         row.depth = Math.min(row.depth, hole.path.length);
         row.topShare = Math.max(row.topShare, hole.share);
+        row.starred = row.starred || isStarred(starred, line);
         continue;
       }
       byName.set(id, {
@@ -178,18 +252,28 @@ export function growthRows(
         eco: named?.eco,
         depth: hole.path.length,
         topShare: hole.share,
+        starred: isStarred(starred, line),
+        urgency: 0,
+        score: 0,
         holes: [hole],
       });
     }
     rows.push(...byName.values());
   }
 
-  // Shallowest first: the shallower the hole, the more games fall into it. At
-  // equal depth the biggest hole wins, so the row that costs most games leads
-  // rather than whichever happened to be found first.
-  return rows.sort(
-    (a, b) => a.depth - b.depth || b.topShare - a.topShare || b.holes.length - a.holes.length,
-  );
+  for (const row of rows) {
+    row.urgency = rowUrgency(row.depth, row.topShare, row.holes.length);
+    row.score = Math.min(1, row.urgency * (row.starred ? STAR_BOOST : 1));
+  }
+
+  // One ordering for the list and for Recommended, so the button never starts
+  // something other than the row sitting at the top of the list.
+  return rows.sort((a, b) => b.score - a.score || a.depth - b.depth || a.name.localeCompare(b.name));
+}
+
+/** The row Start Recommended would begin, or nothing when there is no work. */
+export function recommended(rows: GrowthRow[]): GrowthRow | null {
+  return rows[0] ?? null;
 }
 
 /** A move the book has no name for, called after the move itself: "vs 1.g3". */

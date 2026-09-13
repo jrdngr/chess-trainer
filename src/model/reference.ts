@@ -338,6 +338,106 @@ export function deepestNameForColor(
 }
 
 /**
+ * Families the book's own names cannot be folded into automatically.
+ *
+ * Most variation names are "Family: Variation" over a family the catalogue also
+ * names on its own — "French: Winawer" beside "French Defence" — so the family
+ * resolves by looking it up. These are the ones that do not: abbreviations the
+ * catalogue never spells out (KID), variations named after a person or a pawn
+ * structure rather than their parent (Najdorf, Dragon, Sämisch, Winawer), and
+ * two prefixes that match more than one opening (a King's Indian is an Attack
+ * or a Defence; Pirc is named twice for two move orders).
+ */
+const FAMILY_ALIASES: Record<string, string> = {
+  KID: "King's Indian Defence",
+  "King's Indian": "King's Indian Defence",
+  'Sämisch': "King's Indian Defence",
+  Najdorf: 'Sicilian Defence',
+  Dragon: 'Sicilian Defence',
+  'Accelerated Dragon': 'Sicilian Defence',
+  Winawer: 'French Defence',
+  'Two Knights': 'Italian Game',
+  QGD: "Queen's Gambit Declined",
+  'QGD Exchange': "Queen's Gambit Declined",
+  QGA: "Queen's Gambit Accepted",
+  Benoni: 'Modern Benoni',
+  Pirc: 'Pirc Defence',
+  "Queen's Indian": 'Queen\u2019s Indian Defence',
+};
+
+const familyCache = new WeakMap<ReferenceIndex, Map<string, string>>();
+
+/**
+ * The opening family a name belongs to: "KID: Sämisch Variation" is a King's
+ * Indian Defence, and "Sicilian Defence" is its own family.
+ *
+ * Names rather than positions, because the book's taxonomy lives in the text.
+ * Walking the move order cannot do it: the King's Indian is named at
+ * 1.d4 Nf6 2.c4 g6 3.Nc3 Bg7 4.e4, so the Bf4 System and the Smyslov are its
+ * siblings and not its children — no position they share carries the name.
+ */
+export function familyName(index: ReferenceIndex, name: string): string {
+  return families(index).get(name) ?? name;
+}
+
+function families(index: ReferenceIndex): Map<string, string> {
+  const cached = familyCache.get(index);
+  if (cached) return cached;
+  const names = [...new Set([...index.names.values()].map((named) => named.name))];
+  const standalone = names.filter((named) => !named.includes(': '));
+  const map = new Map<string, string>();
+  for (const name of names) {
+    const at = name.indexOf(': ');
+    if (at < 0) {
+      map.set(name, name);
+      continue;
+    }
+    const prefix = name.slice(0, at);
+    const alias = FAMILY_ALIASES[prefix];
+    if (alias) {
+      map.set(name, alias);
+      continue;
+    }
+    // The shortest opening the catalogue names with this prefix: "Sicilian"
+    // finds "Sicilian Defence". Nothing found leaves the prefix standing, which
+    // still reads as a family.
+    const found = standalone
+      .filter((named) => named === prefix || named.startsWith(`${prefix} `))
+      .sort((a, b) => a.length - b.length)[0];
+    map.set(name, found ?? prefix);
+  }
+  familyCache.set(index, map);
+  return map;
+}
+
+/**
+ * Every name the book attaches along a line, shallowest first.
+ *
+ * `deepestName` answers "what is this line called"; this answers "what is it
+ * called at each stage", which is what grouping lines into families needs: the
+ * Sämisch is a King's Indian is a Queen's Pawn Opening, and which of those three
+ * is the useful heading depends on how specific the caller wants to be.
+ */
+export function namesAlong(
+  index: ReferenceIndex,
+  sans: string[],
+  startFen = START_FEN,
+): NamedLine[] {
+  let fen = startFen;
+  const out: NamedLine[] = [];
+  let ply = 0;
+  for (const san of sans) {
+    const move = applySan(fen, san);
+    if (!move) break;
+    fen = move.after;
+    ply += 1;
+    const named = index.names.get(positionKey(fen));
+    if (named) out.push({ ...named, ply });
+  }
+  return out;
+}
+
+/**
  * The same, but nothing at all when the only name restates the first move.
  *
  * For labelling a line as the player's own opening. "Queen's Pawn Opening" on a

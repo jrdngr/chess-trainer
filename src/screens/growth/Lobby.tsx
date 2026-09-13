@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { AppBar, Icons, Section, Segmented } from '../../components/ui';
-import { growthRows, type GrowthRow } from '../../model/growth';
+import { growthRows, recommended, type GrowthRow } from '../../model/growth';
 import { GROWTH_DEPTHS, SHARE_STEPS, shareLabel } from '../../model/modes';
 import { referenceIndex } from '../../model/referenceIndex';
 import { repertoireList, useStore } from '../../store/useStore';
@@ -30,10 +30,12 @@ export function Lobby({
   /** A side that exists but has no moves in it yet cannot be grown. */
   const hasMoves = reps.some((rep) => Object.keys(rep.nodes).length > 0);
 
+  const starred = state.settings.favoriteOpenings;
   const rows = useMemo(
-    () => growthRows(reps, index, { minShare: prefs.minShare, maxPly: prefs.maxPly }),
-    [reps, index, prefs.minShare, prefs.maxPly],
+    () => growthRows(reps, index, { minShare: prefs.minShare, maxPly: prefs.maxPly, starred }),
+    [reps, index, prefs.minShare, prefs.maxPly, starred],
   );
+  const pick = recommended(rows);
 
   if (reps.length === 0) {
     return (
@@ -64,6 +66,12 @@ export function Lobby({
       />
 
       <div className="screen no-nav">
+        {pick && (
+          <button className="btn primary block xl" onClick={() => onStart(pick)}>
+            Start Recommended
+          </button>
+        )}
+
         {rows.length === 0 ? (
           <>
             <div className="empty">
@@ -82,13 +90,20 @@ export function Lobby({
           </>
         ) : (
           <>
-            <Section title="Pick an opening" aside="shallowest first" />
+            <Section title="Or pick one" aside="most worth doing first" />
             <div className="list">
               {rows.map((row) => (
                 <button key={row.id} className="list-row" onClick={() => onStart(row)}>
                   <span className={`side ${row.color}`} />
                   <span className="grow" style={{ minWidth: 0 }}>
-                    <div className="title truncate">{row.name}</div>
+                    <div className="title truncate">
+                      {row.starred && (
+                        <span style={{ color: 'var(--accent)', marginRight: 5 }}>
+                          <Icons.star size={12} filled />
+                        </span>
+                      )}
+                      {row.name}
+                    </div>
                     <div className="meta">
                       {depthLabel(row.depth)} ·{' '}
                       {row.holes.length === 1 ? '1 reply' : `${row.holes.length} replies`}{' '}

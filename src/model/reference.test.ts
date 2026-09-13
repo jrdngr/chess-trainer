@@ -5,6 +5,7 @@ import {
   buildRefTree,
   deepestName,
   deepestNameForColor,
+  familyName,
   formatGameCount,
   lookup,
   openingNameForPath,
@@ -224,5 +225,45 @@ describe('naming a line as the player\u2019s own opening', () => {
 
   it('stops at an illegal move rather than throwing', () => {
     expect(() => specificNameForColor(index, ['e4', 'e4', 'e4'], 'w')).not.toThrow();
+  });
+});
+
+describe('opening families', () => {
+  const index = referenceIndex();
+
+  it('folds an abbreviation the catalogue never spells out', () => {
+    expect(familyName(index, 'KID: Sämisch Variation')).toBe("King's Indian Defence");
+    expect(familyName(index, 'KID: Bf4 System')).toBe("King's Indian Defence");
+  });
+
+  it('resolves a prefix the catalogue does name on its own', () => {
+    expect(familyName(index, 'French: Winawer')).toBe('French Defence');
+    expect(familyName(index, 'Caro-Kann: Advance')).toBe('Caro-Kann Defence');
+    expect(familyName(index, 'Dutch: Leningrad')).toBe('Dutch Defence');
+  });
+
+  it('folds a variation named after a person rather than its parent', () => {
+    // Nothing in "Dragon: Yugoslav Attack" says Sicilian, and no position on
+    // the way to it carries the Sicilian's name either.
+    expect(familyName(index, 'Dragon: Yugoslav Attack')).toBe('Sicilian Defence');
+    expect(familyName(index, 'Najdorf: English Attack')).toBe('Sicilian Defence');
+  });
+
+  it('leaves an opening that is already a family alone', () => {
+    expect(familyName(index, 'Sicilian Defence')).toBe('Sicilian Defence');
+    expect(familyName(index, "King's Pawn Opening")).toBe("King's Pawn Opening");
+  });
+
+  it('hands back a name it has never heard of unchanged', () => {
+    // Only names the book actually carries are folded. Splitting an unknown one
+    // on its colon would invent a family out of a string nobody authored.
+    expect(familyName(index, 'Grace Attack')).toBe('Grace Attack');
+    expect(familyName(index, 'Nonsense: Variation')).toBe('Nonsense: Variation');
+  });
+
+  it('never folds a family into something that is itself a variation', () => {
+    for (const named of new Set([...index.names.values()].map((n) => n.name))) {
+      expect(familyName(index, named)).not.toContain(': ');
+    }
   });
 });
