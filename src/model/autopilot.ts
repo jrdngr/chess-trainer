@@ -11,7 +11,7 @@ import type { ScoreMode } from './scoring';
  */
 export const GAME_SIZE = {
   /** Answers in one Drill game, each answer in a followed line counting. */
-  drill: 10,
+  drill: 5,
   /** Items in one Repair game. */
   repair: 5,
 } as const;

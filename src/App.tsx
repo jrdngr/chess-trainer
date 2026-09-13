@@ -76,7 +76,13 @@ export default function App() {
         setMode(null);
         setImporting(true);
       }}
-      onExit={() => setMode(null)}
+      // Leaving Autopilot is the only way a session ends, and it lands on
+      // Stats: what the play added up to is the thing to look at next.
+      onExit={() => {
+        setMode(null);
+        setStatsFor('');
+        setTab('stats');
+      }}
     />
   ) : mode?.id === 'drill' ? (
     <DrillScreen onExit={() => setMode(null)} />

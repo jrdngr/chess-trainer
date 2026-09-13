@@ -25,7 +25,7 @@ only hold what is specific to that mode.
 
 **Autopilot is the main loop.** A recommendation engine chooses a mode, an
 opening inside the selection and a colour, one game after another, with no
-trip back to Home in between. Modes stay selectable by hand.
+trip back to Home in between and no end until you stop. Modes stay selectable by hand.
 
 **Optimise for fun.** Run is the most fun, Drill less, Growth and Repair least.
 The engine tilts toward fun without ignoring need. Every mode pays points, the
@@ -74,14 +74,14 @@ anything inside is fair.
 
 ## Autopilot
 
-Autopilot plays one game after another. A game is one Run, ten Drill answers,
+Autopilot plays one game after another. A game is one Run, five Drill answers,
 one Growth run, or five Repair items. When a game ends, a bar over the mode's
 own ending shows what it earned and names the next game — "Run · Sicilian:
 Najdorf" with the colour square — and one tap starts it. The mode's own
 ending stays on screen behind the bar, so a Run's reveal can still be read.
-Stop is the close button in the app bar, and stopping shows the session's
-tally: games, points, milestones crossed, openings touched. Play is not in the
-rotation; a full game breaks the rhythm and is one tap away by hand.
+A session never ends on its own. Stop is the close button in the app bar, and
+stopping opens Stats. Play is not in the rotation; a full game breaks the
+rhythm and is one tap away by hand.
 
 Under Autopilot a Run or Drill is always on a ten-second clock, with no hints
 and no extended play.
