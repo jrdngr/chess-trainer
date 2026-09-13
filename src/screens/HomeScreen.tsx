@@ -2,7 +2,13 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { AppBar, Icons, Section, Sheet } from '../components/ui';
 import { measureCoverage } from '../model/gameAnalysis';
 import { growthRows } from '../model/growth';
-import { MODE_NAMES, nextUp, type Candidate } from '../model/nextUp';
+import {
+  MODE_NAMES,
+  nextUp,
+  planFor,
+  type Candidate,
+  type NextUpPlan,
+} from '../model/nextUp';
 import { levelById } from '../model/play';
 import { buildRepairs } from '../model/repair';
 import { GRADES, gradeLabel, type RunGrade } from '../model/openingRun';
@@ -18,8 +24,12 @@ export type ModeId = 'drill' | 'openingRun' | 'repair' | 'growth' | 'play';
 export interface HomeScreenProps {
   /** Launching one side's prep straight into a session, from the sheet below. */
   onStart: (items: TrainingItem[], mode: SessionMode, title: string) => void;
-  /** `auto` skips the mode's setup screen — Next Up has already decided. */
-  onOpenMode: (mode: ModeId, auto?: boolean) => void;
+  /**
+   * `auto` skips the mode's setup screen — Next Up has already decided. `plan`
+   * carries the options it decided, which outrank what the mode remembers and
+   * last until the player comes back here.
+   */
+  onOpenMode: (mode: ModeId, auto?: boolean, plan?: NextUpPlan) => void;
   onOpenSettings: () => void;
 }
 
@@ -131,16 +141,18 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
    */
   const drillSide = state.settings.drill.side;
   const drillScope = perRep.filter((e) => drillSide === 'both' || e.rep.color === drillSide);
-  const next = nextUp({
+  const input = {
     due: drillScope.reduce((sum, e) => sum + e.counts.due, 0),
     unseen: drillScope.reduce((sum, e) => sum + e.unseen, 0),
     newPerSession: state.settings.drill.newPerSession,
+    preferredDraw: state.settings.drill.draw,
     growth,
     repairs,
     reps,
     openingRun,
     activity: state.activity,
-  });
+  };
+  const next = nextUp(input);
 
   return (
     <>
@@ -149,7 +161,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
       <div className="screen">
         <StorageWarning />
 
-        <NextUp pick={next} onStart={() => onOpenMode(next.mode, true)} />
+        <NextUp pick={next} onStart={() => onOpenMode(next.mode, true, planFor(next.mode, input))} />
 
         <div className="mode-grid">
           <Tile

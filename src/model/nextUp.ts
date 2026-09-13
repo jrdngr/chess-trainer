@@ -1,6 +1,7 @@
+import type { Color } from '../chess/core';
 import type { GrowthRow } from './growth';
-import type { DrillDraw } from './modes';
-import type { OpeningRunRecord } from './openingRun';
+import type { DrillDraw, DrillPrefs } from './modes';
+import type { OpeningRunPrefs, OpeningRunRecord } from './openingRun';
 import type { RepairItem } from './repair';
 import type { Repertoire } from './types';
 
@@ -182,6 +183,8 @@ export interface NextUpInput {
   reps: Repertoire[];
   openingRun: OpeningRunRecord;
   activity: Activity;
+  /** What the player last chose to draw from, which the plan may correct. */
+  preferredDraw?: DrillDraw;
 }
 
 /**
@@ -279,6 +282,72 @@ export function drillDraw(preferred: DrillDraw, due: number, unseen: number): Dr
   if (preferred === 'new' && unseen === 0) return 'due';
   if (preferred === 'due' && due === 0 && unseen > 0) return 'new';
   return preferred;
+}
+
+/* ── what the recommendation decides for you ────────────────────────────── */
+
+/**
+ * Options the recommendation sets itself, over what the mode remembers.
+ *
+ * Next Up exists to answer "what now" without being asked a second question, so
+ * the options it starts a mode on have to be the ones its own reasoning implies.
+ * A remembered setting that contradicts the recommendation makes the button a
+ * lie about what it starts: sent to Drill because forty cards are due, opening
+ * on "new only" because that is what you picked last week.
+ *
+ * Only options the reasoning actually has an opinion about belong here. The rest
+ * stay yours — the plan corrects the draw, and leaves how many new positions a
+ * session introduces alone, because nothing about "what now" says anything about
+ * that. A plan lives as long as the visit and is never written to settings, so
+ * it steers a mode without quietly re-teaching it.
+ */
+export interface NextUpPlan {
+  drill?: Partial<DrillPrefs>;
+  openingRun?: Partial<OpeningRunPrefs>;
+}
+
+export function planFor(mode: NextUpMode, input: NextUpInput): NextUpPlan {
+  switch (mode) {
+    case 'drill':
+      return { drill: { draw: drillDraw(input.preferredDraw ?? 'due', input.due, input.unseen) } };
+    case 'openingRun':
+      return { openingRun: { color: runColor(input) } };
+    default:
+      return {};
+  }
+}
+
+/**
+ * Which side a recommended run should test.
+ *
+ * Never random. "Random" is a fine answer to "surprise me" and a poor one to
+ * "what needs work", and because a plan holds for the whole visit, a random
+ * colour would also mean the second run contradicts the first without anything
+ * having changed.
+ *
+ * Untested prep decides it: moves added since the last run are the ones no run
+ * has ever asked about. Failing that the larger side wins, having more that
+ * could have rusted, and failing that the side with the worse hole in it. A
+ * repertoire with nothing in either side has no signal at all and gets White,
+ * which at least does not change under them mid-visit.
+ */
+export function runColor(input: NextUpInput): Color {
+  const measure = (color: Color) => {
+    const reps = input.reps.filter((rep) => rep.color === color);
+    return {
+      untested: untestedSince(reps, input.openingRun.lastAt),
+      size: reps.reduce((sum, rep) => sum + Object.keys(rep.nodes).length, 0),
+      worst: input.growth
+        .filter((row) => row.color === color)
+        .reduce((max, row) => Math.max(max, row.urgency), 0),
+    };
+  };
+  const white = measure('w');
+  const black = measure('b');
+  if (white.untested !== black.untested) return white.untested > black.untested ? 'w' : 'b';
+  if (white.size !== black.size) return white.size > black.size ? 'w' : 'b';
+  if (white.worst !== black.worst) return white.worst > black.worst ? 'w' : 'b';
+  return 'w';
 }
 
 export const MODE_NAMES: Record<NextUpMode, string> = {

@@ -16,7 +16,9 @@ import {
   normalizeActivity,
   noted,
   openingRunPressure,
+  planFor,
   rank,
+  runColor,
   repairPressure,
   untestedSince,
   type Activity,
@@ -319,5 +321,70 @@ describe('activity', () => {
 
   it('stamps one mode without touching the others', () => {
     expect(noted(NO_ACTIVITY, 'growth', T)).toEqual({ ...NO_ACTIVITY, growth: T });
+  });
+});
+
+/* ── what the recommendation decides for you ────────────────────────────── */
+
+describe('the plan a recommendation starts a mode on', () => {
+  it('never sends a run out on a random colour', () => {
+    // Random is an answer to "surprise me" and not to "what needs work" — and
+    // a plan holds for the whole visit, so a random colour would also mean the
+    // second run contradicts the first for no reason.
+    for (const reps of [[], [thin('w', 'e4 e5 Nf3')], [thin('b', 'd4 Nf6 c4 g6')]]) {
+      const plan = planFor('openingRun', input({ reps }));
+      expect(plan.openingRun?.color).toMatch(/^[wb]$/);
+    }
+  });
+
+  it('picks the side with prep no run has asked about yet', () => {
+    const white = thin('w', 'e4 e5 Nf3 Nc6 Bb5');
+    const black = thin('b', 'd4 Nf6');
+    // Both sides untested, White has more of it.
+    expect(runColor(input({ reps: [white, black] }))).toBe('w');
+    expect(runColor(input({ reps: [black, white] }))).toBe('w');
+  });
+
+  it('falls to the larger side once everything has been run', () => {
+    const white = thin('w', 'e4 e5');
+    const black = thin('b', 'd4 Nf6 c4 g6 Nc3');
+    // A last run after every move was added leaves nothing untested either way.
+    const after = input({ reps: [white, black], openingRun: record({ lastAt: Date.now() + 1000 }) });
+    expect(untestedSince(after.reps, after.openingRun.lastAt)).toBe(0);
+    expect(runColor(after)).toBe('b');
+  });
+
+  it('settles on one side when there is nothing to go on at all', () => {
+    // Not a coin toss: a fresh install has no signal, and a colour that changes
+    // under the player between runs is worse than one that does not.
+    expect(runColor(input())).toBe('w');
+    expect(runColor(input())).toBe('w');
+  });
+
+  it('corrects a draw that would open onto nothing', () => {
+    expect(planFor('drill', input({ preferredDraw: 'new', unseen: 0, due: 5 })).drill?.draw).toBe(
+      'due',
+    );
+    expect(planFor('drill', input({ preferredDraw: 'due', due: 0, unseen: 5 })).drill?.draw).toBe(
+      'new',
+    );
+  });
+
+  it('leaves a draw that works alone', () => {
+    expect(planFor('drill', input({ preferredDraw: 'cram', due: 5 })).drill?.draw).toBe('cram');
+    expect(planFor('drill', input({ preferredDraw: 'due', due: 5 })).drill?.draw).toBe('due');
+  });
+
+  it('has no opinion about the modes whose options it cannot reason about', () => {
+    expect(planFor('growth', input())).toEqual({});
+    expect(planFor('repair', input())).toEqual({});
+  });
+
+  it('only ever decides options the reasoning actually implies', () => {
+    // The rest stay the player's. Nothing about "what now" says how many new
+    // positions a session should introduce.
+    const plan = planFor('drill', input({ due: 5, preferredDraw: 'due' }));
+    expect(Object.keys(plan.drill ?? {})).toEqual(['draw']);
+    expect(Object.keys(planFor('openingRun', input()).openingRun ?? {})).toEqual(['color']);
   });
 });

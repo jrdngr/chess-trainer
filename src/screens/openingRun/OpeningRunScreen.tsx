@@ -23,6 +23,7 @@ import {
   weaknessFromCards,
   type LineSource,
   type OpeningRunOptions,
+  type OpeningRunPrefs,
   type Run,
 } from '../../model/openingRun';
 import { deepestName, openingById, specificNameForColor } from '../../model/reference';
@@ -60,11 +61,34 @@ interface OffPrep {
  * out. Nothing on screen names the line while it is live; the reveal is the
  * reward for dying, and lives in its own screen.
  */
-export function OpeningRunScreen({ auto, onExit }: { auto?: boolean; onExit: () => void }) {
+export function OpeningRunScreen({
+  auto,
+  plan,
+  onExit,
+}: {
+  auto?: boolean;
+  /**
+   * Options the recommendation decided. They outrank the saved ones and hold
+   * for every run in this visit: the reasoning that chose a colour has not
+   * changed between the first run and the second, so neither should the colour.
+   */
+  plan?: Partial<OpeningRunPrefs>;
+  onExit: () => void;
+}) {
   const state = useStore();
   const reps = repertoireList(state);
   const { settings, cards } = state;
-  const prefs = settings.openingRun;
+  /**
+   * What this visit runs on: the saved options, under whatever the
+   * recommendation decided.
+   *
+   * Only the plan is held in state. The saved options stay live, so changing
+   * them on the setup screen still takes effect on the next run; the plan is
+   * pinned, so every run this visit is on the same terms and none of it is
+   * written back as though the player had chosen it.
+   */
+  const [planned] = useState<Partial<OpeningRunPrefs> | undefined>(() => plan);
+  const prefs: OpeningRunPrefs = { ...settings.openingRun, ...planned };
   const endRun = useStore((s) => s.endOpeningRun);
   const missed = useStore((s) => s.missedInOpeningRun);
   const addToRep = useStore((s) => s.addLine);
