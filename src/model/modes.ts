@@ -49,17 +49,6 @@ export const DRAW_LABELS: Record<DrillDraw, string> = {
   cram: 'Everything',
 };
 
-export function drawDescription(draw: DrillDraw): string {
-  switch (draw) {
-    case 'new':
-      return 'Only positions you have never been asked. Good for learning a line you just added.';
-    case 'cram':
-      return 'Every position in scope, shallow first, ignoring the schedule. Answers still count.';
-    default:
-      return 'What the schedule says is due, with a few new positions woven in. The normal way to practise.';
-  }
-}
-
 /* ── Repair ─────────────────────────────────────────────────────────────── */
 
 /** How many of your games must have reached a position before it counts. */
@@ -85,17 +74,6 @@ export const DEFAULT_REPAIR: RepairPrefs = {
 
 export function kindLabel(kind: RepairKind): string {
   return kind === 'offprep' ? 'Off prep' : 'Unprepared';
-}
-
-export function kindDescription(kinds: RepairPrefs['kinds']): string {
-  switch (kinds) {
-    case 'offprep':
-      return 'Positions where you had a move prepared and played something else. These have a right answer.';
-    case 'unprepared':
-      return 'Positions you keep reaching with nothing prepared. These need a decision, not an answer.';
-    default:
-      return 'Both: the moves you forgot, and the positions you never prepared for.';
-  }
 }
 
 export function gamesLabel(n: number): string {

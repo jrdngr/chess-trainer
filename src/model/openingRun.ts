@@ -259,19 +259,6 @@ export function clockLabel(mode: ClockMode): string {
   }
 }
 
-export function clockDescription(mode: ClockMode): string {
-  switch (mode) {
-    case 'move10':
-      return '10 seconds for each of your moves. Running out ends the run.';
-    case 'move30':
-      return '30 seconds for each of your moves. Running out ends the run.';
-    case 'run180':
-      return 'Three minutes for the whole run, counting only your own thinking.';
-    default:
-      return 'Take as long as you like.';
-  }
-}
-
 export const HINT_BUDGETS = [0, 1, 3];
 
 /** Everything the setup screen decides, in one place. */

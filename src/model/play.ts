@@ -14,8 +14,6 @@ import type { EngineLine } from '../engine/types';
 export interface Level {
   id: string;
   name: string;
-  /** What it plays like, in a few words. */
-  blurb: string;
   depth: number;
   multiPv: number;
   /**
@@ -29,7 +27,6 @@ export const LEVELS: Level[] = [
   {
     id: 'casual',
     name: 'Casual',
-    blurb: 'Sees one move ahead and often takes the second-best. Good for trying a line out.',
     depth: 1,
     multiPv: 5,
     slip: 0.65,
@@ -37,7 +34,6 @@ export const LEVELS: Level[] = [
   {
     id: 'club',
     name: 'Club',
-    blurb: 'Punishes a hanging piece and little else. A real game without much pressure.',
     depth: 5,
     multiPv: 4,
     slip: 0.3,
@@ -45,7 +41,6 @@ export const LEVELS: Level[] = [
   {
     id: 'strong',
     name: 'Strong',
-    blurb: 'Plays the best move nearly always. Your opening has to be sound.',
     depth: 11,
     multiPv: 3,
     slip: 0.08,
@@ -53,7 +48,6 @@ export const LEVELS: Level[] = [
   {
     id: 'full',
     name: 'Full',
-    blurb: 'No handicap at all. It will find everything you missed.',
     depth: 16,
     multiPv: 1,
     slip: 0,

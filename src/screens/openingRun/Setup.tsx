@@ -10,8 +10,6 @@ import {
 } from '../../components/ui';
 import { sansToMoveText } from '../../chess/core';
 import {
-  BLUNDER_LIMIT,
-  clockDescription,
   clockLabel,
   CLOCK_MODES,
   HINT_BUDGETS,
@@ -19,7 +17,6 @@ import {
   playableRepertoires,
   type ColorChoice,
   type OpeningRunOptions,
-  type OpeningRunPrefs,
 } from '../../model/openingRun';
 import { formatGameCount, type CatalogueEntry } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
@@ -150,7 +147,6 @@ export function Setup({
             onSelect={() => setOpeningRunPrefs({ kind: 'book' })}
           />
         </div>
-        <div className="note">{sourceNote(prefs, chosenOpening)}</div>
 
         {fromOpening && (
           <>
@@ -213,7 +209,6 @@ export function Setup({
           options={CLOCK_MODES.map((mode) => ({ value: mode, label: clockLabel(mode) }))}
           onChange={(clock) => setOpeningRunPrefs({ clock })}
         />
-        <div className="note">{clockDescription(prefs.clock)}</div>
 
         <Section title="Hints" />
         <Segmented
@@ -224,11 +219,6 @@ export function Setup({
           }))}
           onChange={(n) => setOpeningRunPrefs({ hints: Number(n) })}
         />
-        <div className="note">
-          {prefs.hints === 0
-            ? 'No help. The position is the whole question.'
-            : 'A hint shows the square the move starts from — never where it lands.'}
-        </div>
 
         <Section title="Extras" />
         <div className="list">
@@ -261,12 +251,6 @@ export function Setup({
             onToggle={() => setOpeningRunPrefs({ perLine: !prefs.perLine })}
           />
         </div>
-        {prefs.extended && (
-          <div className="note">
-            In extended mode the run does not stop when the prep does: the engine takes over, and
-            you survive as long as your moves do not drop more than {(BLUNDER_LIMIT / 100).toFixed(2)}.
-          </div>
-        )}
 
         {record.runs > 0 && <Record record={record} perLine={prefs.perLine} />}
       </div>
@@ -282,22 +266,6 @@ export function Setup({
       />
     </>
   );
-}
-
-/** What the chosen source means for the run, in a sentence. */
-function sourceNote(prefs: OpeningRunPrefs, opening: CatalogueEntry | null): string {
-  switch (prefs.kind) {
-    case 'opening':
-      return opening
-        ? `The opponent walks you into the ${opening.name}. Its move order is the only thing that counts while you are still in it; after that the book takes over.`
-        : 'Pick an opening to play out. Its move order is the only thing that counts while you are still in it; after that the book takes over.';
-    case 'book':
-      return 'Any move in the book keeps you alive, so the book forgives more than your own prep does. It is a curated sample, not every game ever played.';
-    default:
-      return prefs.reverse
-        ? 'You play the side your repertoire answers. Staying alive means knowing what your opponent is meant to do — the run ends on any move you have not prepared for.'
-        : 'A line is drawn from your repertoire. Any move you have prepared from a position counts — the run ends the moment you leave your own prep.';
-  }
 }
 
 /** One opening: tap to pick it, star to keep it on the setup screen. */

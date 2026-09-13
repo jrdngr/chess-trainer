@@ -3,7 +3,6 @@ import { AppBar, ChoiceRow, Icons, Section, Segmented, Toggle } from '../../comp
 import {
   GAME_THRESHOLDS,
   gamesLabel,
-  kindDescription,
   type RepairPrefs,
 } from '../../model/modes';
 import { buildRepairs, openingMismatch } from '../../model/repair';
@@ -114,10 +113,6 @@ export function Setup({
             <Icons.download size={18} />
             Import games
           </button>
-          <div className="note center">
-            Lichess, Chess.com, or a PGN pasted in. Nothing leaves your device except the request
-            for your own games.
-          </div>
         </div>
       </>
     );
@@ -144,11 +139,6 @@ export function Setup({
         >
           {items.length === 0 ? 'Nothing to repair' : 'Start'}
         </button>
-        <div className="note center">
-          {items.length === 0
-            ? 'No position matches these settings. Loosen them, or import more games.'
-            : `${items.length} ${items.length === 1 ? 'position' : 'positions'} from your games disagree with your repertoire.`}
-        </div>
 
         {mismatches.map(({ rep, mismatch }) => (
           <div className="banner" style={{ marginTop: 12 }} key={rep.id}>
@@ -201,7 +191,6 @@ export function Setup({
 
         <Section title="What to fix" />
         <Segmented value={prefs.kinds} options={KINDS} onChange={(kinds) => set({ kinds })} />
-        <div className="note">{kindDescription(prefs.kinds)}</div>
 
         <Section title="How often you reached it" />
         <Segmented
@@ -209,19 +198,9 @@ export function Setup({
           options={GAME_THRESHOLDS.map((n) => ({ value: String(n), label: gamesLabel(n) }))}
           onChange={(n) => set({ minGames: Number(n) })}
         />
-        <div className="note">
-          {prefs.minGames === 1
-            ? 'Everything, including positions you have seen once. Thorough, and noisier.'
-            : `Only positions ${prefs.minGames} or more of your games reached — the ones that keep happening.`}
-        </div>
 
         <Section title="Order" />
         <Segmented value={prefs.sort} options={SORTS} onChange={(sort) => set({ sort })} />
-        <div className="note">
-          {prefs.sort === 'costly'
-            ? 'Worst results first — the positions you actually lose from.'
-            : 'Most frequent first, with forgotten prep ahead of unprepared positions.'}
-        </div>
 
         {reps.length > 1 && (
           <>

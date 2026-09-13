@@ -6,7 +6,6 @@ import {
   beginRun,
   bookHas,
   bookSource,
-  clockDescription,
   clockLabel,
   clockSpec,
   CLOCK_MODES,
@@ -566,10 +565,7 @@ describe('the clock', () => {
   });
 
   it('labels every mode it offers', () => {
-    for (const mode of CLOCK_MODES) {
-      expect(clockLabel(mode)).toBeTruthy();
-      expect(clockDescription(mode).length).toBeGreaterThan(10);
-    }
+    for (const mode of CLOCK_MODES) expect(clockLabel(mode)).toBeTruthy();
   });
 
   it('ends the run where it stands, with no move played', () => {

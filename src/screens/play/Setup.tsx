@@ -1,5 +1,5 @@
 import { AppBar, ChoiceRow, Section, Segmented, Toggle } from '../../components/ui';
-import { LEVELS, levelById, OPENING_PLIES, type PlayPrefs } from '../../model/modes';
+import { LEVELS, OPENING_PLIES, type PlayPrefs } from '../../model/modes';
 import { displayName } from '../../model/repertoire';
 import type { ColorChoice } from '../../model/openingRun';
 import { repertoireList, useStore } from '../../store/useStore';
@@ -22,7 +22,6 @@ export function Setup({
   const setModePrefs = useStore((s) => s.setModePrefs);
   const prefs = state.settings.play;
   const reps = repertoireList(state);
-  const level = levelById(prefs.level);
 
   const set = (patch: Partial<PlayPrefs>) => setModePrefs('play', patch);
   const target = reps.find((rep) => rep.id === prefs.repertoireId) ?? null;
@@ -35,11 +34,6 @@ export function Setup({
         <button className="btn primary block xl" onClick={() => onStart(prefs)}>
           Start
         </button>
-        <div className="note center">
-          {prefs.save
-            ? `The first ${OPENING_PLIES / 2} moves join your repertoire when the game ends.`
-            : 'Nothing is saved from this game unless you ask at the end.'}
-        </div>
 
         <Section title="Play as" />
         <Segmented value={prefs.color} options={COLORS} onChange={(color) => set({ color })} />
@@ -50,7 +44,6 @@ export function Setup({
           options={LEVELS.map((l) => ({ value: l.id, label: l.name }))}
           onChange={(id) => set({ level: id })}
         />
-        <div className="note">{level.blurb}</div>
 
         <Section title="Keeping the opening" />
         <div className="list">
@@ -66,11 +59,6 @@ export function Setup({
             on={prefs.warnOffBook}
             onToggle={() => set({ warnOffBook: !prefs.warnOffBook })}
           />
-        </div>
-        <div className="note">
-          {reps.length === 0
-            ? 'Nothing prepared yet. Saving a game starts your repertoire, and the book names the opening you played.'
-            : 'Saved moves join the openings you already have for that side.'}
         </div>
 
         {reps.length > 0 && (

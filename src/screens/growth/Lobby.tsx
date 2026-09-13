@@ -99,10 +99,6 @@ export function Lobby({
                 </button>
               ))}
             </div>
-            <div className="note">
-              A run walks your own prep from move one and stops at the first reply you have no
-              answer to. You add one move, and it ends.
-            </div>
           </>
         )}
 
@@ -115,13 +111,6 @@ export function Lobby({
           }))}
           onChange={(share) => setModePrefs('growth', { minShare: Number(share) })}
         />
-        <div className="note">
-          {prefs.minShare >= 3
-            ? 'Mainlines only — the replies you will actually meet.'
-            : prefs.minShare >= 1
-              ? 'Everything with a real following, sidelines included.'
-              : 'Every reply anyone plays. Thorough, and a long way down.'}
-        </div>
 
         <Section title="How deep" />
         <Segmented
