@@ -16,7 +16,7 @@ import { getEngine } from '../../engine/useEngine';
 import { formatScore, winFraction, type EngineSnapshot } from '../../engine/types';
 import { chooseMove, levelById, openingLine, type GameResult } from '../../model/play';
 import type { PlayPrefs } from '../../model/modes';
-import { deepestNameForColor, openingNameForPath } from '../../model/reference';
+import { openingNameForPath, specificNameForColor } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
 import { childrenOf, displayName, fenAt } from '../../model/repertoire';
 import { positionKey } from '../../chess/core';
@@ -57,7 +57,7 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
   const state = useStore();
   const settings = state.settings;
   const addLine = useStore((s) => s.addLine);
-  const addRepertoire = useStore((s) => s.addRepertoire);
+  const ensureRepertoire = useStore((s) => s.ensureRepertoire);
   const logMistake = useStore((s) => s.logMistake);
   const reps = repertoireList(state);
   const index = referenceIndex();
@@ -189,24 +189,26 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
     setOffBook(null);
   };
 
-  /** Write the opening into a repertoire, creating one if there is none. */
+  /**
+   * Write the opening into the repertoire for the side you played.
+   *
+   * The opening it becomes is derived from the moves, so nothing here has to
+   * name anything: the toast says which opening it landed in, taking the name
+   * from the side you played, since "Queen's Pawn Opening" would describe what
+   * a Black game's opponent did.
+   */
   const save = () => {
     const line = openingLine(moves, color);
     if (!line.length) {
       toast('Too short to save');
       return;
     }
-    let repId = target?.id;
-    if (!repId) {
-      // Named from the side you played: a Black repertoire called "Queen's Pawn
-      // Opening" is named after what your opponent did.
-      const named = deepestNameForColor(index, line, color)?.name;
-      const side = color === 'w' ? 'White' : 'Black';
-      repId = addRepertoire(`${side} — ${named ?? side}`, color);
-    }
+    const repId = ensureRepertoire(color);
     const { added } = addLine(repId, line, 'games');
     setSaved(true);
-    toast(added > 0 ? `${added} moves saved` : 'Already in your repertoire');
+    const named = specificNameForColor(index, line, color)?.name;
+    if (added === 0) toast('Already in your repertoire');
+    else toast(named ? `${added} moves saved to ${named}` : `${added} moves saved`);
   };
 
   const strip: StripItem[] = moves.map((san, i) => ({

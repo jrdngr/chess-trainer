@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { DrillSession } from './DrillSession';
 import { Setup } from './Setup';
 import type { DrillPrefs } from '../../model/modes';
-import { displayName } from '../../model/repertoire';
 import { itemsFor, repertoireList, useStore } from '../../store/useStore';
 
 export interface DrillScreenProps {
@@ -18,11 +17,7 @@ export function DrillScreen({ onExit }: DrillScreenProps) {
   const items = useMemo(() => {
     if (!running) return [];
     return reps
-      .filter(
-        (rep) =>
-          (running.repertoireId === '' || rep.id === running.repertoireId) &&
-          (running.side === 'both' || rep.color === running.side),
-      )
+      .filter((rep) => running.side === 'both' || rep.color === running.side)
       .flatMap(itemsFor);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, reps]);
@@ -31,9 +26,8 @@ export function DrillScreen({ onExit }: DrillScreenProps) {
 
   // The bar says what is being drilled, so a narrowed session is never a
   // mystery once you are three positions into it.
-  const chosen = reps.find((rep) => rep.id === running.repertoireId);
   const side = running.side === 'w' ? 'White' : running.side === 'b' ? 'Black' : null;
-  const title = chosen ? displayName(chosen.name) : side ? `Drill · ${side}` : 'Drill';
+  const title = side ? `Drill · ${side}` : 'Drill';
 
   return (
     <DrillSession

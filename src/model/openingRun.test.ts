@@ -53,7 +53,7 @@ import {
   type Weakness,
   type Run,
 } from './openingRun';
-import { addLine, createRepertoire, displayName, leafLines, pathTo } from './repertoire';
+import { addLine, createRepertoire, leafLines, pathTo } from './repertoire';
 import { lookup, openingById } from './reference';
 import { referenceIndex } from './referenceIndex';
 import { cardId, mulberry32 } from './session';
@@ -129,7 +129,8 @@ describe('choosing a run', () => {
     const counts = new Map<string, number>();
     for (let seed = 0; seed < 90; seed += 1) {
       const run = startRepertoireRun(reps, 'random', { seed })!;
-      counts.set(run.sourceLabel, (counts.get(run.sourceLabel) ?? 0) + 1);
+      const from = run.repertoireId ?? '';
+      counts.set(from, (counts.get(from) ?? 0) + 1);
     }
     expect(counts.size).toBe(reps.length);
     for (const n of counts.values()) expect(n).toBeGreaterThan(10);
@@ -273,7 +274,7 @@ describe('naming the line at the end of a run', () => {
     const bad: string[] = [];
     for (let seed = 0; seed < 40; seed += 1) {
       const run0 = startRepertoireRun(reps, 'random', { seed, index })!;
-      const source = repertoireSource(reps.find((r) => displayName(r.name) === run0.sourceLabel)!);
+      const source = repertoireSource(reps.find((r) => r.id === run0.repertoireId)!);
       const run = finish(source, run0, seed + 1);
       const label = lineName(index, source, run);
       if (generic.test(label.name)) bad.push(`${label.name} <- ${fullLine(source, run).slice(0, 8).join(' ')}`);
@@ -286,14 +287,14 @@ describe('naming the line at the end of a run', () => {
     const distinct = new Set<string>();
     for (let seed = 0; seed < 40; seed += 1) {
       const run0 = startRepertoireRun(reps, 'random', { seed, index })!;
-      const source = repertoireSource(reps.find((r) => displayName(r.name) === run0.sourceLabel)!);
+      const source = repertoireSource(reps.find((r) => r.id === run0.repertoireId)!);
       const label = lineName(index, source, finish(source, run0, seed + 1));
       distinct.add(label.name);
       if (label.specific) named += 1;
     }
     // Not every line can be named: a couple of offbeat tries have no entry in
-    // the database, and the fallback — the repertoire's own name — is honest
-    // about that rather than inventing one.
+    // the book, and the fallback — "your White prep" — is honest about that
+    // rather than inventing a name.
     expect(named / 40).toBeGreaterThan(0.9);
     expect(distinct.size).toBeGreaterThan(6);
   });

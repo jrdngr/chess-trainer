@@ -141,7 +141,7 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
         <AppBar title="Growth" onClose={onExit} />
         <div className="screen no-nav">
           <div className="empty">
-            <div className="t">That repertoire is gone</div>
+            <div className="t">Those lines are gone</div>
           </div>
         </div>
       </>

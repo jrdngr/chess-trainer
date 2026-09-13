@@ -1,11 +1,10 @@
-import { AppBar, ChoiceRow, Section, Segmented, Stepper, Toggle } from '../../components/ui';
+import { AppBar, Section, Segmented, Stepper, Toggle } from '../../components/ui';
 import {
   DRAW_LABELS,
   drawDescription,
   type DrillDraw,
   type DrillPrefs,
 } from '../../model/modes';
-import { displayName } from '../../model/repertoire';
 import { countDue } from '../../model/srs';
 import type { Color } from '../../chess/core';
 import type { Card } from '../../model/types';
@@ -43,11 +42,7 @@ export function Setup({
 
   const set = (patch: Partial<DrillPrefs>) => setModePrefs('drill', patch);
 
-  const inScope = reps.filter(
-    (rep) =>
-      (prefs.repertoireId === '' || rep.id === prefs.repertoireId) &&
-      (prefs.side === 'both' || rep.color === prefs.side),
-  );
+  const inScope = reps.filter((rep) => prefs.side === 'both' || rep.color === prefs.side);
   const items = inScope.flatMap(itemsFor);
   const ready = readyCount(items.map((i) => state.cards[i.cardId]), items.length, prefs);
 
@@ -65,7 +60,7 @@ export function Setup({
         </button>
         <div className="note center">
           {items.length === 0
-            ? 'Widen the scope below, or add a repertoire for that colour.'
+            ? 'Widen the scope below, or prepare an opening for that side.'
             : ready === 0
               ? `Nothing due. ${items.length} positions to practise anyway.`
               : `${ready} ${ready === 1 ? 'position' : 'positions'} ready of ${items.length}.`}
@@ -87,25 +82,16 @@ export function Setup({
             : `Only the lines you play as ${prefs.side === 'w' ? 'White' : 'Black'}.`}
         </div>
 
-        {reps.length > 1 && (
+        {reps.length > 0 && (
           <>
-            <Section title="Repertoire" />
+            <Section title="What you have" />
             <div className="list">
-              <ChoiceRow
-                title="All of them"
-                meta={`${reps.length} repertoires`}
-                selected={prefs.repertoireId === ''}
-                onSelect={() => set({ repertoireId: '' })}
-              />
               {reps.map((rep) => (
-                <ChoiceRow
-                  key={rep.id}
-                  title={displayName(rep.name)}
-                  leading={<span className={`side ${rep.color}`} />}
-                  meta={`${itemsFor(rep).length} positions`}
-                  selected={prefs.repertoireId === rep.id}
-                  onSelect={() => set({ repertoireId: rep.id })}
-                />
+                <div className="list-row kv" key={rep.id}>
+                  <span className={`side ${rep.color}`} />
+                  <span className="k grow">{rep.color === 'w' ? 'As White' : 'As Black'}</span>
+                  <span className="v num">{itemsFor(rep).length}</span>
+                </div>
               ))}
             </div>
           </>

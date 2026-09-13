@@ -4,7 +4,9 @@ import {
   addLine,
   createRepertoire,
   moveSibling,
+  pruneLine,
   removeSubtree,
+  repertoireName,
   setNote,
   setPreferred,
 } from '../model/repertoire';
@@ -92,8 +94,9 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
  * 6: Punish became Repair, which is built from imported games.
  * 7: no seeded repertoires — everyone starts empty and builds their own.
  * 8: Gap became Growth, and keeps different options.
+ * 9: one tree per colour, named for the side; openings are derived from it.
  */
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 interface PersistedState {
   version: number;
@@ -127,7 +130,14 @@ interface StoreState extends PersistedState {
   annotate: (repId: string, nodeId: string, note: string) => void;
   reorder: (repId: string, nodeId: string, delta: number) => void;
   addRepertoire: (name: string, color: Color) => string;
-  /** Delete a repertoire outright, with everything that only existed for it. */
+  /** The tree for one side, created if this is the first line for it. */
+  ensureRepertoire: (color: Color) => string;
+  /**
+   * Delete a derived opening: the region, and the move order that only led to
+   * it. `rootId` is the opening's own root node.
+   */
+  removeOpening: (repId: string, rootId: string) => void;
+  /** Delete one side's tree outright, with everything that only existed for it. */
   removeRepertoire: (repId: string) => void;
 
   grade: (item: TrainingItem, grade: Grade, playedSan: string | null, correct: boolean) => void;
@@ -177,7 +187,7 @@ interface StoreState extends PersistedState {
  * openings: Drill asked about a Queen's Gambit nobody had chosen, and Repair
  * compared real games against prep the player had never agreed to. You now
  * build the repertoire by playing — Play saves the openings from your games,
- * Opening Run adds the lines you survive, and Gap fills what they leave out.
+ * Opening Run adds the lines you survive, and Growth fills what they leave out.
  */
 function emptyPersisted(): PersistedState {
   return {
@@ -291,6 +301,36 @@ export const useStore = create<StoreState>((set, get) => {
     commit({ repertoires: { ...get().repertoires, [repId]: fn(rep) } });
   };
 
+  /**
+   * Shrink a tree, and drop what only existed for the positions that went.
+   *
+   * A card, a logged mistake and a review entry are all keyed by position, and
+   * a position that is no longer in the tree has nothing to ask about — left
+   * behind they would keep counting toward "positions ready" for lines that
+   * were deleted. Surviving keys are read back off the tree rather than
+   * predicted, so a position still reachable by another move order keeps its
+   * schedule.
+   */
+  const shrinkRep = (repId: string, fn: (rep: Repertoire) => Repertoire) => {
+    const state = get();
+    const rep = state.repertoires[repId];
+    if (!rep) return;
+    const next = fn(rep);
+    const alive = new Set(Object.values(next.nodes).map((node) => node.key));
+    const orphaned = (id: string, key: string) => id === repId && !alive.has(key);
+    commit({
+      repertoires: { ...state.repertoires, [repId]: next },
+      cards: Object.fromEntries(
+        Object.entries(state.cards).filter(([, card]) => !orphaned(card.repertoireId, card.key)),
+      ),
+      log: state.log.filter((entry) => {
+        const [id, key] = splitCardId(entry.cardId);
+        return !orphaned(id, key);
+      }),
+      mistakes: state.mistakes.filter((m) => !orphaned(m.repertoireId, m.key)),
+    });
+  };
+
   return {
     ...emptyPersisted(),
     ready: false,
@@ -396,7 +436,11 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     removeNode(repId, nodeId) {
-      updateRep(repId, (rep) => removeSubtree(rep, nodeId));
+      shrinkRep(repId, (rep) => removeSubtree(rep, nodeId));
+    },
+
+    removeOpening(repId, rootId) {
+      shrinkRep(repId, (rep) => pruneLine(rep, rootId));
     },
 
     preferMove(repId, nodeId) {
@@ -418,6 +462,18 @@ export const useStore = create<StoreState>((set, get) => {
         repertoireOrder: [...get().repertoireOrder, rep.id],
       });
       return rep.id;
+    },
+
+    /**
+     * One tree per colour, so everything that saves a line asks for the side and
+     * gets the same tree back. Naming it after the opening that happened to
+     * create it was the old behaviour, and it went stale the moment a second
+     * opening moved in.
+     */
+    ensureRepertoire(color) {
+      const existing = repertoireList(get()).find((rep) => rep.color === color);
+      if (existing) return existing.id;
+      return get().addRepertoire(repertoireName(color), color);
     },
 
     /**
@@ -545,3 +601,9 @@ export function itemsFor(rep: Repertoire): TrainingItem[] {
   return items;
 }
 
+
+/** "rep_x#key" → ["rep_x", "key"]. A position key has no "#" in it. */
+function splitCardId(id: string): [string, string] {
+  const at = id.indexOf('#');
+  return at < 0 ? [id, ''] : [id.slice(0, at), id.slice(at + 1)];
+}

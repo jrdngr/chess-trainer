@@ -24,8 +24,8 @@ import {
   type OpeningRunOptions,
   type Run,
 } from '../../model/openingRun';
-import { deepestName, deepestNameForColor, openingById } from '../../model/reference';
-import { displayName, hasLine } from '../../model/repertoire';
+import { deepestName, openingById, specificNameForColor } from '../../model/reference';
+import { hasLine } from '../../model/repertoire';
 import { referenceIndex } from '../../model/referenceIndex';
 import { mulberry32 } from '../../model/session';
 import { repertoireList, useStore } from '../../store/useStore';
@@ -49,7 +49,7 @@ interface OffPrep {
   expected: string[];
   /** What the database calls the line your move leads into. */
   opening: string | null;
-  /** Whether there is a repertoire this could be added to. */
+  /** Whether this run produced a line worth keeping. */
   addable: boolean;
 }
 
@@ -69,7 +69,7 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
   const endRun = useStore((s) => s.endOpeningRun);
   const missed = useStore((s) => s.missedInOpeningRun);
   const addToRep = useStore((s) => s.addLine);
-  const addRepertoire = useStore((s) => s.addRepertoire);
+  const ensureRepertoire = useStore((s) => s.ensureRepertoire);
   const index = referenceIndex();
 
   const [phase, setPhase] = useState<Phase>('setup');
@@ -100,21 +100,18 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
   };
 
   /**
-   * What to call a repertoire this run is about to create.
+   * Which opening the saved line belongs to.
    *
-   * An opening run has the answer already: you chose the opening, so that is
-   * its name, whatever the few moves you survived of it happen to be called. A
-   * book run has no such choice, so the line is named from the side you played
-   * — a Black repertoire called "Queen's Pawn Opening" describes what your
-   * opponent did.
-   *
-   * The side is stored in the name and stripped for display, which is the
-   * convention the rest of the app already reads.
+   * Only for saying where it went: the line is written into the tree for the
+   * side you played, and the opening it lands in is derived from the moves
+   * afterwards. An opening run has the answer already — you chose the opening.
+   * A book run has no such choice, so the name comes from the side you played,
+   * since "Queen's Pawn Opening" describes what a Black line's opponent did.
    */
-  const newName = (ended: Run, line: string[]): string => {
+  const openingOf = (ended: Run, line: string[]): string => {
     const chosen = ended.openingId ? openingById(index, ended.openingId) : null;
-    const named = chosen?.name ?? deepestNameForColor(index, line, ended.color)?.name;
-    return `${ended.color === 'w' ? 'White' : 'Black'} — ${named ?? ended.sourceLabel}`;
+    const named = chosen?.name ?? specificNameForColor(index, line, ended.color)?.name;
+    return named ?? ended.sourceLabel;
   };
 
   /** Where a run's line would go, and whether there is anything to put there. */
@@ -135,20 +132,22 @@ export function OpeningRunScreen({ onExit }: { onExit: () => void }) {
   };
 
   /**
-   * Write what the run survived into a repertoire, when asked to.
+   * Write what the run survived into the repertoire, when asked to.
    *
    * Offered at the end rather than done automatically: a book run can hand you
-   * any opening in the database, and keeping all of them builds a wide, shallow
+   * any opening in the book, and keeping all of them builds a wide, shallow
    * repertoire rather than a coherent one.
+   *
+   * It joins the one tree for the side you played, whatever the opening. The
+   * opening is only what the moves are called once they are in there.
    */
   const keepLine = (ended: Run): { name: string; added: number } | null => {
     const target = keepTarget(ended);
     if (!target) return null;
-    const { line, existing } = target;
-    const name = existing?.name ?? newName(ended, line);
-    const repId = existing?.id ?? addRepertoire(name, ended.color);
+    const { line } = target;
+    const repId = ensureRepertoire(ended.color);
     const { added } = addToRep(repId, line, 'reference');
-    return { name: displayName(name), added };
+    return { name: openingOf(ended, line), added };
   };
 
   /** End the run here. `ended` may carry state the run picked up on the way out. */

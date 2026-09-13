@@ -225,17 +225,17 @@ export function Setup({
 
         {reps.length > 1 && (
           <>
-            <Section title="Repertoire" />
+            <Section title="Side" />
             <div className="list">
               <ChoiceRow
-                title="All of them"
+                title="Both"
                 selected={prefs.repertoireId === ''}
                 onSelect={() => set({ repertoireId: '' })}
               />
               {reps.map((rep) => (
                 <ChoiceRow
                   key={rep.id}
-                  title={displayName(rep.name)}
+                  title={rep.color === 'w' ? 'As White' : 'As Black'}
                   leading={<span className={`side ${rep.color}`} />}
                   selected={prefs.repertoireId === rep.id}
                   onSelect={() => set({ repertoireId: rep.id })}

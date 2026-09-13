@@ -11,6 +11,7 @@ import {
   deepestName,
   lookup,
   openingById,
+  specificNameForColor,
   type CatalogueEntry,
   type ReferenceIndex,
 } from './reference';
@@ -524,10 +525,19 @@ export function startRepertoireRun(
   const picked = candidates[Math.floor(rand() * candidates.length)];
   const line = pickWeighted(picked.lines, (l) => l.weight, rand);
 
+  // Named for the opening the drawn line belongs to, not for the tree it came
+  // out of: there is one tree per side, so its name ("White repertoire") would
+  // label every run the same. The colour-aware namer is what keeps a Black line
+  // from being announced as what White did.
+  const drawn = line.path.map((node) => node.san);
+  const named = opts.index
+    ? specificNameForColor(opts.index, drawn, picked.rep.color)?.name
+    : undefined;
+
   return {
     id: newRunId(),
     source: 'repertoire',
-    sourceLabel: displayName(picked.rep.name),
+    sourceLabel: named ?? (picked.rep.color === 'w' ? 'Your White prep' : 'Your Black prep'),
     repertoireId: picked.rep.id,
     reverse,
     leftPrep: false,

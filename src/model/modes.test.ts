@@ -18,7 +18,6 @@ describe('mode defaults', () => {
   });
 
   it('starts every mode unnarrowed', () => {
-    expect(DEFAULT_DRILL.repertoireId).toBe('');
     expect(DEFAULT_REPAIR.repertoireId).toBe('');
     expect(DEFAULT_DRILL.side).toBe('both');
     expect(DEFAULT_REPAIR.kinds).toBe('both');

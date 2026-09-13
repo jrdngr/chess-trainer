@@ -37,7 +37,7 @@ export function Setup({
         </button>
         <div className="note center">
           {prefs.save
-            ? `The first ${OPENING_PLIES / 2} moves become a repertoire line when the game ends.`
+            ? `The first ${OPENING_PLIES / 2} moves join your repertoire when the game ends.`
             : 'Nothing is saved from this game unless you ask at the end.'}
         </div>
 
@@ -56,7 +56,7 @@ export function Setup({
         <div className="list">
           <Toggle
             label="Save the opening"
-            hint={`Write the first ${OPENING_PLIES / 2} moves into a repertoire when the game ends`}
+            hint={`Write the first ${OPENING_PLIES / 2} moves into your repertoire when the game ends`}
             on={prefs.save}
             onToggle={() => set({ save: !prefs.save })}
           />
@@ -69,8 +69,8 @@ export function Setup({
         </div>
         <div className="note">
           {reps.length === 0
-            ? 'You have no repertoires yet. Saving a game creates one, named after the opening you played.'
-            : 'Saved lines merge into an existing repertoire for that colour, or start a new one.'}
+            ? 'Nothing prepared yet. Saving a game starts your repertoire, and the book names the opening you played.'
+            : 'Saved moves join the openings you already have for that side.'}
         </div>
 
         {reps.length > 0 && (
@@ -95,7 +95,7 @@ export function Setup({
             </div>
             {target && prefs.color !== 'random' && target.color !== prefs.color && (
               <div className="note">
-                That repertoire is for {target.color === 'w' ? 'White' : 'Black'}, so a game as the
+                That is your {target.color === 'w' ? 'White' : 'Black'} repertoire, so a game as the
                 other side will start a new one instead.
               </div>
             )}

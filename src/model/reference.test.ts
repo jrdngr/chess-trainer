@@ -8,6 +8,7 @@ import {
   formatGameCount,
   lookup,
   openingNameForPath,
+  specificNameForColor,
   totalGamesAt,
 } from './reference';
 import { referenceIndex } from './referenceIndex';
@@ -187,5 +188,41 @@ describe('naming a line from one side', () => {
 
   it('stops at an illegal move rather than throwing', () => {
     expect(() => deepestNameForColor(index, ['e4', 'e4', 'e4'], 'w')).not.toThrow();
+  });
+});
+
+describe('naming a line as the player\u2019s own opening', () => {
+  const index = referenceIndex();
+
+  it('gives nothing when the only name restates the first move', () => {
+    // The bug this exists for: a Black line the book only recognises at 1.d4
+    // came back as "Queen's Pawn Opening" \u2014 true, and the name of what White
+    // did. "Your Black prep" says more.
+    expect(deepestNameForColor(index, ['d4', 'Nf6'], 'b')?.name).toBe("Queen's Pawn Opening");
+    expect(specificNameForColor(index, ['d4', 'Nf6'], 'b')).toBeNull();
+    expect(specificNameForColor(index, ['d4', 'Nf6', 'Bf4'], 'w')).toBeNull();
+  });
+
+  it('keeps a Black reply at move one, which does name a choice', () => {
+    expect(specificNameForColor(index, ['e4', 'c5'], 'b')?.name).toBe('Sicilian Defence');
+  });
+
+  it('keeps a name earned on the other side\u2019s move', () => {
+    // The book attaches "King's Indian Defence" at White's seventh ply, and it
+    // is still the name of Black's opening \u2014 so whose move earned it cannot be
+    // what decides this.
+    const line = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6'.split(' ');
+    const found = specificNameForColor(index, line, 'b');
+    expect(found?.name).toContain("King's Indian");
+    expect(found!.ply % 2).toBe(1);
+  });
+
+  it('takes the cutoff as an argument, for callers that want more', () => {
+    const line = 'e4 c5'.split(' ');
+    expect(specificNameForColor(index, line, 'b', START_FEN, 3)).toBeNull();
+  });
+
+  it('stops at an illegal move rather than throwing', () => {
+    expect(() => specificNameForColor(index, ['e4', 'e4', 'e4'], 'w')).not.toThrow();
   });
 });

@@ -17,7 +17,6 @@ import { formatScore } from '../../engine/types';
 import { useEngine } from '../../engine/useEngine';
 import { openingNameForPath } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
-import { displayName } from '../../model/repertoire';
 import {
   buildSession,
   checkAnswer,
@@ -340,7 +339,7 @@ export function DrillSession({ items, mode, title, prefs, onExit }: DrillSession
     <>
       <AppBar
         title={opening?.name ?? title}
-        subtitle={displayName(item.repertoireName)}
+        subtitle={item.orientation === 'white' ? 'as White' : 'as Black'}
         onClose={stop}
         actions={
           <span className="num muted small appbar-gap" style={{ textAlign: 'right' }}>

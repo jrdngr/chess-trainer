@@ -21,8 +21,6 @@ export { LEVELS, levelById, OPENING_PLIES } from './play';
 export type DrillDraw = Extract<SessionMode, 'due' | 'new' | 'cram'>;
 
 export interface DrillPrefs {
-  /** '' — every repertoire. */
-  repertoireId: string;
   draw: DrillDraw;
   /** Restrict to positions you answer as this colour. */
   side: Color | 'both';
@@ -37,7 +35,6 @@ export interface DrillPrefs {
 }
 
 export const DEFAULT_DRILL: DrillPrefs = {
-  repertoireId: '',
   draw: 'due',
   side: 'both',
   newPerSession: 8,

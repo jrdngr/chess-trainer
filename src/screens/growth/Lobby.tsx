@@ -3,7 +3,6 @@ import { AppBar, Icons, Section, Segmented } from '../../components/ui';
 import { growthRows, type GrowthRow } from '../../model/growth';
 import { GROWTH_DEPTHS, SHARE_STEPS, shareLabel } from '../../model/modes';
 import { referenceIndex } from '../../model/referenceIndex';
-import { displayName } from '../../model/repertoire';
 import { repertoireList, useStore } from '../../store/useStore';
 
 /**
@@ -28,7 +27,7 @@ export function Lobby({
   const reps = repertoireList(state);
   const index = referenceIndex();
 
-  /** A repertoire someone made but never put a move in cannot be grown. */
+  /** A side that exists but has no moves in it yet cannot be grown. */
   const hasMoves = reps.some((rep) => Object.keys(rep.nodes).length > 0);
 
   const rows = useMemo(
@@ -44,7 +43,7 @@ export function Lobby({
           <div className="empty">
             <div className="t">Nothing to grow yet</div>
             <div className="h">
-              Growth extends a repertoire you already have. Survive a line in Opening Run, or save
+              Growth extends prep you already have. Survive a line in Opening Run, or save
               the opening from a game in Play, and it will have something to work on.
             </div>
           </div>
@@ -134,14 +133,14 @@ export function Lobby({
           onChange={(ply) => setModePrefs('growth', { maxPly: Number(ply) })}
         />
 
-        {state.repertoires && (
+        {reps.length > 0 && (
           <>
-            <Section title="Repertoires" />
+            <Section title="What you have" />
             <div className="list">
               {reps.map((rep) => (
                 <div className="list-row kv" key={rep.id}>
                   <span className={`side ${rep.color}`} />
-                  <span className="k grow">{displayName(rep.name)}</span>
+                  <span className="k grow">{rep.color === 'w' ? 'As White' : 'As Black'}</span>
                   <span className="v num">{Object.keys(rep.nodes).length}</span>
                 </div>
               ))}

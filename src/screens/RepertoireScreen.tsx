@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { Board } from '../components/Board';
 import { ExplorerPanel } from '../components/ExplorerPanel';
 import { AppBar, Empty, IconButton, Icons, Section, Sheet, Strip, toast } from '../components/ui';
-import { fenTurn, lastMoveOf, sansToMoveText, type LegalMove } from '../chess/core';
-import { childrenOf, displayName, fenAt, pathTo, subtreeIds } from '../model/repertoire';
+import { fenTurn, lastMoveOf, sansToMoveText, type Color, type LegalMove } from '../chess/core';
+import { openingsIn, type DerivedOpening } from '../model/openings';
+import { childrenOf, fenAt, pathTo, repertoireName, subtreeIds } from '../model/repertoire';
 import { lookup, openingNameForPath } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
 import { branchItems, type SessionMode, type TrainingItem } from '../model/session';
@@ -17,20 +18,48 @@ export interface RepertoireScreenProps {
   onExploreFrom: (sans: string[]) => void;
 }
 
+/** Where the browser is pointed: one opening, or a whole side's tree. */
+interface Scope {
+  repId: string;
+  /** The node to land on, or null for the start position. */
+  nodeId: string | null;
+  title: string;
+}
+
+/**
+ * Your repertoire: the whole collection, listed as the openings in it.
+ *
+ * Two trees are stored, one per side, and an opening is a named region of one of
+ * them — see `openingsIn`. So this screen lists what you have prepared the way
+ * you would describe it out loud ("a King's Indian, a Sicilian") rather than
+ * listing the two containers those openings happen to live in.
+ */
 export function RepertoireScreen({ onStart, onImport, onExploreFrom }: RepertoireScreenProps) {
   const state = useStore();
   const reps = repertoireList(state);
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const index = referenceIndex();
+  const [scope, setScope] = useState<Scope | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [openingMenu, setOpeningMenu] = useState<DerivedOpening | null>(null);
+  const [sideMenu, setSideMenu] = useState<string | null>(null);
 
-  const rep = openId ? state.repertoires[openId] : null;
+  const sides = useMemo(
+    () =>
+      (['w', 'b'] as Color[])
+        .map((color) => reps.find((rep) => rep.color === color))
+        .filter((rep): rep is Repertoire => !!rep)
+        .map((rep) => ({ rep, openings: openingsIn(rep, index) })),
+    [reps, index],
+  );
 
-  if (rep) {
+  const scoped = scope ? state.repertoires[scope.repId] : null;
+  if (scope && scoped) {
     return (
       <RepertoireBrowser
-        rep={rep}
-        onBack={() => setOpenId(null)}
+        rep={scoped}
+        startNodeId={scope.nodeId}
+        title={scope.title}
+        onBack={() => setScope(null)}
         onStart={onStart}
         onExploreFrom={onExploreFrom}
       />
@@ -44,10 +73,10 @@ export function RepertoireScreen({ onStart, onImport, onExploreFrom }: Repertoir
         title="Repertoire"
         actions={
           <>
-            <IconButton label="Import" onClick={onImport}>
+            <IconButton label="Import games" onClick={onImport}>
               <Icons.download size={20} />
             </IconButton>
-            <IconButton label="New repertoire" onClick={() => setCreating(true)}>
+            <IconButton label="Add an opening" onClick={() => setAdding(true)}>
               <Icons.plus size={20} />
             </IconButton>
           </>
@@ -55,20 +84,53 @@ export function RepertoireScreen({ onStart, onImport, onExploreFrom }: Repertoir
       />
 
       <div className="screen">
-        {reps.length === 0 && <Empty title="No repertoires" hint="Create one or import your games" />}
-        {reps.length > 0 && (
-          <div className="list">
-            {reps.map((r) => (
-              <RepertoireRow
-                key={r.id}
-                rep={r}
-                cards={state.cards}
-                onOpen={() => setOpenId(r.id)}
-                onMenu={() => setMenuFor(r.id)}
-              />
-            ))}
-          </div>
+        {sides.length === 0 && (
+          <Empty
+            title="No openings yet"
+            hint="Play a game and keep the opening, or survive a line in Opening Run. Both write into your repertoire."
+          />
         )}
+
+        {sides.map(({ rep, openings }) => (
+          <div key={rep.id}>
+            <Section
+              title={rep.color === 'w' ? 'As White' : 'As Black'}
+              aside={`${openings.length} ${openings.length === 1 ? 'opening' : 'openings'}`}
+            />
+            <div className="list">
+              {openings.map((opening) => (
+                <OpeningRow
+                  key={opening.id}
+                  opening={opening}
+                  onOpen={() =>
+                    setScope({ repId: rep.id, nodeId: opening.rootId, title: opening.name })
+                  }
+                  onMenu={() => setOpeningMenu(opening)}
+                />
+              ))}
+              <div className="list-row">
+                <button
+                  className="grow row"
+                  onClick={() =>
+                    setScope({ repId: rep.id, nodeId: null, title: repertoireName(rep.color) })
+                  }
+                >
+                  <span className="grow">
+                    <div className="title muted">Whole tree, from move one</div>
+                    <div className="meta">{Object.keys(rep.nodes).length} moves</div>
+                  </span>
+                  <Icons.chevron size={18} />
+                </button>
+                <IconButton
+                  label={`Options for the ${rep.color === 'w' ? 'White' : 'Black'} repertoire`}
+                  onClick={() => setSideMenu(rep.id)}
+                >
+                  <Icons.more size={18} />
+                </IconButton>
+              </div>
+            </div>
+          </div>
+        ))}
 
         <div className="spacer" />
         <button className="btn soft block" onClick={onImport}>
@@ -76,42 +138,55 @@ export function RepertoireScreen({ onStart, onImport, onExploreFrom }: Repertoir
         </button>
       </div>
 
-      <NewRepertoireSheet open={creating} onClose={() => setCreating(false)} />
-      <RepertoireMenu repId={menuFor} onClose={() => setMenuFor(null)} />
+      <NewOpeningSheet
+        open={adding}
+        onClose={() => setAdding(false)}
+        onReady={(repId, color) =>
+          setScope({ repId, nodeId: null, title: repertoireName(color) })
+        }
+      />
+      <OpeningMenu
+        opening={openingMenu}
+        onClose={() => setOpeningMenu(null)}
+        onDrill={(items, title) => {
+          setOpeningMenu(null);
+          onStart(items, 'branch', title);
+        }}
+      />
+      <SideMenu repId={sideMenu} onClose={() => setSideMenu(null)} />
     </>
   );
 }
 
-function RepertoireRow({
-  rep,
-  cards,
+function OpeningRow({
+  opening,
   onOpen,
   onMenu,
 }: {
-  rep: Repertoire;
-  cards: Record<string, Card>;
+  opening: DerivedOpening;
   onOpen: () => void;
   onMenu: () => void;
 }) {
-  const nodes = Object.keys(rep.nodes).length;
-  const trained = Object.values(cards).filter((c) => c.repertoireId === rep.id).length;
-  const firstMoves = childrenOf(rep, null)
-    .map((m) => m.san)
-    .slice(0, 3);
+  const meta = [
+    opening.eco,
+    `${opening.lines} ${opening.lines === 1 ? 'line' : 'lines'}`,
+    `${Math.ceil(opening.depth / 2)} moves deep`,
+    opening.variations.length
+      ? `${opening.variations.length} ${opening.variations.length === 1 ? 'variation' : 'variations'}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
   return (
     <div className="list-row" style={{ minHeight: 64 }}>
       <button className="grow row" onClick={onOpen}>
-        <span className={`side ${rep.color}`} />
-        <span className="grow">
-          <div className="title truncate">{displayName(rep.name)}</div>
-          <div className="meta">
-            {nodes} moves{trained ? ` · ${trained} trained` : ''}
-            {firstMoves.length > 0 ? ` · ${firstMoves.join(' ')}` : ''}
-          </div>
+        <span className="grow" style={{ minWidth: 0 }}>
+          <div className="title truncate">{opening.name}</div>
+          <div className="meta truncate">{meta}</div>
         </span>
         <Icons.chevron size={18} />
       </button>
-      <IconButton label={`Options for ${displayName(rep.name)}`} onClick={onMenu}>
+      <IconButton label={`Options for ${opening.name}`} onClick={onMenu}>
         <Icons.more size={18} />
       </IconButton>
     </div>
@@ -119,13 +194,92 @@ function RepertoireRow({
 }
 
 /**
- * What can be done to a whole repertoire.
+ * What can be done to one opening.
  *
- * Deleting takes the schedule and the logged mistakes with it, which is a lot
- * to lose by accident, so it asks twice — the same two-tap confirm Settings
- * uses for the other irreversible things.
+ * Deleting takes the move order that only led there with it, which is usually
+ * more moves than the opening's own region holds, so the count says so before
+ * you commit. It asks twice — the same two-tap confirm Settings uses for the
+ * other irreversible things.
  */
-function RepertoireMenu({
+function OpeningMenu({
+  opening,
+  onClose,
+  onDrill,
+}: {
+  opening: DerivedOpening | null;
+  onClose: () => void;
+  onDrill: (items: TrainingItem[], title: string) => void;
+}) {
+  const rep = useStore((s) => (opening ? s.repertoires[opening.repertoireId] : null));
+  const removeOpening = useStore((s) => s.removeOpening);
+  const [confirming, setConfirming] = useState(false);
+
+  const close = () => {
+    setConfirming(false);
+    onClose();
+  };
+
+  if (!opening || !rep) return null;
+
+  return (
+    <Sheet open onClose={close} title={opening.name}>
+      <div className="movetext" style={{ marginBottom: 10 }}>
+        {sansToMoveText(opening.path)}
+      </div>
+
+      <div className="list">
+        <button
+          className="list-row"
+          onClick={() => {
+            const items = branchItems(rep, opening.rootId);
+            if (!items.length) {
+              toast('Nothing to drill');
+              return;
+            }
+            onDrill(items.slice(0, 40), opening.name);
+          }}
+        >
+          <span className="grow">
+            <div className="title">Drill this opening</div>
+            <div className="meta">{opening.moves} moves below here</div>
+          </span>
+          <Icons.chevron size={18} />
+        </button>
+        {opening.variations.map((variation) => (
+          <div className="list-row kv" key={variation.id}>
+            <span className="k grow truncate">{variation.name}</span>
+            <span className="v num">{variation.moves}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="spacer" />
+      <button
+        className="btn danger block"
+        onClick={() => {
+          if (!confirming) {
+            setConfirming(true);
+            return;
+          }
+          removeOpening(opening.repertoireId, opening.rootId);
+          close();
+          toast(`${opening.name} deleted`);
+        }}
+      >
+        <Icons.trash size={18} />
+        {confirming ? 'Tap again to delete' : 'Delete opening'}
+      </button>
+      <div className="note center">
+        {opening.removes} {opening.removes === 1 ? 'move goes' : 'moves go'} with it — the opening
+        and the move order that only leads there. This cannot be undone.
+      </div>
+      <div className="spacer" />
+    </Sheet>
+  );
+}
+
+/** What can be done to a whole side's tree: every opening you play as it. */
+function SideMenu({
   repId,
   onClose,
   onDeleted,
@@ -139,7 +293,6 @@ function RepertoireMenu({
   const removeRepertoire = useStore((s) => s.removeRepertoire);
   const [confirming, setConfirming] = useState(false);
 
-  // A fresh sheet always opens un-armed.
   const close = () => {
     setConfirming(false);
     onClose();
@@ -148,10 +301,10 @@ function RepertoireMenu({
   if (!rep) return null;
   const moves = Object.keys(rep.nodes).length;
   const trained = Object.values(cards).filter((c) => c.repertoireId === rep.id).length;
-  const name = displayName(rep.name);
+  const side = rep.color === 'w' ? 'White' : 'Black';
 
   return (
-    <Sheet open onClose={close} title={name}>
+    <Sheet open onClose={close} title={repertoireName(rep.color)}>
       <div className="list">
         <div className="list-row kv">
           <span className="k">Moves</span>
@@ -174,54 +327,63 @@ function RepertoireMenu({
           removeRepertoire(rep.id);
           close();
           onDeleted?.();
-          toast(`${name} deleted`);
+          toast(`Everything you play as ${side} deleted`);
         }}
       >
         <Icons.trash size={18} />
-        {confirming ? 'Tap again to delete' : 'Delete repertoire'}
+        {confirming ? 'Tap again to delete' : `Delete everything as ${side}`}
       </button>
       <div className="note center">
         {trained > 0
-          ? `Its ${moves} moves and the schedule for ${trained} of them go too. This cannot be undone.`
-          : `All ${moves} moves go with it. This cannot be undone.`}
+          ? `Every opening you play as ${side} goes, along with the schedule for ${trained} positions. This cannot be undone.`
+          : `Every opening you play as ${side} goes — all ${moves} moves. This cannot be undone.`}
       </div>
       <div className="spacer" />
     </Sheet>
   );
 }
 
-function NewRepertoireSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const add = useStore((s) => s.addRepertoire);
-  const [name, setName] = useState('');
-  const [color, setColor] = useState<'w' | 'b'>('w');
+/**
+ * Start an opening by hand.
+ *
+ * Openings are derived from the moves, so there is no name to type: you pick a
+ * side and play the moves in. The side is the only thing the app cannot work
+ * out for itself.
+ */
+function NewOpeningSheet({
+  open,
+  onClose,
+  onReady,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onReady: (repId: string, color: Color) => void;
+}) {
+  const ensureRepertoire = useStore((s) => s.ensureRepertoire);
+  const [color, setColor] = useState<Color>('w');
   return (
-    <Sheet open={open} onClose={onClose} title="New repertoire">
-      <input
-        className="field"
-        placeholder="Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      <div className="spacer sm" />
+    <Sheet open={open} onClose={onClose} title="Add an opening">
       <div className="segmented">
         <button className={color === 'w' ? 'active' : ''} onClick={() => setColor('w')}>
-          White
+          As White
         </button>
         <button className={color === 'b' ? 'active' : ''} onClick={() => setColor('b')}>
-          Black
+          As Black
         </button>
+      </div>
+      <div className="note">
+        Play the moves in and the book names the opening for you. It joins whatever you already have
+        for that side.
       </div>
       <div className="spacer" />
       <button
         className="btn primary block"
-        disabled={!name.trim()}
         onClick={() => {
-          add(name.trim(), color);
-          setName('');
+          onReady(ensureRepertoire(color), color);
           onClose();
         }}
       >
-        Create
+        Start playing moves
       </button>
     </Sheet>
   );
@@ -231,22 +393,26 @@ function NewRepertoireSheet({ open, onClose }: { open: boolean; onClose: () => v
 
 function RepertoireBrowser({
   rep,
+  startNodeId,
+  title,
   onBack,
   onStart,
   onExploreFrom,
 }: {
   rep: Repertoire;
+  startNodeId: string | null;
+  title: string;
   onBack: () => void;
   onStart: (items: TrainingItem[], mode: SessionMode, title: string) => void;
   onExploreFrom: (sans: string[]) => void;
 }) {
   const state = useStore();
   const addLine = useStore((s) => s.addLine);
-  const [nodeId, setNodeId] = useState<string | null>(null);
+  const [nodeId, setNodeId] = useState<string | null>(startNodeId);
   const [pendingMove, setPendingMove] = useState<LegalMove | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [showReference, setShowReference] = useState(false);
-  const [repMenu, setRepMenu] = useState(false);
+  const [sideMenu, setSideMenu] = useState(false);
 
   const fen = fenAt(rep, nodeId);
   const path = useMemo(() => pathTo(rep, nodeId), [rep, nodeId]);
@@ -255,7 +421,6 @@ function RepertoireBrowser({
   const ourTurn = fenTurn(fen) === rep.color;
   const opening = useMemo(() => openingNameForPath(referenceIndex(), pathSans), [pathSans]);
   const refEntry = useMemo(() => lookup(referenceIndex(), fen), [fen]);
-  const name = displayName(rep.name);
 
   const onBoardMove = (move: LegalMove) => {
     const existing = kids.find((k) => k.san === move.san);
@@ -288,21 +453,21 @@ function RepertoireBrowser({
       toast('Nothing to drill');
       return;
     }
-    onStart(items, 'branch', opening?.name ?? name);
+    onStart(items, 'branch', opening?.name ?? title);
   };
 
   return (
     <>
       <AppBar
-        title={opening?.name ?? name}
-        subtitle={`${opening?.eco ? `${opening.eco} · ` : ''}${opening ? name : `${Object.keys(rep.nodes).length} moves`}`}
+        title={opening?.name ?? title}
+        subtitle={`${opening?.eco ? `${opening.eco} · ` : ''}${rep.color === 'w' ? 'as White' : 'as Black'}`}
         onBack={onBack}
         actions={
           <>
-            <IconButton label="Reference" onClick={() => setShowReference(true)}>
+            <IconButton label="The book" onClick={() => setShowReference(true)}>
               <Icons.book size={20} />
             </IconButton>
-            <IconButton label="Repertoire options" onClick={() => setRepMenu(true)}>
+            <IconButton label="Repertoire options" onClick={() => setSideMenu(true)}>
               <Icons.more size={20} />
             </IconButton>
           </>
@@ -376,7 +541,7 @@ function RepertoireBrowser({
 
         {refEntry && refEntry.moves.length > 0 && (
           <>
-            <Section title="Book" aside="Tap to add" />
+            <Section title="The book" aside="Tap to add" />
             <ExplorerPanel
               fen={fen}
               path={pathSans}
@@ -402,9 +567,9 @@ function RepertoireBrowser({
         </div>
       </div>
 
-      <RepertoireMenu
-        repId={repMenu ? rep.id : null}
-        onClose={() => setRepMenu(false)}
+      <SideMenu
+        repId={sideMenu ? rep.id : null}
+        onClose={() => setSideMenu(false)}
         onDeleted={onBack}
       />
 
@@ -416,13 +581,13 @@ function RepertoireBrowser({
           setMenuFor(null);
           setNodeId(id);
         }}
-        onDrill={(items, title) => {
+        onDrill={(items, drillTitle) => {
           setMenuFor(null);
-          onStart(items, 'branch', title);
+          onStart(items, 'branch', drillTitle);
         }}
       />
 
-      <Sheet open={showReference} onClose={() => setShowReference(false)} title="Reference">
+      <Sheet open={showReference} onClose={() => setShowReference(false)} title="The book">
         <div className="movetext" style={{ marginBottom: 10 }}>
           {sansToMoveText(pathSans) || 'Start'}
         </div>

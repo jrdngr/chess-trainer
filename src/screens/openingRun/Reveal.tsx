@@ -45,7 +45,7 @@ export interface RevealProps {
   canSaveLine: boolean;
   /** That line is already in the repertoire, so there is nothing to add. */
   alreadySaved: boolean;
-  /** Write the line into a repertoire; returns what it added. */
+  /** Write the line into your repertoire; returns the opening it landed in. */
   onSaveLine: () => { name: string; added: number } | null;
   onExit: () => void;
   onNewRun: () => void;

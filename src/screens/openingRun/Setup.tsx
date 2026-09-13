@@ -61,7 +61,7 @@ export function Setup({
   const fromOpening = prefs.kind === 'opening';
 
   const pool = playableRepertoires(reps, prefs.color, { reverse: prefs.reverse });
-  // A repertoire the colour no longer allows quietly falls back to "any".
+  // A side the colour no longer allows quietly falls back to "either".
   const chosenId = pool.some((r) => r.id === prefs.repertoireId) ? prefs.repertoireId : '';
   const starred = favorites
     .map((id) => catalogue.find((entry) => entry.id === id))
@@ -86,7 +86,7 @@ export function Setup({
     setBrowsing(false);
   };
 
-  /** Picking a repertoire settles which side you are on, so the colour follows it. */
+  /** Picking a side settles which colour you are on, so the colour follows it. */
   const chooseRepertoire = (rep: Repertoire | null) => {
     if (!rep) {
       setOpeningRunPrefs({ repertoireId: '' });
@@ -126,7 +126,7 @@ export function Setup({
                 ? pool.map((r) => displayName(r.name)).join(', ')
                 : prefs.reverse
                   ? 'Nothing prepared against that side'
-                  : 'No repertoire for that colour'
+                  : 'Nothing prepared for that side'
             }
             selected={fromRepertoire}
             onSelect={() => setOpeningRunPrefs({ kind: 'repertoire' })}
@@ -144,8 +144,8 @@ export function Setup({
             onSelect={() => setOpeningRunPrefs({ kind: 'opening' })}
           />
           <ChoiceRow
-            title="Book"
-            meta="Every line in the reference database"
+            title="The book"
+            meta="Every named line the app knows"
             selected={prefs.kind === 'book'}
             onSelect={() => setOpeningRunPrefs({ kind: 'book' })}
           />
@@ -179,25 +179,25 @@ export function Setup({
             )}
             <button className="btn sm block mt-8" onClick={() => setBrowsing(true)}>
               <Icons.book size={16} />
-              All openings
+              The whole book
             </button>
           </>
         )}
 
         {fromRepertoire && pool.length > 1 && (
           <>
-            <Section title="Which repertoire" />
+            <Section title="Which side" />
             <div className="list">
               <ChoiceRow
-                title="Any of mine"
-                meta="Drawn across every repertoire that fits"
+                title="Either"
+                meta="Drawn across everything that fits"
                 selected={chosenId === ''}
                 onSelect={() => chooseRepertoire(null)}
               />
               {pool.map((rep) => (
                 <ChoiceRow
                   key={rep.id}
-                  title={displayName(rep.name)}
+                  title={rep.color === 'w' ? 'As White' : 'As Black'}
                   leading={<span className={`side ${prefs.reverse ? other(rep.color) : rep.color}`} />}
                   selected={chosenId === rep.id}
                   onSelect={() => chooseRepertoire(rep)}
@@ -292,7 +292,7 @@ function sourceNote(prefs: OpeningRunPrefs, opening: CatalogueEntry | null): str
         ? `The opponent walks you into the ${opening.name}. Its move order is the only thing that counts while you are still in it; after that the book takes over.`
         : 'Pick an opening to play out. Its move order is the only thing that counts while you are still in it; after that the book takes over.';
     case 'book':
-      return 'Any move played in the reference database keeps you alive, so the book forgives more than your repertoire does. It is a curated sample, not every game ever played.';
+      return 'Any move in the book keeps you alive, so the book forgives more than your own prep does. It is a curated sample, not every game ever played.';
     default:
       return prefs.reverse
         ? 'You play the side your repertoire answers. Staying alive means knowing what your opponent is meant to do — the run ends on any move you have not prepared for.'

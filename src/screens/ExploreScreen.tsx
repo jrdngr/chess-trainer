@@ -45,7 +45,7 @@ export function ExploreScreen({ initialPath, onConsumedInitial }: ExploreScreenP
   const fen = fens[fens.length - 1];
   const opening = useMemo(() => openingNameForPath(referenceIndex(), visible), [visible]);
 
-  /** Which of the user's repertoires already contain a move from this position. */
+  /** Which sides already have a move from this position prepared. */
   const repMoves = useMemo(() => {
     const out: { repId: string; name: string; sans: string[] }[] = [];
     for (const rep of repertoireList(state)) {

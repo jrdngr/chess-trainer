@@ -337,6 +337,28 @@ export function deepestNameForColor(
   return mine ?? any;
 }
 
+/**
+ * The same, but nothing at all when the only name restates the first move.
+ *
+ * For labelling a line as the player's own opening. "Queen's Pawn Opening" on a
+ * Black line whose point is what happened at move four is true and says less
+ * than "your Black prep" does — that is the complaint this answers, and the
+ * depth is what fixes it rather than which side the name belongs to. Whose move
+ * earned the name cannot decide it: the book attaches "King's Indian Defence"
+ * at 1.d4 Nf6 2.c4 g6 3.Nc3 Bg7 4.e4, White's seventh ply, and it is still the
+ * name of Black's opening.
+ */
+export function specificNameForColor(
+  index: ReferenceIndex,
+  sans: string[],
+  color: Color,
+  startFen = START_FEN,
+  minPly = 2,
+): NamedLine | null {
+  const found = deepestNameForColor(index, sans, color, startFen);
+  return found && found.ply >= minPly ? found : null;
+}
+
 /** Deepest opening name on the path to a position — "Sicilian Defence: Najdorf". */
 export function openingNameForPath(
   index: ReferenceIndex,
@@ -345,6 +367,17 @@ export function openingNameForPath(
 ): OpeningName | null {
   const found = deepestName(index, sans, startFen);
   return found ? { eco: found.eco, name: found.name } : null;
+}
+
+/**
+ * The book's name for this exact position, if it has one.
+ *
+ * Unlike `deepestName` this looks at one position rather than a whole line, so
+ * it answers "does an opening begin here?" — which is what deriving the named
+ * regions of a repertoire tree needs.
+ */
+export function nameAt(index: ReferenceIndex, fen: string): OpeningName | null {
+  return index.names.get(positionKey(fen)) ?? null;
 }
 
 export function lookup(index: ReferenceIndex, fen: string): ExplorerEntry | null {

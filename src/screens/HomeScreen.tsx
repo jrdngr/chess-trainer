@@ -15,7 +15,7 @@ import type { Repertoire } from '../model/types';
 export type ModeId = 'drill' | 'openingRun' | 'repair' | 'growth' | 'play';
 
 export interface HomeScreenProps {
-  /** Launching one repertoire straight into a session, from the sheet below. */
+  /** Launching one side's prep straight into a session, from the sheet below. */
   onStart: (items: TrainingItem[], mode: SessionMode, title: string) => void;
   onOpenMode: (mode: ModeId) => void;
   onOpenSettings: () => void;
@@ -210,7 +210,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
             }
             onClick={() => onOpenMode('growth')}
           />
-          {/* Play is where a repertoire comes from, so it spans the row rather
+          {/* Play is where the repertoire comes from, so it spans the row rather
               than sitting alone in a corner of it. */}
           <Tile
             wide
@@ -225,11 +225,11 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
           />
         </div>
 
-        <Section title="Repertoires" />
+        <Section title="Repertoire" />
         {perRep.length === 0 ? (
           <div className="card small muted">
             Nothing prepared yet. Play a game and save the opening, or survive a line in Opening
-            Run — both write into a repertoire, and everything else here works from it.
+            Run — both write into your repertoire, and everything else here works from it.
           </div>
         ) : (
           <div className="list">

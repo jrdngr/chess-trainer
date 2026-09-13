@@ -183,6 +183,48 @@ export function removeSubtree(rep: Repertoire, nodeId: string): Repertoire {
   return { ...rep, nodes, rootChildren };
 }
 
+/**
+ * Remove a node, everything below it, and the moves that only led to it.
+ *
+ * This is what deleting an opening means. A derived opening begins where the
+ * book starts naming the position, which is often several moves in: a Black
+ * King's Indian is named at 1.d4 Nf6 2.c4 g6 3.Nc3 Bg7 4.e4, so removing only
+ * the subtree would leave six moves standing that now lead nowhere. Climbing
+ * while the parent has nothing else under it stops at the first real branch
+ * point, so an opening that shares a move order with another one keeps it.
+ */
+export function pruneLine(rep: Repertoire, nodeId: string): Repertoire {
+  const start = rep.nodes[nodeId];
+  if (!start) return rep;
+  let next = removeSubtree(rep, nodeId);
+  let parentId = start.parentId;
+  while (parentId) {
+    const parent = next.nodes[parentId];
+    if (!parent || parent.children.length > 0) break;
+    const grandparent = parent.parentId;
+    next = removeSubtree(next, parentId);
+    parentId = grandparent;
+  }
+  return next;
+}
+
+/** How many moves `pruneLine` would take, without taking them. */
+export function pruneCount(rep: Repertoire, nodeId: string): number {
+  const start = rep.nodes[nodeId];
+  if (!start) return 0;
+  let count = subtreeIds(rep, nodeId).length;
+  let childId = nodeId;
+  let parentId = start.parentId;
+  while (parentId) {
+    const parent = rep.nodes[parentId];
+    if (!parent || parent.children.some((id) => id !== childId)) break;
+    count += 1;
+    childId = parentId;
+    parentId = parent.parentId;
+  }
+  return count;
+}
+
 /** Make `nodeId` the preferred move among its siblings. */
 export function setPreferred(rep: Repertoire, nodeId: string): Repertoire {
   const node = rep.nodes[nodeId];
@@ -302,7 +344,26 @@ export function subtreeIds(rep: Repertoire, nodeId: string): string[] {
   return out;
 }
 
-/** "White — Queen's Gambit" → "Queen's Gambit"; the side is shown separately. */
+/**
+ * What a stored tree is called: "White repertoire" or "Black repertoire".
+ *
+ * There is exactly one tree per colour, and it is never named after an opening.
+ * Naming it after whichever opening happened to create it was the old
+ * behaviour, and it lied as soon as a second opening moved in: a container
+ * called "King's Indian Defence" holding a Nimzo-Indian and a Dutch. Openings
+ * are derived from the tree instead — see `openingsIn` — so the container only
+ * has to say which side it is for.
+ */
+export function repertoireName(color: Color): string {
+  return color === 'w' ? 'White repertoire' : 'Black repertoire';
+}
+
+/**
+ * "White — Queen's Gambit" → "Queen's Gambit"; the side is shown separately.
+ *
+ * Kept for names a user typed themselves, and for trees saved before the
+ * per-colour naming above.
+ */
 export function displayName(name: string): string {
   return name.replace(/^\s*(white|black)\s*[—–\-:]\s*/i, '').trim() || name;
 }

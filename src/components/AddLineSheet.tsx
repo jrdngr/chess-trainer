@@ -20,7 +20,7 @@ export interface AddLineSheetProps {
 }
 
 /**
- * Import a line into a repertoire, letting the user choose how much of it to
+ * Import a line into your repertoire, letting the user choose how much of it to
  * take. Tapping a move sets the cut-off.
  */
 export function AddLineSheet({
@@ -50,7 +50,7 @@ export function AddLineSheet({
   const effectiveDepth = Math.min(depth, sans.length);
   const slice = sans.slice(0, effectiveDepth);
 
-  // Suggest the repertoire whose side actually plays the last move of the line.
+  // Suggest the side that actually plays the last move of the line.
   const suggested = useMemo(() => {
     if (preferColor) {
       const byColor = reps.filter((r) => r.color === preferColor);
@@ -88,7 +88,7 @@ export function AddLineSheet({
       if (tip) annotate(target.id, tip.id, note);
     }
     onAdded?.(target.id, res.added);
-    toast(res.added > 0 ? `${res.added} added` : 'Already in repertoire');
+    toast(res.added > 0 ? `${res.added} added` : 'Already in your repertoire');
     onClose();
   };
 
@@ -112,7 +112,7 @@ export function AddLineSheet({
         </div>
       </div>
 
-      <Section title="Repertoire" />
+      <Section title="Side" />
       <div className="list">
         {reps.map((rep) => (
           <button key={rep.id} className="list-row" onClick={() => setRepId(rep.id)}>
