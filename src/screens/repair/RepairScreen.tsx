@@ -313,11 +313,6 @@ function Working({
           </>
         )}
 
-        <Section title="How you got here" />
-        <div className="card">
-          <div className="movetext">{item.lineText}</div>
-        </div>
-
         {answered && item.path.length > 0 && (
           <div className="note">
             The full line: {sansToMoveText([...item.path, item.expected[0]])}

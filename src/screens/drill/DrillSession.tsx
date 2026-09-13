@@ -52,7 +52,8 @@ export interface DrillSessionProps {
   onExit: () => void;
 }
 
-type Phase = 'ask' | 'wrong';
+/** `flash`: a correct move, shown for a beat before the next position. */
+type Phase = 'ask' | 'flash' | 'wrong';
 
 /** The queue, in the order the mode asks for. */
 function order(
@@ -78,6 +79,9 @@ export function gradeForTime(seconds: number): Grade {
 function speedNow(elapsed: number, budget: number | null): number {
   return speedBonus(elapsed, budget);
 }
+
+/** How long a correct move stays on the board before the next position. */
+const FLASH_MS = 650;
 
 /** How many positions to line up at a time, and when to line up more. */
 const BATCH = 20;
@@ -266,7 +270,11 @@ export function DrillSession({
       const before = card ?? createCard(item.cardId, item.repertoireId, item.key, item.fen);
       grade(item, auto, move.san, true);
       setLast({ item, before, grade: auto, played: move.san });
-      advance(followUp ?? undefined);
+      // A beat on the move you just made, so it registers before the board
+      // changes under you.
+      setPhase('flash');
+      const next = followUp ?? undefined;
+      window.setTimeout(() => advance(next), FLASH_MS);
       return;
     }
     if (!result.correct) {
@@ -368,6 +376,9 @@ export function DrillSession({
       if (expectedMove) {
         out.push({ square: expectedMove.from, kind: 'good' }, { square: expectedMove.to, kind: 'good' });
       }
+    }
+    if (phase === 'flash' && played) {
+      out.push({ square: played.from, kind: 'good' }, { square: played.to, kind: 'good' });
     }
     return out;
   }, [phase, played, expectedMove]);
