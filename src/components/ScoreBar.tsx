@@ -18,6 +18,7 @@ const MILESTONE_MS = 4200;
 export function ScoreBar() {
   const feed = useStore((s) => s.feed);
   const haptics = useStore((s) => s.settings.hapticFeedback);
+  const openStats = useStore((s) => s.openStats);
   const [shown, setShown] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   /** The bar draws the state before the event first, so the fill can animate. */
@@ -55,6 +56,7 @@ export function ScoreBar() {
       className={`score-bar${shown ? ' shown' : ''}${celebrating ? ' celebrate' : ''}`}
       style={{ ['--tier' as string]: color }}
       aria-live="polite"
+      onClick={() => shown && openStats('')}
     >
       <div className="head">
         <span className="tier">

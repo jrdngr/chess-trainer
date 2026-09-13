@@ -941,3 +941,34 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .next-bar .go .kicker { display: block; font-size: 10.5px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; opacity: 0.55; }
 .next-bar .go .what { display: block; font-size: 15px; font-weight: 700; }
 @keyframes barUp { from { transform: translate(-50%, 24px); opacity: 0; } }
+
+/* ── charts ────────────────────────────────────────────────────────────── */
+.chart { position: relative; }
+.chart-svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.chart-svg .grid { stroke: var(--surface-3); stroke-width: 1; }
+.chart-svg .tick { fill: var(--text-3); font-size: 10px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.chart-svg .marker { stroke: var(--surface); stroke-width: 2; }
+.chart-svg .crosshair { stroke: var(--text-3); stroke-width: 1; }
+.chart-readout { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; margin-top: 4px; padding: 0 2px; }
+.chart-readout b { font-size: 15px; }
+.chart-empty { color: var(--text-3); font-size: 13px; text-align: center; padding: 28px 0; }
+
+.bar-list { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: grid; grid-template-columns: minmax(0, 110px) 1fr 40px; align-items: center; gap: 10px; font-size: 13px; }
+.bar-row .lbl { color: var(--text-2); font-weight: 600; }
+.bar-row.highlight .lbl { color: var(--text); }
+.bar-row .track { height: 12px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.bar-row .track i { display: block; height: 100%; border-radius: 0 4px 4px 0; min-width: 2px; }
+.bar-row .val { text-align: right; color: var(--text-2); }
+
+/* ── stats ─────────────────────────────────────────────────────────────── */
+.milestone-bar { display: flex; flex-direction: column; gap: 6px; }
+.milestone-bar .head { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 600; color: var(--text-2); }
+.milestone-bar .head .tier { display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
+.milestone-bar .head .tier i { width: 9px; height: 9px; border-radius: 50%; }
+.milestone-bar .track { height: 10px; border-radius: 5px; background: var(--surface-3); overflow: hidden; }
+.milestone-bar .fill { height: 100%; border-radius: 5px; transition: width 0.4s; }
+.ladder { display: flex; gap: 3px; margin-top: 8px; }
+.ladder i { flex: 1; height: 6px; border-radius: 3px; opacity: 0.25; }
+.ladder i.held { opacity: 1; }
+.score-bar.shown { pointer-events: auto; cursor: pointer; }

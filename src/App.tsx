@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Icons, ToastHost } from './components/ui';
 import { ScoreBar } from './components/ScoreBar';
 import { AnalysisScreen } from './screens/AnalysisScreen';
-import { ExploreScreen } from './screens/ExploreScreen';
+import { StatsScreen } from './screens/StatsScreen';
 import { ImportScreen } from './screens/ImportScreen';
 import { RepertoireScreen } from './screens/RepertoireScreen';
 import { SettingsSheet } from './screens/SettingsSheet';
@@ -18,7 +18,7 @@ import type { SessionMode, TrainingItem } from './model/session';
 import { countDue } from './model/srs';
 import { useStore } from './store/useStore';
 
-type Tab = 'home' | 'repertoire' | 'explore' | 'analysis';
+type Tab = 'home' | 'repertoire' | 'stats' | 'analysis';
 
 export default function App() {
   const ready = useStore((s) => s.ready);
@@ -35,10 +35,28 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [explorePath, setExplorePath] = useState<string[] | undefined>();
+  const statsTarget = useStore((s) => s.statsTarget);
+  const clearStats = useStore((s) => s.clearStats);
+  const [statsFor, setStatsFor] = useState<string | undefined>();
 
   useEffect(() => {
     void init();
   }, [init]);
+
+  /**
+   * A stats page asked for from anywhere — the picker, the score bar — opens
+   * the Stats tab. Only from a tab screen, though: nothing pulls you out of
+   * a game.
+   */
+  useEffect(() => {
+    if (statsTarget === null) return;
+    if (!mode && !session && !importing) {
+      setStatsFor(statsTarget);
+      setTab('stats');
+    }
+    clearStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statsTarget]);
 
   const startSession = (items: TrainingItem[], mode: SessionMode, title: string) => {
     if (!items.length) return;
@@ -104,17 +122,19 @@ export default function App() {
               onImport={() => setImporting(true)}
               onExploreFrom={(sans) => {
                 setExplorePath(sans);
-                setTab('explore');
+                setTab('analysis');
               }}
             />
           )}
-          {tab === 'explore' && (
-            <ExploreScreen
+          {tab === 'stats' && (
+            <StatsScreen target={statsFor} onConsumedTarget={() => setStatsFor(undefined)} />
+          )}
+          {tab === 'analysis' && (
+            <AnalysisScreen
               initialPath={explorePath}
               onConsumedInitial={() => setExplorePath(undefined)}
             />
           )}
-          {tab === 'analysis' && <AnalysisScreen />}
 
           <nav className="nav">
             <NavButton
@@ -131,10 +151,10 @@ export default function App() {
               icon={<Icons.tree filled={tab === 'repertoire'} />}
             />
             <NavButton
-              label="Explore"
-              active={tab === 'explore'}
-              onClick={() => setTab('explore')}
-              icon={<Icons.book filled={tab === 'explore'} />}
+              label="Stats"
+              active={tab === 'stats'}
+              onClick={() => setTab('stats')}
+              icon={<Icons.chart filled={tab === 'stats'} />}
             />
             <NavButton
               label="Analysis"

@@ -151,6 +151,10 @@ interface StoreState extends PersistedState {
   ready: boolean;
   cloud: CloudStatus;
   feed: ScoreFeed;
+  /** An opening whose stats page was asked for, until the Stats tab picks it up. '' is the whole game. */
+  statsTarget: string | null;
+  openStats: (openingId: string) => void;
+  clearStats: () => void;
   /** Which persistence backends actually work on this page. */
   storage: StorageSupport;
   syncNow: () => Promise<void>;
@@ -377,6 +381,13 @@ export const useStore = create<StoreState>((set, get) => {
     ...emptyPersisted(),
     ready: false,
     feed: { seq: 0, points: 0, total: 0, milestone: null },
+    statsTarget: null,
+    openStats(openingId) {
+      set({ statsTarget: openingId });
+    },
+    clearStats() {
+      set({ statsTarget: null });
+    },
     cloud: cloudAvailable() ? { kind: 'idle', lastSyncedAt: null } : { kind: 'unavailable' },
     storage: { localStorage: false, indexedDB: false, any: false },
 

@@ -35,6 +35,7 @@ export function ColorSquare({ choice, size = 18 }: { choice: ColorChoice; size?:
  */
 export function SelectionBar() {
   const selection = useStore((s) => s.settings.selection);
+  const openStats = useStore((s) => s.openStats);
   const [picking, setPicking] = useState<'color' | 'opening' | null>(null);
   const tree = openingTree(referenceIndex());
   const node = nodeById(tree, selection.opening);
@@ -52,7 +53,14 @@ export function SelectionBar() {
         </button>
       </div>
       <ColorPicker open={picking === 'color'} onClose={() => setPicking(null)} />
-      <OpeningPicker open={picking === 'opening'} onClose={() => setPicking(null)} />
+      <OpeningPicker
+        open={picking === 'opening'}
+        onClose={() => setPicking(null)}
+        onStats={(id) => {
+          setPicking(null);
+          openStats(id);
+        }}
+      />
     </>
   );
 }
