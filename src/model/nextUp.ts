@@ -158,8 +158,6 @@ export interface Work {
   pressure: number;
   /** When this mode last did something for you. Null means never. */
   lastAt: number | null;
-  /** One line for the button: why this, now. */
-  reason: string;
 }
 
 export interface Candidate extends Work {
@@ -202,35 +200,22 @@ export function candidates(input: NextUpInput): Work[] {
       mode: 'drill',
       pressure: drillPressure(input.due, input.unseen, input.newPerSession),
       lastAt: input.activity.drill,
-      reason:
-        input.due > 0
-          ? `${input.due} position${input.due === 1 ? '' : 's'} due`
-          : `${input.unseen} position${input.unseen === 1 ? '' : 's'} you have never been asked`,
     });
   }
 
   if (input.growth.length > 0) {
-    const top = input.growth[0];
-    // The opening stands on its own, the way the lobby writes it: a row named
-    // for a move rather than a book line reads "vs 1.g3", which no sentence
-    // built around it survives. What follows is what the hole costs, not how
-    // many there are — the tile already counts those, and "1 unanswered" next
-    // to a tile reading 35 says the wrong thing about both.
     out.push({
       mode: 'growth',
       pressure: growthPressure(input.growth),
       lastAt: input.activity.growth,
-      reason: `${top.name} · ${top.topShare}% of games`,
     });
   }
 
   if (input.repairs.length > 0) {
-    const n = input.repairs.length;
     out.push({
       mode: 'repair',
       pressure: repairPressure(input.repairs),
       lastAt: input.activity.repair,
-      reason: `${n} position${n === 1 ? '' : 's'} you have got wrong`,
     });
   }
 
@@ -239,12 +224,6 @@ export function candidates(input: NextUpInput): Work[] {
     mode: 'openingRun',
     pressure: openingRunPressure(untested, input.openingRun.runs),
     lastAt: input.openingRun.lastAt,
-    reason:
-      input.openingRun.runs === 0
-        ? 'One secret line. One mistake.'
-        : untested > 0
-          ? `${untested} move${untested === 1 ? '' : 's'} added since your last run`
-          : 'See how far the prep holds',
   });
 
   return out;

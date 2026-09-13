@@ -182,14 +182,6 @@ describe('candidates', () => {
     expect(offered).not.toContain('growth');
   });
 
-  it('says what is waiting, in the mode’s own terms', () => {
-    const [drill] = candidates(input({ due: 1 }));
-    expect(drill.reason).toBe('1 position due');
-    const learn = candidates(input({ unseen: 5 }))[0];
-    expect(learn.reason).toContain('never been asked');
-    const growth = candidates(input({ growth: [row(2, 20, 'French Defence')] }))[0];
-    expect(growth.reason).toBe('French Defence · 20% of games');
-  });
 });
 
 /* ── the ranking ────────────────────────────────────────────────────────── */

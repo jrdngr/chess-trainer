@@ -335,9 +335,10 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
  * The one thing to do now.
  *
  * Everything under it is a choice; this is an answer. It names the mode it will
- * start, so it is never a mystery box, says in one line why that one, and then
- * starts it on the options you last used rather than sending you through a
- * setup screen to agree with a decision that has already been made.
+ * start, so it is never a mystery box, and then starts it on the options you
+ * last used rather than sending you through a setup screen to agree with a
+ * decision that has already been made. The tiles below carry the counts, so
+ * arguing the case here would only be saying twice what they already show.
  */
 function NextUp({ pick, onStart }: { pick: Candidate; onStart: () => void }) {
   return (
@@ -348,7 +349,6 @@ function NextUp({ pick, onStart }: { pick: Candidate; onStart: () => void }) {
       <span className="grow">
         <span className="kicker">Next Up</span>
         <span className="name">{MODE_NAMES[pick.mode]}</span>
-        <span className="why truncate">{pick.reason}</span>
       </span>
       <Icons.chevron size={20} />
     </button>
