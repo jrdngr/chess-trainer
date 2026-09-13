@@ -1,5 +1,8 @@
 import { useMemo } from 'react';
 import { AppBar, Icons, Section, Segmented } from '../../components/ui';
+import { SelectionBar } from '../../components/Selection';
+import { openingTree } from '../../model/openingTree';
+import { regionOf, repertoiresIn } from '../../model/selection';
 import { growthRows, recommended, type GrowthRow } from '../../model/growth';
 import { GROWTH_DEPTHS, SHARE_STEPS, shareLabel } from '../../model/modes';
 import { referenceIndex } from '../../model/referenceIndex';
@@ -24,16 +27,25 @@ export function Lobby({
   const state = useStore();
   const setModePrefs = useStore((s) => s.setModePrefs);
   const prefs = state.settings.growth;
-  const reps = repertoireList(state);
+  const selection = state.settings.selection;
+  const reps = repertoiresIn(repertoireList(state), selection.color);
   const index = referenceIndex();
+  const tree = openingTree(index);
+  const node = regionOf(tree, selection);
 
   /** A side that exists but has no moves in it yet cannot be grown. */
   const hasMoves = reps.some((rep) => Object.keys(rep.nodes).length > 0);
 
   const starred = state.settings.favoriteOpenings;
   const rows = useMemo(
-    () => growthRows(reps, index, { minShare: prefs.minShare, maxPly: prefs.maxPly, starred }),
-    [reps, index, prefs.minShare, prefs.maxPly, starred],
+    () =>
+      growthRows(reps, index, {
+        minShare: prefs.minShare,
+        maxPly: prefs.maxPly,
+        starred,
+        region: { tree, node },
+      }),
+    [reps, index, prefs.minShare, prefs.maxPly, starred, tree, node],
   );
   const pick = recommended(rows);
 
@@ -42,6 +54,7 @@ export function Lobby({
       <>
         <AppBar title="Growth" onClose={onExit} />
         <div className="screen no-nav">
+          <SelectionBar />
           <div className="empty">
             <div className="t">Nothing to grow yet</div>
             <div className="h">
@@ -66,6 +79,8 @@ export function Lobby({
       />
 
       <div className="screen no-nav">
+        <SelectionBar />
+
         {pick && (
           <button className="btn primary block xl" onClick={() => onStart(pick)}>
             Start Recommended
@@ -78,7 +93,7 @@ export function Lobby({
               <div className="t">Nothing to extend</div>
               <div className="h">
                 {hasMoves
-                  ? `Your repertoire meets every reply played in ${prefs.minShare}% of games or more, down to ${Math.ceil(prefs.maxPly / 2)} moves. Lower the threshold below to keep going.`
+                  ? `Your repertoire meets every reply played in ${prefs.minShare}% of games or more${node.depth > 0 ? ` in ${node.name}` : ''}, down to ${Math.ceil(prefs.maxPly / 2)} moves. Lower the threshold below, or widen the opening, to keep going.`
                   : 'Growth answers replies, and your first move as White is not a reply to anything. Play a game or survive a line first, then come back to extend it.'}
               </div>
             </div>

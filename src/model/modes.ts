@@ -1,5 +1,3 @@
-import type { Color } from '../chess/core';
-import type { ColorChoice } from './openingRun';
 import { DEFAULT_LEVEL } from './play';
 import type { RepairKind, RepairSort } from './repair';
 import type { SessionMode } from './session';
@@ -22,8 +20,6 @@ export type DrillDraw = Extract<SessionMode, 'due' | 'new' | 'cram'>;
 
 export interface DrillPrefs {
   draw: DrillDraw;
-  /** Restrict to positions you answer as this colour. */
-  side: Color | 'both';
   /** How many unseen positions a session is willing to introduce. */
   newPerSession: number;
   /** Keep going after a correct move instead of stopping at one answer. */
@@ -36,7 +32,6 @@ export interface DrillPrefs {
 
 export const DEFAULT_DRILL: DrillPrefs = {
   draw: 'due',
-  side: 'both',
   newPerSession: 8,
   followLine: true,
   weakFirst: false,
@@ -55,8 +50,6 @@ export const DRAW_LABELS: Record<DrillDraw, string> = {
 export const GAME_THRESHOLDS = [1, 2, 3] as const;
 
 export interface RepairPrefs {
-  /** '' — every repertoire. */
-  repertoireId: string;
   kinds: 'both' | RepairKind;
   minGames: number;
   /** Only positions from games you went on to lose. */
@@ -65,7 +58,6 @@ export interface RepairPrefs {
 }
 
 export const DEFAULT_REPAIR: RepairPrefs = {
-  repertoireId: '',
   kinds: 'both',
   minGames: 2,
   lossesOnly: false,
@@ -83,13 +75,10 @@ export function gamesLabel(n: number): string {
 /* ── Play ───────────────────────────────────────────────────────────────── */
 
 export interface PlayPrefs {
-  color: ColorChoice;
   /** One of LEVELS. */
   level: string;
   /** Write the opening into a repertoire when the game ends. */
   save: boolean;
-  /** '' — whichever repertoire fits the colour played. */
-  repertoireId: string;
   /** Say so the moment you leave your own prep. */
   warnOffBook: boolean;
   showEval: boolean;
@@ -97,10 +86,8 @@ export interface PlayPrefs {
 }
 
 export const DEFAULT_PLAY: PlayPrefs = {
-  color: 'w',
   level: DEFAULT_LEVEL,
   save: true,
-  repertoireId: '',
   warnOffBook: true,
   showEval: false,
   takeBacks: true,

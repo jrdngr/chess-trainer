@@ -7,55 +7,58 @@ import {
   type Color,
   type Square,
 } from '../chess/core';
-import {
-  deepestName,
-  lookup,
-  openingById,
-  specificNameForColor,
-  type CatalogueEntry,
-  type ReferenceIndex,
-} from './reference';
-import { childrenOf, displayName, fenAt, leafLines, pathTo } from './repertoire';
+import { deepestName, lookup, type ReferenceIndex } from './reference';
+import { insideRegion, lineStatus, approachKeys, type OpeningNode, type OpeningTree } from './openingTree';
+import { childrenOf, fenAt, leafLines, pathTo } from './repertoire';
 import { cardId, mulberry32 } from './session';
 import type { Card, RepMove, Repertoire } from './types';
 
 /**
- * OpeningRun: one secret line, played until the first mistake ends the run.
+ * Run: one secret line, played until the first mistake ends the run.
  *
- * Both modes run on the same engine. A `LineSource` answers two questions about
- * a position — which moves count as staying in, and how the opponent replies —
- * and everything else (judging, revealing, scoring) is shared. The repertoire
- * source asks whether you know your own prep; the book source asks whether you
- * can stay in theory at all.
+ * A run lives inside a region of the opening tree — the whole book, one first
+ * move, a family, or a single variation — and one rule decides every move:
+ * inside the region, a move keeps you alive if it is prepared or it is theory.
+ * The opponent replies in proportion to how often each move is played, but
+ * only with moves that keep the game inside the region; on the way in, only
+ * moves the book can still get there from. Past the end of the book your prep
+ * is the only referee, and past the end of the prep the run is complete.
+ *
+ * A `LineSource` answers those questions about a position, and everything
+ * else (judging, revealing, scoring) is shared.
  */
-export type SourceKind = 'repertoire' | 'book' | 'opening';
-
 export interface LineSource {
-  kind: SourceKind;
-  /** Named after the run, alongside the opening the line turned out to be. */
+  /** Named after the region the run was drawn from. */
   label: string;
   color: Color;
+  node: OpeningNode;
   /** Moves that keep the run alive from this position, best first. */
-  movesAt(fen: string): string[];
+  movesAt(fen: string, played: string[]): string[];
   /** Relative likelihood of each opponent reply. */
-  weightsAt(fen: string): { san: string; weight: number }[];
+  weightsAt(fen: string, played: string[]): { san: string; weight: number }[];
+  /** Your own prepared moves here, preferred first. Empty where prep says nothing. */
+  prepAt(fen: string): string[];
 }
 
 export function other(color: Color): Color {
   return color === 'w' ? 'b' : 'w';
 }
 
-/* ── sources ────────────────────────────────────────────────────────────── */
+/* ── the region source ──────────────────────────────────────────────────── */
+
+/** The least often a prepared sideline may be chosen, as a share of the position. */
+const SIDELINE_FLOOR = 0.01;
 
 /**
  * One repertoire, indexed by position so transpositions behave the way they do
  * in training: the same position reached two ways offers the same moves.
  *
- * Every position in the tree is indexed, the opponent's included — that is what
- * lets a reversed run judge the side you prepared *against*.
+ * Every position in the tree is indexed, the opponent's included — their
+ * prepared replies are what keeps a run going once the book runs out.
  */
-export function repertoireSource(rep: Repertoire, index?: ReferenceIndex | null): LineSource {
+export function prepIndex(rep: Repertoire | null): Map<string, string[]> {
   const byPosition = new Map<string, string[]>();
+  if (!rep) return byPosition;
   const visit = (nodeId: string | null) => {
     const key = positionKey(fenAt(rep, nodeId));
     const kids = childrenOf(rep, nodeId);
@@ -67,29 +70,63 @@ export function repertoireSource(rep: Repertoire, index?: ReferenceIndex | null)
     for (const kid of kids) visit(kid.id);
   };
   visit(null);
-
-  const movesAt = (fen: string) => byPosition.get(positionKey(fen)) ?? [];
-  return {
-    kind: 'repertoire',
-    label: displayName(rep.name),
-    color: rep.color,
-    movesAt,
-    weightsAt: (fen) => {
-      const sans = movesAt(fen);
-      if (!index || sans.length < 2) return sans.map((san) => ({ san, weight: 1 }));
-      const games = new Map((lookup(index, fen)?.moves ?? []).map((m) => [m.san, m.games]));
-      const total = [...games.values()].reduce((sum, n) => sum + n, 0);
-      // A prepared move nobody in the database plays still deserves a turn, just
-      // a rare one: the floor keeps sidelines in the rotation without letting
-      // them crowd out the move orders you will actually meet.
-      const floor = Math.max(1, total * SIDELINE_FLOOR);
-      return sans.map((san) => ({ san, weight: Math.max(floor, games.get(san) ?? 0) }));
-    },
-  };
+  return byPosition;
 }
 
-/** The least often a prepared sideline may be chosen, as a share of the position. */
-const SIDELINE_FLOOR = 0.01;
+/**
+ * Prepared or theory, inside the region.
+ *
+ * `rep` is the tree for the side being played, or null when nothing has been
+ * prepared for it — a run on an empty repertoire is a run through the book,
+ * which is exactly what a new install should be handed.
+ */
+export function regionSource(
+  tree: OpeningTree,
+  node: OpeningNode,
+  rep: Repertoire | null,
+  color: Color,
+): LineSource {
+  const index = tree.index;
+  const prep = prepIndex(rep);
+  const approach = node.depth === 0 ? null : approachKeys(tree, node);
+
+  /** Every move that can be played here at all, prep first, then the book by popularity. */
+  const candidates = (fen: string, played: string[]) => {
+    const status = lineStatus(tree, node, played);
+    if (status === 'outside') return [] as { san: string; games: number; prepared: boolean }[];
+    const key = positionKey(fen);
+    const mine = prep.get(key) ?? [];
+    const book = [...(lookup(index, fen)?.moves ?? [])].sort((a, b) => b.games - a.games);
+    const total = book.reduce((sum, move) => sum + move.games, 0);
+    const games = new Map(book.map((move) => [move.san, move.games]));
+    // A prepared move nobody in the database plays still deserves a turn, just
+    // a rare one: the floor keeps sidelines in the rotation without letting
+    // them crowd out the move orders you will actually meet.
+    const floor = Math.max(1, total * SIDELINE_FLOOR);
+    const out: { san: string; games: number; prepared: boolean }[] = [];
+    for (const san of mine) out.push({ san, games: Math.max(floor, games.get(san) ?? 0), prepared: true });
+    for (const move of book) {
+      if (!mine.includes(move.san)) out.push({ san: move.san, games: Math.max(1, move.games), prepared: false });
+    }
+    if (status === 'reached' || !approach) return out;
+    // Still on the way in: only moves the book can reach the opening from.
+    return out.filter((move) => {
+      const applied = applySan(fen, move.san);
+      if (!applied) return false;
+      const after = positionKey(applied.after);
+      return after === node.key || approach.has(after);
+    });
+  };
+
+  return {
+    label: node.name,
+    color,
+    node,
+    movesAt: (fen, played) => candidates(fen, played).map((move) => move.san),
+    weightsAt: (fen, played) => candidates(fen, played).map((move) => ({ san: move.san, weight: move.games })),
+    prepAt: (fen) => prep.get(positionKey(fen)) ?? [],
+  };
+}
 
 /**
  * How often each line of a repertoire should come up, as a weight per leaf.
@@ -163,60 +200,6 @@ export function lineOdds(
   return odds;
 }
 
-/**
- * The whole reference database. Staying in book means playing a move somebody
- * has actually played here; the opponent answers in proportion to how often
- * each reply is played.
- */
-export function bookSource(index: ReferenceIndex, color: Color): LineSource {
-  const entryMoves = (fen: string) => lookup(index, fen)?.moves ?? [];
-  return {
-    kind: 'book',
-    label: 'Book',
-    color,
-    movesAt: (fen) => [...entryMoves(fen)].sort((a, b) => b.games - a.games).map((m) => m.san),
-    weightsAt: (fen) => entryMoves(fen).map((m) => ({ san: m.san, weight: Math.max(1, m.games) })),
-  };
-}
-
-/**
- * One named opening, then the book.
- *
- * While the run is still inside the opening's move order, that move order is the
- * only thing that counts — for both sides, because it is what makes the opening
- * that opening. Past the end of it the book takes over and anything played in
- * the database keeps you alive.
- */
-export function openingSource(
-  index: ReferenceIndex,
-  opening: CatalogueEntry,
-  color: Color,
-): LineSource {
-  const book = bookSource(index, color);
-  const forced = new Map<string, string>();
-  let fen = START_FEN;
-  for (const san of opening.sans) {
-    const move = applySan(fen, san);
-    if (!move) break;
-    forced.set(positionKey(fen), san);
-    fen = move.after;
-  }
-  const onPath = (at: string) => forced.get(positionKey(at));
-  return {
-    kind: 'opening',
-    label: opening.name,
-    color,
-    movesAt: (at) => {
-      const only = onPath(at);
-      return only ? [only] : book.movesAt(at);
-    },
-    weightsAt: (at) => {
-      const only = onPath(at);
-      return only ? [{ san: only, weight: 1 }] : book.weightsAt(at);
-    },
-  };
-}
-
 /* ── options ────────────────────────────────────────────────────────────── */
 
 export type ColorChoice = Color | 'random';
@@ -261,16 +244,11 @@ export function clockLabel(mode: ClockMode): string {
 
 export const HINT_BUDGETS = [0, 1, 3];
 
-/** Everything the setup screen decides, in one place. */
+/**
+ * What the setup screen decides. The colour and the opening are global and
+ * live in the selection, not here.
+ */
 export interface OpeningRunOptions {
-  kind: SourceKind;
-  color: ColorChoice;
-  /** A single repertoire to draw from, or '' for every one that fits. */
-  repertoireId: string;
-  /** The named opening to run through, for the opening source. */
-  openingId: string;
-  /** Play the side your repertoire prepares *against*. */
-  reverse: boolean;
   /** Draw lines you answer badly more often than lines you know cold. */
   weakFirst: boolean;
   clock: ClockMode;
@@ -284,48 +262,26 @@ export interface OpeningRunOptions {
 }
 
 export const DEFAULT_OPTIONS: OpeningRunOptions = {
-  kind: 'repertoire',
-  color: 'random',
-  repertoireId: '',
-  openingId: '',
-  reverse: false,
   weakFirst: false,
   clock: 'off',
   hints: 0,
   extended: false,
 };
 
-/** What the setup screen remembers between runs: the options, plus how the record is shown. */
-export interface OpeningRunPrefs extends OpeningRunOptions {
-  /** Break the record down by opening and side. */
-  perLine: boolean;
-}
+export type OpeningRunPrefs = OpeningRunOptions;
 
-export const DEFAULT_PREFS: OpeningRunPrefs = { ...DEFAULT_OPTIONS, perLine: false };
-
-/**
- * Does this source produce lines worth offering to keep?
- *
- * A repertoire run is already playing your own lines back at you, so there is
- * nothing there to save.
- */
-export function canKeepLine(kind: SourceKind): boolean {
-  return kind === 'opening' || kind === 'book';
-}
+export const DEFAULT_PREFS: OpeningRunPrefs = { ...DEFAULT_OPTIONS };
 
 /* ── runs ───────────────────────────────────────────────────────────────── */
 
 export interface Run {
   /** Distinguishes one run from the next, so a run can be amended in place. */
   id: string;
-  source: SourceKind;
   sourceLabel: string;
-  /** Which repertoire the line came from, for repertoire runs. */
+  /** The region the run was drawn in — an opening tree node id. */
+  openingId: string;
+  /** The tree for the side played, when there is one. */
   repertoireId?: string;
-  /** Which named opening was chosen, for opening runs. */
-  openingId?: string;
-  /** True when you are playing the side the repertoire prepares against. */
-  reverse: boolean;
   /**
    * True once the run has stepped outside its prep onto a real book move and
    * carried on. Everything after that is judged by the book, and the run is
@@ -357,24 +313,6 @@ export interface Run {
  * ending where the move you played was real theory.
  */
 export type DeathCause = 'move' | 'time' | 'blunder' | 'offprep';
-
-export interface RunOptions {
-  /** Skip lines that ask fewer than this many moves of the user. */
-  minDecisions?: number;
-  seed?: number;
-  /** Draw only from this repertoire. */
-  repertoireId?: string;
-  reverse?: boolean;
-  /** Positions you answer badly, scored — see `weaknessFromCards`. */
-  weakness?: Weakness | null;
-  hints?: number;
-  /**
-   * Reference data, used to draw realistic move orders. Without it every leaf
-   * line is equally likely, which quizzes you on your thinnest sidelines as
-   * often as on the lines you will actually face.
-   */
-  index?: ReferenceIndex | null;
-}
 
 let runCounter = 0;
 
@@ -443,160 +381,82 @@ function pickWeighted<T>(items: T[], weight: (item: T) => number, rand: () => nu
 
 /* ── starting ───────────────────────────────────────────────────────────── */
 
-export interface PoolOptions {
-  reverse?: boolean;
-  repertoireId?: string;
+export interface BeginOptions extends Partial<OpeningRunOptions> {
+  tree: OpeningTree;
+  reps: Repertoire[];
+  /** The region to run in. */
+  node: OpeningNode;
+  color: ColorChoice;
+  seed?: number;
+  /** Skip lines that ask fewer than this many moves of the user. */
+  minDecisions?: number;
+  /** Positions you answer badly, scored — see `weaknessFromCards`. */
+  weakness?: Weakness | null;
 }
 
 /**
- * Repertoires that can host a run for this colour.
+ * A run in a region: the source, and the run with its line drawn.
  *
- * A reversed run sits you on the other side of the board, so it needs a
- * repertoire of the opposite colour to the one you asked to play.
+ * The line drawn up front only steers the opponent. It is one of your own
+ * prepared lines through the region when you have any, drawn on how often you
+ * would actually meet it (and on how badly you answer it, when asked); failing
+ * that it is the region's own move order, so the opponent still walks you into
+ * the opening you asked for. Any move that stays inside the region is accepted
+ * at your own turn whichever line was drawn.
+ *
+ * Null only when the book is empty, which it never is.
  */
-export function playableRepertoires(
-  reps: Repertoire[],
-  color: ColorChoice,
-  opts: PoolOptions = {},
-): Repertoire[] {
-  const wanted = color === 'random' ? null : opts.reverse ? other(color) : color;
-  return reps.filter(
-    (rep) =>
-      (wanted === null || rep.color === wanted) &&
-      (!opts.repertoireId || rep.id === opts.repertoireId),
-  );
-}
-
-/**
- * Start a run from a repertoire. The line drawn up front only decides the
- * opponent's replies; any prepared move is accepted at your own turn.
- */
-export function startRepertoireRun(
-  reps: Repertoire[],
-  color: ColorChoice,
-  opts: RunOptions = {},
-): Run | null {
-  const minDecisions = opts.minDecisions ?? 4;
-  const reverse = opts.reverse ?? false;
+export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } | null {
   const rand = mulberry32(opts.seed ?? Math.floor(Math.random() * 2 ** 31));
+  const side = resolveColor(opts.color, rand);
+  const { tree, node } = opts;
+  if (!lookup(tree.index, START_FEN)?.moves.length) return null;
+  const rep = opts.reps.find((r) => r.color === side) ?? null;
+  const source = regionSource(tree, node, rep, side);
 
-  const weakness = opts.weakness ?? null;
-  const candidates = playableRepertoires(reps, color, {
-    reverse,
-    repertoireId: opts.repertoireId,
-  })
-    .map((rep) => {
-      const side = reverse ? other(rep.color) : rep.color;
-      const usable = leafLines(rep)
-        .map((line) => {
-          const path = pathTo(rep, line.tipId);
-          return { tipId: line.tipId, path, keys: yourMoves(side, path).map((n) => n.key) };
-        })
-        .filter((line) => line.keys.length >= minDecisions);
-      const odds = lineOdds(rep, side, opts.index, new Set(usable.map((l) => l.tipId)));
+  let target = node.sans;
+  if (rep) {
+    const minDecisions = opts.minDecisions ?? 4;
+    const weakness = opts.weakFirst ? (opts.weakness ?? null) : null;
+    const inRegion = leafLines(rep)
+      .filter((line) => lineStatus(tree, node, line.sans) === 'reached')
+      .map((line) => {
+        const path = pathTo(rep, line.tipId);
+        return { tipId: line.tipId, sans: line.sans, keys: yourMoves(side, path).map((n) => n.key) };
+      });
+    // Long enough to be a game where there are such lines; anything at all
+    // where there are not — a thin region is still yours to play.
+    const long = inRegion.filter((line) => line.keys.length >= minDecisions);
+    const usable = long.length ? long : inRegion;
+    if (usable.length) {
+      const odds = lineOdds(rep, side, tree.index, new Set(usable.map((l) => l.tipId)));
       const even = odds.size === 0;
-      const lines = usable.map((line) => ({
-        path: line.path,
-        keys: line.keys,
-        weight:
-          (even ? 1 : (odds.get(line.tipId) ?? 0)) *
-          (weakness ? lineWeakness(rep.id, line.keys, weakness) : 1),
-      }));
-      return { rep, side, lines };
-    })
-    .filter((c) => c.lines.length > 0);
-  if (!candidates.length) return null;
+      const line = pickWeighted(
+        usable,
+        (l) => (even ? 1 : (odds.get(l.tipId) ?? 0)) * (weakness ? lineWeakness(rep.id, l.keys, weakness) : 1),
+        rand,
+      );
+      target = line.sans;
+    }
+  }
 
-  // Repertoire first and evenly, so a big one cannot crowd out the others
-  // however popular its lines are; the line within it is drawn on its odds.
-  const picked = candidates[Math.floor(rand() * candidates.length)];
-  const line = pickWeighted(picked.lines, (l) => l.weight, rand);
-
-  // Named for the opening the drawn line belongs to, not for the tree it came
-  // out of: there is one tree per side, so its name ("White repertoire") would
-  // label every run the same. The colour-aware namer is what keeps a Black line
-  // from being announced as what White did.
-  const drawn = line.path.map((node) => node.san);
-  const named = opts.index
-    ? specificNameForColor(opts.index, drawn, picked.rep.color)?.name
-    : undefined;
-
-  return {
+  const run: Run = {
     id: newRunId(),
-    source: 'repertoire',
-    sourceLabel: named ?? (picked.rep.color === 'w' ? 'Your White prep' : 'Your Black prep'),
-    repertoireId: picked.rep.id,
-    reverse,
-    leftPrep: false,
-    color: picked.side,
-    fen: START_FEN,
-    played: [],
-    survived: 0,
-    over: false,
-    target: line.path.map((n) => n.san),
-    hints: opts.hints ?? 0,
-    hintsUsed: 0,
-    prepEnded: null,
-  };
-}
-
-/** Start a run in the book. There is no line to draw: the book is the line. */
-export function startBookRun(
-  index: ReferenceIndex,
-  color: ColorChoice,
-  opts: RunOptions = {},
-): Run | null {
-  const rand = mulberry32(opts.seed ?? Math.floor(Math.random() * 2 ** 31));
-  const side = resolveColor(color, rand);
-  if (!lookup(index, START_FEN)?.moves.length) return null;
-  return {
-    id: newRunId(),
-    source: 'book',
-    sourceLabel: 'Book',
-    reverse: false,
+    sourceLabel: node.name,
+    openingId: node.id,
+    repertoireId: rep?.id,
     leftPrep: false,
     color: side,
     fen: START_FEN,
     played: [],
     survived: 0,
     over: false,
-    target: [],
-    hints: opts.hints ?? 0,
+    target,
+    hints: opts.hints ?? DEFAULT_OPTIONS.hints,
     hintsUsed: 0,
     prepEnded: null,
   };
-}
-
-/**
- * Start a run through a named opening. The opening's own move order is the
- * target, so the opponent walks you into it before the book takes over.
- */
-export function startOpeningRun(
-  index: ReferenceIndex,
-  opening: CatalogueEntry,
-  color: ColorChoice,
-  opts: RunOptions = {},
-): Run | null {
-  const rand = mulberry32(opts.seed ?? Math.floor(Math.random() * 2 ** 31));
-  const side = resolveColor(color, rand);
-  if (!lookup(index, START_FEN)?.moves.length) return null;
-  return {
-    id: newRunId(),
-    source: 'opening',
-    sourceLabel: opening.name,
-    openingId: opening.id,
-    reverse: false,
-    leftPrep: false,
-    color: side,
-    fen: START_FEN,
-    played: [],
-    survived: 0,
-    over: false,
-    target: opening.sans,
-    hints: opts.hints ?? 0,
-    hintsUsed: 0,
-    prepEnded: null,
-  };
+  return { source, run };
 }
 
 /** Resolve "random" once, up front, so the rest of a run is deterministic. */
@@ -609,7 +469,25 @@ export function isUsersTurn(run: Run): boolean {
 }
 
 export function movesHere(source: LineSource, run: Run): string[] {
-  return source.movesAt(run.fen);
+  return source.movesAt(run.fen, run.played);
+}
+
+/**
+ * What a move is, before it is played: your own prep, real theory your prep
+ * does not have, or a move that ends the run.
+ *
+ * Theory is only told apart from prep where prep has something to say. Where
+ * it says nothing — the book past the end of your lines, or a region you have
+ * never prepared — a theory move is simply the move, and a run never pauses
+ * over it.
+ */
+export type MoveKind = 'prep' | 'theory' | 'miss';
+
+export function classify(source: LineSource, run: Run, san: string): MoveKind {
+  if (!movesHere(source, run).includes(san)) return 'miss';
+  const prep = source.prepAt(run.fen);
+  if (run.leftPrep || !prep.length || prep.includes(san)) return 'prep';
+  return 'theory';
 }
 
 export type Judgement =
@@ -618,7 +496,7 @@ export type Judgement =
 
 /** Judge one move by the user. A move outside the source ends the run. */
 export function play(source: LineSource, run: Run, san: string): Judgement {
-  const options = source.movesAt(run.fen);
+  const options = movesHere(source, run);
   if (!options.includes(san)) {
     // The losing move is reported separately and deliberately kept out of
     // `played`, so the reveal shows the line rather than the mistake.
@@ -658,7 +536,7 @@ export function takeHint(
   run: Run,
 ): { run: Run; from: Square; san: string } | null {
   if (run.hints <= 0) return null;
-  const best = source.movesAt(run.fen)[0];
+  const best = source.prepAt(run.fen)[0] ?? movesHere(source, run)[0];
   if (!best) return null;
   const move = applySan(run.fen, best);
   if (!move) return null;
@@ -672,7 +550,7 @@ export function takeHint(
 /** The opponent's reply: the drawn line where it still applies, else weighted. */
 export function opponentReply(source: LineSource, run: Run, rand: () => number): Run {
   const onLine = run.target[run.played.length];
-  const options = source.weightsAt(run.fen);
+  const options = source.weightsAt(run.fen, run.played);
   if (!options.length) return { ...run, over: true };
 
   let san = onLine && options.some((o) => o.san === onLine) ? onLine : null;
@@ -681,7 +559,7 @@ export function opponentReply(source: LineSource, run: Run, rand: () => number):
     // on the opponent's move when a real continuation exists.
     const live = options.filter((o) => {
       const move = applySan(run.fen, o.san);
-      return move ? source.movesAt(move.after).length > 0 : false;
+      return move ? source.movesAt(move.after, [...run.played, o.san]).length > 0 : false;
     });
     const pool = live.length ? live : options;
     const total = pool.reduce((sum, o) => sum + o.weight, 0);
@@ -736,6 +614,12 @@ export function gradeLabel(grade: RunGrade): string {
 /** Whether a move is real theory here, whatever your own prep says. */
 export function bookHas(index: ReferenceIndex, fen: string, san: string): boolean {
   return (lookup(index, fen)?.moves ?? []).some((move) => move.san === san);
+}
+
+/** Is this line still inside the run's region? */
+export function staysInside(tree: OpeningTree, run: Run, san: string): boolean {
+  const node = tree.byId.get(run.openingId) ?? tree.root;
+  return insideRegion(tree, node, [...run.played, san]);
 }
 
 /**
@@ -860,24 +744,24 @@ export function playExtendedReply(run: Run, san: string): Run {
  * there is always another move, and only a blunder or the game itself ends it.
  */
 export function isComplete(source: LineSource, run: Run): boolean {
-  return !run.over && !isExtended(run) && source.movesAt(run.fen).length === 0;
+  return !run.over && !isExtended(run) && movesHere(source, run).length === 0;
 }
 
 /** How the line would have gone on from here. */
 export function continuation(source: LineSource, run: Run, plies = 48): string[] {
   const out: string[] = [];
   let fen = run.fen;
-  let index = run.played.length;
+  const played = [...run.played];
   for (let i = 0; i < plies; i += 1) {
-    const onLine = run.target[index];
-    const options = source.movesAt(fen);
+    const onLine = run.target[played.length];
+    const options = source.movesAt(fen, played);
     if (!options.length) break;
     const san = onLine && options.includes(onLine) ? onLine : options[0];
     const move = applySan(fen, san);
     if (!move) break;
     out.push(san);
+    played.push(san);
     fen = move.after;
-    index += 1;
   }
   return out;
 }
@@ -931,57 +815,7 @@ export function lineName(
   return { name: run.sourceLabel, eco: found?.eco, specific: false };
 }
 
-/* ── starting a run ─────────────────────────────────────────────────────── */
-
-export interface BeginOptions extends Partial<OpeningRunOptions> {
-  reps: Repertoire[];
-  index: ReferenceIndex;
-  seed?: number;
-  minDecisions?: number;
-  weakness?: Weakness | null;
-}
-
-/** Everything a run needs, or null when the options cannot produce one. */
-export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } | null {
-  const kind = opts.kind ?? DEFAULT_OPTIONS.kind;
-  const color = opts.color ?? DEFAULT_OPTIONS.color;
-  const hints = opts.hints ?? DEFAULT_OPTIONS.hints;
-
-  if (kind === 'opening') {
-    const opening = openingById(opts.index, opts.openingId ?? '');
-    if (!opening) return null;
-    const run = startOpeningRun(opts.index, opening, color, { seed: opts.seed, hints });
-    return run ? { run, source: openingSource(opts.index, opening, run.color) } : null;
-  }
-  if (kind === 'book') {
-    const run = startBookRun(opts.index, color, { seed: opts.seed, hints });
-    return run ? { run, source: bookSource(opts.index, run.color) } : null;
-  }
-  const run = startRepertoireRun(opts.reps, color, {
-    seed: opts.seed,
-    minDecisions: opts.minDecisions,
-    repertoireId: opts.repertoireId,
-    reverse: opts.reverse,
-    weakness: opts.weakFirst ? (opts.weakness ?? null) : null,
-    hints,
-    index: opts.index,
-  });
-  if (!run) return null;
-  const rep = opts.reps.find((r) => r.id === run.repertoireId);
-  return rep ? { run, source: repertoireSource(rep, opts.index) } : null;
-}
-
 /* ── record ─────────────────────────────────────────────────────────────── */
-
-/** A running total for one opening, on one side of the board. */
-export interface LineRecord {
-  label: string;
-  color: Color;
-  runs: number;
-  best: number;
-  survivals: number;
-  lastAt: number;
-}
 
 export interface OpeningRunRecord {
   runs: number;
@@ -991,13 +825,11 @@ export interface OpeningRunRecord {
   lastAt: number | null;
   /** Runs that reached the end of the line. */
   survivals: number;
-  /** Per opening and side, so a Sicilian best does not hide behind a KID one. */
-  byLine: Record<string, LineRecord>;
   /**
    * What the last logged run was, so a run carried on past its prep updates its
    * own entry instead of counting twice.
    */
-  last?: { id: string; key: string; completed: boolean; grade?: RunGrade };
+  last?: { id: string; completed: boolean; grade?: RunGrade };
   /** How runs ended, counted by grade. */
   grades: Record<RunGrade, number>;
 }
@@ -1008,17 +840,15 @@ export const EMPTY_RECORD: OpeningRunRecord = {
   lastDepth: 0,
   lastAt: null,
   survivals: 0,
-  byLine: {},
   grades: { green: 0, yellow: 0, red: 0, purple: 0 },
 };
 
-/** A saved record from before per-opening bests existed is still a record. */
+/** A saved record missing a field is still a record. */
 export function normalizeRecord(record: Partial<OpeningRunRecord> | undefined): OpeningRunRecord {
   if (!record) return { ...EMPTY_RECORD, grades: { ...EMPTY_RECORD.grades } };
   return {
     ...EMPTY_RECORD,
     ...record,
-    byLine: record.byLine ?? {},
     grades: { ...EMPTY_RECORD.grades, ...(record.grades ?? {}) },
   };
 }
@@ -1026,27 +856,20 @@ export function normalizeRecord(record: Partial<OpeningRunRecord> | undefined): 
 export interface RunOutcome {
   /** The run this came from, so carrying a run on amends it. */
   id: string;
-  key: string;
   grade: RunGrade;
   label: string;
+  openingId: string;
   color: Color;
   depth: number;
   completed: boolean;
 }
 
-/** Which bucket a run counts towards: the opening, and the side you played. */
 export function outcomeOf(run: Run, completed: boolean): RunOutcome {
-  const key =
-    run.source === 'book'
-      ? `book:${run.color}`
-      : run.source === 'opening'
-        ? `opening:${run.openingId ?? ''}:${run.color}`
-        : `rep:${run.repertoireId ?? ''}:${run.color}`;
   return {
     id: run.id,
-    key,
     grade: gradeOf(run, completed),
-    label: run.reverse ? `${run.sourceLabel} (reversed)` : run.sourceLabel,
+    label: run.sourceLabel,
+    openingId: run.openingId,
     color: run.color,
     depth: run.survived,
     completed,
@@ -1071,10 +894,9 @@ export function recordRun(
   at = Date.now(),
 ): OpeningRunRecord {
   const base = normalizeRecord(record);
-  const amend = base.last?.id === outcome.id && base.last.key === outcome.key;
+  const amend = base.last?.id === outcome.id;
   const alreadyCounted = amend && !!base.last?.completed;
   const addSurvival = outcome.completed && !alreadyCounted ? 1 : 0;
-  const previous = base.byLine[outcome.key];
   return {
     runs: base.runs + (amend ? 0 : 1),
     best: Math.max(base.best, outcome.depth),
@@ -1084,20 +906,8 @@ export function recordRun(
     grades: amendGrades(base.grades, amend ? base.last?.grade : undefined, outcome.grade),
     last: {
       id: outcome.id,
-      key: outcome.key,
       completed: outcome.completed || alreadyCounted,
       grade: outcome.grade,
-    },
-    byLine: {
-      ...base.byLine,
-      [outcome.key]: {
-        label: outcome.label,
-        color: outcome.color,
-        runs: (previous?.runs ?? 0) + (amend ? 0 : 1),
-        best: Math.max(previous?.best ?? 0, outcome.depth),
-        survivals: (previous?.survivals ?? 0) + addSurvival,
-        lastAt: at,
-      },
     },
   };
 }
@@ -1112,13 +922,6 @@ function amendGrades(
   if (previous) out[previous] = Math.max(0, out[previous] - 1);
   out[next] += 1;
   return out;
-}
-
-/** Per-opening records, deepest first — what the breakdown shows. */
-export function lineRecords(record: OpeningRunRecord): (LineRecord & { key: string })[] {
-  return Object.entries(normalizeRecord(record).byLine)
-    .map(([key, value]) => ({ ...value, key }))
-    .sort((a, b) => b.best - a.best || b.runs - a.runs);
 }
 
 /* ── keeping what you survived ──────────────────────────────────────────── */

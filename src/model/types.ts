@@ -1,6 +1,7 @@
 import type { Color } from '../chess/core';
 import type { OpeningRunPrefs } from './openingRun';
 import type { DrillPrefs, GrowthPrefs, PlayPrefs, RepairPrefs } from './modes';
+import type { Selection } from './selection';
 
 export type MoveSource = 'seed' | 'manual' | 'reference' | 'pgn' | 'games';
 
@@ -146,7 +147,9 @@ export interface Settings {
   chesscomUsername: string;
   /** Opt in to copying state to your Claude account for other devices. */
   cloudSync: boolean;
-  /** Openings starred for quick picking, by their move-order id. */
+  /** Which side, and which region of the opening tree, every mode works in. */
+  selection: Selection;
+  /** Starred opening tree nodes, by id — the move order that defines each. */
   favoriteOpenings: string[];
   openingRun: OpeningRunPrefs;
   drill: DrillPrefs;

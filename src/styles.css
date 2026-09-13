@@ -743,3 +743,41 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 /* A mode that is an action rather than a queue takes the whole row, and does
    not have to be square to say so. */
 .mode-tile.wide { grid-column: 1 / -1; aspect-ratio: auto; min-height: 92px; }
+
+/* ── the global selection ──────────────────────────────────────────────── */
+.selection-bar { display: flex; gap: 8px; margin: 2px 0 12px; }
+.selection-bar .pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 15px;
+  padding: 0 12px;
+  transition: background 0.12s, transform 0.08s;
+}
+.selection-bar .pick:active { background: var(--surface-2); transform: scale(0.98); }
+.selection-bar .pick.color { flex: none; padding: 0 11px; }
+.selection-bar .pick.opening { flex: 1; min-width: 0; }
+.selection-bar .pick.opening .eco { font-size: 12px; color: var(--text-3); font-weight: 500; flex: none; }
+.selection-bar .pick.opening svg { color: var(--text-3); flex: none; }
+
+.color-square {
+  display: inline-block;
+  border-radius: 5px;
+  flex: none;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.18);
+}
+.color-square.w { background: #f2f2f4; }
+.color-square.b { background: #26262c; }
+.color-square.random { background: linear-gradient(135deg, #f2f2f4 50%, #26262c 50%); }
+
+.crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; margin: 12px 4px 8px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.crumbs button { padding: 4px 6px; border-radius: 8px; color: var(--text-2); }
+.crumbs button.here { color: var(--text); }
+.crumbs button:active { background: var(--surface-2); }
+.crumbs .crumb { display: inline-flex; align-items: center; gap: 2px; color: var(--text-3); }
+.list-row.selected .title { color: var(--accent); }

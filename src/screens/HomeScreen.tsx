@@ -1,5 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { AppBar, Icons, Section, Sheet } from '../components/ui';
+import { SelectionBar } from '../components/Selection';
+import { openingTree } from '../model/openingTree';
+import { itemsInRegion, lineInRegion, regionOf, repertoiresIn } from '../model/selection';
 import { measureCoverage } from '../model/gameAnalysis';
 import { growthRows } from '../model/growth';
 import {
@@ -46,7 +49,10 @@ interface RepEntry {
 
 export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenProps) {
   const state = useStore();
-  const reps = repertoireList(state);
+  const selection = state.settings.selection;
+  const tree = openingTree(referenceIndex());
+  const region = regionOf(tree, selection);
+  const reps = repertoiresIn(repertoireList(state), selection.color);
   const now = Date.now();
   const [pick, setPick] = useState<RepEntry | null>(null);
   const openingRun = state.openingRun;
@@ -54,14 +60,14 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
   const perRep = useMemo<RepEntry[]>(
     () =>
       reps.map((rep) => {
-        const items = itemsFor(rep);
+        const items = itemsInRegion(tree, region, itemsFor(rep));
         const cards = items.map((i) => state.cards[i.cardId]).filter(Boolean);
         const unseen = items.length - cards.length;
         const counts = countDue(cards, now);
         return { rep, items, counts, unseen, total: items.length, mastery: masteryBuckets(cards) };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [reps, state.cards],
+    [reps, state.cards, region],
   );
 
   const allCards = Object.values(state.cards);
@@ -95,8 +101,11 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
       growthRows(reps, referenceIndex(), {
         minShare: growthPrefs.minShare,
         maxPly: growthPrefs.maxPly,
+        starred: state.settings.favoriteOpenings,
+        region: { tree, node: region },
       }),
-    [reps, growthPrefs.minShare, growthPrefs.maxPly],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [reps, growthPrefs.minShare, growthPrefs.maxPly, state.settings.favoriteOpenings, region],
   );
   const gapCount = growth.reduce((sum, row) => sum + row.holes.length, 0);
   /**
@@ -114,14 +123,13 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
   const repairs = useMemo(
     () =>
       buildRepairs(state.importedGames, reps, {
-        repertoireId: repairPrefs.repertoireId,
         kinds: repairPrefs.kinds,
         minGames: repairPrefs.minGames,
         lossesOnly: repairPrefs.lossesOnly,
         mistakes: state.mistakes,
-      }),
+      }).filter((item) => lineInRegion(tree, region, item.path)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state.importedGames, state.mistakes, reps, repairPrefs],
+    [state.importedGames, state.mistakes, reps, repairPrefs, region],
   );
   const repairCount = repairs.length;
   const inPrep = useMemo(() => {
@@ -139,8 +147,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
    * than to everything you have prepared, so the reason on the button and the
    * session it starts are talking about the same cards.
    */
-  const drillSide = state.settings.drill.side;
-  const drillScope = perRep.filter((e) => drillSide === 'both' || e.rep.color === drillSide);
+  const drillScope = perRep;
   const input = {
     due: drillScope.reduce((sum, e) => sum + e.counts.due, 0),
     unseen: drillScope.reduce((sum, e) => sum + e.unseen, 0),
@@ -160,6 +167,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
 
       <div className="screen">
         <StorageWarning />
+        <SelectionBar />
 
         <NextUp pick={next} onStart={() => onOpenMode(next.mode, true, planFor(next.mode, input))} />
 

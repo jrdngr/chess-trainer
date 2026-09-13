@@ -1,13 +1,10 @@
 import { AppBar, Section, Segmented, Stepper, Toggle } from '../../components/ui';
+import { SelectionBar } from '../../components/Selection';
 import { DRAW_LABELS, type DrillDraw, type DrillPrefs } from '../../model/modes';
-import type { Color } from '../../chess/core';
+import { itemsInRegion, regionOf, repertoiresIn } from '../../model/selection';
+import { openingTree } from '../../model/openingTree';
+import { referenceIndex } from '../../model/referenceIndex';
 import { itemsFor, repertoireList, useStore } from '../../store/useStore';
-
-const SIDES: { value: Color | 'both'; label: string }[] = [
-  { value: 'both', label: 'Both' },
-  { value: 'w', label: 'White' },
-  { value: 'b', label: 'Black' },
-];
 
 const DRAWS = (['due', 'new', 'cram'] as const).map((value) => ({
   value,
@@ -18,8 +15,8 @@ const DRAWS = (['due', 'new', 'cram'] as const).map((value) => ({
  * What a drill session will consist of, decided before it starts.
  *
  * Start sits at the top: the common case is the same practice as last time,
- * which should be one tap. What follows narrows the material, then changes how
- * it is asked.
+ * which should be one tap. The side and the opening come from the selection
+ * above it; what follows changes how the positions are asked.
  */
 export function Setup({
   onStart,
@@ -31,25 +28,32 @@ export function Setup({
   const state = useStore();
   const setModePrefs = useStore((s) => s.setModePrefs);
   const prefs = state.settings.drill;
-  const reps = repertoireList(state);
+  const selection = state.settings.selection;
+  const tree = openingTree(referenceIndex());
+  const node = regionOf(tree, selection);
+  const inScope = repertoiresIn(repertoireList(state), selection.color);
+  const items = itemsInRegion(tree, node, inScope.flatMap(itemsFor));
 
   const set = (patch: Partial<DrillPrefs>) => setModePrefs('drill', patch);
-
-  const inScope = reps.filter((rep) => prefs.side === 'both' || rep.color === prefs.side);
-  const items = inScope.flatMap(itemsFor);
 
   return (
     <>
       <AppBar title="Drill" onClose={onExit} />
 
       <div className="screen no-nav">
+        <SelectionBar />
+
         <button
           className="btn primary block xl"
           disabled={items.length === 0}
           onClick={() => onStart(prefs)}
         >
-          {items.length === 0 ? 'Nothing in scope' : 'Start'}
+          {items.length === 0 ? 'Nothing prepared here' : 'Start'}
         </button>
+        <div className="note center">
+          {items.length === 1 ? '1 position' : `${items.length} positions`} in{' '}
+          {node.depth === 0 ? 'your repertoire' : node.name}
+        </div>
 
         <Section title="Draw from" />
         <Segmented
@@ -57,24 +61,6 @@ export function Setup({
           options={DRAWS}
           onChange={(draw) => set({ draw: draw as DrillDraw })}
         />
-
-        <Section title="Side" />
-        <Segmented value={prefs.side} options={SIDES} onChange={(side) => set({ side })} />
-
-        {reps.length > 0 && (
-          <>
-            <Section title="What you have" />
-            <div className="list">
-              {reps.map((rep) => (
-                <div className="list-row kv" key={rep.id}>
-                  <span className={`side ${rep.color}`} />
-                  <span className="k grow">{rep.color === 'w' ? 'As White' : 'As Black'}</span>
-                  <span className="v num">{itemsFor(rep).length}</span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
 
         <Section title="How it asks" />
         <div className="list">
@@ -109,4 +95,3 @@ export function Setup({
     </>
   );
 }
-

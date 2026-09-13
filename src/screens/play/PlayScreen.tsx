@@ -18,6 +18,8 @@ import { chooseMove, levelById, openingLine, type GameResult } from '../../model
 import type { PlayPrefs } from '../../model/modes';
 import { openingNameForPath, specificNameForColor } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
+import { lineStatus, nodeById, openingTree } from '../../model/openingTree';
+import { selectionText } from '../../components/Selection';
 import { childrenOf, displayName, fenAt } from '../../model/repertoire';
 import { positionKey } from '../../chess/core';
 import type { Repertoire } from '../../model/types';
@@ -62,10 +64,13 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
   const reps = repertoireList(state);
   const index = referenceIndex();
   const level = levelById(prefs.level);
+  const selection = settings.selection;
+  const tree = openingTree(index);
+  const region = nodeById(tree, selection.opening);
 
   /** Fixed for the life of the game, so a random draw does not re-roll. */
   const [color] = useState<Color>(() =>
-    prefs.color === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : prefs.color,
+    selection.color === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : selection.color,
   );
   const [moves, setMoves] = useState<string[]>([]);
   const [fen, setFen] = useState(START_FEN);
@@ -77,11 +82,7 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
   const rand = useRef(Math.random);
 
   /** The repertoire this game is measured against and saved into. */
-  const target = useMemo(() => {
-    const chosen = reps.find((rep) => rep.id === prefs.repertoireId);
-    if (chosen && chosen.color === color) return chosen;
-    return reps.find((rep) => rep.color === color) ?? null;
-  }, [reps, prefs.repertoireId, color]);
+  const target = useMemo(() => reps.find((rep) => rep.color === color) ?? null, [reps, color]);
   const prep = useMemo(() => prepIndex(target), [target]);
 
   const status = useMemo(() => positionStatus(fen), [fen]);
@@ -99,9 +100,35 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
     }
   }, [status, fen, color, over]);
 
-  /** The engine's turn: search, then pick a move for this level. */
+  /**
+   * The engine's turn.
+   *
+   * While the game is still on the selected opening's move order the engine
+   * plays that move order, so a game in the Najdorf is a Najdorf: it walks
+   * you in the same way Run does. Past it, or once you have stepped off it,
+   * it searches and picks a move for this level.
+   */
   useEffect(() => {
     if (over || fenTurn(fen) === color || status.gameOver) return;
+    const scripted =
+      region.depth > 0 &&
+      moves.length < region.sans.length &&
+      moves.every((san, i) => region.sans[i] === san) &&
+      lineStatus(tree, region, moves) === 'onWay'
+        ? applySan(fen, region.sans[moves.length])
+        : null;
+    if (scripted) {
+      setThinking(true);
+      const timer = setTimeout(() => {
+        setMoves((m) => [...m, scripted.san]);
+        setFen(scripted.after);
+        setThinking(false);
+      }, 420);
+      return () => {
+        clearTimeout(timer);
+        setThinking(false);
+      };
+    }
     let cancelled = false;
     setThinking(true);
     const { engine, backend } = getEngine();
@@ -134,7 +161,8 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
       engine.stop();
       setThinking(false);
     };
-  }, [fen, color, level, over, status.gameOver]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fen, color, level, over, status.gameOver, region, moves.length]);
 
   /** A quiet evaluation for the bar, only when asked for. */
   useEffect(() => {
@@ -224,7 +252,7 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
     <>
       <AppBar
         title={opening?.name ?? 'Play'}
-        subtitle={`${level.name} · you are ${color === 'w' ? 'White' : 'Black'}`}
+        subtitle={`${level.name} · ${selectionText(color, selection.opening)}`}
         onClose={onExit}
         actions={
           <span className="num muted small appbar-gap" style={{ textAlign: 'right' }}>

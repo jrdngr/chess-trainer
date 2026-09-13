@@ -22,7 +22,9 @@ import {
 } from '../../model/growth';
 import { formatGameCount } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
-import { displayName } from '../../model/repertoire';
+import { openingTree } from '../../model/openingTree';
+import { regionOf, repertoiresIn } from '../../model/selection';
+import { selectionText } from '../../components/Selection';
 import { repertoireList, useStore } from '../../store/useStore';
 import { PlayOn } from '../openingRun/PlayOn';
 import { Lobby } from './Lobby';
@@ -37,11 +39,18 @@ export function GrowthScreen({ auto, onExit }: GrowthScreenProps) {
   const state = useStore();
   // The lobby's own order: shallowest hole first, because that is the one the
   // most games fall into. Next Up picks the top of the same list.
-  const [row, setRow] = useState<GrowthRow | null>(() =>
-    auto
-      ? (growthRows(repertoireList(state), referenceIndex(), state.settings.growth)[0] ?? null)
-      : null,
-  );
+  const [row, setRow] = useState<GrowthRow | null>(() => {
+    if (!auto) return null;
+    const tree = openingTree(referenceIndex());
+    const selection = state.settings.selection;
+    return (
+      growthRows(repertoiresIn(repertoireList(state), selection.color), tree.index, {
+        ...state.settings.growth,
+        starred: state.settings.favoriteOpenings,
+        region: { tree, node: regionOf(tree, selection) },
+      })[0] ?? null
+    );
+  });
   if (!row) return <Lobby onStart={setRow} onNoWork={onExit} onExit={onExit} />;
   // A run nobody chose has no lobby to fall back to.
   return <Run row={row} onExit={() => (auto ? onExit() : setRow(null))} />;
@@ -213,7 +222,7 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
     <>
       <AppBar
         title={row.name}
-        subtitle={displayName(rep.name) === row.name ? undefined : displayName(rep.name)}
+        subtitle={selectionText(run.color, settings.selection.opening)}
         onClose={onExit}
         actions={
           <span className="num muted small appbar-gap" style={{ textAlign: 'right' }}>

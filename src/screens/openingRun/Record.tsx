@@ -1,11 +1,5 @@
 import { Section } from '../../components/ui';
-import {
-  GRADES,
-  gradeLabel,
-  lineRecords,
-  type OpeningRunRecord,
-  type RunGrade,
-} from '../../model/openingRun';
+import { GRADES, gradeLabel, type OpeningRunRecord, type RunGrade } from '../../model/openingRun';
 
 /** The colour each grade is drawn in, on the record bar and its legend. */
 export const GRADE_COLORS: Record<RunGrade, string> = {
@@ -32,9 +26,8 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
-/** The global tally, optionally broken down by opening and side. */
-export function Record({ record, perLine }: { record: OpeningRunRecord; perLine: boolean }) {
-  const lines = perLine ? lineRecords(record) : [];
+/** The global tally. Per-opening records live on the Stats tab. */
+export function Record({ record }: { record: OpeningRunRecord }) {
   const total = GRADES.reduce((sum, g) => sum + record.grades[g], 0);
   return (
     <>
@@ -60,32 +53,6 @@ export function Record({ record, perLine }: { record: OpeningRunRecord; perLine:
             ))}
           </div>
         </div>
-      )}
-      {perLine && (
-        <>
-          <Section title="By opening" />
-          {lines.length === 0 ? (
-            <div className="card small muted">
-              Nothing yet. Each opening keeps its own best once you have played it.
-            </div>
-          ) : (
-            <div className="list">
-              {lines.map((line) => (
-                <div className="list-row" key={line.key}>
-                  <span className={`side ${line.color}`} />
-                  <span className="grow">
-                    <div className="title truncate">{line.label}</div>
-                    <div className="meta">
-                      {line.runs} run{line.runs === 1 ? '' : 's'}
-                      {line.survivals > 0 ? ` · ${line.survivals} completed` : ''}
-                    </div>
-                  </span>
-                  <span className="val num">{line.best}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
       )}
     </>
   );

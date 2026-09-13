@@ -327,13 +327,9 @@ describe('activity', () => {
 /* ── what the recommendation decides for you ────────────────────────────── */
 
 describe('the plan a recommendation starts a mode on', () => {
-  it('never sends a run out on a random colour', () => {
-    // Random is an answer to "surprise me" and not to "what needs work" — and
-    // a plan holds for the whole visit, so a random colour would also mean the
-    // second run contradicts the first for no reason.
+  it('leaves a run on the global selection', () => {
     for (const reps of [[], [thin('w', 'e4 e5 Nf3')], [thin('b', 'd4 Nf6 c4 g6')]]) {
-      const plan = planFor('openingRun', input({ reps }));
-      expect(plan.openingRun?.color).toMatch(/^[wb]$/);
+      expect(planFor('openingRun', input({ reps }))).toEqual({});
     }
   });
 
@@ -385,6 +381,6 @@ describe('the plan a recommendation starts a mode on', () => {
     // positions a session should introduce.
     const plan = planFor('drill', input({ due: 5, preferredDraw: 'due' }));
     expect(Object.keys(plan.drill ?? {})).toEqual(['draw']);
-    expect(Object.keys(planFor('openingRun', input()).openingRun ?? {})).toEqual(['color']);
+    expect(Object.keys(planFor('openingRun', input()).openingRun ?? {})).toEqual([]);
   });
 });

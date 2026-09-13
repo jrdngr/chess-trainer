@@ -310,8 +310,6 @@ export function planFor(mode: NextUpMode, input: NextUpInput): NextUpPlan {
   switch (mode) {
     case 'drill':
       return { drill: { draw: drillDraw(input.preferredDraw ?? 'due', input.due, input.unseen) } };
-    case 'openingRun':
-      return { openingRun: { color: runColor(input) } };
     default:
       return {};
   }

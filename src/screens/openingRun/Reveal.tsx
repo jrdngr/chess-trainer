@@ -25,6 +25,7 @@ import {
 import { referenceIndex } from '../../model/referenceIndex';
 import { useStore } from '../../store/useStore';
 import { GRADE_TONES, Record } from './Record';
+import { selectionText } from '../../components/Selection';
 
 /** How a run ended, when it did not finish the line. */
 export interface Death {
@@ -193,8 +194,8 @@ export function Reveal({
   return (
     <>
       <AppBar
-        title="Run"
-        subtitle={survived ? 'Survived' : 'Run over'}
+        title={survived ? 'Survived' : 'Run over'}
+        subtitle={selectionText(run.color, run.openingId)}
         onClose={onExit}
         actions={<span className="chip num wide">{run.survived}</span>}
       />
@@ -230,7 +231,7 @@ export function Reveal({
             <div className="compare mt-8">
               <div className="good">
                 <div className="k">
-                  {death.cause === 'blunder' ? 'Cost' : run.source === 'book' ? 'Book' : 'Repertoire'}
+                  {death.cause === 'blunder' ? 'Cost' : 'Expected'}
                 </div>
                 <div className="v">
                   {death.cause === 'blunder'
@@ -277,7 +278,6 @@ export function Reveal({
               <div className="title">{named.name}</div>
               <div className="meta">
                 {named.specific ? `${run.sourceLabel} · ` : ''}
-                {run.reverse ? 'reversed · ' : ''}
                 {survived && past === 0 ? 'played in full' : `${run.survived} correct`}
                 {past > 0 ? ` · ${past} past prep` : ''}
                 {run.hintsUsed > 0 ? ` · ${run.hintsUsed} hint${run.hintsUsed === 1 ? '' : 's'}` : ''}
@@ -294,7 +294,7 @@ export function Reveal({
         </button>
 
 
-        <Record record={record} perLine={settings.openingRun.perLine} />
+        <Record record={record} />
 
         <div className="spacer" />
         <button className="btn plain block" onClick={onChangeOptions}>

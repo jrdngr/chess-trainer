@@ -7,6 +7,8 @@ import {
   type NamedLine,
   type ReferenceIndex,
 } from './reference';
+import { lineInRegion } from './selection';
+import type { OpeningNode, OpeningTree } from './openingTree';
 import { childrenOf, fenAt } from './repertoire';
 import type { ExplorerMove, RepMove, Repertoire } from './types';
 
@@ -47,6 +49,12 @@ export interface GrowthOptions {
    * play, so it lifts those rows rather than reordering anything silently.
    */
   starred?: string[];
+  /**
+   * Only holes that lead into this region — or toward it: an unanswered reply
+   * on the way into the Najdorf is Najdorf work, even though it sits before
+   * the position the book names.
+   */
+  region?: { tree: OpeningTree; node: OpeningNode };
 }
 
 /**
@@ -82,6 +90,8 @@ export function findHoles(
   const maxPly = opts.maxPly ?? DEFAULT_MAX_PLY;
   const holes: Hole[] = [];
   const seen = new Set<string>();
+  const region = opts.region;
+  const wanted = (line: string[]) => !region || lineInRegion(region.tree, region.node, line);
 
   const walk = (nodeId: string | null, path: string[]) => {
     const fen = fenAt(rep, nodeId);
@@ -97,6 +107,7 @@ export function findHoles(
           if (prepared.has(move.san)) continue;
           const after = applySan(fen, move.san);
           if (!after) continue;
+          if (!wanted([...path, move.san])) continue;
           holes.push({
             path,
             fen,
@@ -110,7 +121,11 @@ export function findHoles(
       }
     }
     if (path.length >= maxPly) return;
-    for (const kid of kids) walk(kid.id, [...path, kid.san]);
+    for (const kid of kids) {
+      // A branch that has already left the region has nothing in it to count.
+      if (!wanted([...path, kid.san])) continue;
+      walk(kid.id, [...path, kid.san]);
+    }
   };
 
   walk(null, []);

@@ -4,9 +4,7 @@ import { AppBar, haptic, Icons, toast } from '../../components/ui';
 import { lastMoveOf, positionStatus, type LegalMove, type Square } from '../../chess/core';
 import {
   beginRun,
-  bookHas,
-  bookSource,
-  canKeepLine,
+  classify,
   extend,
   isComplete,
   isExtended,
@@ -26,9 +24,11 @@ import {
   type OpeningRunPrefs,
   type Run,
 } from '../../model/openingRun';
-import { deepestName, openingById, specificNameForColor } from '../../model/reference';
+import { deepestName, specificNameForColor } from '../../model/reference';
+import { nodeById, openingTree } from '../../model/openingTree';
 import { hasLine } from '../../model/repertoire';
 import { referenceIndex } from '../../model/referenceIndex';
+import { selectionText } from '../../components/Selection';
 import { mulberry32 } from '../../model/session';
 import { repertoireList, useStore } from '../../store/useStore';
 import { PlayOn } from './PlayOn';
@@ -94,21 +94,25 @@ export function OpeningRunScreen({
   const addToRep = useStore((s) => s.addLine);
   const ensureRepertoire = useStore((s) => s.ensureRepertoire);
   const index = referenceIndex();
+  const tree = openingTree(index);
+  const selection = settings.selection;
 
-  /** A run on these options, or null when they cannot produce a line. */
+  /** A run on these options in the selected region, or null when the book is empty. */
   const open = (options: OpeningRunOptions): Game | null =>
-    beginRun({ ...options, reps, index, weakness: weaknessFromCards(cards) });
+    beginRun({
+      ...options,
+      tree,
+      reps,
+      node: nodeById(tree, selection.opening),
+      color: selection.color,
+      weakness: weaknessFromCards(cards),
+    });
 
   /**
-   * Next Up starts the run itself, before the first paint, so the setup screen
-   * it promised to skip never flashes on the way past. A repertoire run needs
-   * prep to draw from and a new install has none — which is exactly when a book
-   * line is the right thing to hand someone — so the fallback is the book
-   * rather than the screen the button was meant to save you from.
+   * An automatic start begins the run itself, before the first paint, so the
+   * setup screen it promised to skip never flashes on the way past.
    */
-  const [opened] = useState<Game | null>(() =>
-    auto ? (open(prefs) ?? open({ ...prefs, kind: 'book' })) : null,
-  );
+  const [opened] = useState<Game | null>(() => (auto ? open(prefs) : null));
   const [phase, setPhase] = useState<Phase>(opened ? 'playing' : 'setup');
   const [game, setGame] = useState<Game | null>(opened);
   const [death, setDeath] = useState<Death | null>(null);
@@ -146,14 +150,12 @@ export function OpeningRunScreen({
    * since "Queen's Pawn Opening" describes what a Black line's opponent did.
    */
   const openingOf = (ended: Run, line: string[]): string => {
-    const chosen = ended.openingId ? openingById(index, ended.openingId) : null;
-    const named = chosen?.name ?? specificNameForColor(index, line, ended.color)?.name;
+    const named = specificNameForColor(index, line, ended.color)?.name;
     return named ?? ended.sourceLabel;
   };
 
   /** Where a run's line would go, and whether there is anything to put there. */
   const keepTarget = (ended: Run) => {
-    if (!canKeepLine(ended.source)) return null;
     const line = lineToKeep(ended);
     if (!line.length) return null;
     return { line, existing: reps.find((rep) => rep.color === ended.color) ?? null };
@@ -275,11 +277,8 @@ export function OpeningRunScreen({
 
   const start = (options: OpeningRunOptions) => begin(open(options));
 
-  /**
-   * Another run on the same terms. An auto-started run keeps its book fallback:
-   * there is no setup screen behind it to go back and fix things on.
-   */
-  const again = () => (auto ? begin(open(prefs) ?? open({ ...prefs, kind: 'book' })) : start(prefs));
+  /** Another run on the same terms. */
+  const again = () => start(prefs);
 
   if (phase === 'setup' || !run || !source) {
     return <Setup onStart={start} onExit={onExit} />;
@@ -334,43 +333,34 @@ export function OpeningRunScreen({
       referee.submit(move);
       return;
     }
+    // A real theory move that your prep simply does not have is not the same
+    // mistake as a move nobody plays. Pause and let it be a decision.
+    if (classify(source, run, move.san) === 'theory') {
+      buzz(14);
+      const named = deepestName(index, [...run.played, move.san]);
+      setOffPrep({
+        san: move.san,
+        expected: source.prepAt(run.fen),
+        opening: named && named.ply >= 3 ? named.name : null,
+      });
+      setPhase('offprep');
+      return;
+    }
     const result = play(source, run, move.san);
     if (result.ok) {
       buzz(10);
       setGame({ source, run: result.run });
       return;
     }
-    // A real theory move that your prep simply does not have is not the same
-    // mistake as a move nobody plays. Pause and let it be a decision.
-    if (!run.leftPrep && run.source !== 'book' && bookHas(index, run.fen, move.san)) {
-      buzz(14);
-      const named = deepestName(index, [...run.played, move.san]);
-      setOffPrep({
-        san: move.san,
-        expected: result.expected,
-        opening: named && named.ply >= 3 ? named.name : null,
-      });
-      setPhase('offprep');
-      return;
-    }
     die(run, { cause: 'move', played: result.played, expected: result.expected });
-    // A reversed run is judged on the side you prepared against, so its
-    // positions are not decision points and must not touch the schedule.
-    if (run.repertoireId && !run.reverse) {
-      missed(run.repertoireId, run.fen, result.played, result.expected[0] ?? '');
+    // Only a position your prep has an answer to is a card on the schedule.
+    if (run.repertoireId && source.prepAt(run.fen).length) {
+      missed(run.repertoireId, run.fen, result.played, source.prepAt(run.fen)[0] ?? '');
     }
   };
 
-  /**
-   * Where an out-of-prep move goes.
-   *
-   * A run drawn from the book or from one opening has no repertoire behind it,
-   * and a reversed run's repertoire is for the other side — so both get the tree
-   * for the side actually being played, the same one the reveal saves into,
-   * rather than having the offer withheld.
-   */
-  const repertoireForAdding = (): string =>
-    run.repertoireId && !run.reverse ? run.repertoireId : ensureRepertoire(run.color);
+  /** Where an out-of-prep move goes: the tree for the side being played. */
+  const repertoireForAdding = (): string => run.repertoireId ?? ensureRepertoire(run.color);
 
   /** Keep the move, and let the book judge the rest of the run. */
   const acceptOffPrep = (addToRepertoire: boolean) => {
@@ -381,7 +371,7 @@ export function OpeningRunScreen({
     }
     buzz(10);
     setOffPrep(null);
-    setGame({ source: bookSource(index, run.color), run: leavePrep(run, offPrep.san) });
+    setGame({ source, run: leavePrep(run, offPrep.san) });
     setPhase('playing');
   };
 
@@ -390,7 +380,7 @@ export function OpeningRunScreen({
     if (!offPrep) return;
     setOffPrep(null);
     die({ ...run, leftPrep: true }, { cause: 'offprep', played: offPrep.san, expected: offPrep.expected });
-    if (run.repertoireId && !run.reverse) {
+    if (run.repertoireId) {
       missed(run.repertoireId, run.fen, offPrep.san, offPrep.expected[0] ?? '');
     }
   };
@@ -410,6 +400,7 @@ export function OpeningRunScreen({
     <>
       <AppBar
         title="Run"
+        subtitle={selectionText(run.color, run.openingId)}
         onClose={onExit}
         actions={
           <div className="row gap-6">

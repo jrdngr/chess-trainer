@@ -41,6 +41,7 @@ import {
   type RunOutcome,
 } from '../model/openingRun';
 import { addMistake, type Mistake } from '../model/mistakes';
+import { DEFAULT_SELECTION, type Selection } from '../model/selection';
 import {
   NO_ACTIVITY,
   normalizeActivity,
@@ -59,6 +60,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lichessUsername: '',
   chesscomUsername: '',
   cloudSync: true,
+  selection: { ...DEFAULT_SELECTION },
   favoriteOpenings: [],
   openingRun: { ...DEFAULT_PREFS },
   drill: { ...DEFAULT_DRILL },
@@ -82,6 +84,7 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
   return {
     ...DEFAULT_SETTINGS,
     ...known,
+    selection: { ...DEFAULT_SELECTION, ...known.selection },
     openingRun: { ...DEFAULT_PREFS, ...known.openingRun },
     drill: { ...DEFAULT_DRILL, ...known.drill },
     repair: { ...DEFAULT_REPAIR, ...known.repair },
@@ -102,8 +105,10 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
  * 7: no seeded repertoires — everyone starts empty and builds their own.
  * 8: Gap became Growth, and keeps different options.
  * 9: one tree per colour, named for the side; openings are derived from it.
+ * 0: the fresh start — global colour and opening, score and stats. Every save
+ *    from before it, settings included, is discarded rather than migrated.
  */
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 0;
 
 interface PersistedState {
   version: number;
@@ -153,6 +158,8 @@ interface StoreState extends PersistedState {
   ensureCard: (item: TrainingItem) => Card;
 
   setSettings: (patch: Partial<Settings>) => void;
+  setSelection: (patch: Partial<Selection>) => void;
+  toggleStar: (openingId: string) => void;
   setOpeningRunPrefs: (patch: Partial<OpeningRunPrefs>) => void;
   /** Patch one mode's own options, without touching the rest of settings. */
   setModePrefs: <K extends 'drill' | 'repair' | 'growth' | 'play'>(
@@ -388,10 +395,9 @@ export const useStore = create<StoreState>((set, get) => {
               : { kind: 'unavailable' },
         });
       } else {
-        // Nothing anywhere, or a save that predates the current seed data.
+        // Nothing anywhere, or a save from an older schema: a fresh start.
         set({
           ...emptyPersisted(),
-          settings: mergeSettings(saved?.settings),
           storage,
           ready: true,
         });
@@ -538,6 +544,19 @@ export const useStore = create<StoreState>((set, get) => {
 
     setSettings(patch) {
       commit({ settings: { ...get().settings, ...patch } });
+    },
+
+    setSelection(patch) {
+      const settings = get().settings;
+      commit({ settings: { ...settings, selection: { ...settings.selection, ...patch } } });
+    },
+
+    toggleStar(openingId) {
+      const settings = get().settings;
+      const starred = settings.favoriteOpenings.includes(openingId)
+        ? settings.favoriteOpenings.filter((id) => id !== openingId)
+        : [...settings.favoriteOpenings, openingId];
+      commit({ settings: { ...settings, favoriteOpenings: starred } });
     },
 
     setOpeningRunPrefs(patch) {

@@ -1,5 +1,9 @@
 import { useMemo } from 'react';
-import { AppBar, ChoiceRow, Icons, Section, Segmented, Toggle } from '../../components/ui';
+import { AppBar, Icons, Section, Segmented, Toggle } from '../../components/ui';
+import { SelectionBar } from '../../components/Selection';
+import { lineInRegion, regionOf, repertoiresIn } from '../../model/selection';
+import { openingTree } from '../../model/openingTree';
+import { referenceIndex } from '../../model/referenceIndex';
 import {
   GAME_THRESHOLDS,
   gamesLabel,
@@ -48,7 +52,10 @@ export function Setup({
   const setModePrefs = useStore((s) => s.setModePrefs);
   const prefs = state.settings.repair;
   const record = state.repair;
-  const reps = repertoireList(state);
+  const selection = state.settings.selection;
+  const tree = openingTree(referenceIndex());
+  const region = regionOf(tree, selection);
+  const reps = repertoiresIn(repertoireList(state), selection.color);
   const games = state.importedGames;
 
   const set = (patch: Partial<RepairPrefs>) => setModePrefs('repair', patch);
@@ -56,15 +63,14 @@ export function Setup({
   const items = useMemo(
     () =>
       buildRepairs(games, reps, {
-        repertoireId: prefs.repertoireId,
         kinds: prefs.kinds,
         minGames: prefs.minGames,
         lossesOnly: prefs.lossesOnly,
         sort: prefs.sort,
         mistakes: state.mistakes,
-      }),
+      }).filter((item) => lineInRegion(tree, region, item.path)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [games, state.mistakes, reps, prefs],
+    [games, state.mistakes, reps, prefs, region],
   );
 
   /**
@@ -75,17 +81,14 @@ export function Setup({
   const mismatches = useMemo(
     () =>
       reps
-        .filter((rep) => !prefs.repertoireId || rep.id === prefs.repertoireId)
         .map((rep) => ({ rep, mismatch: openingMismatch(games, rep) }))
         .filter((m): m is { rep: (typeof reps)[number]; mismatch: NonNullable<ReturnType<typeof openingMismatch>> } => !!m.mismatch),
-    [games, reps, prefs.repertoireId],
+    [games, reps],
   );
 
   /** How much of your real play your prep actually covered. */
   const coverage = useMemo(() => {
-    const totals = reps
-      .filter((rep) => !prefs.repertoireId || rep.id === prefs.repertoireId)
-      .map((rep) => measureCoverage(games, rep));
+    const totals = reps.map((rep) => measureCoverage(games, rep));
     return totals.reduce(
       (sum, c) => ({
         inPrep: sum.inPrep + c.inPrep,
@@ -94,7 +97,7 @@ export function Setup({
       }),
       { inPrep: 0, outOfPrep: 0, games: 0 },
     );
-  }, [games, reps, prefs.repertoireId]);
+  }, [games, reps]);
 
   if (games.length === 0 && state.mistakes.length === 0) {
     return (
@@ -132,12 +135,14 @@ export function Setup({
       />
 
       <div className="screen no-nav">
+        <SelectionBar />
+
         <button
           className="btn primary block xl"
           disabled={items.length === 0}
           onClick={() => onStart(prefs)}
         >
-          {items.length === 0 ? 'Nothing to repair' : 'Start'}
+          {items.length === 0 ? 'Nothing to repair here' : 'Start'}
         </button>
 
         {mismatches.map(({ rep, mismatch }) => (
@@ -201,28 +206,6 @@ export function Setup({
 
         <Section title="Order" />
         <Segmented value={prefs.sort} options={SORTS} onChange={(sort) => set({ sort })} />
-
-        {reps.length > 1 && (
-          <>
-            <Section title="Side" />
-            <div className="list">
-              <ChoiceRow
-                title="Both"
-                selected={prefs.repertoireId === ''}
-                onSelect={() => set({ repertoireId: '' })}
-              />
-              {reps.map((rep) => (
-                <ChoiceRow
-                  key={rep.id}
-                  title={rep.color === 'w' ? 'As White' : 'As Black'}
-                  leading={<span className={`side ${rep.color}`} />}
-                  selected={prefs.repertoireId === rep.id}
-                  onSelect={() => set({ repertoireId: rep.id })}
-                />
-              ))}
-            </div>
-          </>
-        )}
 
         <Section title="Narrow it" />
         <div className="list">

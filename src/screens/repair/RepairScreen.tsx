@@ -6,7 +6,9 @@ import { candidateAnswers } from '../../model/gaps';
 import { kindLabel, type RepairPrefs } from '../../model/modes';
 import { formatGameCount, movePercent, lookup, totalGamesAt } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
-import { displayName } from '../../model/repertoire';
+import { openingTree } from '../../model/openingTree';
+import { lineInRegion, regionOf, repertoiresIn } from '../../model/selection';
+import { selectionText } from '../../components/Selection';
 import { buildRepairs, fixCandidates, isRepaired, lineFor, type RepairItem } from '../../model/repair';
 import { repertoireList, useStore } from '../../store/useStore';
 import { Setup } from './Setup';
@@ -34,13 +36,15 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
   const endRepair = useStore((s) => s.endRepair);
   const repaired = useStore((s) => s.repairedPosition);
   const settings = state.settings;
-  const reps = repertoireList(state);
+  const selection = settings.selection;
+  const reps = repertoiresIn(repertoireList(state), selection.color);
   const index = referenceIndex();
+  const tree = openingTree(index);
+  const region = regionOf(tree, selection);
 
   /** Built once per visit: fixing an item changes the repertoire underneath. */
   const [queue] = useState<RepairItem[]>(() =>
     buildRepairs(state.importedGames, reps, {
-      repertoireId: prefs.repertoireId,
       kinds: prefs.kinds,
       minGames: prefs.minGames,
       lossesOnly: prefs.lossesOnly,
@@ -49,7 +53,7 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
       // the home screen counts them, so a queue built without them promises a
       // number of positions and then opens onto nothing.
       mistakes: state.mistakes,
-    }),
+    }).filter((item) => lineInRegion(tree, region, item.path)),
   );
 
   const [at, setAt] = useState(0);
@@ -134,7 +138,6 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
     );
   }
 
-  const rep = state.repertoires[item.repertoireId];
   const unprepared = item.kind === 'unprepared';
   const answered = phase === 'right' || phase === 'wrong';
 
@@ -142,7 +145,7 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
     <>
       <AppBar
         title={kindLabel(item.kind)}
-        subtitle={rep ? displayName(rep.name) : undefined}
+        subtitle={selectionText(item.color, selection.opening)}
         onClose={onExit}
         actions={
           <span className="num muted small appbar-gap" style={{ textAlign: 'right' }}>
