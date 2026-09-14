@@ -75,8 +75,14 @@ export const STAR = 1.6;
 /** How much the stalest candidate can outweigh the freshest. */
 export const STALENESS = 2;
 
-/** Each recent round of the same focus multiplies its weight by this. */
-export const BRAKE = 0.6;
+/**
+ * Each recent round of the same focus multiplies its weight by this.
+ *
+ * Half, so that three rounds of one focus running leaves it an eighth of its
+ * voice: a focus with real work behind it still comes round, and nothing
+ * takes the table for five rounds because its need is steady.
+ */
+export const BRAKE = 0.5;
 
 /** How many recent rounds the brake looks back over. */
 export const BRAKE_WINDOW = 5;
@@ -209,16 +215,17 @@ export function readiness(strengths: number[]): number {
  * cannot meet will still be played against it whatever its cards say. So an
  * opening with nothing in it asks at full voice however little of it is held.
  *
- * That lift is as steep as the gate it undoes, and for the same reason. An
- * opening that answers half of what it meets is half prepared, not bare, and
- * lifting the floor for it would buy breadth with the review the other half
- * has earned. Only prep that barely exists gets to ignore the gate.
+ * The lift is in proportion: an opening half covered is half free of the
+ * gate. It was once steeper, so that only prep that barely existed could
+ * ignore the gate — and a repertoire of three or four lines, unheld, then
+ * ran them four and five rounds at a stretch before it was let grow. A young
+ * repertoire is for widening; the gate has its full say once it is wide.
  */
 export function growNeed(holes: Hole[], ready = 1, thin = 0): number {
   if (!holes.length) return 0;
   const depth = Math.min(...holes.map((hole) => hole.path.length));
   const topShare = Math.max(...holes.map((hole) => hole.share));
-  const floor = GROWTH_FLOOR + (1 - GROWTH_FLOOR) * clamp(thin) ** 2;
+  const floor = GROWTH_FLOOR + (1 - GROWTH_FLOOR) * clamp(thin);
   const gate = floor + (1 - floor) * clamp(ready) ** 2;
   return clamp(rowUrgency(depth, topShare, holes.length) * gate);
 }
