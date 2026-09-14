@@ -59,14 +59,28 @@ describe('finding holes', () => {
     }
   });
 
-  it('says whether answering a hole would widen the prep or only lengthen it', () => {
+  it('counts how often a hole is actually reached, not merely how deep it is', () => {
     const holes = findHoles(black, index);
-    // The root is a junction: 1.d4 is answered, 1.e4 and the rest are not.
-    const root = holes.find((hole) => hole.path.length === 0 && hole.san === 'e4');
-    expect(root?.answered).toBe(1);
-    // The tip: eight plies in, the prep stops and answers nothing at all.
-    const tip = holes.find((hole) => hole.path.length === 8);
-    expect(tip?.answered).toBe(0);
+    // Every game starts at the root, so a first move is met as often as it is played.
+    const root = holes.find((hole) => hole.path.length === 0 && hole.san === 'e4')!;
+    expect(root.reach).toBe(1);
+    // Eight plies in, only the games that took every step on the way get there.
+    const tip = holes.find((hole) => hole.path.length === 8)!;
+    expect(tip.reach).toBeGreaterThan(0);
+    expect(tip.reach).toBeLessThan(0.2);
+    // An unanswered 1.e4 is met far more often than the end of the one line.
+    expect(root.reach * root.share).toBeGreaterThan(tip.reach * tip.share * 5);
+  });
+
+  it('keeps a hole reachable however unpopular the way in', () => {
+    // Prep off 1.b3, a move almost nobody plays: the holes past it are worth
+    // little, but a weight of zero would hide them from the draw for ever.
+    const odd = addLine(createRepertoire('Odd', 'b', 'r_odd'), 'b3 e5 Bb2 Nc6'.split(' '), 'reference').rep;
+    const holes = findHoles(odd, index);
+    expect(holes.length).toBeGreaterThan(0);
+    for (const hole of holes) expect(hole.reach).toBeGreaterThan(0);
+    const deep = holes.find((hole) => hole.path.length === 4)!;
+    expect(deep.reach).toBeLessThan(0.02);
   });
 
   it('never reports a reply the repertoire already answers', () => {
@@ -492,7 +506,7 @@ describe('the moves drawn on the board', () => {
 
 describe('what your games say about a hole', () => {
   const after = applySan(applySan(START_FEN, 'e4')!.after, 'c5')!.after;
-  const hole = { path: ['e4'], fen: applySan(START_FEN, 'e4')!.after, san: 'c5', share: 20, games: 9, after, nodeId: null, answered: 0 };
+  const hole = { path: ['e4'], fen: applySan(START_FEN, 'e4')!.after, san: 'c5', share: 20, games: 9, after, nodeId: null, reach: 1 };
 
   it('weighs a hole by the games you reached it with nothing prepared', () => {
     expect(evidenceFor([])(hole)).toBe(1);

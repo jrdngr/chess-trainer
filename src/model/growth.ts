@@ -79,16 +79,17 @@ export interface Hole {
   /** The repertoire node the opponent moved from, or null at the root. */
   nodeId: string | null;
   /**
-   * How many replies you already answer at that position.
+   * The share of games that get as far as this position, 0..1: every reply
+   * the opponent chose on the way, multiplied together. Your own moves cost
+   * nothing, because you are the one making them.
    *
-   * Zero is the tip of a line: your prep stops there and answering the hole
-   * makes it longer. More than zero is a junction you already meet one way,
-   * and answering the hole makes the repertoire wider instead — a different
-   * reply at a position you have seen before. Which of the two a run is
-   * steered to is the whole difference between a deep repertoire and a broad
-   * one, so the count travels with the hole.
+   * `reach` times `share` is how often you would actually be sitting in front
+   * of this unanswered reply — the only honest measure of what a hole is
+   * worth. It is what separates a reply at move three from one at move
+   * fourteen without any rule about depth, and a sideline nobody plays from a
+   * main line, on the same scale.
    */
-  answered: number;
+  reach: number;
 }
 
 /**
@@ -102,6 +103,8 @@ interface Choice {
   path: string[];
   fen: string;
   nodeId: string | null;
+  /** The share of games that get this far, 0..1. */
+  reach: number;
   /** Book replies here worth preparing for, inside the region. */
   replies: (ExplorerMove & { share: number })[];
   /** The replies your prep answers. */
@@ -121,10 +124,11 @@ function walkChoices(
   const region = opts.region;
   const wanted = (line: string[]) => !region || lineInRegion(region.tree, region.node, line);
 
-  const walk = (nodeId: string | null, path: string[]) => {
+  const walk = (nodeId: string | null, path: string[], reach: number) => {
     const fen = fenAt(rep, nodeId);
     const kids = childrenOf(rep, nodeId);
-    if (path.length < maxPly && fenTurn(fen) !== rep.color) {
+    const theirs = fenTurn(fen) !== rep.color;
+    if (path.length < maxPly && theirs) {
       const key = positionKey(fen);
       // Transpositions reach the same choice twice; the shallower route wins
       // because the walk is depth-first from the root.
@@ -134,21 +138,44 @@ function walkChoices(
           path,
           fen,
           nodeId,
+          reach,
           replies: popularReplies(index, fen, minShare).filter((move) => wanted([...path, move.san])),
           prepared: new Set(kids.map((kid) => kid.san)),
         });
       }
     }
     if (path.length >= maxPly) return;
+    // Only their moves narrow the field. A move of yours is one you have
+    // decided to play, so every game down your own prep goes through it.
+    const shares = theirs ? shareMap(index, fen) : null;
     for (const kid of kids) {
       // A branch that has already left the region has nothing in it to count.
       if (!wanted([...path, kid.san])) continue;
-      walk(kid.id, [...path, kid.san]);
+      walk(kid.id, [...path, kid.san], shares ? reach * (shares.get(kid.san) ?? RARE) : reach);
     }
   };
 
-  walk(null, []);
+  walk(null, [], 1);
 }
+
+/**
+ * How often the book plays each move at a position, as a share of 0..1.
+ *
+ * Every move, not only the popular ones: a reply below the threshold is not
+ * worth preparing for, but it is still the way into everything prepared past
+ * it, and calling that way in impossible would hide those holes entirely.
+ */
+function shareMap(index: ReferenceIndex, fen: string): Map<string, number> {
+  const entry = lookup(index, fen);
+  const total = entry ? totalGamesAt(entry) : 0;
+  const out = new Map<string, number>();
+  if (!entry || total === 0) return out;
+  for (const move of entry.moves) out.set(move.san, Math.max(move.games / total, RARE));
+  return out;
+}
+
+/** What a move the book has never seen is worth, so a line through it is not lost. */
+const RARE = 0.0001;
 
 /** Every unanswered reply in a repertoire, shallowest and most popular first. */
 export function findHoles(
@@ -170,7 +197,7 @@ export function findHoles(
         games: move.games,
         after: after.after,
         nodeId: choice.nodeId,
-        answered: choice.prepared.size,
+        reach: choice.reach,
       });
     }
   });
@@ -596,8 +623,8 @@ export function nextHole(index: ReferenceIndex, run: GrowthRun): Hole | null {
     games: reply.games,
     after: after.after,
     nodeId: null,
-    // The answer just added is the only thing here, and it is not a reply.
-    answered: 0,
+    // Past the repertoire there is no walk left to have counted the way here.
+    reach: 0,
   };
 }
 

@@ -101,8 +101,8 @@ inside the selection. A focus is a preset of Run settings:
 - **Review**: lines drawn toward the positions you answer badly, have let
   lapse, are due on, or got wrong in your own games; nothing added.
 - **Grow**: the opponent walks you to a reply you have no answer to and the
-  run offers the book, one to eight moves depending on how well the prep
-  around them is held and how bare the opening still is.
+  run offers the book, one to eight moves depending on how much line there is
+  left to build.
 
 Each candidate is scored:
 
@@ -123,9 +123,8 @@ Each candidate is scored:
   deep down one pawn storm is a great deal of prep and the narrowest
   repertoire there is — but how much of what the opponent would actually play
   you answer, at each position where they have a real choice, weighted toward
-  the early ones. Between them, readiness and thinness set the budget: eight
-  new moves for prep that is held or an opening that is bare, one for an
-  opening that is neither.
+  the early ones. Readiness and thinness decide *whether* to grow an opening;
+  how much a round adds is decided by the line it walks to, not here.
 - **Staleness** is how long that opening has gone without a round, measured
   against the other candidates rather than the clock. Candidates never played
   are all equally stale.
@@ -189,14 +188,29 @@ Options: steer toward (popular, weak spots, gaps), new moves (0 to 8), clock
 lands), extended mode (past the prep, the engine judges and a blunder ends the
 run). Autopilot sets the first two for itself.
 
-A gaps run draws the hole it walks to on how often that reply is played, how
-early it comes, what your own games say about it, and — on an opening
-Autopilot has judged bare — on whether answering it would make the repertoire
-wider or only longer. Left to popularity alone the loudest hole is nearly
-always the tip of the one line you have, and round after round walks the same
-opening and makes it a move longer; a hole you already answer some other reply
-to is a white try you have never seen, which is what a bare repertoire is
-short of.
+A gaps run draws the hole it walks to on how often you would actually meet it:
+the reply's share of its position, times the share of games that reach the
+position at all — every opponent choice on the way, multiplied together. Your
+own moves cost nothing, because you are the one making them. That single
+number orders the work without any rule about depth: an unanswered 1.e4 is met
+in four games in ten, a sideline at the same position in one in a hundred, the
+end of a line you reach one game in twenty in less than that.
+
+It is drawn rather than taken in order, so the rounds are not the same round
+twice — but drawn only from the holes worth at least an eighth of the best one
+(`DRAW_WINDOW`). Proportional drawing is fair and still wrong: it spends one
+round in a hundred on a move you will not meet while the move you meet in four
+games in ten goes unanswered. Answering the top hole takes it out of the
+reckoning, the best of what is left is worth less, and the window comes down to
+the next tier — so the common replies are covered first and the obscure ones
+arrive when there is nothing commoner left to do.
+
+How many moves a round adds is fitted to the line rather than to the
+repertoire (`movesToFit`): each answer carries a line two plies on, so the
+budget is the plies left to the horizon, halved. Nothing prepared against 1.e4
+gets eight answers and a real position in one round; a line already fourteen
+plies deep gets the next move or two and no more. Never more than the run was
+allowed to begin with, and never less than one.
 
 ### Drill
 Positions inside the region, drawn from the schedule: due first, then new,

@@ -10,7 +10,6 @@ import {
   FUN,
   GROWTH_FLOOR,
   growNeed,
-  growthBudget,
   HELD_DAYS,
   MAX_NEW_MOVES,
   readiness,
@@ -125,7 +124,7 @@ describe('need', () => {
 
   it('costs a hole by how early and how often you fall into it', () => {
     const hole = (depth: number, share: number) => ({
-      path: Array(depth).fill('x'), fen: '', san: 'e5', share, games: 1, after: '', nodeId: null, answered: 0,
+      path: Array(depth).fill('x'), fen: '', san: 'e5', share, games: 1, after: '', nodeId: null, reach: 1,
     });
     expect(growNeed([])).toBe(0);
     expect(growNeed([hole(1, 30)])).toBeGreaterThan(growNeed([hole(9, 30)]));
@@ -154,7 +153,7 @@ describe('need', () => {
   });
 
   it('quietens growth steeply while the prep is still being learned', () => {
-    const holes = [{ path: ['x'], fen: '', san: 'e5', share: 30, games: 1, after: '', nodeId: null, answered: 0 }];
+    const holes = [{ path: ['x'], fen: '', san: 'e5', share: 30, games: 1, after: '', nodeId: null, reach: 1 }];
     const full = growNeed(holes, 1);
     const half = growNeed(holes, 0.5);
     const none = growNeed(holes, 0);
@@ -167,7 +166,7 @@ describe('need', () => {
   });
 
   it('does not make an opening with nothing in it wait to be held', () => {
-    const holes = [{ path: ['x'], fen: '', san: 'e5', share: 30, games: 1, after: '', nodeId: null, answered: 0 }];
+    const holes = [{ path: ['x'], fen: '', san: 'e5', share: 30, games: 1, after: '', nodeId: null, reach: 1 }];
     // Bare: the gate is gone, however little of the prep is held.
     expect(growNeed(holes, 0, 1)).toBeCloseTo(growNeed(holes, 1), 5);
     expect(growNeed(holes, 1, 1)).toBeCloseTo(growNeed(holes, 1), 5);
@@ -178,19 +177,6 @@ describe('need', () => {
     expect(growNeed(holes, 0.5, 0)).toBe(growNeed(holes, 0.5));
   });
 
-  it('lets a round add more the better the prep is held, or the barer it is', () => {
-    expect(growthBudget(1)).toBe(MAX_NEW_MOVES);
-    expect(growthBudget(0)).toBe(1);
-    expect(growthBudget(0.9)).toBeGreaterThanOrEqual(growthBudget(0.5));
-    expect(growthBudget(0.5)).toBeGreaterThan(growthBudget(0));
-    // Bareness earns the budget on its own: there is nothing to learn first.
-    expect(growthBudget(0, 1)).toBe(MAX_NEW_MOVES);
-    expect(growthBudget(0, 0.5)).toBe(growthBudget(0.5));
-    expect(growthBudget(1, 0)).toBe(growthBudget(0, 1));
-    // Never zero: that is the focus saying no, not the budget.
-    expect(growthBudget(0, 0)).toBe(1);
-  });
-
   it('always asks for a test, and harder for untested prep or a first run', () => {
     expect(testNeed(0, true)).toBe(0.4);
     expect(testNeed(0, false)).toBe(0.55);
@@ -199,7 +185,7 @@ describe('need', () => {
 
   it('weighs a hole up by the games you reached it with nothing', () => {
     const after = applySan(applySan(START_FEN, 'e4')!.after, 'c5')!.after;
-    const hole = { path: ['e4'], fen: '', san: 'c5', share: 10, games: 1, after, nodeId: null, answered: 0 };
+    const hole = { path: ['e4'], fen: '', san: 'c5', share: 10, games: 1, after, nodeId: null, reach: 1 };
     expect(weighHoles([hole], [])[0].share).toBe(10);
     const weighed = weighHoles([hole], [repair({ kind: 'unprepared', fen: after, games: 3 })]);
     expect(weighed[0].share).toBe(40);
@@ -210,7 +196,7 @@ describe('need', () => {
 
 describe('ranking', () => {
   const cand = (focus: Focus, need: number, lastAt: number | null = null, openingId = '') => ({
-    focus, openingId, color: 'w' as const, need, work: 1, lastAt, starred: false, newMoves: 0, thin: 0,
+    focus, openingId, color: 'w' as const, need, work: 1, lastAt, starred: false, newMoves: 0,
   });
 
   it('tilts away from Grow and never lets that override a real need', () => {
@@ -367,31 +353,29 @@ describe('what gets recommended', () => {
       let score = EMPTY_SCORE;
       const recent: Focus[] = [];
       let grows = 0;
-      let budget = 0;
       for (let i = 0; i < 20; i += 1) {
         const pick = recommend(input({ reps, cards, score, recentFocuses: recent, selection: { color: 'w', opening: '' } }));
         if (pick.focus === 'grow') {
           grows += 1;
-          budget = Math.max(budget, pick.newMoves);
+          // The allowance is always the whole of it; the line spends what it needs.
+          expect(pick.newMoves).toBe(MAX_NEW_MOVES);
         }
         recent.push(pick.focus);
         score = played(score, pick.opening.id, T + i);
       }
-      return { grows, budget };
+      return { grows };
     };
     // Everything due, and nothing seen yet: the prep is not held.
     const learning = play(cardsFor(reps, true));
     const unseen = play({});
-    // Held for weeks: the holes ask at full voice, the longest lines at a time.
+    // Held for weeks: the holes ask at full voice.
     const held = play(heldCards(reps));
     expect(held.grows).toBeGreaterThanOrEqual(learning.grows);
     expect(held.grows).toBeGreaterThanOrEqual(unseen.grows);
-    expect(held.budget).toBe(MAX_NEW_MOVES);
     // A repertoire this bare is not made to wait for its cards to mature:
     // what it cannot meet will be played against it whatever they say.
     expect(learning.grows).toBeGreaterThan(0);
     expect(unseen.grows).toBeGreaterThan(0);
-    expect(learning.budget).toBeGreaterThan(3);
   });
 
   it('is stable: the same state always gives the same answer', () => {

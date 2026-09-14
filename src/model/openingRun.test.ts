@@ -4,6 +4,7 @@ import {
   atEdge,
   beginRun,
   BLUNDER_LIMIT,
+  DRAW_WINDOW,
   bookHas,
   chooseAtEdge,
   classify,
@@ -24,6 +25,7 @@ import {
   isComplete,
   isExtended,
   isUsersTurn,
+  movesToFit,
   judgeByEval,
   leavePrep,
   lineName,
@@ -52,6 +54,7 @@ import {
   type Run,
   type Weakness,
 } from './openingRun';
+import { findHoles } from './growth';
 import { nodeById, openingTree } from './openingTree';
 import { addLine, createRepertoire, hasLine, leafLines, pathTo } from './repertoire';
 import { lookup } from './reference';
@@ -483,23 +486,45 @@ describe('steering at gaps', () => {
     }
   });
 
-  it('leans toward a reply it has never met when the repertoire is bare', () => {
-    // A Spanish and nothing else. Its holes are of two shapes: 1...c5, 1...e6
-    // and the rest are junctions off 1.e4, a reply already answered one way;
-    // Black's third move is the tip, where the prep simply stops.
+  it('spends its rounds on the replies it would actually meet', () => {
     const rep = spanish();
-    const tips = (breadth: number) => {
-      let count = 0;
-      for (let seed = 0; seed < 60; seed += 1) {
-        const { run } = start([rep], 'w', seed, any, { steer: 'gaps', breadth });
-        if (run.target.length > 4) count += 1;
-      }
-      return count;
-    };
-    // Left to popularity the tip wins often: 3...a6 is the most played move on
-    // the board. Told the repertoire is bare, the round goes to a junction.
-    expect(tips(0)).toBeGreaterThan(0);
-    expect(tips(1)).toBeLessThan(tips(0));
+    const drawn = new Map<string, number>();
+    for (let seed = 0; seed < 120; seed += 1) {
+      const { run } = start([rep], 'w', seed, any, { steer: 'gaps' });
+      const key = run.target.join(' ');
+      drawn.set(key, (drawn.get(key) ?? 0) + 1);
+    }
+    // Every hole drawn is a reply worth a real share of the most played one,
+    // so no round is spent on a move nobody plays while 1...c5 goes unmet.
+    const holes = findHoles(rep, index);
+    const met = (hole: { reach: number; share: number }) => hole.reach * hole.share;
+    const best = Math.max(...holes.map(met));
+    for (const key of drawn.keys()) {
+      const hole = holes.find((h) => [...h.path, h.san].join(' ') === key)!;
+      expect(met(hole) * DRAW_WINDOW).toBeGreaterThanOrEqual(best);
+    }
+    // The commonest reply leads, and more than one still comes up.
+    const top = [...drawn].sort((a, b) => b[1] - a[1]);
+    expect(top[0][0]).toBe('e4 c5');
+    expect(drawn.size).toBeGreaterThan(1);
+  });
+
+  it('fits what a round adds to how much line is left to build', () => {
+    expect(movesToFit(0)).toBeGreaterThanOrEqual(8);
+    expect(movesToFit(4)).toBe(7);
+    expect(movesToFit(8)).toBe(5);
+    expect(movesToFit(14)).toBe(2);
+    // Past the horizon there is still an answer worth having, never a line.
+    expect(movesToFit(18)).toBe(1);
+    expect(movesToFit(40)).toBe(1);
+    // A shallow hole gets the whole allowance; a deep one only what it needs.
+    const rep = spanish();
+    const shallow = start([rep], 'w', 3, any, { steer: 'gaps', newMoves: 8 }).run;
+    expect(shallow.newMoves).toBe(Math.min(8, movesToFit(shallow.target.length - 1)));
+    expect(shallow.newMoves).toBeGreaterThan(4);
+    // Never more than the run was allowed in the first place.
+    const capped = start([rep], 'w', 3, any, { steer: 'gaps', newMoves: 2 }).run;
+    expect(capped.newMoves).toBe(2);
   });
 
   it('falls back to a line through the opening when there is nothing to walk to', () => {

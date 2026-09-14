@@ -266,10 +266,37 @@ export function steerLabel(steer: Steer): string {
 export const NEW_MOVE_BUDGETS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
 /**
- * How much a hole that widens the repertoire outweighs one that lengthens it,
- * on an opening with no breadth at all. Fades to nothing as breadth arrives.
+ * How many moves are worth adding at a hole this far into a line.
+ *
+ * A line is grown to about the same length whether it starts at the first
+ * move or the fifteenth. Nothing prepared against 1.e4 wants a line, not a
+ * move: eight answers take it to a real position in one round. A line already
+ * fourteen plies deep wants the next move or two and no more — it is nearly
+ * out of opening, and what is added there is play rather than prep.
+ *
+ * Each answer carries the line two plies on: yours, then theirs. So the
+ * budget is the plies left to the horizon, halved, and never less than one —
+ * a hole past the horizon is still worth an answer, just not a line.
  */
-export const BREADTH_TILT = 3;
+export function movesToFit(depth: number, maxPly = 18): number {
+  return Math.max(1, Math.round((maxPly - depth) / 2));
+}
+
+/**
+ * How much less often a hole may be met than the best one and still be drawn.
+ *
+ * Without a window the draw is proportional, and a reply played one game in a
+ * hundred comes up one round in a hundred — which is fair and still wrong,
+ * because those rounds are spent on a move you will not meet while the move
+ * you meet in four games in ten goes unanswered. So the field is the holes
+ * worth a real fraction of the best one, and the rest wait.
+ *
+ * They do not wait for ever: answering the top hole takes it out of the
+ * reckoning, the best of what is left is worth less, and the window comes
+ * down to meet the next tier. The common replies are covered first and the
+ * obscure ones arrive when there is nothing commoner left to do.
+ */
+export const DRAW_WINDOW = 8;
 
 /**
  * What the setup screen decides. The colour and the opening are global and
@@ -450,12 +477,7 @@ export interface BeginOptions extends Partial<OpeningRunOptions> {
   weakness?: Weakness | null;
   /** What counts as a hole worth steering toward. */
   growth?: { minShare?: number; maxPly?: number };
-  /**
-   * How hard to tilt a gaps run toward widening the repertoire rather than
-   * lengthening it, 0..1 — how bare the opening is, see `thinness`. Zero, the
-   * default, draws holes on popularity and depth alone.
-   */
-  breadth?: number;
+
   /** How much more a hole is worth for the games you have lost in it — see `evidenceFor`. */
   holeWeight?: (hole: Hole) => number;
 }
@@ -527,7 +549,11 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
     target,
     hints: opts.hints ?? DEFAULT_OPTIONS.hints,
     hintsUsed: 0,
-    newMoves: Math.max(0, opts.newMoves ?? DEFAULT_OPTIONS.newMoves),
+    // The budget is what the round may spend; the line decides what it needs.
+    newMoves: Math.min(
+      Math.max(0, opts.newMoves ?? DEFAULT_OPTIONS.newMoves),
+      gap ? movesToFit(gap.path.length, opts.growth?.maxPly) : Infinity,
+    ),
     added: 0,
     prepEnded: null,
   };
@@ -535,20 +561,23 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
 }
 
 /**
- * The hole to walk toward: drawn on how often its reply is played, how early
- * it comes, what your own games say about it, and — on a bare opening — on
- * whether answering it would make the repertoire wider or only longer. Null
- * where the prep has no holes in the region, and the run falls back to a line
- * through it.
+ * The hole to walk toward: drawn on how often you would actually meet it, and
+ * on what your own games say about it. Null where the prep has no holes in the
+ * region, and the run falls back to a line through it.
  *
- * The tilt is what stops a thin repertoire being fed back to itself. Left to
- * popularity, the loudest hole is nearly always the tip of the one line you
- * have: the book's main move at every ply is the most played thing on the
- * board, so round after round walks the same opening and makes it one move
- * longer. A hole you already answer some other reply to is a junction —
- * answering it is a white reply you have never seen, which is the thing a
- * repertoire this bare is short of. Once the opening is broad the tilt is
- * zero and depth is worth having again.
+ * How often you would meet it is the reply's share of the position times the
+ * share of games that get to the position at all — nothing else. That one
+ * number is what orders the work: an unanswered 1.e4 is met in four games in
+ * ten, a sideline at the same position in one game in a hundred, the tip of a
+ * line you reach one game in twenty in less than that. So the common replies
+ * are covered first and the obscure ones wait their turn, which is also what
+ * makes a repertoire wider: the moves most often played against you are the
+ * ones you have not met, not the next move of the line you already know.
+ *
+ * Drawn rather than taken in order, so the rounds are not the same round
+ * twice — but drawn from the holes worth a real fraction of the best one, so
+ * a reply nobody plays is not what a round is spent on while a reply everyone
+ * plays goes unanswered. See `DRAW_WINDOW`.
  */
 function drawHole(
   rep: Repertoire,
@@ -560,15 +589,10 @@ function drawHole(
   const holes = findHoles(rep, tree.index, { ...opts.growth, region: { tree, node: aim } });
   if (!holes.length) return null;
   const evidence = opts.holeWeight ?? (() => 1);
-  const breadth = Math.max(0, Math.min(1, opts.breadth ?? 0));
-  return pickWeighted(
-    holes,
-    (hole) => {
-      const widen = hole.answered > 0 ? 1 + BREADTH_TILT * breadth : 1;
-      return (Math.max(hole.share, 0.1) * evidence(hole) * widen) / (1 + hole.path.length / 3);
-    },
-    rand,
-  );
+  const met = (hole: Hole) => hole.reach * hole.share * evidence(hole);
+  const best = Math.max(...holes.map(met));
+  const field = holes.filter((hole) => met(hole) * DRAW_WINDOW >= best);
+  return pickWeighted(field.length ? field : holes, met, rand);
 }
 
 /** Resolve "random" once, up front, so the rest of a run is deterministic. */

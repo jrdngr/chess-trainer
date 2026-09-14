@@ -85,7 +85,12 @@ export const HELD_DAYS = 7;
 /** How loudly Grow can still ask when nothing in the opening is held yet. */
 export const GROWTH_FLOOR = 0.1;
 
-/** The most moves one Grow round may add. */
+/**
+ * The most moves one Grow round may add.
+ *
+ * An allowance rather than a quota: how many a round actually spends is
+ * decided by how much line is left to build, not here — see `movesToFit`.
+ */
 export const MAX_NEW_MOVES = 8;
 
 export interface Candidate {
@@ -100,8 +105,6 @@ export interface Candidate {
   starred: boolean;
   /** Moves a Grow round may add here; 0 for the other focuses. */
   newMoves: number;
-  /** How bare this opening still is, 0..1 — see `thinness`. 0 unless Grow. */
-  thin: number;
   /** need × staleness × star × fun × brake. Only comparable within one ranking. */
   score: number;
 }
@@ -110,14 +113,12 @@ export interface Recommendation {
   focus: Focus;
   opening: OpeningNode;
   color: Color;
-  /** Moves the round may add to the repertoire. */
-  newMoves: number;
   /**
-   * How bare the opening still is, 0..1, and zero for the focuses that add
-   * nothing. A Grow round tilts toward widening the repertoire rather than
-   * lengthening it by this much — see `drawHole`.
+   * Moves the round may add to the repertoire — an allowance, not a quota.
+   * What a round actually spends is decided by the line it walks to: see
+   * `movesToFit`.
    */
-  thin: number;
+  newMoves: number;
 }
 
 export interface RecommendInput {
@@ -213,26 +214,6 @@ export function growNeed(holes: Hole[], ready = 1, thin = 0): number {
   const floor = GROWTH_FLOOR + (1 - GROWTH_FLOOR) * clamp(thin) ** 2;
   const gate = floor + (1 - floor) * clamp(ready) ** 2;
   return clamp(rowUrgency(depth, topShare, holes.length) * gate);
-}
-
-/**
- * How many moves a Grow round may add: more the better the prep is held, or
- * the barer the opening still is.
- *
- * A budget is spent down one line — you answer at the edge of the prep, the
- * book answers back, and your prep ends again — so this is how deep one round
- * may take a line, not how wide. Eight at a time to prep that is known is a
- * line taking shape; eight at a time to prep still being learned is eight more
- * things to forget, which is why readiness earns it.
- *
- * Thinness earns it too, and for the opposite reason. The readiness rule was
- * meant for a repertoire that exists: do not pile more on what you are still
- * learning. An opening that answers almost nothing has nothing to pile onto,
- * and a budget of one there is a repertoire that takes a hundred rounds to
- * become playable.
- */
-export function growthBudget(ready: number, thin = 0): number {
-  return 1 + Math.round((MAX_NEW_MOVES - 1) * clamp(Math.max(ready, thin)));
 }
 
 /**
@@ -361,7 +342,6 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
     need: number,
     work: number,
     newMoves = 0,
-    thin = 0,
   ) => {
     if (need <= 0) return;
     out.push({
@@ -373,14 +353,13 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
       lastAt: lastAt(node.id),
       starred: starredWithin(tree, node.id, starred),
       newMoves,
-      thin,
     });
   };
 
   for (const color of colorsOf(selection.color)) {
     const reps = input.reps.filter((rep) => rep.color === color);
     if (!reps.length) {
-      push('grow', region, color, 0.5, 1, MAX_NEW_MOVES, 1);
+      push('grow', region, color, 0.5, 1, MAX_NEW_MOVES);
       continue;
     }
     const repairs = input.repairs.filter((item) => item.color === color);
@@ -449,8 +428,7 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
         color,
         growNeed(within(holes, node), ready, thin),
         reachedIn(holes, node).length,
-        growthBudget(ready, thin),
-        thin,
+        MAX_NEW_MOVES,
       );
 
       if (mine.length) {
@@ -481,7 +459,6 @@ export function recommend(input: RecommendInput): Recommendation {
       opening: nodeById(tree, input.selection.opening),
       color: colorsOf(input.selection.color)[0],
       newMoves: MAX_NEW_MOVES,
-      thin: 1,
     };
   }
   for (;;) {
@@ -504,7 +481,6 @@ export function recommend(input: RecommendInput): Recommendation {
     opening: nodeById(tree, best.openingId),
     color: best.color,
     newMoves: best.newMoves,
-    thin: best.thin,
   };
 }
 
