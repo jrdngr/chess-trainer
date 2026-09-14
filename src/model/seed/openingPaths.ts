@@ -252,6 +252,8 @@ export const OPENING_PATHS: string[] = [
   'd4 Nf6 c4 g6 Nc3 Bg7 Nf3:25 d6:70 Bf4:20 O-O:85 e3:80 b6:45 Be2:70 Bb7:80 O-O:85 Nbd7:75 h3:60 Re8:70 Qc2:60 e5:75',
   'd4 Nf6 c4 g6 Nc3 Bg7 Nf3 d6 Bg5:20 h6:70 Bh4:75 O-O:85 e3:75 c5:60 Be2:70 cxd4:70 exd4:85 Nc6:80',
   'd4 Nf6 c4 g6 Nc3 Bg7 Nf3 d6 e3:15 O-O:85 Be2:75 e5:70 O-O:85 Nc6:70 d5:70 Ne7:80 e4:70 Nd7:75',
+  // Castling first is as common as 4...d6 and transposes to the Classical after 5.e4 d6.
+  'd4 Nf6 c4 g6 Nc3 Bg7 Nf3 O-O:60 e4:70 d6:95 Be2:70 e5:70',
   'd4 Nf6 c4 g6 Nc3 Bg7 Bg5:6 h6:60 Bh4:70 d6:80 e3:70 O-O:85 Be2:75 Nbd7:70 Nf3:80 e5:75 O-O:80 Qe8:60',
   'd4 Nf6 c4 g6 Nc3 Bg7 Bf4:5 d6:70 e3:75 O-O:85 Be2:70 c5:55 dxc5:60 dxc5:85 Qxd8:80 Rxd8:95 Bxb8:60 Rxb8:90',
   'd4 Nf6 Nf3 g6 Bf4:20 Bg7:90 e3:85 d6:60 Be2:70 O-O:88 h3:60 Nbd7:70 O-O:85 Qe8:55 c4:70 e5:80 Bh2:70 Qe7:70',
