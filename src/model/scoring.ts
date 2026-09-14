@@ -66,7 +66,7 @@ export const MILESTONES: MilestoneTier[] = [
 ];
 
 /** Points to the first milestone on a variation's ladder. */
-export const FIRST_MILESTONE = 100;
+export const FIRST_MILESTONE = 1000;
 /** Each milestone asks this much more than the last. */
 export const MILESTONE_RATIO = 1.6;
 
