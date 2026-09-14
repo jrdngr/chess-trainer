@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { lookup, movePercent, formatGameCount, totalGamesAt, openingNameForPath } from '../model/reference';
+import { BOOK_SOURCE } from '../model/book';
 import { referenceIndex } from '../model/referenceIndex';
 import type { ExplorerMove, ReferenceGame } from '../model/types';
 import { Icons } from './ui';
@@ -88,6 +89,12 @@ export function ExplorerPanel({
           ))}
         </>
       ) : null}
+
+      {!compact && (
+        <div className="small faint" style={{ padding: '10px 2px 0' }}>
+          {BOOK_SOURCE}
+        </div>
+      )}
     </div>
   );
 }

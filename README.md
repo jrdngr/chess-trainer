@@ -410,9 +410,34 @@ so in Settings when it overflows.
 Saved state carries a schema version. Version 0 is the fresh start: every
 earlier save, settings included, is discarded rather than migrated.
 
-The reference database is a small curated sample, authored as weighted paths
-in `src/model/seed/openingPaths.ts` and folded into a tree at runtime. Every
-seeded line is checked for legality by the tests.
+The reference database is crawled from the [Lichess opening
+explorer](https://explorer.lichess.ovh) — rated 2000–2500 blitz, rapid and
+classical games — and lives in `src/model/book/book.json`.
+
+`scripts/fetch-book.mjs` does the crawl. It is best-first: the most-played
+unexpanded position is always the next one requested, so depth and breadth fall
+out of a single budget rather than being configured, and the popular lines get
+deep on their own. Positions are keyed and de-duplicated locally, so a position
+two move orders reach is crawled once and the transposition is free. Pacing
+adapts to the explorer's throttling, and the run checkpoints, so raising the
+budget continues from the frontier instead of starting again:
+
+```bash
+set -a; . ./.env.local; set +a   # LICHESS_TOKEN=...
+node scripts/fetch-book.mjs 8000
+```
+
+Move popularity is stored as a share of the position in basis points rather
+than an absolute count: the explorer only ever shows it as a proportion, and at
+this sample size the absolute numbers are nine digits each. `src/model/book.ts`
+decodes the file into the index the app reads; because the crawl already knows
+every position's key, building the index is a parse and two loops with no move
+generation at all.
+
+The seeded repertoires in `src/model/seed/repertoires.ts` supply each
+repertoire's character by hand and take their coverage from the book: `store/
+seed.ts` extends them until nothing played in 3% of games or more goes
+unanswered, which is the same guarantee `coverage.test.ts` checks.
 
 ## Design
 

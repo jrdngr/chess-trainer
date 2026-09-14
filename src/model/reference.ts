@@ -1,57 +1,5 @@
 import { applySan, positionKey, START_FEN, type Color } from '../chess/core';
-import type { ExplorerEntry, ExplorerMove, ReferenceGame } from './types';
-
-/**
- * The reference database is authored as a set of weighted paths and folded into
- * a tree. Move counts are derived, so a position's numbers always add up: the
- * explorer never shows a child more popular than its parent.
- *
- * Paths look like:  "e4:40:38/33/29 c5:40 Nf3:55 d6:40"
- * where the parts are SAN : share-of-games-at-that-position : white/draw/black.
- */
-export interface RefTreeNode {
-  san: string;
-  share: number;
-  wdl: [number, number, number];
-  children: Map<string, RefTreeNode>;
-}
-
-const DEFAULT_WDL: [number, number, number] = [36, 33, 31];
-
-function parseToken(token: string): { san: string; share: number; wdl?: [number, number, number] } {
-  const [san, shareRaw, wdlRaw] = token.split(':');
-  const share = Number(shareRaw ?? 10);
-  let wdl: [number, number, number] | undefined;
-  if (wdlRaw) {
-    const parts = wdlRaw.split('/').map(Number);
-    if (parts.length === 3 && parts.every((n) => Number.isFinite(n))) {
-      wdl = [parts[0], parts[1], parts[2]];
-    }
-  }
-  return { san, share: Number.isFinite(share) ? share : 10, wdl };
-}
-
-export function buildRefTree(paths: string[]): Map<string, RefTreeNode> {
-  const roots = new Map<string, RefTreeNode>();
-  for (const path of paths) {
-    let level = roots;
-    let parentWdl = DEFAULT_WDL;
-    for (const token of path.trim().split(/\s+/)) {
-      if (!token) continue;
-      const { san, share, wdl } = parseToken(token);
-      let node = level.get(san);
-      if (!node) {
-        node = { san, share, wdl: wdl ?? parentWdl, children: new Map() };
-        level.set(san, node);
-      } else if (wdl) {
-        node.wdl = wdl;
-      }
-      parentWdl = node.wdl;
-      level = node.children;
-    }
-  }
-  return roots;
-}
+import type { ExplorerEntry, ExplorerMove } from './types';
 
 export interface OpeningName {
   eco: string;
@@ -67,6 +15,14 @@ export interface CatalogueEntry extends OpeningName {
   games: number;
 }
 
+/**
+ * The reference database: every position the book knows, keyed by
+ * `positionKey`, plus the names attached to them.
+ *
+ * Built by `model/book.ts` from a crawl of the lichess opening explorer. The
+ * crawl resolves transpositions itself — a position two move orders reach is
+ * one record — so nothing here has to merge routes back together.
+ */
 export interface ReferenceIndex {
   /** positionKey -> explorer entry */
   entries: Map<string, ExplorerEntry>;
@@ -76,192 +32,6 @@ export interface ReferenceIndex {
   catalogue: CatalogueEntry[];
   totalGames: number;
   gameCount: number;
-}
-
-export interface BuildIndexOptions {
-  paths: string[];
-  /** "e4 c5 Nf3 d6" -> { eco, name } */
-  openingNames: Record<string, OpeningName>;
-  games: ReferenceGame[];
-  totalGames: number;
-  startFen?: string;
-}
-
-/** Walk the authored tree and produce a position-keyed explorer index. */
-/**
- * Fold one route's moves into what another route already found.
- *
- * Games add up: both move orders really do arrive here, so the position is as
- * popular as the sum of the ways into it.
- */
-function mergeMoves(existing: ExplorerMove[] | undefined, incoming: ExplorerMove[]): ExplorerMove[] {
-  if (!existing?.length) return [...incoming].sort((a, b) => b.games - a.games);
-  const bySan = new Map(existing.map((m) => [m.san, { ...m }]));
-  for (const move of incoming) {
-    const found = bySan.get(move.san);
-    if (!found) {
-      bySan.set(move.san, { ...move });
-      continue;
-    }
-    found.games += move.games;
-    found.white += move.white;
-    found.draw += move.draw;
-    found.black += move.black;
-  }
-  return [...bySan.values()].sort((a, b) => b.games - a.games);
-}
-
-export function buildReferenceIndex(opts: BuildIndexOptions): ReferenceIndex {
-  const startFen = opts.startFen ?? START_FEN;
-  const tree = buildRefTree(opts.paths);
-  const entries = new Map<string, ExplorerEntry>();
-
-  const visit = (level: Map<string, RefTreeNode>, fen: string, gamesHere: number) => {
-    if (!level.size) return;
-    const nodes = [...level.values()];
-    const shareTotal = nodes.reduce((sum, n) => sum + n.share, 0) || 1;
-    const moves: ExplorerMove[] = [];
-    const children: { node: RefTreeNode; fen: string; games: number }[] = [];
-
-    for (const node of nodes) {
-      const move = applySan(fen, node.san);
-      if (!move) continue;
-      const games = Math.max(1, Math.round((gamesHere * node.share) / shareTotal));
-      const [w, d, b] = node.wdl;
-      const wdlTotal = w + d + b || 1;
-      moves.push({
-        san: move.san,
-        games,
-        white: Math.round((games * w) / wdlTotal),
-        draw: Math.round((games * d) / wdlTotal),
-        black: Math.round((games * b) / wdlTotal),
-      });
-      children.push({ node, fen: move.after, games });
-    }
-
-    if (moves.length) {
-      // Transpositions are the normal case, not the exception: 1.e4 c5 2.Nf3 d6
-      // 3.d4 cxd4 4.Nxd4 Nf6 5.Nc3 Nc6 and the same moves with Nc6 and d6 swapped
-      // are one position authored as two paths. Overwriting here threw away
-      // whichever route was walked first, which is how a position with six real
-      // continuations came to offer one.
-      const key = positionKey(fen);
-      const existing = entries.get(key);
-      entries.set(key, { ...existing, key, moves: mergeMoves(existing?.moves, moves) });
-    }
-    for (const child of children) visit(child.node.children, child.fen, child.games);
-  };
-
-  visit(tree, startFen, opts.totalGames);
-
-  // Opening names, resolved from SAN prefixes to position keys.
-  const names = new Map<string, OpeningName>();
-  for (const [line, name] of Object.entries(opts.openingNames)) {
-    let fen = startFen;
-    let ok = true;
-    for (const san of line.split(/\s+/).filter(Boolean)) {
-      const move = applySan(fen, san);
-      if (!move) {
-        ok = false;
-        break;
-      }
-      fen = move.after;
-    }
-    if (ok) names.set(positionKey(fen), name);
-  }
-
-  // Attach the deepest matching opening name to each entry, and index games.
-  const gamesByKey = new Map<string, ReferenceGame[]>();
-  for (const game of opts.games) {
-    let fen = startFen;
-    const seen = new Set<string>();
-    for (const san of game.moves.slice(0, 30)) {
-      const key = positionKey(fen);
-      if (!seen.has(key)) {
-        seen.add(key);
-        const list = gamesByKey.get(key) ?? [];
-        if (list.length < 8) list.push(game);
-        gamesByKey.set(key, list);
-      }
-      const move = applySan(fen, san);
-      if (!move) break;
-      fen = move.after;
-    }
-  }
-
-  for (const [key, entry] of entries) {
-    const named = names.get(key);
-    if (named) {
-      entry.eco = named.eco;
-      entry.opening = named.name;
-    }
-    const games = gamesByKey.get(key);
-    if (games?.length) entry.topGames = games;
-  }
-
-  // Positions that have games or a name but no authored continuations still
-  // deserve an entry so the explorer can show something useful.
-  for (const [key, name] of names) {
-    if (!entries.has(key)) entries.set(key, { key, moves: [], eco: name.eco, opening: name.name });
-  }
-  for (const [key, games] of gamesByKey) {
-    const existing = entries.get(key);
-    if (existing) existing.topGames = existing.topGames ?? games;
-    else entries.set(key, { key, moves: [], topGames: games });
-  }
-
-  // The catalogue: every named opening, with how often it is actually reached.
-  //
-  // Popularity is the count on the move that arrives at the position, or the
-  // games continuing from it, whichever is larger. The arriving count must come
-  // from the final ply and not an earlier one: a path that leaves the authored
-  // tree part way down is rare, and inheriting 1.d4's count would rank the
-  // Englund Gambit alongside the Queen's Pawn Opening.
-  const found: CatalogueEntry[] = [];
-  for (const [path, name] of Object.entries(opts.openingNames)) {
-    const sans = path.split(/\s+/).filter(Boolean);
-    // A one-move name is not an opening you would sit down to practise — it is
-    // the whole database with a first move, which this mode already offers.
-    if (sans.length < 2) continue;
-    let fen = startFen;
-    let arriving = 0;
-    let legal = true;
-    for (const san of sans) {
-      const parent = entries.get(positionKey(fen));
-      arriving = parent?.moves.find((m) => m.san === san)?.games ?? 0;
-      const move = applySan(fen, san);
-      if (!move) {
-        legal = false;
-        break;
-      }
-      fen = move.after;
-    }
-    if (!legal) continue;
-    const here = entries.get(positionKey(fen));
-    const games = Math.max(arriving, here ? here.moves.reduce((s, m) => s + m.games, 0) : 0);
-    found.push({ id: path, sans, eco: name.eco, name: name.name, games });
-  }
-
-  // One row per name: the data names a few positions the same way at different
-  // depths, and two identical rows in a picker are worse than one.
-  const byName = new Map<string, CatalogueEntry>();
-  for (const entry of found) {
-    const seen = byName.get(entry.name);
-    if (!seen || entry.games > seen.games || (entry.games === seen.games && entry.sans.length < seen.sans.length)) {
-      byName.set(entry.name, entry);
-    }
-  }
-  const catalogue = [...byName.values()].sort(
-    (a, b) => b.games - a.games || a.name.localeCompare(b.name),
-  );
-
-  return {
-    entries,
-    names,
-    catalogue,
-    totalGames: opts.totalGames,
-    gameCount: opts.games.length,
-  };
 }
 
 /** Look one opening up by its id — the space-joined move order. */
@@ -337,39 +107,11 @@ export function deepestNameForColor(
   return mine ?? any;
 }
 
-/**
- * Families the book's own names cannot be folded into automatically.
- *
- * Most variation names are "Family: Variation" over a family the catalogue also
- * names on its own — "French: Winawer" beside "French Defence" — so the family
- * resolves by looking it up. These are the ones that do not: abbreviations the
- * catalogue never spells out (KID), variations named after a person or a pawn
- * structure rather than their parent (Najdorf, Dragon, Sämisch, Winawer), and
- * two prefixes that match more than one opening (a King's Indian is an Attack
- * or a Defence; Pirc is named twice for two move orders).
- */
-const FAMILY_ALIASES: Record<string, string> = {
-  KID: "King's Indian Defence",
-  "King's Indian": "King's Indian Defence",
-  'Sämisch': "King's Indian Defence",
-  Najdorf: 'Sicilian Defence',
-  Dragon: 'Sicilian Defence',
-  'Accelerated Dragon': 'Sicilian Defence',
-  Winawer: 'French Defence',
-  'Two Knights': 'Italian Game',
-  QGD: "Queen's Gambit Declined",
-  'QGD Exchange': "Queen's Gambit Declined",
-  QGA: "Queen's Gambit Accepted",
-  Benoni: 'Modern Benoni',
-  Pirc: 'Pirc Defence',
-  "Queen's Indian": 'Queen\u2019s Indian Defence',
-};
-
 const familyCache = new WeakMap<ReferenceIndex, Map<string, string>>();
 
 /**
- * The opening family a name belongs to: "KID: Sämisch Variation" is a King's
- * Indian Defence, and "Sicilian Defence" is its own family.
+ * The opening family a name belongs to: "Sicilian Defence: Najdorf Variation"
+ * is a Sicilian Defence, and "Sicilian Defence" is its own family.
  *
  * Names rather than positions, because the book's taxonomy lives in the text.
  * Walking the move order cannot do it: the King's Indian is named at
@@ -393,14 +135,11 @@ function families(index: ReferenceIndex): Map<string, string> {
       continue;
     }
     const prefix = name.slice(0, at);
-    const alias = FAMILY_ALIASES[prefix];
-    if (alias) {
-      map.set(name, alias);
-      continue;
-    }
-    // The shortest opening the catalogue names with this prefix: "Sicilian"
-    // finds "Sicilian Defence". Nothing found leaves the prefix standing, which
-    // still reads as a family.
+    // The shortest opening the catalogue names with this prefix. Lichess spells
+    // the family out in full — "Sicilian Defence: Najdorf Variation" — so the
+    // prefix is usually the family exactly, and the lookup only has to confirm
+    // the book names it on its own. Where it does not, as with the Torre
+    // Attack, the prefix is left standing, which still reads as a family.
     const found = standalone
       .filter((named) => named === prefix || named.startsWith(`${prefix} `))
       .sort((a, b) => a.length - b.length)[0];

@@ -21,19 +21,19 @@ describe('whose opening it is', () => {
   it('files each opening under the side that plays it', () => {
     const picks = picksFrom(tree(), [NAJDORF, RUY, FRENCH, LONDON, 'e4']);
     expect(picks.map((pick) => `${pick.name}:${pick.color}`)).toEqual([
-      'Sicilian: Najdorf:b',
-      'Ruy López:w',
+      'Sicilian Defence: Najdorf Variation:b',
+      'Ruy Lopez:w',
       'French Defence:b',
-      'London System vs the King’s Indian:w',
-      "King's Pawn Opening:w",
+      'London System:w',
+      "King's Pawn Game:w",
     ]);
   });
 
   it('gives White the lines White chooses inside a Black opening', () => {
-    // 9.Bg5 against the Najdorf is White's decision, not Black's, and the
+    // 6.Be3 against the Najdorf is White's decision, not Black's, and the
     // name attaches on White's move — so it belongs in the White tree.
-    const [pick] = picksFrom(tree(), [`${NAJDORF} Bg5`]);
-    expect(pick.name).toBe('Najdorf: Main Line, 6.Bg5');
+    const [pick] = picksFrom(tree(), [`${NAJDORF} Be3`]);
+    expect(pick.name).toBe('Sicilian Defence: Najdorf Variation, English Attack');
     expect(pick.color).toBe('w');
   });
 });

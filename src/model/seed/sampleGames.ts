@@ -1,8 +1,8 @@
 import { applySan, fenTurn, START_FEN } from '../../chess/core';
-import { buildRefTree, type RefTreeNode } from '../reference';
+import { lookup } from '../reference';
+import { referenceIndex } from '../referenceIndex';
 import { mulberry32 } from '../session';
 import type { ImportedGame } from '../types';
-import { OPENING_PATHS } from './openingPaths';
 
 /**
  * A stand-in game archive for the import flow.
@@ -37,7 +37,6 @@ const PLAYER_BIAS: Record<string, number> = {
 
 interface Choice {
   san: string;
-  node: RefTreeNode;
   weight: number;
 }
 
@@ -52,7 +51,7 @@ export interface SampleArchiveOptions {
 
 export function generateSampleArchive(opts: SampleArchiveOptions): ImportedGame[] {
   const { username, count = 60, seed = 20240611, source = 'lichess', whiteShare = 0.5 } = opts;
-  const tree = buildRefTree(OPENING_PATHS);
+  const index = referenceIndex();
   const rand = mulberry32(seed);
   const games: ImportedGame[] = [];
 
@@ -60,18 +59,19 @@ export function generateSampleArchive(opts: SampleArchiveOptions): ImportedGame[
     const userIsWhite = rand() < whiteShare;
     const userColor = userIsWhite ? 'w' : 'b';
     const moves: string[] = [];
-    let level = tree;
     let fen = START_FEN;
     const maxPlies = 12 + Math.floor(rand() * 12);
 
-    while (moves.length < maxPlies && level.size) {
+    while (moves.length < maxPlies) {
+      const entry = lookup(index, fen);
+      if (!entry?.moves.length) break;
       const isUserMove = fenTurn(fen) === userColor;
       const choices: Choice[] = [];
-      for (const node of level.values()) {
-        const move = applySan(fen, node.san);
+      for (const row of entry.moves) {
+        const move = applySan(fen, row.san);
         if (!move) continue;
-        const bias = isUserMove ? (PLAYER_BIAS[node.san] ?? 1) : 1;
-        choices.push({ san: move.san, node, weight: Math.max(0.01, node.share * bias) });
+        const bias = isUserMove ? (PLAYER_BIAS[row.san] ?? 1) : 1;
+        choices.push({ san: move.san, weight: Math.max(0.01, row.games * bias) });
       }
       if (!choices.length) break;
 
@@ -88,7 +88,6 @@ export function generateSampleArchive(opts: SampleArchiveOptions): ImportedGame[
       const move = applySan(fen, picked.san)!;
       moves.push(move.san);
       fen = move.after;
-      level = picked.node.children;
     }
 
     const opponent = OPPONENTS[Math.floor(rand() * OPPONENTS.length)];

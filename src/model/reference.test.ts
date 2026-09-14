@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applySan, positionKey, walkSan, START_FEN } from '../chess/core';
 import {
-  buildReferenceIndex,
-  buildRefTree,
   deepestName,
   deepestNameForColor,
   familyName,
@@ -13,33 +11,36 @@ import {
   totalGamesAt,
 } from './reference';
 import { referenceIndex } from './referenceIndex';
+import { decodeBook, type BookFile } from './book';
 
-describe('reference tree', () => {
-  it('merges shared prefixes across paths', () => {
-    const tree = buildRefTree(['e4:44 c5:42 Nf3:70', 'e4:44 e5:23']);
-    expect([...tree.keys()]).toEqual(['e4']);
-    expect([...tree.get('e4')!.children.keys()].sort()).toEqual(['c5', 'e5']);
-  });
+const FIXTURE: BookFile = {
+  version: 1,
+  source: 'test',
+  builtAt: '2026-01-01',
+  totalGames: 1000,
+  positions: [
+    // Shares are basis points of the position's own game count.
+    [positionKey(START_FEN), 1000, [['e4', 6000, 50, 10], ['d4', 4000, 50, 10]]],
+    [positionKey(walkSan(['e4']).fens.at(-1)!), 600, [['c5', 5000, 40, 10], ['e5', 5000, 40, 10]]],
+    [positionKey(walkSan(['e4', 'c5']).fens.at(-1)!), 300, [['Nf3', 8000, 50, 10]]],
+  ],
+  names: [[positionKey(walkSan(['e4', 'c5']).fens.at(-1)!), 'e4 c5', 'B20', 'Sicilian Defense']],
+};
 
-  it('inherits the result split from the parent when omitted', () => {
-    const tree = buildRefTree(['e4:44:40/30/30 c5:42']);
-    expect(tree.get('e4')!.children.get('c5')!.wdl).toEqual([40, 30, 30]);
-  });
-});
+describe('the book file', () => {
+  const index = decodeBook(FIXTURE);
 
-describe('reference index', () => {
-  const index = buildReferenceIndex({
-    paths: ['e4:60 c5:50 Nf3:80', 'e4:60 e5:50', 'd4:40 d5:100'],
-    openingNames: { 'e4 c5': { eco: 'B20', name: 'Sicilian Defence' } },
-    games: [],
-    totalGames: 1000,
-  });
-
-  it('splits games between siblings in proportion to their share', () => {
+  it('expands basis-point shares back into game counts', () => {
     const start = lookup(index, START_FEN)!;
     expect(start.moves.map((m) => m.san)).toEqual(['e4', 'd4']);
     expect(start.moves[0].games).toBe(600);
     expect(start.moves[1].games).toBe(400);
+  });
+
+  it('splits a move\u2019s games across the three results', () => {
+    const [e4] = lookup(index, START_FEN)!.moves;
+    expect([e4.white, e4.draw, e4.black]).toEqual([300, 60, 240]);
+    expect(e4.white + e4.draw + e4.black).toBe(e4.games);
   });
 
   it('never shows a child more popular than its parent', () => {
@@ -54,14 +55,9 @@ describe('reference index', () => {
     expect(openingNameForPath(index, ['d4'])).toBeNull();
   });
 
-  it('skips illegal authored moves rather than throwing', () => {
-    const broken = buildReferenceIndex({
-      paths: ['e4:50 Qh5:20 e5:99'],
-      openingNames: {},
-      games: [],
-      totalGames: 10,
-    });
-    expect(lookup(broken, START_FEN)!.moves.map((m) => m.san)).toEqual(['e4']);
+  it('spells the book\u2019s American names the way the rest of the app does', () => {
+    expect(index.catalogue.map((entry) => entry.name)).toContain('Sicilian Defence');
+    expect(index.catalogue.map((entry) => entry.name)).not.toContain('Sicilian Defense');
   });
 });
 
@@ -80,7 +76,7 @@ describe('the seeded database', () => {
   it('knows the Najdorf', () => {
     const najdorf = walkSan('e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6'.split(' ')).fens.at(-1)!;
     const entry = lookup(index, najdorf)!;
-    expect(entry.opening).toBe('Sicilian: Najdorf');
+    expect(entry.opening).toBe('Sicilian Defence: Najdorf Variation');
     expect(entry.eco).toBe('B90');
     expect(entry.moves.map((m) => m.san)).toEqual(
       expect.arrayContaining(['Be3', 'Bg5', 'Be2', 'Bc4', 'f4', 'h3']),
@@ -109,42 +105,16 @@ describe('formatting', () => {
 });
 
 describe('transposed positions', () => {
-  it('merges the moves of every route into one entry', () => {
-    // Two move orders reaching the same position, each with a continuation the
-    // other does not have. Overwriting would lose one of them.
-    const index = buildReferenceIndex({
-      paths: [
-        'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 Nc6 Bg5',
-        'e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3 d6 Be3',
-      ],
-      totalGames: 1000,
-      openingNames: {},
-      games: [],
-    });
-    let fen = START_FEN;
-    for (const san of 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 Nc6'.split(' ')) {
-      fen = applySan(fen, san)!.after;
-    }
-    const sans = lookup(index, fen)?.moves.map((m) => m.san) ?? [];
-    expect(sans).toContain('Bg5');
-    expect(sans).toContain('Be3');
-  });
-
-  it('conserves the games when two routes rejoin', () => {
-    // Both move orders lead here, so the split upstream and the merge here
-    // cancel out: the position is as popular as the games that reach it,
-    // neither inflated by counting each route nor halved by keeping only one.
-    const index = buildReferenceIndex({
-      paths: ['d4 Nf6 c4 e6 Nf3 d5', 'd4 Nf6 Nf3 e6 c4 d5'],
-      totalGames: 1000,
-      openingNames: {},
-      games: [],
-    });
-    let fen = START_FEN;
-    for (const san of 'd4 Nf6 c4 e6 Nf3'.split(' ')) fen = applySan(fen, san)!.after;
-    const entry = lookup(index, fen);
-    expect(entry?.moves).toHaveLength(1);
-    expect(totalGamesAt(entry)).toBe(1000);
+  it('is one entry however many move orders reach it', () => {
+    // The crawl keys positions rather than lines, so 1.d4 Nf6 2.c4 e6 3.Nf3 and
+    // 1.d4 Nf6 2.Nf3 e6 3.c4 are not two records to be merged — they are the
+    // same record, found once.
+    const index = referenceIndex();
+    const one = walkSan('d4 Nf6 c4 e6 Nf3'.split(' ')).fens.at(-1)!;
+    const other = walkSan('d4 Nf6 Nf3 e6 c4'.split(' ')).fens.at(-1)!;
+    expect(positionKey(one)).toBe(positionKey(other));
+    expect(lookup(index, one)).toBe(lookup(index, other));
+    expect(totalGamesAt(lookup(index, one))).toBeGreaterThan(0);
   });
 
   it('keeps the King’s Indian branching the seed data authors', () => {
@@ -164,7 +134,7 @@ describe('naming a line from one side', () => {
   const index = referenceIndex();
 
   it('prefers a name earned by the side that is asking', () => {
-    // 1.e4 c5 has a name at both plies: "King's Pawn Opening" after e4 is
+    // 1.e4 c5 has a name at both plies: "King's Pawn Game" after e4 is
     // White's, "Sicilian Defence" after c5 is Black's.
     expect(deepestNameForColor(index, ['e4', 'c5'], 'b')?.name).toBe('Sicilian Defence');
     expect(deepestNameForColor(index, ['e4', 'c5'], 'w')?.name).not.toBe('Sicilian Defence');
@@ -183,8 +153,12 @@ describe('naming a line from one side', () => {
     expect(deepestNameForColor(index, line, 'b')?.name).toContain("King's Indian");
   });
 
-  it('returns nothing for a line that leaves the book at once', () => {
-    expect(deepestNameForColor(index, ['a3', 'h6', 'a4'], 'w')).toBeNull();
+  it('stops naming where the line leaves the book', () => {
+    // The book names every first move it holds, so a line that leaves it keeps
+    // the last name it earned rather than picking one up from the moves after.
+    const named = deepestNameForColor(index, ['a3', 'h6', 'a4'], 'w');
+    expect(named?.name).toBe("Anderssen's Opening");
+    expect(named?.ply).toBe(1);
   });
 
   it('stops at an illegal move rather than throwing', () => {
@@ -197,11 +171,11 @@ describe('naming a line as the player\u2019s own opening', () => {
 
   it('gives nothing when the only name restates the first move', () => {
     // The bug this exists for: a Black line the book only recognises at 1.d4
-    // came back as "Queen's Pawn Opening" \u2014 true, and the name of what White
+    // came back as "Queen's Pawn Game" \u2014 true, and the name of what White
     // did. "Your Black prep" says more.
-    expect(deepestNameForColor(index, ['d4', 'Nf6'], 'b')?.name).toBe("Queen's Pawn Opening");
-    expect(specificNameForColor(index, ['d4', 'Nf6'], 'b')).toBeNull();
-    expect(specificNameForColor(index, ['d4', 'Nf6', 'Bf4'], 'w')).toBeNull();
+    expect(deepestNameForColor(index, ['d4', 'h6'], 'b')?.name).toBe("Queen's Pawn Game");
+    expect(specificNameForColor(index, ['d4', 'h6'], 'b')).toBeNull();
+    expect(specificNameForColor(index, ['d4', 'h6', 'c4'], 'w')).toBeNull();
   });
 
   it('keeps a Black reply at move one, which does name a choice', () => {
@@ -209,13 +183,19 @@ describe('naming a line as the player\u2019s own opening', () => {
   });
 
   it('keeps a name earned on the other side\u2019s move', () => {
-    // The book attaches "King's Indian Defence" at White's seventh ply, and it
-    // is still the name of Black's opening \u2014 so whose move earned it cannot be
-    // what decides this.
+    // The book attaches "King's Indian Defence" at White's fifth ply, and it is
+    // still the name of Black's opening \u2014 so whose move earned it cannot be
+    // what decides this. Here the deepest name for Black lands on Black's own
+    // move, and the family it belongs to did not.
     const line = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6'.split(' ');
     const found = specificNameForColor(index, line, 'b');
     expect(found?.name).toContain("King's Indian");
-    expect(found!.ply % 2).toBe(1);
+    expect(familyName(index, found!.name)).toBe("King's Indian Defence");
+    // The family name itself is earned by White's fifth ply, and it names what
+    // Black is doing all the same.
+    const family = deepestName(index, line.slice(0, 5));
+    expect(family?.name).toBe("King's Indian Defence");
+    expect(family!.ply % 2).toBe(1);
   });
 
   it('takes the cutoff as an argument, for callers that want more', () => {
@@ -231,27 +211,32 @@ describe('naming a line as the player\u2019s own opening', () => {
 describe('opening families', () => {
   const index = referenceIndex();
 
-  it('folds an abbreviation the catalogue never spells out', () => {
-    expect(familyName(index, 'KID: Sämisch Variation')).toBe("King's Indian Defence");
-    expect(familyName(index, 'KID: Bf4 System')).toBe("King's Indian Defence");
+  it('resolves a prefix the catalogue names on its own', () => {
+    expect(familyName(index, 'French Defence: Winawer Variation')).toBe('French Defence');
+    expect(familyName(index, 'Caro-Kann Defence: Advance Variation')).toBe('Caro-Kann Defence');
+    expect(familyName(index, "King's Indian Defence: Sämisch Variation")).toBe(
+      "King's Indian Defence",
+    );
   });
 
-  it('resolves a prefix the catalogue does name on its own', () => {
-    expect(familyName(index, 'French: Winawer')).toBe('French Defence');
-    expect(familyName(index, 'Caro-Kann: Advance')).toBe('Caro-Kann Defence');
-    expect(familyName(index, 'Dutch: Leningrad')).toBe('Dutch Defence');
+  it('leaves the prefix standing when the book never names it alone', () => {
+    // The book has Torre Attack lines but no bare "Torre Attack" position, and
+    // the prefix is still the right heading for them.
+    expect(familyName(index, 'Torre Attack: Classical Defence')).toBe('Torre Attack');
   });
 
-  it('folds a variation named after a person rather than its parent', () => {
-    // Nothing in "Dragon: Yugoslav Attack" says Sicilian, and no position on
-    // the way to it carries the Sicilian's name either.
-    expect(familyName(index, 'Dragon: Yugoslav Attack')).toBe('Sicilian Defence');
-    expect(familyName(index, 'Najdorf: English Attack')).toBe('Sicilian Defence');
+  it('folds a variation named after a person under its family', () => {
+    expect(familyName(index, 'Sicilian Defence: Dragon Variation, Yugoslav Attack')).toBe(
+      'Sicilian Defence',
+    );
+    expect(familyName(index, 'Sicilian Defence: Najdorf Variation, English Attack')).toBe(
+      'Sicilian Defence',
+    );
   });
 
   it('leaves an opening that is already a family alone', () => {
     expect(familyName(index, 'Sicilian Defence')).toBe('Sicilian Defence');
-    expect(familyName(index, "King's Pawn Opening")).toBe("King's Pawn Opening");
+    expect(familyName(index, "King's Pawn Game")).toBe("King's Pawn Game");
   });
 
   it('hands back a name it has never heard of unchanged', () => {
