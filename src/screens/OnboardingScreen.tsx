@@ -33,13 +33,8 @@ export function OnboardingScreen() {
     <>
       <AppBar title="Your openings" large />
       <div className="screen no-nav">
-        <div className="card">
-          <div className="title">Do you already play something?</div>
-          <div className="small muted" style={{ marginTop: 6 }}>
-            Pick it at whatever depth you know it — a whole family like the Sicilian, or one
-            variation as deep as the book goes. Each one is starred and its moves go into your
-            repertoire; Growth extends them from there, a few moves at a time.
-          </div>
+        <div className="note">
+          Pick the openings you already play, at whatever depth you know them.
         </div>
 
         <OpeningList multi />
