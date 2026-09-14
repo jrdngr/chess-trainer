@@ -7,6 +7,7 @@ import {
   BRAKE,
   candidates,
   cardStrength,
+  firstLineGap,
   foundationGap,
   FUN,
   GROWTH_FLOOR,
@@ -303,6 +304,29 @@ describe('what gets recommended', () => {
     // A first move Black has not answered past the move itself is not an answer.
     const stub = createRepertoire('Stub', 'b', 'r_stub');
     expect(foundationGap(input({ selection: { color: 'b', opening: '' }, reps: [stub] }))?.opening.id).toBe('e4');
+  });
+
+  it('builds the first line of an opening chosen with nothing in it, before anything else', () => {
+    // A King's Indian player chooses the Najdorf: nothing there, so it grows —
+    // even with every King's Indian card due, which is on the way in and
+    // would otherwise have Review walk it to the edge and stop.
+    const kid = rep('b', ['d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5']);
+    const due = cardsFor([kid], true);
+    const pick = recommend(input({ reps: [kid], cards: due, selection: { color: 'b', opening: NAJDORF } }));
+    expect(pick).toMatchObject({ focus: 'grow', color: 'b', newMoves: MAX_NEW_MOVES });
+    expect(pick.opening.id).toBe(NAJDORF);
+    // With a line in it, the ranking decides.
+    const both = rep('b', ['d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5', `${NAJDORF} Be3 e5`]);
+    expect(firstLineGap(input({ reps: [both], selection: { color: 'b', opening: NAJDORF } }))).toBeNull();
+    // A variation of an opening the prep is in is still empty until a line reaches it.
+    const samisch = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3';
+    expect(firstLineGap(input({ reps: [kid], selection: { color: 'b', opening: samisch } }))?.opening.id).toBe(samisch);
+    // Either side of a random selection can be the empty one.
+    const white = rep('w', [`${NAJDORF} Be3`]);
+    expect(firstLineGap(input({ reps: [white, kid], selection: { color: 'random', opening: NAJDORF } }))?.color).toBe('b');
+    expect(firstLineGap(input({ reps: [white, both], selection: { color: 'random', opening: NAJDORF } }))).toBeNull();
+    // Nothing chosen is the foundation's business, not this.
+    expect(firstLineGap(input({ reps: [kid], selection: { color: 'b', opening: '' } }))).toBeNull();
   });
 
   it('offers a side with no prep nothing but a Grow round', () => {

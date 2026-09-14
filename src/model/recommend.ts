@@ -12,6 +12,7 @@ import {
 } from './growth';
 import {
   descendantsOf,
+  lineStatus,
   nodeById,
   regionsOf,
   starredWithin,
@@ -522,17 +523,45 @@ export function foundationGap(input: RecommendInput): Recommendation | null {
 }
 
 /**
+ * An opening chosen with nothing in it yet is built before it is anything
+ * else.
+ *
+ * Choosing the Najdorf with no Najdorf prepared is a request for a Najdorf,
+ * and the only round that answers it is one that builds a line there. The
+ * ranking could reach the same answer, and usually does — but the prep on
+ * the way in can be due, and a Review that walks it to the edge of the
+ * opening and stops is a round spent not building the line that was asked
+ * for. So this is a rule, like the foundation: nothing inside the chosen
+ * opening for a side means a Grow round in it for that side, and the
+ * ranking has its say from the second line on.
+ */
+export function firstLineGap(input: RecommendInput): Recommendation | null {
+  const { tree, selection } = input;
+  if (selection.opening === '') return null;
+  const region = nodeById(tree, selection.opening);
+  for (const color of colorsOf(selection.color)) {
+    const reps = input.reps.filter((rep) => rep.color === color);
+    const inside = reps.some((rep) =>
+      leafLines(rep).some((line) => lineStatus(tree, region, line.sans) === 'reached'),
+    );
+    if (!inside) return { focus: 'grow', opening: region, color, newMoves: MAX_NEW_MOVES };
+  }
+  return null;
+}
+
+/**
  * The one thing to start. Never null: with nothing prepared at all, a Grow
  * round in the selection hands out a first line.
  *
- * The foundation comes before any ranking — see `foundationGap`. After it,
+ * The foundation comes before any ranking — see `foundationGap` — and so
+ * does the first line of an opening chosen empty, `firstLineGap`. After them,
  * the winner is narrowed while a variation inside it holds most of its need
  * for the same focus and colour, so a Review asked for by one variation's due
  * cards is a Review on that variation.
  */
 export function recommend(input: RecommendInput): Recommendation {
-  const foundation = foundationGap(input);
-  if (foundation) return foundation;
+  const first = foundationGap(input) ?? firstLineGap(input);
+  if (first) return first;
   const ranked = rank(candidates(input), input.recentFocuses);
   const tree = input.tree;
   let best = ranked[0];

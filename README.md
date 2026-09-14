@@ -112,6 +112,12 @@ its own gets its own part (an answer to 1.e4 and 1.d4 for Black; a first line
 for White); an opening chosen is what the player asked for and is what they
 get.
 
+Likewise an opening chosen with nothing of yours in it: the first round there
+builds a line, by the opening's own move order, before the ranking has a say —
+choosing the Najdorf with no Najdorf prepared is a request for a Najdorf. The
+moves it takes to get there past your prep are not charged against the round's
+budget; only the opening itself is.
+
 Each candidate is scored:
 
 - **Need** is how loudly the work asks: cards due (a position your games got

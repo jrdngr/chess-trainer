@@ -56,7 +56,7 @@ import {
 } from './openingRun';
 import { findHoles } from './growth';
 import { markSeen } from './freshness';
-import { nodeById, openingTree } from './openingTree';
+import { lineStatus, nodeById, openingTree } from './openingTree';
 import { addLine, createRepertoire, hasLine, leafLines, pathTo } from './repertoire';
 import { lookup } from './reference';
 import { referenceIndex } from './referenceIndex';
@@ -579,6 +579,44 @@ describe('not the same round twice', () => {
       const { run } = start([rep], 'b', seed, region, { steer: 'gaps', seen, newMoves: 8 });
       expect(run.target.length).toBeLessThanOrEqual(11);
     }
+  });
+});
+
+describe('the first line of an opening', () => {
+  const KID = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5';
+  const player = () => addLine(createRepertoire('Black', 'b', 'rep_b'), KID.split(' '), 'seed').rep;
+
+  it('enters an opening with nothing in it by its own move order', () => {
+    // A King's Indian player builds a Sämisch: 1.d4, as they play it — not
+    // 1.c4, which is the hole on the way in met most often.
+    const samisch = nodeById(tree, 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3');
+    for (let seed = 0; seed < 10; seed += 1) {
+      const { run } = start([player()], 'b', seed, samisch, { steer: 'gaps', newMoves: 8 });
+      expect(run.target).toEqual(samisch.sans);
+    }
+  });
+
+  it('charges the budget for the opening, not for the way in', () => {
+    const najdorf = nodeById(tree, 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6');
+    const { run } = start([player()], 'b', 1, najdorf, { steer: 'gaps', newMoves: 8 });
+    expect(run.target).toEqual(najdorf.sans);
+    // Five of Black's moves just to get there, then what the opening wants.
+    expect(run.newMoves).toBe(5 + Math.min(8, movesToFit(najdorf.sans.length)));
+    // Prep all the way to the door: only the opening is budgeted.
+    const samisch = nodeById(tree, 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3');
+    expect(start([player()], 'b', 1, samisch, { steer: 'gaps', newMoves: 8 }).run.newMoves).toBe(
+      Math.min(8, movesToFit(samisch.sans.length)),
+    );
+  });
+
+  it('draws a hole as usual once the opening has a line in it', () => {
+    const samisch = nodeById(tree, 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3');
+    const rep = addLine(player(), 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3 O-O Be3 e5'.split(' '), 'seed').rep;
+    const { run } = start([rep], 'b', 1, samisch, { steer: 'gaps', newMoves: 8 });
+    // A hole in or on the way into the opening, not the opening's own line.
+    expect(run.target).not.toEqual(samisch.sans);
+    expect(lineStatus(tree, samisch, run.target)).not.toBe('outside');
+    expect(hasLine(rep, run.target)).toBe(false);
   });
 });
 

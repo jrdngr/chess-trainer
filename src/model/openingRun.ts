@@ -520,18 +520,26 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
 
   const steer = opts.steer ?? DEFAULT_OPTIONS.steer;
   let target = aim.sans;
-  const gap = rep && steer === 'gaps' ? drawHole(rep, tree, aim, opts, rand) : null;
+  const inRegion = rep
+    ? leafLines(rep)
+        .filter((line) => lineStatus(tree, aim, line.sans) === 'reached')
+        .map((line) => {
+          const path = pathTo(rep, line.tipId);
+          return { tipId: line.tipId, sans: line.sans, keys: yourMoves(side, path).map((n) => n.key) };
+        })
+    : [];
+  // An opening with nothing of yours in it yet is entered by its own move
+  // order, not by whichever hole on the way in is met most often: a player
+  // who chose the Sämisch plays 1.d4, and the line they are about to build
+  // should be the one the opening is named by. The budget is the opening's
+  // own — the moves it takes to get there past the prep are not charged.
+  const firstLine = rep !== null && steer === 'gaps' && inRegion.length === 0 && aim.depth > 0;
+  const gap = rep && steer === 'gaps' && !firstLine ? drawHole(rep, tree, aim, opts, rand) : null;
   if (gap) {
     target = [...gap.path, gap.san];
-  } else if (rep) {
+  } else if (rep && !firstLine) {
     const minDecisions = opts.minDecisions ?? 4;
     const weakness = steer === 'weak' ? (opts.weakness ?? null) : null;
-    const inRegion = leafLines(rep)
-      .filter((line) => lineStatus(tree, aim, line.sans) === 'reached')
-      .map((line) => {
-        const path = pathTo(rep, line.tipId);
-        return { tipId: line.tipId, sans: line.sans, keys: yourMoves(side, path).map((n) => n.key) };
-      });
     // Long enough to be a game where there are such lines; anything at all
     // where there are not — a thin region is still yours to play.
     const long = inRegion.filter((line) => line.keys.length >= minDecisions);
@@ -555,6 +563,23 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
     }
   }
 
+  /** What the round may add: the allowance, fitted to the line it walks. */
+  const budgetFor = (): number => {
+    const allowance = Math.max(0, opts.newMoves ?? DEFAULT_OPTIONS.newMoves);
+    const maxPly = opts.growth?.maxPly;
+    if (gap) return Math.min(allowance, movesToFit(gap.path.length, maxPly));
+    if (!firstLine) return allowance;
+    // The way in is yours to choose at the edge, one move at a time, and
+    // none of it is the opening: it is not charged against the budget.
+    let fen = START_FEN;
+    let onWay = 0;
+    for (const san of aim.sans) {
+      if (fenTurn(fen) === side && !source.prepAt(fen).includes(san)) onWay += 1;
+      fen = applySan(fen, san)?.after ?? fen;
+    }
+    return onWay + Math.min(allowance, movesToFit(aim.sans.length, maxPly));
+  };
+
   const run: Run = {
     id: newRunId(),
     sourceLabel: node.name,
@@ -571,10 +596,7 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
     hints: opts.hints ?? DEFAULT_OPTIONS.hints,
     hintsUsed: 0,
     // The budget is what the round may spend; the line decides what it needs.
-    newMoves: Math.min(
-      Math.max(0, opts.newMoves ?? DEFAULT_OPTIONS.newMoves),
-      gap ? movesToFit(gap.path.length, opts.growth?.maxPly) : Infinity,
-    ),
+    newMoves: budgetFor(),
     added: 0,
     prepEnded: null,
   };
