@@ -609,14 +609,25 @@ describe('the first line of an opening', () => {
     );
   });
 
-  it('draws a hole as usual once the opening has a line in it', () => {
+  it('grows an opening with a line in it from the inside, not from the way in', () => {
     const samisch = nodeById(tree, 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3');
     const rep = addLine(player(), 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3 O-O Be3 e5'.split(' '), 'seed').rep;
-    const { run } = start([rep], 'b', 1, samisch, { steer: 'gaps', newMoves: 8 });
-    // A hole in or on the way into the opening, not the opening's own line.
-    expect(run.target).not.toEqual(samisch.sans);
-    expect(lineStatus(tree, samisch, run.target)).not.toBe('outside');
-    expect(hasLine(rep, run.target)).toBe(false);
+    for (let seed = 0; seed < 20; seed += 1) {
+      const { run } = start([rep], 'b', seed, samisch, { steer: 'gaps', newMoves: 8 });
+      // A hole past the door of the opening — never 1.c4, met in every game
+      // and on its way to the Sämisch only by transposition.
+      expect(run.target).not.toEqual(samisch.sans);
+      expect(lineStatus(tree, samisch, run.target)).toBe('reached');
+      expect(hasLine(rep, run.target)).toBe(false);
+    }
+  });
+
+  it('walks the way in only once nothing inside is left to answer', () => {
+    // Any opening as the region has no "inside" but the whole board; a first
+    // move the prep cannot meet is the hole, as before.
+    const rep = player();
+    const { run } = start([rep], 'b', 1, any, { steer: 'gaps', newMoves: 8 });
+    expect(run.target.length).toBe(1);
   });
 });
 

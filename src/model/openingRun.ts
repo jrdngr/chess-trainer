@@ -604,9 +604,10 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
 }
 
 /**
- * The hole to walk toward: drawn on how often you would actually meet it, and
- * on what your own games say about it. Null where the prep has no holes in the
- * region, and the run falls back to a line through it.
+ * The hole to walk toward: one inside the opening while there is any, drawn
+ * on how often you would actually meet it, and on what your own games say
+ * about it. Null where the prep has no holes in the region, and the run
+ * falls back to a line through it.
  *
  * How often you would meet it is the reply's share of the position times the
  * share of games that get to the position at all — nothing else. That one
@@ -640,8 +641,15 @@ function drawHole(
   opts: BeginOptions,
   rand: () => number,
 ): Hole | null {
-  const holes = findHoles(rep, tree.index, { ...opts.growth, region: { tree, node: aim } });
-  if (!holes.length) return null;
+  const found = findHoles(rep, tree.index, { ...opts.growth, region: { tree, node: aim } });
+  if (!found.length) return null;
+  // Inside the opening before on the way to it. A hole on the way in — 1.c4,
+  // met in every game, on its way to the Sämisch by transposition — is met
+  // far more often than anything inside, and would take every round from
+  // the opening the player actually chose. The way in is walked to only
+  // once there is nothing left inside to answer.
+  const inside = found.filter((hole) => lineStatus(tree, aim, [...hole.path, hole.san]) === 'reached');
+  const holes = inside.length ? inside : found;
   const evidence = opts.holeWeight ?? (() => 1);
   const seen = opts.seen ?? NOTHING_SEEN;
   const fresh = (hole: Hole) => {

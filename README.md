@@ -223,6 +223,11 @@ number orders the work without any rule about depth: an unanswered 1.e4 is met
 in four games in ten, a sideline at the same position in one in a hundred, the
 end of a line you reach one game in twenty in less than that.
 
+With an opening selected, the hole is one inside it while there is any: a hole
+on the way in — 1.c4, met in every game and on its way to the Sämisch only by
+transposition — would otherwise take every round from the opening chosen. The
+way in is walked to once nothing inside is left to answer.
+
 It is drawn rather than taken in order, so the rounds are not the same round
 twice — but drawn only from the holes worth at least an eighth of the best one
 (`DRAW_WINDOW`). Proportional drawing is fair and still wrong: it spends one
