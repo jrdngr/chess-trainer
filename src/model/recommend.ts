@@ -476,15 +476,63 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
   return out;
 }
 
+/* ── the foundation ─────────────────────────────────────────────────────── */
+
+/** What Black must have an answer to before anything else: the two first moves nearly every game opens with. */
+export const FOUNDATION_FIRST_MOVES = ['e4', 'd4'];
+
+/**
+ * The three lines a repertoire stands on: something to play as White, and
+ * an answer as Black to 1.e4 and to 1.d4. Between them they cover the first
+ * move of nearly every game a player will sit down to, and until all three
+ * are there, a round spent on anything else is a round spent on a
+ * repertoire that cannot yet be played.
+ *
+ * So they are not weighed against the other candidates; they come first.
+ * Only for a selection that asks for everything: a player who has chosen an
+ * opening, or a side, has said what they want, and gets it. A side chosen on
+ * its own still gets its own part of the foundation — an answer to 1.e4 and
+ * 1.d4 for Black, a first line for White — because that is what playing
+ * that side needs. Null once the foundation is in, or where it was never
+ * asked for.
+ */
+export function foundationGap(input: RecommendInput): Recommendation | null {
+  const { tree, selection } = input;
+  if (selection.opening !== '') return null;
+  const grow = (opening: OpeningNode, color: Color): Recommendation => ({
+    focus: 'grow',
+    opening,
+    color,
+    newMoves: MAX_NEW_MOVES,
+  });
+  for (const color of colorsOf(selection.color)) {
+    const reps = input.reps.filter((rep) => rep.color === color);
+    if (color === 'w') {
+      if (!reps.some((rep) => rep.rootChildren.length > 0)) return grow(tree.root, 'w');
+      continue;
+    }
+    for (const first of FOUNDATION_FIRST_MOVES) {
+      const answered = reps.some((rep) =>
+        rep.rootChildren.some((id) => rep.nodes[id]?.san === first && rep.nodes[id].children.length > 0),
+      );
+      if (!answered) return grow(nodeById(tree, first), 'b');
+    }
+  }
+  return null;
+}
+
 /**
  * The one thing to start. Never null: with nothing prepared at all, a Grow
  * round in the selection hands out a first line.
  *
- * The winner is narrowed while a variation inside it holds most of its need
+ * The foundation comes before any ranking — see `foundationGap`. After it,
+ * the winner is narrowed while a variation inside it holds most of its need
  * for the same focus and colour, so a Review asked for by one variation's due
  * cards is a Review on that variation.
  */
 export function recommend(input: RecommendInput): Recommendation {
+  const foundation = foundationGap(input);
+  if (foundation) return foundation;
   const ranked = rank(candidates(input), input.recentFocuses);
   const tree = input.tree;
   let best = ranked[0];

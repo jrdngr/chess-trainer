@@ -104,6 +104,14 @@ inside the selection. A focus is a preset of Run settings:
   run offers the book, one to eight moves depending on how much line there is
   left to build.
 
+Before any of that, the **foundation**: with no opening selected, a repertoire
+is first given something to play as White, then an answer as Black to 1.e4,
+then to 1.d4 — in that order, ahead of every other candidate, because until
+all three are in it is not a repertoire that can be played. A side chosen on
+its own gets its own part (an answer to 1.e4 and 1.d4 for Black; a first line
+for White); an opening chosen is what the player asked for and is what they
+get.
+
 Each candidate is scored:
 
 - **Need** is how loudly the work asks: cards due (a position your games got

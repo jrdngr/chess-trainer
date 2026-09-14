@@ -7,6 +7,7 @@ import {
   BRAKE,
   candidates,
   cardStrength,
+  foundationGap,
   FUN,
   GROWTH_FLOOR,
   growNeed,
@@ -269,6 +270,39 @@ describe('what gets recommended', () => {
     const narrowed = recommend(input({ selection: { color: 'b', opening: NAJDORF } }));
     expect(narrowed).toMatchObject({ focus: 'grow', color: 'b' });
     expect(narrowed.opening.id).toBe(NAJDORF);
+  });
+
+  it('lays the foundation first: White, then Black against 1.e4, then against 1.d4', () => {
+    const auto = { color: 'random' as const, opening: '' };
+    // Nothing at all: a first line as White.
+    expect(recommend(input({ selection: auto }))).toMatchObject({ focus: 'grow', color: 'w' });
+    expect(recommend(input({ selection: auto })).opening.depth).toBe(0);
+    // White in hand: Black's answer to 1.e4, steered to it.
+    const white = rep('w', [`${NAJDORF} Be3`]);
+    const vsE4 = recommend(input({ selection: auto, reps: [white] }));
+    expect(vsE4).toMatchObject({ focus: 'grow', color: 'b', newMoves: MAX_NEW_MOVES });
+    expect(vsE4.opening.id).toBe('e4');
+    // That too: Black's answer to 1.d4, whatever else Black has.
+    const black = rep('b', ['e4 c5 Nf3 d6', 'c4 e5 Nc3 Nf6']);
+    const vsD4 = recommend(input({ selection: auto, reps: [white, black] }));
+    expect(vsD4).toMatchObject({ focus: 'grow', color: 'b' });
+    expect(vsD4.opening.id).toBe('d4');
+    // All three in: the ranking decides from here.
+    const founded = rep('b', ['e4 c5 Nf3 d6', 'd4 Nf6 c4 g6']);
+    expect(foundationGap(input({ selection: auto, reps: [white, founded] }))).toBeNull();
+  });
+
+  it('lays only the part of the foundation the selection asks for', () => {
+    // A side chosen on its own still gets its own foundation.
+    const blackOnly = recommend(input({ selection: { color: 'b', opening: '' } }));
+    expect(blackOnly).toMatchObject({ focus: 'grow', color: 'b' });
+    expect(blackOnly.opening.id).toBe('e4');
+    expect(foundationGap(input({ selection: { color: 'w', opening: '' }, reps: [rep('w', [`${NAJDORF} Be3`])] }))).toBeNull();
+    // An opening chosen is what the player wants, foundation or not.
+    expect(foundationGap(input({ selection: { color: 'random', opening: 'e4' } }))).toBeNull();
+    // A first move Black has not answered past the move itself is not an answer.
+    const stub = createRepertoire('Stub', 'b', 'r_stub');
+    expect(foundationGap(input({ selection: { color: 'b', opening: '' }, reps: [stub] }))?.opening.id).toBe('e4');
   });
 
   it('offers a side with no prep nothing but a Grow round', () => {
