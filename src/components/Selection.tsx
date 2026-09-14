@@ -119,6 +119,32 @@ export function OpeningPicker({
   /** Open a stats page for a node, when the picker is used from somewhere that has one. */
   onStats?: (id: string) => void;
 }) {
+  return (
+    <Sheet open={open} onClose={onClose} title="Opening" from="top">
+      <OpeningList onChose={onClose} onStats={onStats} />
+    </Sheet>
+  );
+}
+
+/**
+ * The picker's list, without the sheet around it.
+ *
+ * Two modes, one list. Picking one opening — the global selection — is what
+ * the sheet does. `multi` is the same list used to say which openings are
+ * yours: a row taps to a star instead of to the selection, nothing closes, and
+ * the chevron is what goes deeper. Onboarding is the one place that wants it,
+ * and it wants it to be the picker rather than something that resembles it.
+ */
+export function OpeningList({
+  multi = false,
+  onChose,
+  onStats,
+}: {
+  multi?: boolean;
+  /** Called after the selection is set, in single mode. */
+  onChose?: () => void;
+  onStats?: (id: string) => void;
+}) {
   const selection = useStore((s) => s.settings.selection);
   const starred = useStore((s) => s.settings.favoriteOpenings);
   const setSelection = useStore((s) => s.setSelection);
@@ -140,36 +166,50 @@ export function OpeningPicker({
    * Everything starred anywhere under this level, so a starred variation is at
    * the top of the picker wherever it was starred from — not only at its own
    * level, three taps down.
+   *
+   * In multi mode the whole star set is shown wherever you are: the picks are
+   * the answer being given, and an answer you can only see part of, depending
+   * on how deep you happened to have walked, is worse than no list at all.
    */
   const starredHere = useMemo(() => {
     const stars = new Set(starred);
-    return descendantsOf(here)
+    return descendantsOf(multi ? tree.root : here)
       .filter((node) => stars.has(node.id))
       .sort((a, b) => a.depth - b.depth || b.games - a.games || a.name.localeCompare(b.name));
-  }, [here, starred]);
+  }, [multi, tree, here, starred]);
 
   const choose = (node: OpeningNode) => {
+    if (multi) {
+      toggleStar(node.id);
+      return;
+    }
     setSelection({ opening: node.id });
     setQuery('');
-    onClose();
+    onChose?.();
   };
+
+  /** What a row shows as chosen: the one selection, or one of the stars. */
+  const chosen = (node: OpeningNode) => (multi ? starred.includes(node.id) : selection.opening === node.id);
 
   const row = (node: OpeningNode, showTrail: boolean) => (
     <OpeningRow
       key={node.id}
       node={node}
       trail={showTrail ? ancestorsOf(tree, node.id).slice(0, -1) : []}
-      selected={selection.opening === node.id}
+      selected={chosen(node)}
       starred={starred.includes(node.id)}
+      // Going deeper is the chevron's job in both modes; in multi the row
+      // itself has to stay free to pick the level it is on.
       onOpen={node.children.length && !showTrail ? () => setAt(node.id) : undefined}
       onPick={() => choose(node)}
       onStar={() => toggleStar(node.id)}
       onStats={onStats ? () => onStats(node.id) : undefined}
+      tapToPick={multi}
     />
   );
 
   return (
-    <Sheet open={open} onClose={onClose} title="Opening" from="top">
+    <>
       <input
         className="field"
         placeholder="Search by name, ECO or moves"
@@ -207,24 +247,33 @@ export function OpeningPicker({
 
           {starredHere.length > 0 && (
             <>
-              <Section title="Starred" aside={starredHere.length} />
+              <Section title={multi ? 'Picked' : 'Starred'} aside={starredHere.length} />
               <div className="list">{starredHere.map((node) => row(node, true))}</div>
             </>
           )}
 
-          <Section title={here.depth === 0 ? 'Everything' : 'This level'} />
-          <div className="list">
-            <ChoiceRow
-              title={here.depth === 0 ? 'Any opening' : `All of ${here.name}`}
-              meta={
-                here.depth === 0
-                  ? 'Every line the book knows'
-                  : `${here.eco ? `${here.eco} · ` : ''}${moveText(here)}`
-              }
-              selected={selection.opening === here.id}
-              onSelect={() => choose(here)}
-            />
-          </div>
+          {/* "Any opening" is a selection, not an opening anyone plays, so in
+              multi mode the root simply has no row of its own. */}
+          {(!multi || here.depth > 0) && (
+            <>
+              <Section title={here.depth === 0 ? 'Everything' : 'This level'} />
+              <div className="list">
+                <ChoiceRow
+                  title={here.depth === 0 ? 'Any opening' : `All of ${here.name}`}
+                  meta={
+                    here.depth === 0
+                      ? 'Every line the book knows'
+                      : `${here.eco ? `${here.eco} · ` : ''}${moveText(here)}`
+                  }
+                  selected={chosen(here)}
+                  leading={
+                    multi ? <Icons.star size={18} filled={starred.includes(here.id)} /> : undefined
+                  }
+                  onSelect={() => choose(here)}
+                />
+              </div>
+            </>
+          )}
 
           {children.length > 0 && (
             <>
@@ -238,7 +287,7 @@ export function OpeningPicker({
         </>
       )}
       <div className="spacer" />
-    </Sheet>
+    </>
   );
 }
 
@@ -251,6 +300,7 @@ function OpeningRow({
   onPick,
   onStar,
   onStats,
+  tapToPick = false,
 }: {
   node: OpeningNode;
   /** Where it sits, for a search result. */
@@ -261,6 +311,8 @@ function OpeningRow({
   onPick: () => void;
   onStar: () => void;
   onStats?: () => void;
+  /** Tap the row to pick it rather than to go deeper, where both are possible. */
+  tapToPick?: boolean;
 }) {
   const meta = trail.length
     ? trail.map((n) => (n.depth === 1 ? moveText(n) : n.name)).join(' › ')
@@ -274,7 +326,11 @@ function OpeningRow({
       >
         <Icons.star size={18} filled={starred} />
       </button>
-      <button className="grow row" style={{ minWidth: 0 }} onClick={onOpen ?? onPick}>
+      <button
+        className="grow row"
+        style={{ minWidth: 0 }}
+        onClick={tapToPick ? onPick : (onOpen ?? onPick)}
+      >
         <span className="grow" style={{ minWidth: 0 }}>
           <div className="title truncate">{node.name}</div>
           <div className="meta truncate">{meta}</div>

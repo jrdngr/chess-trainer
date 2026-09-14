@@ -151,6 +151,12 @@ export interface Settings {
   selection: Selection;
   /** Starred opening tree nodes, by id — the move order that defines each. */
   favoriteOpenings: string[];
+  /**
+   * Whether the opening question has been put to this player. Set when they
+   * answer it or wave it away, and cleared by a full reset along with
+   * everything else, so a fresh profile is asked exactly once.
+   */
+  onboarded: boolean;
   openingRun: OpeningRunPrefs;
   drill: DrillPrefs;
   repair: RepairPrefs;

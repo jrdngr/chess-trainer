@@ -1011,3 +1011,25 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .score-strip .total { font-size: 16px; }
 
 /* ── the mode's name, arriving ─────────────────────────────────────────── */
+
+/* ── onboarding ────────────────────────────────────────────────────────── */
+/* The list scrolls; the answer stays put, because the list is long enough
+   that a button at the end of it would never be seen. */
+.onboard-bar {
+  flex: none;
+  padding: 10px 16px calc(var(--safe-bottom) + 12px);
+  background: rgba(13, 13, 16, 0.92);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border-top: 1px solid var(--line);
+  z-index: 30;
+}
+.onboard-tally {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.onboard-tally .side-count { display: inline-flex; align-items: center; gap: 6px; }

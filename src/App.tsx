@@ -7,6 +7,7 @@ import { ImportScreen } from './screens/ImportScreen';
 import { RepertoireScreen } from './screens/RepertoireScreen';
 import { SettingsSheet } from './screens/SettingsSheet';
 import { HomeScreen, type ModeId } from './screens/HomeScreen';
+import { OnboardingScreen } from './screens/OnboardingScreen';
 import { OpeningRunScreen } from './screens/openingRun/OpeningRunScreen';
 import { RepairScreen } from './screens/repair/RepairScreen';
 import { GrowthScreen } from './screens/growth/GrowthScreen';
@@ -16,7 +17,7 @@ import { AutopilotScreen } from './screens/autopilot/AutopilotScreen';
 import { DrillSession } from './screens/drill/DrillSession';
 import type { SessionMode, TrainingItem } from './model/session';
 import { countDue } from './model/srs';
-import { useStore } from './store/useStore';
+import { needsOnboarding, useStore } from './store/useStore';
 
 type Tab = 'home' | 'repertoire' | 'stats' | 'analysis';
 
@@ -64,12 +65,17 @@ export default function App() {
   };
 
   const dueCount = countDue(Object.values(cards)).due;
+  const onboarding = useStore(needsOnboarding);
 
   /** Screens that take over the whole app, with no tab bar underneath. */
   const overlay = !ready ? (
     <div className="screen no-nav" style={{ display: 'grid', placeItems: 'center' }}>
       <div className="spinner" />
     </div>
+  ) : onboarding ? (
+    // Ahead of everything: a profile with nothing in it has nothing to show on
+    // any of the tabs until this is answered.
+    <OnboardingScreen />
   ) : mode?.id === 'autopilot' ? (
     <AutopilotScreen
       // Leaving Autopilot is the only way a session ends, and it lands on

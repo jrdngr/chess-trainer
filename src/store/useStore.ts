@@ -42,6 +42,7 @@ import {
 } from '../model/openingRun';
 import { addMistake, type Mistake } from '../model/mistakes';
 import { DEFAULT_SELECTION, type Selection } from '../model/selection';
+import { picksFrom, selectionFor } from '../model/onboarding';
 import {
   applyEvent,
   EMPTY_SCORE,
@@ -68,6 +69,7 @@ export const DEFAULT_SETTINGS: Settings = {
   cloudSync: true,
   selection: { ...DEFAULT_SELECTION },
   favoriteOpenings: [],
+  onboarded: false,
   openingRun: { ...DEFAULT_PREFS },
   drill: { ...DEFAULT_DRILL },
   repair: { ...DEFAULT_REPAIR },
@@ -190,6 +192,13 @@ interface StoreState extends PersistedState {
   setSettings: (patch: Partial<Settings>) => void;
   setSelection: (patch: Partial<Selection>) => void;
   toggleStar: (openingId: string) => void;
+  /**
+   * Answer the opening question a fresh profile is asked: star each picked
+   * opening, put its own move order into the tree for the side that plays it,
+   * and point the global selection at what was picked. An empty list is the
+   * player saying they have none, which only records that they were asked.
+   */
+  finishOnboarding: (openingIds: string[]) => void;
   setOpeningRunPrefs: (patch: Partial<OpeningRunPrefs>) => void;
   /** Patch one mode's own options, without touching the rest of settings. */
   setModePrefs: <K extends 'drill' | 'repair' | 'growth' | 'play'>(
@@ -604,6 +613,47 @@ export const useStore = create<StoreState>((set, get) => {
       commit({ settings: { ...settings, favoriteOpenings: starred } });
     },
 
+    /**
+     * One commit for the whole answer: a half-built profile — trees created but
+     * the flag unset, say — would ask the question again on the next launch
+     * with the lines already in.
+     */
+    finishOnboarding(openingIds) {
+      const state = get();
+      const picks = picksFrom(openingTree(referenceIndex()), openingIds);
+      const repertoires = { ...state.repertoires };
+      const order = [...state.repertoireOrder];
+      const byColor = new Map<Color, string>(
+        repertoireList(state).map((rep) => [rep.color, rep.id]),
+      );
+
+      for (const pick of picks) {
+        let repId = byColor.get(pick.color);
+        if (!repId) {
+          const rep = createRepertoire(repertoireName(pick.color), pick.color);
+          repertoires[rep.id] = rep;
+          order.push(rep.id);
+          byColor.set(pick.color, rep.id);
+          repId = rep.id;
+        }
+        repertoires[repId] = addLine(repertoires[repId], pick.sans, 'reference').rep;
+      }
+
+      commit({
+        repertoires,
+        repertoireOrder: order,
+        settings: {
+          ...state.settings,
+          favoriteOpenings: [
+            ...new Set([...state.settings.favoriteOpenings, ...picks.map((pick) => pick.id)]),
+          ],
+          // Nothing picked says nothing about which side they play.
+          selection: picks.length ? selectionFor(picks) : state.settings.selection,
+          onboarded: true,
+        },
+      });
+    },
+
     setOpeningRunPrefs(patch) {
       const settings = get().settings;
       commit({ settings: { ...settings, openingRun: { ...settings.openingRun, ...patch } } });
@@ -716,6 +766,25 @@ export const useStore = create<StoreState>((set, get) => {
 
 export function repertoireList(state: StoreState): Repertoire[] {
   return state.repertoireOrder.map((id) => state.repertoires[id]).filter(Boolean);
+}
+
+/**
+ * A profile nothing has happened in yet: a new install, or one that has just
+ * been reset. Read rather than flagged, so a state synced down from another
+ * device is never mistaken for a new player.
+ */
+export function freshProfile(state: StoreState): boolean {
+  return (
+    state.repertoireOrder.length === 0 &&
+    Object.keys(state.cards).length === 0 &&
+    state.importedGames.length === 0 &&
+    state.score.total === 0
+  );
+}
+
+/** Ask the opening question once, of a profile with nothing in it. */
+export function needsOnboarding(state: StoreState): boolean {
+  return state.ready && !state.settings.onboarded && freshProfile(state);
 }
 
 /** allItems() walks the whole tree, so memoise on repertoire identity. */
