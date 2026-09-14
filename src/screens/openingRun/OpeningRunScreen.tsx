@@ -43,7 +43,7 @@ import { Setup } from './Setup';
 import { useReferee } from './useReferee';
 import { ClockHud, useMoveClock } from '../../components/Clock';
 import { clockSeconds } from '../../model/openingRun';
-import { comboBonus, POINTS } from '../../model/scoring';
+import { comboBonus, POINTS, seenIn } from '../../model/scoring';
 import { deepestNodeWithin } from '../../model/openingTree';
 import type { RoundPlan, RoundSummary } from '../../model/autopilot';
 
@@ -133,6 +133,7 @@ export function OpeningRunScreen({
       weakness: weaknessFromCards(cards, evidence),
       growth: settings.growth,
       holeWeight: evidenceFor(evidence),
+      seen: seenIn(state.score),
     });
 
   /**
@@ -190,7 +191,7 @@ export function OpeningRunScreen({
         correct: ended.survived,
         perfect: completed && !ended.leftPrep,
       };
-      endRound({ mode: 'run', ...summary });
+      endRound({ mode: 'run', ...summary, line: ended.drawn });
       onRoundOver?.(summary);
     }
   };

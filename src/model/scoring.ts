@@ -1,4 +1,5 @@
 import type { Color } from '../chess/core';
+import { markSeen } from './freshness';
 import { ancestorsOf, deepestNodeAlong, type OpeningTree } from './openingTree';
 
 /**
@@ -189,6 +190,11 @@ export interface RoundRecord {
   correct: number;
   perfect: boolean;
   at: number;
+  /**
+   * The line the round was about — the one the opponent was steering toward,
+   * whether or not it was reached. What the next rounds should not be.
+   */
+  line?: string[];
 }
 
 export interface ScoreState {
@@ -196,6 +202,8 @@ export interface ScoreState {
   global: NodeStats;
   nodes: Record<string, NodeStats>;
   rounds: RoundRecord[];
+  /** Position key → the Run round that last saw it. See `freshness.ts`. */
+  seen: Record<string, number>;
 }
 
 function emptyTally(): ModeTally {
@@ -215,7 +223,7 @@ export function emptyNodeStats(): NodeStats {
   };
 }
 
-export const EMPTY_SCORE: ScoreState = { total: 0, global: emptyNodeStats(), nodes: {}, rounds: [] };
+export const EMPTY_SCORE: ScoreState = { total: 0, global: emptyNodeStats(), nodes: {}, rounds: [], seen: {} };
 
 /** A saved tally from before rounds were called rounds. */
 type Legacy<T> = Partial<T> & { games?: number };
@@ -251,6 +259,7 @@ export function normalizeScore(
     global: fix(saved?.global),
     nodes: Object.fromEntries(Object.entries(saved?.nodes ?? {}).map(([id, stats]) => [id, fix(stats)])),
     rounds: saved?.rounds ?? saved?.games ?? [],
+    seen: saved?.seen ?? {},
   };
 }
 
@@ -357,12 +366,23 @@ export function recordRound(state: ScoreState, tree: OpeningTree, round: RoundRe
   const credited = ancestorsOf(tree, round.openingId).map((node) => node.id);
   const nodes = { ...state.nodes };
   for (const id of credited) nodes[id] = tallyRound(nodes[id] ?? emptyNodeStats(), round);
+  const global = tallyRound(state.global, round);
+  // Only a Run is a round the next Run should not repeat; the count of them
+  // is the clock freshness is read against.
+  const seen =
+    round.mode === 'run' && round.line ? markSeen(state.seen, round.line, global.byMode.run.rounds) : state.seen;
   return {
     ...state,
-    global: tallyRound(state.global, round),
+    global,
     nodes,
     rounds: [...state.rounds, round],
+    seen,
   };
+}
+
+/** What the rounds so far have been about, for the draw and the scorer. */
+export function seenIn(state: ScoreState): { at: Record<string, number>; round: number } {
+  return { at: state.seen, round: state.global.byMode.run.rounds };
 }
 
 export function nodeStats(state: ScoreState, id: string): NodeStats {

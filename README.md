@@ -128,6 +128,19 @@ Each candidate is scored:
 - **Staleness** is how long that opening has gone without a round, measured
   against the other candidates rather than the clock. Candidates never played
   are all equally stale.
+- **Freshness** (`src/model/freshness.ts`) is what the last few rounds were
+  about. Every Run stamps the positions of the line it was drawn on with its
+  round number, and a line is then read in two parts: its tail — the moves
+  past where it last parts from another line, what makes it *this* line — and
+  its head, what makes it this opening. A Test asks only as loudly as the
+  stalest line in the opening has been left (fully stale after three rounds),
+  so the line just built is run once and the opening then grows rather than
+  running it again; the draw prefers the line left longest, and never draws
+  the line the last round was drawn on while there is another. Grow's draw
+  reads the same stamps: a hole at the tip of the line just run is that round
+  again with a move on the end, and loses to a junction earlier in it. No
+  schedule: a one-line repertoire runs it, finds it fresh, and grows; forty
+  lines cycle a rotating few.
 - **Star**: an opening that is starred, or sits inside one that is, is worth
   1.6×.
 - **Fun**: Test 1.0, Review 1.0, Grow 0.7.

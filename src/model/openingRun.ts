@@ -11,6 +11,7 @@ import { findHoles, optionsAt, type Hole } from './growth';
 import { deepestName, lookup, type ReferenceIndex } from './reference';
 import { insideRegion, lineStatus, approachKeys, type OpeningNode, type OpeningTree } from './openingTree';
 import type { RepairItem } from './repair';
+import { justRun, keysAlong, lineStaleness, NOTHING_SEEN, staleness, type Seen } from './freshness';
 import { childrenOf, fenAt, leafLines, pathTo } from './repertoire';
 import { cardId, mulberry32 } from './session';
 import type { Card, RepMove, Repertoire } from './types';
@@ -356,6 +357,12 @@ export interface Run {
   over: boolean;
   /** Remaining moves of the line chosen up front, driving opponent replies. */
   target: string[];
+  /**
+   * The line chosen up front, kept whole. `target` is spent as the run goes
+   * and cleared at the edge; this is the record of what the round was about,
+   * for the rounds after it not to be.
+   */
+  drawn: string[];
   /** Hints left to spend. */
   hints: number;
   /** Hints spent, shown on the reveal so a deep run stays honest. */
@@ -480,6 +487,8 @@ export interface BeginOptions extends Partial<OpeningRunOptions> {
 
   /** How much more a hole is worth for the games you have lost in it — see `evidenceFor`. */
   holeWeight?: (hole: Hole) => number;
+  /** What the last few rounds were about, so this one is drawn on what they were not. */
+  seen?: Seen;
 }
 
 /**
@@ -493,6 +502,10 @@ export interface BeginOptions extends Partial<OpeningRunOptions> {
  * region's own move order, so the opponent still walks you into the opening
  * you asked for. Any move that stays inside the region is accepted at your own
  * turn whichever line was drawn.
+ *
+ * Among your own lines, the one that has been left longest is preferred, and
+ * the one the last round was drawn on is not drawn at all while there is any
+ * other — see `freshness.ts`.
  *
  * Null only when the book is empty, which it never is.
  */
@@ -523,12 +536,19 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
     // where there are not — a thin region is still yours to play.
     const long = inRegion.filter((line) => line.keys.length >= minDecisions);
     const usable = long.length ? long : inRegion;
-    if (usable.length) {
-      const odds = lineOdds(rep, side, tree.index, new Set(usable.map((l) => l.tipId)));
+    // Never the same line twice running, while there is another to run.
+    const seen = opts.seen ?? NOTHING_SEEN;
+    const rested = usable.filter((line) => !justRun(seen, rep, line.tipId));
+    const field = rested.length ? rested : usable;
+    if (field.length) {
+      const odds = lineOdds(rep, side, tree.index, new Set(field.map((l) => l.tipId)));
       const even = odds.size === 0;
       const line = pickWeighted(
-        usable,
-        (l) => (even ? 1 : (odds.get(l.tipId) ?? 0)) * (weakness ? lineWeakness(rep.id, l.keys, weakness) : 1),
+        field,
+        (l) =>
+          (even ? 1 : (odds.get(l.tipId) ?? 0)) *
+          (weakness ? lineWeakness(rep.id, l.keys, weakness) : 1) *
+          Math.max(lineStaleness(seen, rep, l.tipId), 0.02),
         rand,
       );
       target = line.sans;
@@ -547,6 +567,7 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
     survived: 0,
     over: false,
     target,
+    drawn: target,
     hints: opts.hints ?? DEFAULT_OPTIONS.hints,
     hintsUsed: 0,
     // The budget is what the round may spend; the line decides what it needs.
@@ -574,6 +595,17 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
  * makes a repertoire wider: the moves most often played against you are the
  * ones you have not met, not the next move of the line you already know.
  *
+ * Then by how much of the round would be new. A Grow round is the walk to
+ * the hole and the moves added past it; the walk was just played if the last
+ * round was drawn on the same line, and a hole at the tip of that line is
+ * that whole round again with one move on the end. A hole at an earlier
+ * junction shares the walk and none of what follows. Read off the same
+ * stamps the line draw reads, with the added moves counted as new, and
+ * squared, because a round a tenth new is not a tenth as good as a new one
+ * — so a young repertoire branches early rather than deepening the one line
+ * it has, and a mature one, whose walks were not just played, is free to
+ * deepen.
+ *
  * Drawn rather than taken in order, so the rounds are not the same round
  * twice — but drawn from the holes worth a real fraction of the best one, so
  * a reply nobody plays is not what a round is spent on while a reply everyone
@@ -589,7 +621,13 @@ function drawHole(
   const holes = findHoles(rep, tree.index, { ...opts.growth, region: { tree, node: aim } });
   if (!holes.length) return null;
   const evidence = opts.holeWeight ?? (() => 1);
-  const met = (hole: Hole) => hole.reach * hole.share * evidence(hole);
+  const seen = opts.seen ?? NOTHING_SEEN;
+  const fresh = (hole: Hole) => {
+    const walk = keysAlong(hole.path).map((key) => staleness(seen, key));
+    const added = 2 * movesToFit(hole.path.length, opts.growth?.maxPly);
+    return ((walk.reduce((sum, s) => sum + s, 0) + added) / (walk.length + added)) ** 2;
+  };
+  const met = (hole: Hole) => hole.reach * hole.share * evidence(hole) * fresh(hole);
   const best = Math.max(...holes.map(met));
   const field = holes.filter((hole) => met(hole) * DRAW_WINDOW >= best);
   return pickWeighted(field.length ? field : holes, met, rand);

@@ -55,6 +55,7 @@ import {
   type Weakness,
 } from './openingRun';
 import { findHoles } from './growth';
+import { markSeen } from './freshness';
 import { nodeById, openingTree } from './openingTree';
 import { addLine, createRepertoire, hasLine, leafLines, pathTo } from './repertoire';
 import { lookup } from './reference';
@@ -535,6 +536,52 @@ describe('steering at gaps', () => {
   });
 });
 
+describe('not the same round twice', () => {
+  const CLASSICAL = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5';
+  const SAMISCH = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3 O-O Be3 e5';
+  function kid(...lines: string[]): Repertoire {
+    let out = createRepertoire('Black', 'b', 'rep_kid');
+    for (const line of lines) out = addLine(out, line.split(' '), 'seed').rep;
+    return out;
+  }
+
+  it('remembers the line it was drawn on, whole', () => {
+    const { run } = start([kid(CLASSICAL)], 'b', 1, any);
+    expect(run.drawn).toEqual(run.target);
+    // The edge spends the target; the record stays.
+    const edge = chooseAtEdge({ ...run, newMoves: 1, fen: run.fen }, run.target[0]);
+    expect(edge.target).toEqual([]);
+    expect(edge.drawn).toEqual(run.target);
+  });
+
+  it('never draws the line the last round was drawn on while there is another', () => {
+    const rep = kid(CLASSICAL, SAMISCH);
+    const seen = { at: markSeen({}, CLASSICAL.split(' '), 7), round: 7 };
+    for (let seed = 0; seed < 30; seed += 1) {
+      const { run } = start([rep], 'b', seed, any, { seen });
+      expect(run.drawn.join(' ')).toBe(SAMISCH);
+    }
+  });
+
+  it('still runs the only line there is', () => {
+    const rep = kid(CLASSICAL);
+    const seen = { at: markSeen({}, CLASSICAL.split(' '), 7), round: 7 };
+    expect(start([rep], 'b', 1, any, { seen }).run.drawn.join(' ')).toBe(CLASSICAL);
+  });
+
+  it('branches a young repertoire early rather than deepening the line just run', () => {
+    // One line, just run. The hole at its tip is the same round with a move
+    // on the end; the holes at move 9 are a different opening from there.
+    const rep = kid(CLASSICAL + ' O-O Nc6 d5 Ne7');
+    const seen = { at: markSeen({}, (CLASSICAL + ' O-O Nc6 d5 Ne7').split(' '), 3), round: 3 };
+    const region = nodeById(tree, 'd4 Nf6 c4 g6 Nc3 Bg7 e4');
+    for (let seed = 0; seed < 40; seed += 1) {
+      const { run } = start([rep], 'b', seed, region, { steer: 'gaps', seen, newMoves: 8 });
+      expect(run.target.length).toBeLessThanOrEqual(11);
+    }
+  });
+});
+
 describe('the edge of the prep', () => {
   /** One move of prep: after 1.e4 e5 White has nothing, and the book has plenty. */
   function thin(): Repertoire {
@@ -794,7 +841,7 @@ describe('keeping what a run survived', () => {
   function runOf(over: Partial<Run>): Run {
     return {
       id: 'r', sourceLabel: 'Any opening', openingId: '', leftPrep: false, color: 'w',
-      fen: START_FEN, played: [], survived: 0, over: true, target: [], hints: 0, hintsUsed: 0,
+      fen: START_FEN, played: [], survived: 0, over: true, target: [], drawn: [], hints: 0, hintsUsed: 0,
       newMoves: 0, added: 0, prepEnded: null, ...over,
     };
   }

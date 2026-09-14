@@ -1,5 +1,6 @@
 import type { Color } from '../chess/core';
 import { positionKey } from '../chess/core';
+import { lineStaleness, NOTHING_SEEN, type Seen } from './freshness';
 import {
   evidenceFor,
   findCoverage,
@@ -18,6 +19,7 @@ import {
   type OpeningTree,
 } from './openingTree';
 import type { RepairItem } from './repair';
+import { leafLines } from './repertoire';
 import { colorsOf, type Selection } from './selection';
 import { allItems, type TrainingItem } from './session';
 import { nodeStats, type ScoreMode, type ScoreState } from './scoring';
@@ -46,7 +48,10 @@ import type { Card, Repertoire } from './types';
  * being drilled is not ready to get wider — unless it is barely an opening
  * yet, and there is nothing there to drill first. Staleness is how long that
  * opening has gone without a run, measured against the other candidates
- * rather than the clock. A star on the opening or anything above it lifts
+ * rather than the clock — and a Test asks only as loudly as the line it
+ * would run has been left, so the line just built is run once and the
+ * opening then grows rather than running it again (see `freshness.ts`). A
+ * star on the opening or anything above it lifts
  * it. Fun tilts away from Grow, whose pickers interrupt the run, without
  * overriding the one that matters most. And a brake cuts a focus's weight
  * for every one of the last few rounds it was, so a standing backlog cannot
@@ -134,6 +139,8 @@ export interface RecommendInput {
   growth: { minShare: number; maxPly: number };
   /** The focuses of the session's rounds so far, oldest first, for the brake. */
   recentFocuses: Focus[];
+  /** What the last few rounds were about — see `freshness.ts`. */
+  seen?: Seen;
   now?: number;
 }
 
@@ -219,11 +226,17 @@ export function growNeed(holes: Hole[], ready = 1, thin = 0): number {
 /**
  * A Test has no queue behind it: what it measures is whether the prep holds
  * up when nothing on screen says what it is. That is always worth asking,
- * and more so the more prep has been added since it was last asked here.
+ * and more so the more prep has been added since it was last asked here —
+ * but only as loudly as the line it would run has been left. An opening
+ * whose every line the last rounds were drawn on has nothing to test yet,
+ * whatever the prep in it; one with a line never run asks at full voice.
+ * That one factor is what keeps a young repertoire from being the same
+ * round over and over: a line just built has never run, so Test takes it;
+ * once it has, nothing in the opening is left, so Grow takes the round.
  */
-export function testNeed(untested: number, everRun: boolean): number {
+export function testNeed(untested: number, everRun: boolean, stalest = 1): number {
   const base = 0.4 + 0.4 * saturate(untested, 10);
-  return clamp(everRun ? base : Math.max(base, 0.55));
+  return clamp((everRun ? base : Math.max(base, 0.55)) * clamp(stalest));
 }
 
 /* ── ranking ────────────────────────────────────────────────────────────── */
@@ -365,6 +378,16 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
     const repairs = input.repairs.filter((item) => item.color === color);
     const items = place(tree, nodes, allItems(reps), (item: TrainingItem) => item.pathSans);
     const moves = place(tree, nodes, reps.flatMap(repMoves), (m) => m.sans);
+    // Every line a Test could run, with how long it has been left.
+    const seen = input.seen ?? NOTHING_SEEN;
+    const lines = place(
+      tree,
+      nodes,
+      reps.flatMap((rep) =>
+        leafLines(rep).map((line) => ({ sans: line.sans, stale: lineStaleness(seen, rep, line.tipId) })),
+      ),
+      (line) => line.sans,
+    );
     const holes = place(
       tree,
       nodes,
@@ -422,19 +445,24 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
       );
       const ready = readiness(strengths);
       const thin = thinness(within(coverage, node));
+      // Grow's work is how often the holes inside are met, not how many there
+      // are: a variation holds most of the holes, at its tip, and hardly any
+      // of the games — narrowing by count would steer every Grow round to
+      // the deepest line rather than the junction the games actually reach.
       push(
         'grow',
         node,
         color,
         growNeed(within(holes, node), ready, thin),
-        reachedIn(holes, node).length,
+        reachedIn(holes, node).reduce((sum, hole) => sum + hole.reach * hole.share, 0),
         MAX_NEW_MOVES,
       );
 
       if (mine.length) {
         const since = lastAt(node.id) ?? 0;
         const untested = mine.filter((m) => m.addedAt > since).length;
-        push('test', node, color, testNeed(untested, everRun), untested || mine.length);
+        const stalest = Math.max(0, ...reachedIn(lines, node).map((line) => line.stale));
+        push('test', node, color, testNeed(untested, everRun, stalest), untested || mine.length);
       }
     }
   }

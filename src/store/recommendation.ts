@@ -2,6 +2,7 @@ import { buildRepairs, type RepairItem } from '../model/repair';
 import { openingTree } from '../model/openingTree';
 import { recommend, type Focus, type RecommendInput, type Recommendation } from '../model/recommend';
 import { referenceIndex } from '../model/referenceIndex';
+import { seenIn } from '../model/scoring';
 import { lineInRegion, regionOf, repertoiresIn } from '../model/selection';
 import { repertoireList, useStore } from './useStore';
 
@@ -39,6 +40,7 @@ export function recommendInput(state: State, recentFocuses: Focus[] = []): Recom
     newPerSession: state.settings.drill.newPerSession,
     growth: state.settings.growth,
     recentFocuses,
+    seen: seenIn(state.score),
   };
 }
 

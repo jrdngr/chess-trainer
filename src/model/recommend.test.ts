@@ -23,6 +23,7 @@ import {
   type Focus,
   type RecommendInput,
 } from './recommend';
+import { markSeen } from './freshness';
 import type { RepairItem } from './repair';
 import { EMPTY_SCORE, recordRound, type ScoreState } from './scoring';
 import { allItems } from './session';
@@ -181,6 +182,27 @@ describe('need', () => {
     expect(testNeed(0, true)).toBe(0.4);
     expect(testNeed(0, false)).toBe(0.55);
     expect(testNeed(20, true)).toBeGreaterThan(testNeed(2, true));
+  });
+
+  it('asks for a test only as loudly as a line has been left', () => {
+    expect(testNeed(0, true, 1)).toBe(testNeed(0, true));
+    expect(testNeed(0, true, 0.5)).toBeCloseTo(testNeed(0, true) / 2, 5);
+    // Every line just run: nothing to test yet, however much prep there is.
+    expect(testNeed(20, false, 0)).toBe(0);
+  });
+
+  it('runs a line once after building it, then grows rather than running it again', () => {
+    const line = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5';
+    const reps = [rep('b', [line])];
+    // Cards on every position, none due, so Review has nothing to say here.
+    const cards = cardsFor(reps, false);
+    const base = input({ reps, cards, selection: { color: 'b', opening: 'd4 Nf6 c4 g6 Nc3 Bg7 e4' }, recentFocuses: ['grow'] });
+    // Just built, never run: the round is a Test of it.
+    const built = recommend({ ...base, seen: { at: {}, round: 1 } });
+    expect(built.focus).toBe('test');
+    // Just run: there is nothing left in the opening to test, so it grows.
+    const ran = recommend({ ...base, recentFocuses: ['grow', 'test'], seen: { at: markSeen({}, line.split(' '), 2), round: 2 } });
+    expect(ran.focus).toBe('grow');
   });
 
   it('weighs a hole up by the games you reached it with nothing', () => {
