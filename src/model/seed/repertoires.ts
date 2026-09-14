@@ -8,6 +8,12 @@ export interface SeedRepertoire {
   lines: string[];
   /** Notes attached to the position reached by a SAN prefix. */
   notes?: Record<string, string>;
+  /**
+   * First moves this repertoire is responsible for answering. Only meaningful
+   * for Black: which of White's openings a Black player must meet is a question
+   * about their repertoires taken together, so each one declares its share.
+   */
+  meets?: string[];
 }
 
 /**
@@ -162,6 +168,7 @@ export const SEED_REPERTOIRES: SeedRepertoire[] = [
     id: 'rep_black_kid',
     name: "Black — King's Indian",
     color: 'b',
+    meets: ['d4', 'Nf3', 'c4', 'b3', 'f4', 'g3'],
     lines: [
       // ── Classical: 5.Nf3 O-O 6.Be2 e5 7.O-O Nc6 8.d5 Ne7 ───────────────
       // House move order: ...Bg7, ...d6, ...O-O, ...e5, ...Nc6. One Black move
@@ -281,6 +288,7 @@ export const SEED_REPERTOIRES: SeedRepertoire[] = [
     id: 'rep_black_sicilian',
     name: 'Black — Sicilian Dragon',
     color: 'b',
+    meets: ['e4'],
     lines: [
       // ── Yugoslav Attack: 6.Be3 Bg7 7.f3 O-O 8.Qd2 Nc6 ──────────────────
       // House move order: ...Bg7, ...O-O, ...Nc6, then ...Bd7 and ...Rc8.

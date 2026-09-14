@@ -3,7 +3,7 @@ import { applySan, fenTurn, walkSan } from '../chess/core';
 import { candidateAnswers, findGaps, gapColor } from './gaps';
 import { referenceIndex } from './referenceIndex';
 import { addLine, childrenOf, createRepertoire } from './repertoire';
-import { buildSeedRepertoires } from '../store/seed';
+import { buildSeedRepertoires, COVER_MIN_SHARE } from '../store/seed';
 
 const index = referenceIndex();
 
@@ -45,11 +45,12 @@ describe('finding gaps', () => {
   });
 
   it('reports nothing for a repertoire that answers everything', () => {
-    // The seeded repertoires are complete by construction, and the coverage
-    // test holds them to it. Finding gaps in them would mean one of the two
-    // is wrong.
+    // The seeded repertoires are completed from the book at COVER_MIN_SHARE,
+    // and `coverage.test.ts` holds them to exactly that bar. Asking here for a
+    // lower one would test a promise nothing makes: below it the book is a long
+    // tail of moves played a handful of times in 280k games.
     for (const rep of buildSeedRepertoires()) {
-      expect(findGaps(rep, index, { minShare: 1 }), rep.name).toEqual([]);
+      expect(findGaps(rep, index, { minShare: COVER_MIN_SHARE }), rep.name).toEqual([]);
     }
   });
 
@@ -63,7 +64,7 @@ describe('finding gaps', () => {
 
   it('opens a gap when a prepared branch is removed', () => {
     const rep = buildSeedRepertoires().find((r) => r.name.includes('King'))!;
-    expect(findGaps(rep, index, { minShare: 1 })).toEqual([]);
+    expect(findGaps(rep, index, { minShare: COVER_MIN_SHARE })).toEqual([]);
     // Drop one of the answers and the reply it met becomes unanswered.
     const d4 = childrenOf(rep, null).find((k) => k.san === 'd4')!;
     const nf6 = childrenOf(rep, d4.id)[0];
@@ -73,7 +74,7 @@ describe('finding gaps', () => {
       ...rep,
       nodes: { ...rep.nodes, [nf6.id]: { ...nf6, children: [replies[0].id] } },
     };
-    const gaps = findGaps(without, index, { minShare: 1 });
+    const gaps = findGaps(without, index, { minShare: COVER_MIN_SHARE });
     expect(gaps.length).toBeGreaterThan(0);
     expect(gaps.every((g) => g.repertoireId === rep.id)).toBe(true);
   });
