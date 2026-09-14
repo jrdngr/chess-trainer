@@ -524,12 +524,44 @@ export function advance(rep: Repertoire, run: GrowthRun, san: string): GrowthRun
 }
 
 /**
- * The opponent's reply, chosen to reach a hole as soon as possible.
+ * How much reaching one hole is worth: how often the player would actually be
+ * sitting in front of it.
  *
- * A hole right here is taken at once; otherwise the run continues down whichever
- * prepared reply has one nearest. Steering makes the opponent slightly
- * artificial and that is the trade: without it the walk wanders, and the mode's
- * whole point is to reach the next unanswered move quickly.
+ * `reach` already compounds the opponent's shares on the way in, so a hole
+ * behind a sideline is discounted for the sideline without anything here
+ * saying so. Never quite zero, so that two holes the book has no numbers for
+ * are still separated by how far away they are.
+ */
+function holeWorth(hole: Hole): number {
+  return Math.max(hole.reach * hole.share, RARE);
+}
+
+/**
+ * What a ply of walking costs, against the worth of what is at the end of it.
+ *
+ * A run adds three moves at most, so arriving somewhere is not free: a hole
+ * eight plies down can cost the whole run to reach, and the player answers one
+ * move instead of three. The decay is what stops the steering marching past
+ * everything answerable toward one distant main line, while still preferring a
+ * mainline hole three plies on to a sideline one right here.
+ */
+const STEER_DECAY = 0.85;
+
+/**
+ * The opponent's reply, chosen to reach the hole most worth having.
+ *
+ * A hole right here is taken at once; otherwise the run continues down the
+ * prepared reply with the best hole under it — how often the player would
+ * meet it, discounted by how far the walk has to go. Nearest-first was the
+ * older rule, and inside a starred opening it steered by accident: a rare
+ * sideline with a hole one ply down beat the main line with one three plies
+ * down, so a run in the opening the player had chosen to learn walked into
+ * its obscure corners. Starring says which openings are theirs; this says
+ * which part of one a round should spend itself on.
+ *
+ * Steering makes the opponent slightly artificial and that is the trade:
+ * without it the walk wanders, and the mode's whole point is to reach an
+ * unanswered move worth answering, quickly.
  */
 export function steer(
   rep: Repertoire,
@@ -537,38 +569,60 @@ export function steer(
   run: GrowthRun,
   opts: GrowthOptions = {},
 ): { san: string; hole: Hole | null } | null {
-  const here = findHoles(rep, index, opts).filter(
-    (hole) => positionKey(hole.fen) === positionKey(run.fen) && run.targets.has(positionKey(hole.fen)),
+  const holes = findHoles(rep, index, opts).filter((hole) =>
+    run.targets.has(positionKey(hole.fen)),
   );
-  if (here.length) return { san: here[0].san, hole: here[0] };
+  const hereKey = positionKey(run.fen);
+  const here = holes.filter((hole) => positionKey(hole.fen) === hereKey);
+  // The reply they play most often among the ones with no answer. That is the
+  // order findHoles already returns them in; taking the best explicitly means
+  // the steering does not quietly depend on that.
+  if (here.length) {
+    const best = here.reduce((a, b) => (holeWorth(b) > holeWorth(a) ? b : a));
+    return { san: best.san, hole: best };
+  }
 
   const kids = childrenOf(rep, run.nodeId);
   if (!kids.length) return null;
-  let best: { kid: RepMove; distance: number } | null = null;
+  const worth = worthByPosition(holes);
+  let best: { kid: RepMove; value: number } | null = null;
   for (const kid of kids) {
-    const distance = distanceToTarget(rep, kid.id, run.targets, 0);
-    if (distance === null) continue;
-    if (!best || distance < best.distance) best = { kid, distance };
+    const value = bestBelow(rep, kid.id, worth, 0);
+    if (value === null) continue;
+    if (!best || value > best.value) best = { kid, value };
   }
   const chosen = best?.kid ?? kids[0];
   return { san: chosen.san, hole: null };
 }
 
-/** Plies from a node down to the nearest position the run is aiming at. */
-function distanceToTarget(
+/** The best any one hole is worth, at each position the run is aiming at. */
+function worthByPosition(holes: Hole[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const hole of holes) {
+    const key = positionKey(hole.fen);
+    out.set(key, Math.max(out.get(key) ?? 0, holeWorth(hole)));
+  }
+  return out;
+}
+
+/**
+ * The best a target under this node is worth from where the run stands, every
+ * ply of walking discounted — see STEER_DECAY. Null when there is none.
+ */
+function bestBelow(
   rep: Repertoire,
   nodeId: string,
-  targets: Set<string>,
+  worth: Map<string, number>,
   depth: number,
 ): number | null {
   if (depth > DEFAULT_MAX_PLY) return null;
   const node = rep.nodes[nodeId];
   if (!node) return null;
-  if (targets.has(positionKey(node.fenAfter))) return depth;
-  let best: number | null = null;
+  const mine = worth.get(positionKey(node.fenAfter));
+  let best: number | null = mine === undefined ? null : mine * STEER_DECAY ** depth;
   for (const kid of childrenOf(rep, nodeId)) {
-    const found = distanceToTarget(rep, kid.id, targets, depth + 1);
-    if (found !== null && (best === null || found < best)) best = found;
+    const found = bestBelow(rep, kid.id, worth, depth + 1);
+    if (found !== null && (best === null || found > best)) best = found;
   }
   return best;
 }

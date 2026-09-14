@@ -21,6 +21,7 @@ import {
   startGrowth,
   steer,
   thinness,
+  type GrowthRun,
 } from './growth';
 import { referenceIndex } from './referenceIndex';
 import { addLine, createRepertoire, hasLine } from './repertoire';
@@ -519,5 +520,76 @@ describe('what your games say about a hole', () => {
     expect(weigh(hole)).toBe(5);
     expect(weigh({ ...hole, after: START_FEN })).toBe(8);
     expect(weigh({ ...hole, after: applySan(START_FEN, 'd4')!.after })).toBe(1);
+  });
+});
+
+describe('which way a run is steered', () => {
+  /** A repertoire with prep down two of Black's first moves. */
+  function branching(lines: string[]): Repertoire {
+    let rep = createRepertoire('Test', 'w', 'r_steer');
+    for (const line of lines) rep = addLine(rep, line.split(' '), 'reference').rep;
+    return rep;
+  }
+
+  /** The run as it stands after 1.e4, aiming at the tips of both branches. */
+  function afterE4(rep: Repertoire, aims: string[]): GrowthRun {
+    const e4 = Object.values(rep.nodes).find((node) => node.parentId === null)!;
+    return {
+      repertoireId: rep.id,
+      color: 'w',
+      rowId: 'row',
+      targets: new Set(aims.map((line) => positionKey(fenAfter(line)))),
+      path: ['e4'],
+      fen: e4.fenAfter,
+      nodeId: e4.id,
+      hole: null,
+    };
+  }
+
+  function fenAfter(line: string): string {
+    let fen = START_FEN;
+    for (const san of line.split(' ')) fen = applySan(fen, san)!.after;
+    return fen;
+  }
+
+  const SICILIAN = 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3';
+  const ALEKHINE = 'e4 Nf6 e5';
+
+  it('walks to the main line rather than the nearest sideline', () => {
+    // 1...Nf6 is played in one game in fifty and its hole is two plies away;
+    // the Najdorf tabiya is eight plies away and is where the games go. The
+    // old rule took whichever hole was nearest, which is how a run inside a
+    // starred Sicilian ended up in an Alekhine.
+    const rep = branching([SICILIAN, ALEKHINE]);
+    const run = afterE4(rep, [SICILIAN, ALEKHINE]);
+    expect(steer(rep, index, run)!.san).toBe('c5');
+  });
+
+  it('takes the nearer of two holes the player would meet as often', () => {
+    // 1...d6 and 1...g6 are played as often as each other and both branches
+    // end in a reply the book plays every time, so the two holes are worth
+    // exactly the same. All that is left to choose on is the walk: one is a
+    // move away, the other three.
+    const near = 'e4 d6 d4';
+    const far = 'e4 g6 d4 Bg7 Nc3';
+    const rep = branching([near, far]);
+    expect(steer(rep, index, afterE4(rep, [near, far]))!.san).toBe('d6');
+  });
+
+  it('answers the reply they play most, where several here have no answer', () => {
+    const rep = branching([SICILIAN]);
+    const run = afterE4(rep, [SICILIAN]);
+    // Aim at the position the run is standing in: 1...c5 is prepared, so the
+    // hole taken is the most played of the rest.
+    const here = { ...run, targets: new Set([positionKey(run.fen)]) };
+    const reply = steer(rep, index, here)!;
+    expect(reply.hole).not.toBeNull();
+    expect(reply.san).toBe('e5');
+  });
+
+  it('still reaches a hole when only an unplayed branch has one', () => {
+    const rep = branching([SICILIAN, ALEKHINE]);
+    const run = afterE4(rep, [ALEKHINE]);
+    expect(steer(rep, index, run)!.san).toBe('Nf6');
   });
 });
