@@ -61,7 +61,7 @@ describe('favouriteness', () => {
     expect(najdorf.of).toBe(2);
     expect(najdorf.siblings.map((s) => s.node.id)).toEqual([NAJDORF, DRAGON]);
     expect(najdorf.siblings[0].share).toBeCloseTo(2 / 3, 5);
-    expect(najdorf.parent?.name).toBe('Sicilian: Open, ...d6');
+    expect(najdorf.parent?.name).toBe('Sicilian Defence: Modern Variations, Main Line');
     expect(favouriteness(tree, state, DRAGON, 30, noon)?.rank).toBe(2);
   });
 
@@ -76,7 +76,7 @@ describe('the openings that matter', () => {
     let state = earned(EMPTY_SCORE, `${NAJDORF} Be3`, 7, 0);
     state = earned(state, 'd4 d5 c4 e6', 3, 0);
     const top = topOpenings(tree, state);
-    expect(top[0].node.name).toBe("King's Pawn Opening");
+    expect(top[0].node.name).toBe("King's Pawn Game");
     expect(top.some((entry) => entry.node.id === NAJDORF)).toBe(true);
     const najdorf = top.find((entry) => entry.node.id === NAJDORF)!;
     expect(najdorf.trail).toContain('Sicilian Defence');

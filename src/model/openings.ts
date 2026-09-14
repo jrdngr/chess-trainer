@@ -123,28 +123,40 @@ export function openingAt(openings: DerivedOpening[], nodeId: string): DerivedOp
 }
 
 /**
- * Drop the first-move names that only lead somewhere.
+ * Drop the names that only lead somewhere.
  *
  * A Black repertoire holding one King's Indian starts at 1.d4, which the book
- * calls the Queen's Pawn Opening — the name of what White did. Listing that as
- * the opening is how a King's Indian came to be filed under White's first move.
+ * calls the Queen's Pawn Game — the name of what White did. Listing that as the
+ * opening is how a King's Indian came to be filed under White's first move.
  * Since every line under it is really a King's Indian, the waypoint is dropped
- * and its children take its place. The same rule does the right thing for
- * White: 1.e4 with prep against c5, e5 and e6 lists as three openings rather
- * than one "King's Pawn Opening" with everything buried inside it.
+ * and its child takes its place. The same rule does the right thing for White:
+ * 1.e4 with prep against c5, e5 and e6 lists as three openings rather than one
+ * "King's Pawn Game" with everything buried inside it.
  *
- * Only first-move names go. A name that attaches deeper is a real opening and
- * stays as the heading for the variations under it, even when every line it
- * holds is inside one of them — a lone Sämisch belongs under "King's Indian
- * Defence" rather than standing on its own with no indication of what it is a
- * variation of. And a region with lines of its own is never dropped, whatever
- * its depth, or those lines would be listed nowhere at all.
+ * Deeper down a second rule applies: a region with no lines of its own and
+ * exactly one region under it describes no choice anybody made, so it goes too.
+ * The book names nearly every position, so one King's Indian line arrives here
+ * as Indian Defence → Indian Defence: Normal Variation → Indian Defence: West
+ * Indian Defence → King's Indian Defence → King's Indian Defence: Normal
+ * Variation, and four of those five headings name a position the player only
+ * passed through on the way to the one they meant.
+ *
+ * The two rules differ in what they do with branches, which is the whole point.
+ * A first move is dropped however many openings sit under it — 1.e4 met by the
+ * Sicilian, the French and 1...e5 is three openings, not one. A deeper name is
+ * kept as soon as it has more than one region under it, because then the
+ * heading is what those branches have in common.
+ *
+ * A region with lines of its own is never dropped, whatever its depth, or those
+ * lines would be listed nowhere at all.
  */
 function collapse(regions: Region[]): Region[] {
   const out: Region[] = [];
   for (const region of regions) {
     const children = collapse(region.children);
-    if (region.ply <= 1 && region.ownLines === 0 && children.length > 0) out.push(...children);
+    const firstMove = region.ply <= 1 && children.length > 0;
+    const waypoint = children.length === 1;
+    if (region.ownLines === 0 && (firstMove || waypoint)) out.push(...children);
     else out.push({ ...region, children });
   }
   return out;

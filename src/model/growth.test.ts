@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { applySan, positionKey, START_FEN } from '../chess/core';
+import { applySan, fenTurn, positionKey, START_FEN } from '../chess/core';
+import { deepestName, familyName, lookup } from './reference';
 import {
   advance,
   answerHole,
@@ -37,6 +38,14 @@ function thin(color: 'w' | 'b', line: string, name = 'Test'): Repertoire {
 
 const white = thin('w', 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3');
 const black = thin('b', 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6');
+
+/**
+ * The row covering the prep itself, as opposed to the first moves the
+ * repertoire cannot meet at all. Found by depth rather than by name: which
+ * family the book puts at the head of a King's Indian is the book's business,
+ * and it moves when the book is rebuilt.
+ */
+const prepRow = (rows: ReturnType<typeof growthRows>) => rows.find((row) => row.depth > 0)!;
 
 describe('finding holes', () => {
   it('finds the unanswered replies in a thin repertoire', () => {
@@ -121,38 +130,35 @@ describe('finding holes', () => {
 describe('how bare a repertoire is', () => {
   /** A King's Indian and nothing else: one reply met at every junction. */
   const kid = black;
-  /** The same opening met several ways, plus something against every first move. */
+  /**
+   * Broad where the narrow one is deep: every reply the book gives at each of
+   * the first few junctions, answered.
+   *
+   * Built from the book rather than listed by hand. A fixed list of lines is
+   * only "broad" relative to the book it is measured against, and this book
+   * offers about five replies in every position — a hand-written 25 lines
+   * stopped being wide the moment the book got real.
+   */
   const broad = (() => {
     let rep = createRepertoire('Broad', 'b', 'r_broad');
-    for (const line of [
-      'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6',
-      'd4 Nf6 c4 g6 Nf3 Bg7 g3 O-O',
-      'd4 Nf6 c4 g6 g3 Bg7 Bg2 O-O',
-      'd4 Nf6 c4 g6 f3 Bg7 e4 d6',
-      'd4 Nf6 c4 g6 Bf4 Bg7',
-      'd4 Nf6 c4 g6 h4 Bg7',
-      'd4 Nf6 Nf3 g6 g3 Bg7',
-      'd4 Nf6 Bg5 Ne4',
-      'd4 Nf6 Bf4 g6',
-      'd4 Nf6 Nc3 d5',
-      'd4 Nf6 e3 g6',
-      'd4 Nf6 g3 g6',
-      'e4 e5 Nf3 Nc6',
-      'c4 e5 Nc3 Nf6',
-      'Nf3 Nf6 g3 g6',
-      'g3 d5 Bg2 Nf6',
-      'b3 e5 Bb2 Nc6',
-      'f4 d5 Nf3 Nf6',
-      'Nc3 d5 e4 d4',
-      'b4 e5 Bb2 Bxb4',
-      'd3 e5 Nf3 Nc6',
-      'e3 d5 d4 Nf6',
-      'c3 e5 d4 exd4',
-      'h3 d5 d4 Nf6',
-      'a3 e5 e4 Nf6',
-    ]) {
-      rep = addLine(rep, line.split(' '), 'reference').rep;
-    }
+    const walk = (path: string[], fen: string) => {
+      if (path.length >= 4) {
+        rep = addLine(rep, path, 'reference').rep;
+        return;
+      }
+      const entry = lookup(index, fen);
+      if (!entry?.moves.length) {
+        if (path.length) rep = addLine(rep, path, 'reference').rep;
+        return;
+      }
+      // Their choices are all met; ours is the one move the book likes best.
+      const ours = fenTurn(fen) === 'b';
+      for (const move of ours ? entry.moves.slice(0, 1) : entry.moves.slice(0, 4)) {
+        const played = applySan(fen, move.san);
+        if (played) walk([...path, played.san], played.after);
+      }
+    };
+    walk([], START_FEN);
     return rep;
   })();
 
@@ -234,17 +240,20 @@ describe('the lobby', () => {
     // One row per variation is an accurate reading of the prep and an unusable
     // way to choose: a thin King's Indian produced Sämisch, Smyslov and Bf4
     // System as three separate rows, all of them a King's Indian.
-    const names = growthRows([black], index).map((row) => row.name);
-    expect(names).toContain("King's Indian Defence");
-    for (const name of names) expect(name).not.toMatch(/^KID: /);
+    const rows = growthRows([black], index);
+    const names = rows.map((row) => row.name);
+    // Everything below the prep is one row, headed by the family the book names
+    // at the top of it rather than by each variation underneath.
+    expect(rows.filter((row) => row.depth > 0)).toHaveLength(1);
+    for (const name of names) expect(name).not.toMatch(/: /);
     expect(new Set(names).size).toBe(names.length);
   });
 
   it('keeps the family row pointing at every hole it absorbed', () => {
     const rows = growthRows([black], index);
-    const kid = rows.find((row) => row.name === "King's Indian Defence")!;
-    const total = growthRows([black], index).reduce((sum, row) => sum + row.holes.length, 0);
-    expect(kid.holes.length).toBeGreaterThan(1);
+    const family = prepRow(rows);
+    const total = rows.reduce((sum, row) => sum + row.holes.length, 0);
+    expect(family.holes.length).toBeGreaterThan(1);
     expect(total).toBe(findHoles(black, index).length);
   });
 
@@ -253,10 +262,10 @@ describe('the lobby', () => {
     // row, not a reason to call a deep variation more urgent than a first move
     // they cannot meet at all.
     const plain = growthRows([black], index);
-    const kidLine = "d4 Nf6 c4 g6 Nc3 Bg7 e4";
+    const kidLine = 'd4 Nf6 c4 g6 Nc3 Bg7 e4';
     const lifted = growthRows([black], index, { starred: [kidLine] });
-    const before = plain.find((row) => row.name === "King's Indian Defence")!;
-    const after = lifted.find((row) => row.name === "King's Indian Defence")!;
+    const before = prepRow(plain);
+    const after = prepRow(lifted);
     expect(before.starred).toBe(false);
     expect(after.starred).toBe(true);
     expect(after.score).toBeGreaterThan(before.score);
@@ -266,8 +275,9 @@ describe('the lobby', () => {
 
   it('stars only the rows inside the opening that was starred', () => {
     const rows = growthRows([black], index, { starred: ['d4 Nf6 c4 g6 Nc3 Bg7 e4'] });
+    const starred = prepRow(rows);
     for (const row of rows) {
-      if (row.name !== "King's Indian Defence") expect(row.starred).toBe(false);
+      if (row !== starred) expect(row.starred).toBe(false);
     }
   });
 
@@ -288,11 +298,19 @@ describe('the lobby', () => {
     }
   });
 
-  it('calls a move the book cannot name after the move itself', () => {
-    const names = growthRows([black], index).map((row) => row.name);
-    // 1.g3 has no opening name here, and must not borrow the repertoire's.
-    expect(names).toContain('vs 1.g3');
-    expect(names).not.toContain('King\u2019s Indian Defence');
+  it('never lets a row borrow a name from the repertoire it sits in', () => {
+    // A row is named after the position it covers or after the move itself —
+    // never after the prep it happens to belong to. The book names every first
+    // move it holds, so the "vs 1.g3" fallback is rare rather than unreachable,
+    // and the invariant is what matters: a name is earned by a position.
+    for (const row of growthRows([black], index)) {
+      // The row is named for the move the hole asks about, not the position the
+      // hole is asked from.
+      const hole = row.holes[0];
+      const deepest = deepestName(index, [...hole.path, hole.san]);
+      if (deepest) expect(row.name).toBe(familyName(index, deepest.name));
+      else expect(row.name).toMatch(/^vs \d+\./);
+    }
   });
 
   it('offers an empty Black repertoire a row per first move it cannot meet', () => {

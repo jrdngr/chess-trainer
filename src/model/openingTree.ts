@@ -150,10 +150,25 @@ export function buildOpeningTree(index: ReferenceIndex): OpeningTree {
       if (other === node || !extendsPath(node.sans, other.sans)) continue;
       if (!parent || other.sans.length > parent.sans.length) parent = other;
     }
-    // Names second: the family the book's own taxonomy files it under.
-    if (!parent) {
-      const family = familyName(index, node.name);
-      const named = family !== node.name ? byName.get(family) : undefined;
+    // Names second, and not only as a fallback: containment by move order is
+    // not the same as belonging.
+    //
+    // A King's Indian Fianchetto goes 1.d4 Nf6 2.c4 g6 3.Nf3, which never
+    // reaches the position the book names the King's Indian Defence by, so its
+    // deepest containing move order is a West Indian Defence — another family.
+    // Filing it there would put a King's Indian outside the King's Indian, and
+    // a region is meant to be a family and every variation under it, by any
+    // road in.
+    //
+    // The reverse mismatch is left alone. The Grünfeld extends the move order
+    // the book names the King's Indian by and is nobody's King's Indian, but
+    // nothing structural separates that from the Ruy López extending the King's
+    // Knight Opening, which is filed exactly right. It is an artefact of the
+    // book naming 1.d4 Nf6 2.c4 g6 3.Nc3 after a defence Black has not yet
+    // committed to, and it is better lived with than guessed at.
+    const family = familyName(index, node.name);
+    if (family !== node.name && (!parent || familyName(index, parent.name) !== family)) {
+      const named = byName.get(family);
       if (named && named !== node && !extendsPath(named.sans, node.sans)) parent = named;
     }
     node.parentId = (parent ?? firstMove(node.sans[0], 0)).id;

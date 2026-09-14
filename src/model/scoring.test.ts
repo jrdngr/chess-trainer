@@ -112,11 +112,13 @@ describe('where points go', () => {
     expect(creditedNodes(tree, [...NAJDORF.split(' '), 'Be3'])).toEqual([
       'e4',
       'e4 c5',
-      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3',
+      'e4 c5 Nf3 d6',
+      'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6',
       NAJDORF,
       `${NAJDORF} Be3`,
     ]);
-    expect(creditedNodes(tree, ['a3', 'h6'])).toEqual([]);
+    // 1.Nh3 is one of the two first moves the book does not hold at all.
+    expect(creditedNodes(tree, ['Nh3', 'h6'])).toEqual([]);
   });
 
   it('moves the global total and every credited opening', () => {
@@ -158,7 +160,7 @@ describe('where points go', () => {
   });
 
   it('touches only the total when the book names nothing on the line', () => {
-    const state = applyEvent(EMPTY_SCORE, tree, event({ line: ['a3', 'h6'], points: 4 }));
+    const state = applyEvent(EMPTY_SCORE, tree, event({ line: ['Nh3', 'h6'], points: 4 }));
     expect(state.total).toBe(4);
     expect(Object.keys(state.nodes)).toEqual([]);
   });

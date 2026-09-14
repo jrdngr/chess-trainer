@@ -419,8 +419,13 @@ describe('what gets recommended', () => {
       }),
     );
     expect(pick.focus).toBe('review');
-    // Three variations each hold a third: the family keeps the round.
-    expect(pick.opening.id).toBe('e4 c5');
+    // Three variations each hold a third, so the round is given to something
+    // above them rather than to whichever one happens to be largest. Which
+    // ancestor that is depends on how deep the book names the Sicilian, so the
+    // test asks that the pick contains the variations rather than naming it.
+    expect([NAJDORF, DRAGON]).not.toContain(pick.opening.id);
+    expect(NAJDORF.startsWith(pick.opening.id)).toBe(true);
+    expect(pick.opening.id.startsWith('e4 c5')).toBe(true);
   });
 
   it('counts a position your games got wrong as due', () => {

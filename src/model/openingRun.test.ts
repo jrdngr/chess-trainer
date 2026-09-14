@@ -148,11 +148,11 @@ describe('beginning a run', () => {
   });
 
   it('walks you into the opening when the region is narrower than your prep', () => {
-    const najdorf = byName('Sicilian: Najdorf');
+    const najdorf = byName('Sicilian Defence: Najdorf Variation');
     const { run } = start([whiteRep()], 'w', 1, najdorf);
     expect(run.target).toEqual(najdorf.sans);
     expect(run.openingId).toBe(najdorf.id);
-    expect(run.sourceLabel).toBe('Sicilian: Najdorf');
+    expect(run.sourceLabel).toBe('Sicilian Defence: Najdorf Variation');
   });
 
   it('draws a line inside the region when you have one', () => {
@@ -182,9 +182,10 @@ describe('prepared or theory, inside the region', () => {
     // The repertoire plays 1.d4; 1.e4 is theory; 1.a4 is nobody's move.
     expect(classify(source, run, 'd4')).toBe('prep');
     expect(classify(source, run, 'e4')).toBe('theory');
-    expect(classify(source, run, 'a4')).toBe('miss');
+    // 1.Nh3 is one of the two first moves the book does not hold at all.
+    expect(classify(source, run, 'Nh3')).toBe('miss');
     expect(play(source, run, 'e4').ok).toBe(true);
-    expect(play(source, run, 'a4').ok).toBe(false);
+    expect(play(source, run, 'Nh3').ok).toBe(false);
     expect(movesHere(source, run)[0]).toBe('d4');
   });
 
@@ -198,20 +199,26 @@ describe('prepared or theory, inside the region', () => {
   });
 
   it('keeps the run inside the region on the way in', () => {
-    const najdorf = byName('Sicilian: Najdorf');
+    const najdorf = byName('Sicilian Defence: Najdorf Variation');
     const { source, run } = start([rep], 'w', 1, najdorf);
-    // 1.d4 is your prep, but it can never be a Najdorf.
-    expect(movesHere(source, run)).toEqual(['e4']);
-    expect(play(source, run, 'd4').ok).toBe(false);
-    expect(staysInside(tree, run, 'e4')).toBe(true);
-    expect(staysInside(tree, run, 'd4')).toBe(false);
+    // Every first move offered has to be able to become a Najdorf. Several can:
+    // 1.d4 c5 2.e4 and 1.Nf3 c5 2.e4 both transpose. Most cannot.
+    const offered = movesHere(source, run);
+    expect(offered).toContain('e4');
+    for (const san of offered) expect(staysInside(tree, run, san)).toBe(true);
+    // Most cannot, and are not offered: the region is a filter, not a list of
+    // everything the book holds at move one.
+    const firsts = lookup(referenceIndex(), START_FEN)!.moves.length;
+    expect(offered.length).toBeLessThan(firsts / 2);
+    // 1.d4 stays alive, because 1.d4 c5 2.e4 is a Sicilian.
+    expect(staysInside(tree, run, 'd4')).toBe(true);
     // Once there, anything in the book keeps you alive.
     const inside = at(run, [...najdorf.sans, 'Be3']);
     expect(movesHere(source, inside).length).toBeGreaterThan(1);
   });
 
   it('lets the opponent only play moves that stay in the region', () => {
-    const najdorf = byName('Sicilian: Najdorf');
+    const najdorf = byName('Sicilian Defence: Najdorf Variation');
     const { source, run } = start([rep], 'w', 1, najdorf);
     const played = play(source, run, 'e4').run;
     for (let seed = 0; seed < 10; seed += 1) {
@@ -318,9 +325,9 @@ describe('the record', () => {
   });
 
   it('files a run under its region and colour', () => {
-    const najdorf = byName('Sicilian: Najdorf');
+    const najdorf = byName('Sicilian Defence: Najdorf Variation');
     const { run } = start([rep], 'w', 1, najdorf);
-    expect(outcomeOf(run, false)).toMatchObject({ openingId: najdorf.id, color: 'w', label: 'Sicilian: Najdorf' });
+    expect(outcomeOf(run, false)).toMatchObject({ openingId: najdorf.id, color: 'w', label: 'Sicilian Defence: Najdorf Variation' });
   });
 
   it('amends the record instead of counting a carried-on run twice', () => {
@@ -901,7 +908,12 @@ describe('drawing move orders you will actually face', () => {
     const mainline = share(rep, 'b', true, ['d4', 'Nf6', 'c4']);
     const sideline = share(rep, 'b', true, ['d4', 'Nf6', 'Bg5']);
     expect(mainline + sideline).toBeCloseTo(1, 5);
-    expect(mainline).toBeGreaterThan(sideline * 10);
+    // Three lines sit under 2.c4 and one under 2.Bg5, and that must not be what
+    // decides how often each is drawn — how often White plays them is. So the
+    // split tracks the book's own popularity rather than the line count.
+    const after = lookup(referenceIndex(), walkSan(['d4', 'Nf6']).fens.at(-1)!)!;
+    const games = (san: string) => after.moves.find((move) => move.san === san)!.games;
+    expect(mainline / sideline).toBeCloseTo(games('c4') / games('Bg5'), 0);
   });
 
   it('gives the rarest lines back their share when short ones are skipped', () => {

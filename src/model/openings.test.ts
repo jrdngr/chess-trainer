@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { openingsAcross, openingsIn } from './openings';
 import { referenceIndex } from './referenceIndex';
+import { nameAt } from './reference';
 import { addLine, createRepertoire, pruneCount, pruneLine, repertoireName } from './repertoire';
+import { walkSan } from '../chess/core';
 import type { Repertoire } from './types';
 
 const index = referenceIndex();
@@ -32,20 +34,21 @@ describe('deriving openings', () => {
     // filed as an opening the player never chose.
     const openings = openingsIn(build('b', [KID]), index);
     expect(openings).toHaveLength(1);
-    expect(openings[0].name).toBe("King's Indian Defence");
+    expect(openings[0].name).toMatch(/^King's Indian Defence/);
     expect(openings[0].path).toEqual(['d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4']);
   });
 
   it('splits one first move into the openings it answers', () => {
-    // 1.e4 is one move but three openings. Listing "King's Pawn Opening" with
+    // 1.e4 is one move but three openings. Listing "King's Pawn Game" with
     // everything inside it is the same mistake in the other direction.
     const names = openingsIn(
       build('w', ['e4 c5 Nf3 d6', 'e4 e5 Nf3 Nc6 Bb5 a6', 'e4 e6 d4 d5 Nc3']),
       index,
     ).map((o) => o.name);
-    expect(names).toContain('French Defence');
-    expect(names).toEqual(expect.arrayContaining([expect.stringMatching(/Sicilian/)]));
-    expect(names).not.toContain("King's Pawn Opening");
+    expect(names).toHaveLength(3);
+    expect(names).toEqual(expect.arrayContaining([expect.stringMatching(/^French Defence/)]));
+    expect(names).toEqual(expect.arrayContaining([expect.stringMatching(/^Sicilian Defence/)]));
+    expect(names).not.toContain("King's Pawn Game");
   });
 
   it('keeps a waypoint that has lines of its own', () => {
@@ -56,24 +59,37 @@ describe('deriving openings', () => {
   });
 
   it('nests a deeper name as a variation of the opening it sits in', () => {
+    // Two King's Indians that part company at move nine: the heading is what
+    // they have in common and each continuation is a variation under it.
     const openings = openingsIn(build('b', [`${KID} f3 O-O`, `${KID} Nf3 O-O`]), index);
-    const kid = openings.find((o) => o.name === "King's Indian Defence");
-    expect(kid).toBeDefined();
-    expect(kid!.variations.map((v) => v.name)).toContain('KID: Sämisch Variation');
+    expect(openings).toHaveLength(1);
+    expect(openings[0].name).toMatch(/^King's Indian Defence/);
+    expect(openings[0].variations).toHaveLength(2);
+    expect(openings[0].variations.map((v) => v.name)).toEqual(
+      expect.arrayContaining([expect.stringMatching(/Sämisch/)]),
+    );
   });
 
-  it('keeps the parent heading when the only line is one variation', () => {
-    // A lone Sämisch listed on its own says nothing about what it is a
-    // variation of. Only first-move names are dropped as waypoints.
+  it('drops a heading that holds one variation and nothing of its own', () => {
+    // A lone Sämisch is listed as a Sämisch. The King's Indian above it holds
+    // no lines and offers no choice — every line under it is the Sämisch — so
+    // it is a step on the way rather than an opening that was chosen.
     const openings = openingsIn(build('b', [`${KID} f3 O-O`]), index);
-    expect(openings.map((o) => o.name)).toEqual(["King's Indian Defence"]);
-    expect(openings[0].variations.map((v) => v.name)).toEqual(['KID: Sämisch Variation']);
+    expect(openings).toHaveLength(1);
+    expect(openings[0].name).toMatch(/Sämisch/);
+    expect(openings[0].variations).toEqual([]);
   });
 
-  it('calls an opening the book cannot name after its first move', () => {
+  it('names an opening after the move itself when the book cannot name it', () => {
+    // The book names every first move it holds, so this is the invariant rather
+    // than a worked example: a region is named for a position, or for its own
+    // move — never for the repertoire it happens to sit in.
     const openings = openingsIn(build('w', ['b3 e5 Bb2 Nc6']), index);
-    expect(openings.map((o) => o.name)).toEqual(['1.b3']);
+    expect(openings).toHaveLength(1);
     expect(openings[0].lines).toBe(1);
+    const named = nameAt(index, walkSan(openings[0].path).fens.at(-1)!);
+    if (named) expect(openings[0].name).toBe(named.name);
+    else expect(openings[0].name).toMatch(/^\d+\.{1,3}/);
   });
 
   it('accounts for every line exactly once', () => {
@@ -86,8 +102,8 @@ describe('deriving openings', () => {
   });
 
   it('measures an opening by what exists only for it', () => {
-    // The King's Indian is named at the seventh move, so its own subtree is two
-    // nodes — but eight moves exist only to reach it, and that is its size.
+    // The heading lands at the seventh move, so its own subtree is two nodes —
+    // but eight moves exist only to reach it, and that is its size.
     const openings = openingsIn(build('b', [KID]), index);
     expect(openings[0].moves).toBe(2);
     expect(openings[0].removes).toBe(8);
@@ -124,12 +140,14 @@ describe('deleting an opening', () => {
 
   it('stops at a move another opening also needs', () => {
     const rep = build('w', ['e4 c5 Nf3 d6', 'e4 e6 d4 d5']);
-    const french = openingsIn(rep, index).find((o) => o.name === 'French Defence')!;
+    const french = openingsIn(rep, index).find((o) => /^French Defence/.test(o.name))!;
     const after = pruneLine(rep, french.rootId);
     // 1.e4 survives, because the Sicilian still needs it.
     expect(after.rootChildren).toHaveLength(1);
     expect(after.nodes[after.rootChildren[0]].san).toBe('e4');
-    expect(openingsIn(after, index).map((o) => o.name)).toEqual(['Sicilian Defence']);
+    expect(openingsIn(after, index).map((o) => o.name)).toEqual([
+      expect.stringMatching(/^Sicilian Defence/),
+    ]);
   });
 
   it('counts the cost before paying it', () => {
