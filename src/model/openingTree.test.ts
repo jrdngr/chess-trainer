@@ -130,6 +130,26 @@ describe('regions', () => {
   it('treats the root as everywhere', () => {
     expect(lineStatus(tree, tree.root, ['a3', 'h6'])).toBe('reached');
   });
+
+  it('is a family and every variation under it, not one position', () => {
+    // The Fianchetto sits under the King's Indian and never passes the
+    // position the family is named by. It is a King's Indian all the same.
+    const fianchetto = ['d4', 'Nf6', 'c4', 'g6', 'Nf3', 'Bg7', 'g3'];
+    expect(ancestorsOf(tree, fianchetto.join(' ')).map((n) => n.name)).toContain("King's Indian Defence");
+    expect(lineStatus(tree, kid, fianchetto)).toBe('reached');
+    expect(lineStatus(tree, kid, fianchetto.slice(0, 5))).toBe('onWay');
+    // 4.Nf3 O-O 5.e4 d6 is the Classical by another road; it skips the
+    // family's own position on the way to the variation's.
+    const castled = ['d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'Nf3', 'O-O', 'e4', 'd6'];
+    expect(lineStatus(tree, kid, castled)).toBe('onWay');
+    expect(lineStatus(tree, kid, [...castled, 'Be2', 'e5'])).toBe('onWay');
+    // Gligorić by that road: a variation's position, the family's never passed.
+    expect(lineStatus(tree, kid, [...castled, 'Be2', 'e5', 'Be3'])).toBe('reached');
+    expect(insideRegion(tree, kid, castled.slice(0, 7))).toBe(true);
+    // What cannot get to any of them is still outside.
+    expect(lineStatus(tree, kid, ['d4', 'd5'])).toBe('outside');
+    expect(lineStatus(tree, kid, ['d4', 'Nf6', 'c4', 'e6'])).toBe('outside');
+  });
 });
 
 describe('naming a line', () => {

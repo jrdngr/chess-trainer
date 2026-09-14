@@ -18,7 +18,11 @@ import { familyName, lookup, nameAt, type ReferenceIndex } from './reference';
  *
  * A node is a *region* of theory: selecting it means "anything that goes
  * through here". That test is done on positions rather than move orders, so a
- * line that transposes into the Najdorf is inside the Najdorf.
+ * line that transposes into the Najdorf is inside the Najdorf. And "here" is
+ * the node's position or any variation's under it: the Fianchetto King's
+ * Indian never passes the position the book names "King's Indian Defence",
+ * nor does 4.Nf3 O-O 5.e4 d6, and both are King's Indians — the picker says
+ * so by nesting them there, and the region agrees.
  */
 export interface OpeningNode {
   /** The defining move order, space-joined. The root's id is ''. */
@@ -251,7 +255,7 @@ export type LineStatus = 'reached' | 'onWay' | 'outside';
 const approaches = new WeakMap<OpeningNode, Set<string>>();
 
 /**
- * Every position the book can reach the node's position from.
+ * Every position the book can reach one node's own position from.
  *
  * Walked backwards through the reference database rather than read off the
  * node's own move order, so a transposition counts: 1.c4 Nf6 2.Nc3 g6 3.e4 is
@@ -259,12 +263,15 @@ const approaches = new WeakMap<OpeningNode, Set<string>>();
  * node's own path is included regardless, since a rarely played opening may
  * have a move order the database never authored a continuation for.
  */
-export function approachKeys(tree: OpeningTree, node: OpeningNode): Set<string> {
+function approachOne(tree: OpeningTree, node: OpeningNode): Set<string> {
   const cached = approaches.get(node);
   if (cached) return cached;
   const parents = parentMap(tree.index);
   const out = new Set<string>(node.pathKeys);
-  const queue = [node.key];
+  // Every position along the path is walked back from, not only the last:
+  // a line can transpose into the path partway along, and a position seeded
+  // as already found would otherwise never have its own parents looked at.
+  const queue = [...node.pathKeys];
   while (queue.length) {
     const key = queue.pop()!;
     for (const parent of parents.get(key) ?? []) {
@@ -275,6 +282,44 @@ export function approachKeys(tree: OpeningTree, node: OpeningNode): Set<string> 
   }
   approaches.set(node, out);
   return out;
+}
+
+interface Region {
+  /** The positions that are the region: the node's own, and every variation's under it. */
+  inside: Set<string>;
+  /** Every position the book can reach one of those from. */
+  approach: Set<string>;
+}
+
+const regions = new WeakMap<OpeningNode, Region>();
+
+/**
+ * What a node is as a region: its own position and its variations' — reaching
+ * any of them is reaching the opening — and everything the book can get to
+ * one of them from.
+ *
+ * The variations matter because a family is named by one position and played
+ * through many. The Fianchetto King's Indian sits under the King's Indian in
+ * the picker and never passes the position the family is named by; the
+ * Classical reached by 4.Nf3 O-O 5.e4 d6 skips it too. Reading the family as
+ * its one position alone would have the opponent refuse those move orders
+ * with the family selected, and the scorer count the lines as no one's.
+ */
+export function regionOf(tree: OpeningTree, node: OpeningNode): Region {
+  const cached = regions.get(node);
+  if (cached) return cached;
+  const members = [node, ...descendantsOf(node)];
+  const inside = new Set(members.map((member) => member.key));
+  const approach = new Set<string>();
+  for (const member of members) for (const key of approachOne(tree, member)) approach.add(key);
+  const out = { inside, approach };
+  regions.set(node, out);
+  return out;
+}
+
+/** Every position the book can reach the region from — see `regionOf`. */
+export function approachKeys(tree: OpeningTree, node: OpeningNode): Set<string> {
+  return regionOf(tree, node).approach;
 }
 
 const parentMaps = new WeakMap<ReferenceIndex, Map<string, string[]>>();
@@ -305,15 +350,15 @@ function parentMap(index: ReferenceIndex): Map<string, string[]> {
 
 export function lineStatus(tree: OpeningTree, node: OpeningNode, sans: string[]): LineStatus {
   if (node.depth === 0) return 'reached';
-  const onWay = approachKeys(tree, node);
+  const { inside, approach } = regionOf(tree, node);
   let fen = START_FEN;
   for (const san of sans) {
     const move = applySan(fen, san);
     if (!move) return 'outside';
     fen = move.after;
     const key = positionKey(fen);
-    if (key === node.key) return 'reached';
-    if (!onWay.has(key)) return 'outside';
+    if (inside.has(key)) return 'reached';
+    if (!approach.has(key)) return 'outside';
   }
   return 'onWay';
 }
@@ -391,15 +436,14 @@ export function regionsOf(
       out.set(node.id, 'outside');
       continue;
     }
-    const at = keys.indexOf(node.key);
+    const { inside, approach } = regionOf(tree, node);
+    const at = keys.findIndex((key) => inside.has(key));
     if (at >= 0) {
       // Reached, provided every position before it was on the way.
-      const approach = approachKeys(tree, node);
       const clean = keys.slice(0, at).every((key) => approach.has(key));
       out.set(node.id, clean ? 'reached' : 'outside');
       continue;
     }
-    const approach = approachKeys(tree, node);
     out.set(node.id, keys.every((key) => approach.has(key)) && (keys.length === 0 || approach.has(last)) ? 'onWay' : 'outside');
   }
   return out;
