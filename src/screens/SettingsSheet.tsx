@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Section, Segmented, Sheet, toast, Toggle } from '../components/ui';
 import { describeStatus } from '../store/cloud';
 import { useStore } from '../store/useStore';
@@ -14,7 +14,18 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
   const setSettings = useStore((s) => s.setSettings);
   const resetProgress = useStore((s) => s.resetProgress);
   const resetAll = useStore((s) => s.resetAll);
-  const [confirmReset, setConfirmReset] = useState(false);
+  /**
+   * Which reset is waiting to be confirmed, if either. One at a time, so
+   * arming one disarms the other and a tap is never confirming the row above
+   * the one it looks like it is on.
+   */
+  const [armed, setArmed] = useState<'progress' | 'all' | null>(null);
+
+  // Closing the sheet is the plainest way to say no. Nothing stays armed for
+  // a tap the next time it is opened.
+  useEffect(() => {
+    if (!open) setArmed(null);
+  }, [open]);
 
   const toggle = (key: keyof Settings) => () =>
     setSettings({ [key]: !settings[key] } as Partial<Settings>);
@@ -55,27 +66,34 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
         <button
           className="list-row"
           onClick={() => {
+            if (armed !== 'progress') {
+              setArmed('progress');
+              return;
+            }
             resetProgress();
+            setArmed(null);
             toast('Progress reset');
           }}
         >
-          <span className="grow title">Reset progress</span>
+          <span className="grow title">
+            {armed === 'progress' ? 'Tap again to confirm' : 'Reset progress'}
+          </span>
         </button>
         <button
           className="list-row"
           style={{ color: 'var(--bad)' }}
           onClick={async () => {
-            if (!confirmReset) {
-              setConfirmReset(true);
+            if (armed !== 'all') {
+              setArmed('all');
               return;
             }
             await resetAll();
-            setConfirmReset(false);
+            setArmed(null);
             onClose();
             toast('Reset');
           }}
         >
-          <span className="grow title">{confirmReset ? 'Tap again to confirm' : 'Reset everything'}</span>
+          <span className="grow title">{armed === 'all' ? 'Tap again to confirm' : 'Reset everything'}</span>
         </button>
       </div>
       <div className="spacer" />
