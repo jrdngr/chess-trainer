@@ -12,6 +12,7 @@ import {
 } from '../../components/ui';
 import { applySan, lastMoveOf, sansToMoveText, walkSan, type Square } from '../../chess/core';
 import {
+  bookMoves,
   extendedMoves,
   fullLine,
   gradeOf,
@@ -79,6 +80,7 @@ export function Reveal({
   const survived = death === null;
   const grade = gradeOf(run, survived);
   const past = extendedMoves(run);
+  const byBook = bookMoves(run);
 
   const line = useMemo(() => {
     const sans = fullLine(source, run);
@@ -269,6 +271,7 @@ export function Reveal({
               <div className="meta">
                 {named.specific ? `${run.sourceLabel} · ` : ''}
                 {survived && past === 0 ? 'played in full' : `${run.survived} correct`}
+                {byBook > 0 ? ` · ${byBook} past your prep, judged by the book` : ''}
                 {past > 0 ? ` · ${past} past prep` : ''}
                 {run.added > 0 ? ` · ${run.added} move${run.added === 1 ? '' : 's'} added` : ''}
                 {run.hintsUsed > 0 ? ` · ${run.hintsUsed} hint${run.hintsUsed === 1 ? '' : 's'}` : ''}

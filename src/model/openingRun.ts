@@ -385,6 +385,13 @@ export interface Run {
    * drawn in.
    */
   enteredIn: string | null;
+  /**
+   * How many plies had been played when the prep ran out and the run carried
+   * on into the book, or null. From there the book judges every move, as it
+   * does after leaving the prep — but nothing was left, because there was
+   * nothing to leave: a finish is still a clean one. See `MIN_DECISIONS`.
+   */
+  pastPrep: number | null;
   /** Hints left to spend. */
   hints: number;
   /** Hints spent, shown on the reveal so a deep run stays honest. */
@@ -647,6 +654,7 @@ export function beginRun(opts: BeginOptions): Begun | null {
     drawn: first.target,
     opened,
     enteredIn: opened > 0 ? aim.id : null,
+    pastPrep: null,
     hints: opts.hints ?? DEFAULT_OPTIONS.hints,
     hintsUsed: 0,
     // The budget is what the round may spend; the line decides what it needs.
@@ -1087,15 +1095,57 @@ export function isComplete(source: LineSource, run: Run): boolean {
 /**
  * True at the edge of the prep: your move, nothing prepared, the book still
  * going. This is where a run completes, or — with moves left to add — where it
- * offers the book.
+ * offers the book, or — while the run is still short — where it carries on.
  *
- * Never once the prep has been left: from there the book judges every move
- * and nothing is added. And never for the engine: past the hand-over there is
- * no prep to be at the edge of.
+ * Never once the prep has been left or carried on past: from there the book
+ * judges every move and nothing is added. And never for the engine: past the
+ * hand-over there is no prep to be at the edge of.
  */
 export function atEdge(source: LineSource, run: Run): boolean {
-  if (run.over || run.leftPrep || isExtended(run) || !isUsersTurn(run)) return false;
+  if (run.over || run.leftPrep || run.pastPrep !== null || isExtended(run) || !isUsersTurn(run)) return false;
   return source.prepAt(run.fen).length === 0 && movesHere(source, run).length > 0;
+}
+
+/**
+ * The fewest moves of your own a run must have asked before it may complete
+ * at the edge of the prep.
+ *
+ * A repertoire starts as stubs — an opening's own move order and nothing
+ * more, five plies of Ruy López beside twenty of Queen's Gambit — and a run
+ * that completes wherever the prep happens to stop is over after three
+ * moves there, with nothing learned and nothing gained. So a short run does
+ * not stop at the edge: it carries on into the book, judged by the book,
+ * and what it survives is written into the repertoire, the same as a run
+ * that has left its prep. A stub grows by being played.
+ */
+export const MIN_DECISIONS = 8;
+
+/** Whether the run has asked enough of you to be allowed to complete at the edge. */
+export function longEnough(run: Run): boolean {
+  return run.survived >= MIN_DECISIONS;
+}
+
+/**
+ * Carry on past the end of the prep, into the book.
+ *
+ * The drawn line led here and no further; from here the opponent plays from
+ * the book, steered again wherever a line of yours passes through, and the
+ * book judges every move. Not leaving the prep: there is nothing here to
+ * leave, and a finish stays green.
+ */
+export function carryOn(run: Run): Run {
+  return run.pastPrep === null ? { ...run, pastPrep: run.played.length, target: [] } : run;
+}
+
+/** Your own moves the book judged after the prep ran out, before any hand-over to the engine. */
+export function bookMoves(run: Run): number {
+  if (run.pastPrep === null) return 0;
+  const end = run.prepEnded ?? run.played.length;
+  let mine = 0;
+  for (let ply = run.pastPrep; ply < end; ply += 1) {
+    if ((ply % 2 === 0) === (run.color === 'w')) mine += 1;
+  }
+  return mine;
 }
 
 /** What to offer at the edge: the book's replies, most played first. */

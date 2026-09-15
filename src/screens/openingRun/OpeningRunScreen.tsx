@@ -5,6 +5,7 @@ import { lastMoveOf, positionStatus, sansToMoveText, type LegalMove, type Square
 import {
   atEdge,
   beginRun,
+  carryOn,
   chooseAtEdge,
   classify,
   edgeOptions,
@@ -14,6 +15,7 @@ import {
   isUsersTurn,
   leavePrep,
   lineToKeep,
+  longEnough,
   movesHere,
   opponentReply,
   outcomeOf,
@@ -314,10 +316,12 @@ export function OpeningRunScreen({
   }, [source, run, myTurn, live, extended]);
 
   /**
-   * The prep running out ends the run. With moves left to add it pauses at
-   * the edge instead and offers the book; with extended mode on the engine
-   * takes over the judging and the run carries on. The book itself running
-   * out — no move left at all — ends the run whoever is to move.
+   * The prep running out ends the run, once the run is long enough. With
+   * moves left to add it pauses at the edge instead and offers the book;
+   * while it is still short it carries on into the book, judged by the book;
+   * with extended mode on the engine takes over the judging and the run
+   * carries on. The book itself running out — no move left at all — ends
+   * the run whoever is to move.
    */
   useEffect(() => {
     if (!source || !run || !live || settled.current) return;
@@ -327,6 +331,10 @@ export function OpeningRunScreen({
     if (edge && run.newMoves > 0) {
       buzz(14);
       setPhase('gap');
+      return;
+    }
+    if (edge && !longEnough(run)) {
+      setGame({ source, run: carryOn(run) });
       return;
     }
     if (prefs.extended) {
@@ -645,6 +653,7 @@ export function OpeningRunScreen({
                     ? 'Reply'
                     : 'Your move'}
               </div>
+              {run.pastPrep !== null && !extended && <div className="ctx">Past your prep · the book judges</div>}
             </div>
             {run.hints > 0 && !extended && (
               <button

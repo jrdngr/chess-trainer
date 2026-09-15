@@ -4,6 +4,8 @@ import {
   atEdge,
   beginRun,
   BLUNDER_LIMIT,
+  bookMoves,
+  carryOn,
   DRAW_WINDOW,
   bookHas,
   chooseAtEdge,
@@ -32,6 +34,8 @@ import {
   lineOdds,
   lineToKeep,
   lineWeakness,
+  longEnough,
+  MIN_DECISIONS,
   movesHere,
   NEW_MOVE_BUDGETS,
   normalizeRecord,
@@ -790,6 +794,36 @@ describe('the edge of the prep', () => {
     expect(chooseAtEdge(edge, 'Qh7').over).toBe(true);
   });
 
+  it('carries on into the book while the run is short, and completes there once it is not', () => {
+    // A Ruy López stub: onboarding's five plies and nothing more.
+    const stub = addLine(createRepertoire('White', 'w', 'rep_ruy'), ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'], 'seed').rep;
+    const { source, run } = start([stub], 'w', 1, any);
+    const edge = at({ ...run, survived: 3 }, ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6']);
+    expect(atEdge(source, edge)).toBe(true);
+    expect(longEnough(edge)).toBe(false);
+    expect(MIN_DECISIONS).toBeGreaterThanOrEqual(5);
+    // Carried on: no longer at the edge, the book judges, and a book move is simply a move.
+    const on = carryOn(edge);
+    expect(on.pastPrep).toBe(6);
+    expect(on.target).toEqual([]);
+    expect(atEdge(source, on)).toBe(false);
+    expect(isComplete(source, on)).toBe(false);
+    expect(classify(source, on, 'Ba4')).toBe('prep');
+    expect(classify(source, on, 'Qh5')).toBe('miss');
+    expect(carryOn(on)).toBe(on);
+    // Played out: the finish is a clean one, and the whole line is kept.
+    const ended = finish(source, play(source, on, 'Ba4').run);
+    expect(isComplete(source, ended)).toBe(true);
+    expect(ended.survived).toBeGreaterThanOrEqual(MIN_DECISIONS);
+    expect(ended.leftPrep).toBe(false);
+    expect(gradeOf(ended, true)).toBe('green');
+    expect(lineToKeep(ended).slice(0, 7)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6', 'Ba4']);
+    expect(bookMoves(ended)).toBe(ended.survived - 3);
+    expect(bookMoves(run)).toBe(0);
+    // Long enough already: the edge is where a run completes.
+    expect(longEnough({ ...edge, survived: MIN_DECISIONS })).toBe(true);
+  });
+
   it('starts with the budget it was given, and none by default', () => {
     expect(start([thin()], 'w').run.newMoves).toBe(0);
     expect(start([thin()], 'w', 1, any, { newMoves: 3 }).run.newMoves).toBe(3);
@@ -1005,7 +1039,7 @@ describe('keeping what a run survived', () => {
     return {
       id: 'r', sourceLabel: 'Any opening', openingId: '', leftPrep: false, color: 'w',
       fen: START_FEN, played: [], survived: 0, over: true, target: [], drawn: [], hints: 0, hintsUsed: 0,
-      newMoves: 0, added: 0, prepEnded: null, opened: 0, enteredIn: null, ...over,
+      newMoves: 0, added: 0, prepEnded: null, opened: 0, enteredIn: null, pastPrep: null, ...over,
     };
   }
 

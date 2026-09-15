@@ -243,7 +243,15 @@ prep), yellow (finished, having left it), red (a move nobody plays), purple
 (ended out of prep).
 
 Where the prep ends — your move, nothing prepared, the book still going — the
-run is complete, unless it has "new moves" left. Then it pauses and offers the
+run is complete, once it has asked you at least eight moves of your own
+(`MIN_DECISIONS`). Before that it carries on into the book: the book judges
+every move, the opponent plays from the book, and what you survive is
+written into the repertoire, so a stub of an opening — the five plies
+onboarding wrote for a starred Ruy López — grows by being played rather
+than ending the run after three moves. Carrying on is not leaving the prep,
+so a finish stays green; the reveal says how many moves the book judged.
+
+With "new moves" left the run pauses at the edge instead and offers the
 book's replies, with how often each is played; the one you choose is written
 into the repertoire and the run carries on, up to the run's budget of new
 moves. A chosen move earns nothing: the score is moves you found.
