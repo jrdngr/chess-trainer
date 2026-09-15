@@ -7,13 +7,17 @@ import {
   BRAKE,
   candidates,
   cardStrength,
+  DEPTH,
+  effectiveLevel,
   firstLineGap,
   foundationGap,
+  isSteered,
   FUN,
   GROWTH_FLOOR,
   growNeed,
   HELD_DAYS,
   MAX_NEW_MOVES,
+  narrowingBar,
   readiness,
   rank,
   recommend,
@@ -21,6 +25,8 @@ import {
   testNeed,
   recentCount,
   saturate,
+  STEER_GAP,
+  steeredRecently,
   weighHoles,
   type Focus,
   type RecommendInput,
@@ -220,7 +226,7 @@ describe('need', () => {
 
 describe('ranking', () => {
   const cand = (focus: Focus, need: number, lastAt: number | null = null, openingId = '') => ({
-    focus, openingId, color: 'w' as const, need, work: 1, lastAt, starred: false, newMoves: 0,
+    focus, openingId, color: 'w' as const, need, work: 1, lastAt, starred: false, level: 0, newMoves: 0,
   });
 
   it('tilts away from Grow and never lets that override a real need', () => {
@@ -252,12 +258,38 @@ describe('ranking', () => {
     expect(ranked[0].openingId).toBe('b');
   });
 
-  it('lifts a starred opening', () => {
+  it('spends less on every level below the selection', () => {
+    expect(DEPTH).toBeLessThan(1);
     const ranked = rank(
-      [{ ...cand('review', 0.5, null, 'a') }, { ...cand('review', 0.5, null, 'b'), starred: true }],
+      [{ ...cand('review', 0.5, null, 'family'), level: 2 }, { ...cand('review', 0.5, null, 'first'), level: 1 }, cand('review', 0.5, null, 'top')],
+      [],
+    );
+    expect(ranked.map((c) => c.openingId)).toEqual(['top', 'first', 'family']);
+    // A stale deep opening still comes round; a fresh one does not.
+    const stale = rank([{ ...cand('review', 0.5, T, 'top') }, { ...cand('review', 0.5, T - 9 * DAY, 'family'), level: 2 }], []);
+    expect(stale[0].openingId).toBe('family');
+    const fresh = rank([{ ...cand('review', 0.5, T - 9 * DAY, 'top') }, { ...cand('review', 0.5, T, 'family'), level: 2 }], []);
+    expect(fresh[0].openingId).toBe('top');
+  });
+
+  it('lifts a starred opening one level', () => {
+    const ranked = rank(
+      [{ ...cand('review', 0.5, null, 'a'), level: 1 }, { ...cand('review', 0.5, null, 'b'), level: 1, starred: true }],
       [],
     );
     expect(ranked[0].openingId).toBe('b');
+    expect(effectiveLevel(2, true)).toBe(1);
+    expect(effectiveLevel(0, true)).toBe(0);
+    // A starred family ranks like a first move, no higher.
+    const tie = rank([{ ...cand('review', 0.5, null, 'a'), level: 1 }, { ...cand('review', 0.5, null, 'b'), level: 2, starred: true }], []);
+    expect(tie[0].score).toBeCloseTo(tie[1].score);
+  });
+
+  it('asks more of a variation the deeper it is before steering there', () => {
+    expect(narrowingBar(1)).toBeCloseTo(1 / 2);
+    expect(narrowingBar(2)).toBeCloseTo(2 / 3);
+    expect(narrowingBar(3)).toBeCloseTo(3 / 4);
+    expect(narrowingBar(0)).toBe(narrowingBar(1));
   });
 });
 
@@ -463,5 +495,73 @@ describe('what gets recommended', () => {
     const a = recommend(input({ reps }));
     const b = recommend(input({ reps }));
     expect(a).toEqual(b);
+  });
+});
+
+describe('where a round starts', () => {
+  it('offers a Test only at the selection, and never narrows it', () => {
+    const reps = [rep('w', [`${NAJDORF} Be3 e5 Nb3 Be6`, `${DRAGON} Be3 Bg7 f3 O-O`])];
+    const tests = candidates(input({ reps, selection: { color: 'w', opening: '' } })).filter((c) => c.focus === 'test');
+    expect(tests).toHaveLength(1);
+    expect(tests[0].openingId).toBe('');
+    // Every card held and nothing due: Test wins, and it is the whole selection from move one.
+    const pick = recommend(input({ reps, cards: heldCards(reps), selection: { color: 'w', opening: '' }, growth: { minShare: 60, maxPly: 18 } }));
+    expect(pick.focus).toBe('test');
+    expect(pick.opening.id).toBe('');
+    expect(pick.start).toBe('first');
+    // With a first move selected, the Test is that first move, still from move one.
+    const first = recommend(input({ reps, cards: heldCards(reps), selection: { color: 'w', opening: 'e4' }, growth: { minShare: 60, maxPly: 18 } }));
+    expect(first.opening.id).toBe('e4');
+    expect(first.start).toBe('first');
+  });
+
+  it('starts a family or deeper inside it, and a first move from move one', () => {
+    const reps = [rep('w', [`${NAJDORF} Be3 e5 Nb3 Be6`, `${DRAGON} Be3 Bg7 f3 O-O`])];
+    const cards = { ...cardsFor(reps, true, (line) => line.includes('a6')), ...cardsFor(reps, false, (line) => !line.includes('a6')) };
+    const review = recommend(
+      input({ reps, cards, selection: { color: 'w', opening: 'e4' }, recentFocuses: ['test', 'test', 'test', 'test', 'test'], growth: { minShare: 60, maxPly: 18 } }),
+    );
+    expect(review.focus).toBe('review');
+    expect(review.opening.id).toBe(NAJDORF);
+    expect(review.start).toBe('inside');
+    // The foundation is laid from move one: an answer to 1.e4 is a round where the opponent opens 1.e4.
+    const vsE4 = recommend(input({ reps, selection: { color: 'random', opening: '' } }));
+    expect(vsE4.opening.id).toBe('e4');
+    expect(vsE4.start).toBe('first');
+    // An opening chosen empty is built from its own position.
+    const empty = recommend(input({ reps, selection: { color: 'w', opening: 'd4 d5 c4 c6' } }));
+    expect(empty).toMatchObject({ focus: 'grow', start: 'inside' });
+    expect(recommend(input({ reps, selection: { color: 'w', opening: 'd4' } })).start).toBe('first');
+  });
+
+  it('spends most rounds from move one, and steers only where the work is concentrated', () => {
+    // One Caro-Kann line, learned: what happened on the home page.
+    const reps = [rep('b', ['e4 c6 d4 d5 e5 Bf5 Nf3 e6 Be2 c5', 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5'])];
+    const cards = halfHeldCards(reps);
+    let score = EMPTY_SCORE;
+    const recent: Focus[] = [];
+    const steered: boolean[] = [];
+    let inside = 0;
+    for (let i = 0; i < 20; i += 1) {
+      const selection = { color: 'b' as const, opening: '' };
+      const pick = recommend(input({ reps, cards, score, recentFocuses: recent, recentSteered: steered, selection }));
+      if (pick.start === 'inside') {
+        inside += 1;
+        // Never two steered rounds within the gap.
+        expect(steeredRecently(steered)).toBe(false);
+      } else {
+        expect(pick.opening.depth).toBeLessThan(2);
+      }
+      recent.push(pick.focus);
+      steered.push(isSteered(pick, selection));
+      score = played(score, pick.opening.id, T + i);
+    }
+    // Rare, but not never: a one-line opening still gets drilled inside now and then.
+    expect(inside).toBeGreaterThan(0);
+    expect(inside).toBeLessThanOrEqual(20 / (STEER_GAP + 1));
+    // A selection that is itself a family starts every round inside it, and that is not steering.
+    const family = recommend(input({ reps, cards, recentSteered: [true, true, true], selection: { color: 'b', opening: 'e4 c6' } }));
+    expect(family.start).toBe('inside');
+    expect(isSteered(family, { color: 'b', opening: 'e4 c6' })).toBe(family.opening.id !== 'e4 c6');
   });
 });

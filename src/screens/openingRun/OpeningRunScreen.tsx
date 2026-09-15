@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Board } from '../../components/Board';
 import { AppBar, haptic, Icons, Section, toast } from '../../components/ui';
-import { lastMoveOf, positionStatus, type LegalMove, type Square } from '../../chess/core';
+import { lastMoveOf, positionStatus, sansToMoveText, type LegalMove, type Square } from '../../chess/core';
 import {
   atEdge,
   beginRun,
@@ -22,6 +22,7 @@ import {
   playExtendedReply,
   takeHint,
   weaknessFromCards,
+  type Begun,
   type LineSource,
   type OpeningRunOptions,
   type OpeningRunPrefs,
@@ -121,20 +122,32 @@ export function OpeningRunScreen({
    */
   const [evidence] = useState(() => evidenceIn(state));
 
+  /**
+   * How to steer the current run again from wherever it has got to. Set
+   * when a run is opened, read when the opponent is about to reply with no
+   * line left to follow.
+   */
+  const redraw = useRef<Begun['redraw'] | null>(null);
+
   /** A run on these options in the selected region, or null when the book is empty. */
-  const open = (options: OpeningRunOptions): Game | null =>
-    beginRun({
+  const open = (options: OpeningRunOptions): Game | null => {
+    const begun = beginRun({
       ...options,
       tree,
       reps,
       node: nodeById(tree, selection.opening),
       toward: planned ? nodeById(tree, planned.steer) : undefined,
       color: planned?.color ?? selection.color,
+      enter: planned?.start === 'inside',
       weakness: weaknessFromCards(cards, evidence),
       growth: settings.growth,
       holeWeight: evidenceFor(evidence),
       seen: seenIn(state.score),
     });
+    if (!begun) return null;
+    redraw.current = begun.redraw;
+    return { source: begun.source, run: begun.run };
+  };
 
   /**
    * An automatic start begins the run itself, before the first paint, so the
@@ -279,14 +292,23 @@ export function OpeningRunScreen({
     active: live && myTurn && !thinking && !referee.pending && !referee.replying,
   });
 
-  // The opponent answers on its own, after a beat.
+  // The opponent answers on its own, after a beat. With no line left to
+  // follow — you stepped off it, or there never was one — a new line is
+  // drawn from here first, by the same steer, so the round follows you
+  // rather than wandering: the opponent walks you toward your lines, your
+  // weak spots or your holes from wherever you have taken it.
   useEffect(() => {
     if (!source || !run || !live || myTurn || run.over || extended) return;
     if (movesHere(source, run).length === 0) return;
     setThinking(true);
     const timer = setTimeout(() => {
       setThinking(false);
-      setGame((g) => (g ? { ...g, run: opponentReply(g.source, g.run, picker.current) } : g));
+      setGame((g) => {
+        if (!g) return g;
+        const offLine = g.run.target.length <= g.run.played.length;
+        const steered = offLine && redraw.current ? redraw.current(g.run) : g.run;
+        return { ...g, run: opponentReply(g.source, steered, picker.current) };
+      });
     }, 420);
     return () => clearTimeout(timer);
   }, [source, run, myTurn, live, extended]);
@@ -402,8 +424,18 @@ export function OpeningRunScreen({
       return;
     }
     // A real theory move that your prep simply does not have is not the same
-    // mistake as a move nobody plays. Pause and let it be a decision.
+    // mistake as a move nobody plays. Pause and let it be a decision — on a
+    // run you set up yourself. Under Autopilot it is simply your move: the
+    // round follows you, the book judges from here, and the reveal says the
+    // run left your prep.
     if (classify(source, run, move.san) === 'theory') {
+      if (planned) {
+        buzz(10);
+        const next = leavePrep(run, move.san);
+        credit(next);
+        setGame({ source, run: next });
+        return;
+      }
       buzz(14);
       const named = deepestName(index, [...run.played, move.san]);
       setOffPrep({
@@ -522,6 +554,12 @@ export function OpeningRunScreen({
           theme={settings.boardTheme}
           captured
         />
+
+        {run.opened > 0 && (
+          <div className="center small muted mt-8">
+            From {sansToMoveText(run.played.slice(0, run.opened))}
+          </div>
+        )}
 
         <div className="spacer" />
 

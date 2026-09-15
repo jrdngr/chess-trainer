@@ -51,18 +51,23 @@ import type { Card, Repertoire } from './types';
  * opening has gone without a run, measured against the other candidates
  * rather than the clock — and a Test asks only as loudly as the line it
  * would run has been left, so the line just built is run once and the
- * opening then grows rather than running it again (see `freshness.ts`). A
- * star on the opening or anything above it lifts
- * it. Fun tilts away from Grow, whose pickers interrupt the run, without
- * overriding the one that matters most. And a brake cuts a focus's weight
- * for every one of the last few rounds it was, so a standing backlog cannot
- * lock the session into one focus.
+ * opening then grows rather than running it again (see `freshness.ts`).
+ * Depth is how far below the selection the opening sits: the selection
+ * itself, played from move one and following the player wherever they go,
+ * is where most rounds should be spent; a first move next; a family after
+ * that; a variation least. A star on the opening or anything above it
+ * lifts it one level. Fun tilts away from Grow, whose pickers interrupt the
+ * run, without overriding the one that matters most. And a brake cuts a
+ * focus's weight for every one of the last few rounds it was, so a
+ * standing backlog cannot lock the session into one focus.
  *
  * Need is measured on everything inside a node, so a family always asks at
- * least as loudly as any of its variations. The winner is then narrowed
- * downward while a variation holds most of its parent's need, so a round is
+ * least as loudly as any of its variations. A Review or Grow that wins is
+ * then narrowed downward while a variation holds most of its parent's need
+ * — most of it, and more of it the deeper the variation — so a round is
  * steered to the variation that actually wants it and left at the family
- * when the need is spread thin.
+ * when the need is spread thin. A Test is never narrowed: it is always the
+ * selection, from move one, with the opponent reacting to what is played.
  */
 export type Focus = 'test' | 'review' | 'grow';
 
@@ -70,8 +75,15 @@ export const FOCUSES: Focus[] = ['test', 'review', 'grow'];
 
 export const FUN: Record<Focus, number> = { test: 1, review: 1, grow: 0.7 };
 
-/** How much a star is worth. */
-export const STAR = 1.6;
+/**
+ * How much each level below the selection is worth.
+ *
+ * The selection is 1, a first move under it 0.6, a family 0.36, a variation
+ * 0.22 and so on. Staleness can lift a candidate to three times its need, so
+ * a family left alone while the selection was just played still comes round;
+ * a fresh one does not.
+ */
+export const DEPTH = 0.6;
 
 /** How much the stalest candidate can outweigh the freshest. */
 export const STALENESS = 2;
@@ -88,8 +100,60 @@ export const BRAKE = 0.5;
 /** How many recent rounds the brake looks back over. */
 export const BRAKE_WINDOW = 5;
 
-/** A variation is worth steering toward once it holds more than this share of its parent's work. */
-export const NARROWING = 0.5;
+/**
+ * How many rounds from move one must pass between rounds steered into an
+ * opening below the selection.
+ *
+ * Narrowing reads how concentrated the work is, and a repertoire of one line
+ * per opening concentrates all of it at every level: every Review and Grow
+ * would start inside the deepest variation there is. A round started inside
+ * is the exception, so the session spaces them: with an opening steered to
+ * in the last three rounds, the ranking and the narrowing both stop at the
+ * openings a round can start from move one.
+ */
+export const STEER_GAP = 3;
+
+/** Whether one of the last few rounds was steered into an opening below the selection. */
+export function steeredRecently(recentSteered: boolean[]): boolean {
+  return recentSteered.slice(-STEER_GAP).some(Boolean);
+}
+
+/**
+ * The share of its parent's work a variation must hold to be steered toward.
+ *
+ * Rises with the level: half for a first move under the selection, two
+ * thirds for a family, three quarters for a variation. A star takes a level
+ * off. Steering a round at a deeper opening starts it in that opening's
+ * position (see `Recommendation.start`), which skips the way in and cannot
+ * be played out of, so it is asked for less the further in it goes.
+ */
+export function narrowingBar(level: number): number {
+  const at = Math.max(1, level);
+  return at / (at + 1);
+}
+
+/** A star is worth one level: a starred family ranks like a first move. */
+export function effectiveLevel(level: number, starred: boolean): number {
+  return Math.max(0, level - (starred ? 1 : 0));
+}
+
+/**
+ * Whether a round on this opening starts in its position rather than from
+ * move one. A first move is not a position worth starting in: a round toward
+ * 1.e4 as Black is a round from move one where the opponent opens 1.e4.
+ */
+export function startsInside(opening: OpeningNode): boolean {
+  return opening.depth >= 2;
+}
+
+/**
+ * Whether a round was steered: started inside an opening below the
+ * selection. A selection that is itself a family starts every round inside
+ * it, and that is the selection's doing, not the engine's.
+ */
+export function isSteered(pick: Pick<Recommendation, 'opening' | 'start'>, selection: Selection): boolean {
+  return pick.start === 'inside' && pick.opening.id !== selection.opening;
+}
 
 /** A review interval this long, in days, is a position fully held. */
 export const HELD_DAYS = 7;
@@ -115,16 +179,30 @@ export interface Candidate {
   work: number;
   lastAt: number | null;
   starred: boolean;
+  /** How many levels below the selection the opening sits; 0 for the selection itself. */
+  level: number;
   /** Moves a Grow round may add here; 0 for the other focuses. */
   newMoves: number;
-  /** need × staleness × star × fun × brake. Only comparable within one ranking. */
+  /** need × staleness × depth × fun × brake. Only comparable within one ranking. */
   score: number;
 }
+
+/**
+ * Where a round begins.
+ *
+ *   first  — from move one. The opponent opens, or you do, and whatever you
+ *            play the round follows: the opening is only what the opponent
+ *            is steered toward, never a fence.
+ *   inside — in the opening's own position, the moves to it already played.
+ *            The round is spent on that opening and nothing else.
+ */
+export type Start = 'first' | 'inside';
 
 export interface Recommendation {
   focus: Focus;
   opening: OpeningNode;
   color: Color;
+  start: Start;
   /**
    * Moves the round may add to the repertoire — an allowance, not a quota.
    * What a round actually spends is decided by the line it walks to: see
@@ -146,6 +224,8 @@ export interface RecommendInput {
   growth: { minShare: number; maxPly: number };
   /** The focuses of the session's rounds so far, oldest first, for the brake. */
   recentFocuses: Focus[];
+  /** For each of those rounds, whether it was steered into an opening below the selection — see `STEER_GAP`. */
+  recentSteered?: boolean[];
   /** What the last few rounds were about — see `freshness.ts`. */
   seen?: Seen;
   now?: number;
@@ -273,8 +353,8 @@ export function rank(list: Omit<Candidate, 'score'>[], recentFocuses: Focus[]): 
     const staler = list.filter((other) => when(other) < when(cand)).length;
     const freshness = list.length < 2 ? 1 : 1 - staler / (list.length - 1);
     const brake = BRAKE ** recentCount(recentFocuses, cand.focus);
-    const score =
-      cand.need * (1 + STALENESS * freshness) * (cand.starred ? STAR : 1) * FUN[cand.focus] * brake;
+    const depth = DEPTH ** effectiveLevel(cand.level, cand.starred);
+    const score = cand.need * (1 + STALENESS * freshness) * depth * FUN[cand.focus] * brake;
     return { ...cand, score };
   });
   return scored.sort(
@@ -373,6 +453,7 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
       work,
       lastAt: lastAt(node.id),
       starred: starredWithin(tree, node.id, starred),
+      level: node.depth - region.depth,
       newMoves,
     });
   };
@@ -466,7 +547,10 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
         MAX_NEW_MOVES,
       );
 
-      if (mine.length) {
+      // A Test is only ever the selection, from move one: what it measures is
+      // whether the prep holds up when nothing says what it is, and a Test
+      // started inside an opening has said what it is.
+      if (mine.length && node === region) {
         const since = lastAt(node.id) ?? 0;
         const untested = mine.filter((m) => m.addedAt > since).length;
         const stalest = Math.max(0, ...reachedIn(lines, node).map((line) => line.stale));
@@ -504,6 +588,7 @@ export function foundationGap(input: RecommendInput): Recommendation | null {
     focus: 'grow',
     opening,
     color,
+    start: 'first',
     newMoves: MAX_NEW_MOVES,
   });
   for (const color of colorsOf(selection.color)) {
@@ -544,7 +629,15 @@ export function firstLineGap(input: RecommendInput): Recommendation | null {
     const inside = reps.some((rep) =>
       leafLines(rep).some((line) => lineStatus(tree, region, line.sans) === 'reached'),
     );
-    if (!inside) return { focus: 'grow', opening: region, color, newMoves: MAX_NEW_MOVES };
+    if (!inside) {
+      return {
+        focus: 'grow',
+        opening: region,
+        color,
+        start: startsInside(region) ? 'inside' : 'first',
+        newMoves: MAX_NEW_MOVES,
+      };
+    }
   }
   return null;
 }
@@ -555,25 +648,38 @@ export function firstLineGap(input: RecommendInput): Recommendation | null {
  *
  * The foundation comes before any ranking — see `foundationGap` — and so
  * does the first line of an opening chosen empty, `firstLineGap`. After them,
- * the winner is narrowed while a variation inside it holds most of its need
- * for the same focus and colour, so a Review asked for by one variation's due
- * cards is a Review on that variation.
+ * a Review or Grow that wins is narrowed while a variation inside it holds
+ * most of its work for the same focus and colour — see `narrowingBar` — so a
+ * Review asked for by one variation's due cards is a Review on that
+ * variation. A Test is never narrowed.
  */
 export function recommend(input: RecommendInput): Recommendation {
   const first = foundationGap(input) ?? firstLineGap(input);
   if (first) return first;
-  const ranked = rank(candidates(input), input.recentFocuses);
   const tree = input.tree;
+  const { selection } = input;
+  // Openings a round would be steered into are off the table for a while
+  // after one was.
+  const closed = steeredRecently(input.recentSteered ?? []);
+  const open = (id: string) => !closed || !isSteered({ opening: nodeById(tree, id), start: 'inside' }, selection);
+  const ranked = rank(candidates(input).filter((c) => open(c.openingId)), input.recentFocuses);
+  const pick = (
+    focus: Focus,
+    opening: OpeningNode,
+    color: Color,
+    newMoves: number,
+  ): Recommendation => ({
+    focus,
+    opening,
+    color,
+    start: startsInside(opening) ? 'inside' : 'first',
+    newMoves,
+  });
   let best = ranked[0];
   if (!best) {
-    return {
-      focus: 'grow',
-      opening: nodeById(tree, input.selection.opening),
-      color: colorsOf(input.selection.color)[0],
-      newMoves: MAX_NEW_MOVES,
-    };
+    return pick('grow', nodeById(tree, input.selection.opening), colorsOf(input.selection.color)[0], MAX_NEW_MOVES);
   }
-  for (;;) {
+  while (best.focus !== 'test') {
     const node = nodeById(tree, best.openingId);
     const parent = best;
     const child = ranked
@@ -582,18 +688,14 @@ export function recommend(input: RecommendInput): Recommendation {
           c.focus === parent.focus &&
           c.color === parent.color &&
           node.children.some((kid) => kid.id === c.openingId) &&
-          c.work > parent.work * NARROWING,
+          open(c.openingId) &&
+          c.work > parent.work * narrowingBar(effectiveLevel(c.level, c.starred)),
       )
       .sort((a, b) => b.work - a.work)[0];
     if (!child) break;
     best = child;
   }
-  return {
-    focus: best.focus,
-    opening: nodeById(tree, best.openingId),
-    color: best.color,
-    newMoves: best.newMoves,
-  };
+  return pick(best.focus, nodeById(tree, best.openingId), best.color, best.newMoves);
 }
 
 export const MODE_NAMES: Record<ScoreMode, string> = {

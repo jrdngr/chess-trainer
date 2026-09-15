@@ -49,6 +49,7 @@ import {
   steerLabel,
   STEERS,
   takeHint,
+  wayIn,
   weaknessFromCards,
   type LineSource,
   type Run,
@@ -631,6 +632,113 @@ describe('the first line of an opening', () => {
   });
 });
 
+describe('starting inside an opening', () => {
+  const qgd = nodeById(tree, 'd4 d5 c4 e6');
+  const slav = nodeById(tree, 'd4 d5 c4 c6');
+
+  it('plays the way in for you, up to the first position the opening names', () => {
+    const { run, source } = start([whiteRep()], 'w', 1, any, { toward: slav, enter: true });
+    expect(run.opened).toBe(4);
+    expect(run.played).toEqual(['d4', 'd5', 'c4', 'c6']);
+    expect(run.fen).toBe(walkSan(run.played).fens[4]);
+    expect(lineStatus(tree, slav, run.played)).toBe('reached');
+    // The line drawn is still whole, and the run is on it.
+    expect(run.target.slice(0, 4)).toEqual(run.played);
+    expect(run.drawn).toEqual(run.target);
+    // Nothing earned for it: the score is moves you found.
+    expect(run.survived).toBe(0);
+    expect(isUsersTurn(run)).toBe(true);
+    expect(movesHere(source, run)).toContain('Nf3');
+    expect(wayIn(tree, slav, ['d4', 'd5', 'c4', 'c6', 'Nf3'])).toEqual(['d4', 'd5', 'c4', 'c6']);
+  });
+
+  it('enters by the drawn line, so a run toward a family lands in the variation drawn', () => {
+    const gambit = nodeById(tree, 'd4 d5 c4');
+    const { run } = start([whiteRep()], 'w', 1, any, { toward: gambit, enter: true });
+    expect(run.opened).toBe(3);
+    expect(run.played).toEqual(['d4', 'd5', 'c4']);
+    expect(['e6', 'c6']).toContain(run.target[3]);
+  });
+
+  it('leaves a first move alone, and a run not asked to enter', () => {
+    expect(start([whiteRep()], 'w', 1, any, { toward: nodeById(tree, 'd4'), enter: true }).run.opened).toBe(0);
+    expect(start([whiteRep()], 'w', 1, any, { toward: qgd }).run.opened).toBe(0);
+    expect(wayIn(tree, any, ['d4'])).toEqual([]);
+    expect(wayIn(tree, qgd, ['e4', 'e5'])).toEqual([]);
+  });
+
+  it('keeps the way in with the line it survived', () => {
+    const { run, source } = start([whiteRep()], 'w', 1, any, { toward: qgd, enter: true });
+    const ended = finish(source, run);
+    expect(isComplete(source, ended)).toBe(true);
+    expect(lineToKeep(ended).slice(0, 4)).toEqual(['d4', 'd5', 'c4', 'e6']);
+    expect(ended.survived).toBe(lineToKeep(ended).filter((_, i) => i % 2 === 0).length - 2);
+  });
+
+  it('builds an empty opening from its own position, and charges only the opening', () => {
+    const kid = addLine(createRepertoire('Black', 'b', 'rep_b'), 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5'.split(' '), 'seed').rep;
+    const najdorf = nodeById(tree, 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6');
+    const { run } = start([kid], 'b', 1, najdorf, { steer: 'gaps', newMoves: 8, enter: true });
+    expect(run.played).toEqual(najdorf.sans);
+    expect(run.opened).toBe(najdorf.sans.length);
+    expect(run.target).toEqual(najdorf.sans);
+    // The way in was played for you, so none of it is budgeted.
+    expect(run.newMoves).toBe(Math.min(8, movesToFit(najdorf.sans.length)));
+  });
+});
+
+describe('following the player', () => {
+  const SLAV = ['d4', 'd5', 'c4', 'c6', 'Nf3', 'Nf6', 'Nc3', 'dxc4', 'a4'];
+
+  it('draws a new line through the position you took the run to', () => {
+    const { run, redraw } = start([whiteRep()], 'w', 1, any, { seed: 2 });
+    const off = at(run, ['d4', 'd5', 'c4', 'c6']);
+    const steered = redraw(off);
+    expect(steered.target).toEqual(SLAV);
+    expect(steered.drawn).toEqual(SLAV);
+    expect(steered.played).toEqual(off.played);
+  });
+
+  it('finds a line by the position, whatever the road to it', () => {
+    const { run, redraw } = start([whiteRep()], 'w', 1);
+    // The Slav position reached the other way round.
+    const steered = redraw(at(run, ['d4', 'c6', 'c4', 'd5']));
+    expect(steered.target).toEqual(['d4', 'c6', 'c4', 'd5', ...SLAV.slice(4)]);
+  });
+
+  it('leaves the run alone where nothing of yours passes through', () => {
+    const { run, redraw } = start([whiteRep()], 'w', 1);
+    const off = at(run, ['e4']);
+    expect(redraw(off)).toBe(off);
+    const past = at(run, [...SLAV, 'e6']);
+    expect(redraw(past)).toBe(past);
+  });
+
+  it('walks to the nearest hole from here when steered at gaps', () => {
+    const rep = addLine(createRepertoire('White', 'w', 'rep_sp'), ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'], 'seed').rep;
+    const { run, redraw } = start([rep], 'w', 1, any, { steer: 'gaps' });
+    const off = at(run, ['e4', 'e5', 'Nf3']);
+    const steered = redraw(off);
+    expect(steered.target.slice(0, 3)).toEqual(['e4', 'e5', 'Nf3']);
+    expect(steered.target).toHaveLength(4);
+    expect(steered.target[3]).not.toBe('Nc6');
+    expect(hasLine(rep, steered.target)).toBe(false);
+  });
+
+  it('draws by weakness from here when steered at weak spots', () => {
+    const rep = whiteRep();
+    const tips = leafLines(rep);
+    const exchange = tips.find((line) => line.sans[3] === 'e6')!;
+    const weakness: Weakness = (_, key) => (pathTo(rep, exchange.tipId).some((n) => n.key === key) ? 50 : 1);
+    let steered = 0;
+    for (let seed = 0; seed < 20; seed += 1) {
+      const { run, redraw } = start([rep], 'w', seed, any, { steer: 'weak', weakness });
+      if (redraw(at(run, ['d4', 'd5'])).target[3] === 'e6') steered += 1;
+    }
+    expect(steered).toBeGreaterThanOrEqual(18);
+  });
+});
+
 describe('the edge of the prep', () => {
   /** One move of prep: after 1.e4 e5 White has nothing, and the book has plenty. */
   function thin(): Repertoire {
@@ -891,7 +999,7 @@ describe('keeping what a run survived', () => {
     return {
       id: 'r', sourceLabel: 'Any opening', openingId: '', leftPrep: false, color: 'w',
       fen: START_FEN, played: [], survived: 0, over: true, target: [], drawn: [], hints: 0, hintsUsed: 0,
-      newMoves: 0, added: 0, prepEnded: null, ...over,
+      newMoves: 0, added: 0, prepEnded: null, opened: 0, ...over,
     };
   }
 

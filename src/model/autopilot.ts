@@ -1,6 +1,6 @@
 import type { Color } from '../chess/core';
 import type { Steer } from './openingRun';
-import type { Focus, Recommendation } from './recommend';
+import type { Focus, Recommendation, Start } from './recommend';
 
 /**
  * Autopilot: one round after another, each a Run on settings the
@@ -19,6 +19,11 @@ export interface RoundPlan {
   color: Color;
   /** The opening to steer toward: an opening tree node id inside the selection. */
   steer: string;
+  /**
+   * Where the round begins: from move one, following whatever is played, or
+   * inside the opening with the way in already on the board.
+   */
+  start: Start;
   /** The Run settings the focus comes down to. */
   options: { steer: Steer; newMoves: number };
 }
@@ -27,6 +32,7 @@ export function planFor(pick: Recommendation): RoundPlan {
   return {
     color: pick.color,
     steer: pick.opening.id,
+    start: pick.start,
     options: { steer: STEER_FOR[pick.focus], newMoves: pick.focus === 'grow' ? pick.newMoves : 0 },
   };
 }

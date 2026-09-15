@@ -8,6 +8,7 @@ import { measureCoverage } from '../model/gameAnalysis';
 import { growthRows } from '../model/growth';
 import { streak } from '../model/scoring';
 import { recommendNow } from '../store/recommendation';
+import type { Recommendation } from '../model/recommend';
 import { levelById } from '../model/play';
 import { buildRepairs } from '../model/repair';
 import { GRADES, gradeLabel, type RunGrade } from '../model/openingRun';
@@ -150,7 +151,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
             <span className="kicker">Autopilot</span>
             <span className="name">Play</span>
             <span className="first truncate">
-              First up: {first.opening.name}
+              First up: {firstUp(first)}
             </span>
           </span>
           {days > 0 && (
@@ -348,6 +349,16 @@ interface Tag {
  * the foot says it again in a shape you can read without counting. Tapping it
  * opens that mode's own setup screen.
  */
+/**
+ * What the first round is, said plainly. A round from move one is a side and
+ * nothing more: it follows whatever is played. One that starts inside an
+ * opening is that opening, and worth a heads-up.
+ */
+function firstUp(pick: Recommendation): string {
+  if (pick.start === 'inside') return pick.opening.name;
+  return `${pick.color === 'w' ? 'White' : 'Black'}, from move one`;
+}
+
 function Tile({
   name,
   tag,

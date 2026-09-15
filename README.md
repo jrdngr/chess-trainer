@@ -87,9 +87,21 @@ its own. Stop is the close button in the app bar, and stopping opens Stats.
 
 Under Autopilot a Run is always on a ten-second clock, with no hints and no
 extended play. What changes from round to round is the opening, the colour,
-and two of Run's own settings: what the opponent steers toward, and how many
-moves the run may add. The player is told none of it; the bar says "Next
-Round" and nothing else.
+where the round starts, and two of Run's own settings: what the opponent
+steers toward, and how many moves the run may add. The player is told none
+of it; the bar says "Next Round" and nothing else.
+
+Most rounds start from move one and follow the player. The opening the
+engine chose is only what the opponent steers toward: play something else
+and the round comes with you, re-steering from wherever you take it (see
+Run). A theory move your prep does not have is simply your move under
+Autopilot — no pause, though the reveal still says the run left your prep.
+Now and then a round is *steered* instead: it starts inside a family or a
+variation, with the way in already on the board, dimmed, and your first
+decision is the first move inside. That is how the engine drills one
+variation or grows one opening, and it is kept rare. Home's Autopilot button
+says which the first round would be: "Black, from move one", or the opening
+it would start inside.
 
 ### The recommendation engine
 
@@ -155,22 +167,39 @@ Each candidate is scored:
   again with a move on the end, and loses to a junction earlier in it. No
   schedule: a one-line repertoire runs it, finds it fresh, and grows; forty
   lines cycle a rotating few.
-- **Star**: an opening that is starred, or sits inside one that is, is worth
-  1.6×.
+- **Depth**: how far below the selection the opening sits, at 0.6 a level —
+  the selection 1, a first move 0.6, a family 0.36, a variation 0.22. Most
+  rounds are spent at the selection, from move one; a family left alone
+  while the selection was just played still comes round, a fresh one does
+  not.
+- **Star**: an opening that is starred, or sits inside one that is, counts
+  one level shallower.
 - **Fun**: Test 1.0, Review 1.0, Grow 0.7.
 - **Brake**: for every one of the session's last five rounds that was this
   focus, its weight is multiplied by 0.6. Counted over a window rather than
   consecutively, so two focuses taking turns still let the third come round.
   The session remembers its own rounds; nothing is saved.
 
-Score is need × staleness × star × fun × brake. Need is measured on
+Score is need × staleness × depth × fun × brake. Need is measured on
 everything inside an opening, so a family asks at least as loudly as any of
-its variations; the winner is then narrowed while a variation holds more than
-half of its parent's work, so a round lands on the variation that wants it and
-stays at the family when the need is spread thin. Only openings the player has
-prep inside are candidates, besides the selection itself. A side with nothing
-prepared is offered one thing, a Grow round in the selection, so a brand new
-install gets its first line from the book.
+its variations. A Review or Grow that wins is then narrowed while a variation
+holds most of its parent's work — half to step to a first move, two thirds
+to a family, three quarters to a variation, a star taking a level off — so a
+round lands on the variation that wants it and stays at the family when the
+need is spread thin. A Test is never narrowed and is only ever the selection:
+what it measures is whether the prep holds up when nothing says what it is.
+Only openings the player has prep inside are candidates, besides the
+selection itself. A side with nothing prepared is offered one thing, a Grow
+round in the selection, so a brand new install gets its first line from the
+book.
+
+A round on a family or deeper starts inside it; one on the selection or a
+first move starts from move one. A repertoire of one line per opening
+concentrates all of its work at every level, and every Review and Grow would
+start inside the deepest variation there is — so the session spaces them:
+after a round steered into an opening below the selection, the next three
+are drawn from the openings a round can start from move one. Steered rounds
+are the exception, and stay one.
 
 ## Modes
 
@@ -188,6 +217,20 @@ actually meet each line; *weak spots* tilts hard toward positions you answer
 badly, have let lapse, or got wrong in your own games; *gaps* walks you to a
 reply you have no answer to. Where you have no lines, the opponent walks you
 down the opening's own move order.
+
+The drawn line is not a fence. Any move that stays inside the region is
+accepted, and when yours leaves the line a new one is drawn from where you
+now are, by the same steer — one of your lines through this position, your
+weakest, or the walk to the nearest hole from here — so the opponent keeps
+steering rather than wandering. A line reached by a transposition counts.
+Only where nothing of yours passes through the position does the opponent
+fall back to the book, by popularity.
+
+A run can also start *inside* an opening: the way in is played onto the
+board first, shown dimmed, earns nothing and reviews no cards, and is kept
+with the line when the run is written into the repertoire. Autopilot uses
+this for its steered rounds; a Run started by hand always begins at move
+one.
 
 Every move of yours on a position your prep has an answer to is a review of
 that position's card, graded by how long it took, so Run and Drill share one

@@ -26,7 +26,11 @@ export function evidenceIn(state: State): RepairItem[] {
 }
 
 /** Everything the engine needs, read off the store. */
-export function recommendInput(state: State, recentFocuses: Focus[] = []): RecommendInput {
+export function recommendInput(
+  state: State,
+  recentFocuses: Focus[] = [],
+  recentSteered: boolean[] = [],
+): RecommendInput {
   const tree = openingTree(referenceIndex());
   const selection = state.settings.selection;
   return {
@@ -40,14 +44,20 @@ export function recommendInput(state: State, recentFocuses: Focus[] = []): Recom
     newPerSession: state.settings.drill.newPerSession,
     growth: state.settings.growth,
     recentFocuses,
+    recentSteered,
     seen: seenIn(state.score),
   };
 }
 
 /**
- * What Autopilot would start now. The focuses of the session's rounds so far
- * are the brake; they are the session's memory and nothing is saved.
+ * What Autopilot would start now. The focuses of the session's rounds so
+ * far are the brake, and which of them were steered into an opening spaces
+ * the next; they are the session's memory and nothing is saved.
  */
-export function recommendNow(state: State, recentFocuses: Focus[] = []): Recommendation {
-  return recommend(recommendInput(state, recentFocuses));
+export function recommendNow(
+  state: State,
+  recentFocuses: Focus[] = [],
+  recentSteered: boolean[] = [],
+): Recommendation {
+  return recommend(recommendInput(state, recentFocuses, recentSteered));
 }

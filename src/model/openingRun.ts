@@ -4,12 +4,20 @@ import {
   positionKey,
   sansToMoveText,
   START_FEN,
+  walkSan,
   type Color,
   type Square,
 } from '../chess/core';
 import { findHoles, optionsAt, type Hole } from './growth';
 import { deepestName, lookup, type ReferenceIndex } from './reference';
-import { insideRegion, lineStatus, approachKeys, type OpeningNode, type OpeningTree } from './openingTree';
+import {
+  approachKeys,
+  insideRegion,
+  lineStatus,
+  regionOf,
+  type OpeningNode,
+  type OpeningTree,
+} from './openingTree';
 import type { RepairItem } from './repair';
 import { justRun, keysAlong, lineStaleness, NOTHING_SEEN, staleness, type Seen } from './freshness';
 import { childrenOf, fenAt, leafLines, pathTo } from './repertoire';
@@ -355,14 +363,21 @@ export interface Run {
   /** The user's correct moves so far — the score. */
   survived: number;
   over: boolean;
-  /** Remaining moves of the line chosen up front, driving opponent replies. */
+  /** Remaining moves of the line drawn, driving opponent replies. */
   target: string[];
   /**
-   * The line chosen up front, kept whole. `target` is spent as the run goes
-   * and cleared at the edge; this is the record of what the round was about,
-   * for the rounds after it not to be.
+   * The line drawn, kept whole. `target` is spent as the run goes and
+   * cleared when you step off it; this is the record of what the round was
+   * about, for the rounds after it not to be. Redrawn along with the target
+   * when the run is steered again from a new position.
    */
   drawn: string[];
+  /**
+   * How many plies were played for you before the run began: the way into
+   * the opening a round starts inside. Zero for a run from move one. They
+   * are on the board and in `played`, earn nothing, and are shown dimmed.
+   */
+  opened: number;
   /** Hints left to spend. */
   hints: number;
   /** Hints spent, shown on the reveal so a deep run stays honest. */
@@ -489,6 +504,27 @@ export interface BeginOptions extends Partial<OpeningRunOptions> {
   holeWeight?: (hole: Hole) => number;
   /** What the last few rounds were about, so this one is drawn on what they were not. */
   seen?: Seen;
+  /**
+   * Start inside the opening walked toward rather than from move one: the
+   * drawn line's way in is played onto the board before the run begins. Only
+   * a family or deeper is worth entering; a first move is left alone.
+   */
+  enter?: boolean;
+}
+
+/**
+ * A run, and how to steer it again.
+ *
+ * `redraw` draws a new line from wherever the run has got to, by the same
+ * steer the run began on — one of your lines through the position, your
+ * weakest, or the walk to the nearest hole — and returns the run with its
+ * target set. Unchanged where nothing of yours passes through the position,
+ * which is where the opponent falls back to the book.
+ */
+export interface Begun {
+  source: LineSource;
+  run: Run;
+  redraw: (run: Run) => Run;
 }
 
 /**
@@ -509,7 +545,7 @@ export interface BeginOptions extends Partial<OpeningRunOptions> {
  *
  * Null only when the book is empty, which it never is.
  */
-export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } | null {
+export function beginRun(opts: BeginOptions): Begun | null {
   const rand = mulberry32(opts.seed ?? Math.floor(Math.random() * 2 ** 31));
   const side = resolveColor(opts.color, rand);
   const { tree, node } = opts;
@@ -517,65 +553,74 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
   const rep = opts.reps.find((r) => r.color === side) ?? null;
   const source = regionSource(tree, node, rep, side);
   const aim = opts.toward ?? node;
-
   const steer = opts.steer ?? DEFAULT_OPTIONS.steer;
-  let target = aim.sans;
-  const inRegion = rep
-    ? leafLines(rep)
-        .filter((line) => lineStatus(tree, aim, line.sans) === 'reached')
-        .map((line) => {
-          const path = pathTo(rep, line.tipId);
-          return { tipId: line.tipId, sans: line.sans, keys: yourMoves(side, path).map((n) => n.key) };
-        })
-    : [];
-  // An opening with nothing of yours in it yet is entered by its own move
-  // order, not by whichever hole on the way in is met most often: a player
-  // who chose the Sämisch plays 1.d4, and the line they are about to build
-  // should be the one the opening is named by. The budget is the opening's
-  // own — the moves it takes to get there past the prep are not charged.
-  const firstLine = rep !== null && steer === 'gaps' && inRegion.length === 0 && aim.depth > 0;
-  const gap = rep && steer === 'gaps' && !firstLine ? drawHole(rep, tree, aim, opts, rand) : null;
-  if (gap) {
-    target = [...gap.path, gap.san];
-  } else if (rep && !firstLine) {
+
+  /**
+   * Draw a line from a position: the whole line from the start, the moves
+   * played so far first. At the start it is the line the round is about;
+   * later it is how the round follows you once you have stepped off it.
+   */
+  const draw = (at: At): Drawn => {
+    const atStart = at.played.length === 0;
+    // With nothing of yours to draw on, the opening's own move order, while
+    // the moves played are still on it.
+    const onWay = aim.sans.length > at.played.length && at.played.every((san, i) => aim.sans[i] === san);
+    const fallback = onWay ? aim.sans : [];
+    const through = rep ? linesThrough(rep, tree, aim, side, at) : [];
+    // An opening with nothing of yours in it yet is entered by its own move
+    // order, not by whichever hole on the way in is met most often: a player
+    // who chose the Sämisch plays 1.d4, and the line they are about to build
+    // should be the one the opening is named by. The budget is the opening's
+    // own — the moves it takes to get there past the prep are not charged.
+    const firstLine = rep !== null && steer === 'gaps' && atStart && through.length === 0 && aim.depth > 0;
+    const gap = rep && steer === 'gaps' && !firstLine ? drawHole(rep, tree, aim, opts, rand, at) : null;
+    if (gap) return { target: [...at.played, ...gap.rest], gap: gap.hole, firstLine };
+    if (!rep || firstLine || !through.length) return { target: fallback, gap: null, firstLine };
     const minDecisions = opts.minDecisions ?? 4;
     const weakness = steer === 'weak' ? (opts.weakness ?? null) : null;
     // Long enough to be a game where there are such lines; anything at all
     // where there are not — a thin region is still yours to play.
-    const long = inRegion.filter((line) => line.keys.length >= minDecisions);
-    const usable = long.length ? long : inRegion;
+    const long = through.filter((line) => line.keys.length >= minDecisions);
+    const usable = long.length ? long : through;
     // Never the same line twice running, while there is another to run.
     const seen = opts.seen ?? NOTHING_SEEN;
     const rested = usable.filter((line) => !justRun(seen, rep, line.tipId));
     const field = rested.length ? rested : usable;
-    if (field.length) {
-      const odds = lineOdds(rep, side, tree.index, new Set(field.map((l) => l.tipId)));
-      const even = odds.size === 0;
-      const line = pickWeighted(
-        field,
-        (l) =>
-          (even ? 1 : (odds.get(l.tipId) ?? 0)) *
-          (weakness ? lineWeakness(rep.id, l.keys, weakness) : 1) *
-          Math.max(lineStaleness(seen, rep, l.tipId), 0.02),
-        rand,
-      );
-      target = line.sans;
-    }
-  }
+    const odds = lineOdds(rep, side, tree.index, new Set(field.map((l) => l.tipId)));
+    const even = odds.size === 0;
+    const line = pickWeighted(
+      field,
+      (l) =>
+        (even ? 1 : (odds.get(l.tipId) ?? 0)) *
+        (weakness ? lineWeakness(rep.id, l.keys, weakness) : 1) *
+        Math.max(lineStaleness(seen, rep, l.tipId), 0.02),
+      rand,
+    );
+    return { target: line.sans, gap: null, firstLine };
+  };
+
+  const first = draw({ fen: START_FEN, played: [] });
+  // A round started inside the opening: the drawn line's way in is played
+  // for you, up to the first position the opening names.
+  const way = opts.enter && aim.depth >= 2 ? wayIn(tree, aim, first.target) : [];
+  const entered = walkSan(way);
+  const opened = entered.moves.length === way.length ? way.length : 0;
+  const fen = entered.fens[opened] ?? START_FEN;
 
   /** What the round may add: the allowance, fitted to the line it walks. */
   const budgetFor = (): number => {
     const allowance = Math.max(0, opts.newMoves ?? DEFAULT_OPTIONS.newMoves);
     const maxPly = opts.growth?.maxPly;
-    if (gap) return Math.min(allowance, movesToFit(gap.path.length, maxPly));
-    if (!firstLine) return allowance;
-    // The way in is yours to choose at the edge, one move at a time, and
-    // none of it is the opening: it is not charged against the budget.
-    let fen = START_FEN;
+    if (first.gap) return Math.min(allowance, movesToFit(first.gap.path.length, maxPly));
+    if (!first.firstLine) return allowance;
+    // The way in, where it was not played for you, is yours to choose at the
+    // edge one move at a time, and none of it is the opening: it is not
+    // charged against the budget.
+    let at = START_FEN;
     let onWay = 0;
-    for (const san of aim.sans) {
-      if (fenTurn(fen) === side && !source.prepAt(fen).includes(san)) onWay += 1;
-      fen = applySan(fen, san)?.after ?? fen;
+    for (const san of aim.sans.slice(opened)) {
+      if (fenTurn(at) === side && !source.prepAt(at).includes(san)) onWay += 1;
+      at = applySan(at, san)?.after ?? at;
     }
     return onWay + Math.min(allowance, movesToFit(aim.sans.length, maxPly));
   };
@@ -587,12 +632,13 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
     repertoireId: rep?.id,
     leftPrep: false,
     color: side,
-    fen: START_FEN,
-    played: [],
+    fen,
+    played: way.slice(0, opened),
     survived: 0,
     over: false,
-    target,
-    drawn: target,
+    target: first.target,
+    drawn: first.target,
+    opened,
     hints: opts.hints ?? DEFAULT_OPTIONS.hints,
     hintsUsed: 0,
     // The budget is what the round may spend; the line decides what it needs.
@@ -600,14 +646,85 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
     added: 0,
     prepEnded: null,
   };
-  return { source, run };
+
+  const redraw = (current: Run): Run => {
+    const next = draw({ fen: current.fen, played: current.played });
+    if (next.target.length <= current.played.length) return current;
+    return { ...current, target: next.target, drawn: next.target };
+  };
+
+  return { source, run, redraw };
+}
+
+/** A position a line is drawn from: where the run has got to. */
+interface At {
+  fen: string;
+  played: string[];
+}
+
+interface Drawn {
+  /** The whole line from the start, or empty where there is nothing to walk. */
+  target: string[];
+  gap: Hole | null;
+  /** True when the round builds an opening's first line by its own move order. */
+  firstLine: boolean;
+}
+
+/**
+ * Your lines through the opening that pass through a position, each as the
+ * whole line with the moves played so far first, and the positions it will
+ * still ask you about. A line reached by a transposition counts: what
+ * matters is the position, not the road to it.
+ */
+function linesThrough(
+  rep: Repertoire,
+  tree: OpeningTree,
+  aim: OpeningNode,
+  side: Color,
+  at: At,
+): { tipId: string; sans: string[]; keys: string[] }[] {
+  const key = positionKey(at.fen);
+  const out: { tipId: string; sans: string[]; keys: string[] }[] = [];
+  for (const line of leafLines(rep)) {
+    if (lineStatus(tree, aim, line.sans) !== 'reached') continue;
+    const path = pathTo(rep, line.tipId);
+    // A move's key is the position it is played from, so the node found is
+    // the next move of the line from here.
+    const from = path.findIndex((move) => move.key === key);
+    if (from < 0) continue;
+    const rest = path.slice(from);
+    out.push({
+      tipId: line.tipId,
+      sans: [...at.played, ...rest.map((move) => move.san)],
+      keys: yourMoves(side, rest).map((move) => move.key),
+    });
+  }
+  return out;
+}
+
+/**
+ * The way into an opening along a line: its moves up to and including the
+ * first that reaches a position the opening names. Empty when the line never
+ * gets there, in which case there is nowhere to start but move one.
+ */
+export function wayIn(tree: OpeningTree, aim: OpeningNode, sans: string[]): string[] {
+  if (aim.depth === 0) return [];
+  const { inside } = regionOf(tree, aim);
+  let fen = START_FEN;
+  for (let i = 0; i < sans.length; i += 1) {
+    const move = applySan(fen, sans[i]);
+    if (!move) return [];
+    fen = move.after;
+    if (inside.has(positionKey(fen))) return sans.slice(0, i + 1);
+  }
+  return [];
 }
 
 /**
  * The hole to walk toward: one inside the opening while there is any, drawn
  * on how often you would actually meet it, and on what your own games say
- * about it. Null where the prep has no holes in the region, and the run
- * falls back to a line through it.
+ * about it. Null where the prep has no holes in the region past the
+ * position, and the run falls back to a line through it.
  *
  * How often you would meet it is the reply's share of the position times the
  * share of games that get to the position at all — nothing else. That one
@@ -633,6 +750,9 @@ export function beginRun(opts: BeginOptions): { source: LineSource; run: Run } |
  * twice — but drawn from the holes worth a real fraction of the best one, so
  * a reply nobody plays is not what a round is spent on while a reply everyone
  * plays goes unanswered. See `DRAW_WINDOW`.
+ *
+ * Drawn from a position, only the holes past it: the run has got this far
+ * and walks on from here.
  */
 function drawHole(
   rep: Repertoire,
@@ -640,26 +760,36 @@ function drawHole(
   aim: OpeningNode,
   opts: BeginOptions,
   rand: () => number,
-): Hole | null {
-  const found = findHoles(rep, tree.index, { ...opts.growth, region: { tree, node: aim } });
+  at: At,
+): { hole: Hole; rest: string[] } | null {
+  const key = positionKey(at.fen);
+  const found = findHoles(rep, tree.index, { ...opts.growth, region: { tree, node: aim } })
+    .map((hole) => {
+      // The walk to the hole from here: the rest of its path past this
+      // position, then the reply itself.
+      const from = at.played.length === 0 ? 0 : keysAlong(hole.path).indexOf(key) + 1;
+      if (at.played.length > 0 && from === 0) return null;
+      return { hole, rest: [...hole.path.slice(from), hole.san] };
+    })
+    .filter((x): x is { hole: Hole; rest: string[] } => x !== null);
   if (!found.length) return null;
   // Inside the opening before on the way to it. A hole on the way in — 1.c4,
   // met in every game, on its way to the Sämisch by transposition — is met
   // far more often than anything inside, and would take every round from
   // the opening the player actually chose. The way in is walked to only
   // once there is nothing left inside to answer.
-  const inside = found.filter((hole) => lineStatus(tree, aim, [...hole.path, hole.san]) === 'reached');
+  const inside = found.filter(({ hole }) => lineStatus(tree, aim, [...hole.path, hole.san]) === 'reached');
   const holes = inside.length ? inside : found;
   const evidence = opts.holeWeight ?? (() => 1);
   const seen = opts.seen ?? NOTHING_SEEN;
   const fresh = (hole: Hole) => {
-    const walk = keysAlong(hole.path).map((key) => staleness(seen, key));
+    const walk = keysAlong(hole.path).map((k) => staleness(seen, k));
     const added = 2 * movesToFit(hole.path.length, opts.growth?.maxPly);
     return ((walk.reduce((sum, s) => sum + s, 0) + added) / (walk.length + added)) ** 2;
   };
-  const met = (hole: Hole) => hole.reach * hole.share * evidence(hole) * fresh(hole);
+  const met = ({ hole }: { hole: Hole }) => hole.reach * hole.share * evidence(hole) * fresh(hole);
   const best = Math.max(...holes.map(met));
-  const field = holes.filter((hole) => met(hole) * DRAW_WINDOW >= best);
+  const field = holes.filter((h) => met(h) * DRAW_WINDOW >= best);
   return pickWeighted(field.length ? field : holes, met, rand);
 }
 

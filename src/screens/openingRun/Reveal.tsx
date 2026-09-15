@@ -121,10 +121,12 @@ export function Reveal({
         items.push({ san, label: label(ply), tone: 'good', seek: ply + 1, current: cursor === ply + 1 });
         return;
       }
+      // The way in, played for you, reads like the rest of the line past
+      // the end: there, but not yours.
       items.push({
         san,
         label: label(ply),
-        tone: ply < line.deathPly ? (mine(ply) ? 'mine' : 'theirs') : 'ghost',
+        tone: ply < line.deathPly && ply >= run.opened ? (mine(ply) ? 'mine' : 'theirs') : 'ghost',
         seek: ply + 1,
         current: !onBlunder && cursor === ply + 1,
       });
@@ -134,7 +136,7 @@ export function Reveal({
       items.push(bad(line.deathPly));
     }
     return items;
-  }, [line, run.color, death, cursor, atDeath]);
+  }, [line, run.color, run.opened, death, cursor, atDeath]);
 
   /** The mistake's squares, shown only on the position it was made in. */
   const highlights = useMemo(() => {

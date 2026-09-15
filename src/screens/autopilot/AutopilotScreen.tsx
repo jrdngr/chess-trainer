@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Icons } from '../../components/ui';
 import { planFor, type RoundSummary } from '../../model/autopilot';
-import type { Focus, Recommendation } from '../../model/recommend';
+import { isSteered, type Focus, type Recommendation } from '../../model/recommend';
 import { useStore } from '../../store/useStore';
 import { recommendNow } from '../../store/recommendation';
 import { OpeningRunScreen } from '../openingRun/OpeningRunScreen';
@@ -20,7 +20,9 @@ import { OpeningRunScreen } from '../openingRun/OpeningRunScreen';
 export function AutopilotScreen({ onExit }: { onExit: () => void }) {
   /** The focuses of this session's rounds so far, oldest first: the engine's brake. */
   const [recent, setRecent] = useState<Focus[]>([]);
-  const [pick, setPick] = useState<Recommendation>(() => recommendNow(useStore.getState(), []));
+  /** For each of those rounds, whether it was steered into an opening: the engine spaces them. */
+  const [steered, setSteered] = useState<boolean[]>([]);
+  const [pick, setPick] = useState<Recommendation>(() => recommendNow(useStore.getState(), [], []));
   /** Bumped per round so the Run mounts fresh. */
   const [round, setRound] = useState(1);
   const [over, setOver] = useState<RoundSummary | null>(null);
@@ -28,10 +30,13 @@ export function AutopilotScreen({ onExit }: { onExit: () => void }) {
 
   /** A round ends on its reveal, which is worth reading, so the next waits on a tap. */
   const roundOver = (summary: RoundSummary) => {
+    const state = useStore.getState();
     const played = [...recent, pick.focus];
+    const steers = [...steered, isSteered(pick, state.settings.selection)];
     setRecent(played);
+    setSteered(steers);
     setOver(summary);
-    setNext(recommendNow(useStore.getState(), played));
+    setNext(recommendNow(state, played, steers));
   };
 
   const advance = () => {
