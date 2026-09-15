@@ -650,6 +650,10 @@ describe('starting inside an opening', () => {
     expect(isUsersTurn(run)).toBe(true);
     expect(movesHere(source, run)).toContain('Nf3');
     expect(wayIn(tree, slav, ['d4', 'd5', 'c4', 'c6', 'Nf3'])).toEqual(['d4', 'd5', 'c4', 'c6']);
+    // Called after the opening it was started in, not the region it was drawn in.
+    expect(run.enteredIn).toBe(slav.id);
+    expect(run.sourceLabel).toBe('Slav Defence');
+    expect(run.openingId).toBe('');
   });
 
   it('enters by the drawn line, so a run toward a family lands in the variation drawn', () => {
@@ -663,6 +667,8 @@ describe('starting inside an opening', () => {
   it('leaves a first move alone, and a run not asked to enter', () => {
     expect(start([whiteRep()], 'w', 1, any, { toward: nodeById(tree, 'd4'), enter: true }).run.opened).toBe(0);
     expect(start([whiteRep()], 'w', 1, any, { toward: qgd }).run.opened).toBe(0);
+    expect(start([whiteRep()], 'w', 1, any, { toward: qgd }).run.enteredIn).toBeNull();
+    expect(start([whiteRep()], 'w', 1, any, { toward: qgd }).run.sourceLabel).toBe('Any opening');
     expect(wayIn(tree, any, ['d4'])).toEqual([]);
     expect(wayIn(tree, qgd, ['e4', 'e5'])).toEqual([]);
   });
@@ -999,7 +1005,7 @@ describe('keeping what a run survived', () => {
     return {
       id: 'r', sourceLabel: 'Any opening', openingId: '', leftPrep: false, color: 'w',
       fen: START_FEN, played: [], survived: 0, over: true, target: [], drawn: [], hints: 0, hintsUsed: 0,
-      newMoves: 0, added: 0, prepEnded: null, opened: 0, ...over,
+      newMoves: 0, added: 0, prepEnded: null, opened: 0, enteredIn: null, ...over,
     };
   }
 

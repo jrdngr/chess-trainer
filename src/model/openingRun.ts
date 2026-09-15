@@ -378,6 +378,13 @@ export interface Run {
    * are on the board and in `played`, earn nothing, and are shown dimmed.
    */
   opened: number;
+  /**
+   * The opening the run was started inside — an opening tree node id — or
+   * null for a run from move one. What the run is called on screen: a run
+   * started in the Caro-Kann is a Caro-Kann run, whatever region it was
+   * drawn in.
+   */
+  enteredIn: string | null;
   /** Hints left to spend. */
   hints: number;
   /** Hints spent, shown on the reveal so a deep run stays honest. */
@@ -627,7 +634,7 @@ export function beginRun(opts: BeginOptions): Begun | null {
 
   const run: Run = {
     id: newRunId(),
-    sourceLabel: node.name,
+    sourceLabel: opened > 0 ? aim.name : node.name,
     openingId: node.id,
     repertoireId: rep?.id,
     leftPrep: false,
@@ -639,6 +646,7 @@ export function beginRun(opts: BeginOptions): Begun | null {
     target: first.target,
     drawn: first.target,
     opened,
+    enteredIn: opened > 0 ? aim.id : null,
     hints: opts.hints ?? DEFAULT_OPTIONS.hints,
     hintsUsed: 0,
     // The budget is what the round may spend; the line decides what it needs.

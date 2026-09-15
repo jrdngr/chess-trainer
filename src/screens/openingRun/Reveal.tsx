@@ -178,7 +178,7 @@ export function Reveal({
     <>
       <AppBar
         title="Run"
-        subtitle={selectionText(run.color, run.openingId)}
+        subtitle={selectionText(run.color, run.enteredIn ?? run.openingId)}
         onClose={onExit}
         actions={
           <span className="row gap-6">
