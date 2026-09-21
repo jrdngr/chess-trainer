@@ -91,7 +91,7 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
 
         {pick && (
           <button className="btn primary block xl" onClick={() => start(pick)}>
-            Start Recommended
+            Start
           </button>
         )}
 

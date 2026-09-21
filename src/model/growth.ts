@@ -8,7 +8,7 @@ import {
   type ReferenceIndex,
 } from './reference';
 import { lineInRegion } from './selection';
-import type { OpeningNode, OpeningTree } from './openingTree';
+import { ancestorsOf, descendantsOf, type OpeningNode, type OpeningTree } from './openingTree';
 import { childrenOf, fenAt } from './repertoire';
 import type { ExplorerMove, RepMove, Repertoire } from './types';
 
@@ -52,7 +52,8 @@ export interface GrowthOptions {
   /**
    * Only holes that lead into this region — or toward it: an unanswered reply
    * on the way into the Najdorf is Najdorf work, even though it sits before
-   * the position the book names.
+   * the position the book names. Rows are then narrowed again, by name, to the
+   * openings the selection covers — see `openingsInSelection`.
    */
   region?: { tree: OpeningTree; node: OpeningNode };
 }
@@ -409,12 +410,40 @@ function isStarred(starred: string[][], sans: string[]): boolean {
   );
 }
 
+/**
+ * The openings a selection puts on the lobby, by name.
+ *
+ * The region test the holes go through is positional and deliberately
+ * generous: a line counts while the book can still transpose it into the
+ * region, which is what makes an unanswered reply on the way into the Najdorf
+ * count as Najdorf work. Asking it which openings to *offer* gets a different
+ * answer, because 1.e4 d6 2.d4 Nf6 3.c4 g6 really is a King's Indian, so an
+ * unanswered 1.e4 survives the test — and an unanswered first move outscores
+ * everything else there is, so it wins the top of the list every time. Select
+ * the King's Indian and the lobby leads with the King's Pawn Game.
+ *
+ * A row already carries the sharper test: it is named for the opening its
+ * holes lead into. That name being the selection, something inside it, or
+ * something on the way down to it is what makes the row the selected
+ * opening's work rather than a branch that merely could have joined it.
+ */
+function openingsInSelection(tree: OpeningTree, node: OpeningNode): Set<string> {
+  return new Set([
+    ...ancestorsOf(tree, node.id).map((opening) => opening.name),
+    ...descendantsOf(node).map((opening) => opening.name),
+  ]);
+}
+
 export function growthRows(
   reps: Repertoire[],
   index: ReferenceIndex,
   opts: GrowthOptions = {},
 ): GrowthRow[] {
   const starred = (opts.starred ?? []).map((id) => id.split(/\s+/).filter(Boolean));
+  const region = opts.region;
+  // The root is every opening there is, so it scopes nothing.
+  const offered =
+    region && region.node.depth > 0 ? openingsInSelection(region.tree, region.node) : null;
   const rows: GrowthRow[] = [];
 
   for (const rep of reps) {
@@ -449,7 +478,7 @@ export function growthRows(
         holes: [hole],
       });
     }
-    rows.push(...byName.values());
+    rows.push(...[...byName.values()].filter((row) => !offered || offered.has(row.name)));
   }
 
   for (const row of rows) {
@@ -457,12 +486,12 @@ export function growthRows(
     row.score = Math.min(1, row.urgency * (row.starred ? STAR_BOOST : 1));
   }
 
-  // One ordering for the list and for Recommended, so the button never starts
+  // One ordering for the list and for the button, so Start never begins
   // something other than the row sitting at the top of the list.
   return rows.sort((a, b) => b.score - a.score || a.depth - b.depth || a.name.localeCompare(b.name));
 }
 
-/** The row Start Recommended would begin, or nothing when there is no work. */
+/** The row the Start button would begin, or nothing when there is no work. */
 export function recommended(rows: GrowthRow[]): GrowthRow | null {
   return rows[0] ?? null;
 }

@@ -24,6 +24,7 @@ import {
   thinness,
   type GrowthRun,
 } from './growth';
+import { nodeById, openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
 import { addLine, createRepertoire, hasLine } from './repertoire';
 import type { Repertoire } from './types';
@@ -288,6 +289,39 @@ describe('the lobby', () => {
         expect(rows[i - 1].score).toBeGreaterThanOrEqual(rows[i].score);
       }
     }
+  });
+
+  it('offers only the selected opening, not every route that could reach it', () => {
+    // The bug: select the King's Indian with a King's Indian repertoire and the
+    // lobby led with the King's Pawn Game. 1.e4 d6 2.d4 Nf6 3.c4 g6 is a King's
+    // Indian, so an unanswered 1.e4 passes the positional region test — and an
+    // unanswered first move outscores everything, so it took the top row.
+    const tree = openingTree(index);
+    const kingsIndian = nodeById(tree, 'd4 Nf6 c4 g6 Nc3');
+    const rows = growthRows([black], index, { region: { tree, node: kingsIndian } });
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(row.depth).toBeGreaterThan(0);
+    expect(rows.map((row) => row.name)).not.toContain("King's Pawn Game");
+    expect(recommended(rows)).toBe(prepRow(rows));
+  });
+
+  it('keeps an opening the selection is only on the way into', () => {
+    // The White rep is a Sicilian and the selection a variation of it, so the
+    // row sits above the Najdorf rather than inside it. It is still the work
+    // the selection asks for, and dropping it would leave the lobby empty.
+    const tree = openingTree(index);
+    const najdorf = nodeById(tree, 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6');
+    const rows = growthRows([white], index, { region: { tree, node: najdorf } });
+    expect(rows.map((row) => row.name)).toEqual(['Sicilian Defence']);
+  });
+
+  it('scopes nothing when the selection is every opening there is', () => {
+    // The guard against over-filtering: the root covers everything, so the
+    // first moves a repertoire cannot meet are still the lobby's top rows.
+    const tree = openingTree(index);
+    const rows = growthRows([black], index, { region: { tree, node: tree.root } });
+    expect(rows).toEqual(growthRows([black], index));
+    expect(recommended(rows)!.depth).toBe(0);
   });
 
   it('reports the biggest hole in a row, not merely the first', () => {
