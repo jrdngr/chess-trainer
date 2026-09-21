@@ -302,10 +302,15 @@ never pushes a card out.
 
 ### Growth
 The opponent walks your own prep toward the nearest reply you have no answer
-to, and you choose one from the book. Up to three moves a run — this mode's
-own cap, not the Run's budget. Holes are only counted inside the region, and
-on the way into it. This is the picker a Run with new moves opens at the edge
-of the prep, as a mode of its own.
+to, and you choose one from the book. A batch of answers is sized to how much
+room the line has left — the same rule a Run uses at the edge of its prep
+(`movesToFit`), halving the plies to the horizon and capped at eight — so a
+hole at the second move is grown into a line and one near the end of the
+opening is given the next move and no more. At the reveal, **Add more moves**
+takes another batch, sized again from where the line now is; nothing carries
+on by itself. Holes are only counted inside the region, and on the way into
+it. This is the picker a Run with new moves opens at the edge of the prep, as
+a mode of its own.
 
 It is also where a repertoire starts, since Autopilot builds nothing. A side
 with no tree yet is grown from nothing: as Black, the first moves you would

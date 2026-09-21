@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applySan, fenTurn, positionKey, START_FEN } from '../chess/core';
 import { deepestName, familyName, lookup } from './reference';
 import {
+  addsToFit,
   advance,
   answerHole,
   atHole,
@@ -18,6 +19,7 @@ import {
   optionsAt,
   preparedHere,
   recommended,
+  resumeAdding,
   rowUrgency,
   startGrowth,
   steer,
@@ -490,24 +492,43 @@ describe('answering a hole', () => {
     expect(optionsAt(index, next.fen).length).toBeGreaterThan(0);
   });
 
-  it('runs the loop to the cap, writing every answer into the line', () => {
+  it('runs the loop to the batch it was given, writing every answer into the line', () => {
     let run = toHole();
+    const allowance = addsToFit(run.path.length);
+    expect(allowance).toBeGreaterThan(1);
     const added: string[] = [];
-    while (added.length < MAX_ADDS) {
+    while (added.length < allowance) {
       const san = optionsAt(index, run.fen)[0].san;
       // What the screen writes into the repertoire at each step.
       expect(lineFor(run, san)).toEqual([...run.path, san]);
       run = answerHole(run, san)!;
       added.push(san);
-      if (added.length === MAX_ADDS) break;
+      if (added.length === allowance) break;
       const hole = nextHole(index, run);
       expect(hole).not.toBeNull();
       run = enterHole(run, hole!);
     }
-    expect(added).toHaveLength(3);
-    // Your three answers and the two replies between them.
-    expect(run.path.slice(-5)).toEqual([added[0], expect.any(String), added[1], expect.any(String), added[2]]);
+    // Your answers, and their replies in between.
+    expect(run.path.slice(-(allowance * 2 - 1)).filter((_, i) => i % 2 === 0)).toEqual(added);
     expect(hasLine(white, run.path)).toBe(false);
+  });
+
+  it('carries on from the hole it stopped at, or from their next reply', () => {
+    const at = toHole();
+    // Stopped by hand at a hole: another batch answers that same hole.
+    expect(resumeAdding(white, index, at)).toBe(at);
+
+    // Stopped having answered: their commonest reply becomes the next hole.
+    const answered = answerHole(at, optionsAt(index, at.fen)[0].san)!;
+    const on = resumeAdding(white, index, answered)!;
+    expect(on).not.toBeNull();
+    expect(on.path).toEqual([...answered.path, nextHole(index, answered)!.san]);
+    expect(isUsersTurn(on)).toBe(true);
+    expect(optionsAt(index, on.fen).length).toBeGreaterThan(0);
+
+    // Nothing the book knows: nothing to offer, and the reveal says so.
+    const nowhere = { ...answered, fen: '8/8/4k3/8/8/4K3/8/8 w - - 0 1', hole: null };
+    expect(resumeAdding(white, index, nowhere)).toBeNull();
   });
 
   it('has nothing to offer once the book runs out', () => {
@@ -516,6 +537,25 @@ describe('answering a hole', () => {
     const nowhere = { ...run, fen: '8/8/4k3/8/8/4K3/8/8 b - - 0 1' };
     expect(nextHole(index, nowhere)).toBeNull();
   });
+});
+
+describe('the batch a run is given', () => {
+  it('grows a shallow hole into a line and a deep one by a move', () => {
+    expect(addsToFit(2)).toBe(8);
+    expect(addsToFit(6)).toBe(6);
+    expect(addsToFit(8)).toBe(5);
+    expect(addsToFit(12)).toBe(3);
+    expect(addsToFit(14)).toBe(2);
+    // Past the horizon a hole is still worth one answer, and never more.
+    expect(addsToFit(18)).toBe(1);
+    expect(addsToFit(40)).toBe(1);
+    // A tighter horizon is a smaller batch at the same depth.
+    expect(addsToFit(2, 8)).toBe(3);
+    expect(addsToFit(6, 8)).toBe(1);
+    // However shallow, never more than a run may add at the edge of its prep.
+    expect(addsToFit(0)).toBe(MAX_ADDS);
+  });
+
 });
 
 describe('the moves drawn on the board', () => {

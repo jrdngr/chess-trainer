@@ -3,24 +3,25 @@ import { Board } from '../../components/Board';
 import { AppBar, haptic, Icons, Section, Strip, toast, type StripItem } from '../../components/ui';
 import { applySan, lastMoveOf, sansToMoveText, type LegalMove } from '../../chess/core';
 import {
+  addsToFit,
   advance,
   answerHole,
   atHole,
   enterHole,
   isUsersTurn,
   lineFor,
-  MAX_ADDS,
   movesToDraw,
   nextHole,
   optionsAt,
   preparedHere,
+  resumeAdding,
   startGrowth,
   steer,
   type GrowthRow,
   type GrowthRun,
 } from '../../model/growth';
 import { formatGameCount } from '../../model/reference';
-import { POINTS } from '../../model/scoring';
+import { POINTS, type RoundRecord } from '../../model/scoring';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { selectionText } from '../../components/Selection';
@@ -48,7 +49,8 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
   const endRound = useStore((s) => s.endRound);
   /** Points this run has banked. */
   const [earned, setEarned] = useState(0);
-  const logged = useRef(false);
+  /** The round this sitting will log, kept current until the run is left. */
+  const pending = useRef<Omit<RoundRecord, 'at'> | null>(null);
   const index = referenceIndex();
   const rep = state.repertoires[row.repertoireId];
 
@@ -59,6 +61,15 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
   const [wrong, setWrong] = useState<string | null>(null);
   /** Which plies of the line you added, so the strip can mark them. */
   const [added, setAdded] = useState<number[]>([]);
+  /**
+   * The batch being added: where it began in `added`, and how many it may add.
+   *
+   * Set when the run arrives at the hole the batch starts from, so the
+   * allowance is measured from that depth, and cleared when the reveal is
+   * asked for another batch — which is how a second batch gets the smaller
+   * allowance its deeper hole has earned.
+   */
+  const [batch, setBatch] = useState<{ base: number; allowance: number } | null>(null);
   /** The answer just chosen, until they reply to it — the board shows it green. */
   const [answer, setAnswer] = useState<LegalMove | null>(null);
   const [thinking, setThinking] = useState(false);
@@ -109,6 +120,30 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
     [phase, index, run.fen],
   );
 
+  /**
+   * How many this batch may add, from how deep the hole it starts at is.
+   *
+   * Read straight from the position until the batch is recorded, so the
+   * count under the board is right on the frame the hole appears.
+   */
+  const allowance = batch?.allowance ?? addsToFit(run.path.length, prefs.maxPly);
+  const inBatch = added.length - (batch?.base ?? added.length);
+
+  /**
+   * What another batch would answer, once the run has come to rest — null when
+   * the book has nothing left there, and the reveal offers nothing.
+   */
+  const more = useMemo(
+    () => (phase === 'done' ? resumeAdding(tree, index, run) : null),
+    [phase, tree, index, run],
+  );
+
+  /** A batch is measured from the first hole it is offered at. */
+  useEffect(() => {
+    if (phase !== 'hole' || batch) return;
+    setBatch({ base: added.length, allowance: addsToFit(run.path.length, prefs.maxPly) });
+  }, [phase, batch, added.length, run.path.length, prefs.maxPly]);
+
   const onMove = (move: LegalMove) => {
     if (phase === 'hole') {
       // The board only offers the drawn moves, and taking one is the choice.
@@ -144,9 +179,22 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
     setAdded((plies) => [...plies, run.path.length]);
     setAnswer(move);
     setRun(next);
-    setPhase(added.length + 1 >= MAX_ADDS ? 'done' : 'answered');
+    setPhase(inBatch + 1 >= allowance ? 'done' : 'answered');
     if (settings.hapticFeedback) haptic(10);
     toast(`${san} added`);
+  };
+
+  /**
+   * Take the reveal up on another batch. Nothing here happens on its own: the
+   * run has stopped, and this is the tap that starts it answering again.
+   */
+  const addMore = () => {
+    if (!more) return;
+    setAnswer(null);
+    setBatch(null);
+    setRun(more);
+    setPhase('hole');
+    if (settings.hapticFeedback) haptic(10);
   };
 
   /** Their reply to the move you just added, after a beat. */
@@ -168,23 +216,33 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
 
   const addedSans = added.map((ply) => run.path[ply]).filter(Boolean);
 
-  /** One run is one round, logged the first time it is over. */
+  /**
+   * One sitting is one round, whatever it takes: the reveal only draws up what
+   * the round would be, and asking for another batch redraws it.
+   */
   useEffect(() => {
-    if ((phase !== 'done' && phase !== 'lost') || logged.current) return;
-    logged.current = true;
-    const tree = openingTree(index);
-    const region = nodeById(tree, settings.selection.opening);
-    endRound({
+    if (phase !== 'done' && phase !== 'lost') return;
+    const catalogue = openingTree(index);
+    const region = nodeById(catalogue, settings.selection.opening);
+    pending.current = {
       mode: 'growth',
-      openingId: deepestNodeWithin(tree, region, run.path).id,
+      openingId: deepestNodeWithin(catalogue, region, run.path).id,
       color: run.color,
       score: earned,
       answered: 0,
       correct: 0,
-      perfect: added.length >= MAX_ADDS,
-    });
+      perfect: inBatch >= allowance,
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  }, [phase, earned]);
+
+  /**
+   * And it is logged on the way out rather than at the reveal, because the
+   * reveal is no longer the end of anything: another batch can follow it.
+   */
+  useEffect(() => () => {
+    if (pending.current) endRound(pending.current);
+  }, [endRound]);
 
   const strip: StripItem[] = run.path.map((san, i) => ({
     san,
@@ -280,7 +338,7 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
               Thinking…
             </div>
             <div className="ctx">
-              {added.length} of {MAX_ADDS} added
+              {inBatch} of {allowance} added
             </div>
           </div>
         )}
@@ -326,7 +384,7 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
 
             <Section
               title="Answer it"
-              aside={added.length > 0 ? `${added.length} of ${MAX_ADDS} added` : undefined}
+              aside={inBatch > 0 ? `${inBatch} of ${allowance} added` : `up to ${allowance}`}
             />
             {options.length === 0 ? (
               <div className="card small muted">
@@ -372,7 +430,13 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
             <div className="card">
               <div className="movetext">{sansToMoveText(run.path)}</div>
             </div>
-            <button className="btn block mt-12" onClick={() => setPlayFrom(run.fen)}>
+            {more && (
+              <button className="btn block mt-12" onClick={addMore}>
+                <Icons.plus size={18} />
+                Add more moves
+              </button>
+            )}
+            <button className={`btn block ${more ? 'mt-8' : 'mt-12'}`} onClick={() => setPlayFrom(run.fen)}>
               <Icons.play size={18} />
               Play from here
             </button>

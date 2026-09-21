@@ -8,7 +8,7 @@ import {
   type Color,
   type Square,
 } from '../chess/core';
-import { findHoles, optionsAt, type Hole } from './growth';
+import { findHoles, movesToFit, optionsAt, type Hole } from './growth';
 import { deepestName, lookup, type ReferenceIndex } from './reference';
 import {
   approachKeys,
@@ -286,19 +286,11 @@ export const NEW_MOVE_BUDGETS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 /**
  * How many moves are worth adding at a hole this far into a line.
  *
- * A line is grown to about the same length whether it starts at the first
- * move or the fifteenth. Nothing prepared against 1.e4 wants a line, not a
- * move: eight answers take it to a real position in one round. A line already
- * fourteen plies deep wants the next move or two and no more — it is nearly
- * out of opening, and what is added there is play rather than prep.
- *
- * Each answer carries the line two plies on: yours, then theirs. So the
- * budget is the plies left to the horizon, halved, and never less than one —
- * a hole past the horizon is still worth an answer, just not a line.
+ * Lives with the holes it measures, in `growth`, since Growth answers them a
+ * batch at a time by the same rule; re-exported here because a run's budget
+ * at the edge of the prep is where it was first needed.
  */
-export function movesToFit(depth: number, maxPly = 18): number {
-  return Math.max(1, Math.round((maxPly - depth) / 2));
-}
+export { movesToFit } from './growth';
 
 /**
  * How much less often a hole may be met than the best one and still be drawn.

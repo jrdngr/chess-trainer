@@ -21,24 +21,54 @@ import type { ExplorerMove, RepMove, Repertoire } from './types';
  * opponent steers toward the nearest thing you have no answer to, and when it
  * arrives you choose an answer to it.
  *
- * A run is a few moves at most — three — so it stays small enough to finish in
- * a few taps and the repertoire grows by repetition rather than by a long
- * sitting. Answering one move opens the next position for the same choice, and
- * you can stop at any of them.
+ * A run adds a batch of answers, sized to how much room the line has left —
+ * see `addsToFit` — so a hole at the second move is grown into a line and one
+ * near the end of the opening is given the next move and no more. Answering
+ * one move opens the next position for the same choice, you can stop at any of
+ * them, and the reveal offers another batch rather than running on by itself.
  */
 
 /** The least popular a reply can be and still be worth preparing for. */
 export const DEFAULT_MIN_SHARE = 1;
 /**
- * How many moves one run may add.
+ * The most one batch of answers may add, however shallow the hole.
  *
- * Three rather than one, so a line can be given a shape — their reply, your
- * answer, their reply again — but still bounded, because the mode is meant to
- * be finished rather than sat with.
+ * The same ceiling a run carries at the edge of its prep: eight answers is
+ * already a real line, and past that a batch stops being something you finish
+ * in a sitting.
  */
-export const MAX_ADDS = 3;
+export const MAX_ADDS = 8;
 /** Past here, a line running out is play rather than a hole in the prep. */
 export const DEFAULT_MAX_PLY = 18;
+
+/**
+ * How many moves are worth adding at a hole this far into a line.
+ *
+ * A line is grown to about the same length whether it starts at the first
+ * move or the fifteenth. Nothing prepared against 1.e4 wants a line, not a
+ * move: eight answers take it to a real position in one round. A line already
+ * fourteen plies deep wants the next move or two and no more — it is nearly
+ * out of opening, and what is added there is play rather than prep.
+ *
+ * Each answer carries the line two plies on: yours, then theirs. So the
+ * budget is the plies left to the horizon, halved, and never less than one —
+ * a hole past the horizon is still worth an answer, just not a line.
+ */
+export function movesToFit(depth: number, maxPly = 18): number {
+  return Math.max(1, Math.round((maxPly - depth) / 2));
+}
+
+/**
+ * What a batch of answers may add, starting at this depth.
+ *
+ * A flat three was the older rule, and it grew a stub of an opening at the
+ * same rate as a line already out of book: a hole at the second move is worth
+ * a line, a hole at the fourteenth is worth the next move and no more. The
+ * ceiling keeps the shallowest holes from turning a run into a sitting.
+ */
+export function addsToFit(depth: number, maxPly = DEFAULT_MAX_PLY): number {
+  return Math.min(MAX_ADDS, movesToFit(depth, maxPly));
+}
 
 export interface GrowthOptions {
   minShare?: number;
@@ -749,4 +779,24 @@ export function movesToDraw(
 /** The line a chosen move writes into the repertoire. */
 export function lineFor(run: GrowthRun, san: string): string[] {
   return [...run.path, san];
+}
+
+/**
+ * The run another batch of answers would carry on from, or null when there is
+ * nothing left to answer.
+ *
+ * Either it is already standing at a hole — a batch stopped by hand, at the
+ * reveal — or their commonest reply to the last answer becomes the next one.
+ * Either way the book has to have something to offer there, since a hole it
+ * knows no replies to is a dead end rather than a choice.
+ */
+export function resumeAdding(
+  rep: Repertoire,
+  index: ReferenceIndex,
+  run: GrowthRun,
+): GrowthRun | null {
+  if (atHole(rep, run)) return optionsAt(index, run.fen, 1).length ? run : null;
+  const hole = nextHole(index, run);
+  if (!hole) return null;
+  return optionsAt(index, hole.after, 1).length ? enterHole(run, hole) : null;
 }
