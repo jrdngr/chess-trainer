@@ -42,7 +42,6 @@ export function recommendInput(
     score: state.score,
     starred: state.settings.favoriteOpenings,
     newPerSession: state.settings.drill.newPerSession,
-    growth: state.settings.growth,
     recentFocuses,
     recentSteered,
     seen: seenIn(state.score),
@@ -50,14 +49,15 @@ export function recommendInput(
 }
 
 /**
- * What Autopilot would start now. The focuses of the session's rounds so
- * far are the brake, and which of them were steered into an opening spaces
- * the next; they are the session's memory and nothing is saved.
+ * What Autopilot would start now, or null with nothing prepared inside the
+ * selection to drill. The focuses of the session's rounds so far are the
+ * brake, and which of them were steered into an opening spaces the next;
+ * they are the session's memory and nothing is saved.
  */
 export function recommendNow(
   state: State,
   recentFocuses: Focus[] = [],
   recentSteered: boolean[] = [],
-): Recommendation {
+): Recommendation | null {
   return recommend(recommendInput(state, recentFocuses, recentSteered));
 }

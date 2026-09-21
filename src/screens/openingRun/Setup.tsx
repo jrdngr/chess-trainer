@@ -1,4 +1,4 @@
-import { AppBar, Section, Segmented, Toggle } from '../../components/ui';
+import { AppBar, Section, Segmented } from '../../components/ui';
 import { SelectionBar } from '../../components/Selection';
 import {
   clockLabel,
@@ -17,8 +17,8 @@ import { Record } from './Record';
  * the common case — same rules as last time — is one tap. The side and the
  * opening are the global selection above it; everything here is off by
  * default, and the plain run is a popular line in your opening, nothing
- * added, no clock, no help. Autopilot sets the same two levers — what the
- * opponent steers toward, and how many moves a run may add — for itself.
+ * added, no clock, no help. Autopilot sets what the opponent steers toward
+ * for itself, and never adds.
  */
 export function Setup({
   onStart,
@@ -64,7 +64,7 @@ export function Setup({
         />
         <div className="note">
           {prefs.newMoves === 0
-            ? 'None: a run is complete where your prep ends.'
+            ? 'None: where your prep ends is a checkpoint, and nothing is added unless you keep the line at the reveal.'
             : `Where your prep ends, the book is offered and the move you choose becomes prep, up to ${prefs.newMoves} time${prefs.newMoves === 1 ? '' : 's'}.`}
         </div>
 
@@ -84,16 +84,6 @@ export function Setup({
           }))}
           onChange={(n) => setOpeningRunPrefs({ hints: Number(n) })}
         />
-
-        <Section title="Extras" />
-        <div className="list">
-          <Toggle
-            label="Extended mode"
-            hint="When the prep runs out, keep going while the engine calls your moves sound"
-            on={prefs.extended}
-            onToggle={() => setOpeningRunPrefs({ extended: !prefs.extended })}
-          />
-        </div>
 
         {record.runs > 0 && <Record record={record} />}
       </div>

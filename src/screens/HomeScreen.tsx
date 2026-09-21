@@ -132,7 +132,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.importedGames, reps]);
 
-  /** What Autopilot would start with, said on its button. */
+  /** What Autopilot would start with, said on its button — or that there is nothing to drill. */
   const first = useMemo(() => recommendNow(state), [state]);
   const days = streak(state.score.global);
 
@@ -143,15 +143,15 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
         <SelectionBar />
         <ScoreStrip />
 
-        <button className="autopilot" onClick={() => onOpenMode('autopilot')}>
+        <button className="autopilot" onClick={() => onOpenMode(first ? 'autopilot' : 'growth')}>
           <span className="ico">
             <Icons.bolt size={22} />
           </span>
           <span className="grow" style={{ minWidth: 0 }}>
             <span className="kicker">Autopilot</span>
-            <span className="name">Play</span>
+            <span className="name">{first ? 'Play' : 'Build'}</span>
             <span className="first truncate">
-              First up: {firstUp(first)}
+              {first ? `First up: ${firstUp(first)}` : 'Nothing to drill yet · open Growth'}
             </span>
           </span>
           {days > 0 && (
@@ -253,8 +253,8 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
         <Section title="Repertoire" />
         {perRep.length === 0 ? (
           <div className="card small muted">
-            Nothing prepared yet. Play a game and save the opening, or survive a line in Run —
-            both write into your repertoire, and everything else here works from it.
+            Nothing prepared yet. Build a line in Growth, keep one at the end of a Run, or save
+            the opening from a game in Play — everything else here works from what you keep.
           </div>
         ) : (
           <div className="list">

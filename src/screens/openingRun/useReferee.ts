@@ -1,21 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
-import { applyUci, positionStatus, type LegalMove } from '../../chess/core';
-import { formatScore, type EngineLine } from '../../engine/types';
-import { useEngine } from '../../engine/useEngine';
+import { positionStatus, type LegalMove } from '../../chess/core';
+import { formatScore, type EngineLine, type EngineSnapshot } from '../../engine/types';
+import { getEngine } from '../../engine/useEngine';
 import { isUsersTurn, judgeByEval, type Run } from '../../model/openingRun';
 
-/** Your move past the prep, held until the engine has scored it. */
+/** Your move off the referee's script, held until the engine has scored it. */
 export interface Pending {
   /** The position you moved in. */
   from: string;
   san: string;
-  /** The position you left behind. */
-  after: string;
+  uci: string;
 }
 
-export type Verdict =
-  | { san: string; ok: true; reply: string | null }
-  | { san: string; ok: false; lost: number };
+export interface Verdict {
+  san: string;
+  ok: boolean;
+  /** Centipawns dropped. */
+  lost: number;
+}
+
+/** How long the engine thinks about each question, in milliseconds. */
+const THINK_MS = 700;
 
 /** A forced mate reads as a huge swing; take it as one. */
 function scoreOf(line: EngineLine): number | null {
@@ -24,104 +29,103 @@ function scoreOf(line: EngineLine): number | null {
   return null;
 }
 
+/** The engine's final word on a position: its top line's score, once it has stopped. */
+function settled(snap: EngineSnapshot, fen: string): number | null {
+  // A stopped search reports back under its old position, so check the fen.
+  if (snap.thinking || snap.fen !== fen) return null;
+  const line = snap.lines[0];
+  return line ? scoreOf(line) : null;
+}
+
 /**
- * The engine as referee, for the part of a run that has left the prep.
+ * The engine as referee, and nothing else: it grades your move and never
+ * picks the opponent's.
  *
- * It is asked about two positions in turn: the one you are about to move in,
- * which gives the score your move is measured against, and the one you leave
- * behind, which gives both the verdict and the opponent's reply. It also plays
- * for the opponent when extended play opens on their turn, which is the usual
- * case — a line ends on a move of yours. It runs whether or not evaluations are
+ * It asks two questions of the position you moved in: what it is worth, and
+ * what it is worth if the move has to be yours (`searchmoves`). Both are
+ * answered from the same side of the board, which matters: an engine's score
+ * for a position and its score for the position after the reply are not
+ * mirror images — this build rates the side to move a pawn up at the start
+ * — so comparing the two would fail a fine move. While `active` the first
+ * answer is kept ready for the position you are looking at, so a verdict past
+ * the hand-over costs one search rather than two; a move off your prep,
+ * submitted cold, costs both. The referee runs whether or not evaluations are
  * switched on elsewhere — that setting is about seeing numbers during recall,
- * and here the engine is the judge. A short fixed think keeps it quick on the
- * asm.js build.
+ * and here the engine is the judge.
  */
 export function useReferee({
   run,
   active,
   onVerdict,
-  onOpponentMove,
 }: {
   run: Run | null;
+  /** Keep a baseline ready for the current position, ahead of any move. */
   active: boolean;
   onVerdict: (verdict: Verdict) => void;
-  /** Their move, when the handover leaves them to play. */
-  onOpponentMove: (san: string) => void;
 }) {
   const [pending, setPending] = useState<Pending | null>(null);
-  /** The engine's read on the position you are about to move in. */
+  /** The engine's read on the position you moved, or are about to move, in. */
   const [baseline, setBaseline] = useState<{ fen: string; cp: number } | null>(null);
   const verdict = useRef(onVerdict);
   verdict.current = onVerdict;
-  const opponent = useRef(onOpponentMove);
-  opponent.current = onOpponentMove;
 
   const gameOver = run ? positionStatus(run.fen).gameOver : false;
-  const judging = !!run && active && !run.over && !gameOver;
-  /** True while the engine is being asked for the opponent's move. */
-  const replying = judging && !pending && !isUsersTurn(run);
-  // Their turn is probed like yours — the position itself — for a move rather
-  // than for a baseline.
-  const probeFen = !judging
-    ? null
-    : pending
-      ? baseline?.fen === pending.from
-        ? pending.after
-        : pending.from
-      : run.fen;
-  const { snapshot } = useEngine(probeFen, {
-    enabled: active,
-    movetime: 700,
-    multiPv: 1,
-    debounceMs: 120,
-  });
+  const warming = !!run && active && !run.over && !gameOver && isUsersTurn(run);
+  /** The position a baseline is wanted for, if any. */
+  const wanted = pending?.from ?? (warming ? run.fen : null);
+  const haveBaseline = !!wanted && baseline?.fen === wanted;
 
-  /** Keep the score your next move will be measured against. */
+  /** The score your move is measured against. */
   useEffect(() => {
-    if (!active || !run || snapshot.thinking || snapshot.fen !== run.fen) return;
-    const line = snapshot.lines[0];
-    const cp = line ? scoreOf(line) : null;
-    if (cp === null || baseline?.fen === run.fen) return;
-    setBaseline({ fen: run.fen, cp });
-  }, [active, run, snapshot, baseline?.fen]);
+    if (!wanted || haveBaseline) return;
+    let cancelled = false;
+    const { engine, backend } = getEngine();
+    void backend.then(() => {
+      if (cancelled) return;
+      engine.analyse(wanted, { movetime: THINK_MS, multiPv: 1 }, (snap) => {
+        if (cancelled) return;
+        const cp = settled(snap, wanted);
+        if (cp === null) return;
+        cancelled = true;
+        setBaseline({ fen: wanted, cp });
+      });
+    });
+    return () => {
+      cancelled = true;
+      engine.stop();
+    };
+  }, [wanted, haveBaseline]);
 
-  /** Score the move you played, and let the engine answer if it stands. */
+  /** The score of the move you played, from the same side of the board. */
   useEffect(() => {
-    if (!active || !run || !pending || baseline?.fen !== pending.from) return;
-    // A stopped search reports back under its old position, so check the fen.
-    if (snapshot.fen !== pending.after || snapshot.thinking) return;
-    const line = snapshot.lines[0];
-    const after = line ? scoreOf(line) : null;
-    if (after === null) return;
-
-    const result = judgeByEval(run.color, baseline.cp, after);
-    setPending(null);
-    if (!result.ok) {
-      verdict.current({ san: pending.san, ok: false, lost: result.lost });
-      return;
-    }
-    const replyUci = positionStatus(pending.after).gameOver ? null : (line!.pv[0] ?? null);
-    const reply = replyUci ? (applyUci(pending.after, replyUci)?.san ?? null) : null;
-    verdict.current({ san: pending.san, ok: true, reply });
-  }, [active, run, pending, baseline, snapshot]);
-
-  /** Play for the opponent when the handover left them to move. */
-  useEffect(() => {
-    if (!replying || !run) return;
-    // A stopped search reports back under its old position, so check the fen.
-    if (snapshot.fen !== run.fen || snapshot.thinking) return;
-    const best = snapshot.lines[0]?.pv[0];
-    const move = best ? applyUci(run.fen, best) : null;
-    if (move) opponent.current(move.san);
-  }, [replying, run, snapshot]);
+    if (!run || !pending || baseline?.fen !== pending.from) return;
+    let cancelled = false;
+    const { engine, backend } = getEngine();
+    const before = baseline.cp;
+    void backend.then(() => {
+      if (cancelled) return;
+      engine.analyse(pending.from, { movetime: THINK_MS, multiPv: 1, searchmoves: [pending.uci] }, (snap) => {
+        if (cancelled) return;
+        const after = settled(snap, pending.from);
+        if (after === null) return;
+        cancelled = true;
+        const result = judgeByEval(run.color, before, after);
+        setPending(null);
+        verdict.current({ san: pending.san, ok: result.ok, lost: result.lost });
+      });
+    });
+    return () => {
+      cancelled = true;
+      engine.stop();
+    };
+  }, [run, pending, baseline]);
 
   return {
     pending,
-    replying,
     /** Hand a move to the referee; the board shows it meanwhile. */
     submit(move: LegalMove) {
       if (!run || pending) return;
-      setPending({ from: run.fen, san: move.san, after: move.after });
+      setPending({ from: run.fen, san: move.san, uci: move.uci });
     },
     reset() {
       setPending(null);

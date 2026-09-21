@@ -23,6 +23,13 @@ export interface EngineLimits {
   depth?: number;
   movetime?: number;
   multiPv?: number;
+  /**
+   * Only consider these moves (UCI) at the root. Searching one move this way
+   * scores it from the same side of the board as a search of the whole
+   * position, which is what a fair comparison between the two needs: an
+   * engine's view of a position is not the mirror of its view of the reply.
+   */
+  searchmoves?: string[];
 }
 
 export interface Engine {

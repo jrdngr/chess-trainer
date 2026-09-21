@@ -118,8 +118,11 @@ export function createStockfishEngine(): Engine {
     const multiPv = pending.limits.multiPv ?? 3;
     worker.postMessage(`setoption name MultiPV value ${multiPv}`);
     worker.postMessage(`position fen ${pending.fen}`);
-    if (pending.limits.movetime) worker.postMessage(`go movetime ${pending.limits.movetime}`);
-    else worker.postMessage(`go depth ${pending.limits.depth ?? 14}`);
+    const only = pending.limits.searchmoves?.length
+      ? ` searchmoves ${pending.limits.searchmoves.join(' ')}`
+      : '';
+    if (pending.limits.movetime) worker.postMessage(`go movetime ${pending.limits.movetime}${only}`);
+    else worker.postMessage(`go depth ${pending.limits.depth ?? 14}${only}`);
     emit(true);
   };
 

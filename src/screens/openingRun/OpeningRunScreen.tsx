@@ -1,30 +1,36 @@
 import { useEffect, useRef, useState } from 'react';
 import { Board } from '../../components/Board';
 import { AppBar, haptic, Icons, Section, toast } from '../../components/ui';
-import { lastMoveOf, positionStatus, sansToMoveText, type LegalMove, type Square } from '../../chess/core';
+import {
+  applySan,
+  lastMoveOf,
+  positionStatus,
+  sansToMoveText,
+  type LegalMove,
+  type Square,
+} from '../../chess/core';
 import {
   atEdge,
   beginRun,
-  carryOn,
   chooseAtEdge,
   classify,
   edgeOptions,
-  extend,
+  finishPrep,
   isComplete,
-  isExtended,
   isUsersTurn,
+  keepPlaying,
   leavePrep,
   lineToKeep,
-  longEnough,
   movesHere,
   opponentReply,
   outcomeOf,
   play,
-  playExtended,
-  playExtendedReply,
+  playPast,
+  playReply,
   takeHint,
   weaknessFromCards,
   type Begun,
+  type DeathCause,
   type LineSource,
   type OpeningRunOptions,
   type OpeningRunPrefs,
@@ -32,7 +38,6 @@ import {
 } from '../../model/openingRun';
 import { deepestName, formatGameCount, specificNameForColor } from '../../model/reference';
 import { nodeById, openingTree } from '../../model/openingTree';
-import { hasLine } from '../../model/repertoire';
 import { referenceIndex } from '../../model/referenceIndex';
 import { evidenceFor, movesToDraw } from '../../model/growth';
 import { gradeForTime } from '../../model/srs';
@@ -44,36 +49,51 @@ import { PlayOn } from './PlayOn';
 import { Reveal, type Death } from './Reveal';
 import { Setup } from './Setup';
 import { useReferee } from './useReferee';
+import { useOpponent } from './useOpponent';
 import { ClockHud, useMoveClock } from '../../components/Clock';
 import { clockSeconds } from '../../model/openingRun';
 import { comboBonus, POINTS, seenIn } from '../../model/scoring';
 import { deepestNodeWithin } from '../../model/openingTree';
 import type { RoundPlan, RoundSummary } from '../../model/autopilot';
 
-type Phase = 'setup' | 'playing' | 'offprep' | 'gap' | 'dead' | 'survived' | 'playon';
+type Phase = 'setup' | 'playing' | 'checkpoint' | 'gap' | 'dead' | 'survived' | 'playon';
 
 interface Game {
   source: LineSource;
   run: Run;
 }
 
-/** A move that is theory here, but not in your prep. */
-interface OffPrep {
-  san: string;
-  /** What your prep had instead. */
+/**
+ * Where the drill stopped and the choice is yours: keep playing, or start a
+ * new round.
+ *
+ *   left — you played a sound move your prep does not have. The move is on
+ *          the board but not yet in the run, so a new round ends on the
+ *          position you left, with the move shown as what ended it.
+ *   edge — your prep, or the book on a run through it, has run out. The run
+ *          is complete either way; keeping playing is the game past it.
+ */
+interface Checkpoint {
+  kind: 'left' | 'edge';
+  san?: string;
+  /** Centipawns the move cost, by the engine. */
+  lost?: number;
+  /** What your prep had instead, when it had anything. */
   expected: string[];
   /** What the database calls the line your move leads into. */
   opening: string | null;
 }
 
 /**
- * OpeningRun: one secret line, played until the first mistake.
+ * OpeningRun: the opening of a game, drilled against your prep.
  *
  * This screen owns the run and its rules — the opponent's replies, the clock,
- * hints, stepping out of prep, the book offered at the edge of the prep, and
- * the engine as referee once it has been handed over. Nothing on screen names
- * the line while it is live; the reveal is the reward for dying, and lives in
- * its own screen.
+ * hints, the book offered at the edge of the prep, the engine as referee for
+ * any move your prep does not have, and the checkpoints where the drill ends
+ * and the choice to play on is yours. Nothing on screen names the line while
+ * the run is live; the reveal is the reward for the round ending, and lives
+ * in its own screen. Nothing here writes to the repertoire but the book
+ * offered at the edge, which is chosen up front, and the reveal's one tap.
  */
 export function OpeningRunScreen({
   auto,
@@ -85,7 +105,7 @@ export function OpeningRunScreen({
   /**
    * What Autopilot decided: the side, the opening to walk toward, and the
    * settings the round is played on. It holds for the whole visit, and an
-   * automatic run is always on the clock, with no hints and no extended play.
+   * automatic run is always on the clock, with no hints and nothing added.
    */
   plan?: RoundPlan;
   onRoundOver?: (summary: RoundSummary) => void;
@@ -105,7 +125,7 @@ export function OpeningRunScreen({
    */
   const [planned] = useState<RoundPlan | undefined>(() => plan);
   const prefs: OpeningRunPrefs = planned
-    ? { ...settings.openingRun, ...planned.options, clock: 'move10', hints: 0, extended: false }
+    ? { ...settings.openingRun, ...planned.options, newMoves: 0, clock: 'move10', hints: 0 }
     : settings.openingRun;
   const endRun = useStore((s) => s.endOpeningRun);
   const earn = useStore((s) => s.earn);
@@ -125,9 +145,9 @@ export function OpeningRunScreen({
   const [evidence] = useState(() => evidenceIn(state));
 
   /**
-   * How to steer the current run again from wherever it has got to. Set
-   * when a run is opened, read when the opponent is about to reply with no
-   * line left to follow.
+   * How to steer the current run again from wherever it has got to, while it
+   * is still inside its prep. Set when a run is opened, read when the
+   * opponent is about to reply with no line left to follow.
    */
   const redraw = useRef<Begun['redraw'] | null>(null);
 
@@ -161,63 +181,60 @@ export function OpeningRunScreen({
   const [death, setDeath] = useState<Death | null>(null);
   const [thinking, setThinking] = useState(false);
   const [hintSquare, setHintSquare] = useState<Square | null>(null);
-  const [offPrep, setOffPrep] = useState<OffPrep | null>(null);
+  const [checkpoint, setCheckpoint] = useState<Checkpoint | null>(null);
   /** Where a game against the engine was started from, after the run. */
   const [playOnFrom, setPlayOnFrom] = useState<string | null>(null);
   const picker = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
   /** True once the run has been logged, so nothing ends it twice. */
   const settled = useRef(false);
+  /** True once a move off your prep was logged as a miss, so the round counts it once. */
+  const slipped = useRef(false);
 
   const source = game?.source ?? null;
   const run = game?.run ?? null;
   const live = phase === 'playing';
   const myTurn = run ? isUsersTurn(run) : false;
-  const extended = !!run && isExtended(run);
+  const extended = !!run && run.extended;
+  /** The book has nothing for the opponent here, so the engine plays. */
+  const engineTurn = !!source && !!run && live && extended && !myTurn && !run.over && movesHere(source, run).length === 0;
 
   const buzz = (pattern: number | number[]) => {
     if (settings.hapticFeedback) haptic(pattern);
   };
 
-  /** Points banked this run, for the reveal. */
+  /** Points banked this run, for the reveal — and a ref, for the round's log. */
   const [earned, setEarned] = useState(0);
-
-  /** What the run wrote into the repertoire, for the reveal. */
-  const [saved, setSaved] = useState<{ name: string; added: number } | null>(null);
-
-  const finish = (ended: Run, completed: boolean) => {
-    settled.current = true;
-    endRun(outcomeOf(ended, completed));
-    setSaved(keepLine(ended));
-    let bonus = 0;
-    if (completed && !isExtended(ended)) {
-      bonus += POINTS.run.finish + (ended.leftPrep ? 0 : POINTS.run.green);
-      earn({ mode: 'run', points: bonus, line: ended.played, color: ended.color, answered: false, correct: false });
-    }
-    setEarned((total) => total + bonus);
-    // A run carried on into extended play amends its record, not its round.
-    if (!roundLogged.current) {
-      roundLogged.current = true;
-      const region = nodeById(tree, ended.openingId);
-      const summary: RoundSummary = {
-        openingId: deepestNodeWithin(tree, region, ended.played).id,
-        color: ended.color,
-        score: earned + bonus,
-        answered: ended.survived + (completed ? 0 : 1),
-        correct: ended.survived,
-        perfect: completed && !ended.leftPrep,
-      };
-      endRound({ mode: 'run', ...summary, line: ended.drawn });
-      onRoundOver?.(summary);
-    }
+  const banked = useRef(0);
+  const bank = (points: number) => {
+    banked.current += points;
+    setEarned(banked.current);
   };
-  const roundLogged = useRef(false);
+
+  /** What the reveal's one tap wrote into the repertoire. */
+  const [kept, setKept] = useState<{ name: string; added: number } | null>(null);
+
+  const finish = (ended: Run, cause: DeathCause | null) => {
+    settled.current = true;
+    endRun(outcomeOf(ended, cause));
+    const region = nodeById(tree, ended.openingId);
+    const summary: RoundSummary = {
+      openingId: deepestNodeWithin(tree, region, ended.played).id,
+      color: ended.color,
+      score: banked.current,
+      answered: ended.survived + (slipped.current ? 1 : 0),
+      correct: ended.survived,
+      perfect: cause === null && !ended.leftPrep,
+    };
+    endRound({ mode: 'run', ...summary, line: ended.drawn });
+    onRoundOver?.(summary);
+  };
 
   /** A correct move of yours: the base, the speed bonus, and the combo. */
   const credit = (after: Run) => {
     const points =
       POINTS.run.move + clock.bonus + comboBonus(after.survived);
     earn({ mode: 'run', points, line: after.played, color: after.color, answered: true, correct: true });
-    setEarned((total) => total + points);
+    bank(points);
   };
 
   /** A miss: answered, worth nothing, and counted against the line. */
@@ -226,7 +243,7 @@ export function OpeningRunScreen({
   };
 
   /**
-   * Which opening the saved line belongs to.
+   * Which opening the kept line belongs to.
    *
    * Only for saying where it went: the line is written into the tree for the
    * side you played, and the opening it lands in is derived from the moves
@@ -240,21 +257,19 @@ export function OpeningRunScreen({
   };
 
   /**
-   * Write what the run survived into the repertoire. Always: a line you have
-   * played through is a line you play, which is the whole idea of the app.
-   *
-   * It joins the one tree for the side you played, whatever the opening. The
-   * opening is only what the moves are called once they are in there. Returns
-   * what was written, or null when the run survived nothing worth keeping.
+   * The reveal's one tap: write the line into the repertoire. The only way a
+   * finished run adds anything, and it is never taken for you.
    */
-  const keepLine = (ended: Run): { name: string; added: number } | null => {
-    const line = lineToKeep(ended);
-    if (!line.length) return null;
-    const existing = reps.find((rep) => rep.color === ended.color) ?? null;
-    if (existing && hasLine(existing, line)) return { name: openingOf(ended, line), added: 0 };
-    const repId = ensureRepertoire(ended.color);
+  const keep = () => {
+    if (!run) return;
+    const line = lineToKeep(index, run);
+    if (!line.length) return;
+    const repId = ensureRepertoire(run.color);
     const { added } = addToRep(repId, line, 'reference');
-    return { name: openingOf(ended, line), added };
+    const name = openingOf(run, line);
+    setKept({ name, added });
+    buzz(10);
+    toast(added > 0 ? `${added} move${added === 1 ? '' : 's'} saved to ${name}` : 'Already in your repertoire');
   };
 
   /** End the run here. `ended` may carry state the run picked up on the way out. */
@@ -264,7 +279,23 @@ export function OpeningRunScreen({
     setDeath(how);
     setGame({ source, run: { ...ended, over: true } });
     setPhase('dead');
-    finish(ended, false);
+    finish(ended, how.cause);
+  };
+
+  /**
+   * The referee has run out: the end of your prep, or of the book on a run
+   * through it. That completes the run and pays for it, whatever you choose
+   * next — and the choice is a checkpoint, never made for you.
+   */
+  const arrive = (at: Run) => {
+    if (!source) return;
+    const bonus = POINTS.run.finish + (at.leftPrep ? 0 : POINTS.run.green);
+    earn({ mode: 'run', points: bonus, line: at.played, color: at.color, answered: false, correct: false });
+    bank(bonus);
+    buzz(14);
+    setGame({ source, run: finishPrep(at) });
+    setCheckpoint({ kind: 'edge', expected: [], opening: null });
+    setPhase('checkpoint');
   };
 
   const referee = useReferee({
@@ -272,35 +303,65 @@ export function OpeningRunScreen({
     active: live && extended,
     onVerdict: (verdict) => {
       if (!run || !source || settled.current) return;
-      if (!verdict.ok) {
-        debit(run, verdict.san);
-        die(run, { cause: 'blunder', played: verdict.san, expected: [], lost: verdict.lost });
+      if (extended) {
+        if (!verdict.ok) {
+          die(run, { cause: 'blunder', played: verdict.san, expected: [], lost: verdict.lost });
+          return;
+        }
+        buzz(10);
+        setGame({ source, run: playPast(run, verdict.san) });
         return;
       }
-      buzz(10);
-      const next = playExtended(run, verdict.san, verdict.reply);
-      credit({ ...next, played: [...run.played, verdict.san] });
-      setGame({ source, run: next });
+      // A move your prep does not have. Where it had one, this is a miss —
+      // logged now, whatever you decide, because the drill lives in the
+      // schedule rather than in the round ending.
+      const expected = source.prepAt(run.fen);
+      if (expected.length) {
+        slipped.current = true;
+        debit(run, verdict.san);
+        if (run.repertoireId) missed(run.repertoireId, run.fen, verdict.san, expected[0]);
+      }
+      if (!verdict.ok) {
+        die(run, { cause: 'blunder', played: verdict.san, expected, lost: verdict.lost });
+        return;
+      }
+      buzz(14);
+      const named = deepestName(index, [...run.played, verdict.san]);
+      setCheckpoint({
+        kind: 'left',
+        san: verdict.san,
+        lost: verdict.lost,
+        expected,
+        opening: named && named.ply >= 3 ? named.name : null,
+      });
+      setPhase('checkpoint');
     },
-    onOpponentMove: (san) => {
+  });
+
+  useOpponent({
+    fen: run?.fen ?? null,
+    enabled: engineTurn,
+    onMove: (san) => {
       if (!run || !source || settled.current) return;
-      setGame({ source, run: playExtendedReply(run, san) });
+      setGame({ source, run: playReply(run, san) });
     },
   });
 
   const clock = useMoveClock({
     seconds: clockSeconds(prefs.clock),
     turnKey: `${run?.id ?? ''}:${run?.played.length ?? 0}`,
-    active: live && myTurn && !thinking && !referee.pending && !referee.replying,
+    // Past the hand-over nothing is earned, and the clock is the speed bonus.
+    active: live && myTurn && !thinking && !referee.pending && !extended,
   });
 
-  // The opponent answers on its own, after a beat. With no line left to
-  // follow — you stepped off it, or there never was one — a new line is
-  // drawn from here first, by the same steer, so the round follows you
-  // rather than wandering: the opponent walks you toward your lines, your
-  // weak spots or your holes from wherever you have taken it.
+  // The opponent answers on its own, after a beat. Inside your prep, with no
+  // line left to follow — you stepped onto another of your lines, or there
+  // never was one — a new line is drawn from here first, by the same steer,
+  // so the opponent keeps walking you toward your lines, your weak spots or
+  // your holes. Past the hand-over the drill is over and it simply plays the
+  // book, by popularity, while the book lasts.
   useEffect(() => {
-    if (!source || !run || !live || myTurn || run.over || extended) return;
+    if (!source || !run || !live || myTurn || run.over) return;
     if (movesHere(source, run).length === 0) return;
     setThinking(true);
     const timer = setTimeout(() => {
@@ -313,15 +374,13 @@ export function OpeningRunScreen({
       });
     }, 420);
     return () => clearTimeout(timer);
-  }, [source, run, myTurn, live, extended]);
+  }, [source, run, myTurn, live]);
 
   /**
-   * The prep running out ends the run, once the run is long enough. With
-   * moves left to add it pauses at the edge instead and offers the book;
-   * while it is still short it carries on into the book, judged by the book;
-   * with extended mode on the engine takes over the judging and the run
-   * carries on. The book itself running out — no move left at all — ends
-   * the run whoever is to move.
+   * The referee running out is a checkpoint. With moves left to add the run
+   * pauses at the edge of the prep instead and offers the book; once they
+   * are spent, or with none, the end of the prep — or of the book, on a run
+   * through it, whoever is to move — is where the run is complete.
    */
   useEffect(() => {
     if (!source || !run || !live || settled.current) return;
@@ -333,24 +392,17 @@ export function OpeningRunScreen({
       setPhase('gap');
       return;
     }
-    if (edge && !longEnough(run)) {
-      setGame({ source, run: carryOn(run) });
-      return;
-    }
-    if (prefs.extended) {
-      setGame({ source, run: extend(run) });
-      return;
-    }
-    setPhase('survived');
-    finish(run, true);
-  }, [source, run, live, prefs.extended]);
+    arrive(run);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source, run, live]);
 
-  /** Extended play ends with the game, not with the prep. */
+  /** Past the hand-over, play ends with the game, not with the prep. */
   useEffect(() => {
     if (!extended || !run || !live || settled.current) return;
     if (!positionStatus(run.fen).gameOver) return;
     setPhase('survived');
-    finish(run, true);
+    finish(run, null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extended, run, live]);
 
   /** A hint belongs to one position only. */
@@ -359,11 +411,12 @@ export function OpeningRunScreen({
   const begin = (started: Game | null) => {
     if (!started) return;
     settled.current = false;
-    roundLogged.current = false;
+    slipped.current = false;
+    banked.current = 0;
     setEarned(0);
-    setSaved(null);
+    setKept(null);
     setDeath(null);
-    setOffPrep(null);
+    setCheckpoint(null);
     referee.reset();
     setGame(started);
     setPhase('playing');
@@ -400,22 +453,14 @@ export function OpeningRunScreen({
         death={phase === 'dead' ? death : null}
         earned={earned}
         auto={!!planned}
-        saved={saved}
+        kept={kept}
+        onKeep={keep}
         onExit={onExit}
         onNewRun={again}
         onChangeOptions={() => setPhase('setup')}
         onPlayOn={(fen) => {
           setPlayOnFrom(fen);
           setPhase('playon');
-        }}
-        onContinueExtended={() => {
-          // The run itself carries on: the score keeps counting and a blunder
-          // still ends it. Logging it again amends the completed line's entry.
-          settled.current = false;
-          setDeath(null);
-          referee.reset();
-          setGame({ source, run: extend(run) });
-          setPhase('playing');
         }}
       />
     );
@@ -426,36 +471,15 @@ export function OpeningRunScreen({
       chooseAtGap(move.san);
       return;
     }
-    if (!live || !myTurn) return;
+    if (!live || !myTurn || referee.pending) return;
     if (extended) {
       referee.submit(move);
       return;
     }
-    // A real theory move that your prep simply does not have is not the same
-    // mistake as a move nobody plays. Pause and let it be a decision — on a
-    // run you set up yourself. Under Autopilot it is simply your move: the
-    // round follows you, the book judges from here, and the reveal says the
-    // run left your prep.
-    if (classify(source, run, move.san) === 'theory') {
-      if (planned) {
-        buzz(10);
-        const next = leavePrep(run, move.san);
-        credit(next);
-        setGame({ source, run: next });
-        return;
-      }
-      buzz(14);
-      const named = deepestName(index, [...run.played, move.san]);
-      setOffPrep({
-        san: move.san,
-        expected: source.prepAt(run.fen),
-        opening: named && named.ply >= 3 ? named.name : null,
-      });
-      setPhase('offprep');
-      return;
-    }
-    const result = play(source, run, move.san);
-    if (result.ok) {
+    const kind = classify(source, run, move.san);
+    if (kind === 'prep') {
+      const result = play(source, run, move.san);
+      if (!result.ok) return;
       buzz(10);
       // A position your prep has an answer to is a card on the schedule, and
       // finding the answer is a review of it.
@@ -466,15 +490,13 @@ export function OpeningRunScreen({
       setGame({ source, run: result.run });
       return;
     }
-    debit(run, move.san);
-    die(run, { cause: 'move', played: result.played, expected: result.expected });
-    // Only a position your prep has an answer to is a card on the schedule.
-    if (run.repertoireId && source.prepAt(run.fen).length) {
-      missed(run.repertoireId, run.fen, result.played, source.prepAt(run.fen)[0] ?? '');
-    }
+    // Theory your prep does not have, or a move nobody plays: the engine
+    // decides which kind of mistake it is. A blunder ends the run; a sound
+    // move is a checkpoint, and the choice to carry on is yours.
+    referee.submit(move);
   };
 
-  /** Where an out-of-prep move goes: the tree for the side being played. */
+  /** Where a move added at the edge goes: the tree for the side being played. */
   const repertoireForAdding = (): string => run.repertoireId ?? ensureRepertoire(run.color);
 
   /** The book at the edge of the prep, and the moves drawn on the board for it. */
@@ -497,30 +519,28 @@ export function OpeningRunScreen({
     setPhase('playing');
   };
 
-  /** Keep the move, and let the book judge the rest of the run. */
-  const acceptOffPrep = (addToRepertoire: boolean) => {
-    if (!offPrep) return;
-    if (addToRepertoire) {
-      addToRep(repertoireForAdding(), [...run.played, offPrep.san], 'manual');
-      toast(`${offPrep.san} added`);
-    }
+  /** Keep playing from the checkpoint: the engine judges from here. */
+  const carryOn = () => {
+    if (!checkpoint) return;
     buzz(10);
-    setOffPrep(null);
-    const next = leavePrep(run, offPrep.san);
-    credit(next);
+    const next = checkpoint.kind === 'left' && checkpoint.san ? leavePrep(run, checkpoint.san) : keepPlaying(run);
+    setCheckpoint(null);
+    referee.reset();
     setGame({ source, run: next });
     setPhase('playing');
   };
 
-  /** Stop here instead. A softer ending than a move nobody plays. */
-  const declineOffPrep = () => {
-    if (!offPrep) return;
-    setOffPrep(null);
-    debit(run, offPrep.san);
-    die({ ...run, leftPrep: true }, { cause: 'offprep', played: offPrep.san, expected: offPrep.expected });
-    if (run.repertoireId) {
-      missed(run.repertoireId, run.fen, offPrep.san, offPrep.expected[0] ?? '');
+  /** Stop at the checkpoint instead: the round is over, and the reveal is next. */
+  const stopHere = () => {
+    if (!checkpoint) return;
+    const at = checkpoint;
+    setCheckpoint(null);
+    if (at.kind === 'left' && at.san) {
+      die({ ...run, leftPrep: true }, { cause: 'offprep', played: at.san, expected: at.expected });
+      return;
     }
+    setPhase('survived');
+    finish(run, null);
   };
 
   const onHint = () => {
@@ -532,6 +552,11 @@ export function OpeningRunScreen({
     setGame({ source, run: taken.run });
   };
 
+  /** At a checkpoint after a move off your prep, the board shows the move made. */
+  const previewed = phase === 'checkpoint' && checkpoint?.san ? applySan(run.fen, checkpoint.san) : null;
+  const shownFen = previewed?.after ?? run.fen;
+  const shownLast = previewed ? { from: previewed.from, to: previewed.to } : lastMoveOf(run.played);
+
   return (
     <>
       <AppBar
@@ -541,7 +566,7 @@ export function OpeningRunScreen({
         actions={
           <div className="row gap-6">
             {extended && <span className="chip accent wide">{referee.liveScore ?? '…'}</span>}
-            {live && myTurn && <ClockHud clock={clock} />}
+            {live && myTurn && !extended && <ClockHud clock={clock} />}
             <span className={`chip num wide${run.leftPrep ? ' accent' : ''}`}>{run.survived}</span>
           </div>
         }
@@ -549,14 +574,14 @@ export function OpeningRunScreen({
 
       <div className="screen no-nav">
         <Board
-          fen={run.fen}
+          fen={shownFen}
           orientation={run.color}
-          interactive={(live && myTurn && !thinking) || phase === 'gap'}
+          interactive={(live && myTurn && !thinking && !referee.pending) || phase === 'gap'}
           movableFor={run.color}
           allowed={phase === 'gap' ? drawn.map((move) => move.san) : undefined}
           arrows={drawn.map((move) => ({ from: move.from, to: move.to }))}
           onMove={onMove}
-          lastMove={lastMoveOf(run.played)}
+          lastMove={shownLast}
           highlights={hintSquare ? [{ square: hintSquare, kind: 'hint' }] : []}
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
@@ -571,38 +596,59 @@ export function OpeningRunScreen({
 
         <div className="spacer" />
 
-        {phase === 'offprep' && offPrep && (
+        {phase === 'checkpoint' && checkpoint && (
           <>
-            <div className="verdict accent">
+            <div className={`verdict ${checkpoint.kind === 'left' ? 'accent' : 'ok'}`}>
               <span className="ico">
-                <Icons.book size={16} />
+                {checkpoint.kind === 'left' ? <Icons.book size={16} /> : <Icons.check size={18} />}
               </span>
-              Out of prep
+              {checkpoint.kind === 'left'
+                ? checkpoint.expected.length
+                  ? 'Off your prep, but sound'
+                  : 'Out of the book, but sound'
+                : run.bookRun
+                  ? 'End of the book'
+                  : 'End of your prep'}
             </div>
-            {offPrep.opening && <div className="center small muted">{offPrep.opening}</div>}
-            <div className="compare mt-12">
-              <div>
-                <div className="k">Your prep</div>
-                <div className="v">{offPrep.expected[0] ?? '—'}</div>
+            {checkpoint.opening && <div className="center small muted">{checkpoint.opening}</div>}
+            {checkpoint.kind === 'left' ? (
+              <div className="compare mt-12">
+                <div>
+                  <div className="k">{checkpoint.expected.length ? 'Your prep' : 'Cost'}</div>
+                  <div className="v">
+                    {checkpoint.expected.length
+                      ? checkpoint.expected[0]
+                      : `−${((checkpoint.lost ?? 0) / 100).toFixed(2)}`}
+                  </div>
+                </div>
+                <div className="accent">
+                  <div className="k">You played</div>
+                  <div className="v">{checkpoint.san}</div>
+                </div>
               </div>
-              <div className="accent">
-                <div className="k">You played</div>
-                <div className="v">{offPrep.san}</div>
+            ) : (
+              <div className="center small muted mt-8">
+                {run.bookRun
+                  ? 'The database knows nothing past here.'
+                  : 'Nothing prepared past here. The drill is done; the game need not be.'}
               </div>
-            </div>
+            )}
             <div className="spacer" />
             <div className="actions">
-              <button className="btn accent block xl" onClick={() => acceptOffPrep(true)}>
-                <Icons.plus size={18} />
-                Add {offPrep.san} and carry on
+              <button className="btn accent block xl" onClick={carryOn}>
+                <Icons.play size={18} />
+                Keep playing
               </button>
-              <button className="btn block" onClick={() => acceptOffPrep(false)}>
-                Carry on without adding it
-              </button>
-              <button className="btn plain block" onClick={declineOffPrep}>
-                End the run here
+              <button className="btn block" onClick={stopHere}>
+                {checkpoint.kind === 'left' ? 'Stop here' : 'New round'}
+                <Icons.next size={16} />
               </button>
             </div>
+            {checkpoint.kind === 'left' && (
+              <div className="center small muted mt-8">
+                Past here the engine judges, and nothing is scored.
+              </div>
+            )}
           </>
         )}
 
@@ -642,18 +688,18 @@ export function OpeningRunScreen({
           <>
             <div className="prompt">
               <div className="who">
-                {thinking || referee.pending || referee.replying ? (
+                {thinking || referee.pending || engineTurn ? (
                   <span className="spinner" />
                 ) : (
                   <span className={`side ${run.color}`} />
                 )}
                 {referee.pending
                   ? 'Judging'
-                  : thinking || referee.replying
+                  : thinking || engineTurn
                     ? 'Reply'
                     : 'Your move'}
               </div>
-              {run.pastPrep !== null && !extended && <div className="ctx">Past your prep · the book judges</div>}
+              {extended && <div className="ctx">Past your prep · the engine judges</div>}
             </div>
             {run.hints > 0 && !extended && (
               <button

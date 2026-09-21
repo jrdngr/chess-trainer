@@ -25,17 +25,26 @@ import { cardId, mulberry32 } from './session';
 import type { Card, RepMove, Repertoire } from './types';
 
 /**
- * Run: one secret line, played until the first mistake ends the run.
+ * Run: the opening of a game, drilled against your prep.
  *
  * A run lives inside a region of the opening tree — the whole book, one first
- * move, a family, or a single variation — and one rule decides every move:
- * inside the region, a move keeps you alive if it is prepared or it is theory.
+ * move, a family, or a single variation. While your prep has a move for the
+ * position, your prep is the referee: a prepared move is correct, and anything
+ * else is handed to the engine. A move the engine calls a blunder ends the
+ * round; one it calls sound is a *checkpoint* — you have left your prep, and
+ * the choice is yours to keep playing or start a new round. The end of your
+ * prep is a checkpoint too. Past a checkpoint the engine judges every move,
+ * the opponent plays the book by popularity while the book lasts, and nothing
+ * ends the game but a blunder, mate or a draw.
+ *
  * The opponent replies in proportion to how often each move is played, but
  * only with moves that keep the game inside the region; on the way in, only
- * moves the book can still get there from. Past the end of the book your prep
- * is the only referee. At the end of the prep the run is complete — unless it
- * has moves left to add, in which case the book's replies are offered and the
- * one you choose becomes prep.
+ * moves the book can still get there from. Where nothing of yours passes
+ * through the region at all the book is the referee instead — a run through
+ * the book — until the book runs out.
+ *
+ * Nothing is written into the repertoire by a run. The reveal offers the line
+ * to keep, and keeping it is one tap.
  *
  * A `LineSource` answers those questions about a position, and everything
  * else (judging, revealing, scoring) is shared.
@@ -316,17 +325,13 @@ export interface OpeningRunOptions {
   /**
    * Moves the run may add. Where your prep runs out — on your move, with the
    * book still going — the book's replies are offered and the one you choose
-   * is written into the repertoire; with none left the run is complete there.
+   * is written into the repertoire; with none left the end of the prep is a
+   * checkpoint instead. The one way a run writes anything while it is live,
+   * and it is chosen up front.
    */
   newMoves: number;
   clock: ClockMode;
   hints: number;
-  /**
-   * Carry on past the end of the prep, with the engine calling blunders.
-   * A line that stops the moment the setup is done is anticlimactic; this turns
-   * the rest of it into a game you can still lose.
-   */
-  extended: boolean;
 }
 
 export const DEFAULT_OPTIONS: OpeningRunOptions = {
@@ -334,7 +339,6 @@ export const DEFAULT_OPTIONS: OpeningRunOptions = {
   newMoves: 0,
   clock: 'off',
   hints: 0,
-  extended: false,
 };
 
 export type OpeningRunPrefs = OpeningRunOptions;
@@ -352,11 +356,30 @@ export interface Run {
   /** The tree for the side played, when there is one. */
   repertoireId?: string;
   /**
-   * True once the run has stepped outside its prep onto a real book move and
-   * carried on. Everything after that is judged by the book, and the run is
+   * True once the run has stepped outside its prep and carried on. The run is
    * graded as an out-of-prep one however it ends.
    */
   leftPrep: boolean;
+  /**
+   * True when nothing of yours passes through the region: the book is the
+   * referee, and the run is a walk through it. Reaching the end of the book
+   * is the checkpoint, not the end of the prep, because there is none.
+   */
+  bookRun: boolean;
+  /**
+   * True once the engine is the referee — chosen at a checkpoint, never
+   * automatic. From here the opponent plays the book while it lasts, then
+   * the engine, and only a blunder, mate or a draw ends the game.
+   */
+  extended: boolean;
+  /**
+   * How many plies had been played when the referee handed over to the
+   * engine, or null while it has not. Everything from here was passed by the
+   * engine rather than found in your prep or the book.
+   */
+  handOver: number | null;
+  /** Your own moves past the hand-over, judged by the engine. They earn nothing. */
+  past: number;
   color: Color;
   fen: string;
   played: string[];
@@ -386,12 +409,11 @@ export interface Run {
    */
   enteredIn: string | null;
   /**
-   * How many plies had been played when the prep ran out and the run carried
-   * on into the book, or null. From there the book judges every move, as it
-   * does after leaving the prep — but nothing was left, because there was
-   * nothing to leave: a finish is still a clean one. See `MIN_DECISIONS`.
+   * How many plies had been played when the referee ran out — the end of
+   * your prep, or of the book on a run through it — or null while it has
+   * not. Reaching it is what completes a run, whatever happens after.
    */
-  pastPrep: number | null;
+  prepDone: number | null;
   /** Hints left to spend. */
   hints: number;
   /** Hints spent, shown on the reveal so a deep run stays honest. */
@@ -400,19 +422,14 @@ export interface Run {
   newMoves: number;
   /** Moves it has added. */
   added: number;
-  /**
-   * How many plies had been played when the prep ran out, or null while the run
-   * is still inside the book. Set once and never cleared: everything after it
-   * was judged by the engine rather than by the repertoire.
-   */
-  prepEnded: number | null;
 }
 
 /**
- * How a run ended. Leaving the prep is kept apart from the rest: it is the one
- * ending where the move you played was real theory.
+ * How a run ended short of finishing: on a blunder, or stopped at a
+ * checkpoint after a move off your prep. The latter is kept apart because
+ * the move that ended it was sound — it just was not yours.
  */
-export type DeathCause = 'move' | 'time' | 'blunder' | 'offprep';
+export type DeathCause = 'blunder' | 'offprep';
 
 let runCounter = 0;
 
@@ -533,7 +550,9 @@ export interface BeginOptions extends Partial<OpeningRunOptions> {
  * steer the run began on — one of your lines through the position, your
  * weakest, or the walk to the nearest hole — and returns the run with its
  * target set. Unchanged where nothing of yours passes through the position,
- * which is where the opponent falls back to the book.
+ * which is where the opponent falls back to the book. Only while the run is
+ * still inside its prep: once you have left it the drill is over, and the
+ * opponent plays the book rather than walking you back.
  */
 export interface Begun {
   source: LineSource;
@@ -645,6 +664,13 @@ export function beginRun(opts: BeginOptions): Begun | null {
     openingId: node.id,
     repertoireId: rep?.id,
     leftPrep: false,
+    // Nothing of yours through the region makes this a walk through the
+    // book — a first line built by playing it, if the reveal's offer is
+    // taken — rather than a drill with nothing to drill.
+    bookRun: !rep || linesThrough(rep, tree, aim, side, { fen: START_FEN, played: [] }).length === 0,
+    extended: false,
+    handOver: null,
+    past: 0,
     color: side,
     fen,
     played: way.slice(0, opened),
@@ -654,16 +680,16 @@ export function beginRun(opts: BeginOptions): Begun | null {
     drawn: first.target,
     opened,
     enteredIn: opened > 0 ? aim.id : null,
-    pastPrep: null,
+    prepDone: null,
     hints: opts.hints ?? DEFAULT_OPTIONS.hints,
     hintsUsed: 0,
     // The budget is what the round may spend; the line decides what it needs.
     newMoves: budgetFor(),
     added: 0,
-    prepEnded: null,
   };
 
   const redraw = (current: Run): Run => {
+    if (current.leftPrep || current.extended) return current;
     const next = draw({ fen: current.fen, played: current.played });
     if (next.target.length <= current.played.length) return current;
     return { ...current, target: next.target, drawn: next.target };
@@ -751,7 +777,7 @@ export function wayIn(tree: OpeningTree, aim: OpeningNode, sans: string[]): stri
  * makes a repertoire wider: the moves most often played against you are the
  * ones you have not met, not the next move of the line you already know.
  *
- * Then by how much of the round would be new. A Grow round is the walk to
+ * Then by how much of the round would be new. A round at a gap is the walk to
  * the hole and the moves added past it; the walk was just played if the last
  * round was drawn on the same line, and a hole at the tip of that line is
  * that whole round again with one move on the end. A hole at an earlier
@@ -824,19 +850,19 @@ export function movesHere(source: LineSource, run: Run): string[] {
 
 /**
  * What a move is, before it is played: your own prep, real theory your prep
- * does not have, or a move that ends the run.
+ * does not have, or a move the referee does not know at all.
  *
  * Theory is only told apart from prep where prep has something to say. Where
- * it says nothing — the book past the end of your lines, or a region you have
- * never prepared — a theory move is simply the move, and a run never pauses
- * over it.
+ * it says nothing — a run through the book — a theory move is simply the
+ * move. Both theory and a miss are handed to the engine: a blunder ends the
+ * run, and a sound move is a checkpoint.
  */
 export type MoveKind = 'prep' | 'theory' | 'miss';
 
 export function classify(source: LineSource, run: Run, san: string): MoveKind {
   if (!movesHere(source, run).includes(san)) return 'miss';
   const prep = source.prepAt(run.fen);
-  if (run.leftPrep || !prep.length || prep.includes(san)) return 'prep';
+  if (!prep.length || prep.includes(san)) return 'prep';
   return 'theory';
 }
 
@@ -929,16 +955,19 @@ export function opponentReply(source: LineSource, run: Run, rand: () => number):
 /**
  * How a run ended, in four flavours rather than two.
  *
- * Leaving your prep is not the same kind of failure as playing a move nobody
- * has ever played, and finishing a line after having left it is not the same
- * kind of success as finishing one you knew all the way through. Keeping them
- * apart is the difference between "learn this" and "you got that wrong".
+ * Stopping after a sound move off your prep is not the same kind of failure
+ * as a blunder, and finishing after having left your prep is not the same
+ * kind of success as finishing having known it all the way through. Keeping
+ * them apart is the difference between "learn this" and "you got that wrong".
+ *
+ * `cause` is null for a run that finished: the referee ran out and you
+ * stopped there, or you kept playing and the game itself ended.
  */
 export type RunGrade = 'green' | 'yellow' | 'red' | 'purple';
 
-export function gradeOf(run: Run, completed: boolean): RunGrade {
-  if (completed) return run.leftPrep ? 'yellow' : 'green';
-  return run.leftPrep ? 'purple' : 'red';
+export function gradeOf(run: Run, cause: DeathCause | null): RunGrade {
+  if (cause === null) return run.leftPrep ? 'yellow' : 'green';
+  return cause === 'offprep' ? 'purple' : 'red';
 }
 
 export const GRADES: RunGrade[] = ['green', 'yellow', 'red', 'purple'];
@@ -950,9 +979,9 @@ export function gradeLabel(grade: RunGrade): string {
     case 'yellow':
       return 'Finished out of prep';
     case 'purple':
-      return 'Left your prep';
+      return 'Stopped out of prep';
     default:
-      return 'Run over';
+      return 'Blundered';
   }
 }
 
@@ -968,10 +997,11 @@ export function staysInside(tree: OpeningTree, run: Run, san: string): boolean {
 }
 
 /**
- * Step outside the prep and carry on.
+ * Step outside the prep and carry on, from a checkpoint.
  *
- * The move is played, it counts towards the score, and the drawn line stops
- * steering — from here the caller judges with the book instead of the prep.
+ * The move — sound, by the engine — is played. It earns nothing: the score
+ * is moves found in your prep, and this was not one. The drawn line stops
+ * steering, and from here the engine is the referee.
  */
 export function leavePrep(run: Run, san: string): Run {
   const move = applySan(run.fen, san);
@@ -980,13 +1010,33 @@ export function leavePrep(run: Run, san: string): Run {
     ...run,
     fen: move.after,
     played: [...run.played, san],
-    survived: run.survived + 1,
     leftPrep: true,
+    extended: true,
+    handOver: run.handOver ?? run.played.length,
+    past: run.past + 1,
     target: [],
   };
 }
 
-/* ── extended mode ──────────────────────────────────────────────────────── */
+/**
+ * The referee has nothing more to say: your prep has been played out, or the
+ * book has on a run through it. That completes the run, whatever comes after.
+ */
+export function finishPrep(run: Run): Run {
+  return run.prepDone === null ? { ...run, prepDone: run.played.length } : run;
+}
+
+/**
+ * Keep playing past the end of the prep, from its checkpoint. Not leaving
+ * the prep — there was nothing here to leave — so a finish stays green; but
+ * the engine judges from here, and its verdicts earn nothing.
+ */
+export function keepPlaying(run: Run): Run {
+  if (run.extended) return run;
+  return { ...finishPrep(run), extended: true, handOver: run.played.length, target: [] };
+}
+
+/* ── past the hand-over ─────────────────────────────────────────────────── */
 
 /**
  * How much you may drop, in centipawns, before a move counts as a blunder.
@@ -1025,127 +1075,45 @@ export function judgeByEval(
   return { ok: lost <= limit, lost };
 }
 
-/** Hand a run over to the engine: everything from here is judged on eval. */
-export function extend(run: Run): Run {
-  return run.prepEnded === null ? { ...run, prepEnded: run.played.length } : run;
-}
-
-/** True once the run is being judged by the engine rather than by the prep. */
-export function isExtended(run: Run): boolean {
-  return run.prepEnded !== null;
-}
-
 /**
- * Your own moves played past the end of the prep.
- *
- * Counted by whose ply each one is rather than from how many were played, since
- * the handover can happen on either side's turn: a line that ends on your move
- * leaves the opponent to move first, and their move is not one of yours.
+ * One of your moves the engine passed, past the hand-over. It earns nothing
+ * and does not count as survived: the score is what you found in your prep.
  */
-export function extendedMoves(run: Run): number {
-  if (run.prepEnded === null) return 0;
-  let mine = 0;
-  for (let ply = run.prepEnded; ply < run.played.length; ply += 1) {
-    if ((ply % 2 === 0) === (run.color === 'w')) mine += 1;
-  }
-  return mine;
+export function playPast(run: Run, san: string): Run {
+  const applied = applySan(run.fen, san);
+  if (!applied) return { ...run, over: true };
+  return { ...run, fen: applied.after, played: [...run.played, san], past: run.past + 1 };
 }
 
-/** Record one accepted move in extended play, with the opponent's reply. */
-export function playExtended(run: Run, san: string, reply: string | null): Run {
-  const sans = reply ? [san, reply] : [san];
-  let fen = run.fen;
-  for (const move of sans) {
-    const applied = applySan(fen, move);
-    if (!applied) return { ...run, over: true };
-    fen = applied.after;
-  }
-  return {
-    ...run,
-    fen,
-    played: [...run.played, ...sans],
-    survived: run.survived + 1,
-  };
-}
-
-/**
- * The opponent's move on its own, once the engine has chosen one.
- *
- * Extended play normally takes your move and their answer together, so this is
- * only for the turn that starts it: a line ends on a move of yours, which hands
- * the run to the engine with the opponent still to move. Their move earns
- * nothing — the score counts moves you survived.
- */
-export function playExtendedReply(run: Run, san: string): Run {
+/** The opponent's move, once something has chosen it — the book or the engine. */
+export function playReply(run: Run, san: string): Run {
   const applied = applySan(run.fen, san);
   if (!applied) return { ...run, over: true };
   return { ...run, fen: applied.after, played: [...run.played, san] };
 }
 
 /**
- * True when the prep has been played out with no mistake left to make.
+ * True when the referee has run out entirely: nothing prepared and nothing
+ * in the book, at either side's turn.
  *
- * A run already handed to the engine is never complete this way: past the prep
- * there is always another move, and only a blunder or the game itself ends it.
+ * Never past the hand-over: the engine always has another move, and only a
+ * blunder or the game itself ends play from there.
  */
 export function isComplete(source: LineSource, run: Run): boolean {
-  return !run.over && !isExtended(run) && movesHere(source, run).length === 0;
+  return !run.over && !run.extended && movesHere(source, run).length === 0;
 }
 
 /**
  * True at the edge of the prep: your move, nothing prepared, the book still
- * going. This is where a run completes, or — with moves left to add — where it
- * offers the book, or — while the run is still short — where it carries on.
+ * going. This is where a run offers the book, with moves left to add, and
+ * otherwise where the end of the prep is a checkpoint.
  *
- * Never once the prep has been left or carried on past: from there the book
- * judges every move and nothing is added. And never for the engine: past the
- * hand-over there is no prep to be at the edge of.
+ * Never on a run through the book — there is no prep to be at the edge of,
+ * and the book running out is its checkpoint — and never past the hand-over.
  */
 export function atEdge(source: LineSource, run: Run): boolean {
-  if (run.over || run.leftPrep || run.pastPrep !== null || isExtended(run) || !isUsersTurn(run)) return false;
+  if (run.over || run.bookRun || run.extended || !isUsersTurn(run)) return false;
   return source.prepAt(run.fen).length === 0 && movesHere(source, run).length > 0;
-}
-
-/**
- * The fewest moves of your own a run must have asked before it may complete
- * at the edge of the prep.
- *
- * A repertoire starts as stubs — an opening's own move order and nothing
- * more, five plies of Ruy López beside twenty of Queen's Gambit — and a run
- * that completes wherever the prep happens to stop is over after three
- * moves there, with nothing learned and nothing gained. So a short run does
- * not stop at the edge: it carries on into the book, judged by the book,
- * and what it survives is written into the repertoire, the same as a run
- * that has left its prep. A stub grows by being played.
- */
-export const MIN_DECISIONS = 8;
-
-/** Whether the run has asked enough of you to be allowed to complete at the edge. */
-export function longEnough(run: Run): boolean {
-  return run.survived >= MIN_DECISIONS;
-}
-
-/**
- * Carry on past the end of the prep, into the book.
- *
- * The drawn line led here and no further; from here the opponent plays from
- * the book, steered again wherever a line of yours passes through, and the
- * book judges every move. Not leaving the prep: there is nothing here to
- * leave, and a finish stays green.
- */
-export function carryOn(run: Run): Run {
-  return run.pastPrep === null ? { ...run, pastPrep: run.played.length, target: [] } : run;
-}
-
-/** Your own moves the book judged after the prep ran out, before any hand-over to the engine. */
-export function bookMoves(run: Run): number {
-  if (run.pastPrep === null) return 0;
-  const end = run.prepEnded ?? run.played.length;
-  let mine = 0;
-  for (let ply = run.pastPrep; ply < end; ply += 1) {
-    if ((ply % 2 === 0) === (run.color === 'w')) mine += 1;
-  }
-  return mine;
 }
 
 /** What to offer at the edge: the book's replies, most played first. */
@@ -1291,29 +1259,32 @@ export interface RunOutcome {
   completed: boolean;
 }
 
-export function outcomeOf(run: Run, completed: boolean): RunOutcome {
+/**
+ * What a run adds up to, once it is over.
+ *
+ * Completing a run is reaching the end of its prep — a fact, once it has
+ * happened, whatever you chose to do next. The grade is how the run actually
+ * ended: a blunder past the checkpoint is still a blunder.
+ */
+export function outcomeOf(run: Run, cause: DeathCause | null): RunOutcome {
   return {
     id: run.id,
-    grade: gradeOf(run, completed),
+    grade: gradeOf(run, cause),
     label: run.sourceLabel,
     openingId: run.openingId,
     color: run.color,
     depth: run.survived,
-    completed,
+    completed: run.prepDone !== null,
   };
 }
 
 /**
  * Log a finished run.
  *
- * Logging the same run twice amends it rather than counting it again: a run that
- * reaches the end of its prep is logged there, and may then be carried on into
- * extended play and finish deeper. The count stays at one run and the deeper
- * score replaces the shallower one — `best` only ever grows, so taking the
- * maximum is right either way.
- *
- * Reaching the end of a line is a fact, so carrying the run on past it and
- * blundering does not unmake it: a completed line stays counted.
+ * Logging the same run twice amends it rather than counting it again: the
+ * count stays at one run and the deeper score replaces the shallower one —
+ * `best` only ever grows, so taking the maximum is right either way. A
+ * completed line stays counted.
  */
 export function recordRun(
   record: OpeningRunRecord,
@@ -1351,20 +1322,30 @@ function amendGrades(
   return out;
 }
 
-/* ── keeping what you survived ──────────────────────────────────────────── */
+/* ── keeping the line ───────────────────────────────────────────────────── */
 
 /**
- * The part of a run worth writing into a repertoire.
+ * The part of a run worth offering to the repertoire, at the reveal.
  *
- * Only the moves that were actually correct, and only while the book was still
- * judging them: a run's `played` never contains the move that ended it, and
- * anything past `prepEnded` was passed by the engine rather than found in the
- * book, which makes it sound but not theory. The line is trimmed to end on your
- * own move, because one ending on the opponent's prepares nothing.
+ * Nothing is written by playing; this is what the one tap would write. Every
+ * move the referee passed — a run's `played` never contains the move that
+ * ended it — and then, past the hand-over, only as far as the moves are still
+ * theory: a move the engine passed that the book has never seen is sound but
+ * not prep. The line is trimmed to end on your own move, because one ending
+ * on the opponent's prepares nothing.
  */
-export function lineToKeep(run: Run): string[] {
-  const inBook = run.prepEnded ?? run.played.length;
-  const cut = run.played.slice(0, Math.max(0, inBook));
+export function lineToKeep(index: ReferenceIndex, run: Run): string[] {
+  const judged = run.handOver ?? run.played.length;
+  let fen = START_FEN;
+  const cut: string[] = [];
+  for (let ply = 0; ply < run.played.length; ply += 1) {
+    const san = run.played[ply];
+    if (ply >= judged && !bookHas(index, fen, san)) break;
+    const move = applySan(fen, san);
+    if (!move) break;
+    cut.push(san);
+    fen = move.after;
+  }
   // White's moves sit at even indices, so a White line has odd length.
   const wantsOdd = run.color === 'w';
   if (!cut.length) return [];

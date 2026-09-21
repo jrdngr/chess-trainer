@@ -41,6 +41,7 @@ import {
   type RunOutcome,
 } from '../model/openingRun';
 import { addMistake, type Mistake } from '../model/mistakes';
+import { importedOnly, mergeGames, playGames, withPlayGame } from '../model/play';
 import { DEFAULT_SELECTION, type Selection } from '../model/selection';
 import { picksFrom, selectionFor } from '../model/onboarding';
 import {
@@ -205,7 +206,10 @@ interface StoreState extends PersistedState {
     mode: K,
     patch: Partial<Settings[K]>,
   ) => void;
+  /** Replace the imported games. Games played here are kept. */
   setImportedGames: (games: ImportedGame[]) => void;
+  /** Keep a game finished in Play, as data for Repair and coverage. */
+  recordPlayGame: (game: ImportedGame) => void;
 
   /** Log a finished openingRun run, globally and against its own opening. */
   endOpeningRun: (outcome: RunOutcome) => void;
@@ -249,8 +253,9 @@ interface StoreState extends PersistedState {
  * Seeded lines made the first screen look busy, but they were somebody else's
  * openings: Drill asked about a Queen's Gambit nobody had chosen, and Repair
  * compared real games against prep the player had never agreed to. You now
- * build the repertoire by playing — Play saves the openings from your games,
- * Opening Run adds the lines you survive, and Growth fills what they leave out.
+ * build the repertoire yourself, one tap at a time — Growth answers the
+ * replies you have none for, Run offers the line it ran at the reveal, Play
+ * saves the opening from a game — and nothing writes into it unasked.
  */
 function emptyPersisted(): PersistedState {
   return {
@@ -289,9 +294,11 @@ function persistedFrom(state: StoreState): PersistedState {
 /**
  * What goes to the cloud. Imported games are left out deliberately: they are
  * bulky, re-importable, and the payload has to stay under a 256 KiB document.
+ * Games played here go: there is nowhere to re-import them from, and they are
+ * capped and cut to their openings to stay small.
  */
 function syncableFrom(state: StoreState): PersistedState {
-  return { ...persistedFrom(state), importedGames: [] };
+  return { ...persistedFrom(state), importedGames: playGames(state.importedGames) };
 }
 
 const persist = debounce((state: StoreState) => {
@@ -476,7 +483,7 @@ export const useStore = create<StoreState>((set, get) => {
           repair: normalizeRepairRecord(remote.state.repair),
           mistakes: remote.state.mistakes ?? [],
           score: normalizeScore(remote.state.score),
-          importedGames: local.importedGames,
+          importedGames: mergeGames(local.importedGames, remote.state.importedGames ?? []),
           settings: mergeSettings(remote.state.settings),
           updatedAt: remote.updatedAt,
           ready: true,
@@ -665,7 +672,11 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     setImportedGames(games) {
-      commit({ importedGames: games });
+      commit({ importedGames: [...playGames(get().importedGames), ...importedOnly(games)] });
+    },
+
+    recordPlayGame(game) {
+      commit({ importedGames: withPlayGame(get().importedGames, game) });
     },
 
     endOpeningRun(outcome) {
@@ -764,7 +775,7 @@ export const useStore = create<StoreState>((set, get) => {
 
 /* ───────────────────────────── selectors ───────────────────────────── */
 
-export function repertoireList(state: StoreState): Repertoire[] {
+export function repertoireList(state: Pick<StoreState, 'repertoires' | 'repertoireOrder'>): Repertoire[] {
   return state.repertoireOrder.map((id) => state.repertoires[id]).filter(Boolean);
 }
 

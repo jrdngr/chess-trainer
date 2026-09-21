@@ -3,10 +3,11 @@
 A mobile-first chess opening trainer built around one idea: you are never
 forced down a line. You pick a side and a region of the opening tree — the
 whole book, one first move, a family like the King's Indian, or a single
-variation — and every mode works inside it. A move keeps you alive if it is
-prepared or it is theory. Autopilot plays Run after Run on settings it chooses
-for you, points are credited to every opening a line goes through, and a Stats
-tab keeps the record.
+variation — and every mode works inside it. Inside your prep a move keeps you
+alive if it is prepared or it is theory; outside it the engine judges, and
+only a blunder ends the game. Autopilot plays Run after Run on what you have,
+the repertoire grows only when you say so, points are credited to every
+opening a line goes through, and a Stats tab keeps the record.
 
 This is a **UX prototype**, not a product. It exists to answer questions about
 what the eventual native app should be.
@@ -27,19 +28,24 @@ Everything below leans into it.
 top of Home and every setup screen, and every mode honours them. Setup screens
 only hold what is specific to that mode.
 
-**Autopilot is the main loop, and it is all Run.** Run can do everything the
-other modes do: it can repeat what needs repeating by steering the opponent
-toward it, and it can grow the repertoire by offering the book where the prep
-ends. So a recommendation engine chooses an opening inside the selection, a
-colour, and the Run's settings, one round after another, with no trip back to
-Home in between and no end until you stop. The settings are the engine's
-business and nothing on screen names them. The four modes stay selectable by
-hand, each with its own setup, for training on your own terms.
+**Autopilot is the main loop, and it is all Run.** Run can repeat what needs
+repeating by steering the opponent toward it, so a recommendation engine
+chooses an opening inside the selection, a colour, and what the opponent
+steers toward, one round after another, with no trip back to Home in between
+and no end until you stop. The settings are the engine's business and
+nothing on screen names them. The four modes stay selectable by hand, each
+with its own setup, for training on your own terms.
 
-**Optimise for fun.** A Run that just runs is the most fun; one that stops to
-offer the book is a little less. The engine tilts toward fun without ignoring
-need. Every mode pays points, the points climb a milestone ladder, and each
-opening keeps its own record.
+**Autopilot drills; it never builds.** Nothing is written into the
+repertoire by playing. Growth is where lines are built, a Run offers the
+line it ran at the reveal, Play offers the opening of a game, and every one
+of those is a tap. A repertoire is what you have chosen to play, not what
+you happened to survive.
+
+**Optimise for fun.** A Run that just runs is the most fun, so nothing
+interrupts one but a checkpoint you can tap through, and a game you want to
+keep playing is yours to keep playing. Every mode pays points, the points
+climb a milestone ladder, and each opening keeps its own record.
 
 ## Run it
 
@@ -89,72 +95,46 @@ ends, a bar over its reveal shows what it earned and offers the next round,
 and one tap starts it — the reveal is worth reading. A session never ends on
 its own. Stop is the close button in the app bar, and stopping opens Stats.
 
-Under Autopilot a Run is always on a ten-second clock, with no hints and no
-extended play. What changes from round to round is the opening, the colour,
-where the round starts, and two of Run's own settings: what the opponent
-steers toward, and how many moves the run may add. The player is told none
-of it; the bar says "Next Round" and nothing else.
+Under Autopilot a Run is always on a ten-second clock, with no hints and
+nothing added. What changes from round to round is the opening, the colour,
+where the round starts, and one of Run's own settings: what the opponent
+steers toward. The player is told none of it; the bar says "Next Round" and
+nothing else.
 
 Most rounds start from move one and follow the player. The opening the
 engine chose is only what the opponent steers toward: play something else
-and the round comes with you, re-steering from wherever you take it (see
-Run). A theory move your prep does not have is simply your move under
-Autopilot — no pause, though the reveal still says the run left your prep.
-Now and then a round is *steered* instead: it starts inside a family or a
-variation, with the way in already on the board, dimmed, and your first
-decision is the first move inside. That is how the engine drills one
-variation or grows one opening, and it is kept rare. Home's Autopilot button
-says which the first round would be: "Black, from move one", or the opening
-it would start inside.
+inside your prep and the round comes with you, re-steering from wherever you
+take it (see Run). A move off your prep goes to the engine, as in any Run:
+a blunder ends the round, and a sound one is a checkpoint. Now and then a
+round is *steered* instead: it starts inside a family or a variation, with
+the way in already on the board, dimmed, and your first decision is the
+first move inside. That is how the engine drills one variation, and it is
+kept rare. Home's Autopilot button says which the first round would be:
+"Black, from move one", or the opening it would start inside.
+
+Autopilot runs what you have and nothing else. With nothing prepared inside
+the selection it says so and points at Growth, and Home's button does the
+same; a new install builds its first line there, not here.
 
 ### The recommendation engine
 
 `src/model/recommend.ts` ranks every candidate of (focus, opening, colour)
 inside the selection. A focus is a preset of Run settings:
 
-- **Test**: lines drawn by how often you would meet them, nothing added.
-  Whether the prep holds up when nothing says what it is.
+- **Test**: lines drawn by how often you would meet them. Whether the prep
+  holds up when nothing says what it is.
 - **Review**: lines drawn toward the positions you answer badly, have let
-  lapse, are due on, or got wrong in your own games; nothing added.
-- **Grow**: the opponent walks you to a reply you have no answer to and the
-  run offers the book, one to eight moves depending on how much line there is
-  left to build.
+  lapse, are due on, or got wrong in your own games.
 
-Before any of that, the **foundation**: with no opening selected, a repertoire
-is first given something to play as White, then an answer as Black to 1.e4,
-then to 1.d4 — in that order, ahead of every other candidate, because until
-all three are in it is not a repertoire that can be played. A side chosen on
-its own gets its own part (an answer to 1.e4 and 1.d4 for Black; a first line
-for White); an opening chosen is what the player asked for and is what they
-get.
-
-Likewise an opening chosen with nothing of yours in it: the first round there
-builds a line, by the opening's own move order, before the ranking has a say —
-choosing the Najdorf with no Najdorf prepared is a request for a Najdorf. The
-moves it takes to get there past your prep are not charged against the round's
-budget; only the opening itself is.
+Both run what is there. There is no focus that adds to the repertoire: that
+is Growth's, and the engine's answer to a selection with nothing prepared in
+it is no round at all.
 
 Each candidate is scored:
 
 - **Need** is how loudly the work asks: cards due (a position your games got
-  wrong counts as due), holes in the prep (weighed up by the games you reached
-  them with nothing), prep no run has tested. Each saturates, so two hundred
-  due cards are not ten times louder than twenty.
-- **Readiness** gates Grow. Holes in an opening only ask at full voice once
-  the prep around them is held: a position counts as held when its card has
-  graduated, is not due, and has a review interval of a week or more. Half
-  held is a quarter of the voice; an opening still being learned asks at a
-  tenth at most, so it is grown now and then rather than never. An opening
-  with no prep yet is ready, which is how a new repertoire gets its first
-  lines.
-- **Thinness** undoes that gate for an opening that barely exists, because the
-  readiness rule is about prep being learned and there is none here to learn.
-  It is not how much prep an opening holds — a King's Indian eighteen plies
-  deep down one pawn storm is a great deal of prep and the narrowest
-  repertoire there is — but how much of what the opponent would actually play
-  you answer, at each position where they have a real choice, weighted toward
-  the early ones. Readiness and thinness decide *whether* to grow an opening;
-  how much a round adds is decided by the line it walks to, not here.
+  wrong counts as due), prep no run has tested. Each saturates, so two
+  hundred due cards are not ten times louder than twenty.
 - **Staleness** is how long that opening has gone without a round, measured
   against the other candidates rather than the clock. Candidates never played
   are all equally stale.
@@ -162,15 +142,14 @@ Each candidate is scored:
   about. Every Run stamps the positions of the line it was drawn on with its
   round number, and a line is then read in two parts: its tail — the moves
   past where it last parts from another line, what makes it *this* line — and
-  its head, what makes it this opening. A Test asks only as loudly as the
+  its head, what makes it this opening. A Test asks mostly as loudly as the
   stalest line in the opening has been left (fully stale after three rounds),
-  so the line just built is run once and the opening then grows rather than
-  running it again; the draw prefers the line left longest, and never draws
-  the line the last round was drawn on while there is another. Grow's draw
-  reads the same stamps: a hole at the tip of the line just run is that round
-  again with a move on the end, and loses to a junction earlier in it. No
-  schedule: a one-line repertoire runs it, finds it fresh, and grows; forty
-  lines cycle a rotating few.
+  so the line just built is run once and the other openings and a Review come
+  round before it again; the draw prefers the line left longest, and never
+  draws the line the last round was drawn on while there is another. Never
+  silent, though: a quarter of the voice is kept, because a line just run is
+  still a round when nothing else asks, and Autopilot has nothing but your
+  lines to run. No schedule: forty lines cycle a rotating few.
 - **Depth**: how far below the selection the opening sits, at 0.6 a level —
   the selection 1, a first move 0.6, a family 0.36, a variation 0.22. Most
   rounds are spent at the selection, from move one; a family left alone
@@ -178,29 +157,27 @@ Each candidate is scored:
   not.
 - **Star**: an opening that is starred, or sits inside one that is, counts
   one level shallower.
-- **Fun**: Test 1.0, Review 1.0, Grow 0.7.
 - **Brake**: for every one of the session's last five rounds that was this
-  focus, its weight is multiplied by 0.6. Counted over a window rather than
-  consecutively, so two focuses taking turns still let the third come round.
-  The session remembers its own rounds; nothing is saved.
+  focus, its weight is multiplied by 0.5. Counted over a window rather than
+  consecutively, so a quieter focus still comes round after a run of the
+  louder one. The session remembers its own rounds; nothing is saved.
 
-Score is need × staleness × depth × fun × brake. Need is measured on
-everything inside an opening, so a family asks at least as loudly as any of
-its variations. A Review or Grow that wins is then narrowed while a variation
-holds most of its parent's work — half to step to a first move, two thirds
-to a family, three quarters to a variation, a star taking a level off — so a
-round lands on the variation that wants it and stays at the family when the
-need is spread thin. A Test is never narrowed and is only ever the selection:
-what it measures is whether the prep holds up when nothing says what it is.
-Only openings the player has prep inside are candidates, besides the
-selection itself. A side with nothing prepared is offered one thing, a Grow
-round in the selection, so a brand new install gets its first line from the
-book.
+Score is need × staleness × depth × brake. Need is measured on everything
+inside an opening, so a family asks at least as loudly as any of its
+variations. A Review that wins is then narrowed while a variation holds most
+of its parent's work — half to step to a first move, two thirds to a family,
+three quarters to a variation, a star taking a level off — so a round lands
+on the variation that wants it and stays at the family when the need is
+spread thin. A Test is never narrowed and is only ever the selection: what it
+measures is whether the prep holds up when nothing says what it is. Only
+openings the player has prep inside are candidates, the selection itself
+included: a Review of the way in to an opening with nothing in it would be a
+walk to the edge and a stop.
 
 A round on a family or deeper starts inside it; one on the selection or a
 first move starts from move one. A repertoire of one line per opening
-concentrates all of its work at every level, and every Review and Grow would
-start inside the deepest variation there is — so the session spaces them:
+concentrates all of its work at every level, and every Review would start
+inside the deepest variation there is — so the session spaces them:
 after a round steered into an opening below the selection, the next three
 are drawn from the openings a round can start from move one. Steered rounds
 are the exception, and stay one.
@@ -208,12 +185,12 @@ are the exception, and stay one.
 ## Modes
 
 ### Run
-One secret line, played until the first mistake. Inside the region, a move
-keeps you alive if it is in your repertoire or in the book. The opponent
-replies in proportion to how often each move is played, confined to the
-region; on the way in, confined to moves the book can still reach the opening
-from. Past the end of the book your prep is the only referee, and past the end
-of the prep the line is complete.
+One secret line, played until you blunder. Inside the region, a move keeps
+you alive if it is in your repertoire or in the book. The opponent replies in
+proportion to how often each move is played, confined to the region; on the
+way in, confined to moves the book can still reach the opening from. Past the
+end of the book your prep is the only referee, and reaching the end of the
+prep completes the run.
 
 Where you have prepared lines through the region, one is drawn to steer the
 opponent. "Steer toward" decides how: *popular* draws by how often you would
@@ -231,44 +208,58 @@ Only where nothing of yours passes through the position does the opponent
 fall back to the book, by popularity.
 
 A run can also start *inside* an opening: the way in is played onto the
-board first, shown dimmed, earns nothing and reviews no cards, and is kept
-with the line when the run is written into the repertoire. Autopilot uses
-this for its steered rounds; a Run started by hand always begins at move
-one.
+board first, shown dimmed, earns nothing and reviews no cards, and is part of
+the line the reveal offers. Autopilot uses this for its steered rounds; a Run
+started by hand always begins at move one.
 
 Every move of yours on a position your prep has an answer to is a review of
 that position's card, graded by how long it took, so Run and Drill share one
 schedule and a run does not ask again what it has just shown you know.
 
-A theory move that your prep does not have pauses the run: add it and carry
-on, carry on without adding it, or stop. Only a move nobody plays is a plain
-loss. That makes four endings, coloured apart: green (finished, never left
-prep), yellow (finished, having left it), red (a move nobody plays), purple
-(ended out of prep).
+**Off your prep, the engine judges.** A move your prep does not have —
+theory or not — is handed to the engine, which scores the position before
+and after (`judgeByEval`, with `BLUNDER_LIMIT` of 80 centipawns). A blunder
+ends the run. A sound move is a *checkpoint*, below the board: the verdict,
+the move your prep had beside it, and two buttons — keep playing, or stop
+here. Where your prep had a move, the miss is logged for Repair either way.
+Stopping is the reveal; keeping playing hands the run over to the engine for
+good.
 
-Where the prep ends — your move, nothing prepared, the book still going — the
-run is complete, once it has asked you at least eight moves of your own
-(`MIN_DECISIONS`). Before that it carries on into the book: the book judges
-every move, the opponent plays from the book, and what you survive is
-written into the repertoire, so a stub of an opening — the five plies
-onboarding wrote for a starred Ruy López — grows by being played rather
-than ending the run after three moves. Carrying on is not leaving the prep,
-so a finish stays green; the reveal says how many moves the book judged.
+**Past the hand-over** the engine is the referee and the game is a game: the
+opponent plays the book by popularity while it has a move, because you are
+still in the opening and the book is what you would actually meet, then the
+engine at Play's Club level once it runs out. Your moves earn nothing — the
+score is moves found in your prep — and nothing steers you back: once you are
+out, you are out. Only a blunder, checkmate or a draw ends it. The clock
+stops; the engine's score sits in the app bar instead.
+
+**Where the prep ends** — your move, nothing prepared, the book still going —
+is a checkpoint too. Reaching it completes the run and pays the finish bonus,
+and the choice is the same: stop here and read the reveal, or keep playing
+under the engine. Keeping playing is not leaving the prep, so a finish stays
+green. Where nothing of yours passes through the region at all, the book is
+the referee from the start and its end is the checkpoint.
+
+That makes four endings, coloured apart: green (reached the end of the prep,
+never left it), yellow (left the prep and played the game out to mate or a
+draw), red (blundered), purple (stopped at a checkpoint out of prep).
 
 With "new moves" left the run pauses at the edge instead and offers the
 book's replies, with how often each is played; the one you choose is written
 into the repertoire and the run carries on, up to the run's budget of new
-moves. A chosen move earns nothing: the score is moves you found.
+moves. A chosen move earns nothing: the score is moves you found. This is
+the one thing a run writes while it is played, and it is off by default.
 
-Dying buys the reveal: the line named, the board a replay of the whole line
-parked on the position that ended it, the mistake in red beside the prepared
-move in green. Whatever you survived is written into your repertoire, every
-run: a line you have played through is a line you play.
+The reveal: the line named, the board a replay of the whole line parked on
+the position that ended it, the mistake in red beside the prepared move in
+green. Nothing has been written. One button, *Keep this line*, says how many
+moves it would add and adds them: every move the referee passed, and past
+the hand-over only as far as the moves are still theory — a sound novelty is
+a good move, not prep. A run that has nothing new to offer says so instead.
 
 Options: steer toward (popular, weak spots, gaps), new moves (0 to 8), clock
 (off, 10s, 30s a move), hints (the square a move starts from, never where it
-lands), extended mode (past the prep, the engine judges and a blunder ends the
-run). Autopilot sets the first two for itself.
+lands). Autopilot sets the steer for itself and the rest to their defaults.
 
 A gaps run draws the hole it walks to on how often you would actually meet it:
 the reply's share of its position, times the share of games that reach the
@@ -312,22 +303,33 @@ never pushes a card out.
 ### Growth
 The opponent walks your own prep toward the nearest reply you have no answer
 to, and you choose one from the book. Up to three moves a run — this mode's
-own cap, not the Run's budget. Holes are only
-counted inside the region, and on the way into it. This is the picker a Run
-opens at the edge of the prep, as a mode of its own.
+own cap, not the Run's budget. Holes are only counted inside the region, and
+on the way into it. This is the picker a Run with new moves opens at the edge
+of the prep, as a mode of its own.
+
+It is also where a repertoire starts, since Autopilot builds nothing. A side
+with no tree yet is grown from nothing: as Black, the first moves you would
+meet are the first holes, from move one; as White, your first move is not a
+reply to anything, so the lobby offers the book's first moves and Black's
+answers to the one you keep are the holes from there. Home's Autopilot
+button opens Growth while there is nothing to drill.
 
 ### Repair
-The positions your imported games got wrong, compared against the repertoire:
-off prep (you had a move and played another) and unprepared (you kept reaching
-it with nothing). Slips made in the app count too. Scoped to the region. Under
-Autopilot the same evidence steers Run instead: a slip makes its position a
-weak spot, and a position reached with nothing makes its hole ask louder.
+The positions your games got wrong, compared against the repertoire: off prep
+(you had a move and played another) and unprepared (you kept reaching it with
+nothing). Imported games and games played in Play both count, and so do slips
+made in the app. Scoped to the region. Under Autopilot the same evidence
+steers Run instead: a slip makes its position a weak spot, and one your games
+got wrong counts as due.
 
 ### Play
 A game against the engine at a chosen strength. While the game is still on the
 selected opening's move order the engine plays that move order, so a game in
-the Najdorf is a Najdorf; past it the engine plays for itself. The opening can
-be saved into the repertoire when the game ends.
+the Najdorf is a Najdorf; past it the engine plays for itself. Every finished
+game — mate, a draw or a resignation — is kept as a game, in the same shape
+as an import, so Repair, coverage and the engine read what you actually play:
+the newest two hundred, cut to their openings. The opening can be saved into
+the repertoire when the game ends, and that is a button, not a side effect.
 
 ## Score
 
@@ -336,7 +338,7 @@ live in `POINTS` in `src/model/scoring.ts`.
 
 | Mode | Per action | Bonuses |
 |---|---|---|
-| Run | 1 per correct move | +5 finishing the line, +3 more for green; speed; combo |
+| Run | 1 per correct move in your prep | +5 reaching the end of the prep, +3 more for green; speed; combo. Nothing past the hand-over |
 | Drill | 1 per correct answer | +1 on a card that had lapsed; speed; combo |
 | Growth | 5 per move added | |
 | Repair | 4 per position relearned, 2 per move given | |
@@ -380,9 +382,10 @@ Transpositions collapse to one card. Browse by playing moves; each move has a
 sheet to prefer it, note it, reorder it, train the branch, or delete it. The
 reference database sits under the move list.
 
-A new install starts empty. Play writes openings from your games, Run keeps
-the lines you survive and, with new moves allowed, the ones you choose;
-Growth fills what they leave out.
+A new install starts empty, and nothing writes into it unasked. Growth
+answers the replies you have none for, a Run offers the line it ran at the
+reveal, Play offers the opening of a game; each is a tap, and a Run with new
+moves allowed writes the ones you choose at its edge.
 
 ## Analysis
 
@@ -394,9 +397,10 @@ with a summary and ideas and one tap to add.
 ## Import your games
 
 **Repertoire → Import** pulls recent games from Lichess or Chess.com, or a
-pasted PGN, and feeds Repair. A published Claude Artifact runs under a CSP
-that blocks cross-origin requests, so the live fetch fails there; pasting a
-PGN and a bundled synthetic sample archive both work anyway.
+pasted PGN, and feeds Repair alongside the games played in Play. A published
+Claude Artifact runs under a CSP that blocks cross-origin requests, so the
+live fetch fails there; pasting a PGN and a bundled synthetic sample archive
+both work anyway.
 
 ## Data
 
@@ -409,6 +413,11 @@ so in Settings when it overflows.
 
 Saved state carries a schema version. Version 0 is the fresh start: every
 earlier save, settings included, is discarded rather than migrated.
+
+Imported games stay on the device: bulky, re-importable, and the document
+has to fit. Games played in Play go with the state — there is nowhere to
+re-import them from — capped at two hundred and cut to forty plies, and two
+devices' games are merged by id.
 
 The reference database is crawled from the [Lichess opening
 explorer](https://explorer.lichess.ovh) — rated 2000–2500 blitz, rapid and

@@ -119,7 +119,8 @@ export interface BookLine {
 
 export interface ImportedGame {
   id: string;
-  source: 'lichess' | 'chesscom' | 'pgn';
+  /** Where the game came from: an import, or one you played here in Play. */
+  source: 'lichess' | 'chesscom' | 'pgn' | 'play';
   white: string;
   black: string;
   result: string;

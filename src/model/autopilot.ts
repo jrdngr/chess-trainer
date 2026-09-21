@@ -6,13 +6,14 @@ import type { Focus, Recommendation, Start } from './recommend';
  * Autopilot: one round after another, each a Run on settings the
  * recommendation engine chose, without going back to Home in between.
  *
- * A round is one Run — a line to its end or its first mistake. The engine
- * decides the opening, the colour and the focus; the focus is nothing the
- * player is told, only the settings the round is played on.
+ * A round is one Run — your prep to its end, or to the checkpoint where you
+ * leave it. The engine decides the opening, the colour and the focus; the
+ * focus is nothing the player is told, only what the opponent steers toward.
+ * Autopilot never adds to the repertoire: that is Growth's, and the reveal's.
  */
 
 /** What each focus steers the opponent by. */
-export const STEER_FOR: Record<Focus, Steer> = { test: 'popular', review: 'weak', grow: 'gaps' };
+export const STEER_FOR: Record<Focus, Steer> = { test: 'popular', review: 'weak' };
 
 /** What Autopilot decided a round should be. */
 export interface RoundPlan {
@@ -24,8 +25,8 @@ export interface RoundPlan {
    * inside the opening with the way in already on the board.
    */
   start: Start;
-  /** The Run settings the focus comes down to. */
-  options: { steer: Steer; newMoves: number };
+  /** The Run setting the focus comes down to. */
+  options: { steer: Steer };
 }
 
 export function planFor(pick: Recommendation): RoundPlan {
@@ -33,7 +34,7 @@ export function planFor(pick: Recommendation): RoundPlan {
     color: pick.color,
     steer: pick.opening.id,
     start: pick.start,
-    options: { steer: STEER_FOR[pick.focus], newMoves: pick.focus === 'grow' ? pick.newMoves : 0 },
+    options: { steer: STEER_FOR[pick.focus] },
   };
 }
 

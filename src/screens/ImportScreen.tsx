@@ -12,6 +12,7 @@ import {
 } from '../model/gameAnalysis';
 import { displayName } from '../model/repertoire';
 import { generateSampleArchive } from '../model/seed/sampleGames';
+import { importedOnly } from '../model/play';
 import type { ImportedGame } from '../model/types';
 import { fetchGames, gamesFromPgn, type SourceId } from '../services/gameSources';
 import { repertoireList, useStore } from '../store/useStore';
@@ -27,7 +28,8 @@ export function ImportScreen({ onBack }: ImportScreenProps) {
   const setSettings = useStore((s) => s.setSettings);
   const setImportedGames = useStore((s) => s.setImportedGames);
 
-  const [step, setStep] = useState<Step>(state.importedGames.length ? 'games' : 'source');
+  const imported = importedOnly(state.importedGames);
+  const [step, setStep] = useState<Step>(imported.length ? 'games' : 'source');
   const [source, setSource] = useState<SourceId>('lichess');
   const [username, setUsername] = useState(
     state.settings.lichessUsername || state.settings.chesscomUsername || '',
@@ -37,7 +39,7 @@ export function ImportScreen({ onBack }: ImportScreenProps) {
   const [pgnOpen, setPgnOpen] = useState(false);
   const [pgnText, setPgnText] = useState('');
 
-  const games = state.importedGames;
+  const games = imported;
 
   const run = async () => {
     const name = username.trim();

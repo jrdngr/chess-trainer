@@ -6,30 +6,22 @@ import { addLine, createRepertoire } from './repertoire';
 import {
   BRAKE,
   candidates,
-  cardStrength,
   DEPTH,
   effectiveLevel,
-  firstLineGap,
-  foundationGap,
   isSteered,
-  FUN,
-  GROWTH_FLOOR,
-  growNeed,
-  HELD_DAYS,
-  MAX_NEW_MOVES,
   narrowingBar,
-  readiness,
   rank,
   recommend,
   reviewNeed,
   testNeed,
+  TEST_FLOOR,
   recentCount,
   saturate,
   STEER_GAP,
   steeredRecently,
-  weighHoles,
   type Focus,
   type RecommendInput,
+  type Recommendation,
 } from './recommend';
 import { markSeen } from './freshness';
 import type { RepairItem } from './repair';
@@ -69,12 +61,12 @@ function cardsFor(
   return out;
 }
 
-/** Every position as a card that has been held for weeks: prep ready to grow. */
+/** Every position as a card that has been held for weeks: nothing due. */
 function heldCards(reps: Repertoire[]): Record<string, Card> {
-  return cardsFor(reps, false, undefined, 3 * HELD_DAYS);
+  return cardsFor(reps, false, undefined, 60);
 }
 
-/** Every other position held for weeks, the rest due: Review and Grow both have work. */
+/** Every other position held for weeks, the rest due: Test and Review both have work. */
 function halfHeldCards(reps: Repertoire[]): Record<string, Card> {
   const held = heldCards(reps);
   const due = cardsFor(reps, true);
@@ -95,11 +87,16 @@ function input(patch: Partial<RecommendInput> = {}): RecommendInput {
     score: EMPTY_SCORE,
     starred: [],
     newPerSession: 8,
-    growth: { minShare: 1, maxPly: 18 },
     recentFocuses: [],
     now: T,
     ...patch,
   };
+}
+
+/** A recommendation the test expects to exist. */
+function must(pick: Recommendation | null): Recommendation {
+  if (!pick) throw new Error('nothing recommended');
+  return pick;
 }
 
 /** A round played: every Autopilot round is a Run. */
@@ -131,111 +128,48 @@ describe('need', () => {
     expect(reviewNeed(0, 30, 8)).toBeLessThan(reviewNeed(20, 0, 8));
   });
 
-  it('costs a hole by how early and how often you fall into it', () => {
-    const hole = (depth: number, share: number) => ({
-      path: Array(depth).fill('x'), fen: '', san: 'e5', share, games: 1, after: '', nodeId: null, reach: 1,
-    });
-    expect(growNeed([])).toBe(0);
-    expect(growNeed([hole(1, 30)])).toBeGreaterThan(growNeed([hole(9, 30)]));
-    expect(growNeed([hole(3, 30)])).toBeGreaterThan(growNeed([hole(3, 2)]));
-  });
-
-  it('holds a position only once it has graduated, is not due, and has lasted', () => {
-    const card = createCard('c', 'r', 'k', '', T - DAY);
-    expect(cardStrength(undefined, T)).toBe(0);
-    expect(cardStrength({ ...card, stage: 'new' }, T)).toBe(0);
-    expect(cardStrength({ ...card, stage: 'learning', due: T + DAY }, T)).toBe(0);
-    expect(cardStrength({ ...card, stage: 'review', interval: 30, due: T - 1 }, T)).toBe(0);
-    const fresh = cardStrength({ ...card, stage: 'review', interval: 1, due: T + DAY }, T);
-    const held = cardStrength({ ...card, stage: 'review', interval: HELD_DAYS, due: T + DAY }, T);
-    expect(fresh).toBeGreaterThan(0);
-    expect(fresh).toBeLessThan(held);
-    expect(held).toBe(1);
-    expect(cardStrength({ ...card, stage: 'review', interval: 90, due: T + DAY }, T)).toBe(1);
-  });
-
-  it('is ready to grow when its prep is held, and when there is none yet', () => {
-    expect(readiness([])).toBe(1);
-    expect(readiness([1, 1, 1])).toBe(1);
-    expect(readiness([0, 0, 0])).toBe(0);
-    expect(readiness([1, 0])).toBe(0.5);
-  });
-
-  it('quietens growth steeply while the prep is still being learned', () => {
-    const holes = [{ path: ['x'], fen: '', san: 'e5', share: 30, games: 1, after: '', nodeId: null, reach: 1 }];
-    const full = growNeed(holes, 1);
-    const half = growNeed(holes, 0.5);
-    const none = growNeed(holes, 0);
-    expect(full).toBe(growNeed(holes));
-    expect(half).toBeLessThan(full * 0.35);
-    expect(half).toBeGreaterThan(none);
-    // Never silent: a thin opening still gets grown now and then.
-    expect(none).toBeGreaterThan(0);
-    expect(none).toBeCloseTo(full * GROWTH_FLOOR, 5);
-  });
-
-  it('does not make an opening with nothing in it wait to be held', () => {
-    const holes = [{ path: ['x'], fen: '', san: 'e5', share: 30, games: 1, after: '', nodeId: null, reach: 1 }];
-    // Bare: the gate is gone, however little of the prep is held.
-    expect(growNeed(holes, 0, 1)).toBeCloseTo(growNeed(holes, 1), 5);
-    expect(growNeed(holes, 1, 1)).toBeCloseTo(growNeed(holes, 1), 5);
-    // Half bare lifts the floor halfway, and unheld prep still asks less.
-    expect(growNeed(holes, 0, 0.5)).toBeGreaterThan(growNeed(holes, 0));
-    expect(growNeed(holes, 0, 0.5)).toBeLessThan(growNeed(holes, 1, 0.5));
-    // A broad opening is gated exactly as it was.
-    expect(growNeed(holes, 0.5, 0)).toBe(growNeed(holes, 0.5));
-  });
-
   it('always asks for a test, and harder for untested prep or a first run', () => {
     expect(testNeed(0, true)).toBe(0.4);
     expect(testNeed(0, false)).toBe(0.55);
     expect(testNeed(20, true)).toBeGreaterThan(testNeed(2, true));
   });
 
-  it('asks for a test only as loudly as a line has been left', () => {
+  it('asks for a test mostly as loudly as a line has been left, and never falls silent', () => {
     expect(testNeed(0, true, 1)).toBe(testNeed(0, true));
-    expect(testNeed(0, true, 0.5)).toBeCloseTo(testNeed(0, true) / 2, 5);
-    // Every line just run: nothing to test yet, however much prep there is.
-    expect(testNeed(20, false, 0)).toBe(0);
+    expect(testNeed(0, true, 0.5)).toBeCloseTo(testNeed(0, true) * (TEST_FLOOR + (1 - TEST_FLOOR) / 2), 5);
+    // Every line just run: little to test yet, but a round all the same.
+    expect(testNeed(20, false, 0)).toBeGreaterThan(0);
+    expect(testNeed(20, false, 0)).toBeLessThan(testNeed(20, false, 1) / 2);
+    expect(TEST_FLOOR).toBeLessThan(0.5);
   });
 
-  it('runs a line once after building it, then grows rather than running it again', () => {
+  it('runs a line once after building it, then asks for it more quietly', () => {
     const line = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5';
     const reps = [rep('b', [line])];
     // Cards on every position, none due, so Review has nothing to say here.
     const cards = cardsFor(reps, false);
-    const base = input({ reps, cards, selection: { color: 'b', opening: 'd4 Nf6 c4 g6 Nc3 Bg7 e4' }, recentFocuses: ['grow'] });
-    // Just built, never run: the round is a Test of it.
-    const built = recommend({ ...base, seen: { at: {}, round: 1 } });
-    expect(built.focus).toBe('test');
-    // Just run: there is nothing left in the opening to test, so it grows.
-    const ran = recommend({ ...base, recentFocuses: ['grow', 'test'], seen: { at: markSeen({}, line.split(' '), 2), round: 2 } });
-    expect(ran.focus).toBe('grow');
+    const base = input({ reps, cards, selection: { color: 'b', opening: 'd4 Nf6 c4 g6 Nc3 Bg7 e4' } });
+    // Just built, never run: the round is a Test at full voice.
+    const built = candidates({ ...base, seen: { at: {}, round: 1 } }).find((c) => c.focus === 'test');
+    expect(built?.need).toBe(testNeed(0, false));
+    // Just run: still a Test, since there is nothing else, but a quieter one.
+    const ran = candidates({ ...base, seen: { at: markSeen({}, line.split(' '), 2), round: 2 } }).find((c) => c.focus === 'test');
+    expect(ran?.need).toBeLessThan(testNeed(0, false));
+    expect(ran?.need).toBeGreaterThan(0);
   });
 
-  it('weighs a hole up by the games you reached it with nothing', () => {
-    const after = applySan(applySan(START_FEN, 'e4')!.after, 'c5')!.after;
-    const hole = { path: ['e4'], fen: '', san: 'c5', share: 10, games: 1, after, nodeId: null, reach: 1 };
-    expect(weighHoles([hole], [])[0].share).toBe(10);
-    const weighed = weighHoles([hole], [repair({ kind: 'unprepared', fen: after, games: 3 })]);
-    expect(weighed[0].share).toBe(40);
-    // A slip somewhere you had a move is not evidence for a hole.
-    expect(weighHoles([hole], [repair({ kind: 'offprep', fen: after, games: 3 })])[0].share).toBe(10);
+  it('still has a round when every line was just run and nothing is due', () => {
+    const line = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5';
+    const reps = [rep('b', [line])];
+    const seen = { at: markSeen({}, line.split(' '), 2), round: 2 };
+    const pick = recommend(input({ reps, cards: cardsFor(reps, false), seen, selection: { color: 'b', opening: '' } }));
+    expect(pick).toMatchObject({ focus: 'test', color: 'b' });
   });
 });
 
 describe('ranking', () => {
   const cand = (focus: Focus, need: number, lastAt: number | null = null, openingId = '') => ({
-    focus, openingId, color: 'w' as const, need, work: 1, lastAt, starred: false, level: 0, newMoves: 0,
-  });
-
-  it('tilts away from Grow and never lets that override a real need', () => {
-    expect(FUN.test).toBeGreaterThan(FUN.grow);
-    expect(FUN.review).toBeGreaterThan(FUN.grow);
-    const ranked = rank([cand('test', 0.4), cand('grow', 0.4)], []);
-    expect(ranked[0].focus).toBe('test');
-    const loud = rank([cand('test', 0.4), cand('grow', 1)], []);
-    expect(loud[0].focus).toBe('grow');
+    focus, openingId, color: 'w' as const, need, work: 1, lastAt, starred: false, level: 0,
   });
 
   it('brakes a focus by how much of the recent play it has been', () => {
@@ -247,8 +181,8 @@ describe('ranking', () => {
     expect(fresh[0].focus).toBe('test');
     const braked = rank([cand('test', 0.5), cand('review', 0.5)], ['test', 'review', 'test']);
     expect(braked[0].focus).toBe('review');
-    // Taking turns is not an escape: a third focus still comes round.
-    const turns = rank([cand('test', 0.5), cand('grow', 0.5), cand('review', 0.4)], ['test', 'grow', 'test', 'grow']);
+    // A quieter focus still comes round once the louder one has had a run of rounds.
+    const turns = rank([cand('test', 0.5), cand('review', 0.3)], ['test', 'test', 'test', 'test']);
     expect(turns[0].focus).toBe('review');
     expect(BRAKE).toBeLessThan(1);
   });
@@ -294,78 +228,33 @@ describe('ranking', () => {
 });
 
 describe('what gets recommended', () => {
-  it('sends a brand new install to grow a first line in the selection', () => {
-    const pick = recommend(input());
-    expect(pick.focus).toBe('grow');
-    expect(pick.newMoves).toBe(MAX_NEW_MOVES);
-    expect(pick.opening.depth).toBe(0);
-    expect(['w', 'b']).toContain(pick.color);
-    const narrowed = recommend(input({ selection: { color: 'b', opening: NAJDORF } }));
-    expect(narrowed).toMatchObject({ focus: 'grow', color: 'b' });
-    expect(narrowed.opening.id).toBe(NAJDORF);
+  it('has nothing for a brand new install: building is Growth, not Autopilot', () => {
+    expect(recommend(input())).toBeNull();
+    expect(recommend(input({ selection: { color: 'b', opening: NAJDORF } }))).toBeNull();
+    expect(candidates(input())).toHaveLength(0);
   });
 
-  it('lays the foundation first: White, then Black against 1.e4, then against 1.d4', () => {
-    const auto = { color: 'random' as const, opening: '' };
-    // Nothing at all: a first line as White.
-    expect(recommend(input({ selection: auto }))).toMatchObject({ focus: 'grow', color: 'w' });
-    expect(recommend(input({ selection: auto })).opening.depth).toBe(0);
-    // White in hand: Black's answer to 1.e4, steered to it.
+  it('drills only the sides with prep, and says so when the selection has none', () => {
     const white = rep('w', [`${NAJDORF} Be3`]);
-    const vsE4 = recommend(input({ selection: auto, reps: [white] }));
-    expect(vsE4).toMatchObject({ focus: 'grow', color: 'b', newMoves: MAX_NEW_MOVES });
-    expect(vsE4.opening.id).toBe('e4');
-    // That too: Black's answer to 1.d4, whatever else Black has.
-    const black = rep('b', ['e4 c5 Nf3 d6', 'c4 e5 Nc3 Nf6']);
-    const vsD4 = recommend(input({ selection: auto, reps: [white, black] }));
-    expect(vsD4).toMatchObject({ focus: 'grow', color: 'b' });
-    expect(vsD4.opening.id).toBe('d4');
-    // All three in: the ranking decides from here.
-    const founded = rep('b', ['e4 c5 Nf3 d6', 'd4 Nf6 c4 g6']);
-    expect(foundationGap(input({ selection: auto, reps: [white, founded] }))).toBeNull();
+    expect(must(recommend(input({ reps: [white] }))).color).toBe('w');
+    expect(recommend(input({ reps: [white], selection: { color: 'b', opening: '' } }))).toBeNull();
+    expect(candidates(input({ reps: [white], selection: { color: 'b', opening: '' } }))).toHaveLength(0);
   });
 
-  it('lays only the part of the foundation the selection asks for', () => {
-    // A side chosen on its own still gets its own foundation.
-    const blackOnly = recommend(input({ selection: { color: 'b', opening: '' } }));
-    expect(blackOnly).toMatchObject({ focus: 'grow', color: 'b' });
-    expect(blackOnly.opening.id).toBe('e4');
-    expect(foundationGap(input({ selection: { color: 'w', opening: '' }, reps: [rep('w', [`${NAJDORF} Be3`])] }))).toBeNull();
-    // An opening chosen is what the player wants, foundation or not.
-    expect(foundationGap(input({ selection: { color: 'random', opening: 'e4' } }))).toBeNull();
-    // A first move Black has not answered past the move itself is not an answer.
-    const stub = createRepertoire('Stub', 'b', 'r_stub');
-    expect(foundationGap(input({ selection: { color: 'b', opening: '' }, reps: [stub] }))?.opening.id).toBe('e4');
-  });
-
-  it('builds the first line of an opening chosen with nothing in it, before anything else', () => {
-    // A King's Indian player chooses the Najdorf: nothing there, so it grows —
-    // even with every King's Indian card due, which is on the way in and
-    // would otherwise have Review walk it to the edge and stop.
+  it('has nothing for an opening chosen with nothing in it', () => {
+    // A King's Indian player chooses the Najdorf: nothing there, however
+    // many King's Indian cards are due on the way in.
     const kid = rep('b', ['d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5']);
     const due = cardsFor([kid], true);
-    const pick = recommend(input({ reps: [kid], cards: due, selection: { color: 'b', opening: NAJDORF } }));
-    expect(pick).toMatchObject({ focus: 'grow', color: 'b', newMoves: MAX_NEW_MOVES });
-    expect(pick.opening.id).toBe(NAJDORF);
-    // With a line in it, the ranking decides.
+    expect(recommend(input({ reps: [kid], cards: due, selection: { color: 'b', opening: NAJDORF } }))).toBeNull();
+    // With a line in it, there is a round, and it is inside the Najdorf.
     const both = rep('b', ['d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5', `${NAJDORF} Be3 e5`]);
-    expect(firstLineGap(input({ reps: [both], selection: { color: 'b', opening: NAJDORF } }))).toBeNull();
+    const pick = must(recommend(input({ reps: [both], cards: due, selection: { color: 'b', opening: NAJDORF } })));
+    expect(pick.color).toBe('b');
+    expect(pick.opening.id.startsWith(NAJDORF)).toBe(true);
     // A variation of an opening the prep is in is still empty until a line reaches it.
     const samisch = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3';
-    expect(firstLineGap(input({ reps: [kid], selection: { color: 'b', opening: samisch } }))?.opening.id).toBe(samisch);
-    // Either side of a random selection can be the empty one.
-    const white = rep('w', [`${NAJDORF} Be3`]);
-    expect(firstLineGap(input({ reps: [white, kid], selection: { color: 'random', opening: NAJDORF } }))?.color).toBe('b');
-    expect(firstLineGap(input({ reps: [white, both], selection: { color: 'random', opening: NAJDORF } }))).toBeNull();
-    // Nothing chosen is the foundation's business, not this.
-    expect(firstLineGap(input({ reps: [kid], selection: { color: 'b', opening: '' } }))).toBeNull();
-  });
-
-  it('offers a side with no prep nothing but a Grow round', () => {
-    const reps = [rep('w', [`${NAJDORF} Be3 e5`])];
-    const black = candidates(input({ reps, selection: { color: 'b', opening: '' } }));
-    expect(black).toHaveLength(1);
-    expect(black[0]).toMatchObject({ focus: 'grow', openingId: '', color: 'b', newMoves: MAX_NEW_MOVES });
+    expect(recommend(input({ reps: [kid], selection: { color: 'b', opening: samisch } }))).toBeNull();
   });
 
   it('offers only openings the player has prep in, besides the selection itself', () => {
@@ -395,15 +284,15 @@ describe('what gets recommended', () => {
     // Rounds went through both lines, so nothing in them is staler than the rest.
     score = played(score, `${NAJDORF} Be3`, T - 3);
     score = played(score, `${DRAGON} Be3 Bg7 f3`, T - 2);
-    // No holes worth filling, so the decision is Test against Review.
-    const pick = recommend(
-      input({
-        reps, cards: { ...cards, ...quiet }, score, selection: { color: 'w', opening: 'e4' },
-        recentFocuses: ['test', 'test', 'test', 'test', 'test'], growth: { minShare: 60, maxPly: 18 },
-      }),
+    const pick = must(
+      recommend(
+        input({
+          reps, cards: { ...cards, ...quiet }, score, selection: { color: 'w', opening: 'e4' },
+          recentFocuses: ['test', 'test', 'test', 'test', 'test'],
+        }),
+      ),
     );
     expect(pick.focus).toBe('review');
-    expect(pick.newMoves).toBe(0);
     expect(pick.color).toBe('w');
     // The Najdorf holds the due cards; nothing deeper holds most of them.
     expect(pick.opening.id).toBe(NAJDORF);
@@ -412,11 +301,8 @@ describe('what gets recommended', () => {
   it('stays at the family when the need is spread across its variations', () => {
     const reps = [rep('w', [`${NAJDORF} Be3 e5 Nb3 Be6`, `${DRAGON} Be3 Bg7 f3 O-O`, 'e4 c5 Nf3 e6 d4 cxd4 Nxd4 a6 Bd3 Bc5'])];
     const cards = cardsFor(reps, true);
-    const pick = recommend(
-      input({
-        reps, cards, selection: { color: 'w', opening: 'e4' }, recentFocuses: ['test', 'test', 'test'],
-        growth: { minShare: 60, maxPly: 18 },
-      }),
+    const pick = must(
+      recommend(input({ reps, cards, selection: { color: 'w', opening: 'e4' }, recentFocuses: ['test', 'test', 'test'] })),
     );
     expect(pick.focus).toBe('review');
     // Three variations each hold a third, so the round is given to something
@@ -445,60 +331,27 @@ describe('what gets recommended', () => {
     for (const c of candidates(input({ reps, selection: { color: 'b', opening: '' } }))) expect(c.color).toBe('b');
   });
 
-  it('rotates: every focus with work comes round given a few rounds', () => {
+  it('rotates: both focuses come round given a few rounds', () => {
     const reps = [rep('w', [`${NAJDORF} Be3 e5 Nb3 Be6`, `${DRAGON} Be3 Bg7 f3 O-O`])];
     const cards = halfHeldCards(reps);
     let score = EMPTY_SCORE;
     const seen = new Set<Focus>();
     const recent: Focus[] = [];
     for (let i = 0; i < 12; i += 1) {
-      const pick = recommend(input({ reps, cards, score, recentFocuses: recent, selection: { color: 'w', opening: '' } }));
+      const pick = must(recommend(input({ reps, cards, score, recentFocuses: recent, selection: { color: 'w', opening: '' } })));
       seen.add(pick.focus);
       recent.push(pick.focus);
       score = played(score, pick.opening.id, T + i);
     }
     expect(seen.has('test')).toBe(true);
     expect(seen.has('review')).toBe(true);
-    expect(seen.has('grow')).toBe(true);
-  });
-
-  it('grows a bare opening while it is still being learned, and harder once it is held', () => {
-    // Two Sicilian lines and nothing else: everything else Black plays is
-    // unanswered, so this repertoire is bare however well it is known.
-    const reps = [rep('w', [`${NAJDORF} Be3 e5 Nb3 Be6`, `${DRAGON} Be3 Bg7 f3 O-O`])];
-    const play = (cards: Record<string, Card>) => {
-      let score = EMPTY_SCORE;
-      const recent: Focus[] = [];
-      let grows = 0;
-      for (let i = 0; i < 20; i += 1) {
-        const pick = recommend(input({ reps, cards, score, recentFocuses: recent, selection: { color: 'w', opening: '' } }));
-        if (pick.focus === 'grow') {
-          grows += 1;
-          // The allowance is always the whole of it; the line spends what it needs.
-          expect(pick.newMoves).toBe(MAX_NEW_MOVES);
-        }
-        recent.push(pick.focus);
-        score = played(score, pick.opening.id, T + i);
-      }
-      return { grows };
-    };
-    // Everything due, and nothing seen yet: the prep is not held.
-    const learning = play(cardsFor(reps, true));
-    const unseen = play({});
-    // Held for weeks: the holes ask at full voice.
-    const held = play(heldCards(reps));
-    expect(held.grows).toBeGreaterThanOrEqual(learning.grows);
-    expect(held.grows).toBeGreaterThanOrEqual(unseen.grows);
-    // A repertoire this bare is not made to wait for its cards to mature:
-    // what it cannot meet will be played against it whatever they say.
-    expect(learning.grows).toBeGreaterThan(0);
-    expect(unseen.grows).toBeGreaterThan(0);
   });
 
   it('is stable: the same state always gives the same answer', () => {
     const reps = [rep('w', [`${NAJDORF} Be3 e5`])];
     const a = recommend(input({ reps }));
     const b = recommend(input({ reps }));
+    expect(a).not.toBeNull();
     expect(a).toEqual(b);
   });
 });
@@ -510,12 +363,12 @@ describe('where a round starts', () => {
     expect(tests).toHaveLength(1);
     expect(tests[0].openingId).toBe('');
     // Every card held and nothing due: Test wins, and it is the whole selection from move one.
-    const pick = recommend(input({ reps, cards: heldCards(reps), selection: { color: 'w', opening: '' }, growth: { minShare: 60, maxPly: 18 } }));
+    const pick = must(recommend(input({ reps, cards: heldCards(reps), selection: { color: 'w', opening: '' } })));
     expect(pick.focus).toBe('test');
     expect(pick.opening.id).toBe('');
     expect(pick.start).toBe('first');
     // With a first move selected, the Test is that first move, still from move one.
-    const first = recommend(input({ reps, cards: heldCards(reps), selection: { color: 'w', opening: 'e4' }, growth: { minShare: 60, maxPly: 18 } }));
+    const first = must(recommend(input({ reps, cards: heldCards(reps), selection: { color: 'w', opening: 'e4' } })));
     expect(first.opening.id).toBe('e4');
     expect(first.start).toBe('first');
   });
@@ -523,20 +376,17 @@ describe('where a round starts', () => {
   it('starts a family or deeper inside it, and a first move from move one', () => {
     const reps = [rep('w', [`${NAJDORF} Be3 e5 Nb3 Be6`, `${DRAGON} Be3 Bg7 f3 O-O`])];
     const cards = { ...cardsFor(reps, true, (line) => line.includes('a6')), ...cardsFor(reps, false, (line) => !line.includes('a6')) };
-    const review = recommend(
-      input({ reps, cards, selection: { color: 'w', opening: 'e4' }, recentFocuses: ['test', 'test', 'test', 'test', 'test'], growth: { minShare: 60, maxPly: 18 } }),
+    const review = must(
+      recommend(
+        input({ reps, cards, selection: { color: 'w', opening: 'e4' }, recentFocuses: ['test', 'test', 'test', 'test', 'test'] }),
+      ),
     );
     expect(review.focus).toBe('review');
     expect(review.opening.id).toBe(NAJDORF);
     expect(review.start).toBe('inside');
-    // The foundation is laid from move one: an answer to 1.e4 is a round where the opponent opens 1.e4.
-    const vsE4 = recommend(input({ reps, selection: { color: 'random', opening: '' } }));
-    expect(vsE4.opening.id).toBe('e4');
-    expect(vsE4.start).toBe('first');
-    // An opening chosen empty is built from its own position.
-    const empty = recommend(input({ reps, selection: { color: 'w', opening: 'd4 d5 c4 c6' } }));
-    expect(empty).toMatchObject({ focus: 'grow', start: 'inside' });
-    expect(recommend(input({ reps, selection: { color: 'w', opening: 'd4' } })).start).toBe('first');
+    // An opening chosen empty is nothing to drill, from anywhere.
+    expect(recommend(input({ reps, selection: { color: 'w', opening: 'd4 d5 c4 c6' } }))).toBeNull();
+    expect(recommend(input({ reps, selection: { color: 'w', opening: 'd4' } }))).toBeNull();
   });
 
   it('spends most rounds from move one, and steers only where the work is concentrated', () => {
@@ -549,7 +399,7 @@ describe('where a round starts', () => {
     let inside = 0;
     for (let i = 0; i < 20; i += 1) {
       const selection = { color: 'b' as const, opening: '' };
-      const pick = recommend(input({ reps, cards, score, recentFocuses: recent, recentSteered: steered, selection }));
+      const pick = must(recommend(input({ reps, cards, score, recentFocuses: recent, recentSteered: steered, selection })));
       if (pick.start === 'inside') {
         inside += 1;
         // Never two steered rounds within the gap.
@@ -565,7 +415,7 @@ describe('where a round starts', () => {
     expect(inside).toBeGreaterThan(0);
     expect(inside).toBeLessThanOrEqual(20 / (STEER_GAP + 1));
     // A selection that is itself a family starts every round inside it, and that is not steering.
-    const family = recommend(input({ reps, cards, recentSteered: [true, true, true], selection: { color: 'b', opening: 'e4 c6' } }));
+    const family = must(recommend(input({ reps, cards, recentSteered: [true, true, true], selection: { color: 'b', opening: 'e4 c6' } })));
     expect(family.start).toBe('inside');
     expect(isSteered(family, { color: 'b', opening: 'e4 c6' })).toBe(family.opening.id !== 'e4 c6');
   });

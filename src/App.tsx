@@ -85,6 +85,7 @@ export default function App() {
         setStatsFor('');
         setTab('stats');
       }}
+      onGrow={() => setMode({ id: 'growth' })}
     />
   ) : mode?.id === 'drill' ? (
     <DrillScreen onExit={() => setMode(null)} />

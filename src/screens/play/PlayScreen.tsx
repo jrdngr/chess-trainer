@@ -14,7 +14,7 @@ import {
 } from '../../chess/core';
 import { getEngine } from '../../engine/useEngine';
 import { formatScore, winFraction, type EngineSnapshot } from '../../engine/types';
-import { chooseMove, levelById, openingLine, type GameResult } from '../../model/play';
+import { chooseMove, levelById, openingLine, playedGame, type GameResult } from '../../model/play';
 import type { PlayPrefs } from '../../model/modes';
 import { specificNameForColor } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
@@ -61,6 +61,7 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
   const addLine = useStore((s) => s.addLine);
   const ensureRepertoire = useStore((s) => s.ensureRepertoire);
   const logMistake = useStore((s) => s.logMistake);
+  const recordPlayGame = useStore((s) => s.recordPlayGame);
   const reps = repertoireList(state);
   const index = referenceIndex();
   const level = levelById(prefs.level);
@@ -80,6 +81,8 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
   const [saved, setSaved] = useState(false);
   const [offBook, setOffBook] = useState<string | null>(null);
   const rand = useRef(Math.random);
+  /** One id for the life of the game, so ending it twice records it once. */
+  const gameId = useRef(`play_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`);
 
   /** The repertoire this game is measured against and saved into. */
   const target = useMemo(() => reps.find((rep) => rep.color === color) ?? null, [reps, color]);
@@ -98,6 +101,18 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
       setOver({ result: 'draw', reason: status.stalemate ? 'stalemate' : 'the rules' });
     }
   }, [status, fen, color, over]);
+
+  /**
+   * A finished game is a game: kept with the imports, so Repair, coverage and
+   * Autopilot read what you actually play. Nothing is written to the
+   * repertoire by this — saving the opening is the button below, and your
+   * choice.
+   */
+  useEffect(() => {
+    if (!over) return;
+    const game = playedGame({ id: gameId.current, color, moves, result: over.result, level, at: Date.now() });
+    if (game) recordPlayGame(game);
+  }, [over, color, moves, level, recordPlayGame]);
 
   /**
    * The engine's turn.

@@ -67,7 +67,9 @@ export function createHeuristicEngine(): Engine {
       const multiPv = limits.multiPv ?? 3;
       onUpdate({ lines: [], depth: 0, nodes: 0, thinking: true, fen });
       timer = setTimeout(() => {
+        const only = limits.searchmoves?.length ? new Set(limits.searchmoves) : null;
         const scored = legalMoves(fen)
+          .filter((move) => !only || only.has(move.uci))
           .map((move) => ({ move, score: negamax(move.after, 2, -Infinity, Infinity) }))
           .sort((a, b) => (fen.split(' ')[1] === 'w' ? b.score - a.score : a.score - b.score))
           .slice(0, multiPv);

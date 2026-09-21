@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { chooseMove, levelById, LEVELS, openingLine } from './play';
+import {
+  chooseMove,
+  importedOnly,
+  levelById,
+  LEVELS,
+  mergeGames,
+  openingLine,
+  PLAY_GAME_PLIES,
+  PLAY_GAMES_CAP,
+  playedGame,
+  playGames,
+  withPlayGame,
+} from './play';
+import type { ImportedGame } from './types';
 import { mulberry32 } from './session';
 import type { EngineLine } from '../engine/types';
 
@@ -103,5 +116,49 @@ describe('keeping the opening', () => {
 
   it('drops a lone White move when Black is the one saving it', () => {
     expect(openingLine(['e4'], 'b')).toEqual([]);
+  });
+});
+
+describe('games played here', () => {
+  const club = levelById('club');
+  const played = (over: Partial<Parameters<typeof playedGame>[0]> = {}) =>
+    playedGame({ id: 'g1', color: 'w', moves: ['e4', 'e5', 'Nf3'], result: 'win', level: club, at: 1_700_000_000_000, ...over });
+
+  it('records a finished game as a game, with the result from your side', () => {
+    const game = played();
+    expect(game).toMatchObject({ id: 'g1', source: 'play', userColor: 'w', result: '1-0', white: 'You', date: '2023-11-14' });
+    expect(game?.black).toContain('Club');
+    expect(played({ color: 'b', result: 'win' })?.result).toBe('0-1');
+    expect(played({ color: 'b', result: 'loss' })?.result).toBe('1-0');
+    expect(played({ result: 'draw' })?.result).toBe('1/2-1/2');
+  });
+
+  it('keeps the opening, not the whole game, and nothing of a game that never started', () => {
+    const long = Array.from({ length: 120 }, (_, i) => (i % 2 === 0 ? 'Nf3' : 'Nf6'));
+    expect(played({ moves: long })?.moves).toHaveLength(PLAY_GAME_PLIES);
+    expect(played({ result: 'unfinished' })).toBeNull();
+    expect(played({ moves: ['e4'] })).toBeNull();
+  });
+
+  it('sits with the imports without replacing them, newest first and capped', () => {
+    const lichess: ImportedGame = { id: 'l1', source: 'lichess', white: 'a', black: 'b', result: '1-0', userColor: 'w', moves: ['e4'] };
+    let games = withPlayGame([lichess], played()!);
+    expect(games.map((g) => g.id)).toEqual(['g1', 'l1']);
+    // The same game ended twice is one game.
+    games = withPlayGame(games, played({ result: 'loss' })!);
+    expect(games).toHaveLength(2);
+    expect(games[0].result).toBe('0-1');
+    for (let i = 0; i < PLAY_GAMES_CAP + 5; i += 1) games = withPlayGame(games, played({ id: `p${i}` })!);
+    expect(playGames(games)).toHaveLength(PLAY_GAMES_CAP);
+    expect(importedOnly(games)).toEqual([lichess]);
+    expect(games[0].id).toBe(`p${PLAY_GAMES_CAP + 4}`);
+  });
+
+  it('merges the games of two devices: local imports, and both sides’ play', () => {
+    const lichess: ImportedGame = { id: 'l1', source: 'lichess', white: 'a', black: 'b', result: '1-0', userColor: 'w', moves: ['e4'] };
+    const here = played({ id: 'here', at: 1_700_000_000_000 })!;
+    const there = played({ id: 'there', at: 1_700_500_000_000 })!;
+    const merged = mergeGames([here, lichess], [there, here, { ...lichess, id: 'l2' }]);
+    expect(merged.map((g) => g.id)).toEqual(['there', 'here', 'l1']);
   });
 });

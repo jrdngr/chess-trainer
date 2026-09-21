@@ -34,7 +34,7 @@ export interface GrowthScreenProps {
 
 export function GrowthScreen({ onExit }: GrowthScreenProps) {
   const [row, setRow] = useState<GrowthRow | null>(null);
-  if (!row) return <Lobby onStart={setRow} onNoWork={onExit} onExit={onExit} />;
+  if (!row) return <Lobby onStart={setRow} onExit={onExit} />;
   return <Run row={row} onExit={() => setRow(null)} />;
 }
 

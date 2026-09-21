@@ -10,25 +10,32 @@ import {
   toast,
   type StripItem,
 } from '../../components/ui';
-import { applySan, lastMoveOf, sansToMoveText, walkSan, type Square } from '../../chess/core';
 import {
-  bookMoves,
-  extendedMoves,
+  applySan,
+  fenTurn,
+  lastMoveOf,
+  positionStatus,
+  sansToMoveText,
+  walkSan,
+  type Square,
+} from '../../chess/core';
+import {
   fullLine,
   gradeOf,
-  isExtended,
   lineName,
+  lineToKeep,
   revealText,
   type DeathCause,
   type LineSource,
   type Run,
 } from '../../model/openingRun';
+import { addLine as addLineTo } from '../../model/repertoire';
 import { referenceIndex } from '../../model/referenceIndex';
-import { useStore } from '../../store/useStore';
+import { repertoireList, useStore } from '../../store/useStore';
 import { GRADE_TONES, Record } from './Record';
 import { selectionText } from '../../components/Selection';
 
-/** How a run ended, when it did not finish the line. */
+/** How a run ended, when it did not finish. */
 export interface Death {
   cause: DeathCause;
   played?: string;
@@ -46,21 +53,23 @@ export interface RevealProps {
   earned: number;
   /** Autopilot owns what happens next, so the run offers nothing of its own. */
   auto?: boolean;
-  /** What the run wrote into the repertoire: the opening, and how many moves were new. */
-  saved: { name: string; added: number } | null;
+  /** What the one tap wrote into the repertoire: the opening, and how many moves were new. */
+  kept: { name: string; added: number } | null;
+  /** Keep the line: the one way a finished run adds to the repertoire. */
+  onKeep: () => void;
   onExit: () => void;
   onNewRun: () => void;
   onChangeOptions: () => void;
   /** Carry the shown position on against the engine. */
   onPlayOn: (fen: string) => void;
-  /** Carry the run itself on under extended rules. */
-  onContinueExtended: () => void;
 }
 
 /**
  * The post-mortem. The board becomes a replay of the whole line, parked on the
  * position that ended the run, and the line is named — which is the reward for
- * dying, and the one thing that must not be on screen while the run is live.
+ * the round ending, and the one thing that must not be on screen while the run
+ * is live. It is also where the line is offered to the repertoire: playing
+ * through a line writes nothing, and keeping it is one tap here.
  */
 export function Reveal({
   source,
@@ -68,25 +77,35 @@ export function Reveal({
   death,
   earned,
   auto,
-  saved,
+  kept,
+  onKeep,
   onExit,
   onNewRun,
   onChangeOptions,
   onPlayOn,
-  onContinueExtended,
 }: RevealProps) {
   const settings = useStore((s) => s.settings);
   const record = useStore((s) => s.openingRun);
+  const repertoires = useStore((s) => s.repertoires);
+  const repertoireOrder = useStore((s) => s.repertoireOrder);
+  const reps = useMemo(() => repertoireList({ repertoires, repertoireOrder }), [repertoires, repertoireOrder]);
   const survived = death === null;
-  const grade = gradeOf(run, survived);
-  const past = extendedMoves(run);
-  const byBook = bookMoves(run);
+  const grade = gradeOf(run, death?.cause ?? null);
+  const index = referenceIndex();
+
+  /** What keeping the line would add: the theory the run went through, less what is already there. */
+  const offer = useMemo(() => {
+    const line = lineToKeep(index, run);
+    if (!line.length) return { line, added: 0 };
+    const rep = reps.find((r) => r.color === run.color);
+    return { line, added: rep ? addLineTo(rep, line, 'reference').added : line.length };
+  }, [index, run, reps]);
 
   const line = useMemo(() => {
     const sans = fullLine(source, run);
     return { sans, fens: walkSan(sans).fens, deathPly: run.played.length };
   }, [source, run]);
-  const named = useMemo(() => lineName(referenceIndex(), source, run), [source, run]);
+  const named = useMemo(() => lineName(index, source, run), [index, source, run]);
 
   /** Where the board is looking; starts where the run ended. */
   const [cursor, setCursor] = useState(line.deathPly);
@@ -214,7 +233,7 @@ export function Reveal({
                 <span className="ico">
                   {death.cause === 'offprep' ? <Icons.book size={16} /> : <Icons.cross size={18} />}
                 </span>
-                {deathTitle(death, grade === 'purple')}
+                {deathTitle(death)}
               </div>
               {actions}
             </div>
@@ -229,7 +248,7 @@ export function Reveal({
                     : (death.expected[0] ?? '—')}
                 </div>
               </div>
-              <div className={death.cause === 'time' ? '' : 'bad'}>
+              <div className="bad">
                 <div className="k">You played</div>
                 <div className="v">{death.played ?? '—'}</div>
               </div>
@@ -241,27 +260,33 @@ export function Reveal({
               <span className="ico">
                 <Icons.check size={18} />
               </span>
-              {grade === 'yellow' ? 'Complete, out of prep' : 'Line complete'}
+              {finishedTitle(run)}
             </div>
             {actions}
           </div>
         )}
 
         <div className="spacer" />
-        {!auto && (
-          <div className="actions">
-            {survived && !isExtended(run) && (
-              <button className="btn accent block xl" onClick={onContinueExtended}>
-                <Icons.bolt size={18} />
-                Continue in extended mode
-              </button>
-            )}
+        <div className="actions">
+          {kept ? (
+            <div className="card small muted center">
+              {kept.added > 0
+                ? `${kept.added} move${kept.added === 1 ? '' : 's'} saved to ${kept.name}`
+                : 'Already in your repertoire'}
+            </div>
+          ) : offer.added > 0 ? (
+            <button className="btn accent block xl" onClick={onKeep}>
+              <Icons.plus size={18} />
+              Keep this line · {offer.added} new move{offer.added === 1 ? '' : 's'}
+            </button>
+          ) : null}
+          {!auto && (
             <button className="btn block" onClick={() => onPlayOn(shownFen)}>
               <Icons.play size={18} />
               Play from here
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
         <Section title="The line" />
         <div className="card">
@@ -270,16 +295,10 @@ export function Reveal({
               <div className="title">{named.name}</div>
               <div className="meta">
                 {named.specific ? `${run.sourceLabel} · ` : ''}
-                {survived && past === 0 ? 'played in full' : `${run.survived} correct`}
-                {byBook > 0 ? ` · ${byBook} past your prep, judged by the book` : ''}
-                {past > 0 ? ` · ${past} past prep` : ''}
+                {survived && run.past === 0 ? 'played in full' : `${run.survived} correct`}
+                {run.past > 0 ? ` · ${run.past} past your prep, judged by the engine` : ''}
                 {run.added > 0 ? ` · ${run.added} move${run.added === 1 ? '' : 's'} added` : ''}
                 {run.hintsUsed > 0 ? ` · ${run.hintsUsed} hint${run.hintsUsed === 1 ? '' : 's'}` : ''}
-                {saved
-                  ? saved.added > 0
-                    ? ` · ${saved.added} move${saved.added === 1 ? '' : 's'} saved to your repertoire`
-                    : ' · already in your repertoire'
-                  : ''}
               </div>
             </span>
             {named.eco && <span className="chip">{named.eco}</span>}
@@ -308,15 +327,15 @@ export function Reveal({
   );
 }
 
-function deathTitle(death: Death, leftPrep: boolean): string {
-  switch (death.cause) {
-    case 'time':
-      return 'Out of time';
-    case 'blunder':
-      return 'Blunder';
-    case 'offprep':
-      return 'Stopped out of prep';
-    default:
-      return leftPrep ? 'Run over, out of prep' : 'Run over';
-  }
+function deathTitle(death: Death): string {
+  return death.cause === 'offprep' ? 'Stopped out of prep' : 'Blunder';
+}
+
+/** What a run that was not lost came to: the prep played out, or the game itself. */
+function finishedTitle(run: Run): string {
+  const status = positionStatus(run.fen);
+  if (status.checkmate) return fenTurn(run.fen) === run.color ? 'Checkmate, you lost' : 'Checkmate, you won';
+  if (status.gameOver) return 'Drawn';
+  if (run.leftPrep) return 'Finished out of prep';
+  return run.bookRun ? 'Book complete' : 'Line complete';
 }
