@@ -12,8 +12,10 @@ import {
   lineFor,
   movesToDraw,
   nextHole,
+  growthRows,
   optionsAt,
   preparedHere,
+  recommended,
   resumeAdding,
   startGrowth,
   steer,
@@ -23,6 +25,7 @@ import {
 import { formatGameCount } from '../../model/reference';
 import { POINTS, type RoundRecord } from '../../model/scoring';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
+import { regionOf } from '../../model/selection';
 import { referenceIndex } from '../../model/referenceIndex';
 import { selectionText } from '../../components/Selection';
 import { useStore } from '../../store/useStore';
@@ -35,13 +38,34 @@ export interface GrowthScreenProps {
 
 export function GrowthScreen({ onExit }: GrowthScreenProps) {
   const [row, setRow] = useState<GrowthRow | null>(null);
-  if (!row) return <Lobby onStart={setRow} onExit={onExit} />;
-  return <Run row={row} onExit={() => setRow(null)} />;
+  /**
+   * Counted up for every run started, and used as the run's key: another run
+   * on the same row is a run of its own, not the last one carrying on.
+   */
+  const [started, setStarted] = useState(0);
+
+  const start = (next: GrowthRow) => {
+    setRow(next);
+    setStarted((n) => n + 1);
+  };
+
+  if (!row) return <Lobby onStart={start} onExit={onExit} />;
+  return <Run key={started} row={row} onAgain={start} onExit={() => setRow(null)} />;
 }
 
 type Phase = 'walking' | 'hole' | 'answered' | 'done' | 'lost';
 
-function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
+function Run({
+  row,
+  onAgain,
+  onExit,
+}: {
+  row: GrowthRow;
+  /** Start another run, on the row this one's work leaves most worth doing. */
+  onAgain: (row: GrowthRow) => void;
+  /** Back to the lobby. */
+  onExit: () => void;
+}) {
   const state = useStore();
   const settings = state.settings;
   const addLine = useStore((s) => s.addLine);
@@ -182,6 +206,28 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
     setPhase(inBatch + 1 >= allowance ? 'done' : 'answered');
     if (settings.hapticFeedback) haptic(10);
     toast(`${san} added`);
+  };
+
+  /**
+   * Another run on the same side and settings, on whatever is now most worth
+   * extending — the moves just added are in the repertoire, so the row is
+   * worked out again rather than repeated. With nothing left to answer on this
+   * side, the lobby is the honest answer, and it says so.
+   */
+  const again = () => {
+    const live = state.repertoires[row.repertoireId];
+    if (!live) return onExit();
+    const catalogue = openingTree(index);
+    const next = recommended(
+      growthRows([live], index, {
+        minShare: prefs.minShare,
+        maxPly: prefs.maxPly,
+        starred: settings.favoriteOpenings,
+        region: { tree: catalogue, node: regionOf(catalogue, settings.selection) },
+      }),
+    );
+    if (next) onAgain(next);
+    else onExit();
   };
 
   /**
@@ -421,7 +467,7 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
                 {addedSans.length === 1 ? `${addedSans[0]} added` : `${addedSans.length} moves added`}
                 {earned > 0 && <span className="chip good">+{earned}</span>}
               </div>
-              <button className="btn primary sm" onClick={onExit}>
+              <button className="btn primary sm" onClick={again}>
                 New run
                 <Icons.next size={16} />
               </button>
@@ -439,6 +485,9 @@ function Run({ row, onExit }: { row: GrowthRow; onExit: () => void }) {
             <button className={`btn block ${more ? 'mt-8' : 'mt-12'}`} onClick={() => setPlayFrom(run.fen)}>
               <Icons.play size={18} />
               Play from here
+            </button>
+            <button className="btn plain block mt-8" onClick={onExit}>
+              Back to openings
             </button>
           </>
         )}
