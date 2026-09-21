@@ -29,15 +29,38 @@ export interface OpeningPick {
 }
 
 /**
+ * The openings the book names a move late, and whose they really are.
+ *
+ * Both are named at a position one ply past the move that earned the name, so
+ * reading the last ply files them under the wrong player: the King's Indian is
+ * Black's ...g6 answered by 3.Nc3, and the Scotch is White's 3.d4 answered by
+ * 3...exd4. Two of the book's hundred-odd families do this, and nothing about
+ * their move orders sets them apart from the ones that do not — the Grünfeld
+ * branches off the same 1.d4 Nf6 2.c4 g6 3.Nc3 and is named on Black's move,
+ * as it should be. So they are written down rather than derived.
+ */
+const NAMED_LATE: Record<string, Color> = {
+  // King's Indian Defence.
+  'd4 Nf6 c4 g6 Nc3': 'b',
+  // Scotch Game.
+  'e4 e5 Nf3 Nc6 d4 exd4': 'w',
+};
+
+/** The ids of the openings above, for a test to check the book still has them. */
+export const NAMED_LATE_IDS = Object.keys(NAMED_LATE);
+
+/**
  * Whose opening a line is: whoever played its last move.
  *
  * An opening is named for what one side did — "Sicilian Defence" is Black's
  * 1...c5, "Ruy Lopez" is White's 3.Bb5 — and the book attaches the name at the
  * ply of the move that earned it. So the last ply of a node's move order names
  * the side whose repertoire it belongs in. White opens, so odd plies are White's.
+ *
+ * Except where the book names the opening a move late — see `NAMED_LATE`.
  */
 export function playerOf(sans: string[]): Color {
-  return sans.length % 2 === 1 ? 'w' : 'b';
+  return NAMED_LATE[sans.join(' ')] ?? (sans.length % 2 === 1 ? 'w' : 'b');
 }
 
 /**
