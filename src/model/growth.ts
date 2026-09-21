@@ -637,7 +637,11 @@ export function steer(
   // order findHoles already returns them in; taking the best explicitly means
   // the steering does not quietly depend on that.
   if (here.length) {
-    const best = here.reduce((a, b) => (holeWorth(b) > holeWorth(a) ? b : a));
+    // A hole the book cannot answer is still a hole in the prep — coverage
+    // counts it, and the Repertoire screen can fill it by hand — but a run
+    // arriving at it has nothing to offer, so it is taken last.
+    const open = here.filter((hole) => answerable(index, hole.after));
+    const best = (open.length ? open : here).reduce((a, b) => (holeWorth(b) > holeWorth(a) ? b : a));
     return { san: best.san, hole: best };
   }
 
@@ -716,29 +720,40 @@ export function answerHole(run: GrowthRun, san: string): GrowthRun | null {
   return { ...run, path: [...run.path, san], fen: move.after, hole: null };
 }
 
+/** Whether the book has anything to offer in a position. */
+function answerable(index: ReferenceIndex, fen: string): boolean {
+  return popularReplies(index, fen, 0).length > 0;
+}
+
 /**
  * What they would play against the answer you just added, as the next hole.
  *
  * The book's most popular reply, since nothing steers any more: past the
  * repertoire there is no target left to walk toward, and the commonest move is
  * the one most worth having an answer to.
+ *
+ * A reply the book cannot answer is skipped rather than offered. The book ends
+ * where a position stops being played often enough to record, and a hole past
+ * that edge is a dead end: the run would arrive with nothing to choose. At the
+ * edge itself that is every reply, and there is no next hole at all.
  */
 export function nextHole(index: ReferenceIndex, run: GrowthRun): Hole | null {
-  const reply = popularReplies(index, run.fen, 0)[0];
-  if (!reply) return null;
-  const after = applySan(run.fen, reply.san);
-  if (!after) return null;
-  return {
-    path: run.path,
-    fen: run.fen,
-    san: reply.san,
-    share: reply.share,
-    games: reply.games,
-    after: after.after,
-    nodeId: null,
-    // Past the repertoire there is no walk left to have counted the way here.
-    reach: 0,
-  };
+  for (const reply of popularReplies(index, run.fen, 0)) {
+    const after = applySan(run.fen, reply.san);
+    if (!after || !answerable(index, after.after)) continue;
+    return {
+      path: run.path,
+      fen: run.fen,
+      san: reply.san,
+      share: reply.share,
+      games: reply.games,
+      after: after.after,
+      nodeId: null,
+      // Past the repertoire there is no walk left to have counted the way here.
+      reach: 0,
+    };
+  }
+  return null;
 }
 
 /** What to offer at the hole: the book's replies, most played first. */

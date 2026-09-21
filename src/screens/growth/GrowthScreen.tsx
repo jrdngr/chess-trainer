@@ -162,6 +162,18 @@ function Run({
     [phase, tree, index, run],
   );
 
+  /**
+   * A hole the book cannot answer ends the batch rather than sitting there.
+   *
+   * The book stops where a position stops being played often enough to
+   * record, and the walk can arrive just past that edge — a King's Indian
+   * Sämisch runs out at 7.Nge2 — where there is nothing to choose and no
+   * reason to ask. The reveal says so and offers a new run.
+   */
+  useEffect(() => {
+    if (phase === 'hole' && options.length === 0) setPhase('done');
+  }, [phase, options.length]);
+
   /** A batch is measured from the first hole it is offered at. */
   useEffect(() => {
     if (phase !== 'hole' || batch) return;
@@ -414,7 +426,7 @@ function Run({
           </>
         )}
 
-        {phase === 'hole' && (
+        {phase === 'hole' && options.length > 0 && (
           <>
             <div className="prompt">
               <div className="who">
@@ -432,25 +444,19 @@ function Run({
               title="Answer it"
               aside={inBatch > 0 ? `${inBatch} of ${allowance} added` : `up to ${allowance}`}
             />
-            {options.length === 0 ? (
-              <div className="card small muted">
-                The database has nothing here. Add a move from the Repertoire screen instead.
-              </div>
-            ) : (
-              <div className="list">
-                {options.map((option) => (
-                  <button className="list-row" key={option.san} onClick={() => choose(option.san)}>
-                    <span className="tree-san">{option.san}</span>
-                    <span className="grow">
-                      <div className="meta">
-                        {option.share}% of replies · {formatGameCount(option.games)} games
-                      </div>
-                    </span>
-                    <Icons.plus size={18} />
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="list">
+              {options.map((option) => (
+                <button className="list-row" key={option.san} onClick={() => choose(option.san)}>
+                  <span className="tree-san">{option.san}</span>
+                  <span className="grow">
+                    <div className="meta">
+                      {option.share}% of replies · {formatGameCount(option.games)} games
+                    </div>
+                  </span>
+                  <Icons.plus size={18} />
+                </button>
+              ))}
+            </div>
             {added.length > 0 && (
               <button className="btn block mt-8" onClick={() => setPhase('done')}>
                 Stop here
@@ -462,9 +468,15 @@ function Run({
         {phase === 'done' && (
           <>
             <div className="row between">
-              <div className="verdict ok" style={{ padding: 0 }}>
-                <span className="ico"><Icons.check size={16} /></span>
-                {addedSans.length === 1 ? `${addedSans[0]} added` : `${addedSans.length} moves added`}
+              <div className={`verdict ${addedSans.length ? 'ok' : 'warn'}`} style={{ padding: 0 }}>
+                <span className="ico">
+                  {addedSans.length ? <Icons.check size={16} /> : <Icons.warn size={16} />}
+                </span>
+                {addedSans.length === 0
+                  ? 'Nothing to add here'
+                  : addedSans.length === 1
+                    ? `${addedSans[0]} added`
+                    : `${addedSans.length} moves added`}
                 {earned > 0 && <span className="chip good">+{earned}</span>}
               </div>
               <button className="btn primary sm" onClick={again}>
@@ -476,6 +488,12 @@ function Run({
             <div className="card">
               <div className="movetext">{sansToMoveText(run.path)}</div>
             </div>
+            {!more && (
+              <div className="card small muted mt-8">
+                The book ends here, so there is nothing more to answer. Add a move from the
+                Repertoire screen to go deeper than the book does.
+              </div>
+            )}
             {more && (
               <button className="btn block mt-12" onClick={addMore}>
                 <Icons.plus size={18} />

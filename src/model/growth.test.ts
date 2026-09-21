@@ -531,6 +531,30 @@ describe('answering a hole', () => {
     expect(resumeAdding(white, index, nowhere)).toBeNull();
   });
 
+  it('stops at the edge of the book rather than at a hole it cannot answer', () => {
+    // The King's Indian Sämisch: the book records no reply at all after
+    // 7.Nge2, so a run that walked in there stood at a hole with nothing to
+    // choose from. There is no next hole to offer, and the batch is over.
+    const line = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3 O-O Be3 c5'.split(' ');
+    let fen = START_FEN;
+    for (const san of line) fen = applySan(fen, san)!.after;
+    expect(optionsAt(index, fen)[0].san).toBe('Nge2');
+    expect(optionsAt(index, applySan(fen, 'Nge2')!.after)).toHaveLength(0);
+
+    const edge: GrowthRun = {
+      repertoireId: white.id,
+      color: 'b',
+      rowId: 'row',
+      targets: new Set(),
+      path: line,
+      fen,
+      nodeId: null,
+      hole: null,
+    };
+    expect(nextHole(index, edge)).toBeNull();
+    expect(resumeAdding(white, index, edge)).toBeNull();
+  });
+
   it('has nothing to offer once the book runs out', () => {
     const run = toHole();
     // A position the database has never seen has no reply to give.
