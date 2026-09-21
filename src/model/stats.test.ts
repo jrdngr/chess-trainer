@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
-import { applyEvent, EMPTY_SCORE, recordRound, type ScoreState } from './scoring';
-import { cumulativeScore, dailyScore, favouriteness, niceTicks, rollingAccuracy, topOpenings } from './stats';
+import { applyResult, EMPTY_SCORE, rankOf, recordRound, type ScoreState } from './scoring';
+import {
+  dailyRounds,
+  favouriteness,
+  niceTicks,
+  ratingOverTime,
+  rollingAccuracy,
+  starredOpenings,
+} from './stats';
 
 const tree = openingTree(referenceIndex());
 const DAY = 86_400_000;
@@ -10,38 +17,60 @@ const noon = new Date(2026, 8, 13, 12).getTime();
 const NAJDORF = 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6';
 const DRAGON = 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6';
 
-function earned(state: ScoreState, line: string, points: number, back: number, correct = true): ScoreState {
-  return applyEvent(state, tree, {
-    mode: 'run', points, line: line.split(' '), color: 'w', answered: true, correct, at: noon - back * DAY,
-  });
+/** One rated answer on a line, `back` days ago. */
+function answered(
+  state: ScoreState,
+  line: string,
+  back: number,
+  correct = true,
+  starred: string[] = [NAJDORF],
+): ScoreState {
+  return applyResult(state, tree, starred, {
+    mode: 'run', line: line.split(' '), color: 'w', correct, rated: true, at: noon - back * DAY,
+  }).state;
 }
 
 function round(state: ScoreState, openingId: string, back: number): ScoreState {
   return recordRound(state, tree, {
-    mode: 'run', openingId, color: 'w', score: 1, answered: 1, correct: 1, perfect: false, at: noon - back * DAY,
+    mode: 'run', openingId, color: 'w', answered: 1, correct: 1, perfect: false, at: noon - back * DAY,
   });
 }
 
 describe('series', () => {
   it('lists the window oldest first, zero where nothing happened', () => {
-    let state = earned(EMPTY_SCORE, NAJDORF, 5, 1);
-    state = earned(state, NAJDORF, 2, 0);
-    const daily = dailyScore(state.global, 3, noon);
-    expect(daily.map((p) => p.value)).toEqual([0, 5, 2]);
+    let state = round(EMPTY_SCORE, NAJDORF, 1);
+    state = round(state, NAJDORF, 0);
+    state = round(state, NAJDORF, 0);
+    const daily = dailyRounds(state.global, 3, noon);
+    expect(daily.map((p) => p.value)).toEqual([0, 1, 2]);
     expect(daily[0].at).toBeLessThan(daily[1].at);
   });
 
-  it('starts the climb from what was earned before the window', () => {
-    let state = earned(EMPTY_SCORE, NAJDORF, 40, 10);
-    state = earned(state, NAJDORF, 5, 1);
-    state = earned(state, NAJDORF, 2, 0);
-    expect(cumulativeScore(state.global, 3, noon).map((p) => p.value)).toEqual([40, 45, 47]);
+  it('holds a rating through the days it did not move', () => {
+    let state = answered(EMPTY_SCORE, NAJDORF, 1);
+    const day1 = state.nodes[NAJDORF].rating;
+    state = answered(state, NAJDORF, 0);
+    const series = ratingOverTime(state.nodes[NAJDORF], 4, noon);
+    expect(series.map((p) => p.value)).toEqual([0, 0, day1, state.nodes[NAJDORF].rating]);
+  });
+
+  it('starts the line from where the rating stood before the window', () => {
+    let state = answered(EMPTY_SCORE, NAJDORF, 10);
+    const before = state.nodes[NAJDORF].rating;
+    state = answered(state, NAJDORF, 0);
+    const series = ratingOverTime(state.nodes[NAJDORF], 3, noon);
+    expect(series.map((p) => p.value)).toEqual([before, before, state.nodes[NAJDORF].rating]);
+  });
+
+  it('draws no line for an opening that has never been rated', () => {
+    const state = round(EMPTY_SCORE, NAJDORF, 0);
+    expect(ratingOverTime(state.nodes[NAJDORF], 30, noon)).toEqual([]);
   });
 
   it('smooths accuracy over a week and skips empty days', () => {
-    let state = earned(EMPTY_SCORE, NAJDORF, 1, 2, true);
-    state = earned(state, NAJDORF, 0, 2, false);
-    state = earned(state, NAJDORF, 1, 0, true);
+    let state = answered(EMPTY_SCORE, NAJDORF, 2, true);
+    state = answered(state, NAJDORF, 2, false);
+    state = answered(state, NAJDORF, 0, true);
     const series = rollingAccuracy(state.global, 5, noon);
     // Days 4 and 3 back have nothing in their week; from day 2 the week holds answers.
     expect(series.length).toBe(3);
@@ -71,16 +100,21 @@ describe('favouriteness', () => {
   });
 });
 
-describe('the openings that matter', () => {
-  it('lists scored openings, best first, with where they sit', () => {
-    let state = earned(EMPTY_SCORE, `${NAJDORF} Be3`, 7, 0);
-    state = earned(state, 'd4 d5 c4 e6', 3, 0);
-    const top = topOpenings(tree, state);
-    expect(top[0].node.name).toBe("King's Pawn Game");
-    expect(top.some((entry) => entry.node.id === NAJDORF)).toBe(true);
-    const najdorf = top.find((entry) => entry.node.id === NAJDORF)!;
-    expect(najdorf.trail).toContain('Sicilian Defence');
-    expect(top.every((entry) => entry.node.depth > 0)).toBe(true);
+describe('your openings', () => {
+  it('lists the stars, best rated first, with where they sit', () => {
+    const stars = [NAJDORF, DRAGON];
+    let state = answered(EMPTY_SCORE, `${NAJDORF} Be3`, 0, true, stars);
+    state = answered(state, `${NAJDORF} Be3`, 0, true, stars);
+    const mine = starredOpenings(tree, state, stars);
+    expect(mine.map((entry) => entry.node.id)).toEqual([NAJDORF, DRAGON]);
+    expect(mine[0].trail).toContain('Sicilian Defence');
+    // An untested star is still yours, and still Unrated.
+    expect(rankOf(mine[1].stats.rating).heldLabel).toBe('Unrated');
+  });
+
+  it('leaves out the root and anything starred twice', () => {
+    const mine = starredOpenings(tree, EMPTY_SCORE, ['', NAJDORF, NAJDORF]);
+    expect(mine.map((entry) => entry.node.id)).toEqual([NAJDORF]);
   });
 
   it('draws round ticks', () => {

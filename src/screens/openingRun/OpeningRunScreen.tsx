@@ -52,9 +52,9 @@ import { useReferee } from './useReferee';
 import { useOpponent } from './useOpponent';
 import { ClockHud, useMoveClock } from '../../components/Clock';
 import { clockSeconds } from '../../model/openingRun';
-import { comboBonus, POINTS, seenIn } from '../../model/scoring';
+import { seenIn, type RatingMove } from '../../model/scoring';
 import { deepestNodeWithin } from '../../model/openingTree';
-import type { RoundPlan, RoundSummary } from '../../model/autopilot';
+import type { RatingChange, RoundPlan, RoundSummary } from '../../model/autopilot';
 
 type Phase = 'setup' | 'playing' | 'checkpoint' | 'gap' | 'dead' | 'survived' | 'playon';
 
@@ -128,7 +128,7 @@ export function OpeningRunScreen({
     ? { ...settings.openingRun, ...planned.options, newMoves: 0, clock: 'move10', hints: 0 }
     : settings.openingRun;
   const endRun = useStore((s) => s.endOpeningRun);
-  const earn = useStore((s) => s.earn);
+  const recordMove = useStore((s) => s.recordMove);
   const endRound = useStore((s) => s.endRound);
   const answered = useStore((s) => s.answeredInOpeningRun);
   const missed = useStore((s) => s.missedInOpeningRun);
@@ -202,12 +202,29 @@ export function OpeningRunScreen({
     if (settings.hapticFeedback) haptic(pattern);
   };
 
-  /** Points banked this run, for the reveal — and a ref, for the round's log. */
-  const [earned, setEarned] = useState(0);
-  const banked = useRef(0);
-  const bank = (points: number) => {
-    banked.current += points;
-    setEarned(banked.current);
+  /**
+   * Where each rated opening stood when this run first touched it, and where
+   * it stands now: the run's own doing, for the reveal. A ref as well as
+   * state, because `finish` reads it in the same tick a move writes it.
+   */
+  const ratings = useRef(new Map<string, { before: number; after: number }>());
+  const [moved, setMoved] = useState<RatingChange[]>([]);
+  const movedNow = (): RatingChange[] =>
+    [...ratings.current]
+      .map(([id, seen]) => ({
+        id,
+        name: nodeById(tree, id).name,
+        delta: seen.after - seen.before,
+        after: seen.after,
+      }))
+      .filter((change) => Math.round(change.delta) !== 0);
+  const track = (moves: RatingMove[]) => {
+    for (const move of moves) {
+      const seen = ratings.current.get(move.id);
+      if (seen) seen.after = move.after;
+      else ratings.current.set(move.id, { before: move.before, after: move.after });
+    }
+    setMoved(movedNow());
   };
 
   /** What the reveal's one tap wrote into the repertoire. */
@@ -220,7 +237,7 @@ export function OpeningRunScreen({
     const summary: RoundSummary = {
       openingId: deepestNodeWithin(tree, region, ended.played).id,
       color: ended.color,
-      score: banked.current,
+      moved: movedNow(),
       answered: ended.survived + (slipped.current ? 1 : 0),
       correct: ended.survived,
       perfect: cause === null && !ended.leftPrep,
@@ -229,17 +246,22 @@ export function OpeningRunScreen({
     onRoundOver?.(summary);
   };
 
-  /** A correct move of yours: the base, the speed bonus, and the combo. */
+  /** A prepared position found: one rated result, for every starred opening it is inside. */
   const credit = (after: Run) => {
-    const points =
-      POINTS.run.move + clock.bonus + comboBonus(after.survived);
-    earn({ mode: 'run', points, line: after.played, color: after.color, answered: true, correct: true });
-    bank(points);
+    track(recordMove({ mode: 'run', line: after.played, color: after.color, correct: true, rated: true }));
   };
 
-  /** A miss: answered, worth nothing, and counted against the line. */
-  const debit = (ended: Run, san: string) => {
-    earn({ mode: 'run', points: 0, line: [...ended.played, san], color: ended.color, answered: true, correct: false });
+  /**
+   * A prepared position missed: the same result the other way, which is what
+   * makes the rating mean anything.
+   *
+   * The line is the position you were *asked* about, without the move you
+   * played. A wrong move usually leaves the opening altogether — h6 in the
+   * Najdorf is no longer a Najdorf — and crediting the miss to wherever it
+   * landed would mean a rating that only ever goes up.
+   */
+  const debit = (ended: Run) => {
+    track(recordMove({ mode: 'run', line: ended.played, color: ended.color, correct: false, rated: true }));
   };
 
   /**
@@ -289,9 +311,6 @@ export function OpeningRunScreen({
    */
   const arrive = (at: Run) => {
     if (!source) return;
-    const bonus = POINTS.run.finish + (at.leftPrep ? 0 : POINTS.run.green);
-    earn({ mode: 'run', points: bonus, line: at.played, color: at.color, answered: false, correct: false });
-    bank(bonus);
     buzz(14);
     setGame({ source, run: finishPrep(at) });
     setCheckpoint({ kind: 'edge', expected: [], opening: null });
@@ -318,7 +337,7 @@ export function OpeningRunScreen({
       const expected = source.prepAt(run.fen);
       if (expected.length) {
         slipped.current = true;
-        debit(run, verdict.san);
+        debit(run);
         if (run.repertoireId) missed(run.repertoireId, run.fen, verdict.san, expected[0]);
       }
       if (!verdict.ok) {
@@ -412,8 +431,8 @@ export function OpeningRunScreen({
     if (!started) return;
     settled.current = false;
     slipped.current = false;
-    banked.current = 0;
-    setEarned(0);
+    ratings.current = new Map();
+    setMoved([]);
     setKept(null);
     setDeath(null);
     setCheckpoint(null);
@@ -451,7 +470,7 @@ export function OpeningRunScreen({
         source={source}
         run={run}
         death={phase === 'dead' ? death : null}
-        earned={earned}
+        moved={moved}
         auto={!!planned}
         kept={kept}
         onKeep={keep}
@@ -506,7 +525,7 @@ export function OpeningRunScreen({
 
   /**
    * Take a move from the book at the edge of the prep. It goes into the
-   * repertoire and the run carries on; it earns nothing, since you did not
+   * repertoire and the run carries on; it rates nothing, since you did not
    * find it.
    */
   const chooseAtGap = (san: string) => {
@@ -646,7 +665,7 @@ export function OpeningRunScreen({
             </div>
             {checkpoint.kind === 'left' && (
               <div className="center small muted mt-8">
-                Past here the engine judges, and nothing is scored.
+                Past here the engine judges, and nothing is rated.
               </div>
             )}
           </>

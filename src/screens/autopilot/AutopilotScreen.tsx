@@ -1,20 +1,21 @@
 import { useState } from 'react';
 import { AppBar, Icons } from '../../components/ui';
 import { SelectionBar, selectionText } from '../../components/Selection';
-import { planFor, type RoundSummary } from '../../model/autopilot';
+import { planFor, type RatingChange, type RoundSummary } from '../../model/autopilot';
 import { isSteered, type Focus, type Recommendation } from '../../model/recommend';
 import { useStore } from '../../store/useStore';
 import { recommendNow } from '../../store/recommendation';
 import { OpeningRunScreen } from '../openingRun/OpeningRunScreen';
+import { deltaText } from '../../components/ScoreBar';
 
 /**
  * Autopilot.
  *
  * Every round is a Run of what you already have. The engine picks the
  * opening, the colour and what the opponent steers toward, and the Run
- * plays it. When a round ends, a bar over its reveal shows what it earned
- * and offers the next one: no Home in between, no setup screens, one tap
- * per round. The settings are the engine's business and nothing on screen
+ * plays it. When a round ends, a bar over its reveal shows what it did to
+ * the rating and offers the next one: no Home in between, no setup screens,
+ * one tap per round. The settings are the engine's business and nothing on screen
  * names them. A session never ends on its own. Stop is the close button in
  * the app bar, and stopping opens Stats.
  *
@@ -57,7 +58,7 @@ export function AutopilotScreen({ onExit, onGrow }: { onExit: () => void; onGrow
   return (
     <>
       <OpeningRunScreen key={round} auto plan={planFor(pick)} onRoundOver={roundOver} onExit={onExit} />
-      {over && next && <NextBar earned={over.score} perfect={over.perfect} onNext={advance} />}
+      {over && next && <NextBar moved={over.moved} perfect={over.perfect} onNext={advance} />}
     </>
   );
 }
@@ -86,13 +87,20 @@ function NothingToDrill({ onExit, onGrow }: { onExit: () => void; onGrow: () => 
   );
 }
 
-/** What the round earned, and one button: the next round. */
-function NextBar({ earned, perfect, onNext }: { earned: number; perfect: boolean; onNext: () => void }) {
+/**
+ * What the round did to your rating, and one button: the next round. The
+ * opening shown is the most specific one the round moved, since that is what
+ * the round was about. A round can move nothing — it answered no prepared
+ * position, or none of the openings it went through is starred — and then the
+ * bar says so rather than naming a number that did not change.
+ */
+function NextBar({ moved, perfect, onNext }: { moved: RatingChange[]; perfect: boolean; onNext: () => void }) {
+  const narrowest = moved.length ? moved[moved.length - 1] : null;
   return (
-    <div className={`next-bar${perfect ? ' perfect' : ''}`}>
+    <div className={`next-bar${perfect ? ' perfect' : ''}${narrowest && narrowest.delta < 0 ? ' lost' : ''}`}>
       <div className="earned">
-        <span className="pts num">+{earned}</span>
-        <span className="lbl">{perfect ? 'Perfect round' : 'this round'}</span>
+        <span className="pts num">{narrowest ? deltaText(narrowest.delta) : '—'}</span>
+        <span className="lbl truncate">{narrowest ? narrowest.name : 'No rating change'}</span>
       </div>
       <button className="go" onClick={onNext}>
         <span className="what grow">Next Round</span>

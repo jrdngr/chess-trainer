@@ -23,7 +23,7 @@ import {
   type GrowthRun,
 } from '../../model/growth';
 import { formatGameCount } from '../../model/reference';
-import { POINTS, type RoundRecord } from '../../model/scoring';
+import type { RoundRecord } from '../../model/scoring';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { regionOf } from '../../model/selection';
 import { referenceIndex } from '../../model/referenceIndex';
@@ -69,10 +69,7 @@ function Run({
   const state = useStore();
   const settings = state.settings;
   const addLine = useStore((s) => s.addLine);
-  const earn = useStore((s) => s.earn);
   const endRound = useStore((s) => s.endRound);
-  /** Points this run has banked. */
-  const [earned, setEarned] = useState(0);
   /** The round this sitting will log, kept current until the run is left. */
   const pending = useRef<Omit<RoundRecord, 'at'> | null>(null);
   const index = referenceIndex();
@@ -210,8 +207,6 @@ function Run({
     const next = move ? answerHole(run, san) : null;
     if (!next) return;
     addLine(row.repertoireId, lineFor(run, san), 'reference');
-    earn({ mode: 'growth', points: POINTS.growth.added, line: lineFor(run, san), color: run.color, answered: false, correct: false });
-    setEarned((total) => total + POINTS.growth.added);
     setAdded((plies) => [...plies, run.path.length]);
     setAnswer(move);
     setRun(next);
@@ -286,13 +281,12 @@ function Run({
       mode: 'growth',
       openingId: deepestNodeWithin(catalogue, region, run.path).id,
       color: run.color,
-      score: earned,
       answered: 0,
       correct: 0,
       perfect: inBatch >= allowance,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, earned]);
+  }, [phase, added.length]);
 
   /**
    * And it is logged on the way out rather than at the reveal, because the
@@ -477,7 +471,6 @@ function Run({
                   : addedSans.length === 1
                     ? `${addedSans[0]} added`
                     : `${addedSans.length} moves added`}
-                {earned > 0 && <span className="chip good">+{earned}</span>}
               </div>
               <button className="btn primary sm" onClick={again}>
                 New run

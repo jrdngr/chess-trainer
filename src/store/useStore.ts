@@ -45,14 +45,13 @@ import { importedOnly, mergeGames, playGames, withPlayGame } from '../model/play
 import { DEFAULT_SELECTION, type Selection } from '../model/selection';
 import { picksFrom, selectionFor } from '../model/onboarding';
 import {
-  applyEvent,
+  applyResult,
   EMPTY_SCORE,
-  milestoneOf,
   normalizeScore,
   recordRound,
+  type MoveResult,
+  type RatingMove,
   type RoundRecord,
-  type Milestone,
-  type ScoreEvent,
   type ScoreState,
 } from '../model/scoring';
 import { openingTree } from '../model/openingTree';
@@ -133,21 +132,26 @@ interface PersistedState {
   repair: RepairRecord;
   /** Mistakes made inside the app, for Repair to ask about later. */
   mistakes: Mistake[];
-  /** Points, per opening and in total, and every game played. */
+  /** Every opening's rating and activity, and every round played. */
   score: ScoreState;
 }
 
 /**
- * The last thing that earned points, for the score bar to react to.
+ * The last rating to move, for the score bar to react to.
  *
- * `seq` climbs with every event so the same total earned twice still reads
- * as two events; `milestone` is set only on the event that crossed one.
+ * One answer can move several openings at once, and the bar shows one: the
+ * opening you have selected if it moved, otherwise the narrowest that did,
+ * which is the one the move was most specifically about. `seq` climbs with
+ * every move so the same change twice still reads as two events.
  */
 export interface ScoreFeed {
   seq: number;
-  points: number;
-  total: number;
-  milestone: Milestone | null;
+  /** The opening whose rating moved. '' before anything has. */
+  openingId: string;
+  before: number;
+  after: number;
+  /** 1 promoted a tier, -1 demoted, 0 neither. */
+  promotion: 1 | -1 | 0;
 }
 
 interface StoreState extends PersistedState {
@@ -215,8 +219,12 @@ interface StoreState extends PersistedState {
   endOpeningRun: (outcome: RunOutcome) => void;
   /** Log one Repair item: answered correctly, or given a move. */
   endRepair: (outcome: { relearned?: boolean; added?: boolean }) => void;
-  /** Bank points for one event, credited to the openings its line goes through. */
-  earn: (event: Omit<ScoreEvent, 'at'>) => number;
+  /**
+   * Record one answer: activity against the openings its line names, and, for
+   * a rated one, the rating of every starred opening it was played inside.
+   * Returns the ratings that moved.
+   */
+  recordMove: (result: Omit<MoveResult, 'at'>) => RatingMove[];
   /** Count a finished round against its opening. */
   endRound: (round: Omit<RoundRecord, 'at'>) => void;
   /** Remember a move the user got wrong somewhere in the app. */
@@ -406,7 +414,7 @@ export const useStore = create<StoreState>((set, get) => {
   return {
     ...emptyPersisted(),
     ready: false,
-    feed: { seq: 0, points: 0, total: 0, milestone: null },
+    feed: { seq: 0, openingId: '', before: 0, after: 0, promotion: 0 },
     statsTarget: null,
     openStats(openingId) {
       set({ statsTarget: openingId });
@@ -687,26 +695,32 @@ export const useStore = create<StoreState>((set, get) => {
       commit({ repair: recordRepair(get().repair, outcome) });
     },
 
-    earn(event) {
+    recordMove(result) {
       const state = get();
-      const before = milestoneOf(state.score.total);
-      const score = applyEvent(state.score, openingTree(referenceIndex()), { ...event, at: Date.now() });
-      const after = milestoneOf(score.total);
-      // A miss is recorded for the record but earns nothing, and the bar only
-      // comes out for something earned.
+      const tree = openingTree(referenceIndex());
+      const { state: score, moves } = applyResult(
+        state.score,
+        tree,
+        state.settings.favoriteOpenings,
+        { ...result, at: Date.now() },
+      );
+      // The bar shows the opening you are working in when that is one of the
+      // ratings that moved, and otherwise the narrowest one that did.
+      const selected = state.settings.selection.opening;
+      const shown = moves.find((move) => move.id === selected) ?? moves[moves.length - 1];
       commit({
         score,
-        feed:
-          event.points > 0
-            ? {
-                seq: state.feed.seq + 1,
-                points: event.points,
-                total: score.total,
-                milestone: after.reached > before.reached ? after : null,
-              }
-            : state.feed,
+        feed: shown
+          ? {
+              seq: state.feed.seq + 1,
+              openingId: shown.id,
+              before: shown.before,
+              after: shown.after,
+              promotion: shown.promotion,
+            }
+          : state.feed,
       });
-      return event.points;
+      return moves;
     },
 
     endRound(round) {
@@ -789,7 +803,7 @@ export function freshProfile(state: StoreState): boolean {
     state.repertoireOrder.length === 0 &&
     Object.keys(state.cards).length === 0 &&
     state.importedGames.length === 0 &&
-    state.score.total === 0
+    state.score.global.answered === 0
   );
 }
 

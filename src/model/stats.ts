@@ -1,9 +1,9 @@
 import { ancestorsOf, nodeById, type OpeningNode, type OpeningTree } from './openingTree';
-import { dayKey, nodeStats, type NodeStats, type ScoreState } from './scoring';
+import { dayKey, nodeStats, RATING, type NodeStats, type ScoreState } from './scoring';
 
 /**
  * Stats: the numbers behind one opening, or the whole game, shaped for a
- * chart. Everything here reads the per-day tallies the score keeps and
+ * chart. Everything here reads the per-day tallies the record keeps and
  * folds them into series; nothing is stored twice.
  */
 
@@ -23,32 +23,46 @@ function dayStart(now: number, back: number): number {
   return date.getTime();
 }
 
-/** The last `days` days, oldest first, each with what was earned that day. */
-export function dailyScore(stats: NodeStats, days: number, now = Date.now()): DayPoint[] {
+/** The last `days` days, oldest first, each with the rounds played that day. */
+export function dailyRounds(stats: NodeStats, days: number, now = Date.now()): DayPoint[] {
   const out: DayPoint[] = [];
   for (let back = days - 1; back >= 0; back -= 1) {
     const at = dayStart(now, back);
     const key = dayKey(at);
-    out.push({ at, key, value: stats.days[key]?.score ?? 0 });
+    out.push({ at, key, value: stats.days[key]?.rounds ?? 0 });
   }
   return out;
 }
 
 /**
- * Score as it climbed, one point per day in the window.
+ * The rating as it stood at the end of each day in the window.
  *
- * The curve starts at whatever had been earned before the window, so a
- * ninety-day view of a year-old record does not start from nothing.
+ * A day the rating never moved holds the day before's, so the line is
+ * continuous rather than dropping to nothing whenever the opening was rested.
+ * It starts from wherever the rating stood going into the window, and an
+ * opening that has never been rated has no line at all.
  */
-export function cumulativeScore(stats: NodeStats, days: number, now = Date.now()): DayPoint[] {
+export function ratingOverTime(stats: NodeStats, days: number, now = Date.now()): DayPoint[] {
+  if (stats.rated === 0) return [];
   const first = dayKey(dayStart(now, days - 1));
-  let before = 0;
-  for (const [key, day] of Object.entries(stats.days)) if (key < first) before += day.score;
-  let running = before;
-  return dailyScore(stats, days, now).map((point) => {
-    running += point.value;
-    return { ...point, value: running };
-  });
+  let running: number = RATING.start;
+  let latest = '';
+  for (const [key, day] of Object.entries(stats.days)) {
+    if (key >= first || day.rating === null) continue;
+    if (key > latest) {
+      latest = key;
+      running = day.rating;
+    }
+  }
+  const out: DayPoint[] = [];
+  for (let back = days - 1; back >= 0; back -= 1) {
+    const at = dayStart(now, back);
+    const key = dayKey(at);
+    const rating = stats.days[key]?.rating;
+    if (rating !== null && rating !== undefined) running = rating;
+    out.push({ at, key, value: running });
+  }
+  return out;
 }
 
 /**
@@ -125,18 +139,30 @@ export interface Ranked {
   trail: string;
 }
 
-/** Every opening with a score, best first. */
-export function topOpenings(tree: OpeningTree, score: ScoreState, limit = 12): Ranked[] {
-  return Object.entries(score.nodes)
-    .filter(([, stats]) => stats.score > 0)
-    .map(([id, stats]) => ({
-      node: nodeById(tree, id),
-      stats,
-      trail: ancestorsOf(tree, id).slice(0, -1).map((n) => n.name).join(' › '),
-    }))
-    .filter((entry) => entry.node.depth > 0)
-    .sort((a, b) => b.stats.score - a.stats.score || a.node.depth - b.node.depth)
-    .slice(0, limit);
+/**
+ * Your starred openings, best rated first. Unrated stars are kept and sort
+ * last: a star you have not tested yet is still one of yours, and seeing it
+ * sitting at Unrated is the nudge to go and run it.
+ */
+export function starredOpenings(tree: OpeningTree, score: ScoreState, starred: Iterable<string>): Ranked[] {
+  const seen = new Set<string>();
+  const out: Ranked[] = [];
+  for (const id of starred) {
+    const node = tree.byId.get(id);
+    if (!node || node.depth === 0 || seen.has(id)) continue;
+    seen.add(id);
+    out.push({
+      node,
+      stats: nodeStats(score, id),
+      trail: ancestorsOf(tree, id).slice(0, -1).map((n) => n.name).join(' \u203a '),
+    });
+  }
+  return out.sort(
+    (a, b) =>
+      b.stats.rating - a.stats.rating ||
+      a.node.depth - b.node.depth ||
+      a.node.name.localeCompare(b.node.name),
+  );
 }
 
 /** Ticks for an axis: a few round numbers that cover the range. */

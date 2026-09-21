@@ -375,7 +375,7 @@ export interface Run {
   color: Color;
   fen: string;
   played: string[];
-  /** The user's correct moves so far — the score. */
+  /** The user's correct moves so far — how far the run got. */
   survived: number;
   over: boolean;
   /** Remaining moves of the line drawn, driving opponent replies. */
@@ -991,7 +991,7 @@ export function staysInside(tree: OpeningTree, run: Run, san: string): boolean {
 /**
  * Step outside the prep and carry on, from a checkpoint.
  *
- * The move — sound, by the engine — is played. It earns nothing: the score
+ * The move — sound, by the engine — is played. It rates nothing: the rating
  * is moves found in your prep, and this was not one. The drawn line stops
  * steering, and from here the engine is the referee.
  */
@@ -1068,8 +1068,8 @@ export function judgeByEval(
 }
 
 /**
- * One of your moves the engine passed, past the hand-over. It earns nothing
- * and does not count as survived: the score is what you found in your prep.
+ * One of your moves the engine passed, past the hand-over. It rates nothing
+ * and does not count as survived: the rating is what you found in your prep.
  */
 export function playPast(run: Run, san: string): Run {
   const applied = applySan(run.fen, san);
@@ -1117,7 +1117,7 @@ export function edgeOptions(index: ReferenceIndex, fen: string, limit = 4) {
  * Take a move from the book at the edge of the prep.
  *
  * It is played and it spends one of the run's new moves, but it is not a move
- * you found, so it counts for nothing: the score is moves survived. The drawn
+ * you found, so it counts for nothing: what a run reports is moves survived. The drawn
  * line stops steering — it led here and no further — and the opponent answers
  * from the book.
  */

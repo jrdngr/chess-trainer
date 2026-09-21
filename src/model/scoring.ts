@@ -1,175 +1,178 @@
 import type { Color } from '../chess/core';
 import { markSeen } from './freshness';
-import { ancestorsOf, deepestNodeAlong, type OpeningTree } from './openingTree';
+import {
+  ancestorsOf,
+  deepestNodeAlong,
+  insideRegion,
+  type OpeningTree,
+} from './openingTree';
 
 /**
- * Score: what a game pays, where the points go, and what they add up to.
+ * The rating: how well you know one opening.
  *
- * Points are reward, never assessment — the schedule already grades mistakes,
- * so nothing here is ever subtracted. Every number a game can earn lives in
- * `POINTS`, so balancing the modes against each other is an edit here and
- * nowhere else. Run and Drill are on a clock, and most of their maximum is
- * the speed bonus: a fast answer is the only way to a full score in a timed
- * mode. Growth and Repair have no clock, so their base is higher.
+ * There is no global score any more, and no points. Every opening you have
+ * starred carries a rating of its own, and nothing else is rated: a star is
+ * the player saying "this one is mine", and the rating answers how well they
+ * have it. Only the modes that *test* you move it — Run, and Autopilot, which
+ * is Run with the engine choosing. Drill, Growth, Repair and Play still record
+ * what they did, because rounds, accuracy and streaks are activity rather than
+ * assessment, but none of them changes a rating.
+ *
+ * A rating moves like a chess rating. Each prepared position you answer is one
+ * result against that opening: right pushes it up, a miss pulls it down, and
+ * the size of the move is split by how well the rating already expects you to
+ * do. Low down a correct move is worth a lot and a miss costs little; high up
+ * it is the other way round. So the number settles at the accuracy you really
+ * hold in that opening and cannot be inflated by volume — playing more only
+ * makes it truer.
  */
-export type ScoreMode = 'run' | 'drill' | 'growth' | 'repair';
 
-export const SCORE_MODES: ScoreMode[] = ['run', 'drill', 'growth', 'repair'];
+/**
+ * The modes whose activity is tallied. They are no longer *scoring* modes:
+ * only `rated` results move a rating, and only Run produces those.
+ */
+export type ActivityMode = 'run' | 'drill' | 'growth' | 'repair';
 
-export const POINTS = {
-  run: { move: 1, finish: 5, green: 3 },
-  drill: { answer: 1, lapsed: 1 },
-  growth: { added: 5 },
-  repair: { relearned: 4, added: 2 },
-  /** Per timed move: the first half of the clock, the second half, then nothing. */
-  speed: { fast: 2, quick: 1 },
-  /** Consecutive correct moves in one game, from this many onward, pay this much extra each. */
-  combo: { from: 3, per: 1 },
+export const ACTIVITY_MODES: ActivityMode[] = ['run', 'drill', 'growth', 'repair'];
+
+/* ── the rating ─────────────────────────────────────────────────────────── */
+
+export const RATING = {
+  /** Where an opening starts the moment it is starred. */
+  start: 0,
+  /** It never goes below this, so a bad session cannot dig a hole. */
+  floor: 0,
+  /**
+   * The most one result can move a rating, split between the two outcomes by
+   * the accuracy the rating expects. 40 puts King within a few hundred correct
+   * moves and still lets one miss sting at the top.
+   */
+  step: 40,
+  /**
+   * Ratings this far apart differ by ten to one in odds. 450 spreads the tiers
+   * across the accuracies a repertoire actually passes through: 62% at Pawn,
+   * 99% at King.
+   */
+  scale: 450,
 } as const;
 
-/**
- * The bonus for answering within a budget, decided by how much of it was
- * used: full for the first half, half for the second, nothing once the clock
- * has run out. Reading the tiers off the budget rather than fixed seconds is
- * what makes the bonus and the clock hit zero together.
- */
-export function speedBonus(elapsedSeconds: number, budgetSeconds: number | null): number {
-  if (budgetSeconds === null || budgetSeconds <= 0) return 0;
-  if (elapsedSeconds < budgetSeconds / 2) return POINTS.speed.fast;
-  if (elapsedSeconds < budgetSeconds) return POINTS.speed.quick;
-  return 0;
+/** The share of answers a rating expects to be right. */
+export function expectedAccuracy(rating: number): number {
+  return 1 / (1 + 10 ** (-rating / RATING.scale));
 }
 
-/** The extra a correct move earns for being the `streak`th in a row. */
-export function comboBonus(streak: number): number {
-  return streak >= POINTS.combo.from ? POINTS.combo.per : 0;
+/** The rating a result leaves behind. Kept to two decimals, shown rounded. */
+export function ratingAfter(rating: number, correct: boolean): number {
+  const moved = rating + RATING.step * ((correct ? 1 : 0) - expectedAccuracy(rating));
+  return Math.round(Math.max(RATING.floor, moved) * 100) / 100;
 }
 
-/* ── milestones ─────────────────────────────────────────────────────────── */
+/** What one result would move a rating by, right and wrong. */
+export function ratingSwing(rating: number): { up: number; down: number } {
+  return {
+    up: ratingAfter(rating, true) - rating,
+    down: ratingAfter(rating, false) - rating,
+  };
+}
 
-export interface MilestoneTier {
+/* ── tiers ──────────────────────────────────────────────────────────────── */
+
+export interface Tier {
   name: string;
   color: string;
+  /** The rating that reaches it. */
+  at: number;
 }
-
-/** Infrared through ultraviolet, in order. */
-export const MILESTONES: MilestoneTier[] = [
-  { name: 'Infrared', color: '#7f1d1d' },
-  { name: 'Red', color: '#ef4444' },
-  { name: 'Orange', color: '#f97316' },
-  { name: 'Yellow', color: '#facc15' },
-  { name: 'Green', color: '#4ade80' },
-  { name: 'Blue', color: '#3b82f6' },
-  { name: 'Indigo', color: '#6366f1' },
-  { name: 'Violet', color: '#a855f7' },
-  { name: 'Ultraviolet', color: '#e879f9' },
-];
-
-/** Points to the first milestone on a variation's ladder. */
-export const FIRST_MILESTONE = 1000;
-/** Each milestone asks this much more than the last. */
-export const MILESTONE_RATIO = 1.6;
 
 /**
- * How much steeper a ladder is for a wider region.
- *
- * A first move collects everything under it, so its ladder is four times a
- * variation's and a family's twice; the global ladder stands on its own.
+ * The ladder, in pieces. Each rung is a real step in accuracy rather than a
+ * round number, so a promotion is rare enough to mean something: Pawn is
+ * roughly 62% of your prepared moves found, Knight 78%, Bishop 88%, Rook 94%,
+ * Queen 97%, King 99%.
  */
-export function ladderMultiplier(depth: number): number {
-  if (depth <= 0) return 1;
-  if (depth === 1) return 4;
-  if (depth === 2) return 2;
-  return 1;
-}
+export const TIERS: Tier[] = [
+  { name: 'Pawn', color: '#94a3b8', at: 100 },
+  { name: 'Knight', color: '#4ade80', at: 250 },
+  { name: 'Bishop', color: '#2dd4bf', at: 400 },
+  { name: 'Rook', color: '#3b82f6', at: 550 },
+  { name: 'Queen', color: '#a855f7', at: 700 },
+  { name: 'King', color: '#facc15', at: 850 },
+];
 
-/** Points needed to reach milestone `level` (0 is infrared) on a ladder. */
-export function milestoneThreshold(level: number, multiplier = 1): number {
-  return Math.round(FIRST_MILESTONE * multiplier * MILESTONE_RATIO ** level);
-}
+/** What an opening below the first rung shows. */
+export const UNRATED: Tier = { name: 'Unrated', color: '#4b4b55', at: 0 };
 
-export interface Milestone {
-  /** Milestones reached so far; 0 is none. */
+export interface Rank {
+  rating: number;
+  /** Tiers reached; 0 is unrated. */
   reached: number;
-  /** The colour currently held, or null below infrared. */
-  held: MilestoneTier | null;
-  /** The colour being worked toward. Past ultraviolet the colour stays. */
-  next: MilestoneTier;
-  /** "Ultraviolet II" and on, once the ladder has been climbed. */
-  nextLabel: string;
-  heldLabel: string | null;
+  /** The tier held, or null below Pawn. */
+  held: Tier | null;
+  /** The tier being worked toward, or null at the top of the ladder. */
+  next: Tier | null;
+  heldLabel: string;
+  nextLabel: string | null;
   floor: number;
   ceiling: number;
-  /** 0..1 of the way from the last milestone to the next. */
+  /** 0..1 of the way from the tier held to the next. */
   progress: number;
 }
 
-function tierLabel(level: number): string {
-  const tier = MILESTONES[Math.min(level, MILESTONES.length - 1)];
-  const cycle = level - (MILESTONES.length - 1);
-  return cycle > 0 ? `${tier.name} ${roman(cycle + 1)}` : tier.name;
-}
-
-function tierOf(level: number): MilestoneTier {
-  return MILESTONES[Math.min(level, MILESTONES.length - 1)];
-}
-
-function roman(n: number): string {
-  const numerals: [number, string][] = [[10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
-  let out = '';
-  let left = n;
-  for (const [value, glyph] of numerals) {
-    while (left >= value) {
-      out += glyph;
-      left -= value;
-    }
-  }
-  return out;
-}
-
-/** Where a score stands on a ladder. The ladder never ends. */
-export function milestoneOf(score: number, multiplier = 1): Milestone {
+/** Where a rating stands on the ladder. */
+export function rankOf(rating: number): Rank {
   let reached = 0;
-  while (score >= milestoneThreshold(reached, multiplier)) reached += 1;
-  const floor = reached === 0 ? 0 : milestoneThreshold(reached - 1, multiplier);
-  const ceiling = milestoneThreshold(reached, multiplier);
+  while (reached < TIERS.length && rating >= TIERS[reached].at) reached += 1;
+  const held = reached === 0 ? null : TIERS[reached - 1];
+  const next = reached < TIERS.length ? TIERS[reached] : null;
+  const floor = held?.at ?? 0;
+  const ceiling = next?.at ?? held?.at ?? TIERS[0].at;
   return {
+    rating,
     reached,
-    held: reached === 0 ? null : tierOf(reached - 1),
-    heldLabel: reached === 0 ? null : tierLabel(reached - 1),
-    next: tierOf(reached),
-    nextLabel: tierLabel(reached),
+    held,
+    next,
+    heldLabel: held?.name ?? UNRATED.name,
+    nextLabel: next?.name ?? null,
     floor,
     ceiling,
-    progress: Math.max(0, Math.min(1, (score - floor) / (ceiling - floor))),
+    progress: next ? Math.max(0, Math.min(1, (rating - floor) / (ceiling - floor))) : 1,
   };
+}
+
+/** The colour a rating draws in, the unrated grey included. */
+export function tierColor(rating: number): string {
+  return rankOf(rating).held?.color ?? UNRATED.color;
 }
 
 /* ── the record ─────────────────────────────────────────────────────────── */
 
 export interface ModeTally {
   rounds: number;
-  score: number;
   answered: number;
   correct: number;
   lastAt: number | null;
 }
 
 export interface DayTally {
-  score: number;
   answered: number;
   correct: number;
   rounds: number;
+  /** Where the rating stood at the end of the day, or null if it never moved. */
+  rating: number | null;
 }
 
-/** Everything one opening — or the whole game — has earned. */
+/** Everything one opening — or the whole game — has done. */
 export interface NodeStats {
-  score: number;
-  /** Scoring events credited directly to this node, for comparing siblings. */
-  own: number;
+  /**
+   * The rating. Only openings you have starred are ever rated, and the global
+   * record is never rated at all: it is activity, not assessment.
+   */
+  rating: number;
+  /** Rated results this opening has had, right and wrong. */
+  rated: number;
   answered: number;
   correct: number;
-  byMode: Record<ScoreMode, ModeTally>;
+  byMode: Record<ActivityMode, ModeTally>;
   bestRun: number;
   lastAt: number | null;
   /** 'YYYY-MM-DD' → the day's numbers. Kept for ever. */
@@ -181,11 +184,10 @@ export interface NodeStats {
  * A round rather than a game, because none of them is a game of chess.
  */
 export interface RoundRecord {
-  mode: ScoreMode;
+  mode: ActivityMode;
   /** The opening the round was credited to. */
   openingId: string;
   color: Color;
-  score: number;
   answered: number;
   correct: number;
   perfect: boolean;
@@ -198,7 +200,7 @@ export interface RoundRecord {
 }
 
 export interface ScoreState {
-  total: number;
+  /** Activity for the whole game. Never rated. */
   global: NodeStats;
   nodes: Record<string, NodeStats>;
   rounds: RoundRecord[];
@@ -207,13 +209,13 @@ export interface ScoreState {
 }
 
 function emptyTally(): ModeTally {
-  return { rounds: 0, score: 0, answered: 0, correct: 0, lastAt: null };
+  return { rounds: 0, answered: 0, correct: 0, lastAt: null };
 }
 
 export function emptyNodeStats(): NodeStats {
   return {
-    score: 0,
-    own: 0,
+    rating: RATING.start,
+    rated: 0,
     answered: 0,
     correct: 0,
     byMode: { run: emptyTally(), drill: emptyTally(), growth: emptyTally(), repair: emptyTally() },
@@ -223,42 +225,56 @@ export function emptyNodeStats(): NodeStats {
   };
 }
 
-export const EMPTY_SCORE: ScoreState = { total: 0, global: emptyNodeStats(), nodes: {}, rounds: [], seen: {} };
+export const EMPTY_SCORE: ScoreState = { global: emptyNodeStats(), nodes: {}, rounds: [], seen: {} };
 
-/** A saved tally from before rounds were called rounds. */
-type Legacy<T> = Partial<T> & { games?: number };
+/** A saved tally from before rounds were called rounds, or before ratings. */
+type Legacy<T> = Partial<T> & { games?: number; score?: number };
 
 /**
- * Read a saved score, whatever it is missing. Rounds used to be saved as
- * games, at every level, and a record kept for ever is read either way.
+ * Read a saved record, whatever it is missing.
+ *
+ * Points are deliberately *not* carried over: a save from the scoring era has
+ * a `score` on every tally and a `total` on the state, and none of it is read
+ * here, so every opening comes back unrated and earns its tier again. What the
+ * player actually did — rounds, answers, days, streaks — is kept.
  */
 export function normalizeScore(
   saved: (Partial<ScoreState> & { games?: RoundRecord[] }) | undefined,
 ): ScoreState {
-  const tally = (saved: Legacy<ModeTally> | undefined): ModeTally => {
-    const { games, ...rest } = saved ?? {};
-    return { ...emptyTally(), ...rest, rounds: saved?.rounds ?? games ?? 0 };
-  };
-  const day = (saved: Legacy<DayTally>): DayTally => {
-    const { games, ...rest } = saved;
-    return { score: 0, answered: 0, correct: 0, ...rest, rounds: saved.rounds ?? games ?? 0 };
-  };
+  const tally = (saved: Legacy<ModeTally> | undefined): ModeTally => ({
+    ...emptyTally(),
+    answered: saved?.answered ?? 0,
+    correct: saved?.correct ?? 0,
+    lastAt: saved?.lastAt ?? null,
+    rounds: saved?.rounds ?? saved?.games ?? 0,
+  });
+  const day = (saved: Legacy<DayTally>): DayTally => ({
+    answered: saved.answered ?? 0,
+    correct: saved.correct ?? 0,
+    rounds: saved.rounds ?? saved.games ?? 0,
+    rating: saved.rating ?? null,
+  });
   const fix = (stats: Partial<NodeStats> | undefined): NodeStats => {
     const empty = emptyNodeStats();
     const byMode = { ...empty.byMode };
-    for (const mode of SCORE_MODES) byMode[mode] = tally(stats?.byMode?.[mode]);
+    for (const mode of ACTIVITY_MODES) byMode[mode] = tally(stats?.byMode?.[mode]);
     return {
       ...empty,
-      ...(stats ?? {}),
+      rating: stats?.rating ?? RATING.start,
+      rated: stats?.rated ?? 0,
+      answered: stats?.answered ?? 0,
+      correct: stats?.correct ?? 0,
+      bestRun: stats?.bestRun ?? 0,
+      lastAt: stats?.lastAt ?? null,
       byMode,
       days: Object.fromEntries(Object.entries(stats?.days ?? {}).map(([key, d]) => [key, day(d)])),
     };
   };
+  const rounds = (saved?.rounds ?? saved?.games ?? []).map((round) => ({ ...round }));
   return {
-    total: saved?.total ?? 0,
     global: fix(saved?.global),
     nodes: Object.fromEntries(Object.entries(saved?.nodes ?? {}).map(([id, stats]) => [id, fix(stats)])),
-    rounds: saved?.rounds ?? saved?.games ?? [],
+    rounds,
     seen: saved?.seen ?? {},
   };
 }
@@ -271,83 +287,134 @@ export function dayKey(at: number): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-/** One thing that earned points, or could have. */
-export interface ScoreEvent {
-  mode: ScoreMode;
-  points: number;
-  /** The line the position sits on — decides which openings are credited. */
+/* ── results ────────────────────────────────────────────────────────────── */
+
+/** One answer given somewhere in the app. */
+export interface MoveResult {
+  mode: ActivityMode;
+  /** The line the position sits on — decides which openings it belongs to. */
   line: string[];
   color: Color;
-  /** True when this was an answer, right or wrong; false for a bonus or an add. */
-  answered: boolean;
   correct: boolean;
+  /**
+   * Whether this moves ratings. Only a prepared position answered in Run or
+   * Autopilot does; everything else is recorded and nothing more.
+   */
+  rated: boolean;
   at: number;
 }
 
+/** How one opening's rating moved. */
+export interface RatingMove {
+  id: string;
+  before: number;
+  after: number;
+  /** 1 promoted a tier, -1 demoted, 0 neither. */
+  promotion: 1 | -1 | 0;
+}
+
 /**
- * Which openings an event credits: the deepest node its line goes through
- * and every ancestor of it. Ids, shallowest first; empty when the book names
- * nothing along the line, in which case only the global total moves.
+ * Which openings an answer counts as activity for: the deepest node its line
+ * goes through and every ancestor of it. Ids, shallowest first; empty when the
+ * book names nothing along the line.
  */
 export function creditedNodes(tree: OpeningTree, line: string[]): string[] {
   const deepest = deepestNodeAlong(tree, line);
   return deepest ? ancestorsOf(tree, deepest.id).map((node) => node.id) : [];
 }
 
-function tallyEvent(stats: NodeStats, event: ScoreEvent, own: boolean): NodeStats {
-  const mode = stats.byMode[event.mode];
-  const key = dayKey(event.at);
-  const day = stats.days[key] ?? { score: 0, answered: 0, correct: 0, rounds: 0 };
-  const answered = event.answered ? 1 : 0;
-  const correct = event.answered && event.correct ? 1 : 0;
+/**
+ * Which starred openings a result rates: every one the line is inside, so a
+ * Najdorf move moves a starred Najdorf and a starred Sicilian alike, while a
+ * Dragon move moves the Sicilian and leaves the Najdorf alone. Regions are
+ * matched on positions, so a transposition still counts.
+ */
+export function ratedNodes(tree: OpeningTree, starred: Iterable<string>, line: string[]): string[] {
+  const out: string[] = [];
+  for (const id of starred) {
+    const node = tree.byId.get(id);
+    if (!node || node.depth === 0 || out.includes(id)) continue;
+    if (insideRegion(tree, node, line)) out.push(id);
+  }
+  return out.sort((a, b) => (tree.byId.get(a)?.depth ?? 0) - (tree.byId.get(b)?.depth ?? 0));
+}
+
+function tallyAnswer(stats: NodeStats, result: MoveResult): NodeStats {
+  const mode = stats.byMode[result.mode];
+  const key = dayKey(result.at);
+  const day = stats.days[key] ?? { answered: 0, correct: 0, rounds: 0, rating: null };
+  const correct = result.correct ? 1 : 0;
   return {
     ...stats,
-    score: stats.score + event.points,
-    own: stats.own + (own ? 1 : 0),
-    answered: stats.answered + answered,
+    answered: stats.answered + 1,
     correct: stats.correct + correct,
-    lastAt: event.at,
+    lastAt: result.at,
     byMode: {
       ...stats.byMode,
-      [event.mode]: {
+      [result.mode]: {
         ...mode,
-        score: mode.score + event.points,
-        answered: mode.answered + answered,
+        answered: mode.answered + 1,
         correct: mode.correct + correct,
-        lastAt: event.at,
+        lastAt: result.at,
       },
     },
     days: {
       ...stats.days,
-      [key]: {
-        ...day,
-        score: day.score + event.points,
-        answered: day.answered + answered,
-        correct: day.correct + correct,
-      },
+      [key]: { ...day, answered: day.answered + 1, correct: day.correct + correct },
     },
   };
 }
 
-/** Apply one event: the global total, and every opening it credits. */
-export function applyEvent(state: ScoreState, tree: OpeningTree, event: ScoreEvent): ScoreState {
-  const credited = creditedNodes(tree, event.line);
-  const nodes = { ...state.nodes };
-  credited.forEach((id, i) => {
-    nodes[id] = tallyEvent(nodes[id] ?? emptyNodeStats(), event, i === credited.length - 1);
-  });
+function tallyRating(stats: NodeStats, result: MoveResult): { stats: NodeStats; move: RatingMove } {
+  const before = stats.rating;
+  const after = ratingAfter(before, result.correct);
+  const key = dayKey(result.at);
+  const day = stats.days[key] ?? { answered: 0, correct: 0, rounds: 0, rating: null };
+  const climbed = rankOf(after).reached - rankOf(before).reached;
   return {
-    ...state,
-    total: state.total + event.points,
-    global: tallyEvent(state.global, event, false),
-    nodes,
+    stats: {
+      ...stats,
+      rating: after,
+      rated: stats.rated + 1,
+      days: { ...stats.days, [key]: { ...day, rating: after } },
+    },
+    move: { id: '', before, after, promotion: climbed > 0 ? 1 : climbed < 0 ? -1 : 0 },
+  };
+}
+
+/**
+ * Apply one answer: activity against the openings its line names, and the
+ * rating of every starred opening it was played inside. Returns the ratings
+ * that moved, shallowest opening first, for the bar to show.
+ */
+export function applyResult(
+  state: ScoreState,
+  tree: OpeningTree,
+  starred: Iterable<string>,
+  result: MoveResult,
+): { state: ScoreState; moves: RatingMove[] } {
+  const nodes = { ...state.nodes };
+  for (const id of creditedNodes(tree, result.line)) {
+    nodes[id] = tallyAnswer(nodes[id] ?? emptyNodeStats(), result);
+  }
+  const moves: RatingMove[] = [];
+  if (result.rated) {
+    for (const id of ratedNodes(tree, starred, result.line)) {
+      const { stats, move } = tallyRating(nodes[id] ?? emptyNodeStats(), result);
+      nodes[id] = stats;
+      moves.push({ ...move, id });
+    }
+  }
+  return {
+    state: { ...state, global: tallyAnswer(state.global, result), nodes },
+    moves,
   };
 }
 
 function tallyRound(stats: NodeStats, round: RoundRecord): NodeStats {
   const mode = stats.byMode[round.mode];
   const key = dayKey(round.at);
-  const day = stats.days[key] ?? { score: 0, answered: 0, correct: 0, rounds: 0 };
+  const day = stats.days[key] ?? { answered: 0, correct: 0, rounds: 0, rating: null };
   return {
     ...stats,
     bestRun: round.mode === 'run' ? Math.max(stats.bestRun, round.correct) : stats.bestRun,
@@ -358,9 +425,9 @@ function tallyRound(stats: NodeStats, round: RoundRecord): NodeStats {
 }
 
 /**
- * Log a finished round against the opening it was played in and every
- * opening above it. Points were credited move by move as they were earned;
- * this counts the round and remembers when.
+ * Log a finished round against the opening it was played in and every opening
+ * above it. Ratings moved answer by answer as they were given; this counts the
+ * round and remembers when.
  */
 export function recordRound(state: ScoreState, tree: OpeningTree, round: RoundRecord): ScoreState {
   const credited = ancestorsOf(tree, round.openingId).map((node) => node.id);
@@ -397,7 +464,7 @@ export function accuracy(stats: Pick<NodeStats, 'answered' | 'correct'>): number
 /* ── streaks ────────────────────────────────────────────────────────────── */
 
 /**
- * Days in a row with at least one game, counting back from today — or from
+ * Days in a row with at least one round, counting back from today — or from
  * yesterday, so a streak is not broken by not having played *yet* today.
  */
 export function streak(stats: NodeStats, now = Date.now()): number {

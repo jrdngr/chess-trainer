@@ -10,6 +10,10 @@ import type { Focus, Recommendation, Start } from './recommend';
  * leave it. The engine decides the opening, the colour and the focus; the
  * focus is nothing the player is told, only what the opponent steers toward.
  * Autopilot never adds to the repertoire: that is Growth's, and the reveal's.
+ *
+ * Autopilot rates exactly as Run does, because it *is* Run: every prepared
+ * position answered moves the rating of the starred openings it was played
+ * inside, and nothing else in the app does.
  */
 
 /** What each focus steers the opponent by. */
@@ -38,11 +42,22 @@ export function planFor(pick: Recommendation): RoundPlan {
   };
 }
 
+/** One opening's rating, as a round left it. */
+export interface RatingChange {
+  id: string;
+  name: string;
+  /** Points gained or lost across the whole round. */
+  delta: number;
+  /** Where the rating stands now. */
+  after: number;
+}
+
 /** What a round turned out to be, reported by the Run when it ends. */
 export interface RoundSummary {
   openingId: string;
   color: Color;
-  score: number;
+  /** Every starred opening whose rating the round moved. */
+  moved: RatingChange[];
   answered: number;
   correct: number;
   perfect: boolean;

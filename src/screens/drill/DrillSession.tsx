@@ -27,7 +27,6 @@ import {
 import { DEFAULT_DRILL, type DrillPrefs } from '../../model/modes';
 import { createCard, gradeForTime } from '../../model/srs';
 import { clockSeconds } from '../../model/openingRun';
-import { comboBonus, POINTS, speedBonus } from '../../model/scoring';
 import type { Card, Grade } from '../../model/types';
 import { useStore } from '../../store/useStore';
 import { ClockHud, useMoveClock } from '../../components/Clock';
@@ -55,11 +54,6 @@ function order(
   weakFirst: boolean,
 ): TrainingItem[] {
   return weakFirst ? weakestFirst(batch, cards) : batch;
-}
-
-/** The speed bonus read at the moment of the move rather than the last tick. */
-function speedNow(elapsed: number, budget: number | null): number {
-  return speedBonus(elapsed, budget);
 }
 
 /** How long a correct move stays on the board before the next position. */
@@ -100,7 +94,7 @@ export function DrillSession({
   const regrade = useStore((s) => s.regrade);
   const ensureCard = useStore((s) => s.ensureCard);
   const logMistake = useStore((s) => s.logMistake);
-  const earn = useStore((s) => s.earn);
+  const recordMove = useStore((s) => s.recordMove);
   const endRound = useStore((s) => s.endRound);
 
   const maxNew = options.newPerSession;
@@ -127,7 +121,7 @@ export function DrillSession({
   const [showMoves, setShowMoves] = useState(false);
   const [explore, setExplore] = useState(false);
   const [why, setWhy] = useState(false);
-  const [stats, setStats] = useState({ answered: 0, correct: 0, earned: 0, streak: 0 });
+  const [stats, setStats] = useState({ answered: 0, correct: 0 });
   const [stopped, setStopped] = useState(false);
   /**
    * The last correct answer, graded off the clock and already on the schedule.
@@ -155,7 +149,6 @@ export function DrillSession({
       mode: 'drill',
       openingId: openingId ?? settings.selection.opening,
       color: item?.orientation === 'black' ? ('b' as const) : ('w' as const),
-      score: stats.earned,
       answered: stats.answered,
       correct: stats.correct,
       perfect: stats.correct === stats.answered && stats.answered >= 5,
@@ -217,28 +210,20 @@ export function DrillSession({
     setPlayed(move);
     if (!result.correct) setPhase('wrong');
     const took = clock.elapsedNow();
-    // What this answer pays: the base, more for a card you had lapsed on, the
-    // speed bonus at the moment of the move, and the combo.
-    const streak = result.correct ? stats.streak + 1 : 0;
-    const points = result.correct
-      ? POINTS.drill.answer +
-        (card && card.lapses > 0 ? POINTS.drill.lapsed : 0) +
-        speedNow(took, clock.budget) +
-        comboBonus(streak)
-      : 0;
-    earn({
+    // Drill is recorded, never rated: the schedule already grades this answer,
+    // and a rating is what the test modes are for.
+    recordMove({
       mode: 'drill',
-      points,
-      line: [...item.pathSans, move.san],
+      // Right, and the line is where the answer took you; wrong, and it is the
+      // position you were asked about, since the move played leads elsewhere.
+      line: result.correct ? [...item.pathSans, move.san] : item.pathSans,
       color: item.orientation === 'black' ? 'b' : 'w',
-      answered: true,
       correct: result.correct,
+      rated: false,
     });
     setStats((s) => ({
       answered: s.answered + 1,
       correct: s.correct + (result.correct ? 1 : 0),
-      earned: s.earned + points,
-      streak,
     }));
     if (settings.hapticFeedback) haptic(result.correct ? 12 : [18, 50, 18]);
     if (result.correct) {
@@ -387,7 +372,7 @@ export function DrillSession({
             <div className="pct">{accuracy}%</div>
           </div>
           <div className="center muted" style={{ marginTop: 14 }}>
-            {stats.correct} of {stats.answered} correct · +{stats.earned}
+            {stats.correct} of {stats.answered} correct
           </div>
           <div className="stat-grid" style={{ marginTop: 24 }}>
             <div className="stat">

@@ -13,7 +13,7 @@ import type { RepairItem } from './repair';
 import { leafLines } from './repertoire';
 import { colorsOf, type Selection } from './selection';
 import { allItems, type TrainingItem } from './session';
-import { nodeStats, type ScoreMode, type ScoreState } from './scoring';
+import { nodeStats, type ActivityMode, type ScoreState } from './scoring';
 import { isDue } from './srs';
 import type { Card, Repertoire } from './types';
 
@@ -469,7 +469,7 @@ export function recommend(input: RecommendInput): Recommendation | null {
   return pick(best.focus, nodeById(tree, best.openingId), best.color);
 }
 
-export const MODE_NAMES: Record<ScoreMode, string> = {
+export const MODE_NAMES: Record<ActivityMode, string> = {
   run: 'Run',
   drill: 'Drill',
   growth: 'Growth',

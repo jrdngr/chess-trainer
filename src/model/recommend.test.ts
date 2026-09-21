@@ -102,7 +102,7 @@ function must(pick: Recommendation | null): Recommendation {
 /** A round played: every Autopilot round is a Run. */
 function played(state: ScoreState, openingId: string, at: number): ScoreState {
   return recordRound(state, tree, {
-    mode: 'run', openingId, color: 'w', score: 1, answered: 1, correct: 1, perfect: false, at,
+    mode: 'run', openingId, color: 'w', answered: 1, correct: 1, perfect: false, at,
   });
 }
 

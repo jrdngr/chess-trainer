@@ -1,22 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { speedBonus } from '../model/scoring';
 
 /**
  * A budget for one move.
  *
  * Only your own thinking is charged: the clock starts when `active` turns on
  * (your turn, nothing pending) and stops when it turns off. A new `turnKey`
- * is a new move and a fresh budget. Running out ends nothing — it only means
- * the speed bonus for this move is gone — so the clock parks at zero and
- * waits with you.
+ * is a new move and a fresh budget. Running out ends nothing and costs
+ * nothing — the clock is pressure, not a rate — so it parks at zero and waits
+ * with you. Taking your time still shows in the grade the move is reviewed at,
+ * which is what decides when the position is asked again.
  */
 export interface MoveClock {
   /** Seconds left, or null with no clock. */
   left: number | null;
   /** Seconds per move, or null with no clock. */
   budget: number | null;
-  /** What a correct move would earn for speed, right now. */
-  bonus: number;
   /** True once the budget is spent. */
   expired: boolean;
   /** Seconds spent on the current move so far. */
@@ -68,22 +66,15 @@ export function useMoveClock({
   );
 
   if (seconds === null) {
-    return { left: null, budget: null, bonus: 0, expired: false, elapsedNow };
+    return { left: null, budget: null, expired: false, elapsedNow };
   }
   const left = Math.max(0, seconds - elapsed);
-  return {
-    left,
-    budget: seconds,
-    bonus: speedBonus(elapsed, seconds),
-    expired: left <= 0,
-    elapsedNow,
-  };
+  return { left, budget: seconds, expired: left <= 0, elapsedNow };
 }
 
 /**
- * The clock and the bonus it is still worth, side by side in the app bar.
- * The bonus steps down as the clock runs, and the whole thing shakes and
- * greys out when it reaches nothing.
+ * The clock, in the app bar: a ring that empties as the budget goes, shaking
+ * and greying out when it reaches nothing.
  */
 export function ClockHud({ clock }: { clock: MoveClock }) {
   if (clock.left === null || clock.budget === null) return null;
@@ -93,7 +84,6 @@ export function ClockHud({ clock }: { clock: MoveClock }) {
     <span className={`clock-hud ${tone}`} key={clock.expired ? 'out' : 'in'}>
       <span className="ring" style={{ ['--share' as string]: share }} />
       <span className="left num">{Math.ceil(clock.left)}</span>
-      <span className="bonus num">+{clock.bonus}</span>
     </span>
   );
 }

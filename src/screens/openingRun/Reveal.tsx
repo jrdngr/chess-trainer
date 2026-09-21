@@ -31,6 +31,9 @@ import {
 } from '../../model/openingRun';
 import { addLine as addLineTo } from '../../model/repertoire';
 import { referenceIndex } from '../../model/referenceIndex';
+import type { RatingChange } from '../../model/autopilot';
+import { rankOf, UNRATED } from '../../model/scoring';
+import { deltaText, ratingText } from '../../components/ScoreBar';
 import { repertoireList, useStore } from '../../store/useStore';
 import { GRADE_TONES, Record } from './Record';
 import { selectionText } from '../../components/Selection';
@@ -49,8 +52,8 @@ export interface RevealProps {
   run: Run;
   /** Null when the line was played out in full. */
   death: Death | null;
-  /** Points this run banked. */
-  earned: number;
+  /** Every starred opening this run moved the rating of, shallowest first. */
+  moved: RatingChange[];
   /** Autopilot owns what happens next, so the run offers nothing of its own. */
   auto?: boolean;
   /** What the one tap wrote into the repertoire: the opening, and how many moves were new. */
@@ -75,7 +78,7 @@ export function Reveal({
   source,
   run,
   death,
-  earned,
+  moved,
   auto,
   kept,
   onKeep,
@@ -90,6 +93,8 @@ export function Reveal({
   const repertoireOrder = useStore((s) => s.repertoireOrder);
   const reps = useMemo(() => repertoireList({ repertoires, repertoireOrder }), [repertoires, repertoireOrder]);
   const survived = death === null;
+  /** The most specific opening the run moved: what the round was really about. */
+  const narrowest = moved.length ? moved[moved.length - 1] : null;
   const grade = gradeOf(run, death?.cause ?? null);
   const index = referenceIndex();
 
@@ -203,7 +208,11 @@ export function Reveal({
         onClose={onExit}
         actions={
           <span className="row gap-6">
-            <span className="chip good num wide">+{earned}</span>
+            {narrowest && (
+              <span className={`chip num wide ${narrowest.delta < 0 ? 'bad' : 'good'}`}>
+                {deltaText(narrowest.delta)}
+              </span>
+            )}
             <span className="chip num wide">{run.survived}</span>
           </span>
         }
@@ -225,6 +234,8 @@ export function Reveal({
         <div className="spacer sm" />
         <Strip items={strip} cursor={cursor} max={line.sans.length} onSeek={seek} />
         <div className="spacer" />
+
+        <Ratings moved={moved} />
 
         {death ? (
           <>
@@ -338,4 +349,32 @@ function finishedTitle(run: Run): string {
   if (status.gameOver) return 'Drawn';
   if (run.leftPrep) return 'Finished out of prep';
   return run.bookRun ? 'Book complete' : 'Line complete';
+}
+
+/**
+ * What the round did to your ratings, one line per starred opening it was
+ * played inside. Nothing at all when the run touched none of them — which is
+ * the usual case until something on the line is starred.
+ */
+function Ratings({ moved }: { moved: RatingChange[] }) {
+  if (moved.length === 0) return null;
+  return (
+    <div className="list ratings">
+      {moved.map((change) => {
+        const rank = rankOf(change.after);
+        const color = (rank.held ?? UNRATED).color;
+        return (
+          <div className="list-row" key={change.id}>
+            <span className="side" style={{ background: color }} />
+            <span className="grow" style={{ minWidth: 0 }}>
+              <div className="title truncate">{change.name}</div>
+              <div className="meta truncate">{rank.heldLabel}</div>
+            </span>
+            <span className={`val num ${change.delta < 0 ? 'bad' : 'good'}`}>{deltaText(change.delta)}</span>
+            <span className="val num muted">{ratingText(change.after)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }

@@ -817,10 +817,14 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   pointer-events: none;
 }
 .score-bar.shown { transform: translate(-50%, 0); opacity: 1; }
+.score-bar .who { font-size: 12px; font-weight: 700; color: var(--text-3); margin-bottom: 6px; }
 .score-bar .gain { color: var(--good); font-size: 15px; font-weight: 800; animation: gainPop 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+.score-bar .gain.down { color: var(--bad); }
 .score-bar .total { font-size: 15px; font-weight: 800; color: var(--text); }
 .score-bar.celebrate { animation: celebrate 0.9s ease-out; }
 .score-bar.celebrate .fill { width: 100% !important; animation: fillFlash 0.8s ease-out 2; }
+.score-bar.demoted.celebrate .fill { width: 0 !important; }
+.score-bar.demoted.celebrate .track { animation: fillFlash 0.8s ease-out 2; background: var(--bad-soft); }
 
 /* The milestone bar: the colour held on the left, the next on the right. */
 .milestone { display: flex; flex-direction: column; gap: 6px; width: 100%; }
@@ -864,11 +868,8 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   mask: radial-gradient(circle, transparent 5px, #000 5.5px);
 }
 .clock-hud .left { min-width: 16px; text-align: right; }
-.clock-hud .bonus { color: var(--good); }
 .clock-hud.late .ring { background: conic-gradient(var(--warn) calc(var(--share) * 360deg), var(--surface-3) 0); }
-.clock-hud.late .bonus { color: var(--warn); }
 .clock-hud.out { color: var(--text-3); animation: shake 0.45s ease-out; }
-.clock-hud.out .bonus { color: var(--bad); animation: gainPop 0.4s ease-out; }
 .clock-hud.out .ring { background: var(--bad-soft); }
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
@@ -1009,6 +1010,11 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 }
 .score-strip:active { background: var(--surface-2); transform: scale(0.99); }
 .score-strip .total { font-size: 16px; }
+.score-strip .who { font-size: 12px; font-weight: 700; color: var(--text-3); }
+.score-strip.empty { flex-direction: row; align-items: center; gap: 10px; color: var(--text-3); }
+.score-strip.empty .grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.score-strip.empty .ttl { font-size: 14px; font-weight: 700; color: var(--text); }
+.score-strip.empty .sub { font-size: 12px; color: var(--text-3); }
 
 /* ── the mode's name, arriving ─────────────────────────────────────────── */
 

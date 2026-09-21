@@ -7,7 +7,6 @@ import type { RepairPrefs } from '../../model/modes';
 import { formatGameCount, movePercent, lookup, totalGamesAt } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
 import { openingTree } from '../../model/openingTree';
-import { POINTS } from '../../model/scoring';
 import { lineInRegion, regionOf, repertoiresIn } from '../../model/selection';
 import { selectionText } from '../../components/Selection';
 import { buildRepairs, fixCandidates, isRepaired, lineFor, type RepairItem } from '../../model/repair';
@@ -32,7 +31,7 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
   const addLine = useStore((s) => s.addLine);
   const endRepair = useStore((s) => s.endRepair);
   const repaired = useStore((s) => s.repairedPosition);
-  const earn = useStore((s) => s.earn);
+  const recordMove = useStore((s) => s.recordMove);
   const endRound = useStore((s) => s.endRound);
   const logged = useRef(false);
   const settings = state.settings;
@@ -60,7 +59,7 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
   const [at, setAt] = useState(0);
   const [phase, setPhase] = useState<Phase>('ask');
   const [played, setPlayed] = useState<LegalMove | null>(null);
-  const [done, setDone] = useState({ relearned: 0, added: 0, wrong: 0, earned: 0 });
+  const [done, setDone] = useState({ relearned: 0, added: 0, wrong: 0 });
 
   const item = queue[at];
 
@@ -72,7 +71,6 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
       mode: 'repair',
       openingId: region.id,
       color: queue[0]?.color ?? 'w',
-      score: done.earned,
       answered: done.relearned + done.wrong,
       correct: done.relearned,
       perfect: done.wrong === 0 && done.relearned + done.added >= 3,
@@ -122,12 +120,17 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
     // real position, and getting it wrong is exactly what a lapse is.
     repaired(item.repertoireId, item.fen, move.san, item.expected[0] ?? '', right);
     endRepair({ relearned: right });
-    const points = right ? POINTS.repair.relearned : 0;
-    earn({ mode: 'repair', points, line: [...item.path, move.san], color: item.color, answered: true, correct: right });
+    // Recorded, never rated: Repair is where you go to fix what you got wrong,
+    // and the rating belongs to the modes that test you cold.
+    recordMove({
+      mode: 'repair',
+      line: right ? [...item.path, move.san] : item.path,
+      color: item.color,
+      correct: right,
+      rated: false,
+    });
     setDone((d) =>
-      right
-        ? { ...d, relearned: d.relearned + 1, earned: d.earned + points }
-        : { ...d, wrong: d.wrong + 1 },
+      right ? { ...d, relearned: d.relearned + 1 } : { ...d, wrong: d.wrong + 1 },
     );
     if (settings.hapticFeedback) haptic(right ? 12 : [18, 50, 18]);
   };
@@ -136,8 +139,7 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
     if (!item) return;
     addLine(item.repertoireId, lineFor(item, san), 'manual');
     endRepair({ added: true });
-    earn({ mode: 'repair', points: POINTS.repair.added, line: lineFor(item, san), color: item.color, answered: false, correct: false });
-    setDone((d) => ({ ...d, added: d.added + 1, earned: d.earned + POINTS.repair.added }));
+    setDone((d) => ({ ...d, added: d.added + 1 }));
     toast(`${san} prepared`);
     next();
   };
@@ -158,9 +160,6 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
               </span>
               <span className="pill">
                 <b>{done.added}</b> added
-              </span>
-              <span className="pill">
-                <b>+{done.earned}</b> points
               </span>
             </div>
           </div>
