@@ -150,3 +150,35 @@
 }
 .captured-gap { width: 10px; flex: none; }
 .captured .chip { font-size: 11.5px; padding: 3px 9px; }
+
+/*
+ * A verdict flashed over the board: the words under the board, lifted onto a
+ * pill in the middle of the position, which fades away on its own.
+ */
+.board-flash {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 15;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  animation: boardFlash 2s ease both;
+}
+.board-flash .pill {
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 12px 22px 12px 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  max-width: 88%;
+  text-align: center;
+}
+@keyframes boardFlash {
+  0% { opacity: 0; }
+  8%, 80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-flash { animation: none; }
+}

@@ -38,6 +38,12 @@ import { repertoireList, useStore } from '../../store/useStore';
 import { GRADE_TONES, Record } from './Record';
 import { selectionText } from '../../components/Selection';
 
+/** How long the verdict stays over the board when a round ends. */
+const FLASH_MS = 2000;
+
+/** Endings whose verdict has already flashed, so a return to the same one does not flash again. */
+const flashed = new WeakSet<Run>();
+
 /** How a run ended, when it did not finish. */
 export interface Death {
   cause: DeathCause;
@@ -190,6 +196,35 @@ export function Reveal({
     return out;
   }, [death, run.fen, atDeath]);
 
+  /** Why the round ended, in the words and colour of its grade. */
+  const verdict = (
+    <div className={`verdict ${GRADE_TONES[grade]}`} style={{ padding: 0 }}>
+      <span className="ico">
+        {!death ? (
+          <Icons.check size={18} />
+        ) : death.cause === 'offprep' ? (
+          <Icons.book size={16} />
+        ) : (
+          <Icons.cross size={18} />
+        )}
+      </span>
+      {headline ?? (death ? deathTitle(death) : finishedTitle(run))}
+    </div>
+  );
+
+  /**
+   * The verdict flashes over the board as the round ends, then leaves the
+   * line under the board to say it. Once per ending: coming back from playing
+   * on is the same ending, so it stays quiet.
+   */
+  const [flashing, setFlashing] = useState(() => !flashed.has(run));
+  useEffect(() => {
+    flashed.add(run);
+    if (!flashing) return;
+    const timer = window.setTimeout(() => setFlashing(false), FLASH_MS);
+    return () => window.clearTimeout(timer);
+  }, [run, flashing]);
+
   /** The game as played, ending on the move that finished the run. */
   const playedText = sansToMoveText(death?.played ? [...run.played, death.played] : run.played);
 
@@ -232,6 +267,13 @@ export function Reveal({
           theme={settings.boardTheme}
           dimmed={!!death && atDeath}
           captured
+          overlay={
+            flashing && (
+              <div className="board-flash" onPointerDown={() => setFlashing(false)}>
+                <div className="pill">{verdict}</div>
+              </div>
+            )
+          }
         />
 
         {grow && (
@@ -263,12 +305,7 @@ export function Reveal({
 
         {death ? (
           <>
-            <div className={`verdict ${GRADE_TONES[grade]}`} style={{ padding: 0 }}>
-              <span className="ico">
-                {death.cause === 'offprep' ? <Icons.book size={16} /> : <Icons.cross size={18} />}
-              </span>
-              {headline ?? deathTitle(death)}
-            </div>
+            {verdict}
             <div className="compare mt-8">
               <div className="good">
                 <div className="k">
@@ -287,12 +324,7 @@ export function Reveal({
             </div>
           </>
         ) : (
-          <div className={`verdict ${GRADE_TONES[grade]}`} style={{ padding: 0 }}>
-            <span className="ico">
-              <Icons.check size={18} />
-            </span>
-            {headline ?? finishedTitle(run)}
-          </div>
+          verdict
         )}
 
         {(kept || offer.added > 0) && <div className="spacer" />}

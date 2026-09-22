@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   coordsToSquare,
   kingSquare,
@@ -42,6 +42,8 @@ export interface BoardProps {
   dimmed?: boolean;
   /** Show what has been taken, and who is ahead, above the board. */
   captured?: boolean;
+  /** Drawn on top of the board, the same size as it, e.g. a verdict flashed over the position. */
+  overlay?: ReactNode;
   /**
    * Only these moves, in SAN, may be played. Everything else stops being
    * pickable — the pieces do not lift and no targets are drawn — which is what
@@ -103,6 +105,7 @@ export function Board({
   theme = 'slate',
   dimmed = false,
   captured = false,
+  overlay,
   allowed,
 }: BoardProps) {
   const [selected, setSelected] = useState<Square | null>(null);
@@ -393,6 +396,8 @@ export function Board({
             </div>
           </div>
         )}
+
+        {overlay}
       </div>
     </>
   );
