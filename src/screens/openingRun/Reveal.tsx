@@ -62,6 +62,11 @@ export interface RevealProps {
   kept: { name: string; added: number } | null;
   /** Keep the line: the one way a finished run adds to the repertoire. */
   onKeep: () => void;
+  /**
+   * The offer to grow the opening, on a clean end of prep that earns one:
+   * the round asked you nothing, or you finish every line in it cleanly.
+   */
+  grow: { text: string; onGrow: () => void } | null;
   onExit: () => void;
   /** Play on from where the round ended; null when the game is over and there is nothing to play. */
   onKeepPlaying: (() => void) | null;
@@ -91,6 +96,7 @@ export function Reveal({
   headline,
   kept,
   onKeep,
+  grow,
   onExit,
   onKeepPlaying,
   onNext,
@@ -227,6 +233,16 @@ export function Reveal({
           dimmed={!!death && atDeath}
           captured
         />
+
+        {grow && (
+          <div className="card grow-offer">
+            <span className="grow small">{grow.text}</span>
+            <button className="btn accent sm" onClick={grow.onGrow}>
+              <Icons.plus size={16} />
+              Grow it
+            </button>
+          </div>
+        )}
 
         <div className="next-row">
           <button className="btn block" disabled={!onKeepPlaying} onClick={onKeepPlaying ?? undefined}>

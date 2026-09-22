@@ -30,26 +30,26 @@ export function AutopilotScreen({ onExit, onGrow }: { onExit: () => void; onGrow
   const [pick, setPick] = useState<Recommendation | null>(() => recommendNow(useStore.getState(), [], []));
   /** Bumped per round so the Run mounts fresh. */
   const [round, setRound] = useState(1);
-  const [next, setNext] = useState<Recommendation | null>(null);
 
   /**
-   * A round is logged at its first ending, and the next is picked then. The
-   * reveal is worth reading, so starting it waits on a tap.
+   * A round is remembered at its first ending, for the brake and the spacing.
+   * The reveal is worth reading, so starting the next waits on a tap.
    */
   const roundOver = () => {
     if (!pick) return;
     const state = useStore.getState();
-    const played = [...recent, pick.focus];
-    const steers = [...steered, isSteered(pick, state.settings.selection)];
-    setRecent(played);
-    setSteered(steers);
-    setNext(recommendNow(state, played, steers));
+    setRecent((played) => [...played, pick.focus]);
+    setSteered((steers) => [...steers, isSteered(pick, state.settings.selection)]);
   };
 
-  /** With nothing left to pick, this lands on the way to Growth. */
+  /**
+   * The next round, picked when it starts rather than when the last one
+   * ended: a line kept at the reveal, or grown from its offer, is in the
+   * repertoire by then, and a line never run is what a Test asks for first.
+   * With nothing left to pick, this lands on the way to Growth.
+   */
   const advance = () => {
-    setPick(next);
-    setNext(null);
+    setPick(recommendNow(useStore.getState(), recent, steered));
     setRound((n) => n + 1);
   };
 

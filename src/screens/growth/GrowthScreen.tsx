@@ -18,9 +18,11 @@ import {
   recommended,
   resumeAdding,
   startGrowth,
+  startGrowthAt,
   steer,
   type GrowthRow,
   type GrowthRun,
+  type Hole,
 } from '../../model/growth';
 import { formatGameCount } from '../../model/reference';
 import type { RoundRecord } from '../../model/scoring';
@@ -32,12 +34,29 @@ import { useStore } from '../../store/useStore';
 import { PlayOn } from '../openingRun/PlayOn';
 import { Lobby } from './Lobby';
 
-export interface GrowthScreenProps {
-  onExit: () => void;
+/**
+ * Growth opened from the end of a Run or Autopilot round, by its offer to
+ * grow the opening: straight into a run, never the lobby, and the way out is
+ * back to the mode that sent you.
+ */
+export interface GrowthLaunch {
+  row: GrowthRow;
+  /** The hole the round ended on, when the first run starts standing on it. */
+  hole: Hole | null;
+  /** The opening grown, an opening tree node id: what New run looks in. */
+  region: string;
+  /** "Back to Autopilot" or "Back to Run". */
+  backLabel: string;
+  onBack: () => void;
 }
 
-export function GrowthScreen({ onExit }: GrowthScreenProps) {
-  const [row, setRow] = useState<GrowthRow | null>(null);
+export interface GrowthScreenProps {
+  onExit: () => void;
+  launch?: GrowthLaunch;
+}
+
+export function GrowthScreen({ onExit, launch }: GrowthScreenProps) {
+  const [row, setRow] = useState<GrowthRow | null>(launch?.row ?? null);
   /**
    * Counted up for every run started, and used as the run's key: another run
    * on the same row is a run of its own, not the last one carrying on.
@@ -50,18 +69,39 @@ export function GrowthScreen({ onExit }: GrowthScreenProps) {
   };
 
   if (!row) return <Lobby onStart={start} onExit={onExit} />;
-  return <Run key={started} row={row} onAgain={start} onExit={() => setRow(null)} onClose={onExit} />;
+  return (
+    <Run
+      key={started}
+      row={row}
+      // Only the first run of a launch starts where the round ended.
+      hole={launch && started === 0 ? launch.hole : null}
+      region={launch?.region}
+      back={launch ? { label: launch.backLabel, onBack: launch.onBack } : null}
+      onAgain={start}
+      onExit={launch ? launch.onBack : () => setRow(null)}
+      onClose={onExit}
+    />
+  );
 }
 
 type Phase = 'walking' | 'hole' | 'answered' | 'done' | 'lost';
 
 function Run({
   row,
+  hole,
+  region,
+  back,
   onAgain,
   onExit,
   onClose,
 }: {
   row: GrowthRow;
+  /** Start standing at this hole rather than walking to the row's. */
+  hole?: Hole | null;
+  /** The opening New run looks in, when not the selection. */
+  region?: string;
+  /** The way back to the mode Growth was opened from, in place of the lobby. */
+  back?: { label: string; onBack: () => void } | null;
   /** Start another run, on the row this one's work leaves most worth doing. */
   onAgain: (row: GrowthRow) => void;
   /** Back to the lobby. */
@@ -80,8 +120,8 @@ function Run({
 
   /** The tree as it was when the run began, so adding a move cannot re-steer it. */
   const [tree] = useState(() => rep);
-  const [run, setRun] = useState<GrowthRun>(() => startGrowth(tree, row));
-  const [phase, setPhase] = useState<Phase>('walking');
+  const [run, setRun] = useState<GrowthRun>(() => (hole ? startGrowthAt(tree, row, hole) : startGrowth(tree, row)));
+  const [phase, setPhase] = useState<Phase>(() => (hole ? 'hole' : 'walking'));
   const [wrong, setWrong] = useState<string | null>(null);
   /** Which plies of the line you added, so the strip can mark them. */
   const [added, setAdded] = useState<number[]>([]);
@@ -233,7 +273,7 @@ function Run({
         minShare: prefs.minShare,
         maxPly: prefs.maxPly,
         starred: settings.favoriteOpenings,
-        region: { tree: catalogue, node: regionOf(catalogue, settings.selection) },
+        region: { tree: catalogue, node: region ? nodeById(catalogue, region) : regionOf(catalogue, settings.selection) },
       }),
     );
     if (next) onAgain(next);
@@ -279,10 +319,10 @@ function Run({
   useEffect(() => {
     if (phase !== 'done' && phase !== 'lost') return;
     const catalogue = openingTree(index);
-    const region = nodeById(catalogue, settings.selection.opening);
+    const within = nodeById(catalogue, region ?? settings.selection.opening);
     pending.current = {
       mode: 'growth',
-      openingId: deepestNodeWithin(catalogue, region, run.path).id,
+      openingId: deepestNodeWithin(catalogue, within, run.path).id,
       color: run.color,
       answered: 0,
       correct: 0,
@@ -338,7 +378,7 @@ function Run({
     <>
       <AppBar
         title="Growth"
-        subtitle={selectionText(run.color, settings.selection.opening)}
+        subtitle={selectionText(run.color, region ?? settings.selection.opening)}
         onClose={onClose}
         actions={
           <span className="num muted small appbar-gap" style={{ textAlign: 'right' }}>
@@ -500,8 +540,8 @@ function Run({
               <Icons.play size={18} />
               Play from here
             </button>
-            <button className="btn plain block mt-8" onClick={onExit}>
-              Back to openings
+            <button className="btn plain block mt-8" onClick={back ? back.onBack : onExit}>
+              {back ? back.label : 'Back to openings'}
             </button>
           </>
         )}

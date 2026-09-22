@@ -566,6 +566,16 @@ export function startGrowth(rep: Repertoire, row: GrowthRow): GrowthRun {
   };
 }
 
+/**
+ * A run that begins standing at a hole rather than walking to one: the
+ * position a Run ended on, handed over by the reveal's offer to grow it. The
+ * moves to it were played in the Run, so there is nothing left to walk.
+ */
+export function startGrowthAt(rep: Repertoire, row: GrowthRow, hole: Hole): GrowthRun {
+  const there = { ...startGrowth(rep, row), path: hole.path, fen: hole.fen, nodeId: hole.nodeId };
+  return enterHole(there, hole);
+}
+
 export function isUsersTurn(run: GrowthRun): boolean {
   return fenTurn(run.fen) === run.color;
 }

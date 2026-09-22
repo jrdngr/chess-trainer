@@ -55,8 +55,10 @@ import { clockSeconds } from '../../model/openingRun';
 import { seenIn, type RatingMove } from '../../model/scoring';
 import { deepestNodeWithin } from '../../model/openingTree';
 import type { RatingChange, RoundPlan, RoundSummary } from '../../model/autopilot';
+import { growLaunch, isStubFinish, offerOpening, readyToGrow, yourLastMove, type GrowLaunch } from '../../model/growOffer';
+import { GrowthScreen } from '../growth/GrowthScreen';
 
-type Phase = 'setup' | 'playing' | 'gap' | 'dead' | 'survived' | 'playon';
+type Phase = 'setup' | 'playing' | 'gap' | 'dead' | 'survived' | 'playon' | 'growing';
 
 interface Game {
   source: LineSource;
@@ -76,6 +78,12 @@ interface Game {
  * the game itself.
  */
 type Onward = { kind: 'run'; run: Run } | { kind: 'game'; fen: string } | null;
+
+/** The end-of-round offer to grow the opening: what it says, and where growing starts. */
+interface GrowOffer {
+  text: string;
+  launch: GrowLaunch;
+}
 
 /** How a round ended, as the end-of-round screen is to show it. */
 interface Ending {
@@ -211,6 +219,13 @@ export function OpeningRunScreen({
   const logged = useRef(false);
   /** True once a move off your prep was logged as a miss, so the round counts it once. */
   const slipped = useRef(false);
+  /**
+   * True for a round that asked you nothing: it is not logged at all, at its
+   * first ending or any later one.
+   */
+  const uncounted = useRef(false);
+  /** The offer to grow the opening, on a clean end of prep that earns one. */
+  const [growOffer, setGrowOffer] = useState<GrowOffer | null>(null);
 
   const source = game?.source ?? null;
   const run = game?.run ?? null;
@@ -259,10 +274,26 @@ export function OpeningRunScreen({
    */
   const finish = (ended: Run, cause: DeathCause | null) => {
     settled.current = true;
+    if (!logged.current && cause === null && isStubFinish(ended)) uncounted.current = true;
+    const region = nodeById(tree, ended.openingId);
+    if (uncounted.current) {
+      // Nothing was asked, so nothing is logged: no round, no streak mark, no
+      // clean finish. Autopilot still hears of it, so its session moves on.
+      if (logged.current) return;
+      logged.current = true;
+      onRoundOver?.({
+        openingId: deepestNodeWithin(tree, region, ended.played).id,
+        color: ended.color,
+        moved: [],
+        answered: 0,
+        correct: 0,
+        perfect: false,
+      });
+      return;
+    }
     endRun(outcomeOf(ended, cause));
     if (logged.current) return;
     logged.current = true;
-    const region = nodeById(tree, ended.openingId);
     const summary: RoundSummary = {
       openingId: deepestNodeWithin(tree, region, ended.played).id,
       color: ended.color,
@@ -359,6 +390,36 @@ export function OpeningRunScreen({
     buzz(14);
     const done = finishPrep(at);
     conclude({ run: done, death: null, cause: null, onward: { kind: 'run', run: keepPlaying(done) } });
+    setGrowOffer(offerFor(done));
+  };
+
+  /**
+   * Whether a clean end of prep earns the offer to grow: the round asked you
+   * nothing, or every line in the opening has been finished clean enough
+   * times since it last changed. Read after the round is logged, so this
+   * round counts toward it. Null when neither holds, or there is nowhere left
+   * to grow.
+   */
+  const offerFor = (done: Run): GrowOffer | null => {
+    if (done.leftPrep || done.bookRun) return null;
+    const now = useStore.getState();
+    const rep = repertoireList(now).find((r) => r.color === done.color);
+    if (!rep) return null;
+    const entered = done.enteredIn ? nodeById(tree, done.enteredIn) : null;
+    const opening = offerOpening(tree, nodeById(tree, done.openingId), entered, done.played);
+    const stub = isStubFinish(done);
+    if (!stub && !readyToGrow(rep, tree, opening, now.score.rounds)) return null;
+    const launch = growLaunch(rep, index, tree, opening, done.played, {
+      minShare: now.settings.growth.minShare,
+      maxPly: now.settings.growth.maxPly,
+      starred: now.settings.favoriteOpenings,
+    });
+    if (!launch) return null;
+    const last = yourLastMove(done.played, done.color);
+    const text = stub
+      ? `${opening.name} has nothing past ${last ?? 'the first move'} yet.`
+      : `You finish every ${opening.name} line cleanly.`;
+    return { text, launch };
   };
 
   const referee = useReferee({
@@ -490,7 +551,9 @@ export function OpeningRunScreen({
     settled.current = false;
     logged.current = false;
     slipped.current = false;
+    uncounted.current = false;
     ratings.current = new Map();
+    setGrowOffer(null);
     setMoved([]);
     setKept(null);
     setDeath(null);
@@ -525,6 +588,7 @@ export function OpeningRunScreen({
     buzz(10);
     settled.current = false;
     referee.reset();
+    setGrowOffer(null);
     setKept(null);
     setDeath(null);
     setOnward(null);
@@ -551,6 +615,22 @@ export function OpeningRunScreen({
     );
   }
 
+  if (phase === 'growing' && growOffer) {
+    const { launch } = growOffer;
+    return (
+      <GrowthScreen
+        onExit={onExit}
+        launch={{
+          row: launch.row,
+          hole: launch.hole,
+          region: launch.opening.id,
+          backLabel: planned ? 'Back to Autopilot' : 'Back to Run',
+          onBack: next,
+        }}
+      />
+    );
+  }
+
   if (phase === 'dead' || phase === 'survived') {
     return (
       <Reveal
@@ -562,6 +642,7 @@ export function OpeningRunScreen({
         headline={headline}
         kept={kept}
         onKeep={keep}
+        grow={growOffer ? { text: growOffer.text, onGrow: () => setPhase('growing') } : null}
         onExit={onExit}
         onKeepPlaying={onward ? keepGoing : null}
         onNext={next}

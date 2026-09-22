@@ -909,6 +909,8 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 /* What to do after a round, right under the board: the same two buttons, always in the same place. */
 .next-row { display: flex; gap: 8px; margin-top: 12px; }
 .next-row .btn { flex: 1; min-width: 0; min-height: 52px; font-size: 16px; border-radius: 14px; }
+.grow-offer { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 12px 14px; background: var(--accent-soft); }
+.grow-offer .btn { flex: none; }
 
 /* ── charts ────────────────────────────────────────────────────────────── */
 .chart { position: relative; }
