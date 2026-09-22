@@ -1,23 +1,23 @@
 import { useState } from 'react';
 import { AppBar, Icons } from '../../components/ui';
 import { SelectionBar, selectionText } from '../../components/Selection';
-import { planFor, type RatingChange, type RoundSummary } from '../../model/autopilot';
+import { planFor } from '../../model/autopilot';
 import { isSteered, type Focus, type Recommendation } from '../../model/recommend';
 import { useStore } from '../../store/useStore';
 import { recommendNow } from '../../store/recommendation';
 import { OpeningRunScreen } from '../openingRun/OpeningRunScreen';
-import { deltaText } from '../../components/ScoreBar';
 
 /**
  * Autopilot.
  *
  * Every round is a Run of what you already have. The engine picks the
  * opening, the colour and what the opponent steers toward, and the Run
- * plays it. When a round ends, a bar over its reveal shows what it did to
- * the rating and offers the next one: no Home in between, no setup screens,
- * one tap per round. The settings are the engine's business and nothing on screen
- * names them. A session never ends on its own. Stop is the close button in
- * the app bar, and stopping opens Stats.
+ * plays it. When a round ends, its reveal offers the next one right under the
+ * board: no Home in between, no setup screens, one tap per round. The rating
+ * moves at the top of the screen as it is earned, so nothing sums it up again.
+ * The settings are the engine's business and nothing on screen names them. A
+ * session never ends on its own. Stop is the close button in the app bar,
+ * and stopping goes Home.
  *
  * Autopilot never adds to the repertoire. With nothing prepared inside the
  * selection there is nothing to drill, and it says so and points at Growth.
@@ -30,36 +30,40 @@ export function AutopilotScreen({ onExit, onGrow }: { onExit: () => void; onGrow
   const [pick, setPick] = useState<Recommendation | null>(() => recommendNow(useStore.getState(), [], []));
   /** Bumped per round so the Run mounts fresh. */
   const [round, setRound] = useState(1);
-  const [over, setOver] = useState<RoundSummary | null>(null);
   const [next, setNext] = useState<Recommendation | null>(null);
 
-  /** A round ends on its reveal, which is worth reading, so the next waits on a tap. */
-  const roundOver = (summary: RoundSummary) => {
+  /**
+   * A round is logged at its first ending, and the next is picked then. The
+   * reveal is worth reading, so starting it waits on a tap.
+   */
+  const roundOver = () => {
     if (!pick) return;
     const state = useStore.getState();
     const played = [...recent, pick.focus];
     const steers = [...steered, isSteered(pick, state.settings.selection)];
     setRecent(played);
     setSteered(steers);
-    setOver(summary);
     setNext(recommendNow(state, played, steers));
   };
 
+  /** With nothing left to pick, this lands on the way to Growth. */
   const advance = () => {
-    if (!next) return;
     setPick(next);
     setNext(null);
-    setOver(null);
     setRound((n) => n + 1);
   };
 
   if (!pick) return <NothingToDrill onExit={onExit} onGrow={onGrow} />;
 
   return (
-    <>
-      <OpeningRunScreen key={round} auto plan={planFor(pick)} onRoundOver={roundOver} onExit={onExit} />
-      {over && next && <NextBar moved={over.moved} perfect={over.perfect} onNext={advance} />}
-    </>
+    <OpeningRunScreen
+      key={round}
+      auto
+      plan={planFor(pick)}
+      onRoundOver={roundOver}
+      onNext={advance}
+      onExit={onExit}
+    />
   );
 }
 
@@ -84,28 +88,5 @@ function NothingToDrill({ onExit, onGrow }: { onExit: () => void; onGrow: () => 
         </button>
       </div>
     </>
-  );
-}
-
-/**
- * What the round did to your rating, and one button: the next round. The
- * opening shown is the most specific one the round moved, since that is what
- * the round was about. A round can move nothing — it answered no prepared
- * position, or none of the openings it went through is starred — and then the
- * bar says so rather than naming a number that did not change.
- */
-function NextBar({ moved, perfect, onNext }: { moved: RatingChange[]; perfect: boolean; onNext: () => void }) {
-  const narrowest = moved.length ? moved[moved.length - 1] : null;
-  return (
-    <div className={`next-bar${perfect ? ' perfect' : ''}${narrowest && narrowest.delta < 0 ? ' lost' : ''}`}>
-      <div className="earned">
-        <span className="pts num">{narrowest ? deltaText(narrowest.delta) : '—'}</span>
-        <span className="lbl truncate">{narrowest ? narrowest.name : 'No rating change'}</span>
-      </div>
-      <button className="go" onClick={onNext}>
-        <span className="what grow">Next Round</span>
-        <Icons.next size={20} />
-      </button>
-    </div>
   );
 }

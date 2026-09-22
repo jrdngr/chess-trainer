@@ -33,7 +33,7 @@ export interface PlayScreenProps {
 export function PlayScreen({ onExit }: PlayScreenProps) {
   const [prefs, setPrefs] = useState<PlayPrefs | null>(null);
   if (!prefs) return <Setup onStart={setPrefs} onExit={onExit} />;
-  return <Game prefs={prefs} onExit={() => setPrefs(null)} />;
+  return <Game prefs={prefs} onExit={() => setPrefs(null)} onClose={onExit} />;
 }
 
 /** What the repertoire prepares at a position, by key, for the off-book warning. */
@@ -55,7 +55,8 @@ function prepIndex(rep: Repertoire | null): Map<string, string[]> {
   return out;
 }
 
-function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
+/** `onExit` is back to the setup for a new game; `onClose` is out of Play altogether. */
+function Game({ prefs, onExit, onClose }: { prefs: PlayPrefs; onExit: () => void; onClose: () => void }) {
   const state = useStore();
   const settings = state.settings;
   const addLine = useStore((s) => s.addLine);
@@ -267,7 +268,7 @@ function Game({ prefs, onExit }: { prefs: PlayPrefs; onExit: () => void }) {
       <AppBar
         title="Play"
         subtitle={`${level.name} · ${selectionText(color, selection.opening)}`}
-        onClose={onExit}
+        onClose={onClose}
         actions={
           <span className="num muted small appbar-gap" style={{ textAlign: 'right' }}>
             {fullmoveNumber(fen)}

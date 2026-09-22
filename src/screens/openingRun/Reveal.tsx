@@ -54,25 +54,33 @@ export interface RevealProps {
   death: Death | null;
   /** Every starred opening this run moved the rating of, shallowest first. */
   moved: RatingChange[];
-  /** Autopilot owns what happens next, so the run offers nothing of its own. */
+  /** Autopilot owns the options and the record, so the run shows neither. */
   auto?: boolean;
+  /** Said in place of the usual verdict. */
+  headline?: string | null;
   /** What the one tap wrote into the repertoire: the opening, and how many moves were new. */
   kept: { name: string; added: number } | null;
   /** Keep the line: the one way a finished run adds to the repertoire. */
   onKeep: () => void;
   onExit: () => void;
-  onNewRun: () => void;
+  /** Play on from where the round ended; null when the game is over and there is nothing to play. */
+  onKeepPlaying: (() => void) | null;
+  onNext: () => void;
   onChangeOptions: () => void;
-  /** Carry the shown position on against the engine. */
-  onPlayOn: (fen: string) => void;
 }
 
 /**
- * The post-mortem. The board becomes a replay of the whole line, parked on the
- * position that ended the run, and the line is named — which is the reward for
- * the round ending, and the one thing that must not be on screen while the run
- * is live. It is also where the line is offered to the repertoire: playing
- * through a line writes nothing, and keeping it is one tap here.
+ * The end of a round, however it ended, and the only screen between one round
+ * and the next.
+ *
+ * The board becomes a replay of the whole line, parked on the position that
+ * ended the run — on a miss, the position you were asked about, your move in
+ * red and the prepared one in green — and the line is named, which is the
+ * reward for the round ending and the one thing that must not be on screen
+ * while the run is live. What to do next sits right under the board, always
+ * the same two buttons in the same place: Keep playing, and Next run. It is
+ * also where the line is offered to the repertoire: playing through a line
+ * writes nothing, and keeping it is one tap here.
  */
 export function Reveal({
   source,
@@ -80,12 +88,13 @@ export function Reveal({
   death,
   moved,
   auto,
+  headline,
   kept,
   onKeep,
   onExit,
-  onNewRun,
+  onKeepPlaying,
+  onNext,
   onChangeOptions,
-  onPlayOn,
 }: RevealProps) {
   const settings = useStore((s) => s.settings);
   const record = useStore((s) => s.openingRun);
@@ -188,18 +197,6 @@ export function Reveal({
     }
   };
 
-  /** Shared by both endings, which differ in everything but this. */
-  const actions = (
-    <div className="row gap-8">
-      {!auto && (
-        <button className="btn primary sm" onClick={onNewRun}>
-          New run
-          <Icons.next size={16} />
-        </button>
-      )}
-    </div>
-  );
-
   return (
     <>
       <AppBar
@@ -227,9 +224,20 @@ export function Reveal({
           highlights={highlights}
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
-          dimmed={atDeath}
+          dimmed={!!death && atDeath}
           captured
         />
+
+        <div className="next-row">
+          <button className="btn block" disabled={!onKeepPlaying} onClick={onKeepPlaying ?? undefined}>
+            <Icons.play size={18} />
+            Keep playing
+          </button>
+          <button className="btn primary block" onClick={onNext}>
+            Next run
+            <Icons.next size={18} />
+          </button>
+        </div>
 
         <div className="spacer sm" />
         <Strip items={strip} cursor={cursor} max={line.sans.length} onSeek={seek} />
@@ -239,19 +247,16 @@ export function Reveal({
 
         {death ? (
           <>
-            <div className="row between">
-              <div className={`verdict ${GRADE_TONES[grade]}`} style={{ padding: 0 }}>
-                <span className="ico">
-                  {death.cause === 'offprep' ? <Icons.book size={16} /> : <Icons.cross size={18} />}
-                </span>
-                {deathTitle(death)}
-              </div>
-              {actions}
+            <div className={`verdict ${GRADE_TONES[grade]}`} style={{ padding: 0 }}>
+              <span className="ico">
+                {death.cause === 'offprep' ? <Icons.book size={16} /> : <Icons.cross size={18} />}
+              </span>
+              {headline ?? deathTitle(death)}
             </div>
             <div className="compare mt-8">
               <div className="good">
                 <div className="k">
-                  {death.cause === 'blunder' ? 'Cost' : 'Expected'}
+                  {death.cause === 'blunder' ? 'Cost' : 'Your prep'}
                 </div>
                 <div className="v">
                   {death.cause === 'blunder'
@@ -266,18 +271,15 @@ export function Reveal({
             </div>
           </>
         ) : (
-          <div className="row between">
-            <div className={`verdict ${GRADE_TONES[grade]}`} style={{ padding: 0 }}>
-              <span className="ico">
-                <Icons.check size={18} />
-              </span>
-              {finishedTitle(run)}
-            </div>
-            {actions}
+          <div className={`verdict ${GRADE_TONES[grade]}`} style={{ padding: 0 }}>
+            <span className="ico">
+              <Icons.check size={18} />
+            </span>
+            {headline ?? finishedTitle(run)}
           </div>
         )}
 
-        <div className="spacer" />
+        {(kept || offer.added > 0) && <div className="spacer" />}
         <div className="actions">
           {kept ? (
             <div className="card small muted center">
@@ -291,12 +293,6 @@ export function Reveal({
               Keep this line · {offer.added} new move{offer.added === 1 ? '' : 's'}
             </button>
           ) : null}
-          {!auto && (
-            <button className="btn block" onClick={() => onPlayOn(shownFen)}>
-              <Icons.play size={18} />
-              Play from here
-            </button>
-          )}
         </div>
 
         <Section title="The line" />
@@ -332,14 +328,13 @@ export function Reveal({
             </button>
           </>
         )}
-        {auto && <div style={{ height: 96 }} />}
       </div>
     </>
   );
 }
 
 function deathTitle(death: Death): string {
-  return death.cause === 'offprep' ? 'Stopped out of prep' : 'Blunder';
+  return death.cause === 'offprep' ? 'Off your prep, but sound' : 'Blunder';
 }
 
 /** What a run that was not lost came to: the prep played out, or the game itself. */
@@ -348,7 +343,7 @@ function finishedTitle(run: Run): string {
   if (status.checkmate) return fenTurn(run.fen) === run.color ? 'Checkmate, you lost' : 'Checkmate, you won';
   if (status.gameOver) return 'Drawn';
   if (run.leftPrep) return 'Finished out of prep';
-  return run.bookRun ? 'Book complete' : 'Line complete';
+  return run.bookRun ? 'End of the book' : 'End of your prep';
 }
 
 /**

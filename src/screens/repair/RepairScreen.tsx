@@ -21,12 +21,13 @@ export interface RepairScreenProps {
 export function RepairScreen({ onImport, onExit }: RepairScreenProps) {
   const [prefs, setPrefs] = useState<RepairPrefs | null>(null);
   if (!prefs) return <Setup onStart={setPrefs} onImport={onImport} onExit={onExit} />;
-  return <Working prefs={prefs} onExit={() => setPrefs(null)} />;
+  return <Working prefs={prefs} onExit={() => setPrefs(null)} onClose={onExit} />;
 }
 
 type Phase = 'ask' | 'right' | 'wrong' | 'choose';
 
-function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) {
+/** `onExit` is back to the options; `onClose` is out of Repair altogether. */
+function Working({ prefs, onExit, onClose }: { prefs: RepairPrefs; onExit: () => void; onClose: () => void }) {
   const state = useStore();
   const addLine = useStore((s) => s.addLine);
   const endRepair = useStore((s) => s.endRepair);
@@ -83,6 +84,10 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
   const leave = () => {
     log();
     onExit();
+  };
+  const close = () => {
+    log();
+    onClose();
   };
 
   const book = useMemo(
@@ -147,7 +152,7 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
   if (!item) {
     return (
       <>
-        <AppBar title="Repair" onClose={leave} />
+        <AppBar title="Repair" onClose={close} />
         <div className="screen no-nav">
           <div className="hero" style={{ marginTop: 8 }}>
             <div className="big">{done.relearned + done.added}</div>
@@ -179,7 +184,7 @@ function Working({ prefs, onExit }: { prefs: RepairPrefs; onExit: () => void }) 
       <AppBar
         title="Repair"
         subtitle={selectionText(item.color, region.id)}
-        onClose={leave}
+        onClose={close}
         actions={
           <span className="num muted small appbar-gap" style={{ textAlign: 'right' }}>
             {at + 1}/{queue.length}

@@ -99,7 +99,6 @@ export function DrillSession({
 
   const maxNew = options.newPerSession;
   const weakFirst = options.weakFirst;
-  const startedAt = useRef(Date.now());
   const shuffler = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
   const [queue, setQueue] = useState<TrainingItem[]>(() =>
     order(
@@ -122,7 +121,6 @@ export function DrillSession({
   const [explore, setExplore] = useState(false);
   const [why, setWhy] = useState(false);
   const [stats, setStats] = useState({ answered: 0, correct: 0 });
-  const [stopped, setStopped] = useState(false);
   /**
    * The last correct answer, graded off the clock and already on the schedule.
    * The grade buttons stay on screen for the next position and re-grade it,
@@ -133,7 +131,6 @@ export function DrillSession({
   const logged = useRef(false);
 
   const item = queue[index];
-  const done = stopped;
 
   const clock = useMoveClock({
     seconds: clockSeconds(options.clock),
@@ -164,7 +161,7 @@ export function DrillSession({
    * the stalest positions, so the session only ends when you end it.
    */
   useEffect(() => {
-    if (stopped || !items.length) return;
+    if (!items.length) return;
     if (queue.length - index > REFILL_AT) return;
     setQueue((current) => {
       const ahead = new Set(current.slice(index).map((i) => i.cardId));
@@ -190,7 +187,7 @@ export function DrillSession({
       const batch = order([...scheduled, ...filler], cards, weakFirst);
       return batch.length ? [...current, ...batch] : current;
     });
-  }, [stopped, items, cards, mode, maxNew, weakFirst, index, queue.length]);
+  }, [items, cards, mode, maxNew, weakFirst, index, queue.length]);
 
   useEffect(() => {
     if (item) ensureCard(item);
@@ -299,13 +296,10 @@ export function DrillSession({
     });
   };
 
-  /** End the session. Answering nothing at all just leaves. */
+  /** End the session: log what was answered, if anything, and leave. */
   const stop = () => {
-    if (stats.answered === 0) onExit();
-    else {
-      log();
-      setStopped(true);
-    }
+    log();
+    onExit();
   };
 
   /** Change the grade of the last correct answer. Guessed also brings it back soon. */
@@ -344,65 +338,6 @@ export function DrillSession({
     if (phase === 'wrong' && revealLine && expectedMove) return expectedMove.after;
     return played.after;
   }, [phase, played, revealLine, expectedMove, item]);
-
-  if (done) {
-    const elapsed = Math.round((Date.now() - startedAt.current) / 1000);
-    const accuracy = stats.answered ? Math.round((stats.correct / stats.answered) * 100) : 0;
-    const r = 60;
-    const c = 2 * Math.PI * r;
-    return (
-      <>
-        <AppBar title="Session over" onClose={onExit} />
-        <div className="screen no-nav">
-          <div className="done-ring">
-            <svg width="132" height="132" viewBox="0 0 132 132">
-              <circle cx="66" cy="66" r={r} fill="none" stroke="var(--surface-2)" strokeWidth="8" />
-              <circle
-                cx="66"
-                cy="66"
-                r={r}
-                fill="none"
-                stroke={accuracy >= 80 ? 'var(--good)' : 'var(--accent)'}
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeDasharray={c}
-                strokeDashoffset={c * (1 - accuracy / 100)}
-              />
-            </svg>
-            <div className="pct">{accuracy}%</div>
-          </div>
-          <div className="center muted" style={{ marginTop: 14 }}>
-            {stats.correct} of {stats.answered} correct
-          </div>
-          <div className="stat-grid" style={{ marginTop: 24 }}>
-            <div className="stat">
-              <div className="n">{stats.answered}</div>
-              <div className="l">Positions</div>
-            </div>
-            <div className="stat">
-              <div className="n">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}</div>
-              <div className="l">Time</div>
-            </div>
-            <div className="stat">
-              <div className="n">{stats.answered ? Math.round((elapsed / stats.answered) * 10) / 10 : 0}s</div>
-              <div className="l">Per move</div>
-            </div>
-          </div>
-          <div className="spacer" />
-          <button className="btn primary block xl" onClick={onExit}>
-            Done
-          </button>
-          <button
-            className="btn plain block"
-            style={{ marginTop: 8 }}
-            onClick={() => setStopped(false)}
-          >
-            Keep going
-          </button>
-        </div>
-      </>
-    );
-  }
 
   if (!item) return null;
 

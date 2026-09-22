@@ -91,14 +91,16 @@ anything inside is fair.
 ## Autopilot
 
 Autopilot plays one round after another, and every round is a Run. When it
-ends, a bar over its reveal shows what it earned and offers the next round,
-and one tap starts it — the reveal is worth reading. A session never ends on
-its own. Stop is the close button in the app bar, and stopping opens Stats.
+ends, its reveal has **Next run** right under the board, and one tap starts
+the next round — the reveal is worth reading, so nothing starts on its own.
+The rating moves at the top of the screen as it is earned, so nothing sums a
+round up again. A session never ends on its own. Stop is the close button in
+the app bar, and stopping goes Home, as leaving any mode does.
 
 Under Autopilot a Run is always on a ten-second clock, with no hints and
 nothing added. What changes from round to round is the opening, the colour,
 where the round starts, and one of Run's own settings: what the opponent
-steers toward. The player is told none of it; the bar says "Next Round" and
+steers toward. The player is told none of it; the button says "Next run" and
 nothing else.
 
 Most rounds start from move one and follow the player. The opening the
@@ -219,11 +221,10 @@ schedule and a run does not ask again what it has just shown you know.
 **Off your prep, the engine judges.** A move your prep does not have —
 theory or not — is handed to the engine, which scores the position before
 and after (`judgeByEval`, with `BLUNDER_LIMIT` of 80 centipawns). A blunder
-ends the run. A sound move is a *checkpoint*, below the board: the verdict,
-the move your prep had beside it, and two buttons — keep playing, or stop
-here. Where your prep had a move, the miss is logged for Repair either way.
-Stopping is the reveal; keeping playing hands the run over to the engine for
-good.
+ends the run. A sound move is a *checkpoint*: the round stops there, on the
+reveal, with your move beside the one your prep had. Where your prep had a
+move, the miss is logged for Repair either way. **Keep playing** plays your
+move and hands the run over to the engine for good.
 
 **Past the hand-over** the engine is the referee and the game is a game: the
 opponent plays the book by popularity while it has a move, because you are
@@ -235,8 +236,8 @@ stops; the engine's score sits in the app bar instead.
 
 **Where the prep ends** — your move, nothing prepared, the book still going —
 is a checkpoint too. Reaching it completes the run and pays the finish bonus,
-and the choice is the same: stop here and read the reveal, or keep playing
-under the engine. Keeping playing is not leaving the prep, so a finish stays
+and the choice is the same: the reveal, with keep playing under the engine
+beside next run. Keeping playing is not leaving the prep, so a finish stays
 green. Where nothing of yours passes through the region at all, the book is
 the referee from the start and its end is the checkpoint.
 
@@ -250,9 +251,16 @@ into the repertoire and the run carries on, up to the run's budget of new
 moves. A chosen move earns nothing: the score is moves you found. This is
 the one thing a run writes while it is played, and it is off by default.
 
-The reveal: the line named, the board a replay of the whole line parked on
-the position that ended it, the mistake in red beside the prepared move in
-green. Nothing has been written. One button, *Keep this line*, says how many
+The reveal is the one screen a round ends on, however it ends. The round is
+logged as it opens, once: keep playing and end again, and only its grade
+changes. Right under the board, always in the same place, are **Keep
+playing** and **Next run**. Keep playing carries the run on under the engine
+from a checkpoint, starts a free game against the engine from the position a
+blunder left, and is greyed out once the game is over. Below them: the line
+named, the board a replay of the whole line parked on the position that
+ended it, and on a miss, the position you were asked about, dimmed, with your
+move in red beside the prepared move in green. Nothing has been written. One
+button, *Keep this line*, says how many
 moves it would add and adds them: every move the referee passed, and past
 the hand-over only as far as the moves are still theory — a sound novelty is
 a good move, not prep. A run that has nothing new to offer says so instead.

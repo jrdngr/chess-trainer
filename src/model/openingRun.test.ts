@@ -361,6 +361,17 @@ describe('the record', () => {
     expect(record.grades).toEqual({ green: 0, yellow: 0, red: 0, purple: 1 });
   });
 
+  it('counts a round stopped off prep once when it is played on to a blunder', () => {
+    // The end-of-round screen logs the stop, then Keep playing carries on the same run.
+    const { run } = start([rep], 'w');
+    const asked = { ...at(run, ['d4', 'd5']), survived: 1 };
+    let record = recordRun(EMPTY_RECORD, outcomeOf({ ...asked, leftPrep: true }, 'offprep'), 1000);
+    expect(record.grades).toEqual({ green: 0, yellow: 0, red: 0, purple: 1 });
+    record = recordRun(record, outcomeOf(leavePrep(asked, 'Nf3'), 'blunder'), 2000);
+    expect(record).toMatchObject({ runs: 1, survivals: 0 });
+    expect(record.grades).toEqual({ green: 0, yellow: 0, red: 1, purple: 0 });
+  });
+
   it('reads a record missing fields', () => {
     const fixed = normalizeRecord({ runs: 2, best: 5 });
     expect(fixed.last).toBeUndefined();

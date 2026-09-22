@@ -36,7 +36,7 @@ export function DrillScreen({ onExit }: DrillScreenProps) {
       title="Drill"
       prefs={running}
       openingId={region.id}
-      onExit={() => setRunning(null)}
+      onExit={onExit}
     />
   );
 }

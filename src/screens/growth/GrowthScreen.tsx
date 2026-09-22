@@ -50,7 +50,7 @@ export function GrowthScreen({ onExit }: GrowthScreenProps) {
   };
 
   if (!row) return <Lobby onStart={start} onExit={onExit} />;
-  return <Run key={started} row={row} onAgain={start} onExit={() => setRow(null)} />;
+  return <Run key={started} row={row} onAgain={start} onExit={() => setRow(null)} onClose={onExit} />;
 }
 
 type Phase = 'walking' | 'hole' | 'answered' | 'done' | 'lost';
@@ -59,12 +59,15 @@ function Run({
   row,
   onAgain,
   onExit,
+  onClose,
 }: {
   row: GrowthRow;
   /** Start another run, on the row this one's work leaves most worth doing. */
   onAgain: (row: GrowthRow) => void;
   /** Back to the lobby. */
   onExit: () => void;
+  /** The close button: out of Growth altogether. */
+  onClose: () => void;
 }) {
   const state = useStore();
   const settings = state.settings;
@@ -321,7 +324,7 @@ function Run({
   if (!rep) {
     return (
       <>
-        <AppBar title="Growth" onClose={onExit} />
+        <AppBar title="Growth" onClose={onClose} />
         <div className="screen no-nav">
           <div className="empty">
             <div className="t">Those lines are gone</div>
@@ -336,7 +339,7 @@ function Run({
       <AppBar
         title="Growth"
         subtitle={selectionText(run.color, settings.selection.opening)}
-        onClose={onExit}
+        onClose={onClose}
         actions={
           <span className="num muted small appbar-gap" style={{ textAlign: 'right' }}>
             {Object.keys(rep.nodes).length}

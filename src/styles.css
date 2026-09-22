@@ -742,17 +742,6 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.done-ring {
-  width: 132px;
-  height: 132px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  margin: 12px auto 0;
-  position: relative;
-}
-.done-ring .pct { font-size: 36px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
-.done-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
 
 .strip.wrapped { flex-wrap: wrap; overflow: visible; min-height: 0; }
 
@@ -917,53 +906,9 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .autopilot > svg { flex: none; color: var(--text-3); }
 .autopilot .streak { flex: none; }
 
-.next-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  justify-content: center;
-  align-items: stretch;
-  gap: 8px;
-  padding: 10px 12px calc(var(--safe-bottom) + 10px);
-  background: #000;
-  z-index: 60;
-  animation: barUp 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.next-bar .earned {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 0 14px;
-  border-radius: 16px;
-  background: var(--text);
-  color: var(--ink);
-  min-width: 78px;
-}
-.next-bar .pts { font-size: 20px; font-weight: 800; color: #15803d; letter-spacing: -0.02em; }
-.next-bar .lbl { font-size: 10.5px; color: rgba(11, 11, 14, 0.55); font-weight: 600; }
-.next-bar.perfect .earned { background: var(--good); }
-.next-bar.perfect .pts { color: #052e16; }
-.next-bar.perfect .lbl { color: rgba(5, 46, 22, 0.7); }
-.next-bar .go {
-  flex: 1;
-  min-width: 0;
-  max-width: 480px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 16px;
-  background: var(--text);
-  color: var(--ink);
-  text-align: left;
-  transition: transform 0.08s;
-}
-.next-bar .go:active { transform: scale(0.98); }
-.next-bar .go .what { display: block; font-size: 17px; font-weight: 800; }
-@keyframes barUp { from { transform: translateY(100%); } }
+/* What to do after a round, right under the board: the same two buttons, always in the same place. */
+.next-row { display: flex; gap: 8px; margin-top: 12px; }
+.next-row .btn { flex: 1; min-width: 0; min-height: 52px; font-size: 16px; border-radius: 14px; }
 
 /* ── charts ────────────────────────────────────────────────────────────── */
 .chart { position: relative; }

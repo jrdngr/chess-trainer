@@ -64,6 +64,12 @@ export default function App() {
     setSession({ items, mode, title });
   };
 
+  /** Leaving a mode, from anywhere inside it, lands on Home. */
+  const leaveMode = () => {
+    setMode(null);
+    setTab('home');
+  };
+
   const dueCount = countDue(Object.values(cards)).due;
   const onboarding = useStore(needsOnboarding);
 
@@ -77,32 +83,23 @@ export default function App() {
     // any of the tabs until this is answered.
     <OnboardingScreen />
   ) : mode?.id === 'autopilot' ? (
-    <AutopilotScreen
-      // Leaving Autopilot is the only way a session ends, and it lands on
-      // Stats: what the play added up to is the thing to look at next.
-      onExit={() => {
-        setMode(null);
-        setStatsFor('');
-        setTab('stats');
-      }}
-      onGrow={() => setMode({ id: 'growth' })}
-    />
+    <AutopilotScreen onExit={leaveMode} onGrow={() => setMode({ id: 'growth' })} />
   ) : mode?.id === 'drill' ? (
-    <DrillScreen onExit={() => setMode(null)} />
+    <DrillScreen onExit={leaveMode} />
   ) : mode?.id === 'openingRun' ? (
-    <OpeningRunScreen onExit={() => setMode(null)} />
+    <OpeningRunScreen onExit={leaveMode} />
   ) : mode?.id === 'repair' ? (
     <RepairScreen
       onImport={() => {
         setMode(null);
         setImporting(true);
       }}
-      onExit={() => setMode(null)}
+      onExit={leaveMode}
     />
   ) : mode?.id === 'growth' ? (
-    <GrowthScreen onExit={() => setMode(null)} />
+    <GrowthScreen onExit={leaveMode} />
   ) : mode?.id === 'play' ? (
-    <PlayScreen onExit={() => setMode(null)} />
+    <PlayScreen onExit={leaveMode} />
   ) : session ? (
     <DrillSession
       items={session.items}
