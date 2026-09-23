@@ -79,6 +79,8 @@ export interface RevealProps {
    * suggest anything.
    */
   growLine: (() => void) | null;
+  /** In the button's place, when the line ended because the book did. */
+  bookEnded?: boolean;
   onExit: () => void;
   /** Play on from where the round ended; null when the game is over and there is nothing to play. */
   onKeepPlaying: (() => void) | null;
@@ -110,6 +112,7 @@ export function Reveal({
   onKeep,
   grow,
   growLine,
+  bookEnded,
   onExit,
   onKeepPlaying,
   onNext,
@@ -390,6 +393,7 @@ export function Reveal({
             Grow this line
           </button>
         )}
+        {!growLine && bookEnded && <div className="card small muted center mt-8">End of book line</div>}
       </div>
     </>
   );

@@ -39,7 +39,7 @@ import {
 import { formatGameCount, specificNameForColor } from '../../model/reference';
 import { nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
-import { evidenceFor, movesToDraw } from '../../model/growth';
+import { evidenceFor, movesToDraw, optionsAt } from '../../model/growth';
 import { gradeForTime } from '../../model/srs';
 import { selectionText } from '../../components/Selection';
 import { mulberry32 } from '../../model/session';
@@ -247,6 +247,12 @@ export function OpeningRunScreen({
   const uncounted = useRef(false);
   /** The offer to grow the opening, on a clean end of prep that earns one. */
   const [growOffer, setGrowOffer] = useState<GrowOffer | null>(null);
+  /**
+   * A clean end of prep where the book has nothing more to play, so there is
+   * nothing for Growth to offer: said where "Grow this line" would be, rather
+   * than leaving the button to vanish without a reason.
+   */
+  const [bookEnded, setBookEnded] = useState(false);
 
   const source = game?.source ?? null;
   const run = game?.run ?? null;
@@ -411,7 +417,9 @@ export function OpeningRunScreen({
     buzz(14);
     const done = finishPrep(at);
     conclude({ run: done, death: null, cause: null, onward: { kind: 'run', run: keepPlaying(done) } });
-    setGrowOffer(offerFor(done));
+    const offer = offerFor(done);
+    setGrowOffer(offer);
+    setBookEnded(!offer && !done.leftPrep && !done.bookRun && optionsAt(index, done.fen, 1).length === 0);
   };
 
   /**
@@ -586,6 +594,7 @@ export function OpeningRunScreen({
     uncounted.current = false;
     ratings.current = new Map();
     setGrowOffer(null);
+    setBookEnded(false);
     setMoved([]);
     setKept(null);
     setDeath(null);
@@ -621,6 +630,7 @@ export function OpeningRunScreen({
     settled.current = false;
     referee.reset();
     setGrowOffer(null);
+    setBookEnded(false);
     setKept(null);
     setDeath(null);
     setOnward(null);
@@ -677,6 +687,7 @@ export function OpeningRunScreen({
         onKeep={keep}
         grow={growOffer?.kind === 'opening' ? { text: growOffer.text, onGrow: () => setPhase('growing') } : null}
         growLine={growOffer?.kind === 'line' ? () => setPhase('growing') : null}
+        bookEnded={bookEnded}
         onExit={onExit}
         onKeepPlaying={onward ? keepGoing : null}
         onNext={next}
