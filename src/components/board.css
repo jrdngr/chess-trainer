@@ -166,7 +166,7 @@
   background: rgba(0, 0, 0, 0.35);
   animation: boardFlash 2s ease both;
 }
-.board-flash .pill {
+.board-flash .flash-pill {
   background: var(--surface);
   border-radius: 999px;
   padding: 12px 22px 12px 14px;

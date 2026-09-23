@@ -270,7 +270,7 @@ export function Reveal({
           overlay={
             flashing && (
               <div className="board-flash" onPointerDown={() => setFlashing(false)}>
-                <div className="pill">{verdict}</div>
+                <div className="flash-pill">{verdict}</div>
               </div>
             )
           }
