@@ -27,7 +27,8 @@ import {
 import { formatGameCount } from '../../model/reference';
 import type { RoundRecord } from '../../model/scoring';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
-import { regionOf } from '../../model/selection';
+import { atPracticeCap, offerOpening, practiceOwed, practiceText } from '../../model/growOffer';
+import { regionOf, type Selection } from '../../model/selection';
 import { referenceIndex } from '../../model/referenceIndex';
 import { selectionText } from '../../components/Selection';
 import { useStore } from '../../store/useStore';
@@ -48,14 +49,25 @@ export interface GrowthLaunch {
   /** "Back to Autopilot" or "Back to Run". */
   backLabel: string;
   onBack: () => void;
+  /**
+   * When the reveal points back: after every batch, for a line grown from the
+   * button at the bottom of the round, or once the opening owes its cap of
+   * practice, for an opening grown from the offer.
+   */
+  pointBack: 'batch' | 'cap';
 }
 
 export interface GrowthScreenProps {
   onExit: () => void;
   launch?: GrowthLaunch;
+  /**
+   * Autopilot held to one opening, for Growth opened from Home: there is no
+   * session to go back to, so the card starts one on what was just grown.
+   */
+  onPractice?: (scope: Selection) => void;
 }
 
-export function GrowthScreen({ onExit, launch }: GrowthScreenProps) {
+export function GrowthScreen({ onExit, launch, onPractice }: GrowthScreenProps) {
   const [row, setRow] = useState<GrowthRow | null>(launch?.row ?? null);
   /**
    * Counted up for every run started, and used as the run's key: another run
@@ -77,6 +89,8 @@ export function GrowthScreen({ onExit, launch }: GrowthScreenProps) {
       hole={launch && started === 0 ? launch.hole : null}
       region={launch?.region}
       back={launch ? { label: launch.backLabel, onBack: launch.onBack } : null}
+      pointBack={launch?.pointBack ?? 'cap'}
+      onPractice={launch ? undefined : onPractice}
       onAgain={start}
       onExit={launch ? launch.onBack : () => setRow(null)}
       onClose={onExit}
@@ -91,6 +105,8 @@ function Run({
   hole,
   region,
   back,
+  pointBack,
+  onPractice,
   onAgain,
   onExit,
   onClose,
@@ -102,6 +118,10 @@ function Run({
   region?: string;
   /** The way back to the mode Growth was opened from, in place of the lobby. */
   back?: { label: string; onBack: () => void } | null;
+  /** When the reveal's card points back to practising — see `GrowthLaunch`. */
+  pointBack: 'batch' | 'cap';
+  /** Where the card goes with no mode to go back to. */
+  onPractice?: (scope: Selection) => void;
   /** Start another run, on the row this one's work leaves most worth doing. */
   onAgain: (row: GrowthRow) => void;
   /** Back to the lobby. */
@@ -313,6 +333,36 @@ function Run({
   const addedSans = added.map((ply) => run.path[ply]).filter(Boolean);
 
   /**
+   * How much practice the opening being grown is owed, read at the reveal
+   * from the live repertoire, so the moves just added count.
+   */
+  const live = state.repertoires[row.repertoireId];
+  const rounds = state.score.rounds;
+  const practice = useMemo(() => {
+    if (phase !== 'done' || !live) return null;
+    const catalogue = openingTree(index);
+    const within = nodeById(catalogue, region ?? settings.selection.opening);
+    const opening = offerOpening(catalogue, within, null, run.path);
+    return { opening, ...practiceOwed(live, catalogue, opening, rounds) };
+  }, [phase, live, rounds, index, region, settings.selection.opening, run.path]);
+
+  /**
+   * The card that points back to practising: back to the mode that sent you,
+   * or Autopilot on this one opening when Growth was opened from Home. Only
+   * ever a suggestion: New run is still there underneath it.
+   */
+  const practiceGo = back
+    ? { label: back.label, go: back.onBack }
+    : onPractice && practice
+      ? {
+          label: 'Practice in Autopilot',
+          go: () => onPractice({ color: row.color, opening: practice.opening.id }),
+        }
+      : null;
+  const pointingBack =
+    !!practice && !!practiceGo && (pointBack === 'batch' || atPracticeCap(practice));
+
+  /**
    * One sitting is one round, whatever it takes: the reveal only draws up what
    * the round would be, and asking for another batch redraws it.
    */
@@ -504,6 +554,15 @@ function Run({
 
         {phase === 'done' && (
           <>
+            {pointingBack && (
+              <div className="card grow-offer" style={{ marginTop: 0, marginBottom: 12 }}>
+                <span className="grow small">{practiceText(practice!.opening.name, practice!.owed)}</span>
+                <button className="btn accent sm" onClick={practiceGo!.go}>
+                  {practiceGo!.label}
+                  <Icons.next size={16} />
+                </button>
+              </div>
+            )}
             <div className="row between">
               <div className={`verdict ${addedSans.length ? 'ok' : 'warn'}`} style={{ padding: 0 }}>
                 <span className="ico">
@@ -540,9 +599,11 @@ function Run({
               <Icons.play size={18} />
               Play from here
             </button>
-            <button className="btn plain block mt-8" onClick={back ? back.onBack : onExit}>
-              {back ? back.label : 'Back to openings'}
-            </button>
+            {!(pointingBack && back) && (
+              <button className="btn plain block mt-8" onClick={back ? back.onBack : onExit}>
+                {back ? back.label : 'Back to openings'}
+              </button>
+            )}
           </>
         )}
       </div>

@@ -10,6 +10,10 @@ import {
   lineFinishes,
   offerOpening,
   readyToGrow,
+  atPracticeCap,
+  practiceCap,
+  practiceOwed,
+  practiceText,
 } from './growOffer';
 import { atEdge, beginRun, finishPrep, isUsersTurn, opponentReply, play, movesHere } from './openingRun';
 import { nodeById, openingTree } from './openingTree';
@@ -162,5 +166,37 @@ describe('ready to grow', () => {
 
   it('names what you chose, when you chose something', () => {
     expect(offerOpening(tree, kid, null, SAMISCH.split(' ')).id).toBe(kid.id);
+  });
+});
+
+describe('practice owed', () => {
+  const kid = nodeById(tree, 'd4 Nf6 c4 g6 Nc3');
+  const CLASSICAL = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O';
+  const SAMISCH = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3 O-O';
+  const FOUR_PAWNS = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f4 O-O';
+  const black = rep('b', CLASSICAL, SAMISCH, FOUR_PAWNS);
+  const added = Math.max(...Object.values(black.nodes).map((node) => node.addedAt));
+  const finished = (line: string) =>
+    Array.from({ length: CLEAN_FINISHES }, (_, i) => clean(line, added + 1 + i, 'b'));
+
+  it('allows fewer unpracticed lines as the opening fills in', () => {
+    expect([1, 5, 6, 11, 12, 40].map(practiceCap)).toEqual([3, 3, 2, 2, 1, 1]);
+  });
+
+  it('counts the lines short of their clean finishes', () => {
+    expect(practiceOwed(black, tree, kid, [])).toEqual({ lines: 3, owed: 3, cap: 3 });
+    const owed = practiceOwed(black, tree, kid, finished(CLASSICAL));
+    expect(owed).toEqual({ lines: 3, owed: 2, cap: 3 });
+    expect(atPracticeCap(owed)).toBe(false);
+    expect(atPracticeCap(practiceOwed(black, tree, kid, []))).toBe(true);
+  });
+
+  it('is never at the cap with nothing owed', () => {
+    expect(atPracticeCap({ lines: 0, owed: 0, cap: 3 })).toBe(false);
+  });
+
+  it('says what is owed', () => {
+    expect(practiceText('Sicilian Defence', 3)).toBe('3 Sicilian Defence lines to practice.');
+    expect(practiceText('Sicilian Defence', 1)).toBe('1 Sicilian Defence line to practice.');
   });
 });

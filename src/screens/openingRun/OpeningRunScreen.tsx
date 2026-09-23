@@ -43,7 +43,8 @@ import { evidenceFor, movesToDraw } from '../../model/growth';
 import { gradeForTime } from '../../model/srs';
 import { selectionText } from '../../components/Selection';
 import { mulberry32 } from '../../model/session';
-import { evidenceIn } from '../../store/recommendation';
+import { evidenceIn, withSelection } from '../../store/recommendation';
+import type { Selection } from '../../model/selection';
 import { repertoireList, useStore } from '../../store/useStore';
 import { PlayOn } from './PlayOn';
 import { Reveal, type Death } from './Reveal';
@@ -55,7 +56,16 @@ import { clockSeconds } from '../../model/openingRun';
 import { seenIn, type RatingMove } from '../../model/scoring';
 import { deepestNodeWithin } from '../../model/openingTree';
 import type { RatingChange, RoundPlan, RoundSummary } from '../../model/autopilot';
-import { growLaunch, isStubFinish, offerOpening, readyToGrow, yourLastMove, type GrowLaunch } from '../../model/growOffer';
+import {
+  atPracticeCap,
+  growLaunch,
+  isStubFinish,
+  offerOpening,
+  practiceOwed,
+  readyToGrow,
+  yourLastMove,
+  type GrowLaunch,
+} from '../../model/growOffer';
 import { GrowthScreen } from '../growth/GrowthScreen';
 
 type Phase = 'setup' | 'playing' | 'gap' | 'dead' | 'survived' | 'playon' | 'growing';
@@ -79,8 +89,17 @@ interface Game {
  */
 type Onward = { kind: 'run'; run: Run } | { kind: 'game'; fen: string } | null;
 
-/** The end-of-round offer to grow the opening: what it says, and where growing starts. */
+/**
+ * The end-of-round way into Growth, and where growing starts.
+ *
+ *   opening — the offer: the opening is a stub, or every line in it is
+ *             finished clean. A card above Next run says why, and Growth
+ *             points back once the opening owes its cap of practice.
+ *   line    — the quiet button at the bottom, at any other clean end of prep:
+ *             grow the line just played. Growth points back after one batch.
+ */
 interface GrowOffer {
+  kind: 'opening' | 'line';
   text: string;
   launch: GrowLaunch;
 }
@@ -121,6 +140,7 @@ export function OpeningRunScreen({
   onRoundOver,
   onNext,
   onExit,
+  scope,
 }: {
   auto?: boolean;
   /**
@@ -134,6 +154,8 @@ export function OpeningRunScreen({
   /** Next run, when something else owns what the next round is. */
   onNext?: () => void;
   onExit: () => void;
+  /** Autopilot held to one opening: the selection this visit runs in, in place of the saved one. */
+  scope?: Selection;
 }) {
   const state = useStore();
   const reps = repertoireList(state);
@@ -160,13 +182,13 @@ export function OpeningRunScreen({
   const ensureRepertoire = useStore((s) => s.ensureRepertoire);
   const index = referenceIndex();
   const tree = openingTree(index);
-  const selection = settings.selection;
+  const selection = scope ?? settings.selection;
   /**
    * What your games say, read once a visit: the positions you got wrong with
    * a move prepared weigh on weak-spot steering, and the ones you kept
    * reaching with nothing weigh on which gap a run walks to.
    */
-  const [evidence] = useState(() => evidenceIn(state));
+  const [evidence] = useState(() => evidenceIn(withSelection(state, scope)));
 
   /**
    * How to steer the current run again from wherever it has got to, while it
@@ -407,19 +429,25 @@ export function OpeningRunScreen({
     if (!rep) return null;
     const entered = done.enteredIn ? nodeById(tree, done.enteredIn) : null;
     const opening = offerOpening(tree, nodeById(tree, done.openingId), entered, done.played);
-    const stub = isStubFinish(done);
-    if (!stub && !readyToGrow(rep, tree, opening, now.score.rounds)) return null;
     const launch = growLaunch(rep, index, tree, opening, done.played, {
       minShare: now.settings.growth.minShare,
       maxPly: now.settings.growth.maxPly,
       starred: now.settings.favoriteOpenings,
     });
     if (!launch) return null;
-    const last = yourLastMove(done.played, done.color);
-    const text = stub
-      ? `${opening.name} has nothing past ${last ?? 'the first move'} yet.`
-      : `You finish every ${opening.name} line cleanly.`;
-    return { text, launch };
+    const stub = isStubFinish(done);
+    if (stub || readyToGrow(rep, tree, opening, now.score.rounds)) {
+      const last = yourLastMove(done.played, done.color);
+      const text = stub
+        ? `${opening.name} has nothing past ${last ?? 'the first move'} yet.`
+        : `You finish every ${opening.name} line cleanly.`;
+      return { kind: 'opening', text, launch };
+    }
+    // Growing this line means growing from where it ended, not the opening's
+    // most urgent gap somewhere else. And not while the opening already owes
+    // its cap of practice: Growth would only point straight back here.
+    if (!launch.hole || atPracticeCap(practiceOwed(rep, tree, opening, now.score.rounds))) return null;
+    return { kind: 'line', text: 'Grow this line', launch };
   };
 
   const referee = useReferee({
@@ -626,6 +654,7 @@ export function OpeningRunScreen({
           region: launch.opening.id,
           backLabel: planned ? 'Back to Autopilot' : 'Back to Run',
           onBack: next,
+          pointBack: growOffer.kind === 'line' ? 'batch' : 'cap',
         }}
       />
     );
@@ -642,7 +671,8 @@ export function OpeningRunScreen({
         headline={headline}
         kept={kept}
         onKeep={keep}
-        grow={growOffer ? { text: growOffer.text, onGrow: () => setPhase('growing') } : null}
+        grow={growOffer?.kind === 'opening' ? { text: growOffer.text, onGrow: () => setPhase('growing') } : null}
+        growLine={growOffer?.kind === 'line' ? () => setPhase('growing') : null}
         onExit={onExit}
         onKeepPlaying={onward ? keepGoing : null}
         onNext={next}

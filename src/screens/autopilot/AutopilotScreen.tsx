@@ -4,7 +4,8 @@ import { SelectionBar, selectionText } from '../../components/Selection';
 import { planFor } from '../../model/autopilot';
 import { isSteered, type Focus, type Recommendation } from '../../model/recommend';
 import { useStore } from '../../store/useStore';
-import { recommendNow } from '../../store/recommendation';
+import { recommendNow, withSelection } from '../../store/recommendation';
+import type { Selection } from '../../model/selection';
 import { OpeningRunScreen } from '../openingRun/OpeningRunScreen';
 
 /**
@@ -22,12 +23,27 @@ import { OpeningRunScreen } from '../openingRun/OpeningRunScreen';
  * Autopilot never adds to the repertoire. With nothing prepared inside the
  * selection there is nothing to drill, and it says so and points at Growth.
  */
-export function AutopilotScreen({ onExit, onGrow }: { onExit: () => void; onGrow: () => void }) {
+export function AutopilotScreen({
+  onExit,
+  onGrow,
+  scope,
+}: {
+  onExit: () => void;
+  onGrow: () => void;
+  /**
+   * One opening to hold the session to, in place of the saved selection: what
+   * Growth opened from Home sends you to practice. Nothing is saved, so the
+   * next Autopilot is back on your own selection.
+   */
+  scope?: Selection;
+}) {
   /** The focuses of this session's rounds so far, oldest first: the engine's brake. */
   const [recent, setRecent] = useState<Focus[]>([]);
   /** For each of those rounds, whether it was steered into an opening: the engine spaces them. */
   const [steered, setSteered] = useState<boolean[]>([]);
-  const [pick, setPick] = useState<Recommendation | null>(() => recommendNow(useStore.getState(), [], []));
+  const [pick, setPick] = useState<Recommendation | null>(() =>
+    recommendNow(withSelection(useStore.getState(), scope), [], []),
+  );
   /** Bumped per round so the Run mounts fresh. */
   const [round, setRound] = useState(1);
 
@@ -37,7 +53,7 @@ export function AutopilotScreen({ onExit, onGrow }: { onExit: () => void; onGrow
    */
   const roundOver = () => {
     if (!pick) return;
-    const state = useStore.getState();
+    const state = withSelection(useStore.getState(), scope);
     setRecent((played) => [...played, pick.focus]);
     setSteered((steers) => [...steers, isSteered(pick, state.settings.selection)]);
   };
@@ -49,7 +65,7 @@ export function AutopilotScreen({ onExit, onGrow }: { onExit: () => void; onGrow
    * With nothing left to pick, this lands on the way to Growth.
    */
   const advance = () => {
-    setPick(recommendNow(useStore.getState(), recent, steered));
+    setPick(recommendNow(withSelection(useStore.getState(), scope), recent, steered));
     setRound((n) => n + 1);
   };
 
@@ -60,6 +76,7 @@ export function AutopilotScreen({ onExit, onGrow }: { onExit: () => void; onGrow
       key={round}
       auto
       plan={planFor(pick)}
+      scope={scope}
       onRoundOver={roundOver}
       onNext={advance}
       onExit={onExit}

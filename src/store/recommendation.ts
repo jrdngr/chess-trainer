@@ -3,10 +3,18 @@ import { openingTree } from '../model/openingTree';
 import { recommend, type Focus, type RecommendInput, type Recommendation } from '../model/recommend';
 import { referenceIndex } from '../model/referenceIndex';
 import { seenIn } from '../model/scoring';
-import { lineInRegion, regionOf, repertoiresIn } from '../model/selection';
+import { lineInRegion, regionOf, repertoiresIn, type Selection } from '../model/selection';
 import { repertoireList, useStore } from './useStore';
 
 type State = ReturnType<typeof useStore.getState>;
+
+/**
+ * The store as a session held to one selection sees it: the saved selection
+ * swapped for that one, and nothing written back.
+ */
+export function withSelection(state: State, selection?: Selection): State {
+  return selection ? { ...state, settings: { ...state.settings, selection } } : state;
+}
 
 /**
  * What your games say about the selection: the positions you got wrong with

@@ -16,6 +16,7 @@ import { PlayScreen } from './screens/play/PlayScreen';
 import { AutopilotScreen } from './screens/autopilot/AutopilotScreen';
 import { DrillSession } from './screens/drill/DrillSession';
 import type { SessionMode, TrainingItem } from './model/session';
+import type { Selection } from './model/selection';
 import { countDue } from './model/srs';
 import { needsOnboarding, useStore } from './store/useStore';
 
@@ -32,7 +33,8 @@ export default function App() {
     mode: SessionMode;
     title: string;
   } | null>(null);
-  const [mode, setMode] = useState<{ id: ModeId } | null>(null);
+  /** The mode open, and for Autopilot, the one opening a session is held to. */
+  const [mode, setMode] = useState<{ id: ModeId; scope?: Selection } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [explorePath, setExplorePath] = useState<string[] | undefined>();
@@ -83,7 +85,12 @@ export default function App() {
     // any of the tabs until this is answered.
     <OnboardingScreen />
   ) : mode?.id === 'autopilot' ? (
-    <AutopilotScreen onExit={leaveMode} onGrow={() => setMode({ id: 'growth' })} />
+    <AutopilotScreen
+      key={mode.scope ? `${mode.scope.color}:${mode.scope.opening}` : 'autopilot'}
+      scope={mode.scope}
+      onExit={leaveMode}
+      onGrow={() => setMode({ id: 'growth' })}
+    />
   ) : mode?.id === 'drill' ? (
     <DrillScreen onExit={leaveMode} />
   ) : mode?.id === 'openingRun' ? (
@@ -97,7 +104,7 @@ export default function App() {
       onExit={leaveMode}
     />
   ) : mode?.id === 'growth' ? (
-    <GrowthScreen onExit={leaveMode} />
+    <GrowthScreen onExit={leaveMode} onPractice={(scope) => setMode({ id: 'autopilot', scope })} />
   ) : mode?.id === 'play' ? (
     <PlayScreen onExit={leaveMode} />
   ) : session ? (

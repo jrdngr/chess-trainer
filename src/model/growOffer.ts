@@ -113,6 +113,59 @@ export function readyToGrow(
   return lines.length > 0 && lines.every((line) => line.finishes >= CLEAN_FINISHES);
 }
 
+/**
+ * How much practice an opening is owed: its lines, and how many of them are
+ * short of `CLEAN_FINISHES` since they last changed.
+ *
+ * Growth reads this to point back at Autopilot or Run, and the end of a
+ * round reads it to stop offering Growth, so the two never send you to each
+ * other at once. It is the same count that decides `readyToGrow`, read the
+ * other way: ready is nothing owed, and the cap is owing too much.
+ */
+export interface PracticeOwed {
+  /** Every line of yours inside the opening. */
+  lines: number;
+  /** Lines not yet finished clean `CLEAN_FINISHES` times since they last changed. */
+  owed: number;
+  /** How many owed lines send you back to practice them. */
+  cap: number;
+}
+
+/**
+ * How many unpracticed lines an opening may carry before Growth points back.
+ *
+ * Three while it is small: a stub grown by one line at a time would take a
+ * week to become a repertoire. Fewer as it fills in, because every line a
+ * round could be drawn on makes any one new line slower to come round, and
+ * each needs three clean finishes before it counts as learned.
+ */
+export function practiceCap(lines: number): number {
+  if (lines < 6) return 3;
+  if (lines < 12) return 2;
+  return 1;
+}
+
+export function practiceOwed(
+  rep: Repertoire,
+  tree: OpeningTree,
+  opening: OpeningNode,
+  rounds: RoundRecord[],
+): PracticeOwed {
+  const lines = lineFinishes(rep, tree, opening, rounds);
+  const owed = lines.filter((line) => line.finishes < CLEAN_FINISHES).length;
+  return { lines: lines.length, owed, cap: practiceCap(lines.length) };
+}
+
+/** The opening owes as much practice as it may: time to stop growing it. */
+export function atPracticeCap(practice: PracticeOwed): boolean {
+  return practice.owed > 0 && practice.owed >= practice.cap;
+}
+
+/** What Growth's card says an opening is owed. */
+export function practiceText(name: string, owed: number): string {
+  return owed > 0 ? `${owed} ${name} line${owed === 1 ? '' : 's'} to practice.` : `${name} line grown.`;
+}
+
 /** The repertoire node a line of moves reaches, or null at the root or off the tree. */
 function nodeAt(rep: Repertoire, sans: string[], fen: string): string | null {
   let nodeId: string | null = null;

@@ -73,6 +73,12 @@ export interface RevealProps {
    * the round asked you nothing, or you finish every line in it cleanly.
    */
   grow: { text: string; onGrow: () => void } | null;
+  /**
+   * Grow the line just played, at any other clean end of prep. Kept at the
+   * bottom of the screen, since it is there to be found rather than to
+   * suggest anything.
+   */
+  growLine: (() => void) | null;
   onExit: () => void;
   /** Play on from where the round ended; null when the game is over and there is nothing to play. */
   onKeepPlaying: (() => void) | null;
@@ -103,6 +109,7 @@ export function Reveal({
   kept,
   onKeep,
   grow,
+  growLine,
   onExit,
   onKeepPlaying,
   onNext,
@@ -375,6 +382,13 @@ export function Reveal({
               Change options
             </button>
           </>
+        )}
+
+        {growLine && (
+          <button className="btn plain block mt-8" onClick={growLine}>
+            <Icons.plus size={18} />
+            Grow this line
+          </button>
         )}
       </div>
     </>
