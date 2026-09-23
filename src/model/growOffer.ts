@@ -117,10 +117,9 @@ export function readyToGrow(
  * How much practice an opening is owed: its lines, and how many of them are
  * short of `CLEAN_FINISHES` since they last changed.
  *
- * Growth reads this to point back at Autopilot or Run, and the end of a
- * round reads it to stop offering Growth, so the two never send you to each
- * other at once. It is the same count that decides `readyToGrow`, read the
- * other way: ready is nothing owed, and the cap is owing too much.
+ * Growth reads this to point back at Autopilot or Run. It is the same count
+ * that decides `readyToGrow`, read the other way: ready is nothing owed, and
+ * the cap is owing too much.
  */
 export interface PracticeOwed {
   /** Every line of yours inside the opening. */

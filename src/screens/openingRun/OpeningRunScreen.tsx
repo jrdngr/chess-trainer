@@ -57,11 +57,10 @@ import { seenIn, type RatingMove } from '../../model/scoring';
 import { deepestNodeWithin } from '../../model/openingTree';
 import type { RatingChange, RoundPlan, RoundSummary } from '../../model/autopilot';
 import {
-  atPracticeCap,
   growLaunch,
+  holeAtEnd,
   isStubFinish,
   offerOpening,
-  practiceOwed,
   readyToGrow,
   yourLastMove,
   type GrowLaunch,
@@ -416,11 +415,11 @@ export function OpeningRunScreen({
   };
 
   /**
-   * Whether a clean end of prep earns the offer to grow: the round asked you
-   * nothing, or every line in the opening has been finished clean enough
-   * times since it last changed. Read after the round is logged, so this
-   * round counts toward it. Null when neither holds, or there is nowhere left
-   * to grow.
+   * The way into Growth a clean end of prep earns: the offer, when the round
+   * asked you nothing or every line in the opening has been finished clean
+   * enough times since it last changed, and otherwise the quiet button, when
+   * the round ended on a reply you have no answer to. Read after the round is
+   * logged, so this round counts toward it. Null when there is nowhere to grow.
    */
   const offerFor = (done: Run): GrowOffer | null => {
     if (done.leftPrep || done.bookRun) return null;
@@ -429,25 +428,30 @@ export function OpeningRunScreen({
     if (!rep) return null;
     const entered = done.enteredIn ? nodeById(tree, done.enteredIn) : null;
     const opening = offerOpening(tree, nodeById(tree, done.openingId), entered, done.played);
-    const launch = growLaunch(rep, index, tree, opening, done.played, {
+    const opts = {
       minShare: now.settings.growth.minShare,
       maxPly: now.settings.growth.maxPly,
       starred: now.settings.favoriteOpenings,
-    });
-    if (!launch) return null;
+    };
     const stub = isStubFinish(done);
     if (stub || readyToGrow(rep, tree, opening, now.score.rounds)) {
-      const last = yourLastMove(done.played, done.color);
-      const text = stub
-        ? `${opening.name} has nothing past ${last ?? 'the first move'} yet.`
-        : `You finish every ${opening.name} line cleanly.`;
-      return { kind: 'opening', text, launch };
+      const launch = growLaunch(rep, index, tree, opening, done.played, opts);
+      if (launch) {
+        const last = yourLastMove(done.played, done.color);
+        const text = stub
+          ? `${opening.name} has nothing past ${last ?? 'the first move'} yet.`
+          : `You finish every ${opening.name} line cleanly.`;
+        return { kind: 'opening', text, launch };
+      }
     }
     // Growing this line means growing from where it ended, not the opening's
-    // most urgent gap somewhere else. And not while the opening already owes
-    // its cap of practice: Growth would only point straight back here.
-    if (!launch.hole || atPracticeCap(practiceOwed(rep, tree, opening, now.score.rounds))) return null;
-    return { kind: 'line', text: 'Grow this line', launch };
+    // most urgent gap somewhere else. Nothing else holds it back: it is there
+    // to be found, not to suggest, and Growth opened from it points back after
+    // one batch anyway. Past Growth's depth it adds a move at a time.
+    const hole = holeAtEnd(rep, index, done.played, Infinity);
+    if (!hole) return null;
+    const launch = growLaunch(rep, index, tree, opening, done.played, { ...opts, maxPly: Infinity });
+    return launch ? { kind: 'line', text: 'Grow this line', launch } : null;
   };
 
   const referee = useReferee({
