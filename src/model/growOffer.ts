@@ -224,12 +224,28 @@ export interface GrowLaunch {
   row: GrowthRow;
   /** The hole the round ended on, when growing starts right there. */
   hole: Hole | null;
+  /** How far past Growth's settings the search had to go, or null when it did not. */
+  widened: Widened | null;
+}
+
+/**
+ * Settings a grow offer looked past to find something to grow: rarer replies
+ * first, since those are fresh lines, and only then deeper ones, which only
+ * lengthen lines you already have. The Growth run it opens searches on these
+ * too, or it could not steer toward what it was offered.
+ */
+export interface Widened {
+  why: 'rarer' | 'deeper';
+  minShare: number;
+  maxPly: number;
 }
 
 /**
  * Where growing an opening starts: the position the round ended on, when
- * there is room to grow there, and otherwise the opening's most urgent gap.
- * Null when the opening has nothing left to grow within Growth's settings.
+ * there is room to grow there, and otherwise the opening's most urgent gap —
+ * past Growth's settings when there is none within them, since an opening
+ * you have covered is exactly the one worth growing. Null only when the book
+ * has nothing at all left to answer.
  */
 export function growLaunch(
   rep: Repertoire,
@@ -254,10 +270,22 @@ export function growLaunch(
       score: 0,
       holes: [hole],
     };
-    return { opening, row, hole };
+    return { opening, row, hole, widened: null };
   }
-  const row = recommended(growthRows([rep], index, { ...opts, region: { tree, node: opening } }));
-  return row ? { opening, row, hole: null } : null;
+  const region = { tree, node: opening };
+  const within = recommended(growthRows([rep], index, { ...opts, region }));
+  if (within) return { opening, row: within, hole: null, widened: null };
+  // An opening covered at your settings, and still worth growing: every reply
+  // the book knows, and then past the depth.
+  const steps: Widened[] = [
+    { why: 'rarer', minShare: 0, maxPly },
+    { why: 'deeper', minShare: 0, maxPly: Infinity },
+  ];
+  for (const widened of steps) {
+    const row = recommended(growthRows([rep], index, { ...opts, ...widened, region }));
+    if (row) return { opening, row, hole: null, widened };
+  }
+  return null;
 }
 
 /** A ply as it is written: 2.c4, or 2...e6 for Black. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { walkSan } from '../chess/core';
-import { answerHole, atHole, startGrowthAt } from './growth';
+import { advance, answerHole, atHole, isUsersTurn as growthUsersTurn, preparedHere, startGrowth, startGrowthAt, steer } from './growth';
 import {
   CLEAN_FINISHES,
   growLaunch,
@@ -110,6 +110,35 @@ describe('where growing starts', () => {
     const launch = growLaunch(stub, index, tree, gambit, played, { ...opts, maxPly: 4 });
     expect(launch).not.toBeNull();
     expect(launch!.hole).toBeNull();
+    expect(launch!.row.holes.length).toBeGreaterThan(0);
+    expect(launch!.widened).toBeNull();
+  });
+
+  it('looks at rarer replies when the opening is covered at your settings', () => {
+    const launch = growLaunch(stub, index, tree, gambit, [], { ...opts, minShare: 100 });
+    expect(launch?.widened).toEqual({ why: 'rarer', minShare: 0, maxPly: 18 });
+    expect(launch!.row.holes.length).toBeGreaterThan(0);
+  });
+
+  it('opens a run that can steer to the rarer reply it offered', () => {
+    const launch = growLaunch(stub, index, tree, gambit, [], { ...opts, minShare: 100 })!;
+    let run = startGrowth(stub, launch.row);
+    for (let ply = 0; ply < 10; ply++) {
+      if (growthUsersTurn(run)) {
+        run = advance(stub, run, preparedHere(stub, run)[0].san)!;
+        continue;
+      }
+      const reply = steer(stub, index, run, launch.widened!);
+      expect(reply).not.toBeNull();
+      if (reply!.hole) return;
+      run = advance(stub, run, reply!.san)!;
+    }
+    throw new Error('never reached the hole');
+  });
+
+  it('goes deeper only when no rarer reply is left within the depth', () => {
+    const launch = growLaunch(stub, index, tree, gambit, [], { ...opts, minShare: 100, maxPly: 1 });
+    expect(launch?.widened?.why).toBe('deeper');
     expect(launch!.row.holes.length).toBeGreaterThan(0);
   });
 });

@@ -55,6 +55,8 @@ export interface GrowthLaunch {
    * practice, for an opening grown from the offer.
    */
   pointBack: 'batch' | 'cap';
+  /** Settings the offer looked past to find this, which every run of the launch searches on. */
+  widened?: { minShare: number; maxPly: number } | null;
 }
 
 export interface GrowthScreenProps {
@@ -90,6 +92,7 @@ export function GrowthScreen({ onExit, launch, onPractice }: GrowthScreenProps) 
       region={launch?.region}
       back={launch ? { label: launch.backLabel, onBack: launch.onBack } : null}
       pointBack={launch?.pointBack ?? 'cap'}
+      widened={launch?.widened ?? null}
       onPractice={launch ? undefined : onPractice}
       onAgain={start}
       onExit={launch ? launch.onBack : () => setRow(null)}
@@ -106,6 +109,7 @@ function Run({
   region,
   back,
   pointBack,
+  widened,
   onPractice,
   onAgain,
   onExit,
@@ -120,6 +124,8 @@ function Run({
   back?: { label: string; onBack: () => void } | null;
   /** When the reveal's card points back to practising — see `GrowthLaunch`. */
   pointBack: 'batch' | 'cap';
+  /** Search past the saved settings — see `GrowthLaunch`. */
+  widened?: { minShare: number; maxPly: number } | null;
   /** Where the card goes with no mode to go back to. */
   onPractice?: (scope: Selection) => void;
   /** Start another run, on the row this one's work leaves most worth doing. */
@@ -161,6 +167,12 @@ function Run({
   const [playFrom, setPlayFrom] = useState<string | null>(null);
 
   const prefs = settings.growth;
+  /**
+   * What the run looks for holes with: the saved settings, or the wider ones
+   * the offer needed. A batch is still sized by the saved depth, so past it a
+   * line grows a move at a time.
+   */
+  const find = widened ?? { minShare: prefs.minShare, maxPly: prefs.maxPly };
   const expected = useMemo(() => preparedHere(tree, run), [tree, run]);
 
   /** The opponent answers on its own, after a beat. */
@@ -170,7 +182,7 @@ function Run({
     setThinking(true);
     const timer = setTimeout(() => {
       setThinking(false);
-      const reply = steer(tree, index, run, { minShare: prefs.minShare, maxPly: prefs.maxPly });
+      const reply = steer(tree, index, run, find);
       if (!reply) {
         setPhase('hole');
         return;
@@ -185,7 +197,7 @@ function Run({
       else setPhase('hole');
     }, 420);
     return () => clearTimeout(timer);
-  }, [phase, run, tree, index, prefs.minShare, prefs.maxPly]);
+  }, [phase, run, tree, index, find.minShare, find.maxPly]);
 
   /** A line that ends on the opponent's move leaves you to move with nothing. */
   useEffect(() => {
@@ -290,8 +302,8 @@ function Run({
     const catalogue = openingTree(index);
     const next = recommended(
       growthRows([live], index, {
-        minShare: prefs.minShare,
-        maxPly: prefs.maxPly,
+        minShare: find.minShare,
+        maxPly: find.maxPly,
         starred: settings.favoriteOpenings,
         region: { tree: catalogue, node: region ? nodeById(catalogue, region) : regionOf(catalogue, settings.selection) },
       }),

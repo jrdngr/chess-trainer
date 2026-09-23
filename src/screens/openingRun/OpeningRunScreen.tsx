@@ -446,9 +446,11 @@ export function OpeningRunScreen({
       const launch = growLaunch(rep, index, tree, opening, done.played, opts);
       if (launch) {
         const last = yourLastMove(done.played, done.color);
+        const more =
+          launch.widened?.why === 'rarer' ? ' Grow it with rarer replies.' : launch.widened ? ' Grow it deeper.' : '';
         const text = stub
           ? `${opening.name} has nothing past ${last ?? 'the first move'} yet.`
-          : `You finish every ${opening.name} line cleanly.`;
+          : `You finish every ${opening.name} line cleanly.${more}`;
         return { kind: 'opening', text, launch };
       }
     }
@@ -669,6 +671,7 @@ export function OpeningRunScreen({
           backLabel: planned ? 'Back to Autopilot' : 'Back to Run',
           onBack: next,
           pointBack: growOffer.kind === 'line' ? 'batch' : 'cap',
+          widened: launch.widened,
         }}
       />
     );
