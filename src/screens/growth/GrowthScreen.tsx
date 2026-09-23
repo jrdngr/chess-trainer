@@ -8,6 +8,7 @@ import {
   answerHole,
   atHole,
   enterHole,
+  firstHole,
   isUsersTurn,
   lineFor,
   movesToDraw,
@@ -146,8 +147,10 @@ function Run({
 
   /** The tree as it was when the run began, so adding a move cannot re-steer it. */
   const [tree] = useState(() => rep);
-  const [run, setRun] = useState<GrowthRun>(() => (hole ? startGrowthAt(tree, row, hole) : startGrowth(tree, row)));
-  const [phase, setPhase] = useState<Phase>(() => (hole ? 'hole' : 'walking'));
+  /** Where the run starts: the hole it was handed, or the one the row most wants answered. */
+  const [start] = useState(() => hole ?? firstHole(index, row));
+  const [run, setRun] = useState<GrowthRun>(() => (start ? startGrowthAt(tree, row, start) : startGrowth(tree, row)));
+  const [phase, setPhase] = useState<Phase>(() => (start ? 'hole' : 'walking'));
   const [wrong, setWrong] = useState<string | null>(null);
   /** Which plies of the line you added, so the strip can mark them. */
   const [added, setAdded] = useState<number[]>([]);

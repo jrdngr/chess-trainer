@@ -17,9 +17,8 @@ import type { ExplorerMove, RepMove, Repertoire } from './types';
  *
  * The other modes all need a repertoire to work on — Drill asks about what is
  * in it, Repair compares games against it, Run replays it. Growth is where it
- * comes from after the first line: you walk your own prep from move one, the
- * opponent steers toward the nearest thing you have no answer to, and when it
- * arrives you choose an answer to it.
+ * comes from after the first line: a run starts standing on the reply you
+ * would most often meet with no answer to it, and you choose one.
  *
  * A run adds a batch of answers, sized to how much room the line has left —
  * see `addsToFit` — so a hole at the second move is grown into a line and one
@@ -478,7 +477,10 @@ export function growthRows(
 
   for (const rep of reps) {
     const byName = new Map<string, GrowthRow>();
-    for (const hole of findHoles(rep, index, opts)) {
+    // A reply the book knows nothing past is a hole in the prep, but not work
+    // for Growth: a run sent there would arrive with nothing to choose. The
+    // Repertoire screen is where those are filled, by hand.
+    for (const hole of findHoles(rep, index, opts).filter((found) => answerable(index, found.after))) {
       const line = [...hole.path, hole.san];
       // A move the book cannot name anywhere gets a row of its own, called
       // after the move itself — filing 1.g3 under the name of the repertoire it
@@ -567,9 +569,26 @@ export function startGrowth(rep: Repertoire, row: GrowthRow): GrowthRun {
 }
 
 /**
+ * The hole in a row a run should start standing at: the one you would meet
+ * most often, shallower first on a tie. Null when the book has nothing to
+ * offer at any of them.
+ */
+export function firstHole(index: ReferenceIndex, row: GrowthRow): Hole | null {
+  const open = row.holes.filter((hole) => answerable(index, hole.after));
+  if (!open.length) return null;
+  return open.reduce((best, hole) =>
+    holeWorth(hole) > holeWorth(best) || (holeWorth(hole) === holeWorth(best) && hole.path.length < best.path.length)
+      ? hole
+      : best,
+  );
+}
+
+/**
  * A run that begins standing at a hole rather than walking to one: the
- * position a Run ended on, handed over by the reveal's offer to grow it. The
- * moves to it were played in the Run, so there is nothing left to walk.
+ * position a Run ended on, handed over by the reveal's offer to grow it, or
+ * the hole a row most wants answered. Walking your prep from move one to get
+ * there made most of a run replaying moves you already know, and a walk that
+ * lost its way arrived with nothing to add.
  */
 export function startGrowthAt(rep: Repertoire, row: GrowthRow, hole: Hole): GrowthRun {
   const there = { ...startGrowth(rep, row), path: hole.path, fen: hole.fen, nodeId: hole.nodeId };

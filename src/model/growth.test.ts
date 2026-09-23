@@ -25,6 +25,8 @@ import {
   steer,
   thinness,
   type GrowthRun,
+  firstHole,
+  startGrowthAt,
 } from './growth';
 import { nodeById, openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
@@ -252,12 +254,24 @@ describe('the lobby', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('keeps the family row pointing at every hole it absorbed', () => {
+  it('keeps the family row pointing at every hole it absorbed that the book can answer', () => {
     const rows = growthRows([black], index);
     const family = prepRow(rows);
     const total = rows.reduce((sum, row) => sum + row.holes.length, 0);
+    const answerable = findHoles(black, index).filter((hole) => optionsAt(index, hole.after, 1).length > 0);
     expect(family.holes.length).toBeGreaterThan(1);
-    expect(total).toBe(findHoles(black, index).length);
+    expect(total).toBe(answerable.length);
+  });
+
+  it('starts a run standing on the hole the row most wants answered', () => {
+    const row = prepRow(growthRows([black], index));
+    const first = firstHole(index, row)!;
+    expect(optionsAt(index, first.after, 1).length).toBeGreaterThan(0);
+    const worth = (hole: typeof first) => hole.reach * hole.share;
+    expect(row.holes.every((hole) => worth(hole) <= worth(first))).toBe(true);
+    const run = startGrowthAt(black, row, first);
+    expect(atHole(black, run)).toBe(true);
+    expect(run.path).toEqual([...first.path, first.san]);
   });
 
   it('lifts an opening the player starred without letting it jump the queue', () => {
