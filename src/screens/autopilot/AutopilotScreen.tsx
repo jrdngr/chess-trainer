@@ -95,8 +95,8 @@ function NothingToDrill({ onExit, onGrow }: { onExit: () => void; onGrow: () => 
         <div className="empty">
           <div className="t">Nothing to drill yet</div>
           <div className="h">
-            Autopilot runs the lines you have, and there are none here. Build one in Growth, keep
-            one at the end of a Run, or save the opening from a game in Play.
+            Autopilot runs the lines you have, and there are none here. Build one in Growth, or save
+            the opening from a game in Play.
           </div>
         </div>
         <button className="btn primary block xl" onClick={onGrow}>
