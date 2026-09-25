@@ -86,6 +86,11 @@ export interface RevealProps {
   onKeepPlaying: (() => void) | null;
   onNext: () => void;
   onChangeOptions: () => void;
+  /**
+   * Open the game in Analysis, up to the position the mistake was made in.
+   * Only after a blunder or a miss; null otherwise.
+   */
+  onAnalyze?: (() => void) | null;
 }
 
 /**
@@ -117,6 +122,7 @@ export function Reveal({
   onKeepPlaying,
   onNext,
   onChangeOptions,
+  onAnalyze,
 }: RevealProps) {
   const settings = useStore((s) => s.settings);
   const record = useStore((s) => s.openingRun);
@@ -306,6 +312,13 @@ export function Reveal({
             <Icons.next size={18} />
           </button>
         </div>
+        {/* A row of its own: three buttons side by side wrap their labels on a phone. */}
+        {onAnalyze && (
+          <button className="btn block mt-8" onClick={onAnalyze}>
+            <Icons.search size={18} />
+            Analyze
+          </button>
+        )}
 
         <div className="spacer sm" />
         <Strip items={strip} cursor={cursor} max={line.sans.length} onSeek={seek} />

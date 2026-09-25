@@ -141,6 +141,7 @@ export function OpeningRunScreen({
   onRoundOver,
   onNext,
   onExit,
+  onAnalyze,
   scope,
 }: {
   auto?: boolean;
@@ -155,6 +156,8 @@ export function OpeningRunScreen({
   /** Next run, when something else owns what the next round is. */
   onNext?: () => void;
   onExit: () => void;
+  /** Leave for the Analysis tab on this line, seen from this side. */
+  onAnalyze?: (sans: string[], side: 'w' | 'b') => void;
   /** Autopilot held to one opening: the selection this visit runs in, in place of the saved one. */
   scope?: Selection;
 }) {
@@ -697,6 +700,7 @@ export function OpeningRunScreen({
         onKeepPlaying={onward ? keepGoing : null}
         onNext={next}
         onChangeOptions={() => setPhase('setup')}
+        onAnalyze={phase === 'dead' && death && onAnalyze ? () => onAnalyze(run.played, run.color) : null}
       />
     );
   }

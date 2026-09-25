@@ -74,6 +74,14 @@ export default function App() {
     setTab('home');
   };
 
+  /** Leave a mode for the Analysis tab, on a line and from the side you played it. */
+  const analyzeFrom = (sans: string[], side: 'w' | 'b') => {
+    setExplorePath(sans);
+    setExploreSide(side);
+    setMode(null);
+    setTab('analysis');
+  };
+
   const dueCount = countDue(Object.values(cards)).due;
   const onboarding = useStore(needsOnboarding);
 
@@ -92,18 +100,14 @@ export default function App() {
       scope={mode.scope}
       onExit={leaveMode}
       onGrow={() => setMode({ id: 'growth' })}
+      onAnalyze={analyzeFrom}
     />
   ) : mode?.id === 'drill' ? (
     <DrillScreen onExit={leaveMode} />
   ) : mode?.id === 'survival' ? (
     <SurvivalScreen
       onExit={leaveMode}
-      onAnalyze={(sans, side) => {
-        setExplorePath(sans);
-        setExploreSide(side);
-        setMode(null);
-        setTab('analysis');
-      }}
+      onAnalyze={analyzeFrom}
     />
   ) : mode?.id === 'repair' ? (
     <RepairScreen

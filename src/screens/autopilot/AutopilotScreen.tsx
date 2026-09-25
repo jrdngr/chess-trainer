@@ -26,9 +26,12 @@ import { OpeningRunScreen } from '../openingRun/OpeningRunScreen';
 export function AutopilotScreen({
   onExit,
   onGrow,
+  onAnalyze,
   scope,
 }: {
   onExit: () => void;
+  /** Leave for the Analysis tab on a round's line, seen from your side. */
+  onAnalyze?: (sans: string[], side: 'w' | 'b') => void;
   onGrow: () => void;
   /**
    * One opening to hold the session to, in place of the saved selection: what
@@ -80,6 +83,7 @@ export function AutopilotScreen({
       onRoundOver={roundOver}
       onNext={advance}
       onExit={onExit}
+      onAnalyze={onAnalyze}
     />
   );
 }
