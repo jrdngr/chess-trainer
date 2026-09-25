@@ -68,11 +68,11 @@ interface MissFlash {
  */
 export function SurvivalScreen({
   onExit,
-  onAnalyse,
+  onAnalyze,
 }: {
   onExit: () => void;
   /** Leave for the Analysis tab on this line, seen from this side. */
-  onAnalyse: (sans: string[], side: 'w' | 'b') => void;
+  onAnalyze: (sans: string[], side: 'w' | 'b') => void;
 }) {
   const state = useStore();
   const { settings, cards } = state;
@@ -256,7 +256,7 @@ export function SurvivalScreen({
         before={before}
         onNext={() => start(prefs)}
         onChangeOptions={() => setPhase('setup')}
-        onAnalyse={() => onAnalyse(game.state.run.played, game.state.run.color)}
+        onAnalyze={() => onAnalyze(game.state.run.played, game.state.run.color)}
         onExit={onExit}
       />
     );

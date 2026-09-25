@@ -235,7 +235,7 @@ export const BOOK_LINES: BookLine[] = [
     eco: 'B97',
     forColor: 'b',
     moves: 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bg5 e6 f4 Qb6 Qd2 Qxb2 Rb1 Qa3 e5 dxe5 fxe5 Nfd7 Ne4 h6 Bh4 Qxa2'.split(' '),
-    summary: 'Black grabs the b2 pawn and defends. Sharp, heavily analysed, and still the critical test of 6.Bg5.',
+    summary: 'Black grabs the b2 pawn and defends. Sharp, heavily analyzed, and still the critical test of 6.Bg5.',
     ideas: [
       'The queen on a3 is awkward but surprisingly hard to trap — Rb1 and Nb5 ideas must be met precisely.',
       'After e5 dxe5 fxe5, the knight retreats to d7 rather than d5; f6 breaks are the main freeing resource.',
@@ -417,7 +417,7 @@ export const BOOK_LINES: BookLine[] = [
     eco: 'D44',
     forColor: 'w',
     moves: 'd4 d5 c4 e6 Nf3 Nf6 Nc3 c6 Bg5 dxc4 e4 b5 e5 h6 Bh4 g5 Nxg5 hxg5 Bxg5 Nbd7 exf6 Bb7 g3 c5'.split(' '),
-    summary: 'A piece sacrifice by move eleven that has been analysed to move thirty. The sharpest line in the Queen’s Gambit.',
+    summary: 'A piece sacrifice by move eleven that has been analyzed to move thirty. The sharpest line in the Queen’s Gambit.',
     ideas: [
       'Black’s extra pawns on the queenside and the b7 bishop are the compensation for the piece.',
       'Every move is forced for a long stretch — this is memorisation, not understanding.',

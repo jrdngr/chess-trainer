@@ -52,7 +52,7 @@ export function End({
   before,
   onNext,
   onChangeOptions,
-  onAnalyse,
+  onAnalyze,
   onExit,
 }: {
   state: SurvivalRun;
@@ -65,7 +65,7 @@ export function End({
    * Open the game in Analysis, up to the position you blundered in, so the
    * engine's continuation can be stepped through.
    */
-  onAnalyse: () => void;
+  onAnalyze: () => void;
   onExit: () => void;
 }) {
   const settings = useStore((s) => s.settings);
@@ -190,9 +190,9 @@ export function End({
 
         <div className="next-row">
           {blunder && (
-            <button className="btn block" onClick={onAnalyse}>
+            <button className="btn block" onClick={onAnalyze}>
               <Icons.search size={18} />
-              Analyse
+              Analyze
             </button>
           )}
           <button className="btn primary block" onClick={onNext}>

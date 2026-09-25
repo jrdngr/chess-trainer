@@ -98,7 +98,7 @@ export default function App() {
   ) : mode?.id === 'survival' ? (
     <SurvivalScreen
       onExit={leaveMode}
-      onAnalyse={(sans, side) => {
+      onAnalyze={(sans, side) => {
         setExplorePath(sans);
         setExploreSide(side);
         setMode(null);

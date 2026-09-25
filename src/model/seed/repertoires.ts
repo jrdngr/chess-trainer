@@ -151,7 +151,7 @@ export const SEED_REPERTOIRES: SeedRepertoire[] = [
       'd4 d5 c4 e6 Nc3 Nf6 cxd5 exd5 Bg5':
         'Exchange Variation. The whole plan is the minority attack: Rab1, b4-b5, and Black is left with a weak c6 pawn. Nge2 rather than Nf3 keeps the f-pawn free.',
       'd4 d5 c4 c6 Nf3 Nf6 Nc3 e6 Bg5 dxc4 e4 b5 e5 h6 Bh4 g5 Nxg5':
-        'Botvinnik Variation. A piece for three pawns and an attack, analysed to move thirty. Only enter it if you keep the theory up.',
+        'Botvinnik Variation. A piece for three pawns and an attack, analyzed to move thirty. Only enter it if you keep the theory up.',
       'd4 d5 c4 c6 Nf3 Nf6 Nc3 dxc4 a4':
         'a4 stops ...b5 and is the reason the Slav main line exists. Black gets ...Bf5 in first, which is the whole point of the Slav over the QGD.',
       'd4 d5 c4 dxc4 Nf3 Nf6 e3 e6 Bxc4 c5 O-O a6':
