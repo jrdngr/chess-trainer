@@ -173,4 +173,24 @@ export const Icons = {
       <path d="M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.4 1.6A3.3 3.3 0 0 0 7 18z" />
     </svg>
   ),
+  search: (p: IconProps = {}) => (
+    <svg {...s(p)}>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m16 16 4.5 4.5" />
+    </svg>
+  ),
+  flame: (p: IconProps = {}) => (
+    <svg {...s(p)}>
+      <path
+        d="M12 21c-3.9 0-6.5-2.6-6.5-6.2 0-3.4 2.4-5.4 3.6-8.3.4 1.9 1.3 3 2.4 3.6C11.8 7 13.2 4.6 15.4 3c-.4 2.9.9 4.8 2 6.6 1 1.6 1.6 3.1 1.6 5.2 0 3.6-3.1 6.2-7 6.2z"
+        fill={p.filled ? 'currentColor' : 'none'}
+      />
+    </svg>
+  ),
+  pages: (p: IconProps = {}) => (
+    <svg {...s(p)}>
+      <path d="M4 5.5C6.5 4.5 9.5 4.5 12 6c2.5-1.5 5.5-1.5 8-.5V19c-2.5-1-5.5-1-8 .5-2.5-1.5-5.5-1.5-8-.5z" fill={p.filled ? 'currentColor' : 'none'} />
+      <path d="M12 6v13.5" />
+    </svg>
+  ),
 };

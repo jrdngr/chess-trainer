@@ -37,7 +37,9 @@ export function OnboardingScreen() {
           Pick the openings you already play, at whatever depth you know them.
         </div>
 
-        <OpeningList multi />
+        <div className="op-inline">
+          <OpeningList multi />
+        </div>
       </div>
 
       <div className="onboard-bar">

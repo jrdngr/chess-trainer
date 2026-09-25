@@ -278,7 +278,7 @@ const approaches = new WeakMap<OpeningNode, Set<string>>();
  * node's own path is included regardless, since a rarely played opening may
  * have a move order the database never authored a continuation for.
  */
-function approachOne(tree: OpeningTree, node: OpeningNode): Set<string> {
+export function approachOne(tree: OpeningTree, node: OpeningNode): Set<string> {
   const cached = approaches.get(node);
   if (cached) return cached;
   const parents = parentMap(tree.index);
@@ -337,30 +337,69 @@ export function approachKeys(tree: OpeningTree, node: OpeningNode): Set<string> 
   return regionOf(tree, node).approach;
 }
 
-const parentMaps = new WeakMap<ReferenceIndex, Map<string, string[]>>();
+/** The book as a graph: every position's moves, and every position's parents. */
+export interface BookGraph {
+  /** positionKey → the positions one move before it. */
+  parents: Map<string, string[]>;
+  /** positionKey → the positions one move after it, with how often each move is played. */
+  children: Map<string, { key: string; games: number }[]>;
+}
+
+const graphs = new WeakMap<ReferenceIndex, BookGraph>();
+
+/**
+ * The whole book as a graph, both ways. Asking what leads where (regions) and
+ * what follows what (the picker's difficulty) need the same graph, and finding
+ * where each move goes is the slow part: a linked book (see `book.ts`) already
+ * knows, and costs one pass over its entries; anything else is played through
+ * chess.js move by move.
+ */
+export function bookGraph(index: ReferenceIndex): BookGraph {
+  const cached = graphs.get(index);
+  if (cached) return cached;
+  const parents = new Map<string, string[]>();
+  const children = new Map<string, { key: string; games: number }[]>();
+  const link = (key: string, child: string) => {
+    const up = parents.get(child) ?? [];
+    if (!up.includes(key)) up.push(key);
+    parents.set(child, up);
+  };
+  if (index.linked) {
+    // A move out of the book leads nowhere the graph needs to know about, but
+    // it is still a move someone plays: '' keeps it in the count.
+    for (const [key, entry] of index.entries) {
+      children.set(key, entry.moves.map((move) => ({ key: move.next ?? '', games: move.games })));
+      for (const move of entry.moves) if (move.next) link(key, move.next);
+    }
+    const graph = { parents, children };
+    graphs.set(index, graph);
+    return graph;
+  }
+  const stack = [START_FEN];
+  while (stack.length) {
+    const fen = stack.pop()!;
+    const key = positionKey(fen);
+    if (children.has(key)) continue;
+    const moves = lookup(index, fen)?.moves ?? [];
+    const list: { key: string; games: number }[] = [];
+    children.set(key, list);
+    moves.forEach((move) => {
+      const after = applySan(fen, move.san)?.after;
+      if (!after) return;
+      const child = positionKey(after);
+      list.push({ key: child, games: move.games });
+      link(key, child);
+      if (!children.has(child)) stack.push(after);
+    });
+  }
+  const graph = { parents, children };
+  graphs.set(index, graph);
+  return graph;
+}
 
 /** For every position in the book, the positions one move before it. */
 function parentMap(index: ReferenceIndex): Map<string, string[]> {
-  const cached = parentMaps.get(index);
-  if (cached) return cached;
-  const out = new Map<string, string[]>();
-  const visit = (fen: string, seen: Set<string>) => {
-    const key = positionKey(fen);
-    if (seen.has(key)) return;
-    seen.add(key);
-    for (const move of lookup(index, fen)?.moves ?? []) {
-      const applied = applySan(fen, move.san);
-      if (!applied) continue;
-      const child = positionKey(applied.after);
-      const list = out.get(child) ?? [];
-      if (!list.includes(key)) list.push(key);
-      out.set(child, list);
-      visit(applied.after, seen);
-    }
-  };
-  visit(START_FEN, new Set());
-  parentMaps.set(index, out);
-  return out;
+  return bookGraph(index).parents;
 }
 
 export function lineStatus(tree: OpeningTree, node: OpeningNode, sans: string[]): LineStatus {

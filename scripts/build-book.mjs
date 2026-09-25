@@ -20,6 +20,7 @@ import { spawn } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Chess } from 'chess.js';
+import { linkBook } from './book-links.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'src/model/book');
@@ -249,6 +250,7 @@ const book = {
     .filter(([key]) => positions.has(key))
     .map(([key, [path, eco, name]]) => [key, path, eco, name]),
 };
+linkBook(book);
 const json = `${JSON.stringify(book)}\n`;
 writeFileSync(join(outDir, 'book.json'), json);
 

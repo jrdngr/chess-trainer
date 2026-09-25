@@ -17,19 +17,23 @@ import bookJson from './book/book.json?raw';
  *
  * Wire format — arrays, not objects, because the field names would otherwise be
  * most of the file:
- *   positions: [positionKey, gamesAtPosition, [[san, shareBp, whitePct, drawPct], ...]]
+ *   positions: [positionKey, gamesAtPosition, [[san, shareBp, whitePct, drawPct, next], ...]]
  *   names:     [positionKey, sanPath, eco, name]
  *
  * Move popularity is stored as a share of the position in basis points. The
  * explorer only ever shows it as a proportion, and at 659M games the absolute
  * counts are nine digits each.
+ *
+ * `next` (version 2) is the index in `positions` of where the move leads, or
+ * -1 when that is outside the book — see `scripts/book-links.mjs`. It spares
+ * every device playing the whole book through chess.js to find out.
  */
 export interface BookFile {
   version: number;
   source: string;
   builtAt: string;
   totalGames: number;
-  positions: [string, number, [string, number, number, number][]][];
+  positions: [string, number, [string, number, number, number, number?][]][];
   names: [string, string, string, string][];
 }
 
@@ -45,11 +49,14 @@ function normaliseName(name: string): string {
 function buildEntries(book: BookFile): Map<string, ExplorerEntry> {
   const entries = new Map<string, ExplorerEntry>();
   for (const [key, total, moves] of book.positions) {
-    const rows: ExplorerMove[] = moves.map(([san, bp, whitePct, drawPct]) => {
+    const rows: ExplorerMove[] = moves.map(([san, bp, whitePct, drawPct, next]) => {
       const games = Math.round((total * bp) / 10_000);
       const white = Math.round((games * whitePct) / 100);
       const draw = Math.round((games * drawPct) / 100);
-      return { san, games, white, draw, black: Math.max(0, games - white - draw) };
+      const row: ExplorerMove = { san, games, white, draw, black: Math.max(0, games - white - draw) };
+      const to = next !== undefined && next >= 0 ? book.positions[next]?.[0] : undefined;
+      if (to) row.next = to;
+      return row;
     });
     rows.sort((a, b) => b.games - a.games);
     entries.set(key, { key, moves: rows });
@@ -117,6 +124,7 @@ export function decodeBook(book: BookFile): ReferenceIndex {
     catalogue: [...byName.values()].sort((a, b) => b.games - a.games || a.name.localeCompare(b.name)),
     totalGames: book.totalGames,
     gameCount: REFERENCE_GAMES.length,
+    linked: book.version >= 2,
   };
 }
 

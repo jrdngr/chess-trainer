@@ -69,6 +69,7 @@ export const DEFAULT_SETTINGS: Settings = {
   cloudSync: true,
   selection: { ...DEFAULT_SELECTION },
   favoriteOpenings: [],
+  pickerSort: 'popular',
   onboarded: false,
   openingRun: { ...DEFAULT_PREFS },
   drill: { ...DEFAULT_DRILL },

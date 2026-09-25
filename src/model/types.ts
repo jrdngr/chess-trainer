@@ -2,6 +2,7 @@ import type { Color } from '../chess/core';
 import type { OpeningRunPrefs } from './openingRun';
 import type { DrillPrefs, GrowthPrefs, PlayPrefs, RepairPrefs } from './modes';
 import type { Selection } from './selection';
+import type { PickerSort } from './picker';
 
 export type MoveSource = 'seed' | 'manual' | 'reference' | 'pgn' | 'games';
 
@@ -82,6 +83,11 @@ export interface ExplorerMove {
   black: number;
   /** Centipawn-ish evaluation hint from reference data, if known. */
   eval?: number;
+  /**
+   * The key of the position the move leads to, when the book has it. Absent
+   * for a move out of the book, and for a book built before moves were linked.
+   */
+  next?: string;
 }
 
 export interface ExplorerEntry {
@@ -152,6 +158,8 @@ export interface Settings {
   selection: Selection;
   /** Starred opening tree nodes, by id — the move order that defines each. */
   favoriteOpenings: string[];
+  /** How the opening picker orders its lists. Starred always come first. */
+  pickerSort: PickerSort;
   /**
    * Whether the opening question has been put to this player. Set when they
    * answer it or wave it away, and cleared by a full reset along with

@@ -32,6 +32,8 @@ export interface ReferenceIndex {
   catalogue: CatalogueEntry[];
   totalGames: number;
   gameCount: number;
+  /** Every book move knows where it leads (`ExplorerMove.next`), so the book is a graph as loaded. */
+  linked?: boolean;
 }
 
 /** Look one opening up by its id — the space-joined move order. */
