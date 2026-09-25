@@ -470,7 +470,8 @@ export function recommend(input: RecommendInput): Recommendation | null {
 }
 
 export const MODE_NAMES: Record<ActivityMode, string> = {
-  run: 'Run',
+  run: 'Autopilot',
+  survival: 'Survival',
   drill: 'Drill',
   growth: 'Growth',
   repair: 'Repair',

@@ -29,11 +29,12 @@ import {
 
 /**
  * The modes whose activity is tallied. They are no longer *scoring* modes:
- * only `rated` results move a rating, and only Run produces those.
+ * only `rated` results move a rating, and only Run produces those. `run` is
+ * Autopilot's (and the old Run's); Survival keeps its own tally and never rates.
  */
-export type ActivityMode = 'run' | 'drill' | 'growth' | 'repair';
+export type ActivityMode = 'run' | 'survival' | 'drill' | 'growth' | 'repair';
 
-export const ACTIVITY_MODES: ActivityMode[] = ['run', 'drill', 'growth', 'repair'];
+export const ACTIVITY_MODES: ActivityMode[] = ['run', 'survival', 'drill', 'growth', 'repair'];
 
 /* ── the rating ─────────────────────────────────────────────────────────── */
 
@@ -218,7 +219,7 @@ export function emptyNodeStats(): NodeStats {
     rated: 0,
     answered: 0,
     correct: 0,
-    byMode: { run: emptyTally(), drill: emptyTally(), growth: emptyTally(), repair: emptyTally() },
+    byMode: { run: emptyTally(), survival: emptyTally(), drill: emptyTally(), growth: emptyTally(), repair: emptyTally() },
     bestRun: 0,
     lastAt: null,
     days: {},

@@ -8,7 +8,7 @@ import { RepertoireScreen } from './screens/RepertoireScreen';
 import { SettingsSheet } from './screens/SettingsSheet';
 import { HomeScreen, type ModeId } from './screens/HomeScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
-import { OpeningRunScreen } from './screens/openingRun/OpeningRunScreen';
+import { SurvivalScreen } from './screens/survival/SurvivalScreen';
 import { RepairScreen } from './screens/repair/RepairScreen';
 import { GrowthScreen } from './screens/growth/GrowthScreen';
 import { DrillScreen } from './screens/drill/DrillScreen';
@@ -93,8 +93,8 @@ export default function App() {
     />
   ) : mode?.id === 'drill' ? (
     <DrillScreen onExit={leaveMode} />
-  ) : mode?.id === 'openingRun' ? (
-    <OpeningRunScreen onExit={leaveMode} />
+  ) : mode?.id === 'survival' ? (
+    <SurvivalScreen onExit={leaveMode} />
   ) : mode?.id === 'repair' ? (
     <RepairScreen
       onImport={() => {

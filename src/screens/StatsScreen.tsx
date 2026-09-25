@@ -96,7 +96,7 @@ function YourOpenings({
         {mine.length === 0 ? (
           <div className="card small muted">
             Nothing starred yet. Star an opening in the picker and it gets a rating of its own,
-            which Run and Autopilot move up when you find your prep and down when you miss it.
+            which Autopilot moves up when you find your prep and down when you miss it.
           </div>
         ) : (
           <div className="list">
@@ -159,7 +159,7 @@ function YourOpenings({
           />
         </div>
         <div className="note center mt-12">
-          Only Run and Autopilot move a rating. Drill, Growth and Repair are counted here and
+          Only Autopilot moves a rating. Survival, Drill, Growth and Repair are counted here and
           nowhere else.
         </div>
         <div className="spacer" />
@@ -291,7 +291,7 @@ function OpeningPage({
           <div className="card small muted">
             {stats.rated > 0
               ? 'Not starred, so this rating is resting. Star it again and it picks up where it left off.'
-              : 'Not starred, so it has no rating. Star it and Run will start one.'}
+              : 'Not starred, so it has no rating. Star it and Autopilot will start one.'}
           </div>
         )}
 
@@ -379,7 +379,7 @@ function OpeningPage({
         {stats.lastAt && (
           <div className="note center mt-12">
             <ColorSquare choice={selection.color} size={10} /> Rounds and accuracy here count every game played
-            through this position, in any mode. Only Run and Autopilot move the rating.
+            through this position, in any mode. Only Autopilot moves the rating.
           </div>
         )}
         <div className="spacer" />

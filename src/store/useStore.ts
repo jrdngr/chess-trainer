@@ -57,6 +57,13 @@ import {
 import { openingTree } from '../model/openingTree';
 import { referenceIndex } from '../model/referenceIndex';
 import { cloudAvailable, readCloud, writeCloud, type CloudStatus, type WriteResult } from './cloud';
+import {
+  DEFAULT_SURVIVAL,
+  normalizeSurvival,
+  recordSurvival,
+  type SurvivalPrefs,
+  type SurvivalRecord,
+} from '../model/survival';
 import { clearState, debounce, loadState, probeStorage, saveState, type StorageSupport } from './db';
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -72,6 +79,7 @@ export const DEFAULT_SETTINGS: Settings = {
   pickerSort: 'popular',
   onboarded: false,
   openingRun: { ...DEFAULT_PREFS },
+  survival: { ...DEFAULT_SURVIVAL },
   drill: { ...DEFAULT_DRILL },
   repair: { ...DEFAULT_REPAIR },
   play: { ...DEFAULT_PLAY },
@@ -95,6 +103,7 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
     ...known,
     selection: { ...DEFAULT_SELECTION, ...known.selection },
     openingRun: { ...DEFAULT_PREFS, ...known.openingRun },
+    survival: { ...DEFAULT_SURVIVAL, ...known.survival },
     drill: { ...DEFAULT_DRILL, ...known.drill },
     repair: { ...DEFAULT_REPAIR, ...known.repair },
     play: { ...DEFAULT_PLAY, ...known.play },
@@ -130,6 +139,8 @@ interface PersistedState {
   settings: Settings;
   importedGames: ImportedGame[];
   openingRun: OpeningRunRecord;
+  /** Moves survived, per opening and overall. */
+  survival: SurvivalRecord;
   repair: RepairRecord;
   /** Mistakes made inside the app, for Repair to ask about later. */
   mistakes: Mistake[];
@@ -206,6 +217,7 @@ interface StoreState extends PersistedState {
    */
   finishOnboarding: (openingIds: string[]) => void;
   setOpeningRunPrefs: (patch: Partial<OpeningRunPrefs>) => void;
+  setSurvivalPrefs: (patch: Partial<SurvivalPrefs>) => void;
   /** Patch one mode's own options, without touching the rest of settings. */
   setModePrefs: <K extends 'drill' | 'repair' | 'growth' | 'play'>(
     mode: K,
@@ -218,6 +230,8 @@ interface StoreState extends PersistedState {
 
   /** Log a finished openingRun run, globally and against its own opening. */
   endOpeningRun: (outcome: RunOutcome) => void;
+  /** Log a finished Survival run: its moves survived, against every opening its line went through. */
+  endSurvival: (line: string[], moves: number) => void;
   /** Log one Repair item: answered correctly, or given a move. */
   endRepair: (outcome: { relearned?: boolean; added?: boolean }) => void;
   /**
@@ -277,6 +291,7 @@ function emptyPersisted(): PersistedState {
     settings: { ...DEFAULT_SETTINGS },
     importedGames: [],
     openingRun: { ...EMPTY_RECORD },
+    survival: normalizeSurvival(undefined),
     repair: { ...EMPTY_REPAIR_RECORD },
     mistakes: [],
     score: normalizeScore(EMPTY_SCORE),
@@ -294,6 +309,7 @@ function persistedFrom(state: StoreState): PersistedState {
     settings: state.settings,
     importedGames: state.importedGames,
     openingRun: state.openingRun,
+    survival: state.survival,
     repair: state.repair,
     mistakes: state.mistakes,
     score: state.score,
@@ -445,6 +461,7 @@ export const useStore = create<StoreState>((set, get) => {
         set({
           ...chosen,
           openingRun: normalizeRecord(chosen.openingRun),
+          survival: normalizeSurvival(chosen.survival),
           repair: normalizeRepairRecord(chosen.repair),
           mistakes: chosen.mistakes ?? [],
           score: normalizeScore(chosen.score),
@@ -489,6 +506,7 @@ export const useStore = create<StoreState>((set, get) => {
         set({
           ...remote.state,
           openingRun: normalizeRecord(remote.state.openingRun),
+          survival: normalizeSurvival(remote.state.survival),
           repair: normalizeRepairRecord(remote.state.repair),
           mistakes: remote.state.mistakes ?? [],
           score: normalizeScore(remote.state.score),
@@ -675,6 +693,11 @@ export const useStore = create<StoreState>((set, get) => {
       commit({ settings: { ...settings, openingRun: { ...settings.openingRun, ...patch } } });
     },
 
+    setSurvivalPrefs(patch) {
+      const settings = get().settings;
+      commit({ settings: { ...settings, survival: { ...settings.survival, ...patch } } });
+    },
+
     setModePrefs(mode, patch) {
       const settings = get().settings;
       commit({ settings: { ...settings, [mode]: { ...settings[mode], ...patch } } });
@@ -690,6 +713,10 @@ export const useStore = create<StoreState>((set, get) => {
 
     endOpeningRun(outcome) {
       commit({ openingRun: recordRun(get().openingRun, outcome) });
+    },
+
+    endSurvival(line, moves) {
+      commit({ survival: recordSurvival(get().survival, openingTree(referenceIndex()), line, moves) });
     },
 
     endRepair(outcome) {

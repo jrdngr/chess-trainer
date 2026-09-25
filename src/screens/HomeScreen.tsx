@@ -11,7 +11,7 @@ import { recommendNow } from '../store/recommendation';
 import type { Recommendation } from '../model/recommend';
 import { levelById } from '../model/play';
 import { buildRepairs } from '../model/repair';
-import { GRADES, gradeLabel, type RunGrade } from '../model/openingRun';
+import { recentForm } from '../model/survival';
 import { referenceIndex } from '../model/referenceIndex';
 import { displayName } from '../model/repertoire';
 import type { SessionMode, TrainingItem } from '../model/session';
@@ -19,7 +19,7 @@ import { countDue, DAY, forecast, masteryBuckets, retention } from '../model/srs
 import { itemsFor, repertoireList, useStore } from '../store/useStore';
 import type { Repertoire } from '../model/types';
 
-export type ModeId = 'drill' | 'openingRun' | 'repair' | 'growth' | 'play' | 'autopilot';
+export type ModeId = 'drill' | 'survival' | 'repair' | 'growth' | 'play' | 'autopilot';
 
 export interface HomeScreenProps {
   /** Launching one side's prep straight into a session, from the sheet below. */
@@ -47,7 +47,8 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
   const reps = repertoiresIn(repertoireList(state), selection.color);
   const now = Date.now();
   const [pick, setPick] = useState<RepEntry | null>(null);
-  const openingRun = state.openingRun;
+  const survival = state.survival.global;
+  const form = recentForm(survival);
 
   const perRep = useMemo<RepEntry[]>(
     () =>
@@ -165,14 +166,17 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
 
         <div className="mode-grid">
           <Tile
-            name="Run"
-            tag={
-              openingRun.runs > 0
-                ? { text: `best ${openingRun.best}` }
-                : { text: 'start here', tone: 'accent' }
+            name="Survival"
+            tag={survival.runs > 0 ? { text: `best ${survival.best}` } : { text: 'new', tone: 'accent' }}
+            art={
+              <Gauge
+                parts={[
+                  { width: form !== null ? pct(form, survival.best) : 0, color: 'var(--accent)' },
+                  { width: 100 - (form !== null ? pct(form, survival.best) : 0), color: 'var(--surface-3)' },
+                ]}
+              />
             }
-            art={<GradeBar grades={openingRun.grades} />}
-            onClick={() => onOpenMode('openingRun')}
+            onClick={() => onOpenMode('survival')}
           />
           <Tile
             name="Drill"
@@ -253,7 +257,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
         <Section title="Repertoire" />
         {perRep.length === 0 ? (
           <div className="card small muted">
-            Nothing prepared yet. Build a line in Growth, keep one at the end of a Run, or save
+            Nothing prepared yet. Build a line in Growth, keep one at the end of an Autopilot round, or save
             the opening from a game in Play — everything else here works from what you keep.
           </div>
         ) : (
@@ -396,31 +400,6 @@ function Gauge({ parts }: { parts: { width: number; color: string }[] }) {
     </span>
   );
 }
-
-/** How runs have ended, in the four colours the grades already use. */
-function GradeBar({ grades }: { grades: Record<RunGrade, number> }) {
-  const total = GRADES.reduce((sum, grade) => sum + grades[grade], 0);
-  if (total === 0) {
-    return <Gauge parts={[{ width: 100, color: 'var(--surface-3)' }]} />;
-  }
-  return (
-    <span className="gauge" title={GRADES.map((g) => `${gradeLabel(g)} ${grades[g]}`).join(' · ')}>
-      {GRADES.map((grade) => (
-        <i
-          key={grade}
-          style={{ width: `${(grades[grade] / total) * 100}%`, background: GRADE_COLORS[grade] }}
-        />
-      ))}
-    </span>
-  );
-}
-
-const GRADE_COLORS: Record<RunGrade, string> = {
-  green: 'var(--good)',
-  yellow: 'var(--warn)',
-  red: 'var(--bad)',
-  purple: 'var(--accent)',
-};
 
 /** When nothing can persist, say so instead of quietly forgetting. */
 function StorageWarning() {
