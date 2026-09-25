@@ -52,6 +52,12 @@ export const Icons = {
       <path d="M15 5l-7 7 7 7" />
     </svg>
   ),
+  undo: (p: IconProps = {}) => (
+    <svg {...s(p)}>
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+    </svg>
+  ),
   close: (p: IconProps = {}) => (
     <svg {...s(p)} strokeWidth={2.4}>
       <path d="M6 6l12 12M18 6L6 18" />

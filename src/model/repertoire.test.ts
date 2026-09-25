@@ -12,6 +12,7 @@ import {
   leafLines,
   lineText,
   moveSibling,
+  nodeAtLine,
   pathTo,
   removeSubtree,
   setNote,
@@ -189,5 +190,21 @@ describe('checking for a line without adding it', () => {
     const before = JSON.stringify(base);
     hasLine(base, ['e4', 'c5', 'Nf3', 'd6', 'd4']);
     expect(JSON.stringify(base)).toBe(before);
+  });
+});
+
+describe('finding the node a line ends on', () => {
+  const base = addLine(createRepertoire('White', 'w', 'r'), ['e4', 'c5', 'Nf3', 'd6'], 'seed').rep;
+
+  it('finds it, and taking it away leaves the moves before it', () => {
+    const node = nodeAtLine(base, ['e4', 'c5', 'Nf3'])!;
+    expect(node.san).toBe('Nf3');
+    const cut = removeSubtree(base, node.id);
+    expect(hasLine(cut, ['e4', 'c5'])).toBe(true);
+    expect(hasLine(cut, ['e4', 'c5', 'Nf3'])).toBe(false);
+  });
+
+  it('is null for a line the repertoire does not have', () => {
+    expect(nodeAtLine(base, ['e4', 'e5'])).toBeNull();
   });
 });

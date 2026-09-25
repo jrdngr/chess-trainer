@@ -27,6 +27,7 @@ import {
   type Hole,
 } from '../../model/growth';
 import { nudgeArrows } from '../../model/nudge';
+import { nodeAtLine } from '../../model/repertoire';
 import { formatGameCount } from '../../model/reference';
 import { NudgeReasons, nudgeColor, nudgedArrows } from '../../components/Nudges';
 import type { RoundRecord } from '../../model/scoring';
@@ -142,6 +143,7 @@ function Run({
   const state = useStore();
   const settings = state.settings;
   const addLine = useStore((s) => s.addLine);
+  const removeNode = useStore((s) => s.removeNode);
   const endRound = useStore((s) => s.endRound);
   /** The round this sitting will log, kept current until the run is left. */
   const pending = useRef<Omit<RoundRecord, 'at'> | null>(null);
@@ -169,6 +171,14 @@ function Run({
   /** The answer just chosen, until they reply to it — the board shows it green. */
   const [answer, setAnswer] = useState<LegalMove | null>(null);
   const [thinking, setThinking] = useState(false);
+  /**
+   * Every answer added this sitting, oldest first, with the run and batch as
+   * they stood at the reply it answered: what Undo steps back to. Only this
+   * sitting's moves are here, so Undo can never reach older prep.
+   */
+  const [history, setHistory] = useState<
+    { run: GrowthRun; batch: { base: number; allowance: number } | null; san: string }[]
+  >([]);
   /** The position a carry-on game starts from, once one is asked for. */
   const [playFrom, setPlayFrom] = useState<string | null>(null);
 
@@ -313,12 +323,43 @@ function Run({
     const next = move ? answerHole(run, san) : null;
     if (!next) return;
     addLine(row.repertoireId, lineFor(run, san), 'reference');
+    setHistory((steps) => [...steps, { run, batch, san }]);
     setAdded((plies) => [...plies, run.path.length]);
     setAnswer(move);
     setRun(next);
     setPhase(inBatch + 1 >= allowance ? 'done' : 'answered');
     if (settings.hapticFeedback) haptic(10);
     toast(`${san} added`);
+  };
+
+  /**
+   * Take back answers added this sitting: the last one, or all of them. The
+   * move leaves the repertoire, and the run stands again on the reply it
+   * answered, with the batch as it was — so the slot it took is free again.
+   * Every answer is on one line, so taking back the oldest takes the rest
+   * with it.
+   */
+  const undo = (all = false) => {
+    if (!history.length) return;
+    const to = all ? 0 : history.length - 1;
+    const step = history[to];
+    const live = useStore.getState().repertoires[row.repertoireId];
+    // Standing in a hole, the reply being answered had no node either: adding
+    // the answer wrote it too, so it goes with it. A line that simply ended on
+    // their move had its reply already, and only the answer goes.
+    const line = step.run.hole ? step.run.path : lineFor(step.run, step.san);
+    const node = live ? nodeAtLine(live, line) : null;
+    if (node) removeNode(row.repertoireId, node.id);
+    setHistory(history.slice(0, to));
+    setAdded((plies) => plies.slice(0, to));
+    // Nothing left from this sitting means nothing to log on the way out.
+    if (to === 0) pending.current = null;
+    setAnswer(null);
+    setBatch(step.batch);
+    setRun(step.run);
+    setPhase('hole');
+    if (settings.hapticFeedback) haptic(10);
+    toast(all ? 'Line undone' : `${step.san} undone`);
   };
 
   /**
@@ -591,10 +632,16 @@ function Run({
                 </button>
               ))}
             </div>
-            {added.length > 0 && (
-              <button className="btn block mt-8" onClick={() => setPhase('done')}>
-                Stop here
-              </button>
+            {history.length > 0 && (
+              <div className="row mt-8">
+                <button className="btn grow" onClick={() => undo()}>
+                  <Icons.undo size={18} />
+                  Undo
+                </button>
+                <button className="btn grow" onClick={() => setPhase('done')}>
+                  Stop here
+                </button>
+              </div>
             )}
           </>
         )}
@@ -630,6 +677,17 @@ function Run({
             <div className="card">
               <div className="movetext">{sansToMoveText(run.path)}</div>
             </div>
+            {history.length > 0 && (
+              <div className="row mt-8">
+                <button className="btn grow" onClick={() => undo()}>
+                  <Icons.undo size={18} />
+                  Undo
+                </button>
+                <button className="btn grow" onClick={() => undo(true)}>
+                  Undo all
+                </button>
+              </div>
+            )}
             {!more && (
               <div className="card small muted mt-8">
                 The book ends here, so there is nothing more to answer. Add a move from the

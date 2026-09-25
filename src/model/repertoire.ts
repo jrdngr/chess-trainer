@@ -79,6 +79,18 @@ export function findChildBySan(
   return childrenOf(rep, parentId).find((m) => m.san === san);
 }
 
+/** The node a line from the root ends on, or null when the repertoire does not have it. */
+export function nodeAtLine(rep: Repertoire, sans: string[]): RepMove | null {
+  let parent: string | null = null;
+  let node: RepMove | undefined;
+  for (const san of sans) {
+    node = findChildBySan(rep, parent, san);
+    if (!node) return null;
+    parent = node.id;
+  }
+  return node ?? null;
+}
+
 export interface AddMoveResult {
   rep: Repertoire;
   node: RepMove;
