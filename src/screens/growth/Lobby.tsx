@@ -177,6 +177,32 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
           onChange={(ply) => setModePrefs('growth', { maxPly: Number(ply) })}
         />
 
+        <Section title="Nudge toward" />
+        <Segmented
+          value={prefs.nudgePriority}
+          options={[
+            { value: 'transposition', label: 'Transpositions' },
+            { value: 'habit', label: 'Habits' },
+          ]}
+          onChange={(nudgePriority) => setModePrefs('growth', { nudgePriority })}
+        />
+        <div className="note">
+          {prefs.nudgePriority === 'transposition'
+            ? 'A move that lands in a line you have wins the green arrow; failing that, one you already play in this opening.'
+            : 'A move you already play in this opening wins the green arrow; failing that, one that lands in a line you have.'}{' '}
+          Red marks the move that closes off your lines or that you keep choosing against. Run's new moves follow this too.
+        </div>
+
+        <Section title="Pawn structure" />
+        <Segmented
+          value={prefs.nudgePawns ? 'on' : 'off'}
+          options={[
+            { value: 'off', label: 'Off' },
+            { value: 'on', label: 'Counts as a habit' },
+          ]}
+          onChange={(on) => setModePrefs('growth', { nudgePawns: on === 'on' })}
+        />
+
         {hasMoves && (
           <>
             <Section title="What you have" />

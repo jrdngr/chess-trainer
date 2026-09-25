@@ -339,7 +339,7 @@ export function evidenceFor(
 }
 
 /** Book replies at a position that are played often enough to prepare for. */
-function popularReplies(
+export function popularReplies(
   index: ReferenceIndex,
   fen: string,
   minShare: number,
@@ -425,7 +425,7 @@ export function rowUrgency(depth: number, topShare: number, holes: number): numb
  * "KID", where the position it passes through at move four is named "King's
  * Indian Defence".
  */
-function family(index: ReferenceIndex, sans: string[]): NamedLine | null {
+export function family(index: ReferenceIndex, sans: string[]): NamedLine | null {
   const names = namesAlong(index, sans);
   const found = names.find((named) => named.ply >= 2) ?? names[names.length - 1];
   if (!found) return null;

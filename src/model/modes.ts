@@ -1,5 +1,6 @@
 import { DEFAULT_LEVEL } from './play';
 import type { ClockMode } from './openingRun';
+import type { NudgePriority } from './nudge';
 import type { RepairKind, RepairSort } from './repair';
 import type { SessionMode } from './session';
 
@@ -106,9 +107,22 @@ export const GROWTH_DEPTHS = [8, 12, 18] as const;
 export interface GrowthPrefs {
   minShare: number;
   maxPly: number;
+  /**
+   * Which familiar move the arrows nudge toward when both kinds are on
+   * offer: one that transposes into your lines, or one you play elsewhere in
+   * the opening. Read by Run's new-moves picker too. See `nudgeArrows`.
+   */
+  nudgePriority: NudgePriority;
+  /** Count reaching your usual pawns as a habit. */
+  nudgePawns: boolean;
 }
 
-export const DEFAULT_GROWTH: GrowthPrefs = { minShare: 1, maxPly: 18 };
+export const DEFAULT_GROWTH: GrowthPrefs = {
+  minShare: 1,
+  maxPly: 18,
+  nudgePriority: 'transposition',
+  nudgePawns: false,
+};
 
 export function shareLabel(share: number): string {
   return share >= 1 ? `${share}% and up` : 'Anything played';

@@ -39,7 +39,9 @@ import {
 import { formatGameCount, specificNameForColor } from '../../model/reference';
 import { nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
-import { evidenceFor, movesToDraw, optionsAt } from '../../model/growth';
+import { evidenceFor, movesToDraw, optionsAt, popularReplies } from '../../model/growth';
+import { nudgeArrows } from '../../model/nudge';
+import { NudgeReasons, nudgeColor, nudgedArrows } from '../../components/Nudges';
 import { gradeForTime } from '../../model/srs';
 import { selectionText } from '../../components/Selection';
 import { mulberry32 } from '../../model/session';
@@ -735,7 +737,30 @@ export function OpeningRunScreen({
   /** The book at the edge of the prep, and the moves drawn on the board for it. */
   const inRegion = phase === 'gap' ? movesHere(source, run) : [];
   const gap = edgeOptions(index, run.fen).filter((option) => inRegion.includes(option.san));
-  const drawn = movesToDraw(index, run.fen).filter((move) => inRegion.includes(move.san));
+  /**
+   * Coloured toward the moves that keep your repertoire narrow, as Growth's
+   * are, from Growth's settings: a familiar move the book ranks too low to
+   * draw is pulled onto the board, and into the list, in yellow.
+   */
+  const drawn =
+    phase === 'gap'
+      ? nudgeArrows(
+          reps.find((r) => r.id === run.repertoireId) ?? reps.find((r) => r.color === run.color),
+          index,
+          run.played,
+          run.fen,
+          movesToDraw(index, run.fen).filter((move) => inRegion.includes(move.san)),
+          popularReplies(index, run.fen, settings.growth.minShare).filter((move) => inRegion.includes(move.san)),
+          { priority: settings.growth.nudgePriority, pawns: settings.growth.nudgePawns },
+          settings.growth.minShare,
+        )
+      : [];
+  const far = drawn.find((move) => move.tone === 'toward-far');
+  const listed =
+    far && !gap.some((option) => option.san === far.san)
+      ? [...gap, ...popularReplies(index, run.fen, 0).filter((option) => option.san === far.san)]
+      : gap;
+  const toneOf = (san: string) => drawn.find((move) => move.san === san)?.tone;
 
   /**
    * Take a move from the book at the edge of the prep. It goes into the
@@ -743,7 +768,7 @@ export function OpeningRunScreen({
    * find it.
    */
   const chooseAtGap = (san: string) => {
-    if (phase !== 'gap' || !gap.some((option) => option.san === san)) return;
+    if (phase !== 'gap' || !listed.some((option) => option.san === san)) return;
     const line = [...run.played, san];
     addToRep(repertoireForAdding(), line, 'reference');
     toast(`${san} added`);
@@ -783,7 +808,7 @@ export function OpeningRunScreen({
           interactive={(live && myTurn && !thinking && !referee.pending) || phase === 'gap'}
           movableFor={run.color}
           allowed={phase === 'gap' ? drawn.map((move) => move.san) : undefined}
-          arrows={drawn.map((move) => ({ from: move.from, to: move.to }))}
+          arrows={nudgedArrows(drawn)}
           onMove={onMove}
           lastMove={lastMoveOf(run.played)}
           highlights={hintSquare ? [{ square: hintSquare, kind: 'hint' }] : []}
@@ -811,14 +836,17 @@ export function OpeningRunScreen({
                 {run.newMoves === 1 ? 'One move to add' : `${run.newMoves} moves to add`}
               </div>
             </div>
+            <NudgeReasons moves={drawn} />
             <Section title="Choose a move" />
             {gap.length === 0 ? (
               <div className="card small muted">The database has nothing here.</div>
             ) : (
               <div className="list">
-                {gap.map((option) => (
+                {listed.map((option) => (
                   <button className="list-row" key={option.san} onClick={() => chooseAtGap(option.san)}>
-                    <span className="tree-san">{option.san}</span>
+                    <span className="tree-san" style={{ color: nudgeColor(toneOf(option.san)) }}>
+                      {option.san}
+                    </span>
                     <span className="grow">
                       <div className="meta">
                         {option.share}% of replies · {formatGameCount(option.games)} games

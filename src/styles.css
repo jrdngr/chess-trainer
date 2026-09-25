@@ -986,3 +986,6 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   color: var(--text-2);
 }
 .onboard-tally .side-count { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Why an arrow is coloured, under the board where a move is being added. */
+.nudges { text-align: center; font-size: 13px; font-weight: 600; line-height: 1.45; margin: 2px 0 6px; }

@@ -15,6 +15,7 @@ import {
   nextHole,
   growthRows,
   optionsAt,
+  popularReplies,
   preparedHere,
   recommended,
   resumeAdding,
@@ -25,7 +26,9 @@ import {
   type GrowthRun,
   type Hole,
 } from '../../model/growth';
+import { nudgeArrows } from '../../model/nudge';
 import { formatGameCount } from '../../model/reference';
+import { NudgeReasons, nudgeColor, nudgedArrows } from '../../components/Nudges';
 import type { RoundRecord } from '../../model/scoring';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { atPracticeCap, offerOpening, practiceOwed, practiceText } from '../../model/growOffer';
@@ -213,11 +216,36 @@ function Run({
     [phase, index, run.fen],
   );
 
-  /** The moves drawn on the board, which are also the only ones playable on it. */
+  /**
+   * The moves drawn on the board, which are also the only ones playable on it,
+   * coloured toward the moves that keep your repertoire narrow. The live tree
+   * is read, not the one the run began with, so a move added this sitting
+   * already counts as a habit.
+   */
   const shown = useMemo(
-    () => (phase === 'hole' ? movesToDraw(index, run.fen) : []),
-    [phase, index, run.fen],
+    () =>
+      phase === 'hole'
+        ? nudgeArrows(
+            rep,
+            index,
+            run.path,
+            run.fen,
+            movesToDraw(index, run.fen),
+            popularReplies(index, run.fen, find.minShare),
+            { priority: prefs.nudgePriority, pawns: prefs.nudgePawns },
+            find.minShare,
+          )
+        : [],
+    [phase, rep, index, run.path, run.fen, find.minShare, prefs.nudgePriority, prefs.nudgePawns],
   );
+  /** The list under the board carries a familiar move pulled in from further down the book. */
+  const listed = useMemo(() => {
+    const far = shown.find((move) => move.tone === 'toward-far');
+    if (!far || options.some((option) => option.san === far.san)) return options;
+    const option = popularReplies(index, run.fen, 0).find((o) => o.san === far.san);
+    return option ? [...options, option] : options;
+  }, [shown, options, index, run.fen]);
+  const toneOf = (san: string) => shown.find((move) => move.san === san)?.tone;
 
   /**
    * How many this batch may add, from how deep the hole it starts at is.
@@ -459,7 +487,7 @@ function Run({
           interactive={(phase === 'walking' && isUsersTurn(run)) || phase === 'hole'}
           movableFor={run.color}
           allowed={phase === 'hole' ? shown.map((move) => move.san) : undefined}
-          arrows={shown.map((move) => ({ from: move.from, to: move.to }))}
+          arrows={nudgedArrows(shown)}
           onMove={onMove}
           // The green highlight below stands in for the usual last-move tint on
           // the move that was just added, so the two do not compete.
@@ -542,14 +570,18 @@ function Run({
               )}
             </div>
 
+            <NudgeReasons moves={shown} />
+
             <Section
               title="Answer it"
               aside={inBatch > 0 ? `${inBatch} of ${allowance} added` : `up to ${allowance}`}
             />
             <div className="list">
-              {options.map((option) => (
+              {listed.map((option) => (
                 <button className="list-row" key={option.san} onClick={() => choose(option.san)}>
-                  <span className="tree-san">{option.san}</span>
+                  <span className="tree-san" style={{ color: nudgeColor(toneOf(option.san)) }}>
+                    {option.san}
+                  </span>
                   <span className="grow">
                     <div className="meta">
                       {option.share}% of replies · {formatGameCount(option.games)} games
