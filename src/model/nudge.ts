@@ -179,10 +179,18 @@ function signalsFor(
   const inOpening = profile.nodes.filter((node) => !fam || node.family === fam);
   const mineInOpening = inOpening.filter((node) => node.mine);
 
+  // The line so far: a move back into it is not a transposition, and a line
+  // that ends on it is behind you rather than closed off. Nor is a choice made
+  // on it a habit, or a move passed over: those are about your *other* lines.
+  // Counted here, a repertoire of one line nudged against its own moves.
+  const onPath = new Set(walkSan(path, profile.rootFen).fens.map(positionKey));
+  onPath.add(positionKey(fen));
+
   // Where you have already chosen, and what: one entry per position, so a
   // transposition met twice is one choice rather than two.
   const chosen = new Map<string, Set<string>>();
   for (const node of mineInOpening) {
+    if (onPath.has(node.before)) continue;
     const at = chosen.get(node.before) ?? new Set<string>();
     at.add(sameMove(node.san));
     chosen.set(node.before, at);
@@ -206,10 +214,6 @@ function signalsFor(
     }
   }
 
-  // The line so far: a move back into it is not a transposition, and a line
-  // that ends on it is behind you rather than closed off.
-  const onPath = new Set(walkSan(path, profile.rootFen).fens.map(positionKey));
-  onPath.add(positionKey(fen));
 
   const leaves = uniqueBy(
     inOpening.filter((node) => node.leaf && node.depth > path.length && !onPath.has(node.after)),

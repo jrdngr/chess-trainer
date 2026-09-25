@@ -77,6 +77,13 @@ describe('the reverse signal', () => {
     expect(arrows.filter((arrow) => arrow.tone === 'away')).toHaveLength(1);
   });
 
+  it('does not count the line being grown as your other lines', () => {
+    // A fresh repertoire of one line: every choice on it is on the way here.
+    const line = 'd4 d5 c4 e6 Nc3 Nf6 Bg5 Be7 e3 O-O';
+    const arrows = arrowsAt(rep('w', [line]), line);
+    expect(arrows.every((arrow) => !arrow.tone)).toBe(true);
+  });
+
   it('never reds the green move', () => {
     for (const priority of ['transposition', 'habit'] as const) {
       const arrows = arrowsAt(kid, 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Be2 O-O Bg5', { priority });
