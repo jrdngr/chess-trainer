@@ -789,7 +789,7 @@ export function OpeningRunScreen({
   return (
     <>
       <AppBar
-        title="Run"
+        title={planned ? 'Auto' : 'Run'}
         subtitle={selectionText(run.color, run.enteredIn ?? run.openingId)}
         onClose={onExit}
         actions={

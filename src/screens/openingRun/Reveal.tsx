@@ -251,7 +251,7 @@ export function Reveal({
   return (
     <>
       <AppBar
-        title="Run"
+        title={auto ? 'Auto' : 'Run'}
         subtitle={selectionText(run.color, run.enteredIn ?? run.openingId)}
         onClose={onExit}
         actions={
