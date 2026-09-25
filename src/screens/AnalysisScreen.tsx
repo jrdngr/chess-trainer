@@ -16,6 +16,8 @@ import { useStore } from '../store/useStore';
 export interface AnalysisScreenProps {
   /** Optional starting line, e.g. jumped to from the repertoire browser. */
   initialPath?: string[];
+  /** The side to look from, with the starting line: a Survival run is seen from the side you played. */
+  initialOrientation?: 'w' | 'b';
   onConsumedInitial?: () => void;
 }
 
@@ -26,12 +28,12 @@ export interface AnalysisScreenProps {
  * moves, so it lives here now: the engine's lines above, the book's moves
  * and games below, and the named lines the book knows from this position.
  */
-export function AnalysisScreen({ initialPath, onConsumedInitial }: AnalysisScreenProps) {
+export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInitial }: AnalysisScreenProps) {
   const settings = useStore((s) => s.settings);
   const setSettings = useStore((s) => s.setSettings);
   const [sans, setSans] = useState<string[]>(initialPath ?? []);
   const [cursor, setCursor] = useState(initialPath?.length ?? 0);
-  const [orientation, setOrientation] = useState<'w' | 'b'>('w');
+  const [orientation, setOrientation] = useState<'w' | 'b'>(initialOrientation ?? 'w');
   const [showPgn, setShowPgn] = useState(false);
   const [pgnText, setPgnText] = useState('');
   const [addLine, setAddLine] = useState<{ sans: string[]; note?: string; title: string; color?: 'w' | 'b' } | null>(null);
@@ -43,6 +45,7 @@ export function AnalysisScreen({ initialPath, onConsumedInitial }: AnalysisScree
     if (initialPath) {
       setSans(initialPath);
       setCursor(initialPath.length);
+      if (initialOrientation) setOrientation(initialOrientation);
       onConsumedInitial?.();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

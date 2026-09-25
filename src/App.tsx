@@ -38,6 +38,8 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [explorePath, setExplorePath] = useState<string[] | undefined>();
+  /** The side the Analysis tab opens from, with the line it was sent. */
+  const [exploreSide, setExploreSide] = useState<'w' | 'b' | undefined>();
   const statsTarget = useStore((s) => s.statsTarget);
   const clearStats = useStore((s) => s.clearStats);
   const [statsFor, setStatsFor] = useState<string | undefined>();
@@ -94,7 +96,15 @@ export default function App() {
   ) : mode?.id === 'drill' ? (
     <DrillScreen onExit={leaveMode} />
   ) : mode?.id === 'survival' ? (
-    <SurvivalScreen onExit={leaveMode} />
+    <SurvivalScreen
+      onExit={leaveMode}
+      onAnalyse={(sans, side) => {
+        setExplorePath(sans);
+        setExploreSide(side);
+        setMode(null);
+        setTab('analysis');
+      }}
+    />
   ) : mode?.id === 'repair' ? (
     <RepairScreen
       onImport={() => {
@@ -145,7 +155,11 @@ export default function App() {
           {tab === 'analysis' && (
             <AnalysisScreen
               initialPath={explorePath}
-              onConsumedInitial={() => setExplorePath(undefined)}
+              initialOrientation={exploreSide}
+              onConsumedInitial={() => {
+                setExplorePath(undefined);
+                setExploreSide(undefined);
+              }}
             />
           )}
 

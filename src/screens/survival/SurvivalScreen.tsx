@@ -66,7 +66,14 @@ interface MissFlash {
  * Its own screen, sharing no state with Run or Autopilot: it rates nothing,
  * adds nothing to the repertoire, and keeps its own record of moves survived.
  */
-export function SurvivalScreen({ onExit }: { onExit: () => void }) {
+export function SurvivalScreen({
+  onExit,
+  onAnalyse,
+}: {
+  onExit: () => void;
+  /** Leave for the Analysis tab on this line, seen from this side. */
+  onAnalyse: (sans: string[], side: 'w' | 'b') => void;
+}) {
   const state = useStore();
   const { settings, cards } = state;
   const recordMove = useStore((s) => s.recordMove);
@@ -249,6 +256,7 @@ export function SurvivalScreen({ onExit }: { onExit: () => void }) {
         before={before}
         onNext={() => start(prefs)}
         onChangeOptions={() => setPhase('setup')}
+        onAnalyse={() => onAnalyse(game.state.run.played, game.state.run.color)}
         onExit={onExit}
       />
     );
