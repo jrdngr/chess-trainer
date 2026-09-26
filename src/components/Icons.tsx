@@ -123,6 +123,12 @@ export const Icons = {
       <path d="M4 19h16" />
     </svg>
   ),
+  export: (p: IconProps = {}) => (
+    <svg {...s(p)}>
+      <path d="M12 15V3M7.5 7.5L12 3l4.5 4.5" />
+      <path d="M5 12v7h14v-7" />
+    </svg>
+  ),
   trash: (p: IconProps = {}) => (
     <svg {...s(p)}>
       <path d="M4 6h16M9 6V4h6v2M7 6l1 14h8l1-14" />

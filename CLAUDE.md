@@ -22,6 +22,9 @@ existing artifact rather than creating a new one:
   `dist-artifact/files.json` (`root: "dist"`, `engine/stockfish.js` — the
   Stockfish worker needs a real URL and cannot be inlined).
 - The favicon (♟️) and title stay as they are; do not pass a new one.
+- Capabilities are `{db: {}, downloads: true}` (cloud sync and the JSON export).
+  Omit `capabilities` on a normal republish so they carry forward; restate the
+  full set if you ever change them.
 
 Run `npm test` and `npm run typecheck` before publishing. Commit the change and
 the republish together, so the repo and the live artifact never drift apart.

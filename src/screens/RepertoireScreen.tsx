@@ -10,6 +10,7 @@ import { referenceIndex } from '../model/referenceIndex';
 import { branchItems, type SessionMode, type TrainingItem } from '../model/session';
 import { describeDue } from '../model/srs';
 import type { Card, RepMove, Repertoire } from '../model/types';
+import { saveFile } from '../store/saveFile';
 import { repertoireList, useStore } from '../store/useStore';
 
 export interface RepertoireScreenProps {
@@ -73,6 +74,11 @@ export function RepertoireScreen({ onStart, onImport, onExploreFrom }: Repertoir
         title="Repertoire"
         actions={
           <>
+            {reps.length > 0 && (
+              <IconButton label="Export as JSON" onClick={() => void exportReps(reps)}>
+                <Icons.export size={20} />
+              </IconButton>
+            )}
             <IconButton label="Import games" onClick={onImport}>
               <Icons.download size={20} />
             </IconButton>
@@ -792,4 +798,12 @@ function NodeMenu({
       )}
     </Sheet>
   );
+}
+
+/** Both sides' trees, as they are stored, in one JSON file. */
+async function exportReps(reps: Repertoire[]) {
+  const date = new Date().toISOString().slice(0, 10);
+  const text = JSON.stringify({ format: 'chess-trainer-repertoire', version: 1, exportedAt: date, repertoires: reps }, null, 2);
+  const outcome = await saveFile(`repertoire-${date}.json`, text);
+  if (outcome === 'unavailable') toast('Saving files is not available here');
 }
