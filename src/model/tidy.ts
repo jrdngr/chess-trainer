@@ -1,6 +1,6 @@
 import { fenTurn, positionKey, type Color } from '../chess/core';
 import { movesToDraw, popularReplies } from './growth';
-import { bestSwitch, familiarOffBook, goneWith, type NudgePrefs, type TowardKind } from './nudge';
+import { bestSwitch, familiarOffBook, goneWith, isFirstMove, type NudgePrefs, type TowardKind } from './nudge';
 import { lineInRegion } from './selection';
 import type { OpeningNode, OpeningTree } from './openingTree';
 import type { ReferenceIndex } from './reference';
@@ -65,6 +65,8 @@ export function findAt(
 ): TidyFind | null {
   const line = pathTo(rep, node.parentId);
   const path = line.map((move) => move.san);
+  // Your first move picks the opening; two first moves are two openings, not a loose end.
+  if (isFirstMove(path)) return null;
   const fen = node.fenBefore;
   const gone = goneWith(rep, index, node.id);
   const pathKeys = [positionKey(rep.rootFen), ...line.map((move) => positionKey(move.fenAfter))];

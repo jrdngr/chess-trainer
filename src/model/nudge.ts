@@ -382,6 +382,23 @@ function signalsFor(
         (leaf) => leaf.depth > path.length && !removed.has(leaf.after) && reachable(fen, leaf.fenAfter),
       )
     : [];
+  // Lines another move you keep here still reaches are not closed off by
+  // this one: you chose to branch, and those lines stay yours. Worked out
+  // per leaf, so the move being asked about can leave out its own line.
+  const here = positionKey(fen);
+  const kept = away
+    ? uniqueBy(
+        profile.nodes.filter((node) => node.mine && node.before === here && !removed.has(node.after)),
+        (node) => node.san,
+      )
+    : [];
+  const keptReach = new Map<string, string[]>();
+  for (const leaf of openBefore) {
+    keptReach.set(
+      leaf.after,
+      kept.filter((node) => reachable(node.fenAfter, leaf.fenAfter)).map((node) => sameMove(node.san)),
+    );
+  }
   const myPawnsNow = pawnsOf(fen, profile.color);
   const usualPawns = new Map<string, number>();
   if (prefs.pawns) {
@@ -447,6 +464,7 @@ function signalsFor(
     let closes = 0;
     for (const leaf of openBefore) {
       if (reachable(move.after, leaf.fenAfter)) continue;
+      if (keptReach.get(leaf.after)?.some((other) => other !== same)) continue;
       closes += 1;
       closedFrom.set(familyOf(leaf), (closedFrom.get(familyOf(leaf)) ?? 0) + 1);
     }
@@ -634,7 +652,9 @@ export function nudgeArrows(
   offBook: ReadonlySet<string> = new Set(),
 ): NudgedMove[] {
   const out: NudgedMove[] = drawn.map((move) => ({ ...move }));
-  if (!rep || !candidates.length) return out;
+  // Your first move of the game picks the opening: nothing about the rest of
+  // your lines makes one more familiar than another, so it is left plain.
+  if (!rep || !candidates.length || isFirstMove(path)) return out;
   const profile = profileOf(rep, index);
   if (!profile.nodes.length) return out;
 
@@ -683,6 +703,11 @@ export function nudgeArrows(
     out[at] = { ...out[at], tone: 'away', reason: awayReason(red.signal, red.kind, fam) };
   }
   return out;
+}
+
+/** Whether a move after `path` is the first one of its side in the game. */
+export function isFirstMove(path: readonly string[]): boolean {
+  return path.length < 2;
 }
 
 /** Appended to the reason of a move the book does not have. */
@@ -823,7 +848,7 @@ export function familiarOffBook(
   minShare: number,
   opts: SignalOptions & { habitsOnly?: boolean } = {},
 ): string[] {
-  if (!rep) return [];
+  if (!rep || isFirstMove(path)) return [];
   const profile = profileOf(rep, index);
   if (!profile.nodes.length) return [];
   const listed = new Set(bookMovesAt(index, fen, minShare));

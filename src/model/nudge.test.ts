@@ -17,11 +17,12 @@ function rep(color: 'w' | 'b', lines: string[]): Repertoire {
 }
 
 /** Three King's Indians, each with ...e5. */
-const kid = rep('b', [
+const kidLines = [
   'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5',
   'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3 O-O Be3 e5',
   'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nge2 O-O Ng3 e5',
-]);
+];
+const kid = rep('b', kidLines);
 
 function arrowsAt(r: Repertoire, line: string, prefs: Partial<NudgePrefs> = {}) {
   const path = line.split(' ');
@@ -99,6 +100,25 @@ describe('the reverse signal', () => {
     const arrows = arrowsAt(kid, 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Be2 O-O Bg5');
     const red = arrows.find((arrow) => arrow.tone === 'away')!;
     expect(red.reason).toMatch(/closes off 3 of your/);
+  });
+
+  it('does not count lines another move you keep there still reaches', () => {
+    const branched = rep('b', [...kidLines, 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Be2 O-O Bg5 e5']);
+    const arrows = arrowsAt(branched, 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Be2 O-O Bg5');
+    expect(arrows.some((arrow) => /closes off/.test(arrow.reason ?? ''))).toBe(false);
+  });
+});
+
+describe('your first move', () => {
+  it('draws the arrows plain: the first move picks the opening', () => {
+    const black = arrowsAt(kid, 'd4');
+    expect(black.length).toBeGreaterThan(0);
+    expect(black.every((arrow) => !arrow.tone && !arrow.reason)).toBe(true);
+    const white = rep('w', ['d4 d5 c4 e6 Nc3 Nf6', 'd4 Nf6 c4 e6 Nc3 Bb4', 'd4 d5 c4 c6 Nf3 Nf6']);
+    const fen = walkSan([]).fens.at(-1)!;
+    const prefs: NudgePrefs = { priority: 'habit', pawns: false };
+    const arrows = nudgeArrows(white, index, [], fen, movesToDraw(index, fen), popularReplies(index, fen, 1), prefs, 1);
+    expect(arrows.every((arrow) => !arrow.tone)).toBe(true);
   });
 });
 

@@ -68,6 +68,20 @@ describe('the list', () => {
   });
 });
 
+describe('your first move', () => {
+  it('is never a find: two first moves are two openings', () => {
+    const both = rep('w', [
+      'd4 d5 c4 e6 Nc3 Nf6 Bg5',
+      'd4 Nf6 c4 e6 Nc3 d5 Bg5',
+      'd4 d5 c4 c6 Nf3 Nf6 Nc3',
+      'e4 e5 Nf3 Nc6 Bb5',
+    ]);
+    expect(findAt(both, index, nodeAtLine(both, ['e4'])!, opts)).toBeNull();
+    const finds = tidyFinds([both], index, tree, nodeById(tree, ''), opts);
+    expect(finds.every((find) => find.path.length > 0)).toBe(true);
+  });
+});
+
 describe('switching', () => {
   it('makes the new move yours and removes the old one with its line', () => {
     const node = nodeAtLine(qgd, [...exchange, 'Bg5'])!;
