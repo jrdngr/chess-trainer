@@ -207,6 +207,8 @@ function sum(counts: Map<string, number> | undefined): number {
  * different move with the same name.
  */
 export const HABIT_PLIES = 4;
+/** How far down a line a move can come and still only be put off: your next two moves. */
+const DELAY_PLIES = 5;
 
 /** One place you chose, or passed on, a move. */
 interface Seen {
@@ -281,6 +283,30 @@ function contextOf(profile: Profile, index: ReferenceIndex, fam: string | null, 
     list.push(seen);
     map.set(move, list);
   };
+  // Your moves a little further down each line: a move you play a turn or
+  // two later was put off, not passed on. 1.d4 d5 2.c4 c6 3.cxd5 cxd5 4.Nc3
+  // Nf6 5.Nf3 Nc6 6.g3 does not pass on g3 at move 5.
+  const from = new Map<string, ProfileNode[]>();
+  for (const node of profile.nodes) {
+    const list = from.get(node.before) ?? [];
+    list.push(node);
+    from.set(node.before, list);
+  }
+  const soonAfter = (key: string): Set<string> => {
+    const out = new Set<string>();
+    let frontier = [key];
+    for (let ply = 0; ply < DELAY_PLIES && frontier.length; ply++) {
+      const next: string[] = [];
+      for (const at of frontier) {
+        for (const node of from.get(at) ?? []) {
+          if (ply > 0 && node.mine) out.add(sameMove(node.san));
+          next.push(node.after);
+        }
+      }
+      frontier = next;
+    }
+    return out;
+  };
   const byPly = new Map<number, Map<string, number>>();
   const passedByPly = new Map<number, Map<string, number>>();
   for (const [key, at] of chosen) {
@@ -296,9 +322,10 @@ function contextOf(profile: Profile, index: ReferenceIndex, fam: string | null, 
     if (!fen) continue;
     const passed = passedByPly.get(at.ply) ?? new Map<string, number>();
     passedByPly.set(at.ply, passed);
+    const later = soonAfter(key);
     for (const san of bookMovesAt(index, fen, minShare)) {
       const move = sameMove(san);
-      if (at.moves.has(move)) continue;
+      if (at.moves.has(move) || later.has(move)) continue;
       add(passedOn, move, seen);
       passed.set(move, (passed.get(move) ?? 0) + 1);
     }
@@ -722,18 +749,22 @@ function towardOrder(priority: NudgePriority): TowardKind[] {
     : ['habit', 'pawns', 'transposes', 'heads'];
 }
 
-function towardStrength(s: Signals, kind: TowardKind): number {
+function towardStrength(s: Signals, kind: TowardKind, lenient = false): number {
   if (kind === 'transposes') return s.transposes;
   if (kind === 'heads') return s.heads;
-  if (kind === 'habit') return isHabit(s) ? s.habit : 0;
+  if (kind === 'habit') return isHabit(s, lenient) ? s.habit : 0;
   return s.pawns;
 }
 
 /** How familiar a move is: the first kind it scores in, and how strongly. Null when it is not. */
-function familiarity(s: Signals, priority: NudgePriority): { kind: TowardKind; rank: number; strength: number } | null {
+function familiarity(
+  s: Signals,
+  priority: NudgePriority,
+  lenient = false,
+): { kind: TowardKind; rank: number; strength: number } | null {
   const order = towardOrder(priority);
   for (let rank = 0; rank < order.length; rank++) {
-    const strength = towardStrength(s, order[rank]);
+    const strength = towardStrength(s, order[rank], lenient);
     if (strength > 0) return { kind: order[rank], rank, strength };
   }
   return null;
@@ -767,8 +798,13 @@ function awayStrength(s: Signals, kind: AwayKind): number {
  * is chosen in dozens of places and passed over in dozens more; that is not
  * a habit, only a common move.
  */
-function isHabit(s: Signals): boolean {
-  return s.habit >= HABIT_MIN && s.habit >= s.passed;
+/**
+ * A move you keep choosing. `lenient` drops the test against the times you
+ * passed it up: for a move you have just played over the board, which says
+ * which way you lean better than a count of your lines can.
+ */
+function isHabit(s: Signals, lenient = false): boolean {
+  return s.habit >= HABIT_MIN && (lenient || s.habit >= s.passed);
 }
 
 function pickAway(
@@ -932,7 +968,11 @@ export function bestSwitch(
   others: string[],
   prefs: NudgePrefs,
   minShare: number,
-  opts: Omit<SignalOptions, 'away'> & { against?: boolean } = {},
+  opts: Omit<SignalOptions, 'away'> & {
+    against?: boolean;
+    /** The switch is to a move just played over the board: see `isHabit`. */
+    played?: boolean;
+  } = {},
 ): Switch | null {
   const profile = profileOf(rep, index);
   if (!profile.nodes.length) return null;
@@ -941,11 +981,12 @@ export function bestSwitch(
     away: false,
   });
   const ours = signals.find((s) => s.san === mine);
-  const bar = ours ? familiarity(ours, prefs.priority) : null;
+  const lenient = opts.played ?? false;
+  const bar = ours ? familiarity(ours, prefs.priority, lenient) : null;
   let best: { signal: Signals; kind: TowardKind; rank: number; strength: number } | null = null;
   for (const signal of signals) {
     if (signal.san === mine) continue;
-    const f = familiarity(signal, prefs.priority);
+    const f = familiarity(signal, prefs.priority, lenient);
     if (!f) continue;
     const above = (a: { rank: number; strength: number }, b: { rank: number; strength: number } | null) =>
       !b || a.rank < b.rank || (a.rank === b.rank && a.strength > b.strength);

@@ -38,6 +38,44 @@ describe('the off-prep hint', () => {
     expect(hint.removes).toBe(3);
   });
 
+  it('does not count a move played a turn later as passed on', () => {
+    // Fianchetto lines where Nf3 comes first and g3 follows, beside lines that
+    // pass on g3 outright: g3 is chosen twice and passed on twice.
+    const lean = rep('w', [
+      'd4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Nf3 c6 Bg5',
+      'd4 d5 c4 e6 cxd5 exd5 Nc3 c6 Nf3',
+      'd4 d5 c4 c6 cxd5 cxd5 Nc3 Nf6 Nf3 Nc6 g3',
+      'd4 d5 c4 e6 cxd5 exd5 Nc3 c5 Nf3 Nc6 g3 Nf6 Bg2 Be7 O-O O-O Bg5',
+      'd4 d5 c4 dxc4 Nc3 a6 e4',
+    ]);
+    const fen = walkSan(exchange).fens.at(-1)!;
+    const o = { ...opts, minShare: 1 };
+    expect(offPrepHint(lean, index, fen, 'g3', 'Bg5', o)?.reason).toBe(
+      'You play g3 in 2 Tarrasch and Slav lines, Bg5 in none',
+    );
+    // The list's stricter test holds too, once the put-off g3s stop counting against it.
+    const bg5 = nodeAtLine(lean, [...exchange, 'Bg5'])!;
+    expect(findAt(lean, index, bg5, o)?.suggestion).toBe('g3');
+  });
+
+  it('trusts the move you just played over how often you pass it up', () => {
+    // g3 chosen twice but passed on three times: not a habit on the list, but
+    // playing it over the board is enough for the hint.
+    const passes = rep('w', [
+      'd4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Nf3 c6 Bg5',
+      'd4 d5 c4 c6 cxd5 cxd5 Nc3 Nf6 Nf3 Nc6 g3',
+      'd4 d5 c4 e6 cxd5 exd5 Nc3 c5 Nf3 Nc6 g3',
+      'd4 d5 c4 e6 cxd5 exd5 Nc3 c6 Nf3 Bf5 Qb3',
+      'd4 d5 c4 c6 Nc3 Nf6 Nf3 dxc4 a4',
+      'd4 d5 c4 dxc4 Nc3 a6 e4',
+    ]);
+    const fen = walkSan(exchange).fens.at(-1)!;
+    const o = { ...opts, minShare: 1 };
+    expect(offPrepHint(passes, index, fen, 'g3', 'Bg5', o)?.suggestion).toBe('g3');
+    const bg5 = nodeAtLine(passes, [...exchange, 'Bg5'])!;
+    expect(findAt(passes, index, bg5, o)?.suggestion).not.toBe('g3');
+  });
+
   it('says nothing when the move you played is no closer', () => {
     const fen = walkSan(exchange).fens.at(-1)!;
     expect(offPrepHint(qgd, index, fen, 'Qc2', 'Bg5', opts)).toBeNull();

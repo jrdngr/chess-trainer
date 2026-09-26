@@ -84,6 +84,8 @@ export function findAt(
     gone,
     pathKeys,
     against: false,
+    // Moves handed in are the one just played over the board.
+    played: !!candidates,
   });
   if (!best) return null;
   const drawn = new Set(movesToDraw(index, fen).map((move) => move.san));
