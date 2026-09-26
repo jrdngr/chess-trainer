@@ -35,6 +35,14 @@ export const Icons = {
       />
     </svg>
   ),
+  /** Two lines coming together: Tidy. */
+  merge: (p: IconProps = {}) => (
+    <svg {...s(p)}>
+      <path d="M6 3v3c0 4.5 6 5.5 6 10v5" />
+      <path d="M18 3v3c0 4.5-6 5.5-6 10" />
+      <circle cx="12" cy="20.5" r="1" fill={p.filled ? 'currentColor' : 'none'} opacity={p.filled ? 1 : 0} />
+    </svg>
+  ),
   chart: (p: IconProps = {}) => (
     <svg {...s(p)}>
       <path d="M3 13.5 8 8l4 4 4.5-6L21 9" />

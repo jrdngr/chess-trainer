@@ -188,9 +188,9 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
         />
         <div className="note">
           {prefs.nudgePriority === 'transposition'
-            ? 'A move that lands in a line you have wins the green arrow; failing that, one you already play in this opening.'
-            : 'A move you already play in this opening wins the green arrow; failing that, one that lands in a line you have.'}{' '}
-          Red marks the move that closes off your lines or that you keep choosing against. Run's new moves follow this too.
+            ? 'A move that lands in a line you have, or heads there a move later, wins the green arrow; failing that, one you already play around this point in this opening or its kin.'
+            : 'A move you already play around this point in this opening or its kin wins the green arrow; failing that, one that lands in a line you have.'}{' '}
+          Red marks the move that closes off your lines or that you keep choosing against. A familiar move the book lacks is shown in yellow once the engine passes it. Tidy uses the same rules.
         </div>
 
         <Section title="Pawn structure" />

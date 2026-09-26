@@ -11,6 +11,7 @@ import {
   setPreferred,
 } from '../model/repertoire';
 import { allItems, cardId, type TrainingItem } from '../model/session';
+import { switchMove } from '../model/tidy';
 import { createCard, review } from '../model/srs';
 import type {
   Card,
@@ -196,6 +197,13 @@ interface StoreState extends PersistedState {
   removeOpening: (repId: string, rootId: string) => void;
   /** Delete one side's tree outright, with everything that only existed for it. */
   removeRepertoire: (repId: string) => void;
+  /**
+   * Tidy: play `san` instead of your move at `nodeId`, dropping that move and
+   * its line. The position starts over — its card is new again and its
+   * logged mistakes go — but ratings stand. Returns an undo, or null when the
+   * switch could not be made.
+   */
+  tidySwitch: (repId: string, nodeId: string, san: string) => (() => void) | null;
 
   grade: (item: TrainingItem, grade: Grade, playedSan: string | null, correct: boolean) => void;
   /**
@@ -250,7 +258,7 @@ interface StoreState extends PersistedState {
    * A correct move in a run, on a position your prep has an answer to. It is
    * a review: graded by how long it took where the position already has a
    * card, and a plain pass where this is the first time it has been asked.
-   * Run and Drill share one schedule, so what a run has shown you know is not
+   * Autopilot and Drill share one schedule, so what a round has shown you know is not
    * asked again until it is due.
    */
   answeredInOpeningRun: (repertoireId: string, fen: string, played: string, grade: Grade) => void;
@@ -545,6 +553,38 @@ export const useStore = create<StoreState>((set, get) => {
 
     removeNode(repId, nodeId) {
       shrinkRep(repId, (rep) => removeSubtree(rep, nodeId));
+    },
+
+    tidySwitch(repId, nodeId, san) {
+      const before = get();
+      const rep = before.repertoires[repId];
+      const node = rep?.nodes[nodeId];
+      const next = rep ? switchMove(rep, nodeId, san) : null;
+      if (!rep || !node || !next) return null;
+      const saved = {
+        rep,
+        cards: before.cards,
+        log: before.log,
+        mistakes: before.mistakes,
+      };
+      shrinkRep(repId, () => next);
+      // The answer here changed, so what the old answer earned does not
+      // carry: the card starts over and the misses logged against it go.
+      const after = get();
+      const id = cardId(repId, node.key);
+      const { [id]: _reset, ...cards } = after.cards;
+      commit({
+        cards,
+        mistakes: after.mistakes.filter((m) => !(m.repertoireId === repId && m.key === node.key)),
+      });
+      return () => {
+        commit({
+          repertoires: { ...get().repertoires, [repId]: saved.rep },
+          cards: saved.cards,
+          log: saved.log,
+          mistakes: saved.mistakes,
+        });
+      };
     },
 
     removeOpening(repId, rootId) {

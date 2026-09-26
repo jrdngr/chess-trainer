@@ -7,6 +7,7 @@ import { useStore } from '../../store/useStore';
 import { recommendNow, withSelection } from '../../store/recommendation';
 import type { Selection } from '../../model/selection';
 import { OpeningRunScreen } from '../openingRun/OpeningRunScreen';
+import type { TidyFind } from '../../model/tidy';
 
 /**
  * Autopilot.
@@ -27,11 +28,14 @@ export function AutopilotScreen({
   onExit,
   onGrow,
   onAnalyze,
+  onTidy,
   scope,
 }: {
   onExit: () => void;
   /** Leave for the Analysis tab on a round's line, seen from your side. */
   onAnalyze?: (sans: string[], side: 'w' | 'b') => void;
+  /** Leave for Tidy, open on a move off your prep that was closer to your lines. */
+  onTidy?: (find: TidyFind) => void;
   onGrow: () => void;
   /**
    * One opening to hold the session to, in place of the saved selection: what
@@ -84,6 +88,7 @@ export function AutopilotScreen({
       onNext={advance}
       onExit={onExit}
       onAnalyze={onAnalyze}
+      onTidy={onTidy}
     />
   );
 }

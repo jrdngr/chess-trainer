@@ -119,6 +119,11 @@ function toLegalMove(m: ChessJsMove): LegalMove {
   };
 }
 
+/** The legal moves as SAN only: much cheaper than `legalMoves`, which works out every resulting position. */
+export function legalSans(fen: string): string[] {
+  return new Chess(fen).moves();
+}
+
 /** Apply a move given as SAN. Returns null when the move is illegal. */
 export function applySan(fen: string, san: string): LegalMove | null {
   const chess = new Chess(fen);

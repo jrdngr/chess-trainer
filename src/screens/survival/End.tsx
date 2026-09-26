@@ -6,7 +6,9 @@ import { selectionText } from '../../components/Selection';
 import { nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { moveNumber, openingsAlong, survivalFor, type SurvivalRecord, type SurvivalRun } from '../../model/survival';
-import { useStore } from '../../store/useStore';
+import { repertoireList, useStore } from '../../store/useStore';
+import { offPrepHint, type TidyFind } from '../../model/tidy';
+import { OffPrepHint } from '../../components/OffPrepHint';
 import { ScoreRow } from './Setup';
 
 /** How long the verdict stays over the board when a run ends. */
@@ -53,6 +55,7 @@ export function End({
   onNext,
   onChangeOptions,
   onAnalyze,
+  onTidy,
   onExit,
 }: {
   state: SurvivalRun;
@@ -66,6 +69,8 @@ export function End({
    * engine's continuation can be stepped through.
    */
   onAnalyze: () => void;
+  /** Open Tidy on a miss whose move was closer to your other lines than your prep. */
+  onTidy?: (find: TidyFind) => void;
   onExit: () => void;
 }) {
   const settings = useStore((s) => s.settings);
@@ -73,6 +78,24 @@ export function End({
   const { run, moves, misses } = state;
   const tree = openingTree(referenceIndex());
   const blunder = ending.kind === 'blunder' ? ending : null;
+
+  /** The misses whose move was closer to the rest of your lines than your prep, by ply. */
+  const repertoires = useStore((s) => s.repertoires);
+  const repertoireOrder = useStore((s) => s.repertoireOrder);
+  const hints = useMemo(() => {
+    const out = new Map<number, TidyFind>();
+    if (!onTidy) return out;
+    const rep = repertoireList({ repertoires, repertoireOrder }).find((r) => r.color === run.color);
+    const growth = settings.growth;
+    for (const miss of misses) {
+      const find = offPrepHint(rep, referenceIndex(), miss.fen, miss.played, miss.expected, {
+        prefs: { priority: growth.nudgePriority, pawns: growth.nudgePawns },
+        minShare: growth.minShare,
+      });
+      if (find) out.set(miss.ply, find);
+    }
+    return out;
+  }, [onTidy, misses, repertoires, repertoireOrder, run.color, settings.growth]);
 
   const fens = useMemo(() => walkSan(run.played).fens, [run.played]);
   const last = run.played.length;
@@ -234,17 +257,23 @@ export function End({
           <>
             <Section title={`Missed your prep · ${misses.length}`} />
             <div className="list">
-              {misses.map((miss) => (
-                <button className="list-row" key={miss.ply} onClick={() => seek(miss.ply)}>
-                  <span className="grow">
-                    <div className="title">Move {moveNumber(miss.ply)}</div>
-                    <div className="meta">
-                      You played {miss.played} · your prep {miss.expected}
-                    </div>
-                  </span>
-                  <Icons.chevron size={18} />
-                </button>
-              ))}
+              {misses.map((miss) => {
+                const hint = hints.get(miss.ply);
+                return (
+                  <div key={miss.ply}>
+                    <button className="list-row" onClick={() => seek(miss.ply)}>
+                      <span className="grow">
+                        <div className="title">Move {moveNumber(miss.ply)}</div>
+                        <div className="meta">
+                          You played {miss.played} · your prep {miss.expected}
+                        </div>
+                      </span>
+                      <Icons.chevron size={18} />
+                    </button>
+                    {hint && onTidy && <OffPrepHint find={hint} onTidy={() => onTidy(hint)} compact />}
+                  </div>
+                );
+              })}
             </div>
           </>
         )}

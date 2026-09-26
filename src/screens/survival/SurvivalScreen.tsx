@@ -31,6 +31,7 @@ import {
 } from '../../model/survival';
 import { evidenceIn } from '../../store/recommendation';
 import { repertoireList, useStore } from '../../store/useStore';
+import type { TidyFind } from '../../model/tidy';
 import { useOpponent } from '../openingRun/useOpponent';
 import { End, type Ending } from './End';
 import { Setup } from './Setup';
@@ -69,10 +70,13 @@ interface MissFlash {
 export function SurvivalScreen({
   onExit,
   onAnalyze,
+  onTidy,
 }: {
   onExit: () => void;
   /** Leave for the Analysis tab on this line, seen from this side. */
   onAnalyze: (sans: string[], side: 'w' | 'b') => void;
+  /** Leave for Tidy, open on a miss that was closer to your other lines. */
+  onTidy?: (find: TidyFind) => void;
 }) {
   const state = useStore();
   const { settings, cards } = state;
@@ -257,6 +261,7 @@ export function SurvivalScreen({
         onNext={() => start(prefs)}
         onChangeOptions={() => setPhase('setup')}
         onAnalyze={() => onAnalyze(game.state.run.played, game.state.run.color)}
+        onTidy={onTidy}
         onExit={onExit}
       />
     );

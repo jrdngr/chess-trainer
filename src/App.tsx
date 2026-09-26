@@ -5,6 +5,7 @@ import { AnalysisScreen } from './screens/AnalysisScreen';
 import { StatsScreen } from './screens/StatsScreen';
 import { ImportScreen } from './screens/ImportScreen';
 import { RepertoireScreen } from './screens/RepertoireScreen';
+import { TidyScreen } from './screens/TidyScreen';
 import { SettingsSheet } from './screens/SettingsSheet';
 import { HomeScreen, type ModeId } from './screens/HomeScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
@@ -17,10 +18,11 @@ import { AutopilotScreen } from './screens/autopilot/AutopilotScreen';
 import { DrillSession } from './screens/drill/DrillSession';
 import type { SessionMode, TrainingItem } from './model/session';
 import type { Selection } from './model/selection';
+import type { TidyFind } from './model/tidy';
 import { countDue } from './model/srs';
 import { needsOnboarding, useStore } from './store/useStore';
 
-type Tab = 'home' | 'repertoire' | 'stats' | 'analysis';
+type Tab = 'home' | 'repertoire' | 'tidy' | 'stats' | 'analysis';
 
 export default function App() {
   const ready = useStore((s) => s.ready);
@@ -43,6 +45,8 @@ export default function App() {
   const statsTarget = useStore((s) => s.statsTarget);
   const clearStats = useStore((s) => s.clearStats);
   const [statsFor, setStatsFor] = useState<string | undefined>();
+  /** A find handed over from the end of a round, for Tidy to open on. */
+  const [tidyFocus, setTidyFocus] = useState<TidyFind | null>(null);
 
   useEffect(() => {
     void init();
@@ -82,6 +86,13 @@ export default function App() {
     setTab('analysis');
   };
 
+  /** Leave a mode for Tidy, open on the position a round ended at. */
+  const tidyFrom = (find: TidyFind) => {
+    setTidyFocus(find);
+    setMode(null);
+    setTab('tidy');
+  };
+
   const dueCount = countDue(Object.values(cards)).due;
   const onboarding = useStore(needsOnboarding);
 
@@ -101,14 +112,12 @@ export default function App() {
       onExit={leaveMode}
       onGrow={() => setMode({ id: 'growth' })}
       onAnalyze={analyzeFrom}
+      onTidy={tidyFrom}
     />
   ) : mode?.id === 'drill' ? (
     <DrillScreen onExit={leaveMode} />
   ) : mode?.id === 'survival' ? (
-    <SurvivalScreen
-      onExit={leaveMode}
-      onAnalyze={analyzeFrom}
-    />
+    <SurvivalScreen onExit={leaveMode} onAnalyze={analyzeFrom} onTidy={tidyFrom} />
   ) : mode?.id === 'repair' ? (
     <RepairScreen
       onImport={() => {
@@ -153,6 +162,7 @@ export default function App() {
               }}
             />
           )}
+          {tab === 'tidy' && <TidyScreen focus={tidyFocus} onConsumedFocus={() => setTidyFocus(null)} />}
           {tab === 'stats' && (
             <StatsScreen target={statsFor} onConsumedTarget={() => setStatsFor(undefined)} />
           )}
@@ -180,6 +190,12 @@ export default function App() {
               active={tab === 'repertoire'}
               onClick={() => setTab('repertoire')}
               icon={<Icons.tree filled={tab === 'repertoire'} />}
+            />
+            <NavButton
+              label="Tidy"
+              active={tab === 'tidy'}
+              onClick={() => setTab('tidy')}
+              icon={<Icons.merge filled={tab === 'tidy'} />}
             />
             <NavButton
               label="Stats"

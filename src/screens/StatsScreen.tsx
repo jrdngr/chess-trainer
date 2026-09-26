@@ -308,8 +308,8 @@ function OpeningPage({
         {fav && (
           <>
             <Section
-              title="Favouriteness"
-              aside={`your ${ordinal(fav.rank)} favourite${fav.parent && fav.parent.depth > 0 ? ` in ${fav.parent.name}` : ' first move'}`}
+              title="Favoriteness"
+              aside={`your ${ordinal(fav.rank)} favorite${fav.parent && fav.parent.depth > 0 ? ` in ${fav.parent.name}` : ' first move'}`}
             />
             <div className="card">
               <BarList

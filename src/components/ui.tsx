@@ -77,30 +77,50 @@ export function Sheet({ open, onClose, title, actions, from = 'bottom', children
 }
 
 /* ── toast ─────────────────────────────────────────────────────────────── */
-let toastSetter: ((msg: string | null) => void) | null = null;
+interface Toast {
+  message: string;
+  /** One button in the toast, like Undo. A toast with one stays up longer. */
+  action?: { label: string; run: () => void };
+}
 
-export function toast(message: string) {
-  toastSetter?.(message);
+let toastSetter: ((toast: Toast | null) => void) | null = null;
+
+export function toast(message: string, action?: Toast['action']) {
+  toastSetter?.({ message, action });
 }
 
 export function ToastHost() {
-  const [message, setMessage] = useState<string | null>(null);
+  const [current, setCurrent] = useState<Toast | null>(null);
   useEffect(() => {
-    toastSetter = (msg) => {
-      setMessage(msg);
-      if (msg) {
-        window.setTimeout(() => setMessage((cur) => (cur === msg ? null : cur)), 2000);
+    toastSetter = (next) => {
+      setCurrent(next);
+      if (next) {
+        window.setTimeout(() => setCurrent((cur) => (cur === next ? null : cur)), next.action ? 5000 : 2000);
       }
     };
     return () => {
       toastSetter = null;
     };
   }, []);
-  if (!message) return null;
-  return <div className="toast">{message}</div>;
+  if (!current) return null;
+  return (
+    <div className={`toast${current.action ? ' with-action' : ''}`}>
+      <span className="truncate">{current.message}</span>
+      {current.action && (
+        <button
+          className="toast-action"
+          onClick={() => {
+            current.action!.run();
+            setCurrent(null);
+          }}
+        >
+          {current.action.label}
+        </button>
+      )}
+    </div>
+  );
 }
 
-/* ── misc ──────────────────────────────────────────────────────────────── */
 export function Empty({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="empty">

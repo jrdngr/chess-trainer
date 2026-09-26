@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Board } from '../../components/Board';
-import { AppBar, haptic, Icons, Section, toast } from '../../components/ui';
+import { AppBar, haptic, Icons, toast } from '../../components/ui';
 import {
   applySan,
   lastMoveOf,
@@ -12,9 +12,7 @@ import {
 import {
   atEdge,
   beginRun,
-  chooseAtEdge,
   classify,
-  edgeOptions,
   finishPrep,
   isComplete,
   isUsersTurn,
@@ -36,18 +34,17 @@ import {
   type OpeningRunPrefs,
   type Run,
 } from '../../model/openingRun';
-import { formatGameCount, specificNameForColor } from '../../model/reference';
+import { specificNameForColor } from '../../model/reference';
 import { nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
-import { evidenceFor, movesToDraw, optionsAt, popularReplies } from '../../model/growth';
-import { nudgeArrows } from '../../model/nudge';
-import { NudgeReasons, nudgeColor, nudgedArrows } from '../../components/Nudges';
+import { evidenceFor, optionsAt } from '../../model/growth';
 import { gradeForTime } from '../../model/srs';
 import { selectionText } from '../../components/Selection';
 import { mulberry32 } from '../../model/session';
 import { evidenceIn, withSelection } from '../../store/recommendation';
 import type { Selection } from '../../model/selection';
 import { repertoireList, useStore } from '../../store/useStore';
+import type { TidyFind } from '../../model/tidy';
 import { PlayOn } from './PlayOn';
 import { Reveal, type Death } from './Reveal';
 import { Setup } from './Setup';
@@ -69,7 +66,7 @@ import {
 } from '../../model/growOffer';
 import { GrowthScreen } from '../growth/GrowthScreen';
 
-type Phase = 'setup' | 'playing' | 'gap' | 'dead' | 'survived' | 'playon' | 'growing';
+type Phase = 'setup' | 'playing' | 'dead' | 'survived' | 'playon' | 'growing';
 
 interface Game {
   source: LineSource;
@@ -142,6 +139,7 @@ export function OpeningRunScreen({
   onNext,
   onExit,
   onAnalyze,
+  onTidy,
   scope,
 }: {
   auto?: boolean;
@@ -158,6 +156,8 @@ export function OpeningRunScreen({
   onExit: () => void;
   /** Leave for the Analysis tab on this line, seen from this side. */
   onAnalyze?: (sans: string[], side: 'w' | 'b') => void;
+  /** Leave for Tidy, open on a move off your prep that was closer to your lines. */
+  onTidy?: (find: TidyFind) => void;
   /** Autopilot held to one opening: the selection this visit runs in, in place of the saved one. */
   scope?: Selection;
 }) {
@@ -563,21 +563,15 @@ export function OpeningRunScreen({
   }, [source, run, myTurn, live]);
 
   /**
-   * The referee running out is a checkpoint. With moves left to add the run
-   * pauses at the edge of the prep instead and offers the book; once they
-   * are spent, or with none, the end of the prep — or of the book, on a run
-   * through it, whoever is to move — is where the run is complete.
+   * The referee running out is a checkpoint: the end of the prep — or of the
+   * book, on a run through it, whoever is to move — is where the run is
+   * complete.
    */
   useEffect(() => {
     if (!source || !run || !live || settled.current) return;
     const complete = isComplete(source, run);
     const edge = !complete && atEdge(source, run);
     if (!complete && !edge) return;
-    if (edge && run.newMoves > 0) {
-      buzz(14);
-      setPhase('gap');
-      return;
-    }
     arrive(run);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source, run, live]);
@@ -673,7 +667,7 @@ export function OpeningRunScreen({
           row: launch.row,
           hole: launch.hole,
           region: launch.opening.id,
-          backLabel: planned ? 'Back to Autopilot' : 'Back to Run',
+          backLabel: 'Back to Autopilot',
           onBack: next,
           pointBack: growOffer.kind === 'line' ? 'batch' : 'cap',
           widened: launch.widened,
@@ -701,15 +695,12 @@ export function OpeningRunScreen({
         onNext={next}
         onChangeOptions={() => setPhase('setup')}
         onAnalyze={phase === 'dead' && death && onAnalyze ? () => onAnalyze(run.played, run.color) : null}
+        onTidy={onTidy}
       />
     );
   }
 
   const onMove = (move: LegalMove) => {
-    if (phase === 'gap') {
-      chooseAtGap(move.san);
-      return;
-    }
     if (!live || !myTurn || referee.pending) return;
     if (extended) {
       referee.submit(move);
@@ -733,52 +724,6 @@ export function OpeningRunScreen({
     // decides which kind of mistake it is. A blunder ends the run; a sound
     // move is a checkpoint, and the choice to carry on is yours.
     referee.submit(move);
-  };
-
-  /** Where a move added at the edge goes: the tree for the side being played. */
-  const repertoireForAdding = (): string => run.repertoireId ?? ensureRepertoire(run.color);
-
-  /** The book at the edge of the prep, and the moves drawn on the board for it. */
-  const inRegion = phase === 'gap' ? movesHere(source, run) : [];
-  const gap = edgeOptions(index, run.fen).filter((option) => inRegion.includes(option.san));
-  /**
-   * Coloured toward the moves that keep your repertoire narrow, as Growth's
-   * are, from Growth's settings: a familiar move the book ranks too low to
-   * draw is pulled onto the board, and into the list, in yellow.
-   */
-  const drawn =
-    phase === 'gap'
-      ? nudgeArrows(
-          reps.find((r) => r.id === run.repertoireId) ?? reps.find((r) => r.color === run.color),
-          index,
-          run.played,
-          run.fen,
-          movesToDraw(index, run.fen).filter((move) => inRegion.includes(move.san)),
-          popularReplies(index, run.fen, settings.growth.minShare).filter((move) => inRegion.includes(move.san)),
-          { priority: settings.growth.nudgePriority, pawns: settings.growth.nudgePawns },
-          settings.growth.minShare,
-        )
-      : [];
-  const far = drawn.find((move) => move.tone === 'toward-far');
-  const listed =
-    far && !gap.some((option) => option.san === far.san)
-      ? [...gap, ...popularReplies(index, run.fen, 0).filter((option) => option.san === far.san)]
-      : gap;
-  const toneOf = (san: string) => drawn.find((move) => move.san === san)?.tone;
-
-  /**
-   * Take a move from the book at the edge of the prep. It goes into the
-   * repertoire and the run carries on; it rates nothing, since you did not
-   * find it.
-   */
-  const chooseAtGap = (san: string) => {
-    if (phase !== 'gap' || !listed.some((option) => option.san === san)) return;
-    const line = [...run.played, san];
-    addToRep(repertoireForAdding(), line, 'reference');
-    toast(`${san} added`);
-    buzz(10);
-    setGame({ source, run: chooseAtEdge(run, san) });
-    setPhase('playing');
   };
 
   const onHint = () => {
@@ -809,10 +754,8 @@ export function OpeningRunScreen({
         <Board
           fen={run.fen}
           orientation={run.color}
-          interactive={(live && myTurn && !thinking && !referee.pending) || phase === 'gap'}
+          interactive={live && myTurn && !thinking && !referee.pending}
           movableFor={run.color}
-          allowed={phase === 'gap' ? drawn.map((move) => move.san) : undefined}
-          arrows={nudgedArrows(drawn)}
           onMove={onMove}
           lastMove={lastMoveOf(run.played)}
           highlights={hintSquare ? [{ square: hintSquare, kind: 'hint' }] : []}
@@ -828,41 +771,6 @@ export function OpeningRunScreen({
         )}
 
         <div className="spacer" />
-
-        {phase === 'gap' && (
-          <>
-            <div className="prompt">
-              <div className="who">
-                <span className={`side ${run.color}`} />
-                Your prep ends here
-              </div>
-              <div className="ctx">
-                {run.newMoves === 1 ? 'One move to add' : `${run.newMoves} moves to add`}
-              </div>
-            </div>
-            <NudgeReasons moves={drawn} />
-            <Section title="Choose a move" />
-            {gap.length === 0 ? (
-              <div className="card small muted">The database has nothing here.</div>
-            ) : (
-              <div className="list">
-                {listed.map((option) => (
-                  <button className="list-row" key={option.san} onClick={() => chooseAtGap(option.san)}>
-                    <span className="tree-san" style={{ color: nudgeColor(toneOf(option.san)) }}>
-                      {option.san}
-                    </span>
-                    <span className="grow">
-                      <div className="meta">
-                        {option.share}% of replies · {formatGameCount(option.games)} games
-                      </div>
-                    </span>
-                    <Icons.plus size={18} />
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
-        )}
 
         {live && (
           <>

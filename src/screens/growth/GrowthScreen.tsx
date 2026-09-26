@@ -26,7 +26,8 @@ import {
   type GrowthRun,
   type Hole,
 } from '../../model/growth';
-import { nudgeArrows } from '../../model/nudge';
+import { familiarOffBook, nudgeArrows } from '../../model/nudge';
+import { useSoundness } from '../../engine/soundness';
 import { nodeAtLine } from '../../model/repertoire';
 import { formatGameCount } from '../../model/reference';
 import { NudgeReasons, nudgeColor, nudgedArrows } from '../../components/Nudges';
@@ -51,7 +52,7 @@ export interface GrowthLaunch {
   hole: Hole | null;
   /** The opening grown, an opening tree node id: what New run looks in. */
   region: string;
-  /** "Back to Autopilot" or "Back to Run". */
+  /** "Back to Autopilot". */
   backLabel: string;
   onBack: () => void;
   /**
@@ -232,6 +233,21 @@ function Run({
    * is read, not the one the run began with, so a move added this sitting
    * already counts as a habit.
    */
+  /**
+   * Familiar moves the book leaves out, or ranks too low to offer. Each is
+   * put to the engine first, and only a move it passes can take the yellow
+   * arrow, marked as not in the book.
+   */
+  const offBookAsked = useMemo(
+    () =>
+      phase === 'hole'
+        ? familiarOffBook(rep, index, run.path, run.fen, { priority: prefs.nudgePriority, pawns: prefs.nudgePawns }, find.minShare)
+        : [],
+    [phase, rep, index, run.path, run.fen, find.minShare, prefs.nudgePriority, prefs.nudgePawns],
+  );
+  const sound = useSoundness(offBookAsked.map((san) => ({ fen: run.fen, san })));
+  const offBook = offBookAsked.filter((san) => sound(run.fen, san) === true);
+  const offBookKey = offBook.join(' ');
   const shown = useMemo(
     () =>
       phase === 'hole'
@@ -241,19 +257,31 @@ function Run({
             run.path,
             run.fen,
             movesToDraw(index, run.fen),
-            popularReplies(index, run.fen, find.minShare),
+            [
+              ...popularReplies(index, run.fen, find.minShare),
+              ...(offBookKey ? offBookKey.split(' ') : []).map((san) => ({ san, share: 0 })),
+            ],
             { priority: prefs.nudgePriority, pawns: prefs.nudgePawns },
             find.minShare,
+            new Set(offBookKey ? offBookKey.split(' ') : []),
           )
         : [],
-    [phase, rep, index, run.path, run.fen, find.minShare, prefs.nudgePriority, prefs.nudgePawns],
+    [phase, rep, index, run.path, run.fen, find.minShare, prefs.nudgePriority, prefs.nudgePawns, offBookKey],
   );
   /** The list under the board carries a familiar move pulled in from further down the book. */
   const listed = useMemo(() => {
     const far = shown.find((move) => move.tone === 'toward-far');
     if (!far || options.some((option) => option.san === far.san)) return options;
-    const option = popularReplies(index, run.fen, 0).find((o) => o.san === far.san);
-    return option ? [...options, option] : options;
+    // A move the book does not have at all is listed with nothing to count.
+    const option = popularReplies(index, run.fen, 0).find((o) => o.san === far.san) ?? {
+      san: far.san,
+      games: 0,
+      white: 0,
+      draw: 0,
+      black: 0,
+      share: 0,
+    };
+    return [...options, option];
   }, [shown, options, index, run.fen]);
   const toneOf = (san: string) => shown.find((move) => move.san === san)?.tone;
 
@@ -625,7 +653,9 @@ function Run({
                   </span>
                   <span className="grow">
                     <div className="meta">
-                      {option.share}% of replies · {formatGameCount(option.games)} games
+                      {option.games > 0
+                        ? `${option.share}% of replies · ${formatGameCount(option.games)} games`
+                        : 'Not in the book · passed by the engine'}
                     </div>
                   </span>
                   <Icons.plus size={18} />

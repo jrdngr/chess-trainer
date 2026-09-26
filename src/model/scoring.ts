@@ -298,7 +298,7 @@ export interface MoveResult {
   color: Color;
   correct: boolean;
   /**
-   * Whether this moves ratings. Only a prepared position answered in Run or
+   * Whether this moves ratings. Only a prepared position answered in
    * Autopilot does; everything else is recorded and nothing more.
    */
   rated: boolean;

@@ -79,7 +79,7 @@ export function SelectionBar() {
   return (
     <>
       <div className="selection-bar">
-        <button className="pick color" onClick={() => setPicking('color')} aria-label="Colour">
+        <button className="pick color" onClick={() => setPicking('color')} aria-label="Color">
           <ColorSquare choice={selection.color} size={22} />
         </button>
         <button className="pick opening" onClick={() => setPicking('opening')}>

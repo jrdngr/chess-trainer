@@ -35,6 +35,8 @@ import type { RatingChange } from '../../model/autopilot';
 import { rankOf, UNRATED } from '../../model/scoring';
 import { deltaText, ratingText } from '../../components/ScoreBar';
 import { repertoireList, useStore } from '../../store/useStore';
+import { offPrepHint, type TidyFind } from '../../model/tidy';
+import { OffPrepHint } from '../../components/OffPrepHint';
 import { GRADE_TONES, Record } from './Record';
 import { selectionText } from '../../components/Selection';
 
@@ -91,6 +93,8 @@ export interface RevealProps {
    * Only after a blunder or a miss; null otherwise.
    */
   onAnalyze?: (() => void) | null;
+  /** Open Tidy on this position, when the move you played off your prep was closer to your lines. */
+  onTidy?: (find: TidyFind) => void;
 }
 
 /**
@@ -123,6 +127,7 @@ export function Reveal({
   onNext,
   onChangeOptions,
   onAnalyze,
+  onTidy,
 }: RevealProps) {
   const settings = useStore((s) => s.settings);
   const record = useStore((s) => s.openingRun);
@@ -142,6 +147,20 @@ export function Reveal({
     const rep = reps.find((r) => r.color === run.color);
     return { line, added: rep ? addLineTo(rep, line, 'reference').added : line.length };
   }, [index, run, reps]);
+
+  /**
+   * A sound move off your prep that was closer to the rest of your lines
+   * than the prepared one: said here, and Tidy is one tap away.
+   */
+  const growthPrefs = settings.growth;
+  const tidy = useMemo(() => {
+    if (!onTidy || death?.cause !== 'offprep' || !death.played || !death.expected[0]) return null;
+    const rep = reps.find((r) => r.color === run.color);
+    return offPrepHint(rep, index, run.fen, death.played, death.expected[0], {
+      prefs: { priority: growthPrefs.nudgePriority, pawns: growthPrefs.nudgePawns },
+      minShare: growthPrefs.minShare,
+    });
+  }, [onTidy, death, reps, run.color, run.fen, index, growthPrefs]);
 
   const line = useMemo(() => {
     const sans = fullLine(source, run);
@@ -319,6 +338,7 @@ export function Reveal({
             Analyze
           </button>
         )}
+        {tidy && onTidy && <OffPrepHint find={tidy} onTidy={() => onTidy(tidy)} />}
 
         <div className="spacer sm" />
         <Strip items={strip} cursor={cursor} max={line.sans.length} onSeek={seek} />

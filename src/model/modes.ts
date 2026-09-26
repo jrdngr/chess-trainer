@@ -110,7 +110,7 @@ export interface GrowthPrefs {
   /**
    * Which familiar move the arrows nudge toward when both kinds are on
    * offer: one that transposes into your lines, or one you play elsewhere in
-   * the opening. Read by Run's new-moves picker too. See `nudgeArrows`.
+   * the opening. Read by Tidy too. See `nudgeArrows`.
    */
   nudgePriority: NudgePriority;
   /** Count reaching your usual pawns as a habit. */
