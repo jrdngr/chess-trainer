@@ -88,6 +88,38 @@ describe('the off-prep hint', () => {
   });
 });
 
+describe('setups', () => {
+  const fen = walkSan(exchange).fens.at(-1)!;
+  const o = { ...opts, minShare: 1 };
+
+  it('counts a fianchetto however it is played, once per line', () => {
+    // Three lines fianchetto on move 3, too early to count as the same move
+    // as a g3 on move 6, but the same plan: and g3 with Bg2 is one use.
+    const fianchetto = rep('w', [
+      'd4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Nf3 c6 Bg5',
+      'd4 d5 c4 c6 Nf3 Nf6 g3 Bf5 Bg2',
+      'd4 Nf6 c4 e6 g3 d5 Bg2',
+      'd4 Nf6 Nf3 g6 g3 Bg7 Bg2',
+      'd4 d5 c4 e6 Nc3 Nf6 Bf4 Be7 e3',
+      'd4 d5 c4 c6 Nc3 Nf6 e3 e6 Nf3',
+      'd4 d5 c4 e6 Nc3 c6 e3 Nd7 Nf3',
+    ]);
+    expect(offPrepHint(fianchetto, index, fen, 'g3', 'Bg5', o)?.reason).toBe(
+      'You fianchetto in 3 Slav and Catalan lines, Bg5 in none',
+    );
+  });
+
+  it('needs the setup’s own move: e3 is not the London without Bf4', () => {
+    const london = rep('w', [
+      'd4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Nf3 c6 Bg5',
+      'd4 d5 Nf3 Nf6 Bf4 e6 e3',
+      'd4 Nf6 Bf4 g6 e3 Bg7 Nf3',
+      'd4 d5 Bf4 c5 e3 Nc6 c3',
+    ]);
+    expect(offPrepHint(london, index, fen, 'e3', 'Bg5', o)).toBeNull();
+  });
+});
+
 describe('the list', () => {
   it('finds a switch that transposes, and keeps to the region', () => {
     // 1...g6 first, and a King's Indian reached by 1...Nf6.

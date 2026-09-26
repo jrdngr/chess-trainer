@@ -305,7 +305,12 @@ same point (within four plies) in this opening or its kin at least twice, and
 at least as often as you pass it over. Kin are hand-listed in
 `src/model/kin.ts`: the Catalan shares its fianchetto with the English and the
 Réti and its center with the Queen's Gambit Declined, so a new opening already
-knows your habits from its neighbors. Yellow is a familiar move the board
+knows your habits from its neighbors. A move also counts as a habit through
+a named setup it belongs to (`src/model/setups.ts`: fianchettos, the London,
+the Stonewall and a few more), so g3 counts your Bg2s and a fianchetto on
+move three counts toward one on move seven; a setup's common moves only count
+once the line has its own (e3 is the London only beside Bf4). A move your line
+plays within your next two moves was put off, not passed over. Yellow is a familiar move the board
 would not draw — ranked too low, or not in the book at all, in which case the
 engine must pass it first and the reason says "not in the book". Red is the
 move that closes off lines you could still reach, or one you keep passing

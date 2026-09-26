@@ -12,6 +12,7 @@ import {
 } from '../chess/core';
 import { popularReplies } from './growth';
 import { kinOf, shortFamily } from './kin';
+import { setupsFor, setupsWith, signsSetup, usesSetup, type Setup } from './setups';
 import { familyName, namesAlong, type ReferenceIndex } from './reference';
 import { childrenOf } from './repertoire';
 import type { ExplorerMove, Repertoire } from './types';
@@ -185,6 +186,12 @@ interface Signals {
   /** Times it was a book option in the opening and you chose otherwise. */
   passed: number;
   passedFrom: string[];
+  /** The setup this move belongs to that you use most near here, if any. */
+  setup: Setup | null;
+  /** Lines near here that take the setup up, and where it was offered and never taken. */
+  setupUses: number;
+  setupFrom: string[];
+  setupPassed: number;
 }
 
 /** The families a tally came from, most first. */
@@ -207,6 +214,8 @@ function sum(counts: Map<string, number> | undefined): number {
  * different move with the same name.
  */
 export const HABIT_PLIES = 4;
+/** A setup is one plan whenever it comes in, so it is looked for twice as far. */
+const SETUP_PLIES = 8;
 /** How far down a line a move can come and still only be put off: your next two moves. */
 const DELAY_PLIES = 5;
 
@@ -232,6 +241,14 @@ interface Context {
   /** How many times each move was chosen, and passed on, at each ply, to list likely habits quickly. */
   byPly: Map<number, Map<string, number>>;
   passedByPly: Map<number, Map<string, number>>;
+  /**
+   * Where each line takes a setup up — the move that completes its core, so
+   * g3 and Bg2 in one line are one use — and where the book offered a move
+   * that would have counted toward it and your line never took it up. Keyed
+   * by setup id.
+   */
+  setupUses: Map<string, Seen[]>;
+  setupPasses: Map<string, Seen[]>;
   leaves: ProfileNode[];
 }
 
@@ -292,8 +309,12 @@ function contextOf(profile: Profile, index: ReferenceIndex, fam: string | null, 
     list.push(node);
     from.set(node.before, list);
   }
+  const soonCache = new Map<string, Set<string>>();
   const soonAfter = (key: string): Set<string> => {
+    const cached = soonCache.get(key);
+    if (cached) return cached;
     const out = new Set<string>();
+    soonCache.set(key, out);
     let frontier = [key];
     for (let ply = 0; ply < DELAY_PLIES && frontier.length; ply++) {
       const next: string[] = [];
@@ -330,20 +351,60 @@ function contextOf(profile: Profile, index: ReferenceIndex, fam: string | null, 
       passed.set(move, (passed.get(move) ?? 0) + 1);
     }
   }
+  // Setups: your moves along each position's line, read up the tree once
+  // and remembered.
+  const into = new Map<string, ProfileNode>();
+  for (const node of profile.nodes) if (!into.has(node.after)) into.set(node.after, node);
+  const lineMoves = new Map<string, Set<string>>();
+  const movesBefore = (key: string): Set<string> => {
+    const known = lineMoves.get(key);
+    if (known) return known;
+    const node = into.get(key);
+    const out = new Set<string>(node ? movesBefore(node.before) : []);
+    if (node?.mine) out.add(sameMove(node.san));
+    lineMoves.set(key, out);
+    return out;
+  };
+  const setupUses = new Map<string, Seen[]>();
+  const setupPasses = new Map<string, Seen[]>();
+  const setups = setupsFor(profile.color);
+  for (const [key, at] of chosen) {
+    const seen = { key, ply: at.ply, family: at.family };
+    const before = movesBefore(key);
+    const fen = fenBefore.get(key);
+    const offered = fen ? bookMovesAt(index, fen, minShare).map(sameMove) : [];
+    const later = soonAfter(key);
+    for (const setup of setups) {
+      if (usesSetup(setup, before)) continue;
+      if ([...at.moves].some((move) => setup.core.every((core) => core === move || before.has(core)))) {
+        add(setupUses, setup.id, seen);
+      } else if (
+        offered.some((move) => signsSetup(setup, before, move)) &&
+        ![...at.moves, ...later].some((move) => setup.moves.includes(move))
+      ) {
+        add(setupPasses, setup.id, seen);
+      }
+    }
+  }
   const leaves = uniqueBy(
     scope.filter((node) => node.leaf),
     (node) => node.after,
   );
-  const context = { scope, habits, passedOn, byPly, passedByPly, leaves };
+  const context = { scope, habits, passedOn, byPly, passedByPly, setupUses, setupPasses, leaves };
   byKey.set(cacheKey, context);
   return context;
 }
 
 /** The entries near a depth, off the removed positions, by family. */
-function near(list: Seen[] | undefined, ply: number, removed: ReadonlySet<string>): Map<string, number> {
+function near(
+  list: Seen[] | undefined,
+  ply: number,
+  removed: ReadonlySet<string>,
+  window = HABIT_PLIES,
+): Map<string, number> {
   const out = new Map<string, number>();
   for (const seen of list ?? []) {
-    if (Math.abs(seen.ply - ply) > HABIT_PLIES || removed.has(seen.key)) continue;
+    if (Math.abs(seen.ply - ply) > window || removed.has(seen.key)) continue;
     out.set(seen.family, (out.get(seen.family) ?? 0) + 1);
   }
   return out;
@@ -438,6 +499,7 @@ function signalsFor(
   /** One of your positions, off the line so far. */
   const yours = (key: string) => (removed.has(key) ? null : (profile.positions.get(key) ?? null));
 
+  const mineAlong = yourMovesAlong(path, profile.color);
   const signals: Signals[] = [];
   for (const san of sans) {
     const move = applied(fen, san);
@@ -497,6 +559,17 @@ function signalsFor(
     }
     const habitCounts = near(context.habits.get(same), path.length, removed);
     const passedCounts = near(context.passedOn.get(same), path.length, removed);
+    let setup: Setup | null = null;
+    let setupCounts: Map<string, number> | undefined;
+    let setupPassed = 0;
+    for (const candidate of setupsWith(profile.color, same)) {
+      if (!signsSetup(candidate, mineAlong, same)) continue;
+      const uses = near(context.setupUses.get(candidate.id), path.length, removed, SETUP_PLIES);
+      if (setup && sum(uses) <= sum(setupCounts)) continue;
+      setup = candidate;
+      setupCounts = uses;
+      setupPassed = sum(near(context.setupPasses.get(candidate.id), path.length, removed, SETUP_PLIES));
+    }
     signals.push({
       san,
       transposes,
@@ -511,9 +584,19 @@ function signalsFor(
       closesFrom: ranked(closedFrom),
       passed: sum(passedCounts),
       passedFrom: ranked(passedCounts),
+      setup: setup && sum(setupCounts) > 0 ? setup : null,
+      setupUses: sum(setupCounts),
+      setupFrom: ranked(setupCounts),
+      setupPassed,
     });
   }
   return { signals, family: fam };
+}
+
+/** Your moves on a line from the start, as `sameMove` writes them. */
+function yourMovesAlong(path: readonly string[], color: Color): Set<string> {
+  const first = color === 'w' ? 0 : 1;
+  return new Set(path.filter((_, i) => i % 2 === first).map(sameMove));
 }
 
 const appliedCache = new Map<string, LegalMove | null>();
@@ -752,7 +835,10 @@ function towardOrder(priority: NudgePriority): TowardKind[] {
 function towardStrength(s: Signals, kind: TowardKind, lenient = false): number {
   if (kind === 'transposes') return s.transposes;
   if (kind === 'heads') return s.heads;
-  if (kind === 'habit') return isHabit(s, lenient) ? s.habit : 0;
+  if (kind === 'habit') {
+    const via = habitVia(s, lenient);
+    return via === 'move' ? s.habit : via === 'setup' ? s.setupUses : 0;
+  }
   return s.pawns;
 }
 
@@ -789,7 +875,10 @@ function pickToward(
 }
 
 function awayStrength(s: Signals, kind: AwayKind): number {
-  return kind === 'closes' ? s.closes : s.passed >= HABIT_MIN && s.passed > s.habit ? s.passed : 0;
+  if (kind === 'closes') return s.closes;
+  // A move of a setup you use is not one you turn down, whatever its own count.
+  if (habitVia(s) === 'setup') return 0;
+  return s.passed >= HABIT_MIN && s.passed > s.habit ? s.passed : 0;
 }
 
 /**
@@ -797,14 +886,17 @@ function awayStrength(s: Signals, kind: AwayKind): number {
  * at least as often as you pass it over. Counted across kin, a move like Nf3
  * is chosen in dozens of places and passed over in dozens more; that is not
  * a habit, only a common move.
+ *
+ * The exact move is asked first; failing that, the setup it belongs to (see
+ * `setups.ts`), held to the same test, so g3 counts your Bg2s too. `lenient`
+ * drops the test against the times you passed it up: for a move you have
+ * just played over the board, which says which way you lean better than a
+ * count of your lines can.
  */
-/**
- * A move you keep choosing. `lenient` drops the test against the times you
- * passed it up: for a move you have just played over the board, which says
- * which way you lean better than a count of your lines can.
- */
-function isHabit(s: Signals, lenient = false): boolean {
-  return s.habit >= HABIT_MIN && (lenient || s.habit >= s.passed);
+function habitVia(s: Signals, lenient = false): 'move' | 'setup' | null {
+  if (s.habit >= HABIT_MIN && (lenient || s.habit >= s.passed)) return 'move';
+  if (s.setup && s.setupUses >= HABIT_MIN && (lenient || s.setupUses >= s.setupPassed)) return 'setup';
+  return null;
 }
 
 function pickAway(
@@ -825,12 +917,21 @@ function pickAway(
   return null;
 }
 
-function towardReason(signal: Signals, kind: TowardKind, index: ReferenceIndex, fam: string | null): string {
+function towardReason(
+  signal: Signals,
+  kind: TowardKind,
+  index: ReferenceIndex,
+  fam: string | null,
+  lenient = false,
+): string {
   if (kind === 'transposes') {
     const into = lineName(index, signal.transposesInto ?? []);
     return `${signal.san} ${signal.transposesNow ? 'transposes' : 'can transpose'} into your ${into}`;
   }
   if (kind === 'heads') return `${signal.san} heads toward your ${lineName(index, signal.headsInto ?? [])}`;
+  if (kind === 'habit' && habitVia(signal, lenient) === 'setup' && signal.setup) {
+    return `You ${signal.setup.doing} in ${signal.setupUses} ${linesOf(signal.setupFrom, fam)}`;
+  }
   if (kind === 'habit') return `You play ${signal.san} in ${signal.habit} ${linesOf(signal.habitFrom, fam)}`;
   return `${signal.san} reaches your usual ${fam ? `${shortFamily(fam)} ` : ''}pawns`;
 }
@@ -903,9 +1004,19 @@ export function familiarOffBook(
       for (const [move, n] of context.passedByPly.get(ply) ?? []) passed.set(move, (passed.get(move) ?? 0) + n);
     }
     const listedMoves = new Set([...listed].map(sameMove));
-    sans = [...counts]
-      .filter(([move, n]) => n >= HABIT_MIN && n >= (passed.get(move) ?? 0) && !listedMoves.has(move))
-      .map(([move]) => sanFor(fen, move))
+    const moves = new Set(
+      [...counts].filter(([move, n]) => n >= HABIT_MIN && n >= (passed.get(move) ?? 0)).map(([move]) => move),
+    );
+    // Setups in use near here offer all their moves; the signals decide.
+    const removed = new Set(opts.pathKeys ?? pathKeys(path, profile.rootFen));
+    const mine = yourMovesAlong(path, profile.color);
+    for (const setup of setupsFor(profile.color)) {
+      if (sum(near(context.setupUses.get(setup.id), path.length, removed, SETUP_PLIES)) < HABIT_MIN) continue;
+      for (const move of setup.moves) if (signsSetup(setup, mine, move)) moves.add(move);
+    }
+    sans = [...moves]
+      .filter((move) => !listedMoves.has(move))
+      .map((move) => sanFor(fen, move))
       .filter((san): san is string => san !== null);
   } else {
     sans = legalMoves(fen)
@@ -996,7 +1107,7 @@ export function bestSwitch(
     // you both play elsewhere are a matter of taste, not a loose end.
     // Nor is a capture: taking back is what the position asks for, not a
     // choice between setups.
-    if (f.kind === 'habit' && ((ours?.habit ?? 0) > 0 || mine.includes('x'))) continue;
+    if (f.kind === 'habit' && ((ours?.habit ?? 0) > 0 || (ours?.setupUses ?? 0) > 0 || mine.includes('x'))) continue;
     if (best && !above(f, best)) continue;
     best = { signal, ...f };
   }
@@ -1006,7 +1117,7 @@ export function bestSwitch(
   return {
     san: best.signal.san,
     kind: best.kind,
-    reason: towardReason(best.signal, best.kind, index, fam) + (best.kind === 'habit' ? `, ${mine} in none` : ''),
+    reason: towardReason(best.signal, best.kind, index, fam, lenient) + (best.kind === 'habit' ? `, ${mine} in none` : ''),
     against: opts.against === false ? null : againstReason(rep, index, path, fen, mine, prefs, minShare, opts),
   };
 }
