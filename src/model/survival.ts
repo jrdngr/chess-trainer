@@ -57,9 +57,46 @@ export function survivalSteerLabel(steer: SurvivalSteer): string {
 export interface SurvivalPrefs {
   steer: SurvivalSteer;
   clock: ClockMode;
+  /** What each of your engine-judged moves cost, floated up from its square. */
+  moveScores: boolean;
+  /** A tint around the board for who is better, in place of an eval bar. */
+  boardGlow: boolean;
 }
 
-export const DEFAULT_SURVIVAL: SurvivalPrefs = { steer: 'lines', clock: 'off' };
+export const DEFAULT_SURVIVAL: SurvivalPrefs = { steer: 'lines', clock: 'off', moveScores: true, boardGlow: true };
+
+/* ── feedback ───────────────────────────────────────────────────────────── */
+
+/** How a move's cost reads: the color of its score. */
+export type ScoreTone = 'good' | 'okay' | 'risky';
+
+/**
+ * The popup for one of your moves, or null when it cost nothing worth
+ * showing. A move that matched the engine shows nothing at all: a stream of
+ * zeroes is noise, and the silence is the reward.
+ */
+export function moveScore(lost: number): { cp: number; tone: ScoreTone } | null {
+  const cp = Math.round(lost);
+  if (cp <= 0) return null;
+  return { cp, tone: cp <= 30 ? 'good' : cp <= 60 ? 'okay' : 'risky' };
+}
+
+/** Who is better, in five steps, as the board's glow shows it. */
+export type Glow = 'winning' | 'better' | 'level' | 'worse' | 'losing';
+
+/** Where each glow starts, in centipawns from your side. */
+export const GLOW_BETTER = 50;
+export const GLOW_WINNING = 150;
+
+/** The glow for a position, from the engine's score in White's frame. */
+export function glowFor(color: 'w' | 'b', cp: number): Glow {
+  const mine = color === 'w' ? cp : -cp;
+  if (mine >= GLOW_WINNING) return 'winning';
+  if (mine >= GLOW_BETTER) return 'better';
+  if (mine <= -GLOW_WINNING) return 'losing';
+  if (mine <= -GLOW_BETTER) return 'worse';
+  return 'level';
+}
 
 /* ── a run ──────────────────────────────────────────────────────────────── */
 

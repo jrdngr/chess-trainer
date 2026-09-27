@@ -7,6 +7,8 @@ import { mulberry32 } from './session';
 import {
   bookReply,
   DEFAULT_SURVIVAL,
+  glowFor,
+  moveScore,
   EMPTY_SURVIVAL_RECORD,
   moveNumber,
   normalizeSurvival,
@@ -130,5 +132,34 @@ describe('the record', () => {
   it('reads a save with nothing in it', () => {
     expect(normalizeSurvival(undefined)).toEqual(EMPTY_SURVIVAL_RECORD);
     expect(normalizeSurvival({ global: { best: 3 } as never }).global).toEqual({ best: 3, recent: [], runs: 0 });
+  });
+});
+
+describe('Survival feedback', () => {
+  it('is on by default', () => {
+    expect(DEFAULT_SURVIVAL.moveScores).toBe(true);
+    expect(DEFAULT_SURVIVAL.boardGlow).toBe(true);
+  });
+
+  it('never shows a move that cost nothing', () => {
+    expect(moveScore(0)).toBeNull();
+    expect(moveScore(0.4)).toBeNull();
+  });
+
+  it('colors a move by what it cost', () => {
+    expect(moveScore(18)).toEqual({ cp: 18, tone: 'good' });
+    expect(moveScore(30)).toEqual({ cp: 30, tone: 'good' });
+    expect(moveScore(42)).toEqual({ cp: 42, tone: 'okay' });
+    expect(moveScore(71)).toEqual({ cp: 71, tone: 'risky' });
+  });
+
+  it('reads the glow from your side of the board', () => {
+    expect(glowFor('w', 20)).toBe('level');
+    expect(glowFor('w', 80)).toBe('better');
+    expect(glowFor('w', 300)).toBe('winning');
+    expect(glowFor('w', -80)).toBe('worse');
+    expect(glowFor('b', -300)).toBe('winning');
+    expect(glowFor('b', 160)).toBe('losing');
+    expect(glowFor('b', 10_000)).toBe('losing');
   });
 });

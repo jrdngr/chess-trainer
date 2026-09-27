@@ -188,3 +188,47 @@
 @media (prefers-reduced-motion: reduce) {
   .board-flash { animation: none; }
 }
+
+/* Who is better, felt rather than read: a tint around the board's edge. */
+.board-wrap .board { transition: filter 0.2s, box-shadow 0.8s ease; }
+.board-wrap.glow-better .board { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(74, 222, 128, 0.35), 0 0 22px rgba(74, 222, 128, 0.25); }
+.board-wrap.glow-winning .board { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45), 0 0 0 3px rgba(74, 222, 128, 0.7), 0 0 34px rgba(74, 222, 128, 0.5); }
+.board-wrap.glow-worse .board { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(251, 113, 133, 0.35), 0 0 22px rgba(251, 113, 133, 0.25); }
+.board-wrap.glow-losing .board { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45), 0 0 0 3px rgba(251, 113, 133, 0.7), 0 0 34px rgba(251, 113, 133, 0.5); }
+
+/* What a move cost, floating up from the square it landed on. */
+.move-score {
+  position: absolute;
+  width: 12.5%;
+  height: 12.5%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 14;
+}
+.move-score span {
+  margin-top: -10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  font-weight: 700;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  animation: moveScore 1.4s ease-out forwards;
+}
+.move-score.good span { color: var(--good); }
+.move-score.okay span { color: var(--warn); }
+.move-score.risky span { color: #fb923c; }
+@keyframes moveScore {
+  0% { opacity: 0; transform: translateY(6px); }
+  15% { opacity: 1; transform: translateY(0); }
+  70% { opacity: 1; transform: translateY(-10px); }
+  100% { opacity: 0; transform: translateY(-18px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .move-score span { animation: none; }
+  .board-wrap .board { transition: filter 0.2s; }
+}

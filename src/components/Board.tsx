@@ -50,6 +50,8 @@ export interface BoardProps {
    * makes a board that offers a choice of a few moves rather than the position.
    */
   allowed?: string[];
+  /** A tint around the board's edge, e.g. Survival's hint of who is better. */
+  glow?: 'winning' | 'better' | 'worse' | 'losing' | null;
 }
 
 interface Placed {
@@ -107,6 +109,7 @@ export function Board({
   captured = false,
   overlay,
   allowed,
+  glow = null,
 }: BoardProps) {
   const [selected, setSelected] = useState<Square | null>(null);
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
@@ -257,7 +260,7 @@ export function Board({
   return (
     <>
       {captured && <Captured fen={fen} orientation={orientation} />}
-      <div className={`board-wrap${dimmed ? ' dimmed' : ''}`}>
+      <div className={`board-wrap${dimmed ? ' dimmed' : ''}${glow ? ` glow-${glow}` : ''}`}>
         <div
           className={`board theme-${theme}`}
           ref={boardRef}

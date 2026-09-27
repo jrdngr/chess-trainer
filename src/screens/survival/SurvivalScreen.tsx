@@ -20,6 +20,8 @@ import { gradeForTime } from '../../model/srs';
 import { mulberry32 } from '../../model/session';
 import {
   bookReply,
+  glowFor,
+  moveScore,
   playTheirs,
   playYours,
   prepHere,
@@ -28,6 +30,7 @@ import {
   type SurvivalRecord,
   type SurvivalRun,
   type SurvivalStart,
+  type ScoreTone,
 } from '../../model/survival';
 import { evidenceIn } from '../../store/recommendation';
 import { repertoireList, useStore } from '../../store/useStore';
@@ -41,6 +44,17 @@ type Phase = 'setup' | 'playing' | 'over';
 
 /** How long a miss stays over the board before the game goes on. */
 const MISS_MS = 2000;
+
+/** How long a move's score floats over its square. */
+const SCORE_MS = 1400;
+
+/** What one of your moves cost, floating up from the square it landed on. */
+interface ScorePop {
+  key: number;
+  square: LegalMove['to'];
+  cp: number;
+  tone: ScoreTone;
+}
 
 interface Game {
   source: LineSource;
@@ -100,6 +114,9 @@ export function SurvivalScreen({
   /** The book has nothing for the opponent here, so the engine plays. */
   const [engineTurn, setEngineTurn] = useState(false);
   const [miss, setMiss] = useState<MissFlash | null>(null);
+  const [pop, setPop] = useState<ScorePop | null>(null);
+  /** The engine's last word on the game, White's side, for the glow. */
+  const [evalCp, setEvalCp] = useState<number | null>(null);
   const picker = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
   /** True once the run has ended, so a late verdict or engine move lands nowhere. */
   const over = useRef(false);
@@ -131,6 +148,7 @@ export function SurvivalScreen({
     buzz(how.kind === 'blunder' || how.kind === 'lost' ? [22, 60, 22] : 14);
     setEnding(how);
     setMiss(null);
+    setPop(null);
     setEngineTurn(false);
     setThinking(false);
     setPhase('over');
@@ -171,6 +189,10 @@ export function SurvivalScreen({
         return;
       }
       buzz(expected.length ? 14 : 10);
+      setEvalCp(judged.after);
+      const score = prefs.moveScores ? moveScore(judged.lost) : null;
+      const landed = score ? applySan(run.fen, judged.san) : null;
+      if (score && landed) setPop({ key: Date.now(), square: landed.to, ...score });
       if (expected.length) {
         const right = applySan(run.fen, expected[0]);
         if (right) setMiss({ expected: expected[0], from: right.from, to: right.to });
@@ -217,6 +239,18 @@ export function SurvivalScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game, live, myTurn, miss, engineTurn]);
 
+  // The engine's score for the position in front of you steers the glow.
+  const baselineCp = judge.baseline && run && judge.baseline.fen === run.fen ? judge.baseline.cp : null;
+  useEffect(() => {
+    if (baselineCp !== null) setEvalCp(baselineCp);
+  }, [baselineCp]);
+
+  useEffect(() => {
+    if (!pop) return;
+    const timer = window.setTimeout(() => setPop(null), SCORE_MS);
+    return () => window.clearTimeout(timer);
+  }, [pop]);
+
   /** A miss clears itself, and a tap clears it sooner. */
   useEffect(() => {
     if (!miss) return;
@@ -242,6 +276,8 @@ export function SurvivalScreen({
     setPrefs(chosen);
     setEnding(null);
     setMiss(null);
+    setPop(null);
+    setEvalCp(null);
     setEngineTurn(false);
     setThinking(false);
     setGame({ source: begun.source, state: begun.state, redraw: begun.redraw });
@@ -286,6 +322,7 @@ export function SurvivalScreen({
   /** Your move stands on the board while the engine judges it. */
   const shownFen = judge.pending ? (applySan(run.fen, judge.pending.san)?.after ?? run.fen) : run.fen;
   const shownLine = judge.pending ? [...run.played, judge.pending.san] : run.played;
+  const glow = prefs.boardGlow && evalCp !== null ? glowFor(run.color, evalCp) : 'level';
 
   return (
     <>
@@ -313,16 +350,20 @@ export function SurvivalScreen({
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
           captured
+          glow={glow === 'level' ? null : glow}
           overlay={
-            miss && (
-              <div className="board-flash top" onPointerDown={() => setMiss(null)}>
-                <div className="flash-pill">
-                  <div className="verdict accent" style={{ padding: 0 }}>
-                    Off your prep · {miss.expected} was yours
+            <>
+              {pop && <MoveScore key={pop.key} pop={pop} orientation={run.color} />}
+              {miss && (
+                <div className="board-flash top" onPointerDown={() => setMiss(null)}>
+                  <div className="flash-pill">
+                    <div className="verdict accent" style={{ padding: 0 }}>
+                      Off your prep · {miss.expected} was yours
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
+              )}
+            </>
           }
         />
 
@@ -349,5 +390,18 @@ export function SurvivalScreen({
         </div>
       </div>
     </>
+  );
+}
+
+/** A move's cost, over the square it landed on. */
+function MoveScore({ pop, orientation }: { pop: ScorePop; orientation: 'w' | 'b' }) {
+  const file = pop.square.charCodeAt(0) - 97;
+  const rank = Number(pop.square[1]) - 1;
+  const col = orientation === 'w' ? file : 7 - file;
+  const row = orientation === 'w' ? 7 - rank : rank;
+  return (
+    <div className={`move-score ${pop.tone}`} style={{ left: `${col * 12.5}%`, top: `${row * 12.5}%` }}>
+      <span>−{pop.cp}</span>
+    </div>
   );
 }

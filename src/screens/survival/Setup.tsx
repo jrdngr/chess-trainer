@@ -1,4 +1,4 @@
-import { AppBar, Section, Segmented } from '../../components/ui';
+import { AppBar, Section, Segmented, Toggle } from '../../components/ui';
 import { SelectionBar } from '../../components/Selection';
 import { clockLabel, CLOCK_MODES } from '../../model/openingRun';
 import { nodeById, openingTree } from '../../model/openingTree';
@@ -58,6 +58,22 @@ export function Setup({ onStart, onExit }: { onStart: (prefs: SurvivalPrefs) => 
         <div className="note">
           A run lasts until your first blunder. A sound move where your prep had another is a miss: it is shown,
           logged for review, and the game goes on.
+        </div>
+
+        <Section title="Feedback" />
+        <div className="list">
+          <Toggle
+            label="Move scores"
+            hint="What each move the engine judges cost you, in centipawns, over its square"
+            on={prefs.moveScores}
+            onToggle={() => setPrefs({ moveScores: !prefs.moveScores })}
+          />
+          <Toggle
+            label="Board glow"
+            hint="The board's edge tints green when you are better and red when you are worse"
+            on={prefs.boardGlow}
+            onToggle={() => setPrefs({ boardGlow: !prefs.boardGlow })}
+          />
         </div>
 
         {record.global.runs > 0 && (

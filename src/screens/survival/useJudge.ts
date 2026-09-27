@@ -20,6 +20,8 @@ export interface Judgement {
   lost: number;
   /** The engine's own choice in the position, in SAN, when it had one. */
   best: string | null;
+  /** The position after your move, in centipawns from White's side. */
+  after: number;
 }
 
 /** How long the engine thinks about each question, in milliseconds. */
@@ -107,9 +109,10 @@ export function useJudge({
         const line = settled(snap, pending.from);
         if (!line) return;
         cancelled = true;
-        const result = judgeByEval(color, before, scoreOf(line)!);
+        const after = scoreOf(line)!;
+        const result = judgeByEval(color, before, after);
         setPending(null);
-        judged.current({ san: pending.san, ok: result.ok, lost: result.lost, best });
+        judged.current({ san: pending.san, ok: result.ok, lost: result.lost, best, after });
       });
     });
     return () => {
@@ -120,6 +123,8 @@ export function useJudge({
 
   return {
     pending,
+    /** The engine's score for the position it last weighed, White's side. */
+    baseline: baseline ? { fen: baseline.fen, cp: baseline.cp } : null,
     submit(from: string, move: LegalMove) {
       if (pending) return;
       setPending({ from, san: move.san, uci: move.uci });
