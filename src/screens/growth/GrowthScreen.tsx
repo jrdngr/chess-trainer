@@ -150,6 +150,7 @@ function Run({
   const settings = state.settings;
   const addLine = useStore((s) => s.addLine);
   const removeNode = useStore((s) => s.removeNode);
+  const logEvent = useStore((s) => s.logEvent);
   const endRound = useStore((s) => s.endRound);
   /** The round this sitting will log, kept current until the run is left. */
   const pending = useRef<Omit<RoundRecord, 'at'> | null>(null);
@@ -305,6 +306,23 @@ function Run({
   }, [shown, options, index, run.fen]);
   const toneOf = (san: string) => shown.find((move) => move.san === san)?.tone;
 
+  /** What each hole put in front of you, logged once per position when its moves are in. */
+  const offeredAt = useRef<string | null>(null);
+  useEffect(() => {
+    if (phase !== 'hole' || choices === undefined || !listed.length) return;
+    if (offeredAt.current === run.fen) return;
+    offeredAt.current = run.fen;
+    logEvent({
+      kind: 'growth-offer',
+      via: 'growth',
+      color: run.color,
+      line: run.path.join(' '),
+      offered: listed.map((option) => option.san),
+      from: run.hole?.kept ? 'kept' : pastBook ? 'engine' : 'book',
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, choices, listed, run.fen]);
+
   /**
    * How many this batch may add, from how deep the hole it starts at is.
    *
@@ -370,7 +388,15 @@ function Run({
     const move = applySan(run.fen, san);
     const next = move ? answerHole(run, san) : null;
     if (!next) return;
-    addLine(row.repertoireId, lineFor(run, san), 'reference');
+    addLine(row.repertoireId, lineFor(run, san), 'reference', 'growth');
+    logEvent({
+      kind: 'growth-pick',
+      via: 'growth',
+      color: run.color,
+      line: run.path.join(' '),
+      picked: san,
+      offered: listed.map((option) => option.san),
+    });
     setHistory((steps) => [...steps, { run, batch, san }]);
     setAdded((plies) => [...plies, run.path.length]);
     setAnswer(move);
@@ -398,7 +424,8 @@ function Run({
     // A reply you had kept stays: only the answer to it was added.
     const line = step.run.hole && !step.run.hole.kept ? step.run.path : lineFor(step.run, step.san);
     const node = live ? nodeAtLine(live, line) : null;
-    if (node) removeNode(row.repertoireId, node.id);
+    if (node) removeNode(row.repertoireId, node.id, 'growth');
+    logEvent({ kind: 'growth-undo', via: 'growth', color: run.color, line: lineFor(step.run, step.san).join(' '), all });
     setHistory(history.slice(0, to));
     setAdded((plies) => plies.slice(0, to));
     // Nothing left from this sitting means nothing to log on the way out.
@@ -429,8 +456,10 @@ function Run({
         region: { tree: catalogue, node: region ? nodeById(catalogue, region) : regionOf(catalogue, settings.selection) },
       }),
     );
-    if (next) onAgain(next);
-    else onExit();
+    if (next) {
+      logEvent({ kind: 'growth-start', via: 'growth', rows: [next.name], picked: next.name, start: 'new run' });
+      onAgain(next);
+    } else onExit();
   };
 
   /**

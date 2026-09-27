@@ -9,6 +9,7 @@ import { lookup, openingNameForPath } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
 import { branchItems, type SessionMode, type TrainingItem } from '../model/session';
 import { describeDue } from '../model/srs';
+import type { AppEvent } from '../model/events';
 import type { Card, RepMove, Repertoire } from '../model/types';
 import { saveFile } from '../store/saveFile';
 import { repertoireList, useStore } from '../store/useStore';
@@ -75,7 +76,7 @@ export function RepertoireScreen({ onStart, onImport, onExploreFrom }: Repertoir
         actions={
           <>
             {reps.length > 0 && (
-              <IconButton label="Export as JSON" onClick={() => void exportReps(reps)}>
+              <IconButton label="Export as JSON" onClick={() => void exportReps(reps, useStore.getState().events)}>
                 <Icons.export size={20} />
               </IconButton>
             )}
@@ -801,9 +802,14 @@ function NodeMenu({
 }
 
 /** Both sides' trees, as they are stored, in one JSON file. */
-async function exportReps(reps: Repertoire[]) {
+/** Your repertoire, with the log of how it got that way. */
+async function exportReps(reps: Repertoire[], events: AppEvent[]) {
   const date = new Date().toISOString().slice(0, 10);
-  const text = JSON.stringify({ format: 'chess-trainer-repertoire', version: 1, exportedAt: date, repertoires: reps }, null, 2);
+  const text = JSON.stringify(
+    { format: 'chess-trainer-repertoire', version: 1, exportedAt: date, repertoires: reps, events },
+    null,
+    2,
+  );
   const outcome = await saveFile(`repertoire-${date}.json`, text);
   if (outcome === 'unavailable') toast('Saving files is not available here');
 }

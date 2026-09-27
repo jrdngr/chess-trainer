@@ -56,6 +56,15 @@ import {
   type ScoreState,
 } from '../model/scoring';
 import { openingTree } from '../model/openingTree';
+import {
+  appendEvent,
+  lineAt,
+  normalizeEvents,
+  removedBetween,
+  type AppEvent,
+  type EventPlace,
+  type NewEvent,
+} from '../model/events';
 import { referenceIndex } from '../model/referenceIndex';
 import { cloudAvailable, readCloud, writeCloud, type CloudStatus, type WriteResult } from './cloud';
 import {
@@ -147,6 +156,8 @@ interface PersistedState {
   mistakes: Mistake[];
   /** Every opening's rating and activity, and every round played. */
   score: ScoreState;
+  /** What changed the repertoire, and what Growth offered — see `src/model/events.ts`. */
+  events: AppEvent[];
 }
 
 /**
@@ -182,9 +193,12 @@ interface StoreState extends PersistedState {
   resetAll: () => Promise<void>;
   resetProgress: () => void;
 
-  addLine: (repId: string, sans: string[], source: MoveSource) => { added: number };
-  removeNode: (repId: string, nodeId: string) => void;
+  /** `via` says where the change came from, when the screen it happened on does not. */
+  addLine: (repId: string, sans: string[], source: MoveSource, via?: EventPlace) => { added: number };
+  removeNode: (repId: string, nodeId: string, via?: EventPlace) => void;
   preferMove: (repId: string, nodeId: string) => void;
+  /** Record something worth knowing later that changed nothing — what Growth offered, say. */
+  logEvent: (event: NewEvent) => void;
   annotate: (repId: string, nodeId: string, note: string) => void;
   reorder: (repId: string, nodeId: string, delta: number) => void;
   addRepertoire: (name: string, color: Color) => string;
@@ -303,6 +317,7 @@ function emptyPersisted(): PersistedState {
     repair: { ...EMPTY_REPAIR_RECORD },
     mistakes: [],
     score: normalizeScore(EMPTY_SCORE),
+    events: [],
   };
 }
 
@@ -321,6 +336,7 @@ function persistedFrom(state: StoreState): PersistedState {
     repair: state.repair,
     mistakes: state.mistakes,
     score: state.score,
+    events: state.events,
   };
 }
 
@@ -400,10 +416,22 @@ export const useStore = create<StoreState>((set, get) => {
     pushCloud();
   };
 
-  const updateRep = (repId: string, fn: (rep: Repertoire) => Repertoire) => {
+  /** The log with one more event, for a commit to carry with the change it describes. */
+  const logged = (event: NewEvent) => appendEvent(get().events, event);
+
+  const updateRep = (
+    repId: string,
+    fn: (rep: Repertoire) => Repertoire,
+    describe?: (before: Repertoire, after: Repertoire) => NewEvent | null,
+  ) => {
     const rep = get().repertoires[repId];
     if (!rep) return;
-    commit({ repertoires: { ...get().repertoires, [repId]: fn(rep) } });
+    const next = fn(rep);
+    const event = describe?.(rep, next);
+    commit({
+      repertoires: { ...get().repertoires, [repId]: next },
+      ...(event ? { events: logged(event) } : {}),
+    });
   };
 
   /**
@@ -416,15 +444,21 @@ export const useStore = create<StoreState>((set, get) => {
    * predicted, so a position still reachable by another move order keeps its
    * schedule.
    */
-  const shrinkRep = (repId: string, fn: (rep: Repertoire) => Repertoire) => {
+  const shrinkRep = (
+    repId: string,
+    fn: (rep: Repertoire) => Repertoire,
+    describe?: (before: Repertoire, after: Repertoire) => NewEvent | null,
+  ) => {
     const state = get();
     const rep = state.repertoires[repId];
     if (!rep) return;
     const next = fn(rep);
     const alive = new Set(Object.values(next.nodes).map((node) => node.key));
     const orphaned = (id: string, key: string) => id === repId && !alive.has(key);
+    const event = describe?.(rep, next);
     commit({
       repertoires: { ...state.repertoires, [repId]: next },
+      ...(event ? { events: logged(event) } : {}),
       cards: Object.fromEntries(
         Object.entries(state.cards).filter(([, card]) => !orphaned(card.repertoireId, card.key)),
       ),
@@ -473,6 +507,7 @@ export const useStore = create<StoreState>((set, get) => {
           repair: normalizeRepairRecord(chosen.repair),
           mistakes: chosen.mistakes ?? [],
           score: normalizeScore(chosen.score),
+          events: normalizeEvents(chosen.events),
           updatedAt: Math.max(localAt, remoteAt),
           settings: mergeSettings(chosen.settings),
           storage,
@@ -518,6 +553,7 @@ export const useStore = create<StoreState>((set, get) => {
           repair: normalizeRepairRecord(remote.state.repair),
           mistakes: remote.state.mistakes ?? [],
           score: normalizeScore(remote.state.score),
+          events: normalizeEvents(remote.state.events),
           importedGames: mergeGames(local.importedGames, remote.state.importedGames ?? []),
           settings: mergeSettings(remote.state.settings),
           updatedAt: remote.updatedAt,
@@ -543,16 +579,46 @@ export const useStore = create<StoreState>((set, get) => {
       commit({ cards: {}, log: [] });
     },
 
-    addLine(repId, sans, source) {
+    addLine(repId, sans, source, via) {
       const rep = get().repertoires[repId];
       if (!rep) return { added: 0 };
       const res = addLine(rep, sans, source);
-      commit({ repertoires: { ...get().repertoires, [repId]: res.rep } });
+      commit({
+        repertoires: { ...get().repertoires, [repId]: res.rep },
+        ...(res.added > 0
+          ? {
+              events: logged({
+                kind: 'add',
+                repertoireId: repId,
+                color: rep.color,
+                line: sans.join(' '),
+                added: res.added,
+                source,
+                ...(via ? { via } : {}),
+              }),
+            }
+          : {}),
+      });
       return { added: res.added };
     },
 
-    removeNode(repId, nodeId) {
-      shrinkRep(repId, (rep) => removeSubtree(rep, nodeId));
+    removeNode(repId, nodeId, via) {
+      shrinkRep(
+        repId,
+        (rep) => removeSubtree(rep, nodeId),
+        (before, after) => ({
+          kind: 'remove',
+          repertoireId: repId,
+          color: before.color,
+          line: lineAt(before, nodeId),
+          ...removedBetween(before, after),
+          ...(via ? { via } : {}),
+        }),
+      );
+    },
+
+    logEvent(event) {
+      commit({ events: logged(event) });
     },
 
     tidySwitch(repId, nodeId, san) {
@@ -567,7 +633,18 @@ export const useStore = create<StoreState>((set, get) => {
         log: before.log,
         mistakes: before.mistakes,
       };
-      shrinkRep(repId, () => next);
+      shrinkRep(
+        repId,
+        () => next,
+        (was, now) => ({
+          kind: 'tidy-switch',
+          repertoireId: repId,
+          color: was.color,
+          line: lineAt(was, nodeId),
+          to: san,
+          ...removedBetween(was, now),
+        }),
+      );
       // The answer here changed, so what the old answer earned does not
       // carry: the card starts over and the misses logged against it go.
       const after = get();
@@ -583,24 +660,53 @@ export const useStore = create<StoreState>((set, get) => {
           cards: saved.cards,
           log: saved.log,
           mistakes: saved.mistakes,
+          events: logged({
+            kind: 'tidy-undo',
+            repertoireId: repId,
+            color: saved.rep.color,
+            line: lineAt(saved.rep, nodeId),
+            to: san,
+          }),
         });
       };
     },
 
     removeOpening(repId, rootId) {
-      shrinkRep(repId, (rep) => pruneLine(rep, rootId));
+      shrinkRep(
+        repId,
+        (rep) => pruneLine(rep, rootId),
+        (before, after) => ({
+          kind: 'remove-opening',
+          repertoireId: repId,
+          color: before.color,
+          line: lineAt(before, rootId),
+          ...removedBetween(before, after),
+        }),
+      );
     },
 
     preferMove(repId, nodeId) {
-      updateRep(repId, (rep) => setPreferred(rep, nodeId));
+      updateRep(
+        repId,
+        (rep) => setPreferred(rep, nodeId),
+        (before) => ({ kind: 'prefer', repertoireId: repId, color: before.color, line: lineAt(before, nodeId) }),
+      );
     },
 
     annotate(repId, nodeId, note) {
-      updateRep(repId, (rep) => setNote(rep, nodeId, note));
+      updateRep(
+        repId,
+        (rep) => setNote(rep, nodeId, note),
+        (before) => ({ kind: 'note', repertoireId: repId, color: before.color, line: lineAt(before, nodeId) }),
+      );
     },
 
     reorder(repId, nodeId, delta) {
-      updateRep(repId, (rep) => moveSibling(rep, nodeId, delta));
+      updateRep(
+        repId,
+        (rep) => moveSibling(rep, nodeId, delta),
+        (before) => ({ kind: 'reorder', repertoireId: repId, color: before.color, line: lineAt(before, nodeId), delta }),
+      );
     },
 
     addRepertoire(name, color) {
@@ -633,8 +739,15 @@ export const useStore = create<StoreState>((set, get) => {
       const state = get();
       if (!state.repertoires[repId]) return;
       const repertoires = { ...state.repertoires };
+      const gone = repertoires[repId];
       delete repertoires[repId];
       commit({
+        events: logged({
+          kind: 'remove-repertoire',
+          repertoireId: repId,
+          color: gone.color,
+          count: Object.keys(gone.nodes).length,
+        }),
         repertoires,
         repertoireOrder: state.repertoireOrder.filter((id) => id !== repId),
         cards: Object.fromEntries(
@@ -701,6 +814,7 @@ export const useStore = create<StoreState>((set, get) => {
         repertoireList(state).map((rep) => [rep.color, rep.id]),
       );
 
+      let events = state.events;
       for (const pick of picks) {
         let repId = byColor.get(pick.color);
         if (!repId) {
@@ -710,12 +824,25 @@ export const useStore = create<StoreState>((set, get) => {
           byColor.set(pick.color, rep.id);
           repId = rep.id;
         }
-        repertoires[repId] = addLine(repertoires[repId], pick.sans, 'reference').rep;
+        const res = addLine(repertoires[repId], pick.sans, 'reference');
+        repertoires[repId] = res.rep;
+        if (res.added > 0) {
+          events = appendEvent(events, {
+            kind: 'add',
+            repertoireId: repId,
+            color: pick.color,
+            line: pick.sans.join(' '),
+            added: res.added,
+            source: 'reference',
+            via: 'onboarding',
+          });
+        }
       }
 
       commit({
         repertoires,
         repertoireOrder: order,
+        events,
         settings: {
           ...state.settings,
           favoriteOpenings: [

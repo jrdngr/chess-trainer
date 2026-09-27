@@ -21,6 +21,7 @@ import type { Selection } from './model/selection';
 import type { TidyFind } from './model/tidy';
 import { countDue } from './model/srs';
 import { needsOnboarding, useStore } from './store/useStore';
+import { setEventPlace } from './model/events';
 
 type Tab = 'home' | 'repertoire' | 'tidy' | 'stats' | 'analysis';
 
@@ -95,6 +96,11 @@ export default function App() {
 
   const dueCount = countDue(Object.values(cards)).due;
   const onboarding = useStore(needsOnboarding);
+
+  /** Where you are, so a change to the repertoire can be logged with where it was made. */
+  setEventPlace(
+    onboarding ? 'onboarding' : mode ? mode.id : session ? 'session' : importing ? 'import' : tab,
+  );
 
   /** Screens that take over the whole app, with no tab bar underneath. */
   const overlay = !ready ? (

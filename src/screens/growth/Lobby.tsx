@@ -56,13 +56,21 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
   const firstMoves = useMemo(() => (whiteEmpty ? optionsAt(index, START_FEN, 5) : []), [whiteEmpty, index]);
 
   /** A row on a stand-in starts on the real tree, made on the spot. */
-  const start = (row: GrowthRow) => {
+  const logEvent = useStore((s) => s.logEvent);
+  const start = (row: GrowthRow, how: string) => {
+    logEvent({
+      kind: 'growth-start',
+      via: 'growth',
+      rows: rows.map((r) => `${r.name} (${r.holes.length} replies, ${r.ends.length} ends)`),
+      picked: row.name,
+      start: how,
+    });
     if (!row.repertoireId.startsWith(STAND_IN)) return onStart(row);
     onStart({ ...row, repertoireId: ensureRepertoire(row.color) });
   };
 
   const keepFirstMove = (san: string) => {
-    addLine(ensureRepertoire('w'), [san], 'reference');
+    addLine(ensureRepertoire('w'), [san], 'reference', 'growth');
     toast(`1.${san} kept · now answer Black's replies`);
   };
 
@@ -106,7 +114,7 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
         <SelectionBar />
 
         {pick && (
-          <button className="btn primary block xl" onClick={() => start(pick)}>
+          <button className="btn primary block xl" onClick={() => start(pick, 'Start button')}>
             Start
           </button>
         )}
@@ -149,7 +157,7 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
             <Section title="Or pick one" aside="most worth doing first" />
             <div className="list">
               {rows.map((row) => (
-                <button key={row.id} className="list-row" onClick={() => start(row)}>
+                <button key={row.id} className="list-row" onClick={() => start(row, 'picked from the list')}>
                   <span className={`side ${row.color}`} />
                   <span className="grow" style={{ minWidth: 0 }}>
                     <div className="title truncate">
