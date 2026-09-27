@@ -43,6 +43,18 @@ import { useJudge } from './useJudge';
 
 type Phase = 'setup' | 'playing' | 'over';
 
+/**
+ * Where you stand against your prep: on it, through to the end of the line,
+ * or off it. Latched: once complete or off, it stays that way for the run.
+ */
+type PrepStatus = 'on' | 'complete' | 'off';
+
+const PREP_STATUS: Record<PrepStatus, { text: string; color: string }> = {
+  on: { text: 'On prep', color: 'var(--good)' },
+  complete: { text: 'Prep complete', color: 'var(--warn)' },
+  off: { text: 'Off prep', color: 'var(--bad)' },
+};
+
 /** How long a miss stays over the board before the game goes on. */
 const MISS_MS = 2000;
 
@@ -116,6 +128,9 @@ export function SurvivalScreen({
   const [engineTurn, setEngineTurn] = useState(false);
   const [miss, setMiss] = useState<MissFlash | null>(null);
   const [pop, setPop] = useState<ScorePop | null>(null);
+  const [prepStatus, setPrepStatus] = useState<PrepStatus>('on');
+  /** Whether your prep has answered anything yet this run: with nothing prepared, there is no status to show. */
+  const [prepSeen, setPrepSeen] = useState(false);
   /** The engine's last word on the game, White's side, for the glow. */
   const [evalCp, setEvalCp] = useState<number | null>(null);
   /** The engine's score after your last scored move, White's side: where the next popup counts from. */
@@ -185,6 +200,7 @@ export function SurvivalScreen({
         // A move your prep does not have, where it had one: a miss, logged
         // now whatever the engine says, because the drill lives in review.
         tally(run.played, false);
+        setPrepStatus('off');
         if (run.repertoireId) missed(run.repertoireId, run.fen, judged.san, expected[0]);
       }
       if (!judged.ok) {
@@ -244,6 +260,12 @@ export function SurvivalScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game, live, myTurn, miss, engineTurn]);
 
+  // Your turn with nothing prepared, having followed your prep so far: the line is done.
+  const prepRanOut = live && myTurn && !judge.pending && !!game && prepHere(game.source, game.state).length === 0;
+  useEffect(() => {
+    if (prepRanOut) setPrepStatus((now) => (now === 'on' ? 'complete' : now));
+  }, [prepRanOut]);
+
   // The engine's score for the position in front of you steers the glow.
   const baselineCp = judge.baseline && run && judge.baseline.fen === run.fen ? judge.baseline.cp : null;
   useEffect(() => {
@@ -282,6 +304,8 @@ export function SurvivalScreen({
     setEnding(null);
     setMiss(null);
     setPop(null);
+    setPrepStatus('on');
+    setPrepSeen(false);
     setEvalCp(null);
     lastScored.current = null;
     setEngineTurn(false);
@@ -319,6 +343,7 @@ export function SurvivalScreen({
       // the answer reviews it.
       if (run.repertoireId) answered(run.repertoireId, run.fen, move.san, gradeForTime(clock.elapsedNow()));
       tally(run.played, true);
+      setPrepSeen(true);
       afterMove({ ...game, state: playYours(game.state, move.san) });
       return;
     }
@@ -388,6 +413,11 @@ export function SurvivalScreen({
             )}
             {judge.pending ? 'Judging' : thinking || engineTurn || !myTurn ? 'Reply' : 'Your move'}
           </div>
+          {(prepSeen || prepStatus === 'off' || (prepStatus === 'on' && prepHere(game.source, game.state).length > 0)) && (
+            <div className="ctx" style={{ color: PREP_STATUS[prepStatus].color, fontWeight: 600 }}>
+              {PREP_STATUS[prepStatus].text}
+            </div>
+          )}
           {game.state.misses.length > 0 && (
             <div className="ctx">
               {game.state.misses.length} miss{game.state.misses.length === 1 ? '' : 'es'} so far
