@@ -3,6 +3,8 @@ import { Board } from '../../components/Board';
 import { AppBar, copyText, haptic, Icons, Section, Strip, toast, type StripItem } from '../../components/ui';
 import { applySan, lastMoveOf, sansToMoveText, walkSan, type Square } from '../../chess/core';
 import { selectionText } from '../../components/Selection';
+import { formatScore, winFraction } from '../../engine/types';
+import { useEngine } from '../../engine/useEngine';
 import { nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { moveNumber, openingsAlong, survivalFor, type SurvivalRecord, type SurvivalRun } from '../../model/survival';
@@ -105,6 +107,19 @@ export function End({
   const missAt = misses.find((miss) => miss.ply === cursor) ?? null;
   const onBlunder = !!blunder && cursor === last;
 
+  /**
+   * The eval bar, hidden while you play, shown once the game is over. On the
+   * blunder it weighs the position the blunder left, so the bar shows what it
+   * cost; everywhere else, the position on the board.
+   */
+  const weighed = onBlunder ? (applySan(run.fen, blunder!.played)?.after ?? shownFen) : shownFen;
+  const { sanLines } = useEngine(settings.engineEnabled ? weighed : null, {
+    enabled: settings.engineEnabled,
+    depth: 16,
+    multiPv: 1,
+  });
+  const evalLine = sanLines[0];
+
   const title = endingTitle(ending, last);
   const verdict = (
     <div className={`verdict ${blunder || ending.kind === 'lost' ? 'no' : ending.kind === 'won' ? 'ok' : 'warn'}`} style={{ padding: 0 }}>
@@ -192,6 +207,16 @@ export function End({
       />
 
       <div className="screen no-nav">
+        {settings.engineEnabled && (
+          <div className="row gap-8" style={{ marginBottom: 10 }}>
+            <div className="evalbar grow">
+              <i style={{ width: `${winFraction(evalLine) * 100}%` }} />
+            </div>
+            <span className="num small muted" style={{ minWidth: 48, textAlign: 'right' }}>
+              {evalLine ? formatScore(evalLine) : '—'}
+            </span>
+          </div>
+        )}
         <Board
           fen={shownFen}
           orientation={run.color}
