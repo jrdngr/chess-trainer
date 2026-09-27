@@ -237,7 +237,7 @@ function Run({
    * them once you have answered. Counted so the screen moves on as it answers.
    */
   const asking = (phase === 'hole' || phase === 'answered') && needsEngine(index, run.fen) ? [run.fen] : [];
-  const thinkingFor = useEngineReplies(asking);
+  const thinkingFor = useEngineReplies(asking, true);
 
   /** The moves offered at a hole — undefined while the engine is still working it out. */
   const choices = useMemo(

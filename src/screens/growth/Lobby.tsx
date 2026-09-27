@@ -169,7 +169,6 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
                       {row.name}
                     </div>
                     <div className="meta">
-                      {depthLabel(row.depth)} ·{' '}
                       {rowMeta(row)}
                     </div>
                   </span>
