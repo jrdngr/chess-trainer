@@ -40,3 +40,17 @@ export function deltaTone(cp: number): 'good' | 'bad' | 'even' {
   if (Math.abs(cp) < EVEN_CP) return 'even';
   return cp > 0 ? 'good' : 'bad';
 }
+
+/**
+ * Moves in the engine's order: the best delta first, then anything it has not
+ * weighed yet, in the order it came.
+ */
+export function byDelta<T extends { san: string }>(moves: readonly T[], deltaOf: (san: string) => number | null): T[] {
+  return moves
+    .map((move, at) => ({ move, at, cp: deltaOf(move.san) }))
+    .sort((a, b) => {
+      if (a.cp === null || b.cp === null) return a.cp === null ? (b.cp === null ? a.at - b.at : 1) : -1;
+      return b.cp - a.cp || a.at - b.at;
+    })
+    .map(({ move }) => move);
+}

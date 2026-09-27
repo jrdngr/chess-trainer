@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deltaFor, deltaTone, formatDelta, whiteCp } from './evalDelta';
+import { byDelta, deltaFor, deltaTone, formatDelta, whiteCp } from './evalDelta';
 
 describe('what an answer does to the eval bar', () => {
   it('reads the change from the side playing the move', () => {
@@ -26,5 +26,16 @@ describe('what an answer does to the eval bar', () => {
     expect(whiteCp({ cp: null, mate: 2 })!).toBeGreaterThan(whiteCp({ cp: null, mate: 5 })!);
     expect(whiteCp({ cp: 35, mate: null })).toBe(35);
     expect(whiteCp(undefined)).toBeNull();
+  });
+});
+
+describe('the answers in the engine\'s order', () => {
+  const moves = ['Ng5', 'Ne5', 'Ne3', 'g3', 'h3'].map((san) => ({ san }));
+  const cps: Record<string, number | null> = { Ng5: -60, Ne5: -30, Ne3: -10, g3: -70, h3: null };
+  it('puts the best delta on top and the unweighed last', () => {
+    expect(byDelta(moves, (san) => cps[san]).map((m) => m.san)).toEqual(['Ne3', 'Ne5', 'Ng5', 'g3', 'h3']);
+  });
+  it('keeps the order it came in until the engine has weighed them', () => {
+    expect(byDelta(moves, () => null).map((m) => m.san)).toEqual(['Ng5', 'Ne5', 'Ne3', 'g3', 'h3']);
   });
 });

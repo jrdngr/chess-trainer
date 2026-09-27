@@ -35,7 +35,7 @@ import { useSoundness } from '../../engine/soundness';
 import { useEngineReplies } from '../../engine/engineReplies';
 import { useMoveEvals } from '../../engine/moveEvals';
 import { formatScore, winFraction } from '../../engine/types';
-import { deltaFor, deltaTone, formatDelta } from '../../model/evalDelta';
+import { byDelta, deltaFor, deltaTone, formatDelta } from '../../model/evalDelta';
 import { nodeAtLine } from '../../model/repertoire';
 import { formatGameCount } from '../../model/reference';
 import { NudgeReasons, nudgeColor, nudgedArrows } from '../../components/Nudges';
@@ -321,6 +321,8 @@ function Run({
     const after = evals.moves.get(san);
     return after === undefined || evals.position === null ? null : deltaFor(run.color, evals.position, after);
   };
+  /** The answers as the engine ranks them, best on top, once it has weighed them. */
+  const ranked = byDelta(listed, deltaOf);
 
   /** What each hole put in front of you, logged once per position when its moves are in. */
   const offeredAt = useRef<string | null>(null);
@@ -411,7 +413,7 @@ function Run({
       color: run.color,
       line: run.path.join(' '),
       picked: san,
-      offered: listed.map((option) => option.san),
+      offered: ranked.map((option) => option.san),
     });
     setHistory((steps) => [...steps, { run, batch, san }]);
     setAdded((plies) => [...plies, run.path.length]);
@@ -740,7 +742,7 @@ function Run({
               aside={inBatch > 0 ? `${inBatch} of ${allowance} added` : `up to ${allowance}`}
             />
             <div className="list">
-              {listed.map((option) => (
+              {ranked.map((option) => (
                 <button className="list-row" key={option.san} onClick={() => choose(option.san)}>
                   <span className="tree-san" style={{ color: nudgeColor(toneOf(option.san)) }}>
                     {option.san}
