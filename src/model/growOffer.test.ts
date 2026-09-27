@@ -3,6 +3,7 @@ import { walkSan } from '../chess/core';
 import { advance, answerHole, atHole, isUsersTurn as growthUsersTurn, preparedHere, startGrowth, startGrowthAt, steer } from './growth';
 import {
   CLEAN_FINISHES,
+  endAtEnd,
   growLaunch,
   holeAtEnd,
   isStubFinish,
@@ -227,5 +228,37 @@ describe('practice owed', () => {
   it('says what is owed', () => {
     expect(practiceText('Sicilian Defence', 3)).toBe('3 Sicilian Defence lines to practice.');
     expect(practiceText('Sicilian Defence', 1)).toBe('1 Sicilian Defence line to practice.');
+  });
+});
+
+describe('growing a line that ends on your own move', () => {
+  // The round Jordan finished: 6.g3 is the last move prepared, and nothing
+  // answers what Black plays next. The book has no data there either.
+  const line = 'd4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Nf3 Bb4 g3';
+  const white = rep('w', line);
+  const played = line.split(' ');
+
+  it('finds the end of the line, with them to move', () => {
+    const end = endAtEnd(white, played, Infinity)!;
+    expect(end).not.toBeNull();
+    expect(end.path).toEqual(played);
+    expect(end.nodeId).toBe(white.nodes[end.nodeId!].id);
+  });
+
+  it('is not an end once a reply there is prepared', () => {
+    expect(endAtEnd(rep('w', `${line} O-O Bg2`), played, Infinity)).toBeNull();
+  });
+
+  it('is not an end on your turn, or past the depth', () => {
+    expect(endAtEnd(white, played.slice(0, -1), Infinity)).toBeNull();
+    expect(endAtEnd(white, played, played.length)).toBeNull();
+  });
+
+  it('launches Growth on that end rather than finding nothing', () => {
+    const tree = openingTree(index);
+    const launch = growLaunch(white, index, tree, nodeById(tree, 'd4 d5 c4'), played, { maxPly: Infinity })!;
+    expect(launch).not.toBeNull();
+    expect(launch.hole).toBeNull();
+    expect(launch.row.ends.map((end) => end.path.join(' '))).toEqual([line]);
   });
 });

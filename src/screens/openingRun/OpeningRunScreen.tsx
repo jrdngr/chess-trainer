@@ -57,6 +57,7 @@ import { deepestNodeWithin } from '../../model/openingTree';
 import type { RatingChange, RoundPlan, RoundSummary } from '../../model/autopilot';
 import {
   growLaunch,
+  endAtEnd,
   holeAtEnd,
   isStubFinish,
   offerOpening,
@@ -463,8 +464,10 @@ export function OpeningRunScreen({
     // most urgent gap somewhere else. Nothing else holds it back: it is there
     // to be found, not to suggest, and Growth opened from it points back after
     // one batch anyway. Past Growth's depth it adds a move at a time.
+    // Ended on a reply you have no answer to, or on your own last move with
+    // theirs still to come: either way the line has room to grow right here.
     const hole = holeAtEnd(rep, index, done.played, Infinity);
-    if (!hole) return null;
+    if (!hole && !endAtEnd(rep, done.played, Infinity)) return null;
     const launch = growLaunch(rep, index, tree, opening, done.played, { ...opts, maxPly: Infinity });
     return launch ? { kind: 'line', text: 'Grow this line', launch } : null;
   };

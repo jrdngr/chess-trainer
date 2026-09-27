@@ -1,5 +1,13 @@
 import { fenTurn, positionKey, walkSan } from '../chess/core';
-import { growthRows, optionsAt, recommended, type GrowthOptions, type GrowthRow, type Hole } from './growth';
+import {
+  growthRows,
+  optionsAt,
+  recommended,
+  type GrowthOptions,
+  type GrowthRow,
+  type Hole,
+  type LineEnd,
+} from './growth';
 import {
   ancestorsOf,
   deepestNodeWithin,
@@ -217,6 +225,26 @@ export function holeAtEnd(
   };
 }
 
+/**
+ * The line end a round finished on: your own move, the last one prepared, with
+ * the opponent to move and nothing prepared for what they play. Growth starts
+ * there and has them reply — from the book when it knows the position, from
+ * the engine when it does not. Null when the round ended anywhere else.
+ */
+export function endAtEnd(rep: Repertoire, played: string[], maxPly: number): LineEnd | null {
+  if (played.length === 0 || played.length >= maxPly) return null;
+  const walked = walkSan(played);
+  if (walked.moves.length !== played.length) return null;
+  const fen = walked.fens[played.length];
+  if (fenTurn(fen) === rep.color) return null;
+  const nodeId = nodeAt(rep, played, fen);
+  if (!nodeId) return null;
+  // A reply prepared here, by any move order, means the line goes on.
+  const key = positionKey(fen);
+  if (Object.values(rep.nodes).some((node) => node.key === key)) return null;
+  return { path: played, fen, nodeId, reach: 0 };
+}
+
 /** Where a Growth run offered at the end of a round begins. */
 export interface GrowLaunch {
   opening: OpeningNode;
@@ -256,6 +284,23 @@ export function growLaunch(
 ): GrowLaunch | null {
   const maxPly = opts.maxPly ?? 18;
   const hole = holeAtEnd(rep, index, played, maxPly);
+  const end = hole ? null : endAtEnd(rep, played, maxPly);
+  if (end) {
+    const row: GrowthRow = {
+      id: `${rep.id}#${opening.name}`,
+      repertoireId: rep.id,
+      color: rep.color,
+      name: opening.name,
+      depth: end.path.length,
+      topShare: 0,
+      starred: false,
+      urgency: 0,
+      score: 0,
+      holes: [],
+      ends: [end],
+    };
+    return { opening, row, hole: null, widened: null };
+  }
   if (hole) {
     const row: GrowthRow = {
       id: `${rep.id}#${opening.name}`,
