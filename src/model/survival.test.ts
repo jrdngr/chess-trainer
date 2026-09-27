@@ -154,12 +154,15 @@ describe('Survival feedback', () => {
   });
 
   it('reads the glow from your side of the board', () => {
-    expect(glowFor('w', 20)).toBe('level');
-    expect(glowFor('w', 80)).toBe('better');
-    expect(glowFor('w', 300)).toBe('winning');
-    expect(glowFor('w', -80)).toBe('worse');
-    expect(glowFor('b', -300)).toBe('winning');
-    expect(glowFor('b', 160)).toBe('losing');
-    expect(glowFor('b', 10_000)).toBe('losing');
+    expect(glowFor('w', 0)).toBeNull();
+    expect(glowFor('w', 99)).toBeNull();
+    expect(glowFor('w', -99)).toBeNull();
+    expect(glowFor('w', 100)).toEqual({ tone: 'green', strength: 0 });
+    expect(glowFor('w', 300)).toEqual({ tone: 'green', strength: 0.5 });
+    expect(glowFor('b', -900)).toEqual({ tone: 'green', strength: 1 });
+    expect(glowFor('w', -100)?.tone).toBe('yellow');
+    expect(glowFor('w', -299)?.tone).toBe('yellow');
+    expect(glowFor('w', -300)?.tone).toBe('red');
+    expect(glowFor('b', 10_000)?.tone).toBe('red');
   });
 });

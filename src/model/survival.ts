@@ -84,21 +84,33 @@ export function moveScore(lost: number): { cp: number; tone: ScoreTone } | null 
   return { cp, tone: cp <= 30 ? 'slight' : cp <= 60 ? 'okay' : 'risky' };
 }
 
-/** Who is better, in five steps, as the board's glow shows it. */
-export type Glow = 'winning' | 'better' | 'level' | 'worse' | 'losing';
+/**
+ * Who is better, as the board's glow shows it: nothing while it is level,
+ * green once you are a pawn up and brighter the further ahead, yellow once
+ * you are a pawn down, red once you are a minor piece down.
+ */
+export interface Glow {
+  tone: 'green' | 'yellow' | 'red';
+  /** 0..1, how bright. Only green grows; yellow and red hold steady. */
+  strength: number;
+}
 
-/** Where each glow starts, in centipawns from your side. */
-export const GLOW_BETTER = 50;
-export const GLOW_WINNING = 150;
+/** A pawn, where the glow first shows either way, in centipawns. */
+export const GLOW_PAWN = 100;
+/** A minor piece down, where yellow turns red. */
+export const GLOW_MINOR = 300;
+/** How far ahead green reaches full brightness. */
+export const GLOW_FULL = 500;
 
-/** The glow for a position, from the engine's score in White's frame. */
-export function glowFor(color: 'w' | 'b', cp: number): Glow {
+/** The glow for a position, from the engine's score in White's frame, or null when level. */
+export function glowFor(color: 'w' | 'b', cp: number): Glow | null {
   const mine = color === 'w' ? cp : -cp;
-  if (mine >= GLOW_WINNING) return 'winning';
-  if (mine >= GLOW_BETTER) return 'better';
-  if (mine <= -GLOW_WINNING) return 'losing';
-  if (mine <= -GLOW_BETTER) return 'worse';
-  return 'level';
+  if (mine >= GLOW_PAWN) {
+    return { tone: 'green', strength: Math.min(1, (mine - GLOW_PAWN) / (GLOW_FULL - GLOW_PAWN)) };
+  }
+  if (mine <= -GLOW_MINOR) return { tone: 'red', strength: 1 };
+  if (mine <= -GLOW_PAWN) return { tone: 'yellow', strength: 1 };
+  return null;
 }
 
 /* ── a run ──────────────────────────────────────────────────────────────── */

@@ -322,7 +322,7 @@ export function SurvivalScreen({
   /** Your move stands on the board while the engine judges it. */
   const shownFen = judge.pending ? (applySan(run.fen, judge.pending.san)?.after ?? run.fen) : run.fen;
   const shownLine = judge.pending ? [...run.played, judge.pending.san] : run.played;
-  const glow = prefs.boardGlow && evalCp !== null ? glowFor(run.color, evalCp) : 'level';
+  const glow = prefs.boardGlow && evalCp !== null ? glowFor(run.color, evalCp) : null;
 
   return (
     <>
@@ -350,7 +350,7 @@ export function SurvivalScreen({
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
           captured
-          glow={glow === 'level' ? null : glow}
+          glow={glow}
           overlay={
             <>
               {pop && <MoveScore key={pop.key} pop={pop} orientation={run.color} />}

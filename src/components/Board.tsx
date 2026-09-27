@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   coordsToSquare,
   kingSquare,
@@ -51,7 +51,7 @@ export interface BoardProps {
    */
   allowed?: string[];
   /** A tint around the board's edge, e.g. Survival's hint of who is better. */
-  glow?: 'winning' | 'better' | 'worse' | 'losing' | null;
+  glow?: { tone: 'green' | 'yellow' | 'red'; strength: number } | null;
 }
 
 interface Placed {
@@ -260,7 +260,10 @@ export function Board({
   return (
     <>
       {captured && <Captured fen={fen} orientation={orientation} />}
-      <div className={`board-wrap${dimmed ? ' dimmed' : ''}${glow ? ` glow-${glow}` : ''}`}>
+      <div
+        className={`board-wrap${dimmed ? ' dimmed' : ''}${glow ? ` glow glow-${glow.tone}` : ''}`}
+        style={glow ? ({ '--glow-k': 0.2 + 0.8 * glow.strength } as CSSProperties) : undefined}
+      >
         <div
           className={`board theme-${theme}`}
           ref={boardRef}
