@@ -29,6 +29,15 @@ export interface Judgement {
 /** How long the engine thinks about each question, in milliseconds. */
 const THINK_MS = 700;
 
+/**
+ * The second look at a move the quick check calls a blunder: both moves in
+ * one search, to this depth, capped at this long. Two quick searches, run
+ * apart, can land at different depths and disagree by more than a blunder on
+ * the same move; one search that scores both side by side cannot.
+ */
+const CONFIRM_DEPTH = 16;
+const CONFIRM_MS = 4000;
+
 /** A forced mate reads as a huge swing; take it as one. */
 function scoreOf(line: EngineLine): number | null {
   if (line.cp !== null) return line.cp;
@@ -70,7 +79,12 @@ export function useJudge({
   onJudged: (judgement: Judgement) => void;
 }) {
   const [pending, setPending] = useState<Pending | null>(null);
-  const [baseline, setBaseline] = useState<{ fen: string; cp: number; best: string | null } | null>(null);
+  const [baseline, setBaseline] = useState<{
+    fen: string;
+    cp: number;
+    best: string | null;
+    bestUci: string | null;
+  } | null>(null);
   const judged = useRef(onJudged);
   judged.current = onJudged;
 
@@ -90,7 +104,7 @@ export function useJudge({
         if (!line) return;
         cancelled = true;
         const best = line.pv[0] ? (applyUci(wanted, line.pv[0])?.san ?? null) : null;
-        setBaseline({ fen: wanted, cp: scoreOf(line)!, best });
+        setBaseline({ fen: wanted, cp: scoreOf(line)!, best, bestUci: line.pv[0] ?? null });
       });
     });
     return () => {
@@ -103,18 +117,50 @@ export function useJudge({
     if (!pending || baseline?.fen !== pending.from) return;
     let cancelled = false;
     const { engine, backend } = getEngine();
-    const { cp: before, best } = baseline;
+    const { cp: before, best, bestUci } = baseline;
+    const done = (judgement: Omit<Judgement, 'san' | 'best'>) => {
+      cancelled = true;
+      setPending(null);
+      judged.current({ san: pending.san, best, ...judgement });
+    };
+
+    /** The quick check says blunder: look again, both moves in one deeper search. */
+    const confirm = (quick: Omit<Judgement, 'san' | 'best'>) => {
+      if (!bestUci || bestUci === pending.uci) {
+        // Your move is the engine's own choice: whatever the scores say, not a blunder.
+        done({ ...quick, ok: true, lost: 0 });
+        return;
+      }
+      engine.analyse(
+        pending.from,
+        { depth: CONFIRM_DEPTH, movetime: CONFIRM_MS, multiPv: 2, searchmoves: [bestUci, pending.uci] },
+        (snap) => {
+          if (cancelled || snap.thinking || snap.fen !== pending.from) return;
+          const top = snap.lines[0];
+          const yours = snap.lines.find((line) => line.pv[0] === pending.uci);
+          const topCp = top ? scoreOf(top) : null;
+          const yourCp = yours ? scoreOf(yours) : null;
+          if (topCp === null || yourCp === null) {
+            done(quick);
+            return;
+          }
+          const result = judgeByEval(color, topCp, yourCp);
+          done({ ok: result.ok, lost: result.lost, before: topCp, after: yourCp });
+        },
+      );
+    };
+
     void backend.then(() => {
       if (cancelled) return;
       engine.analyse(pending.from, { movetime: THINK_MS, multiPv: 1, searchmoves: [pending.uci] }, (snap) => {
         if (cancelled) return;
         const line = settled(snap, pending.from);
         if (!line) return;
-        cancelled = true;
         const after = scoreOf(line)!;
         const result = judgeByEval(color, before, after);
-        setPending(null);
-        judged.current({ san: pending.san, ok: result.ok, lost: result.lost, best, before, after });
+        const quick = { ok: result.ok, lost: result.lost, before, after };
+        if (result.ok) done(quick);
+        else confirm(quick);
       });
     });
     return () => {

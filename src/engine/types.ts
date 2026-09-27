@@ -20,6 +20,7 @@ export interface EngineSnapshot {
 export type EngineBackend = 'stockfish' | 'heuristic' | 'unavailable';
 
 export interface EngineLimits {
+  /** With movetime as well, the search stops at whichever it reaches first. */
   depth?: number;
   movetime?: number;
   multiPv?: number;

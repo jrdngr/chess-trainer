@@ -121,7 +121,10 @@ export function createStockfishEngine(): Engine {
     const only = pending.limits.searchmoves?.length
       ? ` searchmoves ${pending.limits.searchmoves.join(' ')}`
       : '';
-    if (pending.limits.movetime) worker.postMessage(`go movetime ${pending.limits.movetime}${only}`);
+    const { depth: maxDepth, movetime } = pending.limits;
+    // Both at once: to this depth, but no longer than this. Whichever comes first.
+    if (movetime && maxDepth) worker.postMessage(`go depth ${maxDepth} movetime ${movetime}${only}`);
+    else if (movetime) worker.postMessage(`go movetime ${movetime}${only}`);
     else worker.postMessage(`go depth ${pending.limits.depth ?? 14}${only}`);
     emit(true);
   };
