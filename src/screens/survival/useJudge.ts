@@ -30,13 +30,17 @@ export interface Judgement {
 const THINK_MS = 700;
 
 /**
- * The second look at a move the quick check calls a blunder: both moves in
- * one search, to this depth, capped at this long. Two quick searches, run
- * apart, can land at different depths and disagree by more than a blunder on
- * the same move; one search that scores both side by side cannot.
+ * How far one search may go on a move that looks like a blunder at the quick
+ * check: this deep, capped at this long. Past the quick check the same search
+ * simply keeps thinking, so only a suspected blunder pays for the extra time.
  */
 const CONFIRM_DEPTH = 16;
 const CONFIRM_MS = 4000;
+
+/** The better of two scores in White's frame, for the side to move. */
+function colorBest(color: Color, a: number, b: number): number {
+  return color === 'w' ? Math.max(a, b) : Math.min(a, b);
+}
 
 /** A forced mate reads as a huge swing; take it as one. */
 function scoreOf(line: EngineLine): number | null {
@@ -117,51 +121,58 @@ export function useJudge({
     if (!pending || baseline?.fen !== pending.from) return;
     let cancelled = false;
     const { engine, backend } = getEngine();
-    const { cp: before, best, bestUci } = baseline;
-    const done = (judgement: Omit<Judgement, 'san' | 'best'>) => {
-      cancelled = true;
-      setPending(null);
-      judged.current({ san: pending.san, best, ...judgement });
-    };
+    const { best, bestUci } = baseline;
+    const theirs = bestUci && bestUci !== pending.uci ? bestUci : null;
+    const started = Date.now();
 
-    /** The quick check says blunder: look again, both moves in one deeper search. */
-    const confirm = (quick: Omit<Judgement, 'san' | 'best'>) => {
-      if (!bestUci || bestUci === pending.uci) {
-        // Your move is the engine's own choice: whatever the scores say, not a blunder.
-        done({ ...quick, ok: true, lost: 0 });
-        return;
-      }
-      engine.analyse(
-        pending.from,
-        { depth: CONFIRM_DEPTH, movetime: CONFIRM_MS, multiPv: 2, searchmoves: [bestUci, pending.uci] },
-        (snap) => {
-          if (cancelled || snap.thinking || snap.fen !== pending.from) return;
-          const top = snap.lines[0];
-          const yours = snap.lines.find((line) => line.pv[0] === pending.uci);
-          const topCp = top ? scoreOf(top) : null;
-          const yourCp = yours ? scoreOf(yours) : null;
-          if (topCp === null || yourCp === null) {
-            done(quick);
-            return;
-          }
-          const result = judgeByEval(color, topCp, yourCp);
-          done({ ok: result.ok, lost: result.lost, before: topCp, after: yourCp });
-        },
-      );
+    /**
+     * Both moves scored at the same depth of the same search, or null while
+     * the search is between iterations. Once it has stopped, the last word on
+     * each, even when a time limit cut one iteration short.
+     */
+    const weigh = (snap: EngineSnapshot) => {
+      const yours = snap.lines.find((line) => line.pv[0] === pending.uci);
+      const top = theirs ? snap.lines.find((line) => line.pv[0] === theirs) : yours;
+      if (!yours || !top || (snap.thinking && yours.depth !== top.depth)) return null;
+      const yourCp = scoreOf(yours);
+      const topCp = scoreOf(top);
+      if (yourCp === null || topCp === null) return null;
+      // Your move scored above the engine's: nothing lost, and the position is worth what yours is.
+      const before = colorBest(color, topCp, yourCp);
+      const result = judgeByEval(color, before, yourCp);
+      return { ok: result.ok, lost: result.lost, before, after: yourCp };
     };
 
     void backend.then(() => {
       if (cancelled) return;
-      engine.analyse(pending.from, { movetime: THINK_MS, multiPv: 1, searchmoves: [pending.uci] }, (snap) => {
-        if (cancelled) return;
-        const line = settled(snap, pending.from);
-        if (!line) return;
-        const after = scoreOf(line)!;
-        const result = judgeByEval(color, before, after);
-        const quick = { ok: result.ok, lost: result.lost, before, after };
-        if (result.ok) done(quick);
-        else confirm(quick);
-      });
+      engine.analyse(
+        pending.from,
+        {
+          depth: CONFIRM_DEPTH,
+          movetime: CONFIRM_MS,
+          multiPv: theirs ? 2 : 1,
+          searchmoves: theirs ? [theirs, pending.uci] : [pending.uci],
+        },
+        (snap) => {
+          if (cancelled || snap.fen !== pending.from) return;
+          const verdict = weigh(snap);
+          const finished = !snap.thinking;
+          // Your move is the engine's own choice: never a blunder, whatever the score.
+          const passed = verdict && (verdict.ok || !theirs);
+          // A sound move is settled at the quick check; a blunder waits for the whole search.
+          if (!finished && !(passed && Date.now() - started >= THINK_MS)) return;
+          cancelled = true;
+          if (!finished) engine.stop();
+          setPending(null);
+          const judgement = verdict ?? { ok: true, lost: 0, before: baseline.cp, after: baseline.cp };
+          judged.current({
+            san: pending.san,
+            best,
+            ...judgement,
+            ...(theirs ? {} : { ok: true, lost: 0 }),
+          });
+        },
+      );
     });
     return () => {
       cancelled = true;
