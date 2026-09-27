@@ -50,8 +50,8 @@ type Phase = 'setup' | 'playing' | 'over';
 type PrepStatus = 'on' | 'complete' | 'off';
 
 const PREP_STATUS: Record<PrepStatus, { text: string; color: string }> = {
-  on: { text: 'On prep', color: 'var(--good)' },
-  complete: { text: 'Prep complete', color: 'var(--warn)' },
+  on: { text: 'On prep', color: 'var(--warn)' },
+  complete: { text: 'Prep complete', color: 'var(--good)' },
   off: { text: 'Off prep', color: 'var(--bad)' },
 };
 
