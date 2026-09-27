@@ -21,6 +21,7 @@ import { mulberry32 } from '../../model/session';
 import {
   bookReply,
   glowFor,
+  evalSwing,
   moveScore,
   playTheirs,
   playYours,
@@ -117,6 +118,8 @@ export function SurvivalScreen({
   const [pop, setPop] = useState<ScorePop | null>(null);
   /** The engine's last word on the game, White's side, for the glow. */
   const [evalCp, setEvalCp] = useState<number | null>(null);
+  /** The engine's score after your last scored move, White's side: where the next popup counts from. */
+  const lastScored = useRef<number | null>(null);
   const picker = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
   /** True once the run has ended, so a late verdict or engine move lands nowhere. */
   const over = useRef(false);
@@ -190,7 +193,9 @@ export function SurvivalScreen({
       }
       buzz(expected.length ? 14 : 10);
       setEvalCp(judged.after);
-      const score = prefs.moveScores ? moveScore(judged.lost) : null;
+      const swing = evalSwing(run.color, lastScored.current ?? judged.before, judged.after);
+      lastScored.current = judged.after;
+      const score = prefs.moveScores && swing !== null ? moveScore(swing) : null;
       const landed = score ? applySan(run.fen, judged.san) : null;
       if (score && landed) setPop({ key: Date.now(), square: landed.to, ...score });
       if (expected.length) {
@@ -278,6 +283,7 @@ export function SurvivalScreen({
     setMiss(null);
     setPop(null);
     setEvalCp(null);
+    lastScored.current = null;
     setEngineTurn(false);
     setThinking(false);
     setGame({ source: begun.source, state: begun.state, redraw: begun.redraw });
@@ -401,7 +407,7 @@ function MoveScore({ pop, orientation }: { pop: ScorePop; orientation: 'w' | 'b'
   const row = orientation === 'w' ? 7 - rank : rank;
   return (
     <div className={`move-score ${pop.tone}`} style={{ left: `${col * 12.5}%`, top: `${row * 12.5}%` }}>
-      <span>−{pop.cp}</span>
+      <span>{pop.cp > 0 ? `+${pop.cp}` : `−${-pop.cp}`}</span>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   DEFAULT_SURVIVAL,
   glowFor,
   moveScore,
+  evalSwing,
   EMPTY_SURVIVAL_RECORD,
   moveNumber,
   normalizeSurvival,
@@ -141,16 +142,23 @@ describe('Survival feedback', () => {
     expect(DEFAULT_SURVIVAL.boardGlow).toBe(true);
   });
 
-  it('never shows a move that cost nothing', () => {
+  it('never shows a zero', () => {
     expect(moveScore(0)).toBeNull();
     expect(moveScore(0.4)).toBeNull();
+    expect(moveScore(-0.4)).toBeNull();
   });
 
-  it('colors a move by what it cost', () => {
-    expect(moveScore(18)).toEqual({ cp: 18, tone: 'slight' });
-    expect(moveScore(30)).toEqual({ cp: 30, tone: 'slight' });
-    expect(moveScore(42)).toEqual({ cp: 42, tone: 'okay' });
-    expect(moveScore(71)).toEqual({ cp: 71, tone: 'risky' });
+  it('shows gains in green and losses in yellow or red', () => {
+    expect(moveScore(120)).toEqual({ cp: 120, tone: 'up' });
+    expect(moveScore(-18)).toEqual({ cp: -18, tone: 'slight' });
+    expect(moveScore(-40)).toEqual({ cp: -40, tone: 'slight' });
+    expect(moveScore(-41)).toEqual({ cp: -41, tone: 'bad' });
+  });
+
+  it('measures a swing from your side, and not across a mate', () => {
+    expect(evalSwing('w', 20, 150)).toBe(130);
+    expect(evalSwing('b', 20, 150)).toBe(-130);
+    expect(evalSwing('w', 20, 10_000)).toBeNull();
   });
 
   it('reads the glow from your side of the board', () => {

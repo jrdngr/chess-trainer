@@ -20,6 +20,8 @@ export interface Judgement {
   lost: number;
   /** The engine's own choice in the position, in SAN, when it had one. */
   best: string | null;
+  /** The position before your move, in centipawns from White's side. */
+  before: number;
   /** The position after your move, in centipawns from White's side. */
   after: number;
 }
@@ -112,7 +114,7 @@ export function useJudge({
         const after = scoreOf(line)!;
         const result = judgeByEval(color, before, after);
         setPending(null);
-        judged.current({ san: pending.san, ok: result.ok, lost: result.lost, best, after });
+        judged.current({ san: pending.san, ok: result.ok, lost: result.lost, best, before, after });
       });
     });
     return () => {

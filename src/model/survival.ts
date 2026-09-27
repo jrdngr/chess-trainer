@@ -67,21 +67,29 @@ export const DEFAULT_SURVIVAL: SurvivalPrefs = { steer: 'lines', clock: 'off', m
 
 /* ── feedback ───────────────────────────────────────────────────────────── */
 
-/**
- * How a move's cost reads: the color of its score. Never green: every score
- * shown is eval you gave up, however little.
- */
-export type ScoreTone = 'slight' | 'okay' | 'risky';
+/** How a move's score reads: green for eval gained, yellow or red for eval lost. */
+export type ScoreTone = 'up' | 'slight' | 'bad';
+
+/** How much you can give back and still read yellow rather than red. */
+export const SCORE_SLIGHT = 40;
 
 /**
- * The popup for one of your moves, or null when it cost nothing worth
- * showing. A move that matched the engine shows nothing at all: a stream of
- * zeroes is noise, and the silence is the reward.
+ * The popup for one of your moves, from the eval swing it closed on, in
+ * centipawns from your side: the change since your last scored move, the
+ * opponent's reply included. So the popups add up to where the game stands.
+ * Null when there is nothing worth showing: a zero is noise.
  */
-export function moveScore(lost: number): { cp: number; tone: ScoreTone } | null {
-  const cp = Math.round(lost);
-  if (cp <= 0) return null;
-  return { cp, tone: cp <= 30 ? 'slight' : cp <= 60 ? 'okay' : 'risky' };
+export function moveScore(swing: number): { cp: number; tone: ScoreTone } | null {
+  const cp = Math.round(swing);
+  if (cp === 0) return null;
+  if (cp > 0) return { cp, tone: 'up' };
+  return { cp, tone: -cp <= SCORE_SLIGHT ? 'slight' : 'bad' };
+}
+
+/** The swing between two engine scores in White's frame, from your side; null across a mate. */
+export function evalSwing(color: 'w' | 'b', from: number, to: number): number | null {
+  if (Math.abs(from) >= 10_000 || Math.abs(to) >= 10_000) return null;
+  return color === 'w' ? to - from : from - to;
 }
 
 /**
