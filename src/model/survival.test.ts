@@ -147,8 +147,8 @@ describe('Survival feedback', () => {
   });
 
   it('colors a move by what it cost', () => {
-    expect(moveScore(18)).toEqual({ cp: 18, tone: 'good' });
-    expect(moveScore(30)).toEqual({ cp: 30, tone: 'good' });
+    expect(moveScore(18)).toEqual({ cp: 18, tone: 'slight' });
+    expect(moveScore(30)).toEqual({ cp: 30, tone: 'slight' });
     expect(moveScore(42)).toEqual({ cp: 42, tone: 'okay' });
     expect(moveScore(71)).toEqual({ cp: 71, tone: 'risky' });
   });

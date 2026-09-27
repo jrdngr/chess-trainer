@@ -67,8 +67,11 @@ export const DEFAULT_SURVIVAL: SurvivalPrefs = { steer: 'lines', clock: 'off', m
 
 /* ── feedback ───────────────────────────────────────────────────────────── */
 
-/** How a move's cost reads: the color of its score. */
-export type ScoreTone = 'good' | 'okay' | 'risky';
+/**
+ * How a move's cost reads: the color of its score. Never green: every score
+ * shown is eval you gave up, however little.
+ */
+export type ScoreTone = 'slight' | 'okay' | 'risky';
 
 /**
  * The popup for one of your moves, or null when it cost nothing worth
@@ -78,7 +81,7 @@ export type ScoreTone = 'good' | 'okay' | 'risky';
 export function moveScore(lost: number): { cp: number; tone: ScoreTone } | null {
   const cp = Math.round(lost);
   if (cp <= 0) return null;
-  return { cp, tone: cp <= 30 ? 'good' : cp <= 60 ? 'okay' : 'risky' };
+  return { cp, tone: cp <= 30 ? 'slight' : cp <= 60 ? 'okay' : 'risky' };
 }
 
 /** Who is better, in five steps, as the board's glow shows it. */
