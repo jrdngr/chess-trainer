@@ -102,6 +102,32 @@ describe('the reverse signal', () => {
     expect(red.reason).toMatch(/closes off 3 of your/);
   });
 
+  it('never reds castling for lines that simply end before you castle', () => {
+    // Jordan's Exchange Slav: the Tarrasch line stops at 9.Nxd4 with White
+    // still to castle. Castling rights alone made O-O "close it off".
+    const white = rep('w', [
+      'd4 d5 c4 e6 cxd5 exd5 Nc3 c5 Nf3 Nc6 g3 Nf6 Bg2 cxd4 Nxd4',
+      'd4 d5 c4 c6 cxd5 cxd5 Nc3 Nf6 Nf3 Nc6 g3 Bf5 Bg2',
+    ]);
+    const path = 'd4 d5 c4 c6 cxd5 cxd5 Nc3 Nf6 Nf3 Nc6 g3 Bf5 Bg2 Qb6'.split(' ');
+    const fen = walkSan(path).fens.at(-1)!;
+    const drawn = ['O-O', 'Na4', 'Nh4'].map((san) => {
+      const move = walkSan([...path, san]).moves.at(-1)!;
+      return { san, from: move.from, to: move.to };
+    });
+    const arrows = nudgeArrows(
+      white,
+      index,
+      path,
+      fen,
+      drawn,
+      drawn.map((move) => ({ san: move.san, share: 0 })),
+      { priority: 'transposition', pawns: false },
+      1,
+    );
+    expect(arrows.find((arrow) => arrow.san === 'O-O')?.tone).not.toBe('away');
+  });
+
   it('does not count lines another move you keep there still reaches', () => {
     const branched = rep('b', [...kidLines, 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Be2 O-O Bg5 e5']);
     const arrows = arrowsAt(branched, 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Be2 O-O Bg5');

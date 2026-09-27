@@ -551,7 +551,12 @@ function signalsFor(
     const myPawns = pawnsOf(move.after, profile.color);
     const closedFrom = new Map<string, number>();
     let closes = 0;
-    for (const leaf of openBefore) {
+    // Castling shuts nothing a line of yours is heading for. Its only
+    // footprint here is castling rights, against lines that end before you
+    // have castled — and castling is how those lines carry on, not how you
+    // leave them. Counted, O-O went red at the edge of every line being grown.
+    const castles = same.startsWith('O-O');
+    for (const leaf of castles ? [] : openBefore) {
       if (reachable(move.after, leaf.fenAfter)) continue;
       if (keptReach.get(leaf.after)?.some((other) => other !== same)) continue;
       closes += 1;
