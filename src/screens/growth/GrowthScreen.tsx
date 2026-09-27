@@ -33,6 +33,9 @@ import {
 import { familiarOffBook, nudgeArrows } from '../../model/nudge';
 import { useSoundness } from '../../engine/soundness';
 import { useEngineReplies } from '../../engine/engineReplies';
+import { useMoveEvals } from '../../engine/moveEvals';
+import { formatScore, winFraction } from '../../engine/types';
+import { deltaFor, deltaTone, formatDelta } from '../../model/evalDelta';
 import { nodeAtLine } from '../../model/repertoire';
 import { formatGameCount } from '../../model/reference';
 import { NudgeReasons, nudgeColor, nudgedArrows } from '../../components/Nudges';
@@ -305,6 +308,19 @@ function Run({
     return [...options, option];
   }, [shown, options, index, run.fen]);
   const toneOf = (san: string) => shown.find((move) => move.san === san)?.tone;
+
+  /**
+   * The eval bar, always, over whatever position the run stands on — and at a
+   * hole, what each answer would do to it.
+   */
+  const evals = useMoveEvals(
+    run.fen,
+    phase === 'hole' ? listed.map((option) => option.san) : [],
+  );
+  const deltaOf = (san: string): number | null => {
+    const after = evals.moves.get(san);
+    return after === undefined || evals.position === null ? null : deltaFor(run.color, evals.position, after);
+  };
 
   /** What each hole put in front of you, logged once per position when its moves are in. */
   const offeredAt = useRef<string | null>(null);
@@ -603,6 +619,15 @@ function Run({
       />
 
       <div className="screen no-nav">
+        <div className="row gap-8" style={{ marginBottom: 10 }}>
+          <div className="evalbar grow">
+            <i style={{ width: `${winFraction(evals.position === null ? undefined : { cp: evals.position, mate: null }) * 100}%` }} />
+          </div>
+          <span className="num small muted" style={{ minWidth: 48, textAlign: 'right' }}>
+            {evals.position === null ? '—' : formatScore({ cp: evals.position, mate: null })}
+          </span>
+        </div>
+
         <Board
           fen={run.fen}
           orientation={run.color}
@@ -729,6 +754,7 @@ function Run({
                           : 'Not in the book · passed by the engine'}
                     </div>
                   </span>
+                  <DeltaTag cp={deltaOf(option.san)} />
                   <Icons.plus size={18} />
                 </button>
               ))}
@@ -811,6 +837,17 @@ function Run({
         )}
       </div>
     </>
+  );
+}
+
+/** What an answer does to the eval bar, from your side: "+0.2", "−1.4", or a dash while the engine works. */
+function DeltaTag({ cp }: { cp: number | null }) {
+  const tone = cp === null ? 'even' : deltaTone(cp);
+  const color = tone === 'good' ? 'var(--good)' : tone === 'bad' ? 'var(--bad)' : 'var(--text-3)';
+  return (
+    <span className="num small" style={{ color, minWidth: 40, textAlign: 'right', marginRight: 8 }}>
+      {cp === null ? '…' : formatDelta(cp)}
+    </span>
   );
 }
 
