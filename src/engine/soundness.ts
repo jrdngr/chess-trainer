@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { applySan, fenTurn } from '../chess/core';
 import { judgeByEval } from '../model/openingRun';
-import type { EngineLine, EngineSnapshot } from './types';
-import { getEngine } from './useEngine';
+import type { EngineLine } from './types';
+import { queueSearch } from './searchQueue';
 
 /**
  * Is a move the book does not have sound?
@@ -33,29 +33,14 @@ function scoreOf(line: EngineLine | undefined): number | null {
 }
 
 /** One search, resolved with its score once the engine settles. */
-function search(fen: string, uci?: string): Promise<number | null> {
-  return new Promise((resolve) => {
-    const { engine, backend } = getEngine();
-    void backend.then(() => {
-      let done = false;
-      getEngine().engine.analyse(
-        fen,
-        { movetime: THINK_MS, multiPv: 1, ...(uci ? { searchmoves: [uci] } : {}) },
-        (snap: EngineSnapshot) => {
-          if (done || snap.thinking || snap.fen !== fen) return;
-          done = true;
-          resolve(scoreOf(snap.lines[0]));
-        },
-      );
-      // A search that never settles (no engine at all) is not a pass.
-      setTimeout(() => {
-        if (done) return;
-        done = true;
-        engine.stop();
-        resolve(null);
-      }, THINK_MS * 8);
-    });
-  });
+async function search(fen: string, uci?: string): Promise<number | null> {
+  const snap = await queueSearch(
+    fen,
+    { movetime: THINK_MS, multiPv: 1, ...(uci ? { searchmoves: [uci] } : {}) },
+    // A search that never settles (no engine at all) is not a pass.
+    THINK_MS * 8,
+  );
+  return snap ? scoreOf(snap.lines[0]) : null;
 }
 
 async function pump() {

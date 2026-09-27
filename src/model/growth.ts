@@ -8,8 +8,9 @@ import {
   type ReferenceIndex,
 } from './reference';
 import { lineInRegion } from './selection';
-import { ancestorsOf, descendantsOf, type OpeningNode, type OpeningTree } from './openingTree';
+import { ancestorsOf, descendantsOf, lineStatus, type OpeningNode, type OpeningTree } from './openingTree';
 import { childrenOf, fenAt } from './repertoire';
+import { engineReplies } from './engineReplies';
 import type { ExplorerMove, RepMove, Repertoire } from './types';
 
 /**
@@ -109,6 +110,18 @@ export interface Hole {
   /** The repertoire node the opponent moved from, or null at the root. */
   nodeId: string | null;
   /**
+   * The reply is in your repertoire already, with nothing after it: kept on
+   * purpose, usually because the answer to it was deleted. Offered whatever
+   * its share, since you chose to keep it.
+   */
+  kept?: boolean;
+  /**
+   * The book has nothing here, and the reply is one of the engine's top moves
+   * instead. It has no share: the engine knows it is good, not how often it
+   * is played.
+   */
+  engine?: boolean;
+  /**
    * The share of games that get as far as this position, 0..1: every reply
    * the opponent chose on the way, multiplied together. Your own moves cost
    * nothing, because you are the one making them.
@@ -135,11 +148,26 @@ interface Choice {
   nodeId: string | null;
   /** The share of games that get this far, 0..1. */
   reach: number;
-  /** Book replies here worth preparing for, inside the region. */
-  replies: (ExplorerMove & { share: number })[];
-  /** The replies your prep answers. */
+  /**
+   * Replies here worth preparing for, inside the region: the book's, or past
+   * the book the engine's, once it has been asked.
+   */
+  replies: Reply[];
+  /** The replies your prep has, answered or not. */
   prepared: Set<string>;
+  /**
+   * The replies your prep answers: something follows them, or the position
+   * they lead to is prepared by another move order.
+   */
+  answered: Set<string>;
+  /** Replies in your prep with nothing after them — see `Hole.kept`. */
+  kept: RepMove[];
+  /** The book knows nothing here at all, so only the engine can say what they play. */
+  bookless: boolean;
 }
+
+/** A reply the opponent might play, with how often the book sees it. */
+export type Reply = ExplorerMove & { share: number; engine?: boolean };
 
 /** Every position inside a repertoire where the opponent has the move. */
 function walkChoices(
@@ -153,6 +181,8 @@ function walkChoices(
   const seen = new Set<string>();
   const region = opts.region;
   const wanted = (line: string[]) => !region || lineInRegion(region.tree, region.node, line);
+  // Positions where you have a move ready, by any move order.
+  const preparedAt = new Set(Object.values(rep.nodes).map((node) => node.key));
 
   const walk = (nodeId: string | null, path: string[], reach: number) => {
     const fen = fenAt(rep, nodeId);
@@ -164,13 +194,21 @@ function walkChoices(
       // because the walk is depth-first from the root.
       if (!seen.has(key)) {
         seen.add(key);
+        const bookless = popularReplies(index, fen, 0).length === 0;
+        const replies: Reply[] = bookless ? engineAsReplies(fen) : popularReplies(index, fen, minShare);
+        const answered = kids.filter(
+          (kid) => childrenOf(rep, kid.id).length > 0 || preparedAt.has(positionKey(kid.fenAfter)),
+        );
         visit({
           path,
           fen,
           nodeId,
           reach,
-          replies: popularReplies(index, fen, minShare).filter((move) => wanted([...path, move.san])),
+          replies: replies.filter((move) => wanted([...path, move.san])),
           prepared: new Set(kids.map((kid) => kid.san)),
+          answered: new Set(answered.map((kid) => kid.san)),
+          kept: kids.filter((kid) => !answered.includes(kid) && wanted([...path, kid.san])),
+          bookless,
         });
       }
     }
@@ -207,6 +245,19 @@ function shareMap(index: ReferenceIndex, fen: string): Map<string, number> {
 /** What a move the book has never seen is worth, so a line through it is not lost. */
 const RARE = 0.0001;
 
+/** The engine's moves at a position the book does not know, as replies with no share. */
+function engineAsReplies(fen: string): Reply[] {
+  return (engineReplies(fen) ?? []).map((san) => ({
+    san,
+    games: 0,
+    white: 0,
+    draw: 0,
+    black: 0,
+    share: 0,
+    engine: true,
+  }));
+}
+
 /** Every unanswered reply in a repertoire, shallowest and most popular first. */
 export function findHoles(
   rep: Repertoire,
@@ -215,10 +266,9 @@ export function findHoles(
 ): Hole[] {
   const holes: Hole[] = [];
   walkChoices(rep, index, opts, (choice) => {
-    for (const move of choice.replies) {
-      if (choice.prepared.has(move.san)) continue;
+    const push = (move: Reply, kept: boolean) => {
       const after = applySan(choice.fen, move.san);
-      if (!after) continue;
+      if (!after) return;
       holes.push({
         path: choice.path,
         fen: choice.fen,
@@ -228,10 +278,62 @@ export function findHoles(
         after: after.after,
         nodeId: choice.nodeId,
         reach: choice.reach,
+        ...(kept ? { kept: true } : {}),
+        ...(move.engine ? { engine: true } : {}),
       });
+    };
+    for (const move of choice.replies) {
+      if (choice.answered.has(move.san)) continue;
+      push(move, choice.prepared.has(move.san));
+    }
+    // A reply you kept with no answer is a hole however rarely it is played:
+    // below the threshold, or somewhere the book has never been.
+    for (const kid of choice.kept) {
+      if (choice.replies.some((move) => move.san === kid.san)) continue;
+      const book = popularReplies(index, choice.fen, 0).find((move) => move.san === kid.san);
+      push(book ?? { san: kid.san, games: 0, white: 0, draw: 0, black: 0, share: 0 }, true);
     }
   });
   return holes.sort((a, b) => a.path.length - b.path.length || b.share - a.share);
+}
+
+/**
+ * The tip of a line past the book, where the opponent is to move and nothing
+ * says what they play: the book never got this far, and the engine has not
+ * been asked yet. Growth starts there by asking it.
+ */
+export interface LineEnd {
+  /** Moves from the start to the tip — the opponent is to move. */
+  path: string[];
+  fen: string;
+  /** The repertoire node the line ends on. */
+  nodeId: string | null;
+  /** The share of games that get this far, 0..1 — see `Hole.reach`. */
+  reach: number;
+}
+
+/** Every line past the book that the engine has not yet been asked to extend. */
+export function findLineEnds(rep: Repertoire, index: ReferenceIndex, opts: GrowthOptions = {}): LineEnd[] {
+  const ends: LineEnd[] = [];
+  walkChoices(rep, index, opts, (choice) => {
+    if (choice.path.length === 0 || choice.prepared.size > 0 || !choice.bookless) return;
+    if (engineReplies(choice.fen) !== undefined) return;
+    ends.push({ path: choice.path, fen: choice.fen, nodeId: choice.nodeId, reach: choice.reach });
+  });
+  return ends;
+}
+
+/**
+ * Positions in your prep past the book where the opponent chooses and the
+ * engine has not been asked what they would play. Asking turns tips into
+ * holes, and finds the replies a line past the book does not meet yet.
+ */
+export function unaskedPastBook(rep: Repertoire, index: ReferenceIndex, opts: GrowthOptions = {}): string[] {
+  const out: string[] = [];
+  walkChoices(rep, index, opts, (choice) => {
+    if (choice.bookless && engineReplies(choice.fen) === undefined) out.push(choice.fen);
+  });
+  return out;
 }
 
 /* ── breadth ──────────────────────────────────────────────────────────── */
@@ -281,7 +383,7 @@ export function findCoverage(
     const all = choice.replies.reduce((sum, move) => sum + move.share, 0);
     if (all <= 0) return;
     const met = choice.replies
-      .filter((move) => choice.prepared.has(move.san))
+      .filter((move) => choice.answered.has(move.san))
       .reduce((sum, move) => sum + move.share, 0);
     const top = Math.max(...choice.replies.map((move) => move.share));
     out.push({ path: choice.path, covered: met / all, choice: 1 - top / all });
@@ -388,6 +490,8 @@ export interface GrowthRow {
   /** Urgency with starring folded in. Orders the list and picks Recommended. */
   score: number;
   holes: Hole[];
+  /** Lines past the book the engine can extend — see `LineEnd`. */
+  ends: LineEnd[];
 }
 
 /** How much a star is worth against raw urgency. */
@@ -471,50 +575,76 @@ export function growthRows(
   const starred = (opts.starred ?? []).map((id) => id.split(/\s+/).filter(Boolean));
   const region = opts.region;
   // The root is every opening there is, so it scopes nothing.
-  const offered =
-    region && region.node.depth > 0 ? openingsInSelection(region.tree, region.node) : null;
+  const scoped = region && region.node.depth > 0 ? region : null;
+  const offered = scoped ? openingsInSelection(scoped.tree, scoped.node) : null;
+  // A family above the selection is the selection, as far as a row is
+  // concerned: every Queen's Gambit line is a "Queen's Pawn Game" by the
+  // book's first name past move one, and a row called that under a Queen's
+  // Gambit selection reads as some other opening's work.
+  const above = scoped
+    ? new Set(ancestorsOf(scoped.tree, scoped.node.id).map((opening) => opening.name))
+    : null;
+  const heading = (line: string[], fallback: string) => {
+    const named = family(index, line);
+    const name = named?.name ?? fallback;
+    // Only for lines inside the selection: one on the way into it is not the
+    // selected opening yet, and keeps the name of where it actually is.
+    if (scoped && above?.has(name) && lineStatus(scoped.tree, scoped.node, line) === 'reached') {
+      return { name: scoped.node.name, eco: named?.eco };
+    }
+    return { name, eco: named?.eco };
+  };
   const rows: GrowthRow[] = [];
 
   for (const rep of reps) {
     const byName = new Map<string, GrowthRow>();
-    // A reply the book knows nothing past is a hole in the prep, but not work
-    // for Growth: a run sent there would arrive with nothing to choose. The
-    // Repertoire screen is where those are filled, by hand.
-    for (const hole of findHoles(rep, index, opts).filter((found) => answerable(index, found.after))) {
-      const line = [...hole.path, hole.san];
+    const rowFor = (line: string[], fallback: string, depth: number) => {
       // A move the book cannot name anywhere gets a row of its own, called
       // after the move itself — filing 1.g3 under the name of the repertoire it
       // interrupts is how "pick King's Indian, get a Sicilian" happened.
-      const named = family(index, line);
-      const name = named?.name ?? moveLabel(hole);
+      const { name, eco } = heading(line, fallback);
       const id = `${rep.id}#${name}`;
-      const row = byName.get(id);
-      if (row) {
-        row.holes.push(hole);
-        row.depth = Math.min(row.depth, hole.path.length);
-        row.topShare = Math.max(row.topShare, hole.share);
-        row.starred = row.starred || isStarred(starred, line);
-        continue;
+      let row = byName.get(id);
+      if (!row) {
+        row = {
+          id,
+          repertoireId: rep.id,
+          color: rep.color,
+          name,
+          eco,
+          depth,
+          topShare: 0,
+          starred: false,
+          urgency: 0,
+          score: 0,
+          holes: [],
+          ends: [],
+        };
+        byName.set(id, row);
       }
-      byName.set(id, {
-        id,
-        repertoireId: rep.id,
-        color: rep.color,
-        name,
-        eco: named?.eco,
-        depth: hole.path.length,
-        topShare: hole.share,
-        starred: isStarred(starred, line),
-        urgency: 0,
-        score: 0,
-        holes: [hole],
-      });
+      row.depth = Math.min(row.depth, depth);
+      row.starred = row.starred || isStarred(starred, line);
+      return row;
+    };
+    // Past the book the engine answers, so every hole is somewhere a run can
+    // offer a choice.
+    for (const hole of findHoles(rep, index, opts)) {
+      const row = rowFor([...hole.path, hole.san], moveLabel(hole), hole.path.length);
+      row.holes.push(hole);
+      row.topShare = Math.max(row.topShare, hole.share);
+    }
+    for (const end of findLineEnds(rep, index, opts)) {
+      const row = rowFor(end.path, endLabel(end), end.path.length);
+      row.ends.push(end);
     }
     rows.push(...[...byName.values()].filter((row) => !offered || offered.has(row.name)));
   }
 
   for (const row of rows) {
-    row.urgency = rowUrgency(row.depth, row.topShare, row.holes.length);
+    // A reply with no share — kept below the threshold, or the engine's past
+    // the book — still wants doing, just after anything the book can weigh.
+    const share = row.topShare > 0 ? row.topShare : UNWEIGHED_SHARE;
+    row.urgency = rowUrgency(row.depth, share, row.holes.length + row.ends.length);
     row.score = Math.min(1, row.urgency * (row.starred ? STAR_BOOST : 1));
   }
 
@@ -522,6 +652,9 @@ export function growthRows(
   // something other than the row sitting at the top of the list.
   return rows.sort((a, b) => b.score - a.score || a.depth - b.depth || a.name.localeCompare(b.name));
 }
+
+/** What a row with nothing the book can weigh counts as, for urgency: a rare reply. */
+const UNWEIGHED_SHARE = 0.5;
 
 /** The row the Start button would begin, or nothing when there is no work. */
 export function recommended(rows: GrowthRow[]): GrowthRow | null {
@@ -531,6 +664,12 @@ export function recommended(rows: GrowthRow[]): GrowthRow | null {
 /** A move the book has no name for, called after the move itself: "vs 1.g3". */
 function moveLabel(hole: Hole): string {
   return `vs ${Math.floor(hole.path.length / 2) + 1}.${hole.path.length % 2 === 0 ? '' : '..'}${hole.san}`;
+}
+
+/** A line end the book has no name for, called after your last move: "after 9.g3". */
+function endLabel(end: LineEnd): string {
+  const ply = end.path.length - 1;
+  return `after ${Math.floor(ply / 2) + 1}.${ply % 2 === 0 ? '' : '..'}${end.path[ply] ?? ''}`;
 }
 
 /* ── the run ────────────────────────────────────────────────────────────── */
@@ -570,17 +709,32 @@ export function startGrowth(rep: Repertoire, row: GrowthRow): GrowthRun {
 
 /**
  * The hole in a row a run should start standing at: the one you would meet
- * most often, shallower first on a tie. Null when the book has nothing to
- * offer at any of them.
+ * most often, shallower first on a tie. Null when the row has only line ends.
  */
-export function firstHole(index: ReferenceIndex, row: GrowthRow): Hole | null {
-  const open = row.holes.filter((hole) => answerable(index, hole.after));
+export function firstHole(_index: ReferenceIndex, row: GrowthRow): Hole | null {
+  const open = row.holes;
   if (!open.length) return null;
   return open.reduce((best, hole) =>
     holeWorth(hole) > holeWorth(best) || (holeWorth(hole) === holeWorth(best) && hole.path.length < best.path.length)
       ? hole
       : best,
   );
+}
+
+/** The line end a row with no holes starts at: the one most often reached, shallower on a tie. */
+export function firstEnd(row: GrowthRow): LineEnd | null {
+  if (!row.ends.length) return null;
+  return row.ends.reduce((best, end) =>
+    end.reach > best.reach || (end.reach === best.reach && end.path.length < best.path.length) ? end : best,
+  );
+}
+
+/**
+ * A run that begins at the tip of a line past the book, with the opponent to
+ * move: the engine picks their reply, and that is the first hole.
+ */
+export function startGrowthAtEnd(rep: Repertoire, row: GrowthRow, end: LineEnd): GrowthRun {
+  return { ...startGrowth(rep, row), path: end.path, fen: end.fen, nodeId: end.nodeId };
 }
 
 /**
@@ -666,11 +820,7 @@ export function steer(
   // order findHoles already returns them in; taking the best explicitly means
   // the steering does not quietly depend on that.
   if (here.length) {
-    // A hole the book cannot answer is still a hole in the prep — coverage
-    // counts it, and the Repertoire screen can fill it by hand — but a run
-    // arriving at it has nothing to offer, so it is taken last.
-    const open = here.filter((hole) => answerable(index, hole.after));
-    const best = (open.length ? open : here).reduce((a, b) => (holeWorth(b) > holeWorth(a) ? b : a));
+    const best = here.reduce((a, b) => (holeWorth(b) > holeWorth(a) ? b : a));
     return { san: best.san, hole: best };
   }
 
@@ -749,11 +899,6 @@ export function answerHole(run: GrowthRun, san: string): GrowthRun | null {
   return { ...run, path: [...run.path, san], fen: move.after, hole: null };
 }
 
-/** Whether the book has anything to offer in a position. */
-function answerable(index: ReferenceIndex, fen: string): boolean {
-  return popularReplies(index, fen, 0).length > 0;
-}
-
 /**
  * What they would play against the answer you just added, as the next hole.
  *
@@ -761,28 +906,30 @@ function answerable(index: ReferenceIndex, fen: string): boolean {
  * repertoire there is no target left to walk toward, and the commonest move is
  * the one most worth having an answer to.
  *
- * A reply the book cannot answer is skipped rather than offered. The book ends
- * where a position stops being played often enough to record, and a hole past
- * that edge is a dead end: the run would arrive with nothing to choose. At the
- * edge itself that is every reply, and there is no next hole at all.
+ * Past the book the engine's best move stands in for it. Undefined while the
+ * engine has not been asked about the position yet, and null only when there
+ * is no move to make at all.
  */
-export function nextHole(index: ReferenceIndex, run: GrowthRun): Hole | null {
-  for (const reply of popularReplies(index, run.fen, 0)) {
-    const after = applySan(run.fen, reply.san);
-    if (!after || !answerable(index, after.after)) continue;
-    return {
-      path: run.path,
-      fen: run.fen,
-      san: reply.san,
-      share: reply.share,
-      games: reply.games,
-      after: after.after,
-      nodeId: null,
-      // Past the repertoire there is no walk left to have counted the way here.
-      reach: 0,
-    };
-  }
-  return null;
+export function nextHole(index: ReferenceIndex, run: GrowthRun): Hole | null | undefined {
+  const book = popularReplies(index, run.fen, 0);
+  const engine = book.length ? null : engineReplies(run.fen);
+  if (engine === undefined) return undefined;
+  const reply: Reply | undefined = book[0] ?? engineAsReplies(run.fen)[0];
+  if (!reply) return null;
+  const after = applySan(run.fen, reply.san);
+  if (!after) return null;
+  return {
+    path: run.path,
+    fen: run.fen,
+    san: reply.san,
+    share: reply.share,
+    games: reply.games,
+    after: after.after,
+    nodeId: null,
+    // Past the repertoire there is no walk left to have counted the way here.
+    reach: 0,
+    ...(reply.engine ? { engine: true } : {}),
+  };
 }
 
 /** What to offer at the hole: the book's replies, most played first. */
@@ -792,6 +939,22 @@ export function optionsAt(
   limit = 4,
 ): (ExplorerMove & { share: number })[] {
   return popularReplies(index, fen, 0).slice(0, limit);
+}
+
+/**
+ * What a run offers you at a hole: the book's moves, or past the book the
+ * engine's. Undefined while the engine has not been asked about it yet.
+ */
+export function choicesAt(index: ReferenceIndex, fen: string, limit = 4): Reply[] | undefined {
+  const book = optionsAt(index, fen, limit);
+  if (book.length) return book;
+  if (engineReplies(fen) === undefined) return undefined;
+  return engineAsReplies(fen).slice(0, limit);
+}
+
+/** Whether a position needs the engine before a run can offer or play anything there. */
+export function needsEngine(index: ReferenceIndex, fen: string): boolean {
+  return popularReplies(index, fen, 0).length === 0 && engineReplies(fen) === undefined;
 }
 
 /**
@@ -831,16 +994,22 @@ export function lineFor(run: GrowthRun, san: string): string[] {
  *
  * Either it is already standing at a hole — a batch stopped by hand, at the
  * reveal — or their commonest reply to the last answer becomes the next one.
- * Either way the book has to have something to offer there, since a hole it
- * knows no replies to is a dead end rather than a choice.
+ * Past the book the engine supplies both, so the only dead end is a position
+ * with no move in it. While the engine has not been asked yet the run comes
+ * back as it stands, for the opponent to reply once it has.
  */
 export function resumeAdding(
   rep: Repertoire,
   index: ReferenceIndex,
   run: GrowthRun,
 ): GrowthRun | null {
-  if (atHole(rep, run)) return optionsAt(index, run.fen, 1).length ? run : null;
+  if (atHole(rep, run)) {
+    const choices = choicesAt(index, run.fen, 1);
+    return choices === undefined || choices.length ? run : null;
+  }
   const hole = nextHole(index, run);
+  if (hole === undefined) return run;
   if (!hole) return null;
-  return optionsAt(index, hole.after, 1).length ? enterHole(run, hole) : null;
+  const choices = choicesAt(index, hole.after, 1);
+  return choices === undefined || choices.length ? enterHole(run, hole) : null;
 }

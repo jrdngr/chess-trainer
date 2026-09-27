@@ -27,7 +27,15 @@ import {
   type GrowthRun,
   firstHole,
   startGrowthAt,
+  choicesAt,
+  findLineEnds,
+  firstEnd,
+  needsEngine,
+  startGrowthAtEnd,
+  unaskedPastBook,
+  type Hole,
 } from './growth';
+import { clearEngineReplies, rememberEngineReplies } from './engineReplies';
 import { nodeById, openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
 import { addLine, createRepertoire, hasLine } from './repertoire';
@@ -254,13 +262,13 @@ describe('the lobby', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('keeps the family row pointing at every hole it absorbed that the book can answer', () => {
+  it('keeps the family row pointing at every hole it absorbed, past the book too', () => {
+    // A hole past the book is answered by the engine, so none is dropped.
     const rows = growthRows([black], index);
     const family = prepRow(rows);
     const total = rows.reduce((sum, row) => sum + row.holes.length, 0);
-    const answerable = findHoles(black, index).filter((hole) => optionsAt(index, hole.after, 1).length > 0);
     expect(family.holes.length).toBeGreaterThan(1);
-    expect(total).toBe(answerable.length);
+    expect(total).toBe(findHoles(black, index).length);
   });
 
   it('starts a run standing on the hole the row most wants answered', () => {
@@ -328,7 +336,11 @@ describe('the lobby', () => {
     const tree = openingTree(index);
     const najdorf = nodeById(tree, 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6');
     const rows = growthRows([white], index, { region: { tree, node: najdorf } });
-    expect(rows.map((row) => row.name)).toEqual(['Sicilian Defence']);
+    // The way in keeps its own name; 5...a6 itself is the Najdorf, and is
+    // called that rather than by the family above it.
+    expect(rows.map((row) => row.name).sort()).toEqual(['Sicilian Defence', najdorf.name].sort());
+    const inside = rows.find((row) => row.name === najdorf.name)!;
+    expect(inside.holes.map((hole) => hole.san)).toEqual(['a6']);
   });
 
   it('scopes nothing when the selection is every opening there is', () => {
@@ -536,44 +548,121 @@ describe('answering a hole', () => {
     const answered = answerHole(at, optionsAt(index, at.fen)[0].san)!;
     const on = resumeAdding(white, index, answered)!;
     expect(on).not.toBeNull();
-    expect(on.path).toEqual([...answered.path, nextHole(index, answered)!.san]);
+    expect(on.path).toEqual([...answered.path, (nextHole(index, answered) as Hole).san]);
     expect(isUsersTurn(on)).toBe(true);
     expect(optionsAt(index, on.fen).length).toBeGreaterThan(0);
-
-    // Nothing the book knows: nothing to offer, and the reveal says so.
-    const nowhere = { ...answered, fen: '8/8/4k3/8/8/4K3/8/8 w - - 0 1', hole: null };
-    expect(resumeAdding(white, index, nowhere)).toBeNull();
   });
 
-  it('stops at the edge of the book rather than at a hole it cannot answer', () => {
+  it('asks the engine for their reply at the edge of the book', () => {
     // The King's Indian Sämisch: the book records no reply at all after
-    // 7.Nge2, so a run that walked in there stood at a hole with nothing to
-    // choose from. There is no next hole to offer, and the batch is over.
+    // 7.Nge2. That used to end the batch; now the engine plays for them.
     const line = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3 O-O Be3 c5'.split(' ');
     let fen = START_FEN;
     for (const san of line) fen = applySan(fen, san)!.after;
     expect(optionsAt(index, fen)[0].san).toBe('Nge2');
-    expect(optionsAt(index, applySan(fen, 'Nge2')!.after)).toHaveLength(0);
+    const edgeFen = applySan(fen, 'Nge2')!.after;
+    expect(optionsAt(index, edgeFen)).toHaveLength(0);
 
     const edge: GrowthRun = {
       repertoireId: white.id,
       color: 'b',
       rowId: 'row',
       targets: new Set(),
-      path: line,
-      fen,
+      path: [...line, 'Nge2'],
+      fen: edgeFen,
       nodeId: null,
       hole: null,
     };
-    expect(nextHole(index, edge)).toBeNull();
-    expect(resumeAdding(white, index, edge)).toBeNull();
+    clearEngineReplies();
+    // Not asked yet: nothing to say, and a batch can still carry on once it is.
+    expect(nextHole(index, edge)).toBeUndefined();
+    expect(resumeAdding(white, index, edge)).toBe(edge);
+    expect(needsEngine(index, edgeFen)).toBe(true);
+
+    rememberEngineReplies(edgeFen, ['cxd4', 'Nc6', 'Qa5']);
+    const hole = nextHole(index, edge) as Hole;
+    expect(hole.san).toBe('cxd4');
+    expect(hole.engine).toBe(true);
+    expect(hole.share).toBe(0);
+    clearEngineReplies();
   });
 
-  it('has nothing to offer once the book runs out', () => {
+  it('has nothing to offer in a position with no moves at all', () => {
     const run = toHole();
-    // A position the database has never seen has no reply to give.
     const nowhere = { ...run, fen: '8/8/4k3/8/8/4K3/8/8 b - - 0 1' };
+    clearEngineReplies();
+    rememberEngineReplies(nowhere.fen, []);
     expect(nextHole(index, nowhere)).toBeNull();
+    expect(resumeAdding(white, index, nowhere)).toBeNull();
+    clearEngineReplies();
+  });
+});
+
+describe('growing past the book', () => {
+  /** The Albin line from a real repertoire, ending past the book on Black's move. */
+  const albin = thin('w', 'd4 d5 c4 e5 dxe5 d4 Nf3 Nc6 g3 Nge7 Bg2');
+
+  it('lists a line past the book as an end until the engine is asked', () => {
+    clearEngineReplies();
+    const ends = findLineEnds(albin, index);
+    expect(ends.map((end) => end.path.join(' '))).toEqual(['d4 d5 c4 e5 dxe5 d4 Nf3 Nc6 g3 Nge7 Bg2']);
+    const row = growthRows([albin], index).find((r) => r.ends.length > 0)!;
+    expect(row).toBeDefined();
+    expect(firstEnd(row)!.path).toHaveLength(11);
+    expect(unaskedPastBook(albin, index)).toContain(ends[0].fen);
+  });
+
+  it("turns the engine's moves into replies to answer once it has them", () => {
+    clearEngineReplies();
+    const [end] = findLineEnds(albin, index);
+    rememberEngineReplies(end.fen, ['Ng6', 'Nf5', 'Be6']);
+    expect(findLineEnds(albin, index)).toHaveLength(0);
+    const holes = findHoles(albin, index).filter((hole) => hole.path.length === 11);
+    expect(holes.map((hole) => hole.san)).toEqual(['Ng6', 'Nf5', 'Be6']);
+    expect(holes.every((hole) => hole.engine && hole.share === 0)).toBe(true);
+    // Every one of them survives the threshold, which only the book can be held to.
+    expect(findHoles(albin, index, { minShare: 5 }).filter((hole) => hole.path.length === 11)).toHaveLength(3);
+    expect(choicesAt(index, end.fen)!.map((choice) => choice.san)).toEqual(['Ng6', 'Nf5', 'Be6']);
+    clearEngineReplies();
+  });
+
+  it('starts a run on a line end with the opponent to move', () => {
+    clearEngineReplies();
+    const row = growthRows([albin], index).find((r) => r.ends.length > 0)!;
+    const end = firstEnd(row)!;
+    const run = startGrowthAtEnd(albin, row, end);
+    expect(run.path).toEqual(end.path);
+    expect(isUsersTurn(run)).toBe(false);
+    expect(nextHole(index, run)).toBeUndefined();
+  });
+});
+
+describe('replies you kept with no answer', () => {
+  /** A Queen's Gambit where the answer to 3...c5 was deleted, leaving the reply behind. */
+  const qg = (() => {
+    let rep = thin('w', 'd4 d5 c4 e6 Nc3');
+    rep = addLine(rep, 'd4 d5 c4 c5'.split(' '), 'reference').rep;
+    return rep;
+  })();
+
+  it('counts the kept reply as a hole, whatever its share', () => {
+    const holes = findHoles(qg, index, { minShare: 50 });
+    const c5 = holes.find((hole) => hole.path.join(' ') === 'd4 d5 c4' && hole.san === 'c5');
+    expect(c5).toBeDefined();
+    expect(c5!.kept).toBe(true);
+  });
+
+  it('does not count it once it is answered, here or by another move order', () => {
+    const answered = addLine(qg, 'd4 d5 c4 c5 cxd5'.split(' '), 'reference').rep;
+    expect(findHoles(answered, index, { minShare: 0 }).some((hole) => hole.san === 'c5' && hole.path.length === 3)).toBe(false);
+  });
+
+  it('names Queen\'s Gambit work after the Queen\'s Gambit when that is the selection', () => {
+    const tree = openingTree(index);
+    const node = nodeById(tree, 'd4 d5 c4');
+    const rows = growthRows([qg], index, { region: { tree, node } });
+    const row = rows.find((r) => r.holes.some((hole) => hole.kept))!;
+    expect(row.name).toBe(node.name);
   });
 });
 

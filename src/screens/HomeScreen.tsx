@@ -100,7 +100,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [reps, growthPrefs.minShare, growthPrefs.maxPly, state.settings.favoriteOpenings, region],
   );
-  const gapCount = growth.reduce((sum, row) => sum + row.holes.length, 0);
+  const gapCount = growth.reduce((sum, row) => sum + row.holes.length + row.ends.length, 0);
   /**
    * Gaps against the breadth of the prep they sit in. A repertoire with two
    * holes in four hundred positions should not read the same as one with two

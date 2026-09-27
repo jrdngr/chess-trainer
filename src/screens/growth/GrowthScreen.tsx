@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../../components/Board';
 import { AppBar, haptic, Icons, Section, Strip, toast, type StripItem } from '../../components/ui';
-import { applySan, lastMoveOf, sansToMoveText, type LegalMove } from '../../chess/core';
+import { applySan, lastMoveOf, sansToMoveText, type LegalMove, type Square } from '../../chess/core';
 import {
   addsToFit,
   advance,
   answerHole,
   atHole,
+  choicesAt,
   enterHole,
+  firstEnd,
   firstHole,
   isUsersTurn,
   lineFor,
   movesToDraw,
+  needsEngine,
   nextHole,
   growthRows,
   optionsAt,
@@ -21,6 +24,7 @@ import {
   resumeAdding,
   startGrowth,
   startGrowthAt,
+  startGrowthAtEnd,
   steer,
   type GrowthRow,
   type GrowthRun,
@@ -28,6 +32,7 @@ import {
 } from '../../model/growth';
 import { familiarOffBook, nudgeArrows } from '../../model/nudge';
 import { useSoundness } from '../../engine/soundness';
+import { useEngineReplies } from '../../engine/engineReplies';
 import { nodeAtLine } from '../../model/repertoire';
 import { formatGameCount } from '../../model/reference';
 import { NudgeReasons, nudgeColor, nudgedArrows } from '../../components/Nudges';
@@ -155,8 +160,12 @@ function Run({
   const [tree] = useState(() => rep);
   /** Where the run starts: the hole it was handed, or the one the row most wants answered. */
   const [start] = useState(() => hole ?? firstHole(index, row));
-  const [run, setRun] = useState<GrowthRun>(() => (start ? startGrowthAt(tree, row, start) : startGrowth(tree, row)));
-  const [phase, setPhase] = useState<Phase>(() => (start ? 'hole' : 'walking'));
+  /** A row with only lines past the book starts at the tip of one, for the engine to reply. */
+  const [end] = useState(() => (start ? null : firstEnd(row)));
+  const [run, setRun] = useState<GrowthRun>(() =>
+    start ? startGrowthAt(tree, row, start) : end ? startGrowthAtEnd(tree, row, end) : startGrowth(tree, row),
+  );
+  const [phase, setPhase] = useState<Phase>(() => (start ? 'hole' : end ? 'answered' : 'walking'));
   const [wrong, setWrong] = useState<string | null>(null);
   /** Which plies of the line you added, so the strip can mark them. */
   const [added, setAdded] = useState<number[]>([]);
@@ -222,10 +231,21 @@ function Run({
     if (isUsersTurn(run) && expected.length === 0) setPhase('hole');
   }, [phase, run, expected.length]);
 
-  const options = useMemo(
-    () => (phase === 'hole' ? optionsAt(index, run.fen, 4) : []),
-    [phase, index, run.fen],
+  /**
+   * Past the book the engine is asked what to play, for you at a hole and for
+   * them once you have answered. Counted so the screen moves on as it answers.
+   */
+  const asking = (phase === 'hole' || phase === 'answered') && needsEngine(index, run.fen) ? [run.fen] : [];
+  const thinkingFor = useEngineReplies(asking);
+
+  /** The moves offered at a hole — undefined while the engine is still working it out. */
+  const choices = useMemo(
+    () => (phase === 'hole' ? choicesAt(index, run.fen, 4) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [phase, index, run.fen, thinkingFor],
   );
+  const options = useMemo(() => choices ?? [], [choices]);
+  const pastBook = phase === 'hole' && optionsAt(index, run.fen, 1).length === 0;
 
   /**
    * The moves drawn on the board, which are also the only ones playable on it,
@@ -256,9 +276,9 @@ function Run({
             index,
             run.path,
             run.fen,
-            movesToDraw(index, run.fen),
+            pastBook ? engineArrows(run.fen, options.map((option) => option.san)) : movesToDraw(index, run.fen),
             [
-              ...popularReplies(index, run.fen, find.minShare),
+              ...(pastBook ? options : popularReplies(index, run.fen, find.minShare)),
               ...(offBookKey ? offBookKey.split(' ') : []).map((san) => ({ san, share: 0 })),
             ],
             { priority: prefs.nudgePriority, pawns: prefs.nudgePawns },
@@ -266,7 +286,7 @@ function Run({
             new Set(offBookKey ? offBookKey.split(' ') : []),
           )
         : [],
-    [phase, rep, index, run.path, run.fen, find.minShare, prefs.nudgePriority, prefs.nudgePawns, offBookKey],
+    [phase, rep, index, run.path, run.fen, find.minShare, prefs.nudgePriority, prefs.nudgePawns, offBookKey, pastBook, options],
   );
   /** The list under the board carries a familiar move pulled in from further down the book. */
   const listed = useMemo(() => {
@@ -312,8 +332,8 @@ function Run({
    * reason to ask. The reveal says so and offers a new run.
    */
   useEffect(() => {
-    if (phase === 'hole' && options.length === 0) setPhase('done');
-  }, [phase, options.length]);
+    if (phase === 'hole' && choices !== undefined && choices.length === 0) setPhase('done');
+  }, [phase, choices]);
 
   /** A batch is measured from the first hole it is offered at. */
   useEffect(() => {
@@ -375,7 +395,8 @@ function Run({
     // Standing in a hole, the reply being answered had no node either: adding
     // the answer wrote it too, so it goes with it. A line that simply ended on
     // their move had its reply already, and only the answer goes.
-    const line = step.run.hole ? step.run.path : lineFor(step.run, step.san);
+    // A reply you had kept stays: only the answer to it was added.
+    const line = step.run.hole && !step.run.hole.kept ? step.run.path : lineFor(step.run, step.san);
     const node = live ? nodeAtLine(live, line) : null;
     if (node) removeNode(row.repertoireId, node.id);
     setHistory(history.slice(0, to));
@@ -421,16 +442,19 @@ function Run({
     setAnswer(null);
     setBatch(null);
     setRun(more);
-    setPhase('hole');
+    // Standing where they are to reply, past the book: the engine replies first.
+    setPhase(atHole(tree, more) ? 'hole' : 'answered');
     if (settings.hapticFeedback) haptic(10);
   };
 
   /** Their reply to the move you just added, after a beat. */
   useEffect(() => {
     if (phase !== 'answered') return;
+    const hole = nextHole(index, run);
+    // Past the book, and the engine is still deciding what they play.
+    if (hole === undefined) return;
     const timer = setTimeout(() => {
-      const hole = nextHole(index, run);
-      // The book knows nothing past here, so there is nothing left to answer.
+      // No move to make at all: the game is over, and so is the batch.
       if (!hole) {
         setPhase('done');
         return;
@@ -440,7 +464,7 @@ function Run({
       setPhase('hole');
     }, 520);
     return () => clearTimeout(timer);
-  }, [phase, run, index]);
+  }, [phase, run, index, thinkingFor]);
 
   const addedSans = added.map((ply) => run.path[ply]).filter(Boolean);
 
@@ -594,9 +618,21 @@ function Run({
               <span className={`side ${other(run.color)}`} />
               Thinking…
             </div>
-            <div className="ctx">
-              {inBatch} of {allowance} added
+            {inBatch > 0 && (
+              <div className="ctx">
+                {inBatch} of {allowance} added
+              </div>
+            )}
+          </div>
+        )}
+
+        {phase === 'hole' && choices === undefined && (
+          <div className="prompt">
+            <div className="who">
+              <span className={`side ${run.color}`} />
+              {run.hole ? `They played ${run.hole.san}` : 'Your prep ends here'}
             </div>
+            <div className="ctx">Past the book · the engine is finding moves…</div>
           </div>
         )}
 
@@ -634,7 +670,11 @@ function Run({
               </div>
               {run.hole && (
                 <div className="ctx">
-                  {run.hole.share}% of games · {formatGameCount(run.hole.games)}
+                  {run.hole.kept
+                    ? 'In your repertoire, with no answer yet'
+                    : run.hole.engine
+                      ? "Engine's pick · past the book"
+                      : `${run.hole.share}% of games · ${formatGameCount(run.hole.games)}`}
                 </div>
               )}
             </div>
@@ -655,7 +695,9 @@ function Run({
                     <div className="meta">
                       {option.games > 0
                         ? `${option.share}% of replies · ${formatGameCount(option.games)} games`
-                        : 'Not in the book · passed by the engine'}
+                        : 'engine' in option && option.engine
+                          ? "Engine's pick · past the book"
+                          : 'Not in the book · passed by the engine'}
                     </div>
                   </span>
                   <Icons.plus size={18} />
@@ -719,10 +761,7 @@ function Run({
               </div>
             )}
             {!more && (
-              <div className="card small muted mt-8">
-                The book ends here, so there is nothing more to answer. Add a move from the
-                Repertoire screen to go deeper than the book does.
-              </div>
+              <div className="card small muted mt-8">There are no moves left to answer here.</div>
             )}
             {more && (
               <button className="btn block mt-12" onClick={addMore}>
@@ -744,6 +783,19 @@ function Run({
       </div>
     </>
   );
+}
+
+/** Arrows for the engine's moves past the book, one per piece like the book's. */
+function engineArrows(fen: string, sans: string[]): { san: string; from: Square; to: Square }[] {
+  const out: { san: string; from: Square; to: Square }[] = [];
+  const pieces = new Set<Square>();
+  for (const san of sans) {
+    const move = applySan(fen, san);
+    if (!move || pieces.has(move.from)) continue;
+    pieces.add(move.from);
+    out.push({ san, from: move.from, to: move.to });
+  }
+  return out;
 }
 
 function other(color: 'w' | 'b'): 'w' | 'b' {

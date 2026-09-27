@@ -183,8 +183,8 @@ function nodeAt(rep: Repertoire, sans: string[], fen: string): string | null {
 /**
  * The hole a round ended on: the opponent's last move, with you to answer it
  * and nothing prepared. Null when there is nothing to grow from right here —
- * it is not your move, the line is already as deep as Growth goes, or the
- * book has nothing to offer.
+ * it is not your move, or the line is already as deep as Growth goes. Past
+ * the book the engine answers, so the book running out is no longer a reason.
  */
 export function holeAtEnd(
   rep: Repertoire,
@@ -198,7 +198,6 @@ export function holeAtEnd(
   const fen = walked.fens[played.length];
   const before = walked.fens[played.length - 1];
   if (fenTurn(fen) !== rep.color) return null;
-  if (optionsAt(index, fen, 1).length === 0) return null;
   // Something prepared here, by any move order, is not a hole.
   const key = positionKey(fen);
   if (Object.values(rep.nodes).some((node) => node.key === key)) return null;
@@ -269,6 +268,7 @@ export function growLaunch(
       urgency: 0,
       score: 0,
       holes: [hole],
+      ends: [],
     };
     return { opening, row, hole, widened: null };
   }

@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { START_FEN } from '../../chess/core';
 import { AppBar, Icons, Section, Segmented, toast } from '../../components/ui';
 import { SelectionBar } from '../../components/Selection';
 import { openingTree } from '../../model/openingTree';
 import { colorsOf, regionOf, repertoiresIn } from '../../model/selection';
-import { growthRows, optionsAt, recommended, type GrowthRow } from '../../model/growth';
+import { growthRows, optionsAt, recommended, unaskedPastBook, type GrowthRow } from '../../model/growth';
+import { useEngineReplies } from '../../engine/engineReplies';
 import { GROWTH_DEPTHS, SHARE_STEPS, shareLabel } from '../../model/modes';
 import { referenceIndex } from '../../model/referenceIndex';
 import { createRepertoire } from '../../model/repertoire';
@@ -66,6 +67,19 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
   };
 
   const starred = state.settings.favoriteOpenings;
+  /**
+   * Your lines past the book, worked out by the engine in the background: what
+   * the opponent would play there becomes replies to answer, as each position
+   * comes in.
+   */
+  const [asked, setAsked] = useState<string[]>([]);
+  const pending = useEngineReplies(asked);
+  useEffect(() => {
+    const fens = reps.flatMap((rep) =>
+      unaskedPastBook(rep, index, { minShare: prefs.minShare, maxPly: prefs.maxPly, region: { tree, node } }),
+    );
+    setAsked((before) => (fens.length === 0 || fens.every((fen) => before.includes(fen)) ? before : [...before, ...fens]));
+  }, [reps, index, prefs.minShare, prefs.maxPly, tree, node, pending]);
   const rows = useMemo(
     () =>
       growthRows(reps, index, {
@@ -74,7 +88,9 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
         starred,
         region: { tree, node },
       }),
-    [reps, index, prefs.minShare, prefs.maxPly, starred, tree, node],
+    // `pending` counts down as the engine answers, and each answer can add replies.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [reps, index, prefs.minShare, prefs.maxPly, starred, tree, node, pending],
   );
   const pick = recommended(rows);
 
@@ -122,7 +138,7 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
         {rows.length === 0 ? (
           hasMoves && (
             <div className="empty">
-              <div className="t">Nothing to extend</div>
+              <div className="t">{pending > 0 ? 'Looking past the book…' : 'Nothing to extend'}</div>
               <div className="h">
                 {`Your repertoire meets every reply played in ${prefs.minShare}% of games or more${node.depth > 0 ? ` in ${node.name}` : ''}, down to ${Math.ceil(prefs.maxPly / 2)} moves. Lower the threshold below, or widen the opening, to keep going.`}
               </div>
@@ -146,8 +162,7 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
                     </div>
                     <div className="meta">
                       {depthLabel(row.depth)} ·{' '}
-                      {row.holes.length === 1 ? '1 reply' : `${row.holes.length} replies`}{' '}
-                      unanswered · up to {row.topShare}% of games
+                      {rowMeta(row)}
                     </div>
                   </span>
                   <Icons.chevron size={18} />
@@ -220,6 +235,17 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
       </div>
     </>
   );
+}
+
+/** What a row holds: replies to answer, and lines past the book the engine can extend. */
+function rowMeta(row: GrowthRow): string {
+  const parts: string[] = [];
+  if (row.holes.length) {
+    parts.push(`${row.holes.length === 1 ? '1 reply' : `${row.holes.length} replies`} unanswered`);
+  }
+  if (row.ends.length) parts.push(row.ends.length === 1 ? '1 line past the book' : `${row.ends.length} lines past the book`);
+  if (row.topShare > 0) parts.push(`up to ${row.topShare}% of games`);
+  return [depthLabel(row.depth), ...parts].join(' · ');
 }
 
 function depthLabel(plies: number): string {
