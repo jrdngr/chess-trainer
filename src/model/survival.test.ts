@@ -163,8 +163,8 @@ describe('Survival feedback', () => {
     expect(glowFor('w', -100)?.tone).toBe('yellow');
     expect(glowFor('w', -299)?.tone).toBe('yellow');
     expect(glowFor('w', -150)).toEqual({ tone: 'yellow', strength: 0.5 });
-    expect(glowFor('w', -300)).toEqual({ tone: 'red', strength: 0 });
-    expect(glowFor('w', -500)).toEqual({ tone: 'red', strength: 0.5 });
+    expect(glowFor('w', -300)).toEqual({ tone: 'red', strength: 0.5 });
+    expect(glowFor('w', -500)).toEqual({ tone: 'red', strength: 0.75 });
     expect(glowFor('b', 10_000)).toEqual({ tone: 'red', strength: 1 });
   });
 });

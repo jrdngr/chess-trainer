@@ -92,7 +92,10 @@ export function moveScore(lost: number): { cp: number; tone: ScoreTone } | null 
  */
 export interface Glow {
   tone: 'green' | 'yellow' | 'red';
-  /** 0..1, how bright. Green and red grow; yellow holds at half. */
+  /**
+   * 0..1, how bright. Green grows from 0; yellow holds at half; red grows
+   * from half, so it never starts dimmer than the yellow before it.
+   */
   strength: number;
 }
 
@@ -109,7 +112,7 @@ export function glowFor(color: 'w' | 'b', cp: number): Glow | null {
   if (mine >= GLOW_PAWN) {
     return { tone: 'green', strength: Math.min(1, (mine - GLOW_PAWN) / GLOW_SPAN) };
   }
-  if (mine <= -GLOW_MINOR) return { tone: 'red', strength: Math.min(1, (-mine - GLOW_MINOR) / GLOW_SPAN) };
+  if (mine <= -GLOW_MINOR) return { tone: 'red', strength: 0.5 + 0.5 * Math.min(1, (-mine - GLOW_MINOR) / GLOW_SPAN) };
   if (mine <= -GLOW_PAWN) return { tone: 'yellow', strength: 0.5 };
   return null;
 }
