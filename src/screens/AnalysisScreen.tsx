@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AddLineSheet } from '../components/AddLineSheet';
 import { Board } from '../components/Board';
 import { ExplorerPanel } from '../components/ExplorerPanel';
-import { Empty, IconButton, Icons, MoveStrip, Section, Sheet, toast } from '../components/ui';
+import { copyText, Empty, haptic, IconButton, Icons, MoveStrip, Section, Sheet, toast } from '../components/ui';
 import { BOOK_LINES } from '../model/seed/bookLines';
 import type { BookLine, ReferenceGame } from '../model/types';
 import { applySan, applyUci, lastMoveOf, positionStatus, sansToMoveText, START_FEN, walkSan, type LegalMove } from '../chess/core';
@@ -106,6 +106,17 @@ export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInit
     );
     setPgnText(wrapPgn(pgn));
     setShowPgn(true);
+  };
+
+  const copyPgn = async () => {
+    const text = pgnText.trim();
+    if (!text) return;
+    if (await copyText(text)) {
+      if (settings.hapticFeedback) haptic(10);
+      toast('PGN copied');
+    } else {
+      toast('Could not copy');
+    }
   };
 
   const engineLabel =
@@ -270,6 +281,9 @@ export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInit
         <div className="row gap-8">
           <button className="btn grow" onClick={exportPgn} disabled={!visible.length}>
             From board
+          </button>
+          <button className="btn grow" onClick={copyPgn} disabled={!pgnText.trim()}>
+            Copy
           </button>
           <button className="btn primary grow" disabled={!pgnText.trim()} onClick={loadPgn}>
             Load
