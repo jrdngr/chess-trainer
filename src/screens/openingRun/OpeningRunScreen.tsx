@@ -666,6 +666,7 @@ export function OpeningRunScreen({
     return (
       <GrowthScreen
         onExit={onExit}
+        onAnalyze={onAnalyze}
         launch={{
           row: launch.row,
           hole: launch.hole,

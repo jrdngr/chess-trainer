@@ -133,7 +133,11 @@ export default function App() {
       onExit={leaveMode}
     />
   ) : mode?.id === 'growth' ? (
-    <GrowthScreen onExit={leaveMode} onPractice={(scope) => setMode({ id: 'autopilot', scope })} />
+    <GrowthScreen
+      onExit={leaveMode}
+      onPractice={(scope) => setMode({ id: 'autopilot', scope })}
+      onAnalyze={analyzeFrom}
+    />
   ) : mode?.id === 'play' ? (
     <PlayScreen onExit={leaveMode} />
   ) : session ? (

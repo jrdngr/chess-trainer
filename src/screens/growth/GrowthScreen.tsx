@@ -81,9 +81,11 @@ export interface GrowthScreenProps {
    * session to go back to, so the card starts one on what was just grown.
    */
   onPractice?: (scope: Selection) => void;
+  /** Leave for the Analysis tab on this line, seen from this side. */
+  onAnalyze?: (sans: string[], side: 'w' | 'b') => void;
 }
 
-export function GrowthScreen({ onExit, launch, onPractice }: GrowthScreenProps) {
+export function GrowthScreen({ onExit, launch, onPractice, onAnalyze }: GrowthScreenProps) {
   const [row, setRow] = useState<GrowthRow | null>(launch?.row ?? null);
   /**
    * Counted up for every run started, and used as the run's key: another run
@@ -109,6 +111,7 @@ export function GrowthScreen({ onExit, launch, onPractice }: GrowthScreenProps) 
       widened={launch?.widened ?? null}
       onPractice={launch ? undefined : onPractice}
       onAgain={start}
+      onAnalyze={onAnalyze}
       onExit={launch ? launch.onBack : () => setRow(null)}
       onClose={onExit}
     />
@@ -126,6 +129,7 @@ function Run({
   widened,
   onPractice,
   onAgain,
+  onAnalyze,
   onExit,
   onClose,
 }: {
@@ -144,6 +148,8 @@ function Run({
   onPractice?: (scope: Selection) => void;
   /** Start another run, on the row this one's work leaves most worth doing. */
   onAgain: (row: GrowthRow) => void;
+  /** Leave for the Analysis tab on this line, seen from this side. */
+  onAnalyze?: (sans: string[], side: 'w' | 'b') => void;
   /** Back to the lobby. */
   onExit: () => void;
   /** The close button: out of Growth altogether. */
@@ -655,6 +661,21 @@ function Run({
           captured
         />
 
+        {phase === 'done' && (
+          <div className="next-row">
+            {onAnalyze && (
+              <button className="btn block" onClick={() => onAnalyze(run.path, run.color)}>
+                <Icons.search size={18} />
+                Analyze
+              </button>
+            )}
+            <button className="btn primary block" onClick={again}>
+              New run
+              <Icons.next size={18} />
+            </button>
+          </div>
+        )}
+
         <div className="spacer sm" />
         {run.path.length > 0 && <Strip items={strip} />}
         <div className="spacer sm" />
@@ -786,21 +807,15 @@ function Run({
                 </button>
               </div>
             )}
-            <div className="row between">
-              <div className={`verdict ${addedSans.length ? 'ok' : 'warn'}`} style={{ padding: 0 }}>
-                <span className="ico">
-                  {addedSans.length ? <Icons.check size={16} /> : <Icons.warn size={16} />}
-                </span>
-                {addedSans.length === 0
-                  ? 'Nothing to add here'
-                  : addedSans.length === 1
-                    ? `${addedSans[0]} added`
-                    : `${addedSans.length} moves added`}
-              </div>
-              <button className="btn primary sm" onClick={again}>
-                New run
-                <Icons.next size={16} />
-              </button>
+            <div className={`verdict ${addedSans.length ? 'ok' : 'warn'}`} style={{ padding: 0 }}>
+              <span className="ico">
+                {addedSans.length ? <Icons.check size={16} /> : <Icons.warn size={16} />}
+              </span>
+              {addedSans.length === 0
+                ? 'Nothing to add here'
+                : addedSans.length === 1
+                  ? `${addedSans[0]} added`
+                  : `${addedSans.length} moves added`}
             </div>
             <Section title="The line now" />
             <div className="card">
