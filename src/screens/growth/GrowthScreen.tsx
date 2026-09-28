@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../../components/Board';
 import { AppBar, haptic, Icons, Section, Strip, toast, type StripItem } from '../../components/ui';
 import { applySan, lastMoveOf, sansToMoveText, type LegalMove, type Square } from '../../chess/core';
@@ -14,6 +14,7 @@ import {
   isUsersTurn,
   lineFor,
   movesToDraw,
+  onePerPiece,
   needsEngine,
   nextHole,
   growthRows,
@@ -278,15 +279,16 @@ function Run({
   const sound = useSoundness(offBookAsked.map((san) => ({ fen: run.fen, san })));
   const offBook = offBookAsked.filter((san) => sound(run.fen, san) === true);
   const offBookKey = offBook.join(' ');
-  const shown = useMemo(
-    () =>
+  /** Colours a set of arrows toward the familiar moves; nothing to draw away from a hole. */
+  const nudge = useCallback(
+    (drawn: { san: string; from: Square; to: Square }[]) =>
       phase === 'hole'
         ? nudgeArrows(
             rep,
             index,
             run.path,
             run.fen,
-            pastBook ? engineArrows(run.fen, options.map((option) => option.san)) : movesToDraw(index, run.fen),
+            drawn,
             [
               ...(pastBook ? options : popularReplies(index, run.fen, find.minShare)),
               ...(offBookKey ? offBookKey.split(' ') : []).map((san) => ({ san, share: 0 })),
@@ -298,9 +300,19 @@ function Run({
         : [],
     [phase, rep, index, run.path, run.fen, find.minShare, prefs.nudgePriority, prefs.nudgePawns, offBookKey, pastBook, options],
   );
+  /**
+   * The arrows before the engine has weighed anything: past the book its
+   * order, in the book the most played move of each piece. These also decide
+   * which familiar move is pulled into the list, so the list — and what the
+   * engine is asked to weigh — does not shift once the evals come in.
+   */
+  const unweighed = useMemo(
+    () => nudge(pastBook ? onePerPiece(run.fen, options.map((option) => option.san)) : movesToDraw(index, run.fen)),
+    [nudge, pastBook, run.fen, options, index],
+  );
   /** The list under the board carries a familiar move pulled in from further down the book. */
   const listed = useMemo(() => {
-    const far = shown.find((move) => move.tone === 'toward-far');
+    const far = unweighed.find((move) => move.tone === 'toward-far');
     if (!far || options.some((option) => option.san === far.san)) return options;
     // A move the book does not have at all is listed with nothing to count.
     const option = popularReplies(index, run.fen, 0).find((o) => o.san === far.san) ?? {
@@ -312,8 +324,7 @@ function Run({
       share: 0,
     };
     return [...options, option];
-  }, [shown, options, index, run.fen]);
-  const toneOf = (san: string) => shown.find((move) => move.san === san)?.tone;
+  }, [unweighed, options, index, run.fen]);
 
   /**
    * The eval bar, always, over whatever position the run stands on — and at a
@@ -329,6 +340,22 @@ function Run({
   };
   /** The answers as the engine ranks them, best on top, once it has weighed them. */
   const ranked = byDelta(listed, deltaOf);
+  /**
+   * Once the engine has weighed the answers, each piece's arrow goes to its
+   * best one. Only the answers themselves are drawn from: a familiar move
+   * pulled in from further down keeps coming in through the nudge, yellow.
+   */
+  const weighedOrder = options.some((option) => deltaOf(option.san) !== null)
+    ? byDelta(options, deltaOf).map((option) => option.san).join(' ')
+    : '';
+  const shown = useMemo(
+    () =>
+      weighedOrder
+        ? nudge(onePerPiece(run.fen, weighedOrder.split(' '), pastBook ? Infinity : 3))
+        : unweighed,
+    [weighedOrder, nudge, run.fen, pastBook, unweighed],
+  );
+  const toneOf = (san: string) => shown.find((move) => move.san === san)?.tone;
 
   /** What each hole put in front of you, logged once per position when its moves are in. */
   const offeredAt = useRef<string | null>(null);
@@ -866,19 +893,6 @@ function DeltaTag({ cp }: { cp: number | null }) {
       {cp === null ? '…' : formatDelta(cp)}
     </span>
   );
-}
-
-/** Arrows for the engine's moves past the book, one per piece like the book's. */
-function engineArrows(fen: string, sans: string[]): { san: string; from: Square; to: Square }[] {
-  const out: { san: string; from: Square; to: Square }[] = [];
-  const pieces = new Set<Square>();
-  for (const san of sans) {
-    const move = applySan(fen, san);
-    if (!move || pieces.has(move.from)) continue;
-    pieces.add(move.from);
-    out.push({ san, from: move.from, to: move.to });
-  }
-  return out;
 }
 
 function other(color: 'w' | 'b'): 'w' | 'b' {

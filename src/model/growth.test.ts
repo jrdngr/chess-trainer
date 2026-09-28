@@ -15,6 +15,7 @@ import {
   lineFor,
   MAX_ADDS,
   movesToDraw,
+  onePerPiece,
   nextHole,
   optionsAt,
   preparedHere,
@@ -721,6 +722,13 @@ describe('the moves drawn on the board', () => {
   it('draws fewer when the book has fewer to offer, and none off the book', () => {
     expect(movesToDraw(index, START_FEN, 1)).toHaveLength(1);
     expect(movesToDraw(index, '8/8/4k3/8/8/4K3/8/8 w - - 0 1')).toEqual([]);
+  });
+
+  it('gives each piece the first of its moves in the order handed over', () => {
+    // Best first: Nf3 beats Nh3 for the g1 knight, so h3 is never drawn.
+    const drawn = onePerPiece(START_FEN, ['Nf3', 'e4', 'Nh3', 'd4'], 3);
+    expect(drawn.map((move) => move.san)).toEqual(['Nf3', 'e4', 'd4']);
+    expect(onePerPiece(START_FEN, ['Nh3', 'Nf3']).map((move) => move.san)).toEqual(['Nh3']);
   });
 });
 

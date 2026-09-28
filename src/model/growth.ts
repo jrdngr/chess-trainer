@@ -971,14 +971,30 @@ export function movesToDraw(
   fen: string,
   count = 3,
 ): { san: string; from: Square; to: Square }[] {
+  return onePerPiece(
+    fen,
+    popularReplies(index, fen, 0).map((option) => option.san),
+    count,
+  );
+}
+
+/**
+ * The first of each piece's moves in `sans`, up to `count` pieces. Given the
+ * moves best first, each piece's arrow is its best move.
+ */
+export function onePerPiece(
+  fen: string,
+  sans: readonly string[],
+  count = Infinity,
+): { san: string; from: Square; to: Square }[] {
   const out: { san: string; from: Square; to: Square }[] = [];
   const pieces = new Set<Square>();
-  for (const option of popularReplies(index, fen, 0)) {
-    const move = applySan(fen, option.san);
+  for (const san of sans) {
+    if (out.length >= count) break;
+    const move = applySan(fen, san);
     if (!move || pieces.has(move.from)) continue;
     pieces.add(move.from);
-    out.push({ san: option.san, from: move.from, to: move.to });
-    if (out.length === count) break;
+    out.push({ san, from: move.from, to: move.to });
   }
   return out;
 }
