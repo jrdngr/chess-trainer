@@ -10,7 +10,6 @@ import { SettingsSheet } from './screens/SettingsSheet';
 import { HomeScreen, type ModeId } from './screens/HomeScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { SurvivalScreen } from './screens/survival/SurvivalScreen';
-import { RepairScreen } from './screens/repair/RepairScreen';
 import { GrowthScreen } from './screens/growth/GrowthScreen';
 import { DrillScreen } from './screens/drill/DrillScreen';
 import { PlayScreen } from './screens/play/PlayScreen';
@@ -123,14 +122,11 @@ export default function App() {
   ) : mode?.id === 'drill' ? (
     <DrillScreen onExit={leaveMode} />
   ) : mode?.id === 'survival' ? (
-    <SurvivalScreen onExit={leaveMode} onAnalyze={analyzeFrom} onTidy={tidyFrom} />
-  ) : mode?.id === 'repair' ? (
-    <RepairScreen
-      onImport={() => {
-        setMode(null);
-        setImporting(true);
-      }}
+    <SurvivalScreen
       onExit={leaveMode}
+      onAnalyze={analyzeFrom}
+      onTidy={tidyFrom}
+      onPractice={(scope) => setMode({ id: 'autopilot', scope })}
     />
   ) : mode?.id === 'growth' ? (
     <GrowthScreen

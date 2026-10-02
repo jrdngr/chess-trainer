@@ -2,15 +2,13 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Icons, Section, Sheet } from '../components/ui';
 import { SelectionBar } from '../components/Selection';
 import { ScoreStrip } from '../components/ScoreBar';
-import { openingTree } from '../model/openingTree';
-import { itemsInRegion, lineInRegion, regionOf, repertoiresIn } from '../model/selection';
-import { measureCoverage } from '../model/gameAnalysis';
+import { nodeById, openingTree } from '../model/openingTree';
+import { itemsInRegion, regionOf, repertoiresIn } from '../model/selection';
 import { growthRows } from '../model/growth';
 import { streak } from '../model/scoring';
-import { recommendNow } from '../store/recommendation';
-import type { Recommendation } from '../model/recommend';
+import { nextRound, NO_HISTORY, type AutoRound } from '../store/recommendation';
+import { MODE_LABELS } from '../model/autopilot';
 import { levelById } from '../model/play';
-import { buildRepairs } from '../model/repair';
 import { recentForm } from '../model/survival';
 import { referenceIndex } from '../model/referenceIndex';
 import { displayName } from '../model/repertoire';
@@ -19,7 +17,7 @@ import { countDue, DAY, forecast, masteryBuckets, retention } from '../model/srs
 import { itemsFor, repertoireList, useStore } from '../store/useStore';
 import type { Repertoire } from '../model/types';
 
-export type ModeId = 'drill' | 'survival' | 'repair' | 'growth' | 'play' | 'autopilot';
+export type ModeId = 'drill' | 'survival' | 'growth' | 'play' | 'autopilot';
 
 export interface HomeScreenProps {
   /** Launching one side's prep straight into a session, from the sheet below. */
@@ -108,33 +106,8 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
    */
   const coverage = totalItems > 0 ? totalItems / (totalItems + gapCount) : 1;
 
-  /**
-   * What your own games disagree with your prep about, and how much of your
-   * real play the prep covered at all.
-   */
-  const repairPrefs = state.settings.repair;
-  const repairs = useMemo(
-    () =>
-      buildRepairs(state.importedGames, reps, {
-        kinds: repairPrefs.kinds,
-        minGames: repairPrefs.minGames,
-        lossesOnly: repairPrefs.lossesOnly,
-        mistakes: state.mistakes,
-      }).filter((item) => lineInRegion(tree, region, item.path)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state.importedGames, state.mistakes, reps, repairPrefs, region],
-  );
-  const repairCount = repairs.length;
-  const inPrep = useMemo(() => {
-    const totals = reps.map((rep) => measureCoverage(state.importedGames, rep));
-    const games = totals.reduce((sum, c) => sum + c.games, 0);
-    if (!games) return 0;
-    return totals.reduce((sum, c) => sum + c.inPrep, 0) / games;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.importedGames, reps]);
-
   /** What Autopilot would start with, said on its button — or that there is nothing to drill. */
-  const first = useMemo(() => recommendNow(state), [state]);
+  const first = useMemo(() => nextRound(state, NO_HISTORY), [state]);
   const days = streak(state.score.global);
 
   return (
@@ -152,7 +125,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
             <span className="kicker">Autopilot</span>
             <span className="name">{first ? 'Play' : 'Build'}</span>
             <span className="first truncate">
-              {first ? `First up: ${firstUp(first)}` : 'Nothing to drill yet · open Growth'}
+              {first ? `First up: ${firstUp(first)}` : 'Nothing to practice yet · open Growth'}
             </span>
           </span>
           {days > 0 && (
@@ -199,29 +172,6 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
             onClick={() => onOpenMode('drill')}
           />
           <Tile
-            name="Repair"
-            tag={
-              state.importedGames.length === 0 && state.mistakes.length === 0
-                ? { text: 'import', tone: 'accent' }
-                : repairCount > 0
-                  ? { text: `${repairCount}`, tone: 'warn' }
-                  : { text: 'clear', tone: 'good' }
-            }
-            art={
-              <Gauge
-                parts={
-                  state.importedGames.length === 0
-                    ? []
-                    : [
-                        { width: inPrep * 100, color: 'var(--good)' },
-                        { width: (1 - inPrep) * 100, color: 'var(--warn)' },
-                      ]
-                }
-              />
-            }
-            onClick={() => onOpenMode('repair')}
-          />
-          <Tile
             name="Growth"
             tag={
               totalItems === 0
@@ -244,10 +194,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
             }
             onClick={() => onOpenMode('growth')}
           />
-          {/* Play is where the repertoire comes from, so it spans the row rather
-              than sitting alone in a corner of it. */}
           <Tile
-            wide
             name="Play"
             tag={{ text: levelById(state.settings.play.level).name }}
             onClick={() => onOpenMode('play')}
@@ -257,8 +204,8 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
         <Section title="Repertoire" />
         {perRep.length === 0 ? (
           <div className="card small muted">
-            Nothing prepared yet. Build a line in Growth, keep one at the end of an Autopilot round, or save
-            the opening from a game in Play — everything else here works from what you keep.
+            Nothing prepared yet. Build a line in Growth, or save the opening from a game in Play — everything
+            else here works from what you keep.
           </div>
         ) : (
           <div className="list">
@@ -354,13 +301,26 @@ interface Tag {
  * opens that mode's own setup screen.
  */
 /**
- * What the first round is, said plainly. A round from move one is a side and
- * nothing more: it follows whatever is played. One that starts inside an
- * opening is that opening, and worth a heads-up.
+ * What the first round is, said plainly: the mode, then what it is about. A
+ * Survival run from move one is a side and nothing more, since it follows
+ * whatever is played; one that starts inside an opening is that opening.
  */
-function firstUp(pick: Recommendation): string {
-  if (pick.start === 'inside') return pick.opening.name;
-  return `${pick.color === 'w' ? 'White' : 'Black'}, from move one`;
+function firstUp(round: AutoRound): string {
+  const side = (color: 'w' | 'b') => (color === 'w' ? 'White' : 'Black');
+  const tree = openingTree(referenceIndex());
+  const about = (() => {
+    switch (round.mode) {
+      case 'survival':
+        return round.pick.start === 'inside' ? round.pick.opening.name : `${side(round.pick.color)}, from move one`;
+      case 'growth':
+        return round.launch.opening.name;
+      default: {
+        const opening = nodeById(tree, round.openingId);
+        return opening.depth === 0 ? side(round.color) : opening.name;
+      }
+    }
+  })();
+  return `${MODE_LABELS[round.mode]} · ${about}`;
 }
 
 function Tile({

@@ -167,6 +167,16 @@ export interface StartOptions {
   holeWeight?: (hole: Hole) => number;
   seen?: Seen;
   seed?: number;
+  /**
+   * What My lines tilts toward: the lines you would meet most, or the ones
+   * you answer worst. Autopilot chooses; a run from the setup screen leans
+   * on your weak spots.
+   */
+  lean?: 'popular' | 'weak';
+  /** An opening inside the region to walk toward — see `BeginOptions.toward`. */
+  toward?: OpeningNode;
+  /** Start inside `toward` rather than from move one — see `BeginOptions.enter`. */
+  enter?: boolean;
 }
 
 /**
@@ -181,7 +191,9 @@ export function startSurvival(opts: StartOptions): SurvivalStart | null {
     reps: blind ? [] : opts.reps,
     node: opts.node,
     color: opts.color,
-    steer: opts.steer === 'gaps' ? 'gaps' : 'weak',
+    steer: opts.steer === 'gaps' ? 'gaps' : (opts.lean ?? 'weak'),
+    toward: opts.toward,
+    enter: opts.enter,
     weakness: opts.weakness ?? null,
     growth: opts.growth,
     holeWeight: opts.holeWeight,

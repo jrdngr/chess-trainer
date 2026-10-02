@@ -1,28 +1,32 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AppBar, Icons } from '../../components/ui';
 import { SelectionBar, selectionText } from '../../components/Selection';
-import { planFor } from '../../model/autopilot';
-import { isSteered, type Focus, type Recommendation } from '../../model/recommend';
-import { useStore } from '../../store/useStore';
-import { recommendNow, withSelection } from '../../store/recommendation';
-import type { Selection } from '../../model/selection';
-import { OpeningRunScreen } from '../openingRun/OpeningRunScreen';
+import { ROUND_SIZE, survivalPlanFor } from '../../model/autopilot';
+import { nodeById, openingTree } from '../../model/openingTree';
+import { referenceIndex } from '../../model/referenceIndex';
+import { itemsInRegion, repertoiresIn, type Selection } from '../../model/selection';
 import type { TidyFind } from '../../model/tidy';
+import { itemsFor, repertoireList, useStore } from '../../store/useStore';
+import { afterRound, nextRound, NO_HISTORY, withSelection, type AutoHistory, type AutoRound } from '../../store/recommendation';
+import { DrillSession } from '../drill/DrillSession';
+import { LineDrill } from '../drill/LineDrill';
+import { GrowthScreen } from '../growth/GrowthScreen';
+import { SurvivalScreen } from '../survival/SurvivalScreen';
 
 /**
  * Autopilot.
  *
- * Every round is a Run of what you already have. The engine picks the
- * opening, the colour and what the opponent steers toward, and the Run
- * plays it. When a round ends, its reveal offers the next one right under the
- * board: no Home in between, no setup screens, one tap per round. The rating
- * moves at the top of the screen as it is earned, so nothing sums it up again.
- * The settings are the engine's business and nothing on screen names them. A
- * session never ends on its own. Stop is the close button in the app bar,
- * and stopping goes Home.
+ * Every round is a sitting of one mode — a Survival run, a few positions or
+ * lines of Drill, a batch of Growth — chosen by what the work inside the
+ * selection asks for, with Survival the default (see `autopilot.ts`). Each
+ * round is the mode's own screen, set up by Autopilot and played on your own
+ * saved options, and its end screen offers Next round right under the board:
+ * no Home in between, no setup screens, one tap per round. A session never
+ * ends on its own. Stop is the close button in the app bar, and stopping goes
+ * Home.
  *
- * Autopilot never adds to the repertoire. With nothing prepared inside the
- * selection there is nothing to drill, and it says so and points at Growth.
+ * With nothing prepared inside the selection there is nothing to practice,
+ * and it says so and points at Growth.
  */
 export function AutopilotScreen({
   onExit,
@@ -33,62 +37,117 @@ export function AutopilotScreen({
 }: {
   onExit: () => void;
   /** Leave for the Analysis tab on a round's line, seen from your side. */
-  onAnalyze?: (sans: string[], side: 'w' | 'b') => void;
+  onAnalyze: (sans: string[], side: 'w' | 'b') => void;
   /** Leave for Tidy, open on a move off your prep that was closer to your lines. */
   onTidy?: (find: TidyFind) => void;
   onGrow: () => void;
   /**
    * One opening to hold the session to, in place of the saved selection: what
-   * Growth opened from Home sends you to practice. Nothing is saved, so the
-   * next Autopilot is back on your own selection.
+   * Growth sends you to practice. Nothing is saved, so the next Autopilot is
+   * back on your own selection.
    */
   scope?: Selection;
 }) {
-  /** The focuses of this session's rounds so far, oldest first: the engine's brake. */
-  const [recent, setRecent] = useState<Focus[]>([]);
-  /** For each of those rounds, whether it was steered into an opening: the engine spaces them. */
-  const [steered, setSteered] = useState<boolean[]>([]);
-  const [pick, setPick] = useState<Recommendation | null>(() =>
-    recommendNow(withSelection(useStore.getState(), scope), [], []),
+  const [history, setHistory] = useState<AutoHistory>(NO_HISTORY);
+  const [round, setRound] = useState<AutoRound | null>(() =>
+    nextRound(withSelection(useStore.getState(), scope), NO_HISTORY),
   );
-  /** Bumped per round so the Run mounts fresh. */
-  const [round, setRound] = useState(1);
-
-  /**
-   * A round is remembered at its first ending, for the brake and the spacing.
-   * The reveal is worth reading, so starting the next waits on a tap.
-   */
-  const roundOver = () => {
-    if (!pick) return;
-    const state = withSelection(useStore.getState(), scope);
-    setRecent((played) => [...played, pick.focus]);
-    setSteered((steers) => [...steers, isSteered(pick, state.settings.selection)]);
-  };
+  /** Bumped per round so each mounts fresh. */
+  const [count, setCount] = useState(1);
 
   /**
    * The next round, picked when it starts rather than when the last one
-   * ended: a line kept at the reveal, or grown from its offer, is in the
-   * repertoire by then, and a line never run is what a Test asks for first.
-   * With nothing left to pick, this lands on the way to Growth.
+   * ended: what the round just played changed — a line finished clean, a
+   * card graded, a move grown — is in the store by then.
    */
   const advance = () => {
-    setPick(recommendNow(withSelection(useStore.getState(), scope), recent, steered));
-    setRound((n) => n + 1);
+    if (!round) return;
+    const state = withSelection(useStore.getState(), scope);
+    const played = afterRound(history, round, state.settings.selection);
+    setHistory(played);
+    setRound(nextRound(state, played));
+    setCount((n) => n + 1);
   };
 
-  if (!pick) return <NothingToDrill onExit={onExit} onGrow={onGrow} />;
+  if (!round) return <NothingToDrill onExit={onExit} onGrow={onGrow} />;
 
+  switch (round.mode) {
+    case 'survival':
+      return (
+        <SurvivalScreen
+          key={count}
+          plan={survivalPlanFor(round.pick)}
+          scope={scope}
+          onNext={advance}
+          onExit={onExit}
+          onAnalyze={onAnalyze}
+          onTidy={onTidy}
+        />
+      );
+    case 'drillLines':
+      return (
+        <LineDrill
+          key={count}
+          color={round.color}
+          openingId={round.openingId}
+          count={ROUND_SIZE.drillLines}
+          lean="weak"
+          only={new Set(round.only)}
+          prefs={useStore.getState().settings.drill}
+          onExit={onExit}
+          onNext={advance}
+        />
+      );
+    case 'drillPositions':
+      return <PositionsRound key={count} round={round} onExit={onExit} onNext={advance} />;
+    case 'growth':
+      return (
+        <GrowthScreen
+          key={count}
+          onExit={onExit}
+          onAnalyze={onAnalyze}
+          launch={{
+            row: round.launch.row,
+            hole: round.launch.hole,
+            region: round.launch.opening.id,
+            backLabel: 'Next round',
+            onBack: advance,
+            pointBack: 'cap',
+            widened: round.launch.widened,
+            next: advance,
+          }}
+        />
+      );
+  }
+}
+
+/** Drill's positions, the scheduled ones first, for a round's worth of answers. */
+function PositionsRound({
+  round,
+  onExit,
+  onNext,
+}: {
+  round: Extract<AutoRound, { mode: 'drillPositions' }>;
+  onExit: () => void;
+  onNext: () => void;
+}) {
+  const state = useStore.getState();
+  const [items] = useState(() => {
+    const tree = openingTree(referenceIndex());
+    const reps = repertoiresIn(repertoireList(state), round.color);
+    return itemsInRegion(tree, nodeById(tree, round.openingId), reps.flatMap(itemsFor));
+  });
+  const prefs = useMemo(() => ({ ...state.settings.drill, draw: 'due' as const }), [state.settings.drill]);
   return (
-    <OpeningRunScreen
-      key={round}
-      auto
-      plan={planFor(pick)}
-      scope={scope}
-      onRoundOver={roundOver}
-      onNext={advance}
+    <DrillSession
+      items={items}
+      mode="due"
+      title="Drill"
+      prefs={prefs}
+      openingId={round.openingId}
+      limit={ROUND_SIZE.drillPositions}
       onExit={onExit}
-      onAnalyze={onAnalyze}
-      onTidy={onTidy}
+      onNext={onNext}
     />
   );
 }
@@ -102,10 +161,8 @@ function NothingToDrill({ onExit, onGrow }: { onExit: () => void; onGrow: () => 
       <div className="screen no-nav">
         <SelectionBar />
         <div className="empty">
-          <div className="t">Nothing to drill yet</div>
-          <div className="h">
-            Build a line in Growth.
-          </div>
+          <div className="t">Nothing to practice yet</div>
+          <div className="h">Build a line in Growth.</div>
         </div>
         <button className="btn primary block xl" onClick={onGrow}>
           Open Growth

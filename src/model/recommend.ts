@@ -18,13 +18,13 @@ import { isDue } from './srs';
 import type { Card, Repertoire } from './types';
 
 /**
- * What the next round should be: an opening inside the selection, a colour,
- * and a focus — what the opponent steers toward.
+ * What Autopilot's next Survival run should be: an opening inside the
+ * selection, a colour, and a focus — what the opponent steers toward.
  *
- * Every round under Autopilot is a Run of what you already have. Autopilot
- * never adds to the repertoire — building is Growth's, and the reveal's —
- * so what changes between rounds is only what the opponent steers you
- * toward, and that is the focus:
+ * Which mode a round is in is decided above this, in `autopilot.ts`; this
+ * decides what a Survival run is about. A run never adds to the repertoire
+ * — building is Growth's — so what changes between runs is only what the
+ * opponent steers you toward, and that is the focus:
  *
  *   test    — lines drawn by how often you would meet them. Whether the prep
  *             holds up when nothing says what it is.
@@ -470,7 +470,7 @@ export function recommend(input: RecommendInput): Recommendation | null {
 }
 
 export const MODE_NAMES: Record<ActivityMode, string> = {
-  run: 'Autopilot',
+  run: 'Autopilot (old)',
   survival: 'Survival',
   drill: 'Drill',
   growth: 'Growth',

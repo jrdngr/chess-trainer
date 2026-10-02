@@ -26,21 +26,7 @@ import {
   DEFAULT_DRILL,
   DEFAULT_GROWTH,
   DEFAULT_PLAY,
-  DEFAULT_REPAIR,
-  EMPTY_REPAIR_RECORD,
-  normalizeRepairRecord,
-  recordRepair,
-  type RepairRecord,
 } from '../model/modes';
-import {
-  DEFAULT_PREFS,
-  EMPTY_RECORD,
-  normalizeRecord,
-  recordRun,
-  type OpeningRunPrefs,
-  type OpeningRunRecord,
-  type RunOutcome,
-} from '../model/openingRun';
 import { addMistake, type Mistake } from '../model/mistakes';
 import { importedOnly, mergeGames, playGames, withPlayGame } from '../model/play';
 import { DEFAULT_SELECTION, type Selection } from '../model/selection';
@@ -88,10 +74,8 @@ export const DEFAULT_SETTINGS: Settings = {
   favoriteOpenings: [],
   pickerSort: 'popular',
   onboarded: false,
-  openingRun: { ...DEFAULT_PREFS },
   survival: { ...DEFAULT_SURVIVAL },
   drill: { ...DEFAULT_DRILL },
-  repair: { ...DEFAULT_REPAIR },
   play: { ...DEFAULT_PLAY },
   growth: { ...DEFAULT_GROWTH },
 };
@@ -112,10 +96,8 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
     ...DEFAULT_SETTINGS,
     ...known,
     selection: { ...DEFAULT_SELECTION, ...known.selection },
-    openingRun: { ...DEFAULT_PREFS, ...known.openingRun },
     survival: { ...DEFAULT_SURVIVAL, ...known.survival },
     drill: { ...DEFAULT_DRILL, ...known.drill },
-    repair: { ...DEFAULT_REPAIR, ...known.repair },
     play: { ...DEFAULT_PLAY, ...known.play },
     growth: { ...DEFAULT_GROWTH, ...known.growth },
   };
@@ -148,11 +130,9 @@ interface PersistedState {
   log: ReviewLogEntry[];
   settings: Settings;
   importedGames: ImportedGame[];
-  openingRun: OpeningRunRecord;
   /** Moves survived, per opening and overall. */
   survival: SurvivalRecord;
-  repair: RepairRecord;
-  /** Mistakes made inside the app, for Repair to ask about later. */
+  /** Mistakes made inside the app, which steer practice back to them. */
   mistakes: Mistake[];
   /** Every opening's rating and activity, and every round played. */
   score: ScoreState;
@@ -238,24 +218,19 @@ interface StoreState extends PersistedState {
    * player saying they have none, which only records that they were asked.
    */
   finishOnboarding: (openingIds: string[]) => void;
-  setOpeningRunPrefs: (patch: Partial<OpeningRunPrefs>) => void;
   setSurvivalPrefs: (patch: Partial<SurvivalPrefs>) => void;
   /** Patch one mode's own options, without touching the rest of settings. */
-  setModePrefs: <K extends 'drill' | 'repair' | 'growth' | 'play'>(
+  setModePrefs: <K extends 'drill' | 'growth' | 'play'>(
     mode: K,
     patch: Partial<Settings[K]>,
   ) => void;
   /** Replace the imported games. Games played here are kept. */
   setImportedGames: (games: ImportedGame[]) => void;
-  /** Keep a game finished in Play, as data for Repair and coverage. */
+  /** Keep a game finished in Play, as evidence for steering and coverage. */
   recordPlayGame: (game: ImportedGame) => void;
 
-  /** Log a finished openingRun run, globally and against its own opening. */
-  endOpeningRun: (outcome: RunOutcome) => void;
   /** Log a finished Survival run: its moves survived, against every opening its line went through. */
   endSurvival: (line: string[], moves: number) => void;
-  /** Log one Repair item: answered correctly, or given a move. */
-  endRepair: (outcome: { relearned?: boolean; added?: boolean }) => void;
   /**
    * Record one answer: activity against the openings its line names, and, for
    * a rated one, the rating of every starred opening it was played inside.
@@ -266,7 +241,7 @@ interface StoreState extends PersistedState {
   endRound: (round: Omit<RoundRecord, 'at'>) => void;
   /** Remember a move the user got wrong somewhere in the app. */
   logMistake: (mistake: Omit<Mistake, 'id' | 'at'>) => void;
-  /** Forget one, once it has been repaired. */
+  /** Forget one, once it has been answered right. */
   clearMistake: (id: string) => void;
   /**
    * A correct move in a run, on a position your prep has an answer to. It is
@@ -276,20 +251,8 @@ interface StoreState extends PersistedState {
    * asked again until it is due.
    */
   answeredInOpeningRun: (repertoireId: string, fen: string, played: string, grade: Grade) => void;
-  /** The move that ended a run: a lapse, and a mistake for Repair. */
+  /** A miss in a run: a lapse, and a logged mistake. */
   missedInOpeningRun: (repertoireId: string, fen: string, played: string, expected: string) => void;
-  /**
-   * An answer given in Repair. Unlike a run, this is one isolated position with
-   * nothing priming it, so it is worth the same as a review: right earns a
-   * normal pass, wrong is a lapse.
-   */
-  repairedPosition: (
-    repertoireId: string,
-    fen: string,
-    played: string,
-    expected: string,
-    correct: boolean,
-  ) => void;
 }
 
 /**
@@ -312,9 +275,7 @@ function emptyPersisted(): PersistedState {
     log: [],
     settings: { ...DEFAULT_SETTINGS },
     importedGames: [],
-    openingRun: { ...EMPTY_RECORD },
     survival: normalizeSurvival(undefined),
-    repair: { ...EMPTY_REPAIR_RECORD },
     mistakes: [],
     score: normalizeScore(EMPTY_SCORE),
     events: [],
@@ -331,9 +292,7 @@ function persistedFrom(state: StoreState): PersistedState {
     log: state.log,
     settings: state.settings,
     importedGames: state.importedGames,
-    openingRun: state.openingRun,
     survival: state.survival,
-    repair: state.repair,
     mistakes: state.mistakes,
     score: state.score,
     events: state.events,
@@ -389,6 +348,15 @@ function reviewed(
       },
     ],
   };
+}
+
+/**
+ * A logged mistake retires once the position is answered right. Until then it
+ * steers practice back to it; after that the card's schedule takes over.
+ */
+function settled(mistakes: Mistake[], repertoireId: string, key: string): Mistake[] {
+  const id = `${repertoireId}#${key}`;
+  return mistakes.some((m) => m.id === id) ? mistakes.filter((m) => m.id !== id) : mistakes;
 }
 
 export const useStore = create<StoreState>((set, get) => {
@@ -502,9 +470,7 @@ export const useStore = create<StoreState>((set, get) => {
       if (chosen) {
         set({
           ...chosen,
-          openingRun: normalizeRecord(chosen.openingRun),
           survival: normalizeSurvival(chosen.survival),
-          repair: normalizeRepairRecord(chosen.repair),
           mistakes: chosen.mistakes ?? [],
           score: normalizeScore(chosen.score),
           events: normalizeEvents(chosen.events),
@@ -548,9 +514,7 @@ export const useStore = create<StoreState>((set, get) => {
         // person on two devices, and honest about not merging concurrent edits.
         set({
           ...remote.state,
-          openingRun: normalizeRecord(remote.state.openingRun),
           survival: normalizeSurvival(remote.state.survival),
-          repair: normalizeRepairRecord(remote.state.repair),
           mistakes: remote.state.mistakes ?? [],
           score: normalizeScore(remote.state.score),
           events: normalizeEvents(remote.state.events),
@@ -771,7 +735,10 @@ export const useStore = create<StoreState>((set, get) => {
       const card =
         state.cards[item.cardId] ?? createCard(item.cardId, item.repertoireId, item.key, item.fen);
       const expectedSan = item.expected.find((e) => e.preferred)?.san ?? item.expected[0]?.san ?? '';
-      commit(reviewed(state, card, gradeValue, { correct, playedSan, expectedSan }));
+      commit({
+        ...reviewed(state, card, gradeValue, { correct, playedSan, expectedSan }),
+        mistakes: correct ? settled(state.mistakes, item.repertoireId, item.key) : state.mistakes,
+      });
     },
 
     regrade(item, before, gradeValue, playedSan) {
@@ -855,11 +822,6 @@ export const useStore = create<StoreState>((set, get) => {
       });
     },
 
-    setOpeningRunPrefs(patch) {
-      const settings = get().settings;
-      commit({ settings: { ...settings, openingRun: { ...settings.openingRun, ...patch } } });
-    },
-
     setSurvivalPrefs(patch) {
       const settings = get().settings;
       commit({ settings: { ...settings, survival: { ...settings.survival, ...patch } } });
@@ -878,16 +840,8 @@ export const useStore = create<StoreState>((set, get) => {
       commit({ importedGames: withPlayGame(get().importedGames, game) });
     },
 
-    endOpeningRun(outcome) {
-      commit({ openingRun: recordRun(get().openingRun, outcome) });
-    },
-
     endSurvival(line, moves) {
       commit({ survival: recordSurvival(get().survival, openingTree(referenceIndex()), line, moves) });
-    },
-
-    endRepair(outcome) {
-      commit({ repair: recordRepair(get().repair, outcome) });
     },
 
     recordMove(result) {
@@ -936,13 +890,14 @@ export const useStore = create<StoreState>((set, get) => {
       const state = get();
       const existing = state.cards[id];
       const card = existing ?? createCard(id, repertoireId, key, fen);
-      commit(
-        reviewed(state, card, existing ? gradeValue : 'good', {
+      commit({
+        ...reviewed(state, card, existing ? gradeValue : 'good', {
           correct: true,
           playedSan: played,
           expectedSan: played,
         }),
-      );
+        mistakes: settled(state.mistakes, repertoireId, key),
+      });
     },
 
     missedInOpeningRun(repertoireId, fen, played, expected) {
@@ -963,22 +918,6 @@ export const useStore = create<StoreState>((set, get) => {
       });
     },
 
-    repairedPosition(repertoireId, fen, played, expected, correct) {
-      const key = positionKey(fen);
-      const id = cardId(repertoireId, key);
-      const state = get();
-      const card = state.cards[id] ?? createCard(id, repertoireId, key, fen);
-      commit({
-        ...reviewed(state, card, correct ? 'good' : 'again', {
-          correct,
-          playedSan: played,
-          expectedSan: expected,
-        }),
-        // Getting it right retires the logged mistake; getting it wrong leaves
-        // it standing so Repair offers it again.
-        mistakes: correct ? state.mistakes.filter((m) => m.key !== key) : state.mistakes,
-      });
-    },
   };
 });
 

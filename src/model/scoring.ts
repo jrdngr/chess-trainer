@@ -13,10 +13,10 @@ import {
  * There is no global score any more, and no points. Every opening you have
  * starred carries a rating of its own, and nothing else is rated: a star is
  * the player saying "this one is mine", and the rating answers how well they
- * have it. Only the modes that *test* you move it — Run, and Autopilot, which
- * is Run with the engine choosing. Drill, Growth, Repair and Play still record
- * what they did, because rounds, accuracy and streaks are activity rather than
- * assessment, but none of them changes a rating.
+ * have it. Only Survival moves it: it is where your prep is tested in a real
+ * game, with nothing telling you what the line is. Drill, Growth and Play
+ * still record what they did, because rounds, accuracy and streaks are
+ * activity rather than assessment, but none of them changes a rating.
  *
  * A rating moves like a chess rating. Each prepared position you answer is one
  * result against that opening: right pushes it up, a miss pulls it down, and
@@ -28,9 +28,10 @@ import {
  */
 
 /**
- * The modes whose activity is tallied. They are no longer *scoring* modes:
- * only `rated` results move a rating, and only Run produces those. `run` is
- * Autopilot's (and the old Run's); Survival keeps its own tally and never rates.
+ * The modes whose activity is tallied. Only `rated` results move a rating,
+ * and only Survival produces those. `run` is the old Autopilot round's, and
+ * `repair` the old Repair mode's: both are kept for history and no longer
+ * played.
  */
 export type ActivityMode = 'run' | 'survival' | 'drill' | 'growth' | 'repair';
 
@@ -45,10 +46,11 @@ export const RATING = {
   floor: 0,
   /**
    * The most one result can move a rating, split between the two outcomes by
-   * the accuracy the rating expects. 40 puts King within a few hundred correct
-   * moves and still lets one miss sting at the top.
+   * the accuracy the rating expects. 20 puts King near eight hundred correct
+   * answers, so a piece is earned over many runs rather than one good
+   * sitting, and a miss at the top costs less than it once did.
    */
-  step: 40,
+  step: 20,
   /**
    * Ratings this far apart differ by ten to one in odds. 450 spreads the tiers
    * across the accuracies a repertoire actually passes through: 62% at Pawn,
@@ -181,7 +183,7 @@ export interface NodeStats {
 }
 
 /**
- * One round: a Run, a Drill session, a Growth run or a Repair sitting.
+ * One round: a Survival run, a Drill session or line, or a Growth run.
  * A round rather than a game, because none of them is a game of chess.
  */
 export interface RoundRecord {
@@ -195,7 +197,8 @@ export interface RoundRecord {
   at: number;
   /**
    * The line the round was about — the one the opponent was steering toward,
-   * whether or not it was reached. What the next rounds should not be.
+   * whether or not it was reached, or the line finished when `perfect`. What
+   * the next rounds should not be. Only rounds that play a line carry one.
    */
   line?: string[];
 }
@@ -205,8 +208,13 @@ export interface ScoreState {
   global: NodeStats;
   nodes: Record<string, NodeStats>;
   rounds: RoundRecord[];
-  /** Position key → the Run round that last saw it. See `freshness.ts`. */
+  /** Position key → the line round that last saw it. See `freshness.ts`. */
   seen: Record<string, number>;
+  /**
+   * How many rounds have played a line: Survival runs, line drills, and the
+   * old Autopilot rounds. The clock freshness is read against.
+   */
+  lineRounds: number;
 }
 
 function emptyTally(): ModeTally {
@@ -226,7 +234,7 @@ export function emptyNodeStats(): NodeStats {
   };
 }
 
-export const EMPTY_SCORE: ScoreState = { global: emptyNodeStats(), nodes: {}, rounds: [], seen: {} };
+export const EMPTY_SCORE: ScoreState = { global: emptyNodeStats(), nodes: {}, rounds: [], seen: {}, lineRounds: 0 };
 
 /** A saved tally from before rounds were called rounds, or before ratings. */
 type Legacy<T> = Partial<T> & { games?: number; score?: number };
@@ -272,11 +280,15 @@ export function normalizeScore(
     };
   };
   const rounds = (saved?.rounds ?? saved?.games ?? []).map((round) => ({ ...round }));
+  const global = fix(saved?.global);
   return {
-    global: fix(saved?.global),
+    global,
     nodes: Object.fromEntries(Object.entries(saved?.nodes ?? {}).map(([id, stats]) => [id, fix(stats)])),
     rounds,
     seen: saved?.seen ?? {},
+    // Saves from before Survival counted here marked `seen` by Autopilot's
+    // round count, so the clock carries on from there.
+    lineRounds: saved?.lineRounds ?? global.byMode.run.rounds,
   };
 }
 
@@ -435,22 +447,23 @@ export function recordRound(state: ScoreState, tree: OpeningTree, round: RoundRe
   const nodes = { ...state.nodes };
   for (const id of credited) nodes[id] = tallyRound(nodes[id] ?? emptyNodeStats(), round);
   const global = tallyRound(state.global, round);
-  // Only a Run is a round the next Run should not repeat; the count of them
-  // is the clock freshness is read against.
-  const seen =
-    round.mode === 'run' && round.line ? markSeen(state.seen, round.line, global.byMode.run.rounds) : state.seen;
+  // A round that played a line is one the next should not repeat; the count
+  // of them is the clock freshness is read against.
+  const lineRounds = state.lineRounds + (round.line ? 1 : 0);
+  const seen = round.line ? markSeen(state.seen, round.line, lineRounds) : state.seen;
   return {
     ...state,
     global,
     nodes,
     rounds: [...state.rounds, round],
     seen,
+    lineRounds,
   };
 }
 
 /** What the rounds so far have been about, for the draw and the scorer. */
 export function seenIn(state: ScoreState): { at: Record<string, number>; round: number } {
-  return { at: state.seen, round: state.global.byMode.run.rounds };
+  return { at: state.seen, round: state.lineRounds };
 }
 
 export function nodeStats(state: ScoreState, id: string): NodeStats {

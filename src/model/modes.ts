@@ -1,7 +1,6 @@
 import { DEFAULT_LEVEL } from './play';
 import type { ClockMode } from './openingRun';
 import type { NudgePriority } from './nudge';
-import type { RepairKind, RepairSort } from './repair';
 import type { SessionMode } from './session';
 
 export { LEVELS, levelById, OPENING_PLIES } from './play';
@@ -20,13 +19,20 @@ export { LEVELS, levelById, OPENING_PLIES } from './play';
 /** What a drill session draws from the schedule. */
 export type DrillDraw = Extract<SessionMode, 'due' | 'new' | 'cram'>;
 
+/** One position at a time, or a whole line from move one — see `lineDrill.ts`. */
+export type DrillForm = 'positions' | 'lines';
+
 export interface DrillPrefs {
+  form: DrillForm;
   draw: DrillDraw;
   /** How many unseen positions a session is willing to introduce. */
   newPerSession: number;
   /** Keep going after a correct move instead of stopping at one answer. */
   followLine: boolean;
-  /** Ask the weakest positions first rather than the most overdue. */
+  /**
+   * Ask the weakest positions first rather than the most overdue; for lines,
+   * draw the weakest lines rather than the ones you would meet most.
+   */
   weakFirst: boolean;
   /** Offer "Why is it wrong?" after a miss. */
   explain: boolean;
@@ -35,6 +41,7 @@ export interface DrillPrefs {
 }
 
 export const DEFAULT_DRILL: DrillPrefs = {
+  form: 'positions',
   draw: 'due',
   newPerSession: 8,
   followLine: true,
@@ -43,39 +50,16 @@ export const DEFAULT_DRILL: DrillPrefs = {
   clock: 'off',
 };
 
+export const FORM_LABELS: Record<DrillForm, string> = {
+  positions: 'Positions',
+  lines: 'Lines',
+};
+
 export const DRAW_LABELS: Record<DrillDraw, string> = {
   due: 'Scheduled',
   new: 'New only',
   cram: 'Everything',
 };
-
-/* ── Repair ─────────────────────────────────────────────────────────────── */
-
-/** How many of your games must have reached a position before it counts. */
-export const GAME_THRESHOLDS = [1, 2, 3] as const;
-
-export interface RepairPrefs {
-  kinds: 'both' | RepairKind;
-  minGames: number;
-  /** Only positions from games you went on to lose. */
-  lossesOnly: boolean;
-  sort: RepairSort;
-}
-
-export const DEFAULT_REPAIR: RepairPrefs = {
-  kinds: 'both',
-  minGames: 2,
-  lossesOnly: false,
-  sort: 'common',
-};
-
-export function kindLabel(kind: RepairKind): string {
-  return kind === 'offprep' ? 'Off prep' : 'Unprepared';
-}
-
-export function gamesLabel(n: number): string {
-  return n === 1 ? 'Any game' : `${n}+ games`;
-}
 
 /* ── Play ───────────────────────────────────────────────────────────────── */
 
@@ -126,32 +110,4 @@ export const DEFAULT_GROWTH: GrowthPrefs = {
 
 export function shareLabel(share: number): string {
   return share >= 1 ? `${share}% and up` : 'Anything played';
-}
-
-/* ── Repair's running record ────────────────────────────────────────────── */
-
-export interface RepairRecord {
-  /** Off-prep positions answered correctly. */
-  relearned: number;
-  /** Unprepared positions given a move. */
-  added: number;
-  /** Items looked at, right or wrong. */
-  seen: number;
-}
-
-export const EMPTY_REPAIR_RECORD: RepairRecord = { relearned: 0, added: 0, seen: 0 };
-
-export function recordRepair(
-  record: RepairRecord,
-  outcome: { relearned?: boolean; added?: boolean },
-): RepairRecord {
-  return {
-    seen: record.seen + 1,
-    relearned: record.relearned + (outcome.relearned ? 1 : 0),
-    added: record.added + (outcome.added ? 1 : 0),
-  };
-}
-
-export function normalizeRepairRecord(record: Partial<RepairRecord> | undefined): RepairRecord {
-  return { ...EMPTY_REPAIR_RECORD, ...(record ?? {}) };
 }

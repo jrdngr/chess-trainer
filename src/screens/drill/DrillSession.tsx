@@ -42,6 +42,9 @@ export interface DrillSessionProps {
   /** The opening the round is credited to; the selection's by default. */
   openingId?: string;
   onExit: () => void;
+  /** Autopilot's round: this many answers, then Next round. */
+  limit?: number;
+  onNext?: () => void;
 }
 
 /** `flash`: a correct move, shown for a beat before the next position. */
@@ -71,7 +74,7 @@ const REFILL_AT = 6;
  * head. These are: you didn't really know it, you got there, you knew it, it
  * was instant.
  */
-const GRADE_LABELS: Record<Grade, string> = {
+export const GRADE_LABELS: Record<Grade, string> = {
   again: 'Guessed',
   hard: 'Hard',
   good: 'Knew it',
@@ -85,6 +88,8 @@ export function DrillSession({
   prefs,
   openingId,
   onExit,
+  limit,
+  onNext,
 }: DrillSessionProps) {
   const options: DrillPrefs = { ...DEFAULT_DRILL, ...prefs };
   const settings = useStore((s) => s.settings);
@@ -131,11 +136,13 @@ export function DrillSession({
   const logged = useRef(false);
 
   const item = queue[index];
+  /** Autopilot's round has had its answers; what is left is the last grade and Next round. */
+  const roundDone = !!limit && stats.answered >= limit && phase === 'ask';
 
   const clock = useMoveClock({
     seconds: clockSeconds(options.clock),
     turnKey: `${index}:${item?.cardId ?? ''}`,
-    active: phase === 'ask' && !!item && !explore && !showMoves,
+    active: phase === 'ask' && !!item && !explore && !showMoves && !roundDone,
   });
 
   /** Count the session as one round, against the opening it was played in. */
@@ -193,6 +200,11 @@ export function DrillSession({
     if (item) ensureCard(item);
   }, [item, ensureCard]);
 
+  useEffect(() => {
+    if (roundDone) log();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roundDone]);
+
   const answer = useMemo(() => (item && played ? checkAnswer(item, played.san) : null), [item, played]);
 
   const expectedMove = useMemo(() => {
@@ -241,8 +253,8 @@ export function DrillSession({
       // A wrong answer is always a lapse; grade it immediately so the user can
       // spend their attention on understanding rather than on a button.
       grade(item, 'again', move.san, false);
-      // And it is a real mistake at a real position, so Repair should be able
-      // to come back to it later.
+      // And it is a real mistake at a real position, so practice should steer
+      // back to it until it is answered right.
       logMistake({
         source: 'drill',
         repertoireId: item.repertoireId,
@@ -363,7 +375,7 @@ export function DrillSession({
         <Board
           fen={boardFen}
           orientation={side}
-          interactive={phase === 'ask'}
+          interactive={phase === 'ask' && !roundDone}
           movableFor={side}
           onMove={onBoardMove}
           highlights={highlights}
@@ -377,17 +389,26 @@ export function DrillSession({
 
         {phase === 'ask' && (
           <>
-            <div className="prompt">
-              <div className="who">
-                <span className={`side ${side}`} />
-                {sideLabel} to move
+            {roundDone ? (
+              <div className="verdict ok" style={{ padding: 0 }}>
+                <span className="ico">
+                  <Icons.check size={16} />
+                </span>
+                {stats.correct} of {stats.answered} right
               </div>
-              <div className="ctx">
-                Move {Math.floor(item.pathSans.length / 2) + 1}
-                {item.expected.length > 1 ? ` · ${item.expected.length} options` : ''}
-                {extra ? ' · extra practice' : ''}
+            ) : (
+              <div className="prompt">
+                <div className="who">
+                  <span className={`side ${side}`} />
+                  {sideLabel} to move
+                </div>
+                <div className="ctx">
+                  Move {Math.floor(item.pathSans.length / 2) + 1}
+                  {item.expected.length > 1 ? ` · ${item.expected.length} options` : ''}
+                  {extra ? ' · extra practice' : ''}
+                </div>
               </div>
-            </div>
+            )}
             {last && (
               <>
                 <div className="spacer sm" />
@@ -406,18 +427,26 @@ export function DrillSession({
                 </div>
               </>
             )}
+            {roundDone && onNext && (
+              <button className="btn primary block mt-12" onClick={onNext}>
+                Next round
+                <Icons.next size={18} />
+              </button>
+            )}
             <div className="spacer" />
-            <div className="row gap-8">
-              <button className="btn soft grow" onClick={() => setShowMoves((v) => !v)}>
-                {showMoves ? 'Hide moves' : 'Moves'}
-              </button>
-              <button className="btn soft grow" onClick={() => setExplore(true)}>
-                Explore
-              </button>
-              <button className="btn soft grow" onClick={stop}>
-                Stop
-              </button>
-            </div>
+            {!roundDone && (
+              <div className="row gap-8">
+                <button className="btn soft grow" onClick={() => setShowMoves((v) => !v)}>
+                  {showMoves ? 'Hide moves' : 'Moves'}
+                </button>
+                <button className="btn soft grow" onClick={() => setExplore(true)}>
+                  Explore
+                </button>
+                <button className="btn soft grow" onClick={stop}>
+                  Stop
+                </button>
+              </div>
+            )}
             {showMoves && (
               <div className="card movetext mt-8">{sansToMoveText(item.pathSans) || 'Start'}</div>
             )}
@@ -532,7 +561,7 @@ interface Verdict {
  * beside what the prepared move would have been worth — so the answer to "why"
  * is a line you can step through rather than a verdict.
  */
-function WhySheet({
+export function WhySheet({
   open,
   onClose,
   fen,

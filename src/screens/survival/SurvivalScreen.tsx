@@ -12,10 +12,15 @@ import {
   type LegalMove,
 } from '../../chess/core';
 import { clockSeconds, weaknessFromCards, type LineSource } from '../../model/openingRun';
+import type { Color } from '../../chess/core';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { evidenceFor } from '../../model/growth';
 import { seenIn } from '../../model/scoring';
+import { growOfferAt, offerOpening, type GrowOffer } from '../../model/growOffer';
+import type { Selection } from '../../model/selection';
+import { useRatingTracker } from '../../components/Ratings';
+import { GrowthScreen } from '../growth/GrowthScreen';
 import { gradeForTime } from '../../model/srs';
 import { mulberry32 } from '../../model/session';
 import {
@@ -41,7 +46,7 @@ import { End, type Ending } from './End';
 import { Setup } from './Setup';
 import { useJudge } from './useJudge';
 
-type Phase = 'setup' | 'playing' | 'over';
+type Phase = 'setup' | 'playing' | 'over' | 'growing';
 
 /**
  * Where you stand against your prep: on it, through to the end of the line,
@@ -69,6 +74,17 @@ interface ScorePop {
   tone: ScoreTone;
 }
 
+/**
+ * What Autopilot decided a run should be: the side, the opening to walk
+ * toward and whether to start inside it, and what My lines leans toward.
+ */
+export interface SurvivalPlan {
+  color: Color;
+  toward: string;
+  enter: boolean;
+  lean: 'popular' | 'weak';
+}
+
 interface Game {
   source: LineSource;
   state: SurvivalRun;
@@ -91,19 +107,39 @@ interface MissFlash {
  * it flashes over the board with the prepared move in green, is logged for
  * review, and the game goes on. Mate or a draw ends a run too.
  *
- * Its own screen, sharing no state with Run or Autopilot: it rates nothing,
- * adds nothing to the repertoire, and keeps its own record of moves survived.
+ * It is the one mode that rates: every prepared position answered moves the
+ * rating of the starred openings it was played inside, up for your prep move
+ * and down for a miss, and nothing past your prep counts. A run that gets to
+ * the end of your prep without a miss is a clean finish of that line, which
+ * is what Growth's readiness reads, and its end screen offers to grow from
+ * where the prep ran out. It adds nothing to the repertoire itself, and keeps
+ * its own record of moves survived.
+ *
+ * Opened by Autopilot it skips setup: the plan says what to run, your saved
+ * options say how, and the end screen's Next run is Autopilot's next round.
  */
 export function SurvivalScreen({
   onExit,
   onAnalyze,
   onTidy,
+  onPractice,
+  plan,
+  scope,
+  onNext,
 }: {
   onExit: () => void;
   /** Leave for the Analysis tab on this line, seen from this side. */
   onAnalyze: (sans: string[], side: 'w' | 'b') => void;
   /** Leave for Tidy, open on a miss that was closer to your other lines. */
   onTidy?: (find: TidyFind) => void;
+  /** Growth's way back, when it was opened from here: Autopilot on what was grown. */
+  onPractice?: (scope: Selection) => void;
+  /** Autopilot's round: what to run, in place of the setup screen. */
+  plan?: SurvivalPlan;
+  /** The selection the round runs in, in place of the saved one. */
+  scope?: Selection;
+  /** Autopilot's next round, in place of another run. */
+  onNext?: () => void;
 }) {
   const state = useStore();
   const { settings, cards } = state;
@@ -114,7 +150,7 @@ export function SurvivalScreen({
   const missed = useStore((s) => s.missedInOpeningRun);
   const index = referenceIndex();
   const tree = openingTree(index);
-  const selection = settings.selection;
+  const selection = scope ?? settings.selection;
   /** What your games say, read once a visit, for the steers. */
   const [evidence] = useState(() => evidenceIn(state));
 
@@ -138,6 +174,14 @@ export function SurvivalScreen({
   const picker = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
   /** True once the run has ended, so a late verdict or engine move lands nowhere. */
   const over = useRef(false);
+  /**
+   * The line as it stood when your prep ran out without a miss: a clean
+   * finish, and where growing it would start. Null until then, and for good
+   * once you miss.
+   */
+  const prepEnd = useRef<string[] | null>(null);
+  const [growOffer, setGrowOffer] = useState<GrowOffer | null>(null);
+  const ratings = useRatingTracker();
 
   const run = game?.state.run ?? null;
   const live = phase === 'playing' && !!run;
@@ -155,14 +199,19 @@ export function SurvivalScreen({
     const line = ended.run.played;
     endSurvival(line, ended.moves);
     const region = nodeById(tree, ended.run.openingId);
+    const clean = ended.misses.length === 0 ? prepEnd.current : null;
     endRound({
       mode: 'survival',
       openingId: deepestNodeWithin(tree, region, line).id,
       color: ended.run.color,
       answered: ended.moves + (how.kind === 'blunder' ? 1 : 0),
       correct: ended.moves,
-      perfect: how.kind !== 'blunder' && how.kind !== 'lost' && ended.misses.length === 0,
+      // A clean finish is your prep played to its end without a miss,
+      // whatever the game did after it.
+      perfect: !!clean,
+      line: clean ?? ended.run.target,
     });
+    setGrowOffer(clean ? offerFor(ended.run.color, ended.run.enteredIn, ended.run.openingId, clean) : null);
     buzz(how.kind === 'blunder' || how.kind === 'lost' ? [22, 60, 22] : 14);
     setEnding(how);
     setMiss(null);
@@ -182,10 +231,32 @@ export function SurvivalScreen({
     else finish(next.state, { kind: 'draw' });
   };
 
-  /** Counted as activity, never rated: Survival does not move a rating. */
+  /**
+   * One prepared position answered: a rated result for every starred opening
+   * it was asked inside, credited to the position asked rather than wherever
+   * the move went.
+   */
   const tally = (line: string[], correct: boolean) => {
     if (!run) return;
-    recordMove({ mode: 'survival', line, color: run.color, correct, rated: false });
+    ratings.track(recordMove({ mode: 'survival', line, color: run.color, correct, rated: true }));
+  };
+
+  /** The way into Growth a clean end of prep earns — see `growOfferAt`. */
+  const offerFor = (color: Color, enteredIn: string | null | undefined, openingId: string, played: string[]) => {
+    const now = useStore.getState();
+    const rep = repertoireList(now).find((r) => r.color === color);
+    if (!rep) return null;
+    const entered = enteredIn ? nodeById(tree, enteredIn) : null;
+    return growOfferAt({
+      rep,
+      index,
+      tree,
+      opening: offerOpening(tree, nodeById(tree, openingId), entered, played),
+      played,
+      rounds: now.score.rounds,
+      growth: now.settings.growth,
+      starred: now.settings.favoriteOpenings,
+    });
   };
 
   const judge = useJudge({
@@ -201,6 +272,7 @@ export function SurvivalScreen({
         // now whatever the engine says, because the drill lives in review.
         tally(run.played, false);
         setPrepStatus('off');
+        prepEnd.current = null;
         if (run.repertoireId) missed(run.repertoireId, run.fen, judged.san, expected[0]);
       }
       if (!judged.ok) {
@@ -263,7 +335,11 @@ export function SurvivalScreen({
   // Your turn with nothing prepared, having followed your prep so far: the line is done.
   const prepRanOut = live && myTurn && !judge.pending && !!game && prepHere(game.source, game.state).length === 0;
   useEffect(() => {
-    if (prepRanOut) setPrepStatus((now) => (now === 'on' ? 'complete' : now));
+    if (!prepRanOut || prepStatus !== 'on') return;
+    setPrepStatus('complete');
+    // Only a line your prep actually asked you something on is finished.
+    if (prepSeen && run && !game?.state.misses.length) prepEnd.current = run.played;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prepRanOut]);
 
   // The engine's score for the position in front of you steers the glow.
@@ -287,11 +363,14 @@ export function SurvivalScreen({
 
   const start = (chosen: SurvivalPrefs) => {
     const begun = startSurvival({
-      steer: chosen.steer,
+      steer: plan ? 'lines' : chosen.steer,
       tree,
       reps: repertoireList(useStore.getState()),
       node: nodeById(tree, selection.opening),
-      color: selection.color,
+      color: plan?.color ?? selection.color,
+      lean: plan?.lean,
+      toward: plan ? nodeById(tree, plan.toward) : undefined,
+      enter: plan?.enter,
       weakness: weaknessFromCards(cards, evidence),
       growth: settings.growth,
       holeWeight: evidenceFor(evidence),
@@ -299,6 +378,9 @@ export function SurvivalScreen({
     });
     if (!begun) return;
     over.current = false;
+    prepEnd.current = null;
+    ratings.reset();
+    setGrowOffer(null);
     judge.reset();
     setPrefs(chosen);
     setEnding(null);
@@ -314,8 +396,41 @@ export function SurvivalScreen({
     setPhase('playing');
   };
 
+  // Autopilot's run starts the moment the screen opens, on your saved options.
+  useEffect(() => {
+    if (plan) start(settings.survival);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (phase === 'setup' || !game || !run) {
+    // Autopilot's run starts itself; there is nothing to set up.
+    if (plan) return <div className="screen no-nav" style={{ display: 'grid', placeItems: 'center' }}><div className="spinner" /></div>;
     return <Setup onStart={start} onExit={onExit} />;
+  }
+
+  const next = onNext ?? (() => start(prefs));
+
+  if (phase === 'growing' && growOffer) {
+    const { launch } = growOffer;
+    const practice = onPractice
+      ? () => onPractice({ color: run.color, opening: launch.opening.id })
+      : next;
+    return (
+      <GrowthScreen
+        onExit={onExit}
+        onAnalyze={onAnalyze}
+        launch={{
+          row: launch.row,
+          hole: launch.hole,
+          region: launch.opening.id,
+          backLabel: onNext ? 'Next round' : 'Practice these lines',
+          onBack: onNext ?? practice,
+          pointBack: growOffer.kind === 'line' ? 'batch' : 'cap',
+          widened: launch.widened,
+          next: onNext,
+        }}
+      />
+    );
   }
 
   if (phase === 'over' && ending) {
@@ -324,8 +439,12 @@ export function SurvivalScreen({
         state={game.state}
         ending={ending}
         before={before}
-        onNext={() => start(prefs)}
-        onChangeOptions={() => setPhase('setup')}
+        moved={ratings.moved}
+        grow={growOffer?.kind === 'opening' ? { text: growOffer.text, onGrow: () => setPhase('growing') } : null}
+        growLine={growOffer?.kind === 'line' ? () => setPhase('growing') : null}
+        nextLabel={onNext ? 'Next round' : 'Next run'}
+        onNext={next}
+        onChangeOptions={plan ? undefined : () => setPhase('setup')}
         onAnalyze={() => onAnalyze(game.state.run.played, game.state.run.color)}
         onTidy={onTidy}
         onExit={onExit}

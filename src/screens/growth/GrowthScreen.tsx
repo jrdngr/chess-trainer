@@ -51,9 +51,9 @@ import { PlayOn } from '../openingRun/PlayOn';
 import { Lobby } from './Lobby';
 
 /**
- * Growth opened from the end of a Run or Autopilot round, by its offer to
- * grow the opening: straight into a run, never the lobby, and the way out is
- * back to the mode that sent you.
+ * Growth opened from the end of a Survival run or a line drill, by its offer
+ * to grow, or as one of Autopilot's rounds: straight into a run, never the
+ * lobby, and the way out is back to practice.
  */
 export interface GrowthLaunch {
   row: GrowthRow;
@@ -61,7 +61,7 @@ export interface GrowthLaunch {
   hole: Hole | null;
   /** The opening grown, an opening tree node id: what New run looks in. */
   region: string;
-  /** "Back to Autopilot". */
+  /** "Practice these lines". */
   backLabel: string;
   onBack: () => void;
   /**
@@ -72,6 +72,11 @@ export interface GrowthLaunch {
   pointBack: 'batch' | 'cap';
   /** Settings the offer looked past to find this, which every run of the launch searches on. */
   widened?: { minShare: number; maxPly: number } | null;
+  /**
+   * Growth as one of Autopilot's rounds: New run becomes Next round, which
+   * hands the session back to Autopilot.
+   */
+  next?: () => void;
 }
 
 export interface GrowthScreenProps {
@@ -111,6 +116,7 @@ export function GrowthScreen({ onExit, launch, onPractice, onAnalyze }: GrowthSc
       pointBack={launch?.pointBack ?? 'cap'}
       widened={launch?.widened ?? null}
       onPractice={launch ? undefined : onPractice}
+      nextRound={launch?.next}
       onAgain={start}
       onAnalyze={onAnalyze}
       onExit={launch ? launch.onBack : () => setRow(null)}
@@ -129,6 +135,7 @@ function Run({
   pointBack,
   widened,
   onPractice,
+  nextRound,
   onAgain,
   onAnalyze,
   onExit,
@@ -147,6 +154,8 @@ function Run({
   widened?: { minShare: number; maxPly: number } | null;
   /** Where the card goes with no mode to go back to. */
   onPractice?: (scope: Selection) => void;
+  /** Autopilot's next round, in place of New run. */
+  nextRound?: () => void;
   /** Start another run, on the row this one's work leaves most worth doing. */
   onAgain: (row: GrowthRow) => void;
   /** Leave for the Analysis tab on this line, seen from this side. */
@@ -571,7 +580,7 @@ function Run({
     ? { label: back.label, go: back.onBack }
     : onPractice && practice
       ? {
-          label: 'Practice in Autopilot',
+          label: 'Practice these lines',
           go: () => onPractice({ color: row.color, opening: practice.opening.id }),
         }
       : null;
@@ -696,8 +705,8 @@ function Run({
                 Analyze
               </button>
             )}
-            <button className="btn primary block" onClick={again}>
-              New run
+            <button className="btn primary block" onClick={nextRound ?? again}>
+              {nextRound ? 'Next round' : 'New run'}
               <Icons.next size={18} />
             </button>
           </div>
@@ -872,7 +881,7 @@ function Run({
               <Icons.play size={18} />
               Play from here
             </button>
-            {!(pointingBack && back) && (
+            {!(pointingBack && back) && !nextRound && (
               <button className="btn plain block mt-8" onClick={back ? back.onBack : onExit}>
                 {back ? back.label : 'Back to openings'}
               </button>

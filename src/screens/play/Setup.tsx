@@ -44,7 +44,7 @@ export function Setup({
           />
           <Toggle
             label="Warn me off book"
-            hint="Say so the moment you leave your own prep, and remember it for Repair"
+            hint="Say so the moment you leave your own prep, and remember it for practice"
             on={prefs.warnOffBook}
             onToggle={() => set({ warnOffBook: !prefs.warnOffBook })}
           />

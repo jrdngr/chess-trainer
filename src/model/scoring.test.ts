@@ -16,6 +16,7 @@ import {
   ratingAfter,
   ratingSwing,
   recordRound,
+  seenIn,
   streak,
   TIERS,
   type MoveResult,
@@ -60,10 +61,10 @@ describe('what a result does to a rating', () => {
       const swing = ratingSwing(rating);
       expect(swing.up - swing.down).toBeCloseTo(RATING.step, 4);
     }
-    expect(ratingSwing(200).up).toBeGreaterThan(10);
+    expect(ratingSwing(200).up).toBeGreaterThan(5);
     const high = ratingSwing(700);
-    expect(high.up).toBeLessThan(2);
-    expect(high.down).toBeLessThan(-35);
+    expect(high.up).toBeLessThan(1);
+    expect(high.down).toBeLessThan(-18);
   });
 
   it('never falls below the floor', () => {
@@ -172,7 +173,7 @@ describe('applying a result', () => {
   it('flags the answer that crosses a piece, up or down', () => {
     let state = EMPTY_SCORE;
     let promotions = 0;
-    for (let i = 0; i < 10; i += 1) {
+    for (let i = 0; i < 20; i += 1) {
       const applied = applyResult(state, tree, [NAJDORF], result());
       state = applied.state;
       promotions += applied.moves.filter((move) => move.promotion === 1).length;
@@ -182,7 +183,7 @@ describe('applying a result', () => {
 
     // Back down through the same rung.
     let demotions = 0;
-    for (let i = 0; i < 30; i += 1) {
+    for (let i = 0; i < 60; i += 1) {
       const applied = applyResult(state, tree, [NAJDORF], result({ correct: false }));
       state = applied.state;
       demotions += applied.moves.filter((move) => move.promotion === -1).length;
@@ -321,5 +322,37 @@ describe('a saved record', () => {
     expect(fixed.nodes.e4.byMode.drill.rounds).toBe(3);
     expect('games' in fixed.global.byMode.run).toBe(false);
     expect('score' in fixed.global.days['2026-09-13']).toBe(false);
+  });
+});
+
+describe('the line clock', () => {
+  const round = (mode: 'survival' | 'drill' | 'growth', line?: string[]) => ({
+    mode,
+    openingId: '',
+    color: 'w' as const,
+    answered: 1,
+    correct: 1,
+    perfect: true,
+    at: 1,
+    line,
+  });
+
+  it('counts every round that played a line, whatever the mode', () => {
+    let state = EMPTY_SCORE;
+    state = recordRound(state, tree, round('survival', ['e4', 'e5']));
+    state = recordRound(state, tree, round('drill', ['d4', 'd5']));
+    state = recordRound(state, tree, round('growth'));
+    state = recordRound(state, tree, round('drill'));
+    expect(state.lineRounds).toBe(2);
+    expect(seenIn(state).round).toBe(2);
+  });
+
+  it('carries on from the old Autopilot count in a save from before it', () => {
+    const saved = normalizeScore({ ...EMPTY_SCORE, lineRounds: undefined } as never);
+    expect(saved.lineRounds).toBe(0);
+    const old = normalizeScore({
+      global: { ...EMPTY_SCORE.global, byMode: { ...EMPTY_SCORE.global.byMode, run: { rounds: 46, answered: 0, correct: 0, lastAt: null } } },
+    } as never);
+    expect(old.lineRounds).toBe(46);
   });
 });

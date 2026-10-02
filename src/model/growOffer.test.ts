@@ -15,6 +15,7 @@ import {
   practiceCap,
   practiceOwed,
   practiceText,
+  growOfferAt,
 } from './growOffer';
 import { atEdge, beginRun, finishPrep, isUsersTurn, opponentReply, play, movesHere } from './openingRun';
 import { nodeById, openingTree } from './openingTree';
@@ -160,14 +161,18 @@ describe('ready to grow', () => {
     expect(readyToGrow(black, tree, kid, [...rounds, clean(SAMISCH, added + 20, 'b')])).toBe(true);
   });
 
-  it('counts only clean Run rounds on your side', () => {
+  it('counts only clean rounds that played a line, on your side', () => {
     const rounds = [CLASSICAL, SAMISCH].flatMap((line) =>
       Array.from({ length: CLEAN_FINISHES }, (_, i) => clean(line, added + 1 + i, 'b')),
     );
     const spoiled = rounds.map((round, i) => (i === 0 ? { ...round, perfect: false } : round));
     expect(readyToGrow(black, tree, kid, spoiled)).toBe(false);
-    const drill = rounds.map((round, i) => (i === 0 ? { ...round, mode: 'drill' as const } : round));
-    expect(readyToGrow(black, tree, kid, drill)).toBe(false);
+    // A Drill session asked positions, not a line: it carries none.
+    const positions = rounds.map((round, i) => (i === 0 ? { ...round, mode: 'drill' as const, line: undefined } : round));
+    expect(readyToGrow(black, tree, kid, positions)).toBe(false);
+    // A Survival run or a line drill finished clean counts like Autopilot's did.
+    const mixed = rounds.map((round, i) => ({ ...round, mode: i % 2 ? ('survival' as const) : ('drill' as const) }));
+    expect(readyToGrow(black, tree, kid, mixed)).toBe(true);
     const white = rounds.map((round, i) => (i === 0 ? { ...round, color: 'w' as const } : round));
     expect(readyToGrow(black, tree, kid, white)).toBe(false);
     expect(readyToGrow(black, tree, kid, rounds)).toBe(true);
@@ -260,5 +265,30 @@ describe('growing a line that ends on your own move', () => {
     expect(launch).not.toBeNull();
     expect(launch.hole).toBeNull();
     expect(launch.row.ends.map((end) => end.path.join(' '))).toEqual([line]);
+  });
+});
+
+describe('the way into Growth at a clean end of prep', () => {
+  const kidRep = rep('b', 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5');
+  const kidNode = nodeById(tree, 'd4 Nf6 c4 g6');
+  const growth = { minShare: 1, maxPly: 18 };
+
+  it('is the quiet button, growing from where the prep ran out', () => {
+    const played = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5'.split(' ');
+    const offer = growOfferAt({ rep: kidRep, index, tree, opening: kidNode, played, rounds: [], growth, starred: [] });
+    expect(offer?.kind).toBe('line');
+    expect(offer?.text).toBe('Grow this line');
+  });
+
+  it('is the card once every line in the opening is finished clean', () => {
+    const played = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5'.split(' ');
+    const at = Math.max(...Object.values(kidRep.nodes).map((n) => n.addedAt)) + 1;
+    const rounds = Array.from({ length: CLEAN_FINISHES }, (_, i) => ({
+      ...clean(played.join(' '), at + i, 'b'),
+      mode: 'survival' as const,
+    }));
+    const offer = growOfferAt({ rep: kidRep, index, tree, opening: kidNode, played, rounds, growth, starred: [] });
+    expect(offer?.kind).toBe('opening');
+    expect(offer?.text).toContain('cleanly');
   });
 });

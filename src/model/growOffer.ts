@@ -22,9 +22,9 @@ import type { RoundRecord } from './scoring';
 import type { RepMove, Repertoire } from './types';
 
 /**
- * The offer to grow: when a Run or Autopilot round finishes clean at the end
- * of your prep, and the opening has nothing more a round could teach you, the
- * end-of-round screen offers Growth from where the round stopped.
+ * The offer to grow: when a Survival run gets through your prep clean, and
+ * the opening has nothing more a round could teach you, the end screen offers
+ * Growth from where your prep ran out.
  *
  * Two things make an opening worth growing rather than drilling again:
  *
@@ -86,10 +86,11 @@ function startsWith(line: string[], prefix: string[]): boolean {
  * Every line of yours inside an opening, with how often it has been finished
  * clean since it last changed.
  *
- * A clean finish is a Run round, Autopilot's included, that reached the end
- * of the prep without a miss and without leaving it: `perfect` on the round.
- * The round's line is the one it was drawn on, which at a clean finish is the
- * line it played to its end. Only rounds after the line's newest move count,
+ * A clean finish is a round that played a line to the end of the prep
+ * without a miss: a Survival run that got through it clean, a line drill
+ * with no miss, or one of the old Autopilot rounds — `perfect` on a round
+ * that carries its line. At a clean finish that line is the one played to
+ * the end of the prep. Only rounds after the line's newest move count,
  * so a line grown by a move starts again from nothing.
  */
 export function lineFinishes(
@@ -99,7 +100,7 @@ export function lineFinishes(
   rounds: RoundRecord[],
 ): LineFinishes[] {
   const clean = rounds.filter(
-    (round) => round.mode === 'run' && round.color === rep.color && round.perfect && !!round.line?.length,
+    (round) => round.color === rep.color && round.perfect && !!round.line?.length,
   );
   return leafLines(rep)
     .filter((line) => lineStatus(tree, opening, line.sans) === 'reached')
@@ -345,4 +346,55 @@ export function yourLastMove(played: string[], color: 'w' | 'b'): string | null 
     if ((ply % 2 === 0) === (color === 'w')) return plyLabel(ply, played[ply]);
   }
   return null;
+}
+
+/**
+ * The end-of-round way into Growth, and where growing starts.
+ *
+ *   opening — the offer: every line in the opening is finished clean. A card
+ *             above the end screen's buttons says why, and Growth points back
+ *             once the opening owes its cap of practice.
+ *   line    — the quiet button at the bottom, at any other clean end of prep:
+ *             grow the line just played. Growth points back after one batch.
+ */
+export interface GrowOffer {
+  kind: 'opening' | 'line';
+  text: string;
+  launch: GrowLaunch;
+}
+
+/**
+ * What a clean end of prep earns, read after the round is logged so it counts
+ * toward it. `played` is the line to the end of the prep, not wherever the
+ * game went after it: growing a line means growing from where your prep ran
+ * out. Null when there is nowhere to grow.
+ */
+export function growOfferAt(args: {
+  rep: Repertoire;
+  index: ReferenceIndex;
+  tree: OpeningTree;
+  /** The opening the offer is about — see `offerOpening`. */
+  opening: OpeningNode;
+  played: string[];
+  rounds: RoundRecord[];
+  growth: { minShare: number; maxPly: number };
+  starred: string[];
+}): GrowOffer | null {
+  const { rep, index, tree, opening, played, rounds } = args;
+  const opts = { minShare: args.growth.minShare, maxPly: args.growth.maxPly, starred: args.starred };
+  if (readyToGrow(rep, tree, opening, rounds)) {
+    const launch = growLaunch(rep, index, tree, opening, played, opts);
+    if (launch) {
+      const more =
+        launch.widened?.why === 'rarer' ? ' Grow it with rarer replies.' : launch.widened ? ' Grow it deeper.' : '';
+      return { kind: 'opening', text: `You finish every ${opening.name} line cleanly.${more}`, launch };
+    }
+  }
+  // Ended on a reply you have no answer to, or on your own last move with
+  // theirs still to come: either way the line has room to grow right here.
+  // Past Growth's depth it adds a move at a time.
+  const hole = holeAtEnd(rep, index, played, Infinity);
+  if (!hole && !endAtEnd(rep, played, Infinity)) return null;
+  const launch = growLaunch(rep, index, tree, opening, played, { ...opts, maxPly: Infinity });
+  return launch ? { kind: 'line', text: 'Grow this line', launch } : null;
 }

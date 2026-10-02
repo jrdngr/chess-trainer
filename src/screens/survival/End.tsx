@@ -12,6 +12,7 @@ import { repertoireList, useStore } from '../../store/useStore';
 import { offPrepHint, type TidyFind } from '../../model/tidy';
 import { OffPrepHint } from '../../components/OffPrepHint';
 import { ScoreRow } from './Setup';
+import { Ratings, type RatingChange } from '../../components/Ratings';
 
 /** How long the verdict stays over the board when a run ends. */
 const FLASH_MS = 2000;
@@ -48,12 +49,18 @@ export function endingTitle(ending: Ending, plies: number): string {
  * engine's in green. Above everything else, the number: moves survived, with
  * the best and recent form of every opening the game went through. The misses
  * — prepared positions answered with something else — are listed, and each
- * one jumps the board there. One way on: Next run.
+ * one jumps the board there. One way on: Next run. A run that finished your
+ * prep clean offers Growth: the card above the buttons when every line in the
+ * opening is held, the quiet button at the bottom otherwise.
  */
 export function End({
   state,
   ending,
   before,
+  moved,
+  grow,
+  growLine,
+  nextLabel,
   onNext,
   onChangeOptions,
   onAnalyze,
@@ -64,8 +71,17 @@ export function End({
   ending: Ending;
   /** The record as it stood before this run, to tell a new best. */
   before: SurvivalRecord;
+  /** Every starred opening this run moved the rating of. */
+  moved: RatingChange[];
+  /** The offer to grow the opening, on a clean end of prep with every line held. */
+  grow: { text: string; onGrow: () => void } | null;
+  /** Grow the line just finished, from where your prep ran out. */
+  growLine: (() => void) | null;
+  /** "Next run", or Autopilot's "Next round". */
+  nextLabel: string;
   onNext: () => void;
-  onChangeOptions: () => void;
+  /** Back to the setup screen; absent when Autopilot set the run up. */
+  onChangeOptions?: () => void;
   /**
    * Open the game in Analysis, up to the position you blundered in, so the
    * engine's continuation can be stepped through.
@@ -236,6 +252,16 @@ export function End({
           }
         />
 
+        {grow && (
+          <div className="card grow-offer">
+            <span className="grow small">{grow.text}</span>
+            <button className="btn accent sm" onClick={grow.onGrow}>
+              <Icons.plus size={16} />
+              Grow it
+            </button>
+          </div>
+        )}
+
         <div className="next-row">
           {blunder && (
             <button className="btn block" onClick={onAnalyze}>
@@ -244,7 +270,7 @@ export function End({
             </button>
           )}
           <button className="btn primary block" onClick={onNext}>
-            Next run
+            {nextLabel}
             <Icons.next size={18} />
           </button>
         </div>
@@ -252,6 +278,8 @@ export function End({
         <div className="spacer sm" />
         <Strip items={strip} cursor={cursor} max={last} onSeek={seek} />
         <div className="spacer" />
+
+        <Ratings moved={moved} />
 
         <div className="card center">
           <div className="small muted">{title}</div>
@@ -315,10 +343,20 @@ export function End({
           <Icons.download size={16} />
           Copy the moves I played
         </button>
-        <div className="spacer" />
-        <button className="btn plain block" onClick={onChangeOptions}>
-          Change options
-        </button>
+        {onChangeOptions && (
+          <>
+            <div className="spacer" />
+            <button className="btn plain block" onClick={onChangeOptions}>
+              Change options
+            </button>
+          </>
+        )}
+        {growLine && (
+          <button className="btn plain block mt-8" onClick={growLine}>
+            <Icons.plus size={18} />
+            Grow this line
+          </button>
+        )}
       </div>
     </>
   );

@@ -1,7 +1,6 @@
 import type { Color } from '../chess/core';
-import type { OpeningRunPrefs } from './openingRun';
 import type { SurvivalPrefs } from './survival';
-import type { DrillPrefs, GrowthPrefs, PlayPrefs, RepairPrefs } from './modes';
+import type { DrillPrefs, GrowthPrefs, PlayPrefs } from './modes';
 import type { Selection } from './selection';
 import type { PickerSort } from './picker';
 
@@ -167,10 +166,8 @@ export interface Settings {
    * everything else, so a fresh profile is asked exactly once.
    */
   onboarded: boolean;
-  openingRun: OpeningRunPrefs;
   survival: SurvivalPrefs;
   drill: DrillPrefs;
-  repair: RepairPrefs;
   play: PlayPrefs;
   growth: GrowthPrefs;
 }
