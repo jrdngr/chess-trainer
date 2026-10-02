@@ -272,7 +272,7 @@ export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, 
   if (!line) {
     return (
       <>
-        <AppBar title="Drill" subtitle={subtitle} onClose={onExit} />
+        <AppBar title="Drill lines" subtitle={subtitle} onClose={onExit} />
         <div className="screen no-nav">
           <div className="empty">
             <div className="t">No lines to drill here</div>
@@ -294,7 +294,7 @@ export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, 
   return (
     <>
       <AppBar
-        title="Drill"
+        title="Drill lines"
         subtitle={subtitle}
         onClose={onExit}
         actions={

@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AppBar, Icons } from '../../components/ui';
 import { SelectionBar, selectionText } from '../../components/Selection';
-import { ROUND_SIZE, survivalPlanFor } from '../../model/autopilot';
+import { MODE_LABELS, ROUND_SIZE, survivalPlanFor } from '../../model/autopilot';
 import { nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { itemsInRegion, repertoiresIn, type Selection } from '../../model/selection';
@@ -71,54 +71,100 @@ export function AutopilotScreen({
 
   if (!round) return <NothingToDrill onExit={onExit} onGrow={onGrow} />;
 
-  switch (round.mode) {
-    case 'survival':
-      return (
-        <SurvivalScreen
-          key={count}
-          plan={survivalPlanFor(round.pick)}
-          scope={scope}
-          onNext={advance}
-          onExit={onExit}
-          onAnalyze={onAnalyze}
-          onTidy={onTidy}
-        />
-      );
-    case 'drillLines':
-      return (
-        <LineDrill
-          key={count}
-          color={round.color}
-          openingId={round.openingId}
-          count={ROUND_SIZE.drillLines}
-          lean="weak"
-          only={new Set(round.only)}
-          prefs={useStore.getState().settings.drill}
-          onExit={onExit}
-          onNext={advance}
-        />
-      );
-    case 'drillPositions':
-      return <PositionsRound key={count} round={round} onExit={onExit} onNext={advance} />;
-    case 'growth':
-      return (
-        <GrowthScreen
-          key={count}
-          onExit={onExit}
-          onAnalyze={onAnalyze}
-          launch={{
-            row: round.launch.row,
-            hole: round.launch.hole,
-            region: round.launch.opening.id,
-            backLabel: 'Next round',
-            onBack: advance,
-            pointBack: 'cap',
-            widened: round.launch.widened,
-            next: advance,
-          }}
-        />
-      );
-  }
+  const current = round;
+  const screen = ((): ReactNode => {
+    switch (current.mode) {
+      case 'survival':
+        return (
+          <SurvivalScreen
+            key={count}
+            plan={survivalPlanFor(current.pick)}
+            scope={scope}
+            onNext={advance}
+            onExit={onExit}
+            onAnalyze={onAnalyze}
+            onTidy={onTidy}
+          />
+        );
+      case 'drillLines':
+        return (
+          <LineDrill
+            key={count}
+            color={current.color}
+            openingId={current.openingId}
+            count={ROUND_SIZE.drillLines}
+            lean="weak"
+            only={new Set(current.only)}
+            prefs={useStore.getState().settings.drill}
+            onExit={onExit}
+            onNext={advance}
+          />
+        );
+      case 'drillPositions':
+        return <PositionsRound key={count} round={current} onExit={onExit} onNext={advance} />;
+      case 'growth':
+        return (
+          <GrowthScreen
+            key={count}
+            onExit={onExit}
+            onAnalyze={onAnalyze}
+            launch={{
+              row: current.launch.row,
+              hole: current.launch.hole,
+              region: current.launch.opening.id,
+              backLabel: 'Next round',
+              onBack: advance,
+              pointBack: 'cap',
+              widened: current.launch.widened,
+              next: advance,
+            }}
+          />
+        );
+    }
+  })();
+
+  return (
+    <>
+      <ModeIntro key={count} name={MODE_LABELS[current.mode]} />
+      {screen}
+    </>
+  );
+}
+
+/**
+ * The round's mode, large over the board as the round begins, then carried up
+ * into its place in the app bar. The real title is underneath the whole time,
+ * so the name lands where it will stay.
+ */
+function ModeIntro({ name }: { name: string }) {
+  const [shown, setShown] = useState(true);
+  /** Where the app bar's title actually sits, measured once the screen is up. */
+  const [land, setLand] = useState<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    // Measured just before the name sets off rather than on mount: a Survival
+    // round shows its setup for a moment before the run's own bar arrives.
+    const measure = window.setTimeout(() => {
+      const title = document.querySelector('.appbar .appbar-title .line');
+      if (!title) return;
+      const box = title.getBoundingClientRect();
+      setLand({ x: box.left + box.width / 2, y: box.top + box.height / 2 });
+    }, 700);
+    const timer = window.setTimeout(() => setShown(false), 1500);
+    return () => {
+      window.clearTimeout(measure);
+      window.clearTimeout(timer);
+    };
+  }, []);
+  if (!shown) return null;
+  return (
+    <div
+      className="mode-intro"
+      style={land ? { ['--land-x' as string]: `${land.x}px`, ['--land-y' as string]: `${land.y}px` } : undefined}
+      aria-hidden
+    >
+      <span>{name}</span>
+    </div>
+  );
 }
 
 /** Drill's positions, the scheduled ones first, for a round's worth of answers. */
@@ -142,7 +188,7 @@ function PositionsRound({
     <DrillSession
       items={items}
       mode="due"
-      title="Drill"
+      title="Drill positions"
       prefs={prefs}
       openingId={round.openingId}
       limit={ROUND_SIZE.drillPositions}

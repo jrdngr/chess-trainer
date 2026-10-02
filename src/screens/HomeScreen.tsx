@@ -123,9 +123,9 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
           </span>
           <span className="grow" style={{ minWidth: 0 }}>
             <span className="kicker">Autopilot</span>
-            <span className="name">{first ? 'Play' : 'Build'}</span>
+            <span className="name">{first ? MODE_LABELS[first.mode] : 'Build'}</span>
             <span className="first truncate">
-              {first ? `First up: ${firstUp(first)}` : 'Nothing to practice yet · open Growth'}
+              {first ? firstUp(first) : 'Nothing to practice yet · open Growth'}
             </span>
           </span>
           {days > 0 && (
@@ -301,7 +301,7 @@ interface Tag {
  * opens that mode's own setup screen.
  */
 /**
- * What the first round is, said plainly: the mode, then what it is about. A
+ * What the first round is about, under its mode's name. A
  * Survival run from move one is a side and nothing more, since it follows
  * whatever is played; one that starts inside an opening is that opening.
  */
@@ -320,7 +320,7 @@ function firstUp(round: AutoRound): string {
       }
     }
   })();
-  return `${MODE_LABELS[round.mode]} · ${about}`;
+  return about;
 }
 
 function Tile({

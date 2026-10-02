@@ -126,7 +126,7 @@ export function survivalPlanFor(pick: Recommendation): { color: Color; toward: s
 
 export const MODE_LABELS: Record<RoundMode, string> = {
   survival: 'Survival',
-  drillPositions: 'Drill',
+  drillPositions: 'Drill positions',
   drillLines: 'Drill lines',
   growth: 'Growth',
 };
