@@ -26,7 +26,7 @@ const state = () => useStore.getState();
 describe('a Tidy switch', () => {
   it('starts the position over, and undoes cleanly', () => {
     const repId = state().ensureRepertoire('w');
-    state().addLine(repId, `${EXCHANGE} Bg5 Be7 e3`.split(' '), 'reference');
+    state().addLine(repId, `${EXCHANGE} Bg5 Be7 e3`.split(' '), 'book');
     const fen = walkSan(EXCHANGE.split(' ')).fens.at(-1)!;
     const key = positionKey(fen);
     const id = cardId(repId, key);

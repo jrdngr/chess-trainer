@@ -186,7 +186,7 @@ export function offPrepHint(
 export function switchMove(rep: Repertoire, nodeId: string, san: string): Repertoire | null {
   const old = rep.nodes[nodeId];
   if (!old) return null;
-  const added = addMove(rep, old.parentId, san, 'manual');
+  const added = addMove(rep, old.parentId, san, 'tidy');
   if (!added) return null;
   return removeSubtree(setPreferred(added.rep, added.node.id), nodeId);
 }

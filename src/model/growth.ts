@@ -11,6 +11,7 @@ import { lineInRegion } from './selection';
 import { ancestorsOf, descendantsOf, lineStatus, type OpeningNode, type OpeningTree } from './openingTree';
 import { childrenOf, fenAt } from './repertoire';
 import { engineReplies } from './engineReplies';
+import { PREPARED_FLOOR, withFloor } from './prepFloor';
 import type { ExplorerMove, RepMove, Repertoire } from './types';
 
 /**
@@ -27,6 +28,15 @@ import type { ExplorerMove, RepMove, Repertoire } from './types';
  * one move opens the next position for the same choice, you can stop at any of
  * them, and the reveal offers another batch rather than running on by itself.
  */
+
+/**
+ * How often a hole comes up, in percent, for ranking: the book's share, or for
+ * a reply you kept in your repertoire at least `PREPARED_FLOOR`, since that is
+ * how often training plays it. `share` itself stays the book's, for display.
+ */
+export function holeShare(hole: Pick<Hole, 'share' | 'kept'>): number {
+  return hole.kept ? Math.max(hole.share, PREPARED_FLOOR * 100) : hole.share;
+}
 
 /** The least popular a reply can be and still be worth preparing for. */
 export const DEFAULT_MIN_SHARE = 1;
@@ -215,7 +225,7 @@ function walkChoices(
     if (path.length >= maxPly) return;
     // Only their moves narrow the field. A move of yours is one you have
     // decided to play, so every game down your own prep goes through it.
-    const shares = theirs ? shareMap(index, fen) : null;
+    const shares = theirs ? shareMap(index, fen, kids.map((kid) => kid.san)) : null;
     for (const kid of kids) {
       // A branch that has already left the region has nothing in it to count.
       if (!wanted([...path, kid.san])) continue;
@@ -227,18 +237,31 @@ function walkChoices(
 }
 
 /**
- * How often the book plays each move at a position, as a share of 0..1.
+ * How often each move at a position comes up, as a share of 0..1: the book's
+ * share, with every reply you prepared lifted to `PREPARED_FLOOR`.
  *
  * Every move, not only the popular ones: a reply below the threshold is not
  * worth preparing for, but it is still the way into everything prepared past
- * it, and calling that way in impossible would hide those holes entirely.
+ * it, and calling that way in impossible would hide those holes entirely. A
+ * prepared reply is tested at its floor in training, so the holes under it are
+ * met that often too.
  */
-function shareMap(index: ReferenceIndex, fen: string): Map<string, number> {
+function shareMap(index: ReferenceIndex, fen: string, prepared: string[] = []): Map<string, number> {
   const entry = lookup(index, fen);
   const total = entry ? totalGamesAt(entry) : 0;
   const out = new Map<string, number>();
-  if (!entry || total === 0) return out;
-  for (const move of entry.moves) out.set(move.san, Math.max(move.games / total, RARE));
+  if (!entry || total === 0) {
+    for (const san of prepared) out.set(san, Math.max(1 / prepared.length, RARE));
+    return out;
+  }
+  const book = entry.moves.map((move) => move.san);
+  const sans = [...book, ...prepared.filter((san) => !book.includes(san))];
+  const games = new Map(entry.moves.map((move) => [move.san, move.games]));
+  const shares = withFloor(
+    sans.map((san) => games.get(san) ?? 0),
+    sans.map((san) => prepared.includes(san)),
+  );
+  sans.forEach((san, i) => out.set(san, Math.max(shares[i], RARE)));
   return out;
 }
 
@@ -631,7 +654,7 @@ export function growthRows(
     for (const hole of findHoles(rep, index, opts)) {
       const row = rowFor([...hole.path, hole.san], moveLabel(hole), hole.path.length);
       row.holes.push(hole);
-      row.topShare = Math.max(row.topShare, hole.share);
+      row.topShare = Math.max(row.topShare, holeShare(hole));
     }
     for (const end of findLineEnds(rep, index, opts)) {
       const row = rowFor(end.path, endLabel(end), end.path.length);
@@ -775,7 +798,7 @@ export function advance(rep: Repertoire, run: GrowthRun, san: string): GrowthRun
  * are still separated by how far away they are.
  */
 function holeWorth(hole: Hole): number {
-  return Math.max(hole.reach * hole.share, RARE);
+  return Math.max(hole.reach * holeShare(hole), RARE);
 }
 
 /**

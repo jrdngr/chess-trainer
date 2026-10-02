@@ -8,7 +8,7 @@ import {
   type Color,
   type Square,
 } from '../chess/core';
-import { findHoles, movesToFit, optionsAt, type Hole } from './growth';
+import { findHoles, holeShare, movesToFit, optionsAt, type Hole } from './growth';
 import { deepestName, lookup, type ReferenceIndex } from './reference';
 import {
   approachKeys,
@@ -21,6 +21,7 @@ import {
 import type { RepairItem } from './repair';
 import { justRun, keysAlong, lineStaleness, NOTHING_SEEN, staleness, type Seen } from './freshness';
 import { childrenOf, fenAt, leafLines, pathTo } from './repertoire';
+import { withFloor } from './prepFloor';
 import { cardId, mulberry32 } from './session';
 import type { Card, RepMove, Repertoire } from './types';
 
@@ -68,8 +69,6 @@ export function other(color: Color): Color {
 
 /* ── the region source ──────────────────────────────────────────────────── */
 
-/** The least often a prepared sideline may be chosen, as a share of the position. */
-const SIDELINE_FLOOR = 0.01;
 
 /**
  * One repertoire, indexed by position so transpositions behave the way they do
@@ -119,25 +118,31 @@ export function regionSource(
     const key = positionKey(fen);
     const mine = prep.get(key) ?? [];
     const book = [...(lookup(index, fen)?.moves ?? [])].sort((a, b) => b.games - a.games);
-    const total = book.reduce((sum, move) => sum + move.games, 0);
     const games = new Map(book.map((move) => [move.san, move.games]));
-    // A prepared move nobody in the database plays still deserves a turn, just
-    // a rare one: the floor keeps sidelines in the rotation without letting
-    // them crowd out the move orders you will actually meet.
-    const floor = Math.max(1, total * SIDELINE_FLOOR);
     const out: { san: string; games: number; prepared: boolean }[] = [];
-    for (const san of mine) out.push({ san, games: Math.max(floor, games.get(san) ?? 0), prepared: true });
+    for (const san of mine) out.push({ san, games: games.get(san) ?? 0, prepared: true });
     for (const move of book) {
       if (!mine.includes(move.san)) out.push({ san: move.san, games: Math.max(1, move.games), prepared: false });
     }
-    if (status === 'reached' || !approach) return out;
-    // Still on the way in: only moves the book can reach the opening from.
-    return out.filter((move) => {
-      const applied = applySan(fen, move.san);
-      if (!applied) return false;
-      const after = positionKey(applied.after);
-      return after === node.key || approach.has(after);
-    });
+    const inside =
+      status === 'reached' || !approach
+        ? out
+        : // Still on the way in: only moves the book can reach the opening from.
+          out.filter((move) => {
+            const applied = applySan(fen, move.san);
+            if (!applied) return false;
+            const after = positionKey(applied.after);
+            return after === node.key || approach.has(after);
+          });
+    // A prepared move is one you mean to be tested on, however rarely strong
+    // players choose it: it gets its floor of the position and the book splits
+    // the rest. Weights stay in games so the scale reads the same as before.
+    const scale = Math.max(1, inside.reduce((sum, move) => sum + move.games, 0));
+    const shares = withFloor(
+      inside.map((move) => move.games),
+      inside.map((move) => move.prepared),
+    );
+    return inside.map((move, i) => ({ ...move, games: shares[i] * scale }));
   };
 
   return {
@@ -156,11 +161,11 @@ export function regionSource(
  * Walked top-down so the weights form a distribution rather than a score per
  * line. Two kinds of branching are told apart, which is the whole point:
  *
- * - Where the *opponent* chooses, the reference database says how often each
- *   move is actually played, so you meet the King's Indian through 2.c4 far
- *   more often than through 2.Bg5. A prepared move the database has never seen
- *   falls back to an even split, and every share has a floor, so a sideline
- *   stays in the rotation instead of vanishing.
+ * - Where the *opponent* chooses, the reference database says how often
+ *   strong players choose each move, so the King's Indian through 2.c4 comes
+ *   up far more often than through 2.Bg5. Every prepared reply gets at least
+ *   `PREPARED_FLOOR` of the position, so one strong players never choose —
+ *   5.e5 against the King's Indian, say — is still tested properly.
  * - Where *you* choose between prepared alternatives, the split is even. This
  *   is what stops a heavily branched mainline from swamping everything else:
  *   your own alternatives multiply leaves without making the position any more
@@ -205,7 +210,10 @@ export function lineOdds(
     const total = entry.moves.reduce((sum, m) => sum + m.games, 0);
     if (total <= 0) return even;
     const games = new Map(entry.moves.map((m) => [m.san, m.games]));
-    return kids.map((kid) => Math.max(SIDELINE_FLOOR, (games.get(kid.san) ?? 0) / total));
+    return withFloor(
+      kids.map((kid) => games.get(kid.san) ?? 0),
+      kids.map(() => true),
+    );
   };
 
   const visit = (nodeId: string | null, weight: number) => {
@@ -821,7 +829,7 @@ function drawHole(
     const added = 2 * movesToFit(hole.path.length, opts.growth?.maxPly);
     return ((walk.reduce((sum, s) => sum + s, 0) + added) / (walk.length + added)) ** 2;
   };
-  const met = ({ hole }: { hole: Hole }) => hole.reach * hole.share * evidence(hole) * fresh(hole);
+  const met = ({ hole }: { hole: Hole }) => hole.reach * holeShare(hole) * evidence(hole) * fresh(hole);
   const best = Math.max(...holes.map(met));
   const field = holes.filter((h) => met(h) * DRAW_WINDOW >= best);
   return pickWeighted(field.length ? field : holes, met, rand);

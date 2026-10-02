@@ -10,7 +10,7 @@ const index = referenceIndex();
 
 function build(color: 'w' | 'b', lines: string[]): Repertoire {
   let rep = createRepertoire(repertoireName(color), color, `r_${color}`);
-  for (const line of lines) rep = addLine(rep, line.split(' '), 'reference').rep;
+  for (const line of lines) rep = addLine(rep, line.split(' '), 'book').rep;
   return rep;
 }
 

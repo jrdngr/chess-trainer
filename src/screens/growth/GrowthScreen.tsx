@@ -38,6 +38,7 @@ import { useMoveEvals } from '../../engine/moveEvals';
 import { formatScore, winFraction } from '../../engine/types';
 import { byDelta, deltaFor, deltaTone, formatDelta } from '../../model/evalDelta';
 import { nodeAtLine } from '../../model/repertoire';
+import { growthSource } from '../../model/moveSource';
 import { formatGameCount } from '../../model/reference';
 import { NudgeReasons, nudgeColor, nudgedArrows } from '../../components/Nudges';
 import type { RoundRecord } from '../../model/scoring';
@@ -448,7 +449,7 @@ function Run({
     const move = applySan(run.fen, san);
     const next = move ? answerHole(run, san) : null;
     if (!next) return;
-    addLine(row.repertoireId, lineFor(run, san), 'reference', 'growth');
+    addLine(row.repertoireId, lineFor(run, san), growthSource(index), 'growth');
     logEvent({
       kind: 'growth-pick',
       via: 'growth',
@@ -787,7 +788,7 @@ function Run({
                     ? 'In your repertoire, with no answer yet'
                     : run.hole.engine
                       ? "Engine's pick · past the book"
-                      : `${run.hole.share}% of games · ${formatGameCount(run.hole.games)}`}
+                      : `${run.hole.share}% of strong players' games · ${formatGameCount(run.hole.games)}`}
                 </div>
               )}
             </div>
@@ -807,7 +808,7 @@ function Run({
                   <span className="grow">
                     <div className="meta">
                       {option.games > 0
-                        ? `${option.share}% of replies · ${formatGameCount(option.games)} games`
+                        ? `${option.share}% of strong players' replies · ${formatGameCount(option.games)} games`
                         : 'engine' in option && option.engine
                           ? "Engine's pick · past the book"
                           : 'Not in the book · passed by the engine'}

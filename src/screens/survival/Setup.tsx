@@ -45,8 +45,8 @@ export function Setup({ onStart, onExit }: { onStart: (prefs: SurvivalPrefs) => 
           {prefs.steer === 'gaps'
             ? 'The opponent walks you to a reply you have no answer to, and the game goes on past it.'
             : prefs.steer === 'book'
-              ? 'The opponent plays the book by popularity, with no idea what you have prepared.'
-              : 'Your lines, as often as you would meet them, leaning toward the ones you miss.'}
+              ? 'The opponent plays what strong players choose most, with no idea what you have prepared.'
+              : 'Your lines, weighted by what strong players choose, every reply you prepared coming up often, leaning toward the ones you miss.'}
         </div>
 
         <Section title="Clock" />

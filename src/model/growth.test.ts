@@ -36,6 +36,7 @@ import {
   unaskedPastBook,
   type Hole,
 } from './growth';
+import { PREPARED_FLOOR } from './prepFloor';
 import { clearEngineReplies, rememberEngineReplies } from './engineReplies';
 import { nodeById, openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
@@ -47,7 +48,7 @@ const index = referenceIndex();
 /** The shape a real user ends up with: one line saved from a run or a game. */
 function thin(color: 'w' | 'b', line: string, name = 'Test'): Repertoire {
   const rep = createRepertoire(name, color, `r_${color}`);
-  return addLine(rep, line.split(' '), 'reference').rep;
+  return addLine(rep, line.split(' '), 'book').rep;
 }
 
 const white = thin('w', 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3');
@@ -97,14 +98,16 @@ describe('finding holes', () => {
   });
 
   it('keeps a hole reachable however unpopular the way in', () => {
-    // Prep off 1.b3, a move almost nobody plays: the holes past it are worth
-    // little, but a weight of zero would hide them from the draw for ever.
-    const odd = addLine(createRepertoire('Odd', 'b', 'r_odd'), 'b3 e5 Bb2 Nc6'.split(' '), 'reference').rep;
+    // Prep off 1.b3, a move almost nobody plays among strong players. It is
+    // prepared, so training plays it at its floor and the holes past it are
+    // reached that often, never more.
+    const odd = addLine(createRepertoire('Odd', 'b', 'r_odd'), 'b3 e5 Bb2 Nc6'.split(' '), 'book').rep;
     const holes = findHoles(odd, index);
     expect(holes.length).toBeGreaterThan(0);
     for (const hole of holes) expect(hole.reach).toBeGreaterThan(0);
     const deep = holes.find((hole) => hole.path.length === 4)!;
-    expect(deep.reach).toBeLessThan(0.02);
+    expect(deep.reach).toBeLessThan(PREPARED_FLOOR);
+    expect(deep.reach).toBeGreaterThan(PREPARED_FLOOR / 2);
   });
 
   it('never reports a reply the repertoire already answers', () => {
@@ -157,12 +160,12 @@ describe('how bare a repertoire is', () => {
     let rep = createRepertoire('Broad', 'b', 'r_broad');
     const walk = (path: string[], fen: string) => {
       if (path.length >= 4) {
-        rep = addLine(rep, path, 'reference').rep;
+        rep = addLine(rep, path, 'book').rep;
         return;
       }
       const entry = lookup(index, fen);
       if (!entry?.moves.length) {
-        if (path.length) rep = addLine(rep, path, 'reference').rep;
+        if (path.length) rep = addLine(rep, path, 'book').rep;
         return;
       }
       // Their choices are all met; ours is the one move the book likes best.
@@ -206,7 +209,7 @@ describe('how bare a repertoire is', () => {
   it('ignores the tip of a line, which is depth missing rather than breadth', () => {
     // One move of prep: after 1.d4 Black answers, and then nothing. The only
     // junction is the root, so the tip cannot make the repertoire read wider.
-    const oneMove = addLine(createRepertoire('One', 'b', 'r_one'), ['d4', 'Nf6'], 'reference').rep;
+    const oneMove = addLine(createRepertoire('One', 'b', 'r_one'), ['d4', 'Nf6'], 'book').rep;
     const paths = findCoverage(oneMove, index).map((at) => at.path.join(' '));
     expect(paths).toEqual(['']);
   });
@@ -642,7 +645,7 @@ describe('replies you kept with no answer', () => {
   /** A Queen's Gambit where the answer to 3...c5 was deleted, leaving the reply behind. */
   const qg = (() => {
     let rep = thin('w', 'd4 d5 c4 e6 Nc3');
-    rep = addLine(rep, 'd4 d5 c4 c5'.split(' '), 'reference').rep;
+    rep = addLine(rep, 'd4 d5 c4 c5'.split(' '), 'book').rep;
     return rep;
   })();
 
@@ -654,7 +657,7 @@ describe('replies you kept with no answer', () => {
   });
 
   it('does not count it once it is answered, here or by another move order', () => {
-    const answered = addLine(qg, 'd4 d5 c4 c5 cxd5'.split(' '), 'reference').rep;
+    const answered = addLine(qg, 'd4 d5 c4 c5 cxd5'.split(' '), 'book').rep;
     expect(findHoles(answered, index, { minShare: 0 }).some((hole) => hole.san === 'c5' && hole.path.length === 3)).toBe(false);
   });
 
@@ -754,7 +757,7 @@ describe('which way a run is steered', () => {
   /** A repertoire with prep down two of Black's first moves. */
   function branching(lines: string[]): Repertoire {
     let rep = createRepertoire('Test', 'w', 'r_steer');
-    for (const line of lines) rep = addLine(rep, line.split(' '), 'reference').rep;
+    for (const line of lines) rep = addLine(rep, line.split(' '), 'book').rep;
     return rep;
   }
 
@@ -782,14 +785,14 @@ describe('which way a run is steered', () => {
   const SICILIAN = 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3';
   const ALEKHINE = 'e4 Nf6 e5';
 
-  it('walks to the main line rather than the nearest sideline', () => {
-    // 1...Nf6 is played in one game in fifty and its hole is two plies away;
-    // the Najdorf tabiya is eight plies away and is where the games go. The
-    // old rule took whichever hole was nearest, which is how a run inside a
-    // starred Sicilian ended up in an Alekhine.
+  it('weighs a prepared sideline at its floor, not its book share', () => {
+    // 1...Nf6 is played in one game in fifty among strong players, and its
+    // hole is two plies away; the Najdorf tabiya is eight plies away. Prepared,
+    // the Alekhine is met at least PREPARED_FLOOR of the time in training, so
+    // its near hole is worth more than the Najdorf's after the walk.
     const rep = branching([SICILIAN, ALEKHINE]);
     const run = afterE4(rep, [SICILIAN, ALEKHINE]);
-    expect(steer(rep, index, run)!.san).toBe('c5');
+    expect(steer(rep, index, run)!.san).toBe('Nf6');
   });
 
   it('takes the nearer of two holes the player would meet as often', () => {

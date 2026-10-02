@@ -141,18 +141,26 @@ export function addMove(
   return { rep: { ...rep, nodes, rootChildren }, node, created: true };
 }
 
+/** A move's source, or how to tell it per move — Growth's is Engine past the book. */
+export type SourceFor = MoveSource | ((fenBefore: string, san: string) => MoveSource);
+
 /** Add a whole SAN line, reusing existing nodes where they already match. */
 export function addLine(
   rep: Repertoire,
   sans: string[],
-  source: MoveSource = 'manual',
+  source: SourceFor = 'manual',
   startNodeId: string | null = null,
 ): { rep: Repertoire; added: number; tipId: string | null } {
   let current = rep;
   let parentId = startNodeId;
   let added = 0;
   for (const san of sans) {
-    const res = addMove(current, parentId, san, source);
+    const res = addMove(
+      current,
+      parentId,
+      san,
+      typeof source === 'function' ? source(fenAt(current, parentId), san) : source,
+    );
     if (!res) break;
     current = res.rep;
     parentId = res.node.id;

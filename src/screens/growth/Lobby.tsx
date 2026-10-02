@@ -70,7 +70,7 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
   };
 
   const keepFirstMove = (san: string) => {
-    addLine(ensureRepertoire('w'), [san], 'reference', 'growth');
+    addLine(ensureRepertoire('w'), [san], 'growth', 'growth');
     toast(`1.${san} kept · now answer Black's replies`);
   };
 
@@ -134,7 +134,7 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
                   <span className="side w" />
                   <span className="grow" style={{ minWidth: 0 }}>
                     <div className="title">1.{move.san}</div>
-                    <div className="meta">{move.share}% of games</div>
+                    <div className="meta">{move.share}% of strong players' games</div>
                   </span>
                   <Icons.chevron size={18} />
                 </button>
@@ -148,7 +148,7 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
             <div className="empty">
               <div className="t">{pending > 0 ? 'Looking past the book…' : 'Nothing to extend'}</div>
               <div className="h">
-                {`Your repertoire meets every reply played in ${prefs.minShare}% of games or more${node.depth > 0 ? ` in ${node.name}` : ''}, down to ${Math.ceil(prefs.maxPly / 2)} moves. Lower the threshold below, or widen the opening, to keep going.`}
+                {`Your repertoire meets every reply strong players choose in ${prefs.minShare}% of games or more${node.depth > 0 ? ` in ${node.name}` : ''}, down to ${Math.ceil(prefs.maxPly / 2)} moves. Lower the threshold below, or widen the opening, to keep going.`}
               </div>
             </div>
           )
@@ -251,7 +251,9 @@ function rowMeta(row: GrowthRow): string {
     parts.push(`${row.holes.length === 1 ? '1 reply' : `${row.holes.length} replies`} unanswered`);
   }
   if (row.ends.length) parts.push(row.ends.length === 1 ? '1 line past the book' : `${row.ends.length} lines past the book`);
-  if (row.topShare > 0) parts.push(`up to ${row.topShare}% of games`);
+  // The book's own share, not the floor a kept reply is ranked at.
+  const top = Math.max(0, ...row.holes.map((hole) => hole.share));
+  if (top > 0) parts.push(`up to ${top}% of strong players' games`);
   return [depthLabel(row.depth), ...parts].join(' · ');
 }
 

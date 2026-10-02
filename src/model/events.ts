@@ -63,6 +63,12 @@ export type AppEvent =
   | (RepertoireBase & { kind: 'tidy-switch'; line: string; to: string; removed: string[]; count: number })
   /** A Tidy switch taken back. */
   | (RepertoireBase & { kind: 'tidy-undo'; line: string; to: string })
+  /** A reply strong players rarely choose, kept from Tidy's card: `line` ends on it. */
+  | (RepertoireBase & { kind: 'tidy-keep'; line: string })
+  /** That reply removed from Tidy's card, with everything under it. */
+  | (RepertoireBase & { kind: 'tidy-remove'; line: string; removed: string[]; count: number })
+  /** A Tidy remove taken back. */
+  | (RepertoireBase & { kind: 'tidy-remove-undo'; line: string })
   /** The Growth lobby's Start or a row picked: every row it listed, and the one chosen. */
   | (Base & { kind: 'growth-start'; rows: string[]; picked: string; start: string })
   /**

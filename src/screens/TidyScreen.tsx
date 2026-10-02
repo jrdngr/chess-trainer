@@ -10,6 +10,7 @@ import { openingTree } from '../model/openingTree';
 import { referenceIndex } from '../model/referenceIndex';
 import { pathTo } from '../model/repertoire';
 import { regionOf, repertoiresIn } from '../model/selection';
+import { rareReason, rareReplies, type RareReply } from '../model/rareReplies';
 import { findAt, moveLabel, sortFinds, tidyPositions, type TidyFind, type TidyOptions } from '../model/tidy';
 import { repertoireList, useStore } from '../store/useStore';
 
@@ -28,6 +29,9 @@ const CHECK_AHEAD = 12;
  * a find. Switching makes it yours and drops your move with everything under
  * it, so the biggest savings come first.
  *
+ * Above them sit the replies you added that strong players rarely or never
+ * choose — see `rareReplies` — each kept or removed once.
+ *
  * `focus` is a find handed over from the end of a round, shown first and open.
  */
 export function TidyScreen({ focus, onConsumedFocus }: { focus?: TidyFind | null; onConsumedFocus?: () => void }) {
@@ -36,6 +40,8 @@ export function TidyScreen({ focus, onConsumedFocus }: { focus?: TidyFind | null
   const selection = useStore((s) => s.settings.selection);
   const growth = useStore((s) => s.settings.growth);
   const tidySwitch = useStore((s) => s.tidySwitch);
+  const tidyKeep = useStore((s) => s.tidyKeep);
+  const tidyRemove = useStore((s) => s.tidyRemove);
   const index = referenceIndex();
   const tree = openingTree(index);
   const region = regionOf(tree, selection);
@@ -126,6 +132,25 @@ export function TidyScreen({ focus, onConsumedFocus }: { focus?: TidyFind | null
     toast(`Switched to ${moveLabel(find.path.length, find.suggestion)}`, { label: 'Undo', run: undo });
   };
 
+  const rare = useMemo(
+    () => rareReplies(reps, index, tree, region, growth.minShare),
+    [reps, index, tree, region, growth.minShare],
+  );
+
+  const onKeep = (reply: RareReply) => {
+    tidyKeep(reply.repertoireId, reply.nodeId);
+    haptic(8);
+    toast(`Kept ${moveLabel(reply.path.length, reply.san)}`);
+  };
+
+  const onRemove = (reply: RareReply) => {
+    const undo = tidyRemove(reply.repertoireId, reply.nodeId);
+    if (!undo) return;
+    haptic(12);
+    const moves = `${reply.removes} move${reply.removes === 1 ? '' : 's'}`;
+    toast(`Removed ${moveLabel(reply.path.length, reply.san)} · ${moves}`, { label: 'Undo', run: undo });
+  };
+
   const where = region.depth === 0 ? 'your repertoire' : `the ${region.name}`;
 
   return (
@@ -135,13 +160,24 @@ export function TidyScreen({ focus, onConsumedFocus }: { focus?: TidyFind | null
         <SelectionBar />
         <p className="muted small tidy-intro">
           Places where another move is closer to the rest of your lines. Switching keeps that move and drops yours,
-          with everything under it.
+          with everything under it. Replies you added that strong players rarely choose are listed once, to keep or
+          remove.
         </p>
         {reps.length === 0 ? (
           <Empty title="No lines yet" hint="Build some in Growth first. Tidy looks for lines that could converge." />
-        ) : shown.length === 0 && !progress ? (
+        ) : shown.length === 0 && rare.length === 0 && !progress ? (
           <Empty title={`Nothing to tidy in ${where}`} hint="Your moves here are as close to your other lines as any." />
         ) : null}
+        {rare.map((reply) => (
+          <RareCard
+            key={reply.id}
+            reply={reply}
+            open={open === reply.id}
+            onToggle={() => setOpen((cur) => (cur === reply.id ? null : reply.id))}
+            onKeep={() => onKeep(reply)}
+            onRemove={() => onRemove(reply)}
+          />
+        ))}
         {progress && (
           <div className="faint tiny center tidy-progress">
             Looking through {progress.total} positions{progress.done ? ` · ${Math.round((progress.done / progress.total) * 100)}%` : ''}
@@ -239,6 +275,54 @@ function TidyCard({
           ? 'Checking with the engine…'
           : `Switch · removes ${find.removes} move${find.removes === 1 ? '' : 's'}`}
       </button>
+    </div>
+  );
+}
+
+/** A reply you added that strong players rarely or never choose: keep it or remove it. */
+function RareCard({
+  reply,
+  open,
+  onToggle,
+  onKeep,
+  onRemove,
+}: {
+  reply: RareReply;
+  open: boolean;
+  onToggle: () => void;
+  onKeep: () => void;
+  onRemove: () => void;
+}) {
+  const arrows = useMemo<Arrow[]>(() => {
+    const move = applySan(reply.fen, reply.san);
+    return move ? [{ from: move.from, to: move.to }] : [];
+  }, [reply]);
+
+  return (
+    <div className="card tidy-card">
+      <button className="tidy-head" onClick={onToggle}>
+        {!open && <MiniBoard sans={reply.path} orientation={reply.color} size={76} />}
+        <span className="grow" style={{ minWidth: 0 }}>
+          <span className="tidy-moves">
+            <ColorSquare choice={reply.color} size={14} />
+            <span className="mine">{moveLabel(reply.path.length, reply.san)}</span>
+          </span>
+          <span className="tidy-reason muted">{rareReason(reply)}</span>
+        </span>
+      </button>
+      {open && (
+        <div className="tidy-board">
+          <Board fen={reply.fen} orientation={reply.color} interactive={false} arrows={arrows} />
+        </div>
+      )}
+      <div className="row gap-8 mt-8">
+        <button className="btn accent grow" onClick={onKeep}>
+          Keep
+        </button>
+        <button className="btn danger grow" onClick={onRemove}>
+          Remove
+        </button>
+      </div>
     </div>
   );
 }

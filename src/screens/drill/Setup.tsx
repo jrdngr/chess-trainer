@@ -113,7 +113,7 @@ export function Setup({
             label="Weakest first"
             hint={
               lineMode
-                ? 'Draw the lines you get wrong rather than the ones you would meet most'
+                ? 'Draw the lines you get wrong rather than the ones strong players choose most'
                 : 'Ask what you keep getting wrong before what is merely due'
             }
             on={prefs.weakFirst}

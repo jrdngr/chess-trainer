@@ -11,6 +11,7 @@ import { branchItems, type SessionMode, type TrainingItem } from '../model/sessi
 import { describeDue } from '../model/srs';
 import type { AppEvent } from '../model/events';
 import type { Card, RepMove, Repertoire } from '../model/types';
+import { sourceLabel } from '../model/moveSource';
 import { saveFile } from '../store/saveFile';
 import { repertoireList, useStore } from '../store/useStore';
 
@@ -555,7 +556,7 @@ function RepertoireBrowser({
               inRepertoire={kids.map((k) => k.san)}
               compact
               onPlay={(san) => {
-                addLine(rep.id, [...pathSans, san], 'reference');
+                addLine(rep.id, [...pathSans, san], 'book');
                 descendTo(san);
                 toast(`${san} added`);
               }}
@@ -603,7 +604,7 @@ function RepertoireBrowser({
           path={pathSans}
           inRepertoire={kids.map((k) => k.san)}
           onPlay={(san) => {
-            addLine(rep.id, [...pathSans, san], 'reference');
+            addLine(rep.id, [...pathSans, san], 'book');
             descendTo(san);
             setShowReference(false);
             toast(`${san} added`);
@@ -632,6 +633,7 @@ function TreeRow({
   const kids = childrenOf(rep, node.id).length;
   const stage = !card ? 'none' : card.stage === 'new' ? 'new' : card.stage === 'learning' ? 'learning' : card.interval >= 21 ? 'mature' : 'young';
   const meta = [
+    sourceLabel(node.source),
     kids === 0 ? 'end of line' : `${kids} ${kids === 1 ? 'branch' : 'branches'}`,
     card && ourTurn ? describeDue(card.due) : null,
   ]

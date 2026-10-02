@@ -247,7 +247,7 @@ function Game({ prefs, onExit, onClose }: { prefs: PlayPrefs; onExit: () => void
       return;
     }
     const repId = ensureRepertoire(color);
-    const { added } = addLine(repId, line, 'games');
+    const { added } = addLine(repId, line, 'play');
     setSaved(true);
     const named = specificNameForColor(index, line, color)?.name;
     if (added === 0) toast('Already in your repertoire');

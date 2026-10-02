@@ -9,6 +9,7 @@ import {
   repertoireName,
   setNote,
   setPreferred,
+  type SourceFor,
 } from '../model/repertoire';
 import { allItems, cardId, type TrainingItem } from '../model/session';
 import { switchMove } from '../model/tidy';
@@ -17,7 +18,6 @@ import type {
   Card,
   Grade,
   ImportedGame,
-  MoveSource,
   Repertoire,
   ReviewLogEntry,
   Settings,
@@ -52,6 +52,7 @@ import {
   type NewEvent,
 } from '../model/events';
 import { referenceIndex } from '../model/referenceIndex';
+import { normalizeSources } from '../model/moveSource';
 import { cloudAvailable, readCloud, writeCloud, type CloudStatus, type WriteResult } from './cloud';
 import {
   DEFAULT_SURVIVAL,
@@ -120,6 +121,14 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
  */
 export const SCHEMA_VERSION = 0;
 
+/** Saved moves onto the current source labels — see `normalizeSources`. */
+function upgradeSources(
+  repertoires: Record<string, Repertoire>,
+  games: ImportedGame[] | undefined,
+): Record<string, Repertoire> {
+  return normalizeSources(repertoires, referenceIndex(), importedOnly(games ?? []).length > 0);
+}
+
 interface PersistedState {
   version: number;
   /** When this state was last changed, used to resolve device conflicts. */
@@ -174,7 +183,7 @@ interface StoreState extends PersistedState {
   resetProgress: () => void;
 
   /** `via` says where the change came from, when the screen it happened on does not. */
-  addLine: (repId: string, sans: string[], source: MoveSource, via?: EventPlace) => { added: number };
+  addLine: (repId: string, sans: string[], source: SourceFor, via?: EventPlace) => { added: number };
   removeNode: (repId: string, nodeId: string, via?: EventPlace) => void;
   preferMove: (repId: string, nodeId: string) => void;
   /** Record something worth knowing later that changed nothing — what Growth offered, say. */
@@ -198,6 +207,10 @@ interface StoreState extends PersistedState {
    * switch could not be made.
    */
   tidySwitch: (repId: string, nodeId: string, san: string) => (() => void) | null;
+  /** Keep a reply Tidy listed as rarely chosen: it leaves the list until more is added under it. */
+  tidyKeep: (repId: string, nodeId: string) => void;
+  /** Remove that reply and everything under it; returns the undo. */
+  tidyRemove: (repId: string, nodeId: string) => (() => void) | null;
 
   grade: (item: TrainingItem, grade: Grade, playedSan: string | null, correct: boolean) => void;
   /**
@@ -470,6 +483,7 @@ export const useStore = create<StoreState>((set, get) => {
       if (chosen) {
         set({
           ...chosen,
+          repertoires: upgradeSources(chosen.repertoires, chosen.importedGames),
           survival: normalizeSurvival(chosen.survival),
           mistakes: chosen.mistakes ?? [],
           score: normalizeScore(chosen.score),
@@ -514,6 +528,7 @@ export const useStore = create<StoreState>((set, get) => {
         // person on two devices, and honest about not merging concurrent edits.
         set({
           ...remote.state,
+          repertoires: upgradeSources(remote.state.repertoires, remote.state.importedGames),
           survival: normalizeSurvival(remote.state.survival),
           mistakes: remote.state.mistakes ?? [],
           score: normalizeScore(remote.state.score),
@@ -557,7 +572,7 @@ export const useStore = create<StoreState>((set, get) => {
                 color: rep.color,
                 line: sans.join(' '),
                 added: res.added,
-                source,
+                source: typeof source === 'function' ? 'growth' : source,
                 ...(via ? { via } : {}),
               }),
             }
@@ -583,6 +598,51 @@ export const useStore = create<StoreState>((set, get) => {
 
     logEvent(event) {
       commit({ events: logged(event) });
+    },
+
+    tidyKeep(repId, nodeId) {
+      const rep = get().repertoires[repId];
+      const node = rep?.nodes[nodeId];
+      if (!rep || !node) return;
+      commit({
+        repertoires: {
+          ...get().repertoires,
+          [repId]: { ...rep, nodes: { ...rep.nodes, [nodeId]: { ...node, keptAt: Date.now() } } },
+        },
+        events: logged({ kind: 'tidy-keep', repertoireId: repId, color: rep.color, line: lineAt(rep, nodeId) }),
+      });
+    },
+
+    tidyRemove(repId, nodeId) {
+      const before = get();
+      const rep = before.repertoires[repId];
+      if (!rep?.nodes[nodeId]) return null;
+      const saved = { rep, cards: before.cards, log: before.log, mistakes: before.mistakes };
+      shrinkRep(
+        repId,
+        (was) => removeSubtree(was, nodeId),
+        (was, now) => ({
+          kind: 'tidy-remove',
+          repertoireId: repId,
+          color: was.color,
+          line: lineAt(was, nodeId),
+          ...removedBetween(was, now),
+        }),
+      );
+      return () => {
+        commit({
+          repertoires: { ...get().repertoires, [repId]: saved.rep },
+          cards: saved.cards,
+          log: saved.log,
+          mistakes: saved.mistakes,
+          events: logged({
+            kind: 'tidy-remove-undo',
+            repertoireId: repId,
+            color: saved.rep.color,
+            line: lineAt(saved.rep, nodeId),
+          }),
+        });
+      };
     },
 
     tidySwitch(repId, nodeId, san) {
@@ -791,7 +851,7 @@ export const useStore = create<StoreState>((set, get) => {
           byColor.set(pick.color, rep.id);
           repId = rep.id;
         }
-        const res = addLine(repertoires[repId], pick.sans, 'reference');
+        const res = addLine(repertoires[repId], pick.sans, 'picker');
         repertoires[repId] = res.rep;
         if (res.added > 0) {
           events = appendEvent(events, {
@@ -800,7 +860,7 @@ export const useStore = create<StoreState>((set, get) => {
             color: pick.color,
             line: pick.sans.join(' '),
             added: res.added,
-            source: 'reference',
+            source: 'picker',
             via: 'onboarding',
           });
         }

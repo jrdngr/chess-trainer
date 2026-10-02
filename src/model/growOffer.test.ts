@@ -182,7 +182,7 @@ describe('ready to grow', () => {
     const rounds = [CLASSICAL, SAMISCH].flatMap((line) =>
       Array.from({ length: CLEAN_FINISHES }, (_, i) => clean(line, added + 1 + i, 'b')),
     );
-    const grown = addLine(black, `${CLASSICAL} Be2 e5`.split(' '), 'reference').rep;
+    const grown = addLine(black, `${CLASSICAL} Be2 e5`.split(' '), 'book').rep;
     const tip = leafLines(grown).find((line) => line.sans.length === 12)!;
     grown.nodes[tip.tipId] = { ...grown.nodes[tip.tipId], addedAt: added + 100 };
     const finishes = lineFinishes(grown, tree, kid, rounds);

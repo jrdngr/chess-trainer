@@ -353,7 +353,7 @@ function GameReview({
         open={!!addSans}
         onClose={() => setAddSans(null)}
         sans={addSans ?? []}
-        source="games"
+        source="import"
         title="Add to repertoire"
       />
     </>

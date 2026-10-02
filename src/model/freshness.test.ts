@@ -10,7 +10,7 @@ const SICILIAN = 'e4 c5 Nf3 d6 d4 cxd4';
 
 function rep(lines: string[]): Repertoire {
   let out = createRepertoire('Black', 'b', 'r_b');
-  for (const line of lines) out = addLine(out, line.split(' '), 'reference').rep;
+  for (const line of lines) out = addLine(out, line.split(' '), 'book').rep;
   return out;
 }
 

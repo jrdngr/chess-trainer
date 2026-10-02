@@ -28,7 +28,7 @@ export function AddLineSheet({
   onClose,
   sans,
   title = 'Add to repertoire',
-  source = 'reference',
+  source = 'book',
   preferColor,
   note,
   onAdded,

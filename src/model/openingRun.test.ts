@@ -62,6 +62,7 @@ import { lookup } from './reference';
 import { referenceIndex } from './referenceIndex';
 import { cardId, mulberry32 } from './session';
 import { buildSeedRepertoires } from '../store/seed';
+import { MAX_LIFTED, PREPARED_FLOOR, withFloor } from './prepFloor';
 import type { Card, Repertoire } from './types';
 
 const index = referenceIndex();
@@ -889,39 +890,35 @@ describe('drawing move orders you will actually face', () => {
 
   it('follows the database when the opponent chooses', () => {
     const rep = kid[0];
-    expect(share(rep, 'b', true, ['d4'])).toBeGreaterThan(0.5);
-    expect(share(rep, 'b', true, ['b4'])).toBeLessThan(0.05);
+    const d4 = share(rep, 'b', true, ['d4']);
+    for (const first of ['c4', 'Nf3', 'g3', 'b3', 'f4', 'b4']) {
+      expect(d4).toBeGreaterThan(share(rep, 'b', true, [first]) * 2);
+    }
   });
 
-  it('finds move orders that leaf counts had buried', () => {
+  it('keeps the book ahead above the floor', () => {
+    // 1.Nf3 is played more than its floor, 1.b4 far less: both are prepared,
+    // and the one strong players choose more still comes up more.
     const rep = kid[0];
-    expect(share(rep, 'b', true, ['Nf3'])).toBeGreaterThan(share(rep, 'b', false, ['Nf3']) * 2);
+    expect(share(rep, 'b', true, ['Nf3'])).toBeGreaterThan(share(rep, 'b', true, ['b4']));
   });
 
-  it('cuts how often a run turns on a reply almost nobody plays', () => {
+  it('tests a prepared reply strong players rarely choose', () => {
+    // 1.b4 is barely in the book. Prepared, it is one you mean to be tested
+    // on: it gets its floor, shrunk only because five such first moves share
+    // MAX_LIFTED between them.
     const rep = kid[0];
-    const obscure = (withIndex: boolean, limit: number) => {
-      const odds = lineOdds(rep, 'b', withIndex ? index : null);
-      let all = 0;
-      let hit = 0;
-      for (const leaf of leafLines(rep)) {
-        const weight = odds.get(leaf.tipId) ?? 1;
-        all += weight;
-        let rarest = 1;
-        for (const node of pathTo(rep, leaf.tipId)) {
-          if (fenTurn(node.fenBefore) === 'b') continue;
-          const entry = lookup(index, node.fenBefore);
-          if (!entry || entry.moves.length < 2) continue;
-          const total = entry.moves.reduce((sum, m) => sum + m.games, 0);
-          if (!total) continue;
-          rarest = Math.min(rarest, (entry.moves.find((m) => m.san === node.san)?.games ?? 0) / total);
-        }
-        if (rarest < limit) hit += weight;
-      }
-      return hit / all;
-    };
-    expect(obscure(true, 0.05)).toBeLessThan(obscure(false, 0.05) * 0.75);
-    expect(obscure(true, 0.05)).toBeGreaterThan(0.05);
+    const b4 = share(rep, 'b', true, ['b4']);
+    expect(b4).toBeGreaterThanOrEqual(MAX_LIFTED / 5 - 1e-9);
+    expect(b4).toBeLessThanOrEqual(PREPARED_FLOOR);
+  });
+
+  it('lifts a lone rare reply to the full floor', () => {
+    let rep = createRepertoire('Black', 'b', 'rep_floor');
+    rep = addLine(rep, ['d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4', 'd6', 'Nf3', 'O-O'], 'seed').rep;
+    rep = addLine(rep, ['d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4', 'd6', 'e5', 'dxe5'], 'manual').rep;
+    const e5 = share(rep, 'b', true, ['d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4', 'd6', 'e5']);
+    expect(e5).toBeCloseTo(PREPARED_FLOOR, 5);
   });
 
   it('keeps a prepared sideline in the rotation rather than burying it', () => {
@@ -941,10 +938,12 @@ describe('drawing move orders you will actually face', () => {
     expect(mainline + sideline).toBeCloseTo(1, 5);
     // Three lines sit under 2.c4 and one under 2.Bg5, and that must not be what
     // decides how often each is drawn — how often White plays them is. So the
-    // split tracks the book's own popularity rather than the line count.
+    // split tracks the book's own popularity, with 2.Bg5 at its floor, rather
+    // than the line count.
     const after = lookup(referenceIndex(), walkSan(['d4', 'Nf6']).fens.at(-1)!)!;
     const games = (san: string) => after.moves.find((move) => move.san === san)!.games;
-    expect(mainline / sideline).toBeCloseTo(games('c4') / games('Bg5'), 0);
+    const [c4, bg5] = withFloor([games('c4'), games('Bg5')], [true, true]);
+    expect(mainline / sideline).toBeCloseTo(c4 / bg5, 5);
   });
 
   it('gives the rarest lines back their share when short ones are skipped', () => {

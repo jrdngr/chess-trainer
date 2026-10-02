@@ -4,7 +4,18 @@ import type { DrillPrefs, GrowthPrefs, PlayPrefs } from './modes';
 import type { Selection } from './selection';
 import type { PickerSort } from './picker';
 
-export type MoveSource = 'seed' | 'manual' | 'reference' | 'pgn' | 'games';
+/** Where a move came from — see `SOURCE_LABELS` in `moveSource.ts`. */
+export type MoveSource =
+  | 'picker'
+  | 'book'
+  | 'growth'
+  | 'engine'
+  | 'manual'
+  | 'analysis'
+  | 'import'
+  | 'play'
+  | 'tidy'
+  | 'seed';
 
 /** A single move edge in the repertoire tree. */
 export interface RepMove {
@@ -24,6 +35,11 @@ export interface RepMove {
   note?: string;
   source: MoveSource;
   addedAt: number;
+  /**
+   * When you looked at this reply on Tidy's card and kept it. The card comes
+   * back only once something under it is newer.
+   */
+  keptAt?: number;
 }
 
 export interface Repertoire {

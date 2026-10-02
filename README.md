@@ -374,6 +374,14 @@ Undo in the toast. The position starts over: its review card is new again and
 its logged mistakes go, while ratings stand. A find opened from the end of a
 round is pinned at the top, open.
 
+Above the finds sit the replies you added yourself (see the source labels
+under Repertoire) that strong players choose in under Growth's minimum share
+of games, or never: 5.e5 against the King's Indian is the case it was built
+for. The book is 2200+ games, so it says nothing about how often you will meet
+a move at your level. Each card names where the reply came from and what the
+book makes of it. **Keep** takes it off the list until something under it is
+newer; **Remove** deletes it with everything under it, with Undo.
+
 ## Stats
 
 The Stats tab leads with your starred openings by rating, then activity: the
@@ -392,6 +400,16 @@ an opening is the region beginning where the book starts naming the position.
 Transpositions collapse to one card. Browse by playing moves; each move has a
 sheet to prefer it, note it, reorder it, train the branch, or delete it. The
 reference database sits under the move list.
+
+Every move carries where it came from, shown on its row: Opening picker, Book
+(the book list here), Growth, Engine (Growth past the book), Entered by hand,
+Analysis, Imported games, Play game, Tidy switch, or Sample. Saves from before
+the labels are read once on load: an old book move the book lacks is Engine.
+
+Every opponent reply in the tree comes up at least 15% of the time at its
+position in Survival, Autopilot and line drills, whatever the book says, with
+the book splitting the rest (`PREPARED_FLOOR`; past five such replies at one
+position they share half of it). Growth ranks a kept reply at that floor too.
 
 A new install starts empty, and nothing writes into it unasked. Growth
 answers the replies you have none for, an Autopilot round offers the line it

@@ -40,7 +40,7 @@ const DRAGON = 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6';
 
 function rep(color: 'w' | 'b', lines: string[], addedAt = T - 10 * DAY): Repertoire {
   let out = createRepertoire('Test', color, `r_${color}`);
-  for (const line of lines) out = addLine(out, line.split(' '), 'reference').rep;
+  for (const line of lines) out = addLine(out, line.split(' '), 'book').rep;
   for (const node of Object.values(out.nodes)) node.addedAt = addedAt;
   return out;
 }

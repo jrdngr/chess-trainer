@@ -334,7 +334,7 @@ export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInit
         sans={addLine?.sans ?? []}
         note={addLine?.note}
         preferColor={addLine?.color}
-        source="pgn"
+        source="analysis"
         title={addLine?.title ?? 'Add to repertoire'}
       />
     </>
