@@ -95,7 +95,7 @@ export function AutopilotScreen({
             count={ROUND_SIZE.drillLines}
             lean="weak"
             only={new Set(current.only)}
-            prefs={useStore.getState().settings.drill}
+            prefs={{ ...useStore.getState().settings.drill, draw: 'due' }}
             onExit={onExit}
             onNext={advance}
           />

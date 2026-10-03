@@ -1,7 +1,7 @@
 import { AppBar, Section, Segmented, Stepper, Toggle } from '../../components/ui';
 import { SelectionBar } from '../../components/Selection';
 import { DRAW_LABELS, FORM_LABELS, type DrillDraw, type DrillPrefs } from '../../model/modes';
-import { drillableLines } from '../../model/lineDrill';
+import { drillableLines, dueLines } from '../../model/lineDrill';
 import { clockLabel, CLOCK_MODES } from '../../model/openingRun';
 import { itemsInRegion, regionOf, repertoiresIn } from '../../model/selection';
 import { openingTree } from '../../model/openingTree';
@@ -37,7 +37,9 @@ export function Setup({
   const node = regionOf(tree, selection);
   const inScope = repertoiresIn(repertoireList(state), selection.color);
   const items = itemsInRegion(tree, node, inScope.flatMap(itemsFor));
-  const lines = inScope.flatMap((rep) => drillableLines(rep, tree, node)).length;
+  const lineList = inScope.flatMap((rep) => drillableLines(rep, tree, node));
+  const lines = lineList.length;
+  const due = dueLines(lineList, state.lineCards).length;
   const lineMode = prefs.form === 'lines';
   const empty = lineMode ? lines === 0 : items.length === 0;
 
@@ -66,21 +68,18 @@ export function Setup({
               ? '1 position'
               : `${items.length} positions`}{' '}
           in {node.depth === 0 ? 'your repertoire' : node.name}
+          {lineMode && due > 0 ? ` · ${due} due` : ''}
         </div>
 
         <Section title="Drill" />
         <Segmented value={prefs.form} options={FORMS} onChange={(form) => set({ form })} />
 
-        {!lineMode && (
-          <>
-            <Section title="Draw from" />
-            <Segmented
-              value={prefs.draw}
-              options={DRAWS}
-              onChange={(draw) => set({ draw: draw as DrillDraw })}
-            />
-          </>
-        )}
+        <Section title="Draw from" />
+        <Segmented
+          value={prefs.draw}
+          options={DRAWS}
+          onChange={(draw) => set({ draw: draw as DrillDraw })}
+        />
 
         <Section title="Clock" />
         <Segmented
@@ -113,7 +112,7 @@ export function Setup({
             label="Weakest first"
             hint={
               lineMode
-                ? 'Draw the lines you get wrong rather than the ones strong players choose most'
+                ? 'Draw the lines you grade lowest rather than the ones strong players choose most'
                 : 'Ask what you keep getting wrong before what is merely due'
             }
             on={prefs.weakFirst}

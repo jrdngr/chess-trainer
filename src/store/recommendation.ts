@@ -1,6 +1,7 @@
 import type { Color } from '../chess/core';
 import { chooseMode, type RoundMode } from '../model/autopilot';
 import { growLaunch, lineFinishes, readyToGrow, type GrowLaunch } from '../model/growOffer';
+import { drillableLines, dueLines } from '../model/lineDrill';
 import { buildRepairs, type RepairItem } from '../model/repair';
 import { openingTree } from '../model/openingTree';
 import { isSteered, recommend, type Focus, type RecommendInput, type Recommendation } from '../model/recommend';
@@ -107,17 +108,19 @@ export function nextRound(state: State, history: AutoHistory): AutoRound | null 
   const rounds = state.score.rounds;
   const now = Date.now();
 
-  /** Per side: cards due, and the lines no round has finished clean. */
+  /** Per side: cards due, the lines no round has finished clean, and the lines due. */
   const sides = reps.map((rep) => {
     const keys = new Set(itemsInRegion(tree, region, itemsFor(rep)).map((item) => item.cardId));
     const due = [...keys].filter((id) => state.cards[id] && isDue(state.cards[id], now)).length;
     const unpracticed = lineFinishes(rep, tree, region, rounds)
       .filter((line) => line.finishes === 0)
       .map((line) => line.tipId);
-    return { rep, due, unpracticed };
+    const linesDue = dueLines(drillableLines(rep, tree, region), state.lineCards, now).map((line) => line.tipId);
+    return { rep, due, unpracticed, linesDue };
   });
+  const owed = (side: (typeof sides)[number]) => side.unpracticed.length + side.linesDue.length;
   const mostDue = [...sides].sort((a, b) => b.due - a.due)[0];
-  const mostOwed = [...sides].sort((a, b) => b.unpracticed.length - a.unpracticed.length)[0];
+  const mostOwed = [...sides].sort((a, b) => owed(b) - owed(a))[0];
 
   /** An opening ready to widen: the one Survival would run, or the selection itself. */
   const growth = (() => {
@@ -140,6 +143,7 @@ export function nextRound(state: State, history: AutoHistory): AutoRound | null 
     {
       due: mostDue?.due ?? 0,
       unpracticed: mostOwed?.unpracticed.length ?? 0,
+      dueLines: mostOwed?.linesDue.length ?? 0,
       growReady: !!growth,
     },
     history.modes,
@@ -148,7 +152,12 @@ export function nextRound(state: State, history: AutoHistory): AutoRound | null 
     case 'drillPositions':
       return { mode, color: mostDue.rep.color, openingId: region.id };
     case 'drillLines':
-      return { mode, color: mostOwed.rep.color, openingId: region.id, only: mostOwed.unpracticed };
+      return {
+        mode,
+        color: mostOwed.rep.color,
+        openingId: region.id,
+        only: [...new Set([...mostOwed.linesDue, ...mostOwed.unpracticed])],
+      };
     case 'growth':
       return growth ? { mode, ...growth } : { mode: 'survival', pick };
     default:

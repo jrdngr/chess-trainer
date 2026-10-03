@@ -1,4 +1,4 @@
-import type { Card, CardStage, Grade } from './types';
+import type { Card, CardStage, Grade, LineCard, Schedule } from './types';
 
 export const MINUTE = 60_000;
 export const DAY = 86_400_000;
@@ -73,8 +73,32 @@ function clampInterval(days: number, cfg: SrsConfig): number {
   return Math.min(cfg.maxInterval, Math.max(1, Math.round(days * 100) / 100));
 }
 
-export interface ReviewOutcome {
-  card: Card;
+/** A fresh card for a whole line — see `LineCard`. */
+export function createLineCard(repertoireId: string, tipId: string, now = Date.now()): LineCard {
+  return {
+    id: lineCardId(repertoireId, tipId),
+    repertoireId,
+    tipId,
+    stage: 'new',
+    step: 0,
+    interval: 0,
+    ease: DEFAULT_SRS.startingEase,
+    reps: 0,
+    lapses: 0,
+    correct: 0,
+    incorrect: 0,
+    due: now,
+    lastReviewed: null,
+    createdAt: now,
+  };
+}
+
+export function lineCardId(repertoireId: string, tipId: string): string {
+  return `${repertoireId}#${tipId}`;
+}
+
+export interface ReviewOutcome<C extends Schedule = Card> {
+  card: C;
   /** Milliseconds until the card is next due. */
   delay: number;
 }
@@ -83,14 +107,14 @@ export interface ReviewOutcome {
  * Apply a grade to a card. Pure and deterministic: the same (card, grade, now)
  * always produces the same next state. No interval fuzz, on purpose.
  */
-export function review(
-  card: Card,
+export function review<C extends Schedule>(
+  card: C,
   grade: Grade,
   now = Date.now(),
   cfg: SrsConfig = DEFAULT_SRS,
-): ReviewOutcome {
+): ReviewOutcome<C> {
   const correct = grade !== 'again';
-  const base: Card = {
+  const base: C = {
     ...card,
     reps: card.reps + 1,
     correct: card.correct + (correct ? 1 : 0),
@@ -196,7 +220,7 @@ export function describeDue(due: number, now = Date.now()): string {
   return `in ${describeDelay(due - now)}`;
 }
 
-export function isDue(card: Card, now = Date.now()): boolean {
+export function isDue(card: Schedule, now = Date.now()): boolean {
   return card.due <= now;
 }
 
@@ -271,4 +295,15 @@ export function gradeForTime(seconds: number): Grade {
   if (seconds < 3) return 'easy';
   if (seconds < 8) return 'good';
   return 'hard';
+}
+
+/**
+ * The grade a whole line earns, for Drill lines to preselect: any miss is
+ * Guessed; otherwise the average time of your correct moves, on the same
+ * scale as one position.
+ */
+export function gradeForLine(seconds: number[], misses: number): Grade {
+  if (misses > 0) return 'again';
+  if (!seconds.length) return 'good';
+  return gradeForTime(seconds.reduce((sum, s) => sum + s, 0) / seconds.length);
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { askedKeys, continueLine, drawLines, drillableLines, yoursAt } from './lineDrill';
+import { askedKeys, continueLine, drawLines, drillableLines, dueLines, yoursAt } from './lineDrill';
+import { createLineCard, DAY, gradeForLine, review } from './srs';
 import { nodeById, openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
 import { addLine, createRepertoire, leafLines } from './repertoire';
@@ -69,17 +70,56 @@ describe('lines to drill', () => {
     expect(sicilianOnly).toHaveLength(2);
   });
 
-  it('leans on the weak lines when asked to', () => {
-    const keysOf = (line: string) => askedKeys(black, leafLines(black).find((l) => l.sans.join(' ') === line)!.tipId);
-    const alapin = new Set(keysOf(ALAPIN));
-    const sore = new Set(keysOf(NAJDORF).filter((key) => !alapin.has(key)));
-    const weakness = (_rep: string, key: string) => (sore.has(key) ? 50 : 1);
+  it('leans on the lines whose card is weakest when asked to', () => {
+    const tipOf = (line: string) => leafLines(black).find((l) => l.sans.join(' ') === line)!.tipId;
+    const now = 1_000_000;
+    const sore = { ...createLineCard(black.id, tipOf(NAJDORF), now), lapses: 4, ease: 1.3, stage: 'learning' as const };
+    const fine = { ...createLineCard(black.id, tipOf(ALAPIN), now), stage: 'review' as const, due: now + 10 * DAY };
+    const cards = { [sore.id]: sore, [fine.id]: fine };
     let najdorf = 0;
     for (let seed = 1; seed <= 40; seed += 1) {
-      const [first] = drawLines({ rep: black, tree, region: sicilian, index, lean: 'weak', weakness, count: 1, rand: mulberry32(seed) });
+      const [first] = drawLines({ rep: black, tree, region: sicilian, index, lean: 'weak', cards, count: 1, rand: mulberry32(seed), now: now - 1 });
       if (first.sans.join(' ') === NAJDORF) najdorf += 1;
     }
     expect(najdorf).toBeGreaterThan(30);
+  });
+
+  it('draws due lines first, then lines never drilled, then the rest', () => {
+    const tipOf = (line: string) => leafLines(black).find((l) => l.sans.join(' ') === line)!.tipId;
+    const now = 1_000_000;
+    const due = { ...createLineCard(black.id, tipOf(FRENCH), now), stage: 'review' as const, due: now - 1 };
+    const later = { ...createLineCard(black.id, tipOf(NAJDORF), now), stage: 'review' as const, due: now + DAY };
+    const cards = { [due.id]: due, [later.id]: later };
+    for (let seed = 1; seed <= 10; seed += 1) {
+      const order = (draw: 'due' | 'new') =>
+        drawLines({ rep: black, tree, region: tree.root, index, lean: 'popular', cards, draw, count: 3, rand: mulberry32(seed), now }).map(
+          (line) => line.sans.join(' '),
+        );
+      expect(order('due')).toEqual([FRENCH, ALAPIN, NAJDORF]);
+      expect(order('new')[0]).toBe(ALAPIN);
+    }
+    expect(dueLines(drillableLines(black, tree, tree.root), cards, now).map((line) => line.tipId)).toEqual([tipOf(FRENCH)]);
+  });
+});
+
+describe('the grade a line earns', () => {
+  it('is Guessed after any miss', () => {
+    expect(gradeForLine([1, 1], 1)).toBe('again');
+  });
+
+  it('is the average time of the correct moves on the position scale', () => {
+    expect(gradeForLine([1, 2, 4], 0)).toBe('easy');
+    // One long think in a quick line pulls it down, but not all the way.
+    expect(gradeForLine([1, 1, 10], 0)).toBe('good');
+    expect(gradeForLine([9, 10], 0)).toBe('hard');
+  });
+
+  it('schedules the line card like a position card', () => {
+    const card = createLineCard('rep_b', 'tip', 0);
+    expect(review(card, 'easy', 0).card.tipId).toBe('tip');
+    expect(review(card, 'easy', 0).card.stage).toBe('review');
+    // Guessed: back after the first learning step, a minute.
+    expect(review(card, 'again', 0).card.due).toBe(60_000);
   });
 });
 

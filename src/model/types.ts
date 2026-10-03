@@ -77,6 +77,27 @@ export interface Card {
   createdAt: number;
 }
 
+/** The schedule part of a card: what `review()` reads and writes. */
+export type Schedule = Pick<
+  Card,
+  'stage' | 'step' | 'interval' | 'ease' | 'reps' | 'lapses' | 'correct' | 'incorrect' | 'due' | 'lastReviewed' | 'createdAt'
+>;
+
+/**
+ * Spaced-repetition state for one whole line, as Drill lines asks it.
+ *
+ * Keyed by the line's last move (`tipId`), a node of its own in the tree, so
+ * two lines never share one. A line that grows ends on a new node and starts
+ * a new card. Separate from position cards: Drill positions never reads it,
+ * and a line drill never touches a position's card.
+ */
+export interface LineCard extends Schedule {
+  /** `repertoireId#tipId`. */
+  id: string;
+  repertoireId: string;
+  tipId: string;
+}
+
 export type Grade = 'again' | 'hard' | 'good' | 'easy';
 
 export interface ReviewLogEntry {

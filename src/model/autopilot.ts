@@ -18,7 +18,8 @@ import type { Focus, Recommendation } from './recommend';
  *
  *   drillPositions — cards due, more of them the louder.
  *   drillLines     — lines no round has finished clean since they last
- *                    changed, which is what Growth leaves behind.
+ *                    changed, which is what Growth leaves behind, and
+ *                    lines whose own card is due.
  *   growth         — an opening every line of which is held, and nothing
  *                    owed: ready to widen.
  *
@@ -60,6 +61,8 @@ export interface ModeNeeds {
   due: number;
   /** Lines inside the selection with no clean finish since they last changed. */
   unpracticed: number;
+  /** Lines inside the selection whose line card is due. */
+  dueLines?: number;
   /** Whether an opening in the selection is ready to grow. */
   growReady: boolean;
 }
@@ -73,7 +76,8 @@ export function modeNeed(mode: RoundMode, needs: ModeNeeds): number {
     case 'drillLines':
       // One unpracticed line is already enough to come before Survival: a
       // line just grown is drilled before it is tested.
-      return saturate(needs.unpracticed, 0.25);
+      // A due line asks like due positions do, a line being worth a few.
+      return Math.max(saturate(needs.unpracticed, 0.25), saturate(needs.dueLines ?? 0, 2));
     case 'growth':
       return needs.growReady ? 1 : 0;
   }

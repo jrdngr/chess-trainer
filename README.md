@@ -285,6 +285,14 @@ wrong is graded `again` automatically and offers **Why?**, **Show line** and
 **Explore**. "Follow the line" keeps going after a correct move. A session has
 no length: it ends when you end it.
 
+**Lines** play a whole line from move one instead, the opponent's moves made
+for you. Each line has its own card (`LineCard`, keyed by the line's last
+move) and never touches a position's card. At the end of the line one grade
+goes to it, given from the clock and shown selected: Guessed after any miss,
+otherwise the average time of your correct moves on the same 3s / 8s scale.
+Tap another grade to change it. Draw from works the same way: Scheduled takes
+due lines, then lines never drilled, then the rest.
+
 Scheduling is a small SM-2 variant in `src/model/srs.ts`. Answering early
 never pushes a card out.
 

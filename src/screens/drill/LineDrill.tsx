@@ -5,15 +5,14 @@ import { ClockHud, useMoveClock } from '../../components/Clock';
 import { selectionText } from '../../components/Selection';
 import { applySan, positionKey, walkSan, type LegalMove, type Square } from '../../chess/core';
 import { DEFAULT_DRILL, type DrillPrefs } from '../../model/modes';
-import { clockSeconds, weaknessFromCards } from '../../model/openingRun';
+import { clockSeconds } from '../../model/openingRun';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { continueLine, drawLines, yoursAt, type DrillLine, type LineLean } from '../../model/lineDrill';
 import { checkAnswer, mulberry32, type TrainingItem } from '../../model/session';
-import { createCard, gradeForTime } from '../../model/srs';
-import type { Card, Grade } from '../../model/types';
+import { gradeForLine } from '../../model/srs';
+import type { Grade, LineCard } from '../../model/types';
 import type { Color } from '../../chess/core';
-import { evidenceIn, withSelection } from '../../store/recommendation';
 import { itemsFor, repertoireList, useStore } from '../../store/useStore';
 import { GRADE_LABELS, WhySheet } from './DrillSession';
 
@@ -26,12 +25,10 @@ const BATCH = 5;
 
 type Phase = 'play' | 'flash' | 'wrong' | 'done';
 
-/** A correct answer this line, kept so the line's one grade can re-grade it. */
-interface Answered {
-  item: TrainingItem;
-  before: Card;
+/** The line's grade, once given: its card as it was before, so it can be changed. */
+interface Graded {
+  before: LineCard;
   grade: Grade;
-  played: string;
 }
 
 export interface LineDrillProps {
@@ -54,24 +51,26 @@ export interface LineDrillProps {
  * Drill, a line at a time.
  *
  * Each line is played from move one: the opponent's moves are played for you,
- * and each of yours is asked. A correct answer is graded by the clock and the
- * line goes on. A miss shows your prep's move beside the one you played, with
- * Why? to see it refuted, and Continue plays your prep's move and carries on
+ * and each of yours is asked. A correct answer is timed and the line goes on.
+ * A miss shows your prep's move beside the one you played, with Why? to see
+ * it refuted, and Continue plays your prep's move and carries on
  * — a slip early in a line still leaves the rest of it to practise. Playing
  * another move your prep has is right, and the line follows that move
  * instead.
  *
- * At the end of the line there is one grade for the whole of it: how it felt,
- * from Guessed to Easy, applied to every position you got right on the way.
- * A line with no miss is a clean finish. Nothing here moves a rating.
+ * At the end of the line there is one grade for the whole of it, and it goes
+ * to the line's own card — position cards are Drill positions' alone. It is
+ * given for you from the clock (Guessed after any miss, otherwise the average
+ * time of your correct moves, on Drill positions' scale) and shown selected;
+ * tapping another grade changes it. A line with no miss is a clean finish.
+ * Nothing here moves a rating.
  */
 export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, onNext }: LineDrillProps) {
   const options: DrillPrefs = { ...DEFAULT_DRILL, ...prefs };
   const state = useStore();
   const settings = state.settings;
-  const grade = useStore((s) => s.grade);
-  const regrade = useStore((s) => s.regrade);
-  const ensureCard = useStore((s) => s.ensureCard);
+  const gradeLine = useStore((s) => s.gradeLine);
+  const clearMistake = useStore((s) => s.clearMistake);
   const logMistake = useStore((s) => s.logMistake);
   const recordMove = useStore((s) => s.recordMove);
   const endRound = useStore((s) => s.endRound);
@@ -83,14 +82,14 @@ export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, 
     const now = useStore.getState();
     const rep = repertoireList(now).find((r) => r.color === color);
     if (!rep) return [];
-    const scoped = withSelection(now, { color, opening: openingId });
     return drawLines({
       rep,
       tree,
       region,
       index: referenceIndex(),
       lean,
-      weakness: weaknessFromCards(now.cards, evidenceIn(scoped)),
+      cards: now.lineCards,
+      draw: options.draw,
       only,
       count: count ?? BATCH,
       rand: rand.current,
@@ -105,8 +104,9 @@ export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, 
   const [played, setPlayed] = useState<LegalMove | null>(null);
   const [why, setWhy] = useState(false);
   const [misses, setMisses] = useState(0);
-  const [answered, setAnswered] = useState<Answered[]>([]);
-  const [ease, setEase] = useState<Grade | null>(null);
+  /** Seconds each correct move of yours took, this line. */
+  const [times, setTimes] = useState<number[]>([]);
+  const [graded, setGraded] = useState<Graded | null>(null);
   /** Lines finished this sitting, for the counter. */
   const [finished, setFinished] = useState(0);
 
@@ -128,10 +128,6 @@ export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, 
     active: phase === 'play' && mine && !why,
   });
 
-  useEffect(() => {
-    if (item) ensureCard(item);
-  }, [item, ensureCard]);
-
   /** The opponent's moves play themselves, after a beat. */
   useEffect(() => {
     if (!line || phase !== 'play' || mine || ply >= line.sans.length) return;
@@ -142,16 +138,20 @@ export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, 
   /** The end of the line: counted once, as a round of its own. */
   useEffect(() => {
     if (!line || phase !== 'play' || ply < line.sans.length) return;
-    const asked = answered.length + misses;
+    const asked = times.length + misses;
     endRound({
       mode: 'drill',
       openingId: deepestNodeWithin(tree, region, line.sans).id,
       color,
       answered: asked,
-      correct: answered.length,
+      correct: times.length,
       perfect: misses === 0 && asked > 0,
       line: line.sans,
     });
+    if (asked > 0) {
+      const auto = gradeForLine(times, misses);
+      setGraded({ before: gradeLine(line.repertoireId, line.tipId, auto), grade: auto });
+    }
     setFinished((n) => n + 1);
     setPhase('done');
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -172,15 +172,11 @@ export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, 
     recordMove({ mode: 'drill', line: right ? [...asked, move.san] : asked, color, correct: right, rated: false });
     if (right) {
       buzz(12);
-      if (item) {
-        const card = state.cards[item.cardId];
-        const auto = gradeForTime(clock.elapsedNow());
-        grade(item, auto, move.san, true);
-        setAnswered((list) => [
-          ...list,
-          { item, before: card ?? createCard(item.cardId, item.repertoireId, item.key, item.fen), grade: auto, played: move.san },
-        ]);
-      }
+      const took = clock.elapsedNow();
+      setTimes((list) => [...list, took]);
+      // Answered right: a mistake logged here has been put right.
+      const logged = item && `${item.repertoireId}#${item.key}`;
+      if (logged && state.mistakes.some((m) => m.id === logged)) clearMistake(logged);
       // Another move your prep has: right, and the line follows it.
       if (move.san !== expected) {
         const along = continueLine(rep, [...asked, move.san]);
@@ -197,7 +193,6 @@ export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, 
     buzz([18, 50, 18]);
     setMisses((n) => n + 1);
     if (item) {
-      grade(item, 'again', move.san, false);
       logMistake({
         source: 'drill',
         repertoireId: item.repertoireId,
@@ -219,13 +214,11 @@ export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, 
     setPhase('play');
   };
 
-  /** One grade for the whole line, over the clock's grade for each position. */
-  const gradeLine = (value: Grade) => {
-    for (const answer of answered) {
-      if (answer.grade !== value) regrade(answer.item, answer.before, value, answer.played);
-    }
-    setAnswered((list) => list.map((answer) => ({ ...answer, grade: value })));
-    setEase(value);
+  /** Change the line's grade: its card goes back to before and takes the new one. */
+  const regradeLine = (value: Grade) => {
+    if (!line || !graded || graded.grade === value) return;
+    gradeLine(line.repertoireId, line.tipId, value, graded.before);
+    setGraded({ ...graded, grade: value });
   };
 
   const lastOfRound = count !== undefined && at + 1 >= batch.length;
@@ -244,8 +237,8 @@ export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, 
     setPhase('play');
     setPlayed(null);
     setMisses(0);
-    setAnswered([]);
-    setEase(null);
+    setTimes([]);
+    setGraded(null);
   };
 
   const highlights = useMemo(() => {
@@ -385,16 +378,16 @@ export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, 
               <span className="ico">{misses === 0 ? <Icons.check size={16} /> : <Icons.warn size={16} />}</span>
               {misses === 0 ? 'Line finished clean' : `Line finished · ${misses} miss${misses === 1 ? '' : 'es'}`}
             </div>
-            {answered.length > 0 && (
+            {graded && (
               <>
                 <div className="note center mt-12">How did that line feel?</div>
                 <div className="grades sm mt-8">
                   {(['again', 'hard', 'good', 'easy'] as Grade[]).map((g) => (
                     <button
                       key={g}
-                      className={`${g}${ease === g ? ' selected' : ''}`}
-                      aria-pressed={ease === g}
-                      onClick={() => gradeLine(g)}
+                      className={`${g}${graded.grade === g ? ' selected' : ''}`}
+                      aria-pressed={graded.grade === g}
+                      onClick={() => regradeLine(g)}
                     >
                       {GRADE_LABELS[g]}
                     </button>

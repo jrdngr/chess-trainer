@@ -13,11 +13,12 @@ import {
 } from '../model/repertoire';
 import { allItems, cardId, type TrainingItem } from '../model/session';
 import { switchMove } from '../model/tidy';
-import { createCard, review } from '../model/srs';
+import { createCard, createLineCard, lineCardId, review } from '../model/srs';
 import type {
   Card,
   Grade,
   ImportedGame,
+  LineCard,
   Repertoire,
   ReviewLogEntry,
   Settings,
@@ -136,6 +137,8 @@ interface PersistedState {
   repertoires: Record<string, Repertoire>;
   repertoireOrder: string[];
   cards: Record<string, Card>;
+  /** Drill lines' schedule, one card per line — see `LineCard`. */
+  lineCards: Record<string, LineCard>;
   log: ReviewLogEntry[];
   settings: Settings;
   importedGames: ImportedGame[];
@@ -220,6 +223,12 @@ interface StoreState extends PersistedState {
    */
   regrade: (item: TrainingItem, before: Card, grade: Grade, playedSan: string | null) => void;
   ensureCard: (item: TrainingItem) => Card;
+  /**
+   * Grade a whole line, from Drill lines. With `before`, the line's card as
+   * it was before this sitting's grade: the grade is changed rather than
+   * given twice. Returns the card the grade was applied to.
+   */
+  gradeLine: (repertoireId: string, tipId: string, grade: Grade, before?: LineCard) => LineCard;
 
   setSettings: (patch: Partial<Settings>) => void;
   setSelection: (patch: Partial<Selection>) => void;
@@ -285,6 +294,7 @@ function emptyPersisted(): PersistedState {
     repertoires: {},
     repertoireOrder: [],
     cards: {},
+    lineCards: {},
     log: [],
     settings: { ...DEFAULT_SETTINGS },
     importedGames: [],
@@ -302,6 +312,7 @@ function persistedFrom(state: StoreState): PersistedState {
     repertoires: state.repertoires,
     repertoireOrder: state.repertoireOrder,
     cards: state.cards,
+    lineCards: state.lineCards,
     log: state.log,
     settings: state.settings,
     importedGames: state.importedGames,
@@ -486,6 +497,7 @@ export const useStore = create<StoreState>((set, get) => {
           repertoires: upgradeSources(chosen.repertoires, chosen.importedGames),
           survival: normalizeSurvival(chosen.survival),
           mistakes: chosen.mistakes ?? [],
+          lineCards: chosen.lineCards ?? {},
           score: normalizeScore(chosen.score),
           events: normalizeEvents(chosen.events),
           updatedAt: Math.max(localAt, remoteAt),
@@ -531,6 +543,7 @@ export const useStore = create<StoreState>((set, get) => {
           repertoires: upgradeSources(remote.state.repertoires, remote.state.importedGames),
           survival: normalizeSurvival(remote.state.survival),
           mistakes: remote.state.mistakes ?? [],
+          lineCards: remote.state.lineCards ?? {},
           score: normalizeScore(remote.state.score),
           events: normalizeEvents(remote.state.events),
           importedGames: mergeGames(local.importedGames, remote.state.importedGames ?? []),
@@ -555,7 +568,7 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     resetProgress() {
-      commit({ cards: {}, log: [] });
+      commit({ cards: {}, lineCards: {}, log: [] });
     },
 
     addLine(repId, sans, source, via) {
@@ -777,6 +790,9 @@ export const useStore = create<StoreState>((set, get) => {
         cards: Object.fromEntries(
           Object.entries(state.cards).filter(([, card]) => card.repertoireId !== repId),
         ),
+        lineCards: Object.fromEntries(
+          Object.entries(state.lineCards).filter(([, card]) => card.repertoireId !== repId),
+        ),
         log: state.log.filter((entry) => !entry.cardId.startsWith(`${repId}#`)),
         mistakes: state.mistakes.filter((m) => m.repertoireId !== repId),
       });
@@ -808,6 +824,15 @@ export const useStore = create<StoreState>((set, get) => {
       const log = last < 0 ? state.log : state.log.filter((_, i) => i !== state.log.length - 1 - last);
       const again = reviewed({ ...state, log }, before, gradeValue, { correct: true, playedSan, expectedSan });
       commit(again);
+    },
+
+    gradeLine(repertoireId, tipId, gradeValue, before) {
+      const state = get();
+      const id = lineCardId(repertoireId, tipId);
+      const from = before ?? state.lineCards[id] ?? createLineCard(repertoireId, tipId);
+      const { card } = review(from, gradeValue);
+      commit({ lineCards: { ...state.lineCards, [id]: card } });
+      return from;
     },
 
     setSettings(patch) {

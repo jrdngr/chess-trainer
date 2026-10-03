@@ -1,9 +1,11 @@
 import { fenTurn, type Color } from '../chess/core';
-import { lineOdds, lineWeakness, type Weakness } from './openingRun';
+import type { DrillDraw } from './modes';
+import { lineOdds } from './openingRun';
 import { lineStatus, type OpeningNode, type OpeningTree } from './openingTree';
 import type { ReferenceIndex } from './reference';
 import { childrenOf, leafLines, nodeAtLine, pathTo } from './repertoire';
-import type { RepMove, Repertoire } from './types';
+import { isDue, lineCardId } from './srs';
+import type { LineCard, RepMove, Repertoire } from './types';
 
 /**
  * Line drills: Drill's way of asking a whole line.
@@ -18,6 +20,9 @@ import type { RepMove, Repertoire } from './types';
  * carries on from your prep's move, so the back half of a line you slip on
  * early still gets its practice. A line got through without a miss is a clean
  * finish, which is what Growth's readiness reads.
+ *
+ * Each line has a schedule of its own — a `LineCard` — moved only by the one
+ * grade given at the end of it. Position cards are Drill positions' alone.
  */
 
 export interface DrillLine {
@@ -50,13 +55,41 @@ export function drillableLines(rep: Repertoire, tree: OpeningTree, region: Openi
 }
 
 /**
+ * How much a line wants practice, from its card: a lapse, a low ease, a
+ * Guessed still being relearned or a line overdue all count. A line never
+ * drilled is worth seeing, but not the emergency a lapse is. Only ever
+ * compared against other lines, so the scale does not matter.
+ */
+export function lineCardWeakness(card: LineCard | undefined, now = Date.now()): number {
+  if (!card) return 1.5;
+  let score = 1 + card.lapses * 1.2 + Math.max(0, 2.5 - card.ease) * 2;
+  if (card.stage === 'learning') score += 1;
+  if (card.due <= now) score += 1;
+  const answered = card.correct + card.incorrect;
+  if (answered > 0) score += (card.incorrect / answered) * 2;
+  return score;
+}
+
+/** Lines whose card is due: drilled before, and the schedule wants them back. */
+export function dueLines(lines: DrillLine[], cards: Record<string, LineCard>, now = Date.now()): DrillLine[] {
+  return lines.filter((line) => {
+    const card = cards[lineCardId(line.repertoireId, line.tipId)];
+    return !!card && isDue(card, now);
+  });
+}
+
+/**
  * Draw up to `count` different lines.
  *
- * Each is drawn in proportion to how often you would meet it (the opponent's
- * choices weighted by the book, your own split evenly), and for `weak` that
- * weight is multiplied by how badly the line's positions want practice. With
- * `only` given and any of its lines in reach, the draw is held to those: what
- * Autopilot asks for when lines have just been grown.
+ * What is drawn first follows `draw`, the way Drill positions reads it:
+ * Scheduled takes the lines due, then the lines never drilled, then the rest
+ * so a sitting never runs dry; New only starts with the lines never drilled;
+ * Everything draws from all of them at once. Inside each tier a line is drawn
+ * in proportion to how often you would meet it (the opponent's choices
+ * weighted by the book, your own split evenly), and for `weak` that weight is
+ * multiplied by how badly the line's card wants practice. With `only` given
+ * and any of its lines in reach, the draw is held to those: what Autopilot
+ * asks for when lines are new or due.
  */
 export function drawLines(opts: {
   rep: Repertoire;
@@ -64,12 +97,16 @@ export function drawLines(opts: {
   region: OpeningNode;
   index: ReferenceIndex | null;
   lean: LineLean;
-  weakness?: Weakness | null;
+  cards?: Record<string, LineCard>;
+  draw?: DrillDraw;
   only?: Set<string> | null;
   count: number;
   rand: () => number;
+  now?: number;
 }): DrillLine[] {
   const { rep } = opts;
+  const cards = opts.cards ?? {};
+  const now = opts.now ?? Date.now();
   let lines = drillableLines(rep, opts.tree, opts.region);
   if (opts.only?.size) {
     const held = lines.filter((line) => opts.only!.has(line.tipId));
@@ -77,29 +114,41 @@ export function drawLines(opts: {
   }
   if (!lines.length) return [];
   const odds = lineOdds(rep, rep.color, opts.index, new Set(lines.map((line) => line.tipId)));
+  const cardOf = (line: DrillLine) => cards[lineCardId(line.repertoireId, line.tipId)];
   const weight = (line: DrillLine): number => {
     const meet = odds.size ? (odds.get(line.tipId) ?? 0) : 1;
-    const want =
-      opts.lean === 'weak' && opts.weakness ? lineWeakness(rep.id, askedKeys(rep, line.tipId), opts.weakness) : 1;
+    const want = opts.lean === 'weak' ? lineCardWeakness(cardOf(line), now) : 1;
     return meet * want;
   };
-  const pool = [...lines];
+
+  const due = new Set(dueLines(lines, cards, now).map((line) => line.tipId));
+  const tier = (line: DrillLine): number => {
+    const draw = opts.draw ?? 'cram';
+    if (draw === 'cram') return 0;
+    const fresh = !cardOf(line);
+    if (draw === 'new') return fresh ? 0 : 1;
+    return due.has(line.tipId) ? 0 : fresh ? 1 : 2;
+  };
+
   const out: DrillLine[] = [];
-  while (out.length < opts.count && pool.length) {
-    const total = pool.reduce((sum, line) => sum + weight(line), 0);
-    let at = 0;
-    if (total > 0) {
-      let roll = opts.rand() * total;
-      at = pool.findIndex((line) => {
-        roll -= weight(line);
-        return roll <= 0;
-      });
-      if (at < 0) at = pool.length - 1;
-    } else {
-      at = Math.floor(opts.rand() * pool.length);
+  for (const level of [0, 1, 2]) {
+    const pool = lines.filter((line) => tier(line) === level);
+    while (out.length < opts.count && pool.length) {
+      const total = pool.reduce((sum, line) => sum + weight(line), 0);
+      let at = 0;
+      if (total > 0) {
+        let roll = opts.rand() * total;
+        at = pool.findIndex((line) => {
+          roll -= weight(line);
+          return roll <= 0;
+        });
+        if (at < 0) at = pool.length - 1;
+      } else {
+        at = Math.floor(opts.rand() * pool.length);
+      }
+      out.push(pool[at]);
+      pool.splice(at, 1);
     }
-    out.push(pool[at]);
-    pool.splice(at, 1);
   }
   return out;
 }

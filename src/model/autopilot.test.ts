@@ -31,6 +31,11 @@ describe("Autopilot's choice of mode", () => {
     expect(chooseMode({ ...quiet, unpracticed: 4 }, ['growth'])).toBe('drillLines');
   });
 
+  it('turns to Drill lines once lines come due', () => {
+    expect(modeNeed('drillLines', { ...quiet, dueLines: 1 })).toBeLessThan(modeNeed('drillLines', { ...quiet, dueLines: 6 }));
+    expect(chooseMode({ ...quiet, dueLines: 6 }, ['survival'])).toBe('drillLines');
+  });
+
   it('never runs one mode more than MAX_RUN rounds while another has work', () => {
     const needs = { ...quiet, due: 40, unpracticed: 40 };
     const recent = Array<RoundMode>(MAX_RUN).fill('drillLines');
