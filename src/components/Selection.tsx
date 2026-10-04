@@ -19,7 +19,7 @@ import {
 } from '../model/picker';
 import { formatGameCount } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
-import { rankOf } from '../model/scoring';
+import { rankOf, UNRATED } from '../model/scoring';
 import { colorLabel } from '../model/selection';
 import { useStore } from '../store/useStore';
 import { Piece } from './Pieces';
@@ -73,7 +73,7 @@ export function selectionText(color: ColorChoice, openingId: string): string {
 export function SelectionBar() {
   const selection = useStore((s) => s.settings.selection);
   const openStats = useStore((s) => s.openStats);
-  const [picking, setPicking] = useState<'color' | 'opening' | null>(null);
+  const [picking, setPicking] = useState<'color' | 'quick' | 'opening' | null>(null);
   const trail = selectionTrail(selection.opening);
 
   return (
@@ -82,7 +82,7 @@ export function SelectionBar() {
         <button className="pick color" onClick={() => setPicking('color')} aria-label="Color">
           <ColorSquare choice={selection.color} size={22} />
         </button>
-        <button className="pick opening" onClick={() => setPicking('opening')}>
+        <button className="pick opening" onClick={() => setPicking('quick')}>
           <span className="grow sel-trail">
             {trail.map((label, i) => (
               <span key={i} className={i === trail.length - 1 ? 'here' : ''}>
@@ -95,9 +95,15 @@ export function SelectionBar() {
         </button>
       </div>
       <ColorPicker open={picking === 'color'} onClose={() => setPicking(null)} />
+      <QuickPicker
+        open={picking === 'quick'}
+        onClose={() => setPicking(null)}
+        onBrowse={() => setPicking('opening')}
+      />
       <OpeningPicker
         open={picking === 'opening'}
         onClose={() => setPicking(null)}
+        onBack={() => setPicking('quick')}
         onStats={(id) => {
           setPicking(null);
           openStats(id);
@@ -133,6 +139,134 @@ export function ColorPicker({ open, onClose }: { open: boolean; onClose: () => v
   );
 }
 
+/** The first moves the quick picker offers, as tree ids. */
+const QUICK_FIRST_MOVES = ['e4', 'd4', 'c4', 'Nf3'];
+/** Favorites shown before "Show all". */
+const QUICK_FAVORITES = 6;
+
+/**
+ * The quick picker: the few picks most sessions want, one tap each.
+ *
+ * Any opening, your favorites (the ones played last first), and the common
+ * first moves. A favorite sets the side the way the full picker does; a first
+ * move keeps the side you have, so 1.e4 as Black means facing it. Everything
+ * else is one tap further, in the full picker.
+ */
+export function QuickPicker({
+  open,
+  onClose,
+  onBrowse,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onBrowse: () => void;
+}) {
+  const selection = useStore((s) => s.settings.selection);
+  const favorites = useStore((s) => s.settings.favoriteOpenings);
+  const score = useStore((s) => s.score);
+  const setSelection = useStore((s) => s.setSelection);
+  const [showAll, setShowAll] = useState(false);
+  if (!open) return null;
+
+  const { tree, catalog } = catalogNow();
+  const lastAt = (id: string) => score.nodes[id]?.lastAt ?? 0;
+  const mine = favorites
+    .map((id, i) => ({ node: tree.byId.get(id), i }))
+    .filter((f): f is { node: OpeningNode; i: number } => Boolean(f.node) && f.node!.depth > 0)
+    .sort((a, b) => lastAt(b.node.id) - lastAt(a.node.id) || a.i - b.i)
+    .map(({ node }) => ({ node, side: sideForPick(catalog, node) ?? 'w', label: favoriteLabel(catalog, node) }));
+  const shown = showAll ? mine : mine.slice(0, QUICK_FAVORITES);
+  const firstMoves = QUICK_FIRST_MOVES.map((id) => tree.byId.get(id)).filter((node): node is OpeningNode =>
+    Boolean(node),
+  );
+
+  const choose = (patch: Parameters<typeof setSelection>[0]) => {
+    setSelection(patch);
+    onClose();
+  };
+  const isChosen = (id: string) => (selection.opening === id ? ' selected' : '');
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Opening" from="top">
+      <div className="qp">
+        <Segmented
+          value={selection.color}
+          options={CHOICES.map((choice) => ({
+            value: choice,
+            label: (
+              <span className="op-side-opt">
+                <ColorSquare choice={choice} size={12} />
+                {colorLabel(choice)}
+              </span>
+            ),
+          }))}
+          onChange={(color) => setSelection({ color })}
+        />
+
+        <button className={`qp-tile qp-any${isChosen('')}`} onClick={() => choose({ opening: '' })}>
+          <span className="qp-any-name">Any opening</span>
+          <span className="qp-any-meta">Everything in the book</span>
+        </button>
+
+        {mine.length > 0 && (
+          <div>
+            <SectionHead title="Favorites" />
+            <div className="qp-grid">
+              {shown.map(({ node, side, label }) => {
+                const stats = score.nodes[node.id];
+                const rank = rankOf(stats?.rating ?? 0, stats?.rated ?? 0);
+                return (
+                  <button
+                    key={node.id}
+                    className={`qp-tile${isChosen(node.id)}`}
+                    onClick={() => choose({ opening: node.id, color: side })}
+                  >
+                    <span className="qp-name">
+                      <SideDot side={side} />
+                      <span className="truncate">{label}</span>
+                    </span>
+                    <span className="qp-tier">
+                      <i style={{ background: rank.held?.color ?? UNRATED.color }} />
+                      {rank.heldLabel}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {mine.length > QUICK_FAVORITES && (
+              <button className="op-more" onClick={() => setShowAll(!showAll)}>
+                {showAll ? 'Show fewer' : `Show all ${mine.length}`}
+              </button>
+            )}
+          </div>
+        )}
+
+        <div>
+          <SectionHead title="First move" />
+          <div className="qp-moves">
+            {firstMoves.map((node) => (
+              <button key={node.id} className={`qp-tile qp-move${isChosen(node.id)}`} onClick={() => choose({ opening: node.id })}>
+                {moveText(node.sans)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button className="qp-browse" onClick={onBrowse}>
+          <span className="grow">Browse all openings</span>
+          <Icons.chevron size={16} />
+        </button>
+      </div>
+    </Sheet>
+  );
+}
+
+/** A favorite's name as the picker shows it, short where the book's is long. */
+function favoriteLabel(catalog: PickerCatalog, node: OpeningNode): string {
+  const entry = entryForNode(catalog, node);
+  return shortLabel(entry?.label ?? node.name);
+}
+
 /**
  * The opening picker, over the whole screen.
  *
@@ -144,10 +278,13 @@ export function ColorPicker({ open, onClose }: { open: boolean; onClose: () => v
 export function OpeningPicker({
   open,
   onClose,
+  onBack,
   onStats,
 }: {
   open: boolean;
   onClose: () => void;
+  /** Where the back button goes from the picker's first page, when it was opened from somewhere. */
+  onBack?: () => void;
   /** Open a stats page for a node, when the picker is used from somewhere that has one. */
   onStats?: (id: string) => void;
 }) {
@@ -160,7 +297,7 @@ export function OpeningPicker({
   if (!open) return null;
   return (
     <div className="op-screen" role="dialog" aria-label="Opening">
-      <OpeningList onChose={onClose} onClose={onClose} onStats={onStats} />
+      <OpeningList onChose={onClose} onClose={onClose} onBack={onBack} onStats={onStats} />
     </div>
   );
 }
@@ -219,9 +356,12 @@ export function OpeningList({
   multi = false,
   onChose,
   onClose,
+  onBack,
   onStats,
 }: {
   multi?: boolean;
+  /** Back from the first page, which otherwise has nowhere to go back to. */
+  onBack?: () => void;
   /** Called after the selection is set, in single mode. */
   onChose?: () => void;
   onClose?: () => void;
@@ -381,7 +521,7 @@ export function OpeningList({
         {entry.exact ? (
           <button
             className="icon-btn plain"
-            aria-label={`${stars.has(entry.node.id) ? 'Unstar' : 'Star'} ${entry.label}`}
+            aria-label={`${stars.has(entry.node.id) ? 'Remove' : 'Add'} ${entry.label} ${stars.has(entry.node.id) ? 'from' : 'to'} favorites`}
             onClick={() => toggleStar(entry.node.id)}
           >
             <Icons.star size={18} filled={stars.has(entry.node.id)} />
@@ -470,7 +610,7 @@ export function OpeningList({
         <>
           {mine.length > 0 && (
             <>
-              <SectionHead title={multi ? 'Picked' : 'Your openings'} aside={mine.length} />
+              <SectionHead title={multi ? 'Picked' : 'Favorites'} aside={mine.length} />
               <div className="list">{sorted(mine).map((entry) => row(entry, { meta: trailMeta(entry), tapPicks: !multi }))}</div>
             </>
           )}
@@ -565,8 +705,11 @@ export function OpeningList({
     <div className="op">
       <header className="op-head">
         <div className="op-trail">
-          {place.kind !== 'root' && (
-            <IconButton label="Back" onClick={() => go(crumbs[crumbs.length - 2]?.place ?? ROOT)}>
+          {(place.kind !== 'root' || onBack) && (
+            <IconButton
+              label="Back"
+              onClick={() => (place.kind === 'root' ? onBack?.() : go(crumbs[crumbs.length - 2]?.place ?? ROOT))}
+            >
               <Icons.back size={18} />
             </IconButton>
           )}
@@ -645,7 +788,7 @@ export function OpeningList({
                 {!multi && head.node && head.node.depth > 0 && (
                   <button
                     className="icon-btn plain"
-                    aria-label={`${stars.has(head.node.id) ? 'Unstar' : 'Star'} ${head.title}`}
+                    aria-label={`${stars.has(head.node.id) ? 'Remove' : 'Add'} ${head.title} ${stars.has(head.node.id) ? 'from' : 'to'} favorites`}
                     onClick={() => toggleStar(head.node!.id)}
                   >
                     <Icons.star size={18} filled={stars.has(head.node.id)} />

@@ -87,11 +87,11 @@ describe('what a result does to a rating', () => {
 
 describe('the ladder', () => {
   it('climbs Learning to Mastered', () => {
-    expect(TIERS.map((tier) => tier.name)).toEqual(['Learning', 'Familiar', 'Solid', 'Strong', 'Sharp', 'Mastered']);
+    expect(TIERS.map((tier) => tier.name)).toEqual(['Learning', 'Familiar', 'Solid', 'Strong', 'Fluent', 'Mastered']);
     expect(rankOf(0)).toMatchObject({ reached: 0, held: null, heldLabel: 'Shaky', nextLabel: 'Learning' });
     expect(rankOf(100)).toMatchObject({ reached: 1, heldLabel: 'Learning', nextLabel: 'Familiar' });
     expect(rankOf(99).heldLabel).toBe('Shaky');
-    expect(rankOf(700).heldLabel).toBe('Sharp');
+    expect(rankOf(700).heldLabel).toBe('Fluent');
   });
 
   it('reads New below the ladder until anything has rated it', () => {

@@ -93,10 +93,10 @@ function YourOpenings({
     <>
       <AppBar title="Stats" large />
       <div className="screen">
-        <Section title="Your openings" aside={mine.length ? 'by rating' : undefined} />
+        <Section title="Favorites" aside={mine.length ? 'by rating' : undefined} />
         {mine.length === 0 ? (
           <div className="card small muted">
-            Nothing starred yet. Star an opening in the picker and it gets a rating of its own,
+            No favorites yet. Add an opening to favorites in the picker and it gets a rating of its own,
             which Survival moves up when you find your prep and down when you miss it.
           </div>
         ) : (
@@ -249,7 +249,7 @@ function OpeningPage({
         actions={
           <button
             className="icon-btn plain"
-            aria-label={isStarred ? 'Unstar' : 'Star'}
+            aria-label={isStarred ? 'Remove from favorites' : 'Add to favorites'}
             onClick={() => toggleStar(node.id)}
           >
             <Icons.star size={20} filled={isStarred} />
@@ -290,8 +290,8 @@ function OpeningPage({
         {!isStarred && (
           <div className="card small muted">
             {stats.rated > 0
-              ? 'Not starred, so this rating is resting. Star it again and it picks up where it left off.'
-              : 'Not starred, so it has no rating. Star it and Survival will start one.'}
+              ? 'Not a favorite, so this rating is resting. Add it back and it picks up where it left off.'
+              : 'Not a favorite, so it has no rating. Add it to favorites and Survival will start one.'}
           </div>
         )}
 

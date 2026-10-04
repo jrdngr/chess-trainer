@@ -140,7 +140,7 @@ export function ScoreStrip() {
       <button className="score-strip empty" onClick={() => openStats('')} aria-label="Your ratings">
         <span className="grow">
           <span className="ttl">No opening selected</span>
-          <span className="sub">Pick a starred opening above to see its rating.</span>
+          <span className="sub">Pick a favorite opening above to see its rating.</span>
         </span>
         <Icons.chevron size={18} />
       </button>
@@ -154,11 +154,11 @@ export function ScoreStrip() {
       <button
         className="score-strip empty"
         onClick={() => toggleStar(node.id)}
-        aria-label={`Star ${node.name}`}
+        aria-label={`Add ${node.name} to favorites`}
       >
         <span className="grow">
           <span className="ttl truncate">{node.name}</span>
-          <span className="sub">Not starred, so no rating. Star it to start one.</span>
+          <span className="sub">Not a favorite, so no rating. Add it to favorites to start one.</span>
         </span>
         <Icons.star size={20} />
       </button>

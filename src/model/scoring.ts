@@ -91,14 +91,14 @@ export interface Tier {
  * The ladder, named for how well you know the opening. Each rung is a real
  * step in accuracy rather than a round number, so a promotion is rare enough
  * to mean something: Learning is roughly 62% of your prepared moves found,
- * Familiar 78%, Solid 88%, Strong 94%, Sharp 97%, Mastered 99%.
+ * Familiar 78%, Solid 88%, Strong 94%, Fluent 97%, Mastered 99%.
  */
 export const TIERS: Tier[] = [
   { name: 'Learning', color: '#94a3b8', at: 100 },
   { name: 'Familiar', color: '#4ade80', at: 250 },
   { name: 'Solid', color: '#2dd4bf', at: 400 },
   { name: 'Strong', color: '#3b82f6', at: 550 },
-  { name: 'Sharp', color: '#a855f7', at: 700 },
+  { name: 'Fluent', color: '#a855f7', at: 700 },
   { name: 'Mastered', color: '#facc15', at: 850 },
 ];
 
