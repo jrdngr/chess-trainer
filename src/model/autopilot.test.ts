@@ -37,11 +37,29 @@ describe("Autopilot's choice of mode", () => {
   });
 
   it('never runs one mode more than MAX_RUN rounds while another has work', () => {
-    const needs = { ...quiet, due: 40, unpracticed: 40 };
-    const recent = Array<RoundMode>(MAX_RUN).fill('drillLines');
-    const ranked = rankModes(needs, recent);
-    expect(ranked[0].mode).not.toBe('drillLines');
-    expect(ranked.find((s) => s.mode === 'drillLines')?.score).toBe(0);
+    // Drills never repeat (Survival follows each), so the cap is for Survival and Growth.
+    const needs = { ...quiet, due: 40, unpracticed: 40, growReady: true };
+    for (const mode of ['survival', 'growth'] as RoundMode[]) {
+      const ranked = rankModes(needs, Array<RoundMode>(MAX_RUN).fill(mode));
+      expect(ranked[0].mode).not.toBe(mode);
+      expect(ranked.find((s) => s.mode === mode)?.score).toBe(0);
+    }
+  });
+
+  it('plays Survival right after every Drill round, however loudly the rest ask', () => {
+    const needs = { due: 40, unpracticed: 40, dueLines: 40, growReady: true };
+    for (const drill of ['drillPositions', 'drillLines'] as RoundMode[]) {
+      expect(chooseMode(needs, [drill])).toBe('survival');
+      expect(chooseMode(needs, ['survival', 'survival', drill])).toBe('survival');
+      const ranked = rankModes(needs, ['growth', drill]);
+      expect(ranked[0].mode).toBe('survival');
+      expect(ranked.slice(1).every((s) => s.score === 0)).toBe(true);
+    }
+  });
+
+  it('weighs the round after Growth as usual', () => {
+    expect(chooseMode({ ...quiet, unpracticed: 4, growReady: true }, ['growth'])).toBe('drillLines');
+    expect(chooseMode(quiet, ['growth'])).toBe('survival');
   });
 
   it('settles into a mix rather than one mode, over a session', () => {
@@ -50,6 +68,9 @@ describe("Autopilot's choice of mode", () => {
     for (let i = 0; i < 12; i += 1) played.push(chooseMode(needs, played));
     expect(new Set(played).size).toBe(4);
     expect(played.filter((m) => m === 'survival').length).toBeGreaterThanOrEqual(3);
+    played.forEach((mode, i) => {
+      if ((mode === 'drillPositions' || mode === 'drillLines') && i + 1 < played.length) expect(played[i + 1]).toBe('survival');
+    });
   });
 });
 

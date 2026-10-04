@@ -27,6 +27,11 @@ import type { Focus, Recommendation } from './recommend';
  * weight for every one of the last few rounds it already had, and no mode
  * plays more than `MAX_RUN` rounds in a row while another has anything to
  * ask, so a standing backlog cannot lock the session into one mode.
+ *
+ * A Drill round, of positions or of lines, is always followed by Survival:
+ * what was just drilled is tested at once, the way a game would, and two
+ * drills never run back to back. Growth carries no such rule; what follows
+ * it is weighed as usual, which is Drill lines while what it grew is new.
  */
 export type RoundMode = 'survival' | 'drillPositions' | 'drillLines' | 'growth';
 
@@ -90,9 +95,13 @@ export interface ModeScore {
   score: number;
 }
 
+/** The modes after which the next round is always Survival. */
+export const DRILL_MODES: RoundMode[] = ['drillPositions', 'drillLines'];
+
 /**
  * Every mode's weight for the next round, highest first. Ties go to the
- * earlier mode in `ROUND_MODES`, so Survival wins a tie.
+ * earlier mode in `ROUND_MODES`, so Survival wins a tie. Right after a Drill
+ * round, every other mode scores 0, so Survival comes next.
  */
 export function rankModes(needs: ModeNeeds, recent: RoundMode[]): ModeScore[] {
   const window = recent.slice(-MODE_WINDOW);
@@ -105,7 +114,11 @@ export function rankModes(needs: ModeNeeds, recent: RoundMode[]): ModeScore[] {
   const streak = tail.length === MAX_RUN && tail.every((m) => m === tail[0]) ? tail[0] : null;
   const others = scored.some((s) => s.mode !== streak && s.score > 0);
   const capped = scored.map((s) => (s.mode === streak && others ? { ...s, score: 0 } : s));
-  return capped
+  // A Drill round is tested straight away: only Survival is left standing.
+  const last = recent[recent.length - 1];
+  const afterDrill = last !== undefined && DRILL_MODES.includes(last);
+  const ruled = afterDrill ? capped.map((s) => (s.mode === 'survival' ? s : { ...s, score: 0 })) : capped;
+  return ruled
     .map((s, i) => ({ ...s, i }))
     .sort((a, b) => b.score - a.score || a.i - b.i)
     .map(({ mode, score }) => ({ mode, score }));
