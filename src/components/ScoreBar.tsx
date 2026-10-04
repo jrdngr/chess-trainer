@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { nodeById, openingTree } from '../model/openingTree';
 import { referenceIndex } from '../model/referenceIndex';
-import { nodeStats, rankOf, UNRATED, type Rank } from '../model/scoring';
+import { NEW_LABEL, nodeStats, rankOf, UNRATED, type Rank } from '../model/scoring';
 import { haptic, Icons } from './ui';
 import { useStore } from '../store/useStore';
 
@@ -17,16 +17,16 @@ export function deltaText(delta: number): string {
 }
 
 /**
- * The rank bar, the same everywhere it appears: the piece held on the left,
- * the piece being worked toward on the right, each a dot with its name above
+ * The rank bar, the same everywhere it appears: the rung held on the left,
+ * the rung being worked toward on the right, each a dot with its name above
  * it, and the bar between them filled in the colour held. At the top of the
  * ladder there is nothing left to work toward, so the right-hand end is the
- * piece held and the bar is full.
+ * rung held and the bar is full.
  */
 export function RankBar({ rank, centre }: { rank: Rank; centre?: React.ReactNode }) {
   const held = rank.held ?? UNRATED;
   const next = rank.next ?? held;
-  // Unrated grey is the colour of the empty track, so below the first piece
+  // Below-the-ladder grey is the colour of the empty track, so below the first rung
   // the bar fills in the colour it is climbing toward instead of vanishing.
   const fill = rank.held?.color ?? next.color;
   return (
@@ -55,9 +55,9 @@ const TIER_MS = 4200;
  * The rating, at the top of the screen, whenever one moves.
  *
  * It slides in naming the opening that moved, with what the answer was worth
- * and where the rating now stands, fills toward the next piece in that piece's
- * colour, and slides away. Crossing a piece — up or down — flashes the bar,
- * names the piece and buzzes: a promotion is worth celebrating, and a demotion
+ * and where the rating now stands, fills toward the next rung in that rung's
+ * colour, and slides away. Crossing a rung — up or down — flashes the bar,
+ * names the rung and buzzes: a promotion is worth celebrating, and a demotion
  * is worth knowing about, which is the point of a rating that can fall.
  */
 export function ScoreBar() {
@@ -166,7 +166,7 @@ export function ScoreStrip() {
   }
 
   const stats = nodeStats(score, node.id);
-  const rank = rankOf(stats.rating);
+  const rank = rankOf(stats.rating, stats.rated);
   return (
     <button className="score-strip" onClick={() => openStats(node.id)} aria-label={`${node.name} rating`}>
       <span className="who truncate">{node.name}</span>
@@ -174,7 +174,7 @@ export function ScoreStrip() {
         rank={rank}
         centre={
           <span className="total num">
-            {stats.rated === 0 ? 'Unrated' : ratingText(stats.rating)}
+            {stats.rated === 0 ? NEW_LABEL : ratingText(stats.rating)}
           </span>
         }
       />

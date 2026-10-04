@@ -72,7 +72,7 @@ describe('what a result does to a rating', () => {
     expect(ratingAfter(5, false)).toBe(RATING.floor);
   });
 
-  it('still climbs at the top of the ladder, so King is reachable', () => {
+  it('still climbs at the top of the ladder, so Mastered is reachable', () => {
     expect(ratingSwing(TIERS[TIERS.length - 1].at).up).toBeGreaterThan(0);
   });
 
@@ -86,23 +86,29 @@ describe('what a result does to a rating', () => {
 });
 
 describe('the ladder', () => {
-  it('climbs pawn to king', () => {
-    expect(TIERS.map((tier) => tier.name)).toEqual(['Pawn', 'Knight', 'Bishop', 'Rook', 'Queen', 'King']);
-    expect(rankOf(0)).toMatchObject({ reached: 0, held: null, heldLabel: 'Unrated', nextLabel: 'Pawn' });
-    expect(rankOf(100)).toMatchObject({ reached: 1, heldLabel: 'Pawn', nextLabel: 'Knight' });
-    expect(rankOf(99).heldLabel).toBe('Unrated');
-    expect(rankOf(700).heldLabel).toBe('Queen');
+  it('climbs Learning to Mastered', () => {
+    expect(TIERS.map((tier) => tier.name)).toEqual(['Learning', 'Familiar', 'Solid', 'Strong', 'Sharp', 'Mastered']);
+    expect(rankOf(0)).toMatchObject({ reached: 0, held: null, heldLabel: 'Shaky', nextLabel: 'Learning' });
+    expect(rankOf(100)).toMatchObject({ reached: 1, heldLabel: 'Learning', nextLabel: 'Familiar' });
+    expect(rankOf(99).heldLabel).toBe('Shaky');
+    expect(rankOf(700).heldLabel).toBe('Sharp');
   });
 
-  it('holds the top piece with nothing left to work toward', () => {
+  it('reads New below the ladder until anything has rated it', () => {
+    expect(rankOf(0, 0).heldLabel).toBe('New');
+    expect(rankOf(0, 3).heldLabel).toBe('Shaky');
+    expect(rankOf(100, 0).heldLabel).toBe('Learning');
+  });
+
+  it('holds the top rung with nothing left to work toward', () => {
     const top = rankOf(900);
-    expect(top.heldLabel).toBe('King');
+    expect(top.heldLabel).toBe('Mastered');
     expect(top.next).toBeNull();
     expect(top.nextLabel).toBeNull();
     expect(top.progress).toBe(1);
   });
 
-  it('measures progress between the piece held and the next', () => {
+  it('measures progress between the rung held and the next', () => {
     expect(rankOf(175).progress).toBeCloseTo(0.5, 5);
     expect(rankOf(100).progress).toBe(0);
     expect(rankOf(249).progress).toBeLessThan(1);
@@ -179,7 +185,7 @@ describe('applying a result', () => {
       promotions += applied.moves.filter((move) => move.promotion === 1).length;
     }
     expect(promotions).toBe(1);
-    expect(rankOf(nodeStats(state, NAJDORF).rating).heldLabel).toBe('Pawn');
+    expect(rankOf(nodeStats(state, NAJDORF).rating).heldLabel).toBe('Learning');
 
     // Back down through the same rung.
     let demotions = 0;

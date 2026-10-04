@@ -16,6 +16,7 @@ import { referenceIndex } from '../model/referenceIndex';
 import {
   accuracy,
   ACTIVITY_MODES,
+  NEW_LABEL,
   nodeStats,
   rankOf,
   streak,
@@ -37,7 +38,7 @@ const WINDOWS = [
  *
  * There is no global score to open on any more — a rating belongs to one
  * opening — so the tab opens on the openings you have starred, each with the
- * piece it holds, and the activity that is true of the whole game underneath.
+ * rung it holds, and the activity that is true of the whole game underneath.
  * Every row, and every stats button in the opening picker, opens that
  * opening's own page over it.
  */
@@ -67,7 +68,7 @@ export function StatsScreen({ target, onConsumedTarget }: { target?: string; onC
 }
 
 /**
- * The tab's own page: the openings you have starred, each with the piece it
+ * The tab's own page: the openings you have starred, each with the rung it
  * holds, and under them the activity that is true of the whole game.
  */
 function YourOpenings({
@@ -101,7 +102,7 @@ function YourOpenings({
         ) : (
           <div className="list">
             {mine.map(({ node, stats: own, trail }) => {
-              const rank = rankOf(own.rating);
+              const rank = rankOf(own.rating, own.rated);
               return (
                 <button className="list-row" key={node.id} onClick={() => onOpen(node.id)}>
                   <span className="side" style={{ background: (rank.held ?? UNRATED).color }} />
@@ -171,22 +172,22 @@ function rounds(stats: NodeStats): number {
   return ACTIVITY_MODES.reduce((sum, mode) => sum + stats.byMode[mode].rounds, 0);
 }
 
-/** The piece an opening holds, as a dot. Nothing at all while it is unrated. */
+/** The rung an opening holds, as a dot. Nothing at all below the ladder. */
 function Tier({ stats }: { stats: NodeStats }) {
   const held = rankOf(stats.rating).held;
   if (!held) return null;
   return <span className="side" style={{ background: held.color }} title={held.name} />;
 }
 
-/** Where a rating stands on its ladder, and the pieces already held. */
+/** Where a rating stands on its ladder, and the rungs already held. */
 function Ladder({ stats }: { stats: NodeStats }) {
-  const rank = rankOf(stats.rating);
+  const rank = rankOf(stats.rating, stats.rated);
   return (
     <div className="milestone-bar">
       <RankBar
         rank={rank}
         centre={
-          <span className="num">{stats.rated === 0 ? 'Unrated' : `${ratingText(stats.rating)}/${rank.ceiling}`}</span>
+          <span className="num">{stats.rated === 0 ? NEW_LABEL : `${ratingText(stats.rating)}/${rank.ceiling}`}</span>
         }
       />
       <div className="ladder" aria-hidden>
@@ -230,7 +231,7 @@ function OpeningPage({
   const toggleStar = useStore((s) => s.toggleStar);
   const tree = openingTree(referenceIndex());
   const stats = nodeStats(score, node.id);
-  const rank = rankOf(stats.rating);
+  const rank = rankOf(stats.rating, stats.rated);
   const trail = ancestorsOf(tree, node.id).slice(0, -1);
   const fav = useMemo(() => favouriteness(tree, score, node.id), [tree, score, node.id]);
   const children = orderedChildren(node, starred).filter((kid) => nodeStats(score, kid.id).answered > 0);

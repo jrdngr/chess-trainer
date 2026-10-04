@@ -108,8 +108,8 @@ describe('your openings', () => {
     const mine = starredOpenings(tree, state, stars);
     expect(mine.map((entry) => entry.node.id)).toEqual([NAJDORF, DRAGON]);
     expect(mine[0].trail).toContain('Sicilian Defence');
-    // An untested star is still yours, and still Unrated.
-    expect(rankOf(mine[1].stats.rating).heldLabel).toBe('Unrated');
+    // An untested star is still yours, and reads New.
+    expect(rankOf(mine[1].stats.rating, mine[1].stats.rated).heldLabel).toBe('New');
   });
 
   it('leaves out the root and anything starred twice', () => {

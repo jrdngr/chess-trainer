@@ -46,7 +46,7 @@ export const RATING = {
   floor: 0,
   /**
    * The most one result can move a rating, split between the two outcomes by
-   * the accuracy the rating expects. 20 puts King near eight hundred correct
+   * the accuracy the rating expects. 20 puts Mastered near eight hundred correct
    * answers, so a piece is earned over many runs rather than one good
    * sitting, and a miss at the top costs less than it once did.
    */
@@ -88,28 +88,33 @@ export interface Tier {
 }
 
 /**
- * The ladder, in pieces. Each rung is a real step in accuracy rather than a
- * round number, so a promotion is rare enough to mean something: Pawn is
- * roughly 62% of your prepared moves found, Knight 78%, Bishop 88%, Rook 94%,
- * Queen 97%, King 99%.
+ * The ladder, named for how well you know the opening. Each rung is a real
+ * step in accuracy rather than a round number, so a promotion is rare enough
+ * to mean something: Learning is roughly 62% of your prepared moves found,
+ * Familiar 78%, Solid 88%, Strong 94%, Sharp 97%, Mastered 99%.
  */
 export const TIERS: Tier[] = [
-  { name: 'Pawn', color: '#94a3b8', at: 100 },
-  { name: 'Knight', color: '#4ade80', at: 250 },
-  { name: 'Bishop', color: '#2dd4bf', at: 400 },
-  { name: 'Rook', color: '#3b82f6', at: 550 },
-  { name: 'Queen', color: '#a855f7', at: 700 },
-  { name: 'King', color: '#facc15', at: 850 },
+  { name: 'Learning', color: '#94a3b8', at: 100 },
+  { name: 'Familiar', color: '#4ade80', at: 250 },
+  { name: 'Solid', color: '#2dd4bf', at: 400 },
+  { name: 'Strong', color: '#3b82f6', at: 550 },
+  { name: 'Sharp', color: '#a855f7', at: 700 },
+  { name: 'Mastered', color: '#facc15', at: 850 },
 ];
 
-/** What an opening below the first rung shows. */
-export const UNRATED: Tier = { name: 'Unrated', color: '#4b4b55', at: 0 };
+/**
+ * Below the first rung. It reads New until Survival has rated the opening at
+ * all, and Shaky once it has: one says go and start it, the other go and fix
+ * it.
+ */
+export const UNRATED: Tier = { name: 'Shaky', color: '#4b4b55', at: 0 };
+export const NEW_LABEL = 'New';
 
 export interface Rank {
   rating: number;
   /** Tiers reached; 0 is unrated. */
   reached: number;
-  /** The tier held, or null below Pawn. */
+  /** The tier held, or null below the first rung. */
   held: Tier | null;
   /** The tier being worked toward, or null at the top of the ladder. */
   next: Tier | null;
@@ -121,8 +126,12 @@ export interface Rank {
   progress: number;
 }
 
-/** Where a rating stands on the ladder. */
-export function rankOf(rating: number): Rank {
+/**
+ * Where a rating stands on the ladder. `rated` is how many results have moved
+ * it; it only decides whether an opening below the first rung reads New or
+ * Shaky, and is left out where a rating has just moved.
+ */
+export function rankOf(rating: number, rated = 1): Rank {
   let reached = 0;
   while (reached < TIERS.length && rating >= TIERS[reached].at) reached += 1;
   const held = reached === 0 ? null : TIERS[reached - 1];
@@ -134,7 +143,7 @@ export function rankOf(rating: number): Rank {
     reached,
     held,
     next,
-    heldLabel: held?.name ?? UNRATED.name,
+    heldLabel: held?.name ?? (rated > 0 ? UNRATED.name : NEW_LABEL),
     nextLabel: next?.name ?? null,
     floor,
     ceiling,

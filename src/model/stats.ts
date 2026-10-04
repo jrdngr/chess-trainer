@@ -140,9 +140,9 @@ export interface Ranked {
 }
 
 /**
- * Your starred openings, best rated first. Unrated stars are kept and sort
+ * Your starred openings, best rated first. Stars below the ladder are kept and sort
  * last: a star you have not tested yet is still one of yours, and seeing it
- * sitting at Unrated is the nudge to go and run it.
+ * sitting at New or Shaky is the nudge to go and run it.
  */
 export function starredOpenings(tree: OpeningTree, score: ScoreState, starred: Iterable<string>): Ranked[] {
   const seen = new Set<string>();
