@@ -1221,13 +1221,15 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .mode-intro {
   --land-x: 50%;
   --land-y: calc(var(--safe-top) + 21px);
+  /* A long name shrinks to fit a phone across; `--len` is its length. */
+  --intro-size: min(52px, calc(160vw / var(--len, 8)));
   position: fixed;
   left: 50%;
   top: 42%;
   transform: translate(-50%, -50%);
   z-index: 65;
   pointer-events: none;
-  font-size: 52px;
+  font-size: var(--intro-size);
   font-weight: 800;
   letter-spacing: -0.03em;
   color: var(--text);
@@ -1238,7 +1240,7 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 @keyframes modeIntro {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
   12% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  55% { opacity: 1; left: 50%; top: 42%; font-size: 52px; letter-spacing: -0.03em; text-shadow: 0 4px 24px rgba(0, 0, 0, 0.95), 0 0 60px rgba(0, 0, 0, 0.9); }
+  55% { opacity: 1; left: 50%; top: 42%; font-size: var(--intro-size); letter-spacing: -0.03em; text-shadow: 0 4px 24px rgba(0, 0, 0, 0.95), 0 0 60px rgba(0, 0, 0, 0.9); }
   90% { opacity: 1; left: var(--land-x); top: var(--land-y); font-size: 17px; letter-spacing: -0.01em; text-shadow: 0 0 0 rgba(0, 0, 0, 0), 0 0 0 rgba(0, 0, 0, 0); }
   100% { opacity: 0; left: var(--land-x); top: var(--land-y); font-size: 17px; text-shadow: 0 0 0 rgba(0, 0, 0, 0), 0 0 0 rgba(0, 0, 0, 0); }
 }

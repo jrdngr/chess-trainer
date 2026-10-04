@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AppBar, Icons } from '../../components/ui';
 import { SelectionBar, selectionText } from '../../components/Selection';
-import { MODE_LABELS, ROUND_SIZE, survivalPlanFor } from '../../model/autopilot';
+import { ROUND_SIZE, roundLabel, survivalPlanFor } from '../../model/autopilot';
 import { nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { itemsInRegion, repertoiresIn, type Selection } from '../../model/selection';
@@ -125,7 +125,7 @@ export function AutopilotScreen({
 
   return (
     <>
-      <ModeIntro key={count} name={MODE_LABELS[current.mode]} />
+      <ModeIntro key={count} name={roundLabel(current.mode, current.mode === 'survival' ? current.pick.start : undefined)} />
       {screen}
     </>
   );
@@ -159,7 +159,10 @@ function ModeIntro({ name }: { name: string }) {
   return (
     <div
       className="mode-intro"
-      style={land ? { ['--land-x' as string]: `${land.x}px`, ['--land-y' as string]: `${land.y}px` } : undefined}
+      style={{
+        ['--len' as string]: name.length,
+        ...(land ? { ['--land-x' as string]: `${land.x}px`, ['--land-y' as string]: `${land.y}px` } : {}),
+      }}
       aria-hidden
     >
       <span>{name}</span>

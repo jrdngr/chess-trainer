@@ -7,7 +7,7 @@ import { itemsInRegion, regionOf, repertoiresIn } from '../model/selection';
 import { growthRows } from '../model/growth';
 import { streak } from '../model/scoring';
 import { nextRound, NO_HISTORY, type AutoRound } from '../store/recommendation';
-import { MODE_LABELS } from '../model/autopilot';
+import { roundLabel } from '../model/autopilot';
 import { levelById } from '../model/play';
 import { recentForm } from '../model/survival';
 import { referenceIndex } from '../model/referenceIndex';
@@ -123,7 +123,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
           </span>
           <span className="grow" style={{ minWidth: 0 }}>
             <span className="kicker">Autopilot</span>
-            <span className="name">{first ? MODE_LABELS[first.mode] : 'Build'}</span>
+            <span className="name">{first ? roundLabel(first.mode, first.mode === 'survival' ? first.pick.start : undefined) : 'Build'}</span>
             <span className="first truncate">
               {first ? firstUp(first) : 'Nothing to practice yet · open Growth'}
             </span>

@@ -1,5 +1,5 @@
 import type { Color } from '../chess/core';
-import type { Focus, Recommendation } from './recommend';
+import type { Focus, Recommendation, Start } from './recommend';
 
 /**
  * Autopilot: one round after another, each in the mode the work asks for,
@@ -32,6 +32,10 @@ import type { Focus, Recommendation } from './recommend';
  * what was just drilled is tested at once, the way a game would, and two
  * drills never run back to back. Growth carries no such rule; what follows
  * it is weighed as usual, which is Drill lines while what it grew is new.
+ *
+ * A Survival run that starts from move one is a Cold Start: nothing is set
+ * up for you, and you find your own way into the opening. Every `COLD_EVERY`th
+ * run is one, whatever the recommendation's start — see `coldStart`.
  */
 export type RoundMode = 'survival' | 'drillPositions' | 'drillLines' | 'growth';
 
@@ -128,6 +132,31 @@ export function chooseMode(needs: ModeNeeds, recent: RoundMode[]): RoundMode {
   return rankModes(needs, recent)[0].mode;
 }
 
+/**
+ * How often a Survival run starts from move one even where the
+ * recommendation would start it inside an opening: once the last
+ * `COLD_EVERY - 1` runs all started inside, the next is a Cold Start.
+ *
+ * Starting inside is how a run gets to the opening that needs the work, and
+ * a selection that is itself a family starts every run there; but a game
+ * never starts there, so now and then the way in is part of the test. A run
+ * from move one for any reason counts, so a selection whose runs mostly
+ * start there anyway is never pushed further.
+ */
+export const COLD_EVERY = 4;
+
+/**
+ * The recommendation as this run plays it: the same opening, side and focus,
+ * but from move one when the last `COLD_EVERY - 1` runs all started inside.
+ * The opponent is still steered toward the opening, from the first move.
+ */
+export function coldStart(pick: Recommendation, recentStarts: Start[]): Recommendation {
+  if (pick.start === 'first') return pick;
+  const tail = recentStarts.slice(-(COLD_EVERY - 1));
+  const due = tail.length === COLD_EVERY - 1 && tail.every((start) => start === 'inside');
+  return due ? { ...pick, start: 'first' } : pick;
+}
+
 /** What each recommendation focus asks of a Survival run: the lines you would meet, or your weakest. */
 export const LEAN_FOR: Record<Focus, 'popular' | 'weak'> = { test: 'popular', review: 'weak' };
 
@@ -147,3 +176,11 @@ export const MODE_LABELS: Record<RoundMode, string> = {
   drillLines: 'Drill lines',
   growth: 'Growth',
 };
+
+/** A Survival run from move one, by its banner name. */
+export const COLD_START_LABEL = 'Survival: Cold Start';
+
+/** A round's name as Autopilot announces it. */
+export function roundLabel(mode: RoundMode, start?: Start): string {
+  return mode === 'survival' && start === 'first' ? COLD_START_LABEL : MODE_LABELS[mode];
+}

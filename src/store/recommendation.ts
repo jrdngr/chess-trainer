@@ -1,10 +1,10 @@
 import type { Color } from '../chess/core';
-import { chooseMode, type RoundMode } from '../model/autopilot';
+import { chooseMode, coldStart, type RoundMode } from '../model/autopilot';
 import { growLaunch, lineFinishes, readyToGrow, type GrowLaunch } from '../model/growOffer';
 import { drillableLines, dueLines } from '../model/lineDrill';
 import { buildRepairs, type RepairItem } from '../model/repair';
 import { openingTree } from '../model/openingTree';
-import { isSteered, recommend, type Focus, type RecommendInput, type Recommendation } from '../model/recommend';
+import { isSteered, recommend, type Focus, type RecommendInput, type Recommendation, type Start } from '../model/recommend';
 import { referenceIndex } from '../model/referenceIndex';
 import { seenIn } from '../model/scoring';
 import { itemsInRegion, lineInRegion, regionOf, repertoiresIn, type Selection } from '../model/selection';
@@ -86,9 +86,11 @@ export interface AutoHistory {
   focuses: Focus[];
   /** For each of those, whether it was steered into an opening below the selection. */
   steered: boolean[];
+  /** Where each of those started, for the Cold Start rule — see `coldStart`. */
+  starts: Start[];
 }
 
-export const NO_HISTORY: AutoHistory = { modes: [], focuses: [], steered: [] };
+export const NO_HISTORY: AutoHistory = { modes: [], focuses: [], steered: [], starts: [] };
 
 /**
  * Autopilot's next round, or null with nothing prepared inside the selection.
@@ -98,8 +100,9 @@ export const NO_HISTORY: AutoHistory = { modes: [], focuses: [], steered: [] };
  * selection — see `autopilot.ts`.
  */
 export function nextRound(state: State, history: AutoHistory): AutoRound | null {
-  const pick = recommendNow(state, history.focuses, history.steered);
-  if (!pick) return null;
+  const recommended = recommendNow(state, history.focuses, history.steered);
+  if (!recommended) return null;
+  const pick = coldStart(recommended, history.starts);
   const tree = openingTree(referenceIndex());
   const index = referenceIndex();
   const selection = state.settings.selection;
@@ -171,5 +174,6 @@ export function afterRound(history: AutoHistory, round: AutoRound, selection: Se
     modes: [...history.modes, round.mode],
     focuses: round.mode === 'survival' ? [...history.focuses, round.pick.focus] : history.focuses,
     steered: round.mode === 'survival' ? [...history.steered, isSteered(round.pick, selection)] : history.steered,
+    starts: round.mode === 'survival' ? [...history.starts, round.pick.start] : history.starts,
   };
 }
