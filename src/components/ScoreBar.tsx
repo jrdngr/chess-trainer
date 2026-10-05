@@ -121,17 +121,16 @@ export function ScoreBar() {
 /**
  * The rating of the opening you have selected, for Home.
  *
- * Only starred openings are rated, so this box has three things to say. A
- * starred opening shows its piece, its rating and how far it is from the next
- * piece. One you have selected but not starred explains itself in a line and
- * offers the star. With the whole tree selected there is no one opening to
- * report on, so it points at the list of the ones there are.
+ * Any opening shows its tier, its rating and how far it is from the next
+ * tier, and opens its stats. One that is not a favorite carries an outline
+ * star by its name: a label, never a button, so nothing here can favorite it
+ * by accident. With the whole tree selected there is no one opening to report
+ * on, so it points at the list of the ones there are.
  */
 export function ScoreStrip() {
   const selection = useStore((s) => s.settings.selection);
   const starredIds = useStore((s) => s.settings.favoriteOpenings);
   const score = useStore((s) => s.score);
-  const toggleStar = useStore((s) => s.toggleStar);
   const openStats = useStore((s) => s.openStats);
   const tree = openingTree(referenceIndex());
 
@@ -140,7 +139,7 @@ export function ScoreStrip() {
       <button className="score-strip empty" onClick={() => openStats('')} aria-label="Your ratings">
         <span className="grow">
           <span className="ttl">No opening selected</span>
-          <span className="sub">Pick a favorite opening above to see its rating.</span>
+          <span className="sub">Pick an opening above to see its rating.</span>
         </span>
         <Icons.chevron size={18} />
       </button>
@@ -148,28 +147,19 @@ export function ScoreStrip() {
   }
 
   const node = nodeById(tree, selection.opening);
-
-  if (!starredIds.includes(node.id)) {
-    return (
-      <button
-        className="score-strip empty"
-        onClick={() => toggleStar(node.id)}
-        aria-label={`Add ${node.name} to favorites`}
-      >
-        <span className="grow">
-          <span className="ttl truncate">{node.name}</span>
-          <span className="sub">Not a favorite, so no rating. Add it to favorites to start one.</span>
-        </span>
-        <Icons.star size={20} />
-      </button>
-    );
-  }
-
+  const favorite = starredIds.includes(node.id);
   const stats = nodeStats(score, node.id);
   const rank = rankOf(stats.rating, stats.rated);
   return (
     <button className="score-strip" onClick={() => openStats(node.id)} aria-label={`${node.name} rating`}>
-      <span className="who truncate">{node.name}</span>
+      <span className="who truncate">
+        {!favorite && (
+          <span className="not-fav" aria-label="Not a favorite">
+            <Icons.star size={11} />
+          </span>
+        )}
+        {node.name}
+      </span>
       <RankBar
         rank={rank}
         centre={

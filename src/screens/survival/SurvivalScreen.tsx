@@ -16,7 +16,7 @@ import type { Color } from '../../chess/core';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { evidenceFor } from '../../model/growth';
-import { seenIn } from '../../model/scoring';
+import { seenIn, type MoveResult } from '../../model/scoring';
 import { growOfferAt, offerOpening, type GrowOffer } from '../../model/growOffer';
 import type { Selection } from '../../model/selection';
 import { useRatingTracker } from '../../components/Ratings';
@@ -108,8 +108,9 @@ interface MissFlash {
  * review, and the game goes on. Mate or a draw ends a run too.
  *
  * It is the one mode that rates: every prepared position answered moves the
- * rating of the starred openings it was played inside, up for your prep move
- * and down for a miss, and nothing past your prep counts. A run that gets to
+ * rating of every opening the run's line reaches, up for your prep move and
+ * down for a miss, and nothing past your prep counts. An opening the line
+ * reaches later in the run takes the answers that led there. A run that gets to
  * the end of your prep without a miss is a clean finish of that line, which
  * is what Growth's readiness reads, and its end screen offers to grow from
  * where the prep ran out. It adds nothing to the repertoire itself, and keeps
@@ -144,6 +145,7 @@ export function SurvivalScreen({
   const state = useStore();
   const { settings, cards } = state;
   const recordMove = useStore((s) => s.recordMove);
+  const settleRun = useStore((s) => s.settleRun);
   const endRound = useStore((s) => s.endRound);
   const endSurvival = useStore((s) => s.endSurvival);
   const answered = useStore((s) => s.answeredInOpeningRun);
@@ -182,6 +184,8 @@ export function SurvivalScreen({
   const prepEnd = useRef<string[] | null>(null);
   const [growOffer, setGrowOffer] = useState<GrowOffer | null>(null);
   const ratings = useRatingTracker();
+  /** This run's rated answers, which an opening the line reaches later takes too. */
+  const answers = useRef<MoveResult[]>([]);
 
   const run = game?.state.run ?? null;
   const live = phase === 'playing' && !!run;
@@ -198,6 +202,7 @@ export function SurvivalScreen({
     setBefore(useStore.getState().survival);
     const line = ended.run.played;
     endSurvival(line, ended.moves);
+    ratings.track(settleRun(answers.current, line));
     const region = nodeById(tree, ended.run.openingId);
     const clean = ended.misses.length === 0 ? prepEnd.current : null;
     endRound({
@@ -232,13 +237,15 @@ export function SurvivalScreen({
   };
 
   /**
-   * One prepared position answered: a rated result for every starred opening
-   * it was asked inside, credited to the position asked rather than wherever
-   * the move went.
+   * One prepared position answered: a rated result for every opening the run
+   * has reached, credited to the position asked rather than wherever the move
+   * went.
    */
   const tally = (line: string[], correct: boolean) => {
     if (!run) return;
-    ratings.track(recordMove({ mode: 'survival', line, color: run.color, correct, rated: true }));
+    const result: MoveResult = { mode: 'survival', line, color: run.color, correct, rated: true, at: Date.now() };
+    ratings.track(recordMove(result, answers.current));
+    answers.current = [...answers.current, result];
   };
 
   /** The way into Growth a clean end of prep earns — see `growOfferAt`. */
@@ -380,6 +387,7 @@ export function SurvivalScreen({
     over.current = false;
     prepEnd.current = null;
     ratings.reset();
+    answers.current = [];
     setGrowOffer(null);
     judge.reset();
     setPrefs(chosen);
@@ -434,12 +442,19 @@ export function SurvivalScreen({
   }
 
   if (phase === 'over' && ending) {
+    // Every opening the run reached was rated; the end screen names your
+    // favorites and the one the run was played in, not every opening above it.
+    const { run: ended } = game.state;
+    const playedIn = deepestNodeWithin(tree, nodeById(tree, ended.openingId), ended.played).id;
+    const shown = ratings.moved.filter(
+      (change) => change.id === playedIn || settings.favoriteOpenings.includes(change.id),
+    );
     return (
       <End
         state={game.state}
         ending={ending}
         before={before}
-        moved={ratings.moved}
+        moved={shown}
         grow={growOffer?.kind === 'opening' ? { text: growOffer.text, onGrow: () => setPhase('growing') } : null}
         growLine={growOffer?.kind === 'line' ? () => setPhase('growing') : null}
         nextLabel={onNext ? 'Next round' : 'Next run'}

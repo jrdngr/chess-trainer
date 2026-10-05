@@ -71,7 +71,7 @@ export function End({
   ending: Ending;
   /** The record as it stood before this run, to tell a new best. */
   before: SurvivalRecord;
-  /** Every starred opening this run moved the rating of. */
+  /** The ratings this run moved that the end screen names: favorites and the run's own opening. */
   moved: RatingChange[];
   /** The offer to grow the opening, on a clean end of prep with every line held. */
   grow: { text: string; onGrow: () => void } | null;

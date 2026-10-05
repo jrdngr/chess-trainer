@@ -24,8 +24,19 @@ import {
   UNRATED,
   type NodeStats,
 } from '../model/scoring';
-import { dailyRounds, favouriteness, ratingOverTime, rollingAccuracy, starredOpenings } from '../model/stats';
+import {
+  dailyRounds,
+  favouriteness,
+  ratedOpenings,
+  ratingOverTime,
+  rollingAccuracy,
+  starredOpenings,
+  type Ranked,
+} from '../model/stats';
 import { useStore } from '../store/useStore';
+
+/** Rated openings shown before "Show all": the ones played last. */
+const RATED_SHOWN = 6;
 
 const WINDOWS = [
   { value: '30', label: '30 days' },
@@ -34,11 +45,13 @@ const WINDOWS = [
 ];
 
 /**
- * Stats: your starred openings, and any opening in the book.
+ * Stats: your favorite openings, the others you have played, and any opening
+ * in the book.
  *
  * There is no global score to open on any more — a rating belongs to one
- * opening — so the tab opens on the openings you have starred, each with the
- * rung it holds, and the activity that is true of the whole game underneath.
+ * opening — so the tab opens on your favorites, each with the rung it holds,
+ * then every other opening Survival has rated, and the activity that is true
+ * of the whole game underneath.
  * Every row, and every stats button in the opening picker, opens that
  * opening's own page over it.
  */
@@ -67,9 +80,30 @@ export function StatsScreen({ target, onConsumedTarget }: { target?: string; onC
   );
 }
 
+/** One opening in a ratings list: its tier, where it sits, and its rating. */
+function RatedRow({ entry, onOpen }: { entry: Ranked; onOpen: (id: string) => void }) {
+  const { node, stats: own, trail } = entry;
+  const rank = rankOf(own.rating, own.rated);
+  return (
+    <button className="list-row" onClick={() => onOpen(node.id)}>
+      <span className="side" style={{ background: (rank.held ?? UNRATED).color }} />
+      <span className="grow" style={{ minWidth: 0 }}>
+        <div className="title truncate">{node.name}</div>
+        <div className="meta truncate">
+          {rank.heldLabel}
+          {trail ? ` \u00b7 ${trail}` : ''}
+        </div>
+      </span>
+      <span className="val num">{own.rated === 0 ? '\u2014' : ratingText(own.rating)}</span>
+      <Icons.chevron size={18} />
+    </button>
+  );
+}
+
 /**
- * The tab's own page: the openings you have starred, each with the rung it
- * holds, and under them the activity that is true of the whole game.
+ * The tab's own page: your favorites and then the other rated openings, each
+ * with the rung it holds, and under them the activity that is true of the
+ * whole game.
  */
 function YourOpenings({
   days,
@@ -85,6 +119,16 @@ function YourOpenings({
   const tree = openingTree(referenceIndex());
   const stats = score.global;
   const mine = useMemo(() => starredOpenings(tree, score, starred), [tree, score, starred]);
+  const others = useMemo(() => ratedOpenings(tree, score, starred), [tree, score, starred]);
+  const [showAll, setShowAll] = useState(false);
+  // Folded, the list keeps the openings played last, still in rating order.
+  const recent = new Set(
+    [...others]
+      .sort((a, b) => (b.stats.lastAt ?? 0) - (a.stats.lastAt ?? 0))
+      .slice(0, RATED_SHOWN)
+      .map((entry) => entry.node.id),
+  );
+  const shownOthers = showAll ? others : others.filter((entry) => recent.has(entry.node.id));
   const daily = useMemo(() => dailyRounds(stats, Number(days)), [stats, days]);
   const daysPlayed = streak(stats);
   const acc = accuracy(stats);
@@ -96,29 +140,31 @@ function YourOpenings({
         <Section title="Favorites" aside={mine.length ? 'by rating' : undefined} />
         {mine.length === 0 ? (
           <div className="card small muted">
-            No favorites yet. Add an opening to favorites in the picker and it gets a rating of its own,
-            which Survival moves up when you find your prep and down when you miss it.
+            No favorites yet. Add openings to favorites in the picker to keep them here. Every opening
+            Survival plays has a rating, which goes up when you find your prep and down when you miss it.
           </div>
         ) : (
           <div className="list">
-            {mine.map(({ node, stats: own, trail }) => {
-              const rank = rankOf(own.rating, own.rated);
-              return (
-                <button className="list-row" key={node.id} onClick={() => onOpen(node.id)}>
-                  <span className="side" style={{ background: (rank.held ?? UNRATED).color }} />
-                  <span className="grow" style={{ minWidth: 0 }}>
-                    <div className="title truncate">{node.name}</div>
-                    <div className="meta truncate">
-                      {rank.heldLabel}
-                      {trail ? ` \u00b7 ${trail}` : ''}
-                    </div>
-                  </span>
-                  <span className="val num">{own.rated === 0 ? '\u2014' : ratingText(own.rating)}</span>
-                  <Icons.chevron size={18} />
-                </button>
-              );
-            })}
+            {mine.map((entry) => (
+              <RatedRow key={entry.node.id} entry={entry} onOpen={onOpen} />
+            ))}
           </div>
+        )}
+
+        {others.length > 0 && (
+          <>
+            <Section title="Rated" aside="by rating" />
+            <div className="list">
+              {shownOthers.map((entry) => (
+                <RatedRow key={entry.node.id} entry={entry} onOpen={onOpen} />
+              ))}
+              {others.length > RATED_SHOWN && (
+                <button className="list-row" onClick={() => setShowAll(!showAll)}>
+                  <span className="grow title">{showAll ? 'Show fewer' : `Show all ${others.length}`}</span>
+                </button>
+              )}
+            </div>
+          </>
         )}
 
         <Section title="Activity" />
@@ -286,14 +332,6 @@ function OpeningPage({
           <div className="spacer" />
           <Ladder stats={stats} />
         </div>
-
-        {!isStarred && (
-          <div className="card small muted">
-            {stats.rated > 0
-              ? 'Not a favorite, so this rating is resting. Add it back and it picks up where it left off.'
-              : 'Not a favorite, so it has no rating. Add it to favorites and Survival will start one.'}
-          </div>
-        )}
 
         <div className="row gap-8 mt-12">
           <button

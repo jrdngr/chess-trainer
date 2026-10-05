@@ -139,6 +139,22 @@ export interface Ranked {
   trail: string;
 }
 
+function ranked(tree: OpeningTree, score: ScoreState, id: string): Ranked {
+  return {
+    node: nodeById(tree, id),
+    stats: nodeStats(score, id),
+    trail: ancestorsOf(tree, id).slice(0, -1).map((n) => n.name).join(' \u203a '),
+  };
+}
+
+function byRating(a: Ranked, b: Ranked): number {
+  return (
+    b.stats.rating - a.stats.rating ||
+    a.node.depth - b.node.depth ||
+    a.node.name.localeCompare(b.node.name)
+  );
+}
+
 /**
  * Your starred openings, best rated first. Stars below the ladder are kept and sort
  * last: a star you have not tested yet is still one of yours, and seeing it
@@ -151,18 +167,22 @@ export function starredOpenings(tree: OpeningTree, score: ScoreState, starred: I
     const node = tree.byId.get(id);
     if (!node || node.depth === 0 || seen.has(id)) continue;
     seen.add(id);
-    out.push({
-      node,
-      stats: nodeStats(score, id),
-      trail: ancestorsOf(tree, id).slice(0, -1).map((n) => n.name).join(' \u203a '),
-    });
+    out.push(ranked(tree, score, id));
   }
-  return out.sort(
-    (a, b) =>
-      b.stats.rating - a.stats.rating ||
-      a.node.depth - b.node.depth ||
-      a.node.name.localeCompare(b.node.name),
-  );
+  return out.sort(byRating);
+}
+
+/**
+ * Every opening Survival has rated that is not a favorite, best rated first.
+ * Unlike a star, one never rated is not listed: it is not yours until you
+ * have played it.
+ */
+export function ratedOpenings(tree: OpeningTree, score: ScoreState, starred: Iterable<string>): Ranked[] {
+  const stars = new Set(starred);
+  return Object.entries(score.nodes)
+    .filter(([id, stats]) => stats.rated > 0 && !stars.has(id) && (tree.byId.get(id)?.depth ?? 0) > 0)
+    .map(([id]) => ranked(tree, score, id))
+    .sort(byRating);
 }
 
 /** Ticks for an axis: a few round numbers that cover the range. */

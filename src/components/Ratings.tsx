@@ -49,9 +49,8 @@ export function useRatingTracker() {
 }
 
 /**
- * What a round did to your ratings, one line per starred opening it was
- * played inside. Nothing at all when the round touched none of them — which
- * is the usual case until something on the line is starred.
+ * What a round did to your ratings, one line per opening it is handed.
+ * Nothing at all when the round moved none of them.
  */
 export function Ratings({ moved }: { moved: RatingChange[] }) {
   if (moved.length === 0) return null;

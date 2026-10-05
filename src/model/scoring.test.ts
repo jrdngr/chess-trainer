@@ -17,6 +17,7 @@ import {
   ratingSwing,
   recordRound,
   seenIn,
+  settleRun,
   streak,
   TIERS,
   type MoveResult,
@@ -41,10 +42,10 @@ function result(over: Partial<MoveResult> = {}): MoveResult {
 }
 
 /** Answer the same line `n` times over, right or wrong. */
-function answered(starred: string[], n: number, correct: boolean, from = EMPTY_SCORE): ScoreState {
+function answered(_starred: string[], n: number, correct: boolean, from = EMPTY_SCORE): ScoreState {
   let state = from;
   for (let i = 0; i < n; i += 1) {
-    state = applyResult(state, tree, starred, result({ correct })).state;
+    state = applyResult(state, tree, result({ correct })).state;
   }
   return state;
 }
@@ -134,41 +135,75 @@ describe('which openings a result touches', () => {
     expect(creditedNodes(tree, ['Nh3', 'h6'])).toEqual([]);
   });
 
-  it('rates every starred opening the line is inside, widest first', () => {
+  it('rates every opening the line has reached, widest first', () => {
     const line = [...NAJDORF.split(' '), 'Be3'];
-    expect(ratedNodes(tree, [NAJDORF, SICILIAN], line)).toEqual([SICILIAN, NAJDORF]);
-    // A Dragon move is inside the starred Sicilian and outside the Najdorf.
-    expect(ratedNodes(tree, [NAJDORF, SICILIAN], DRAGON.split(' '))).toEqual([SICILIAN]);
-    expect(ratedNodes(tree, [], line)).toEqual([]);
-    expect(ratedNodes(tree, ['d4'], line)).toEqual([]);
+    expect(ratedNodes(tree, line)).toEqual(creditedNodes(tree, line));
+    // A Dragon move has reached the Sicilian and is outside the Najdorf.
+    expect(ratedNodes(tree, DRAGON.split(' '))).not.toContain(NAJDORF);
+    expect(ratedNodes(tree, DRAGON.split(' '))).toContain(SICILIAN);
   });
 
-  it('never rates the whole book, however it is starred', () => {
-    expect(ratedNodes(tree, [''], [...NAJDORF.split(' '), 'Be3'])).toEqual([]);
+  it('does not rate an opening the line has only yet to reach', () => {
+    expect(ratedNodes(tree, ['e4'])).toEqual(['e4']);
+    expect(ratedNodes(tree, ['e4'])).not.toContain(NAJDORF);
+    expect(ratedNodes(tree, [])).toEqual([]);
   });
 });
 
 describe('applying a result', () => {
-  it('moves the starred openings and nothing else', () => {
-    const { state, moves } = applyResult(EMPTY_SCORE, tree, [NAJDORF, SICILIAN], result());
-    expect(moves.map((move) => move.id)).toEqual([SICILIAN, NAJDORF]);
+  it('moves every opening the line has reached, favorite or not', () => {
+    const line = [...NAJDORF.split(' '), 'Be3'];
+    const { state, moves } = applyResult(EMPTY_SCORE, tree, result());
+    expect(moves.map((move) => move.id)).toEqual(creditedNodes(tree, line));
     expect(nodeStats(state, NAJDORF).rating).toBeGreaterThan(0);
-    expect(nodeStats(state, SICILIAN).rating).toBeGreaterThan(0);
-    // Credited for activity, but not starred, so not rated.
-    expect(nodeStats(state, 'e4').rating).toBe(0);
+    expect(nodeStats(state, 'e4').rating).toBeGreaterThan(0);
     expect(nodeStats(state, 'e4').answered).toBe(1);
+    // A Dragon was never on the line.
+    expect(nodeStats(state, DRAGON).rated).toBe(0);
     expect(state.global.rating).toBe(0);
+  });
+
+  it('rates an opening the run reaches later with the answers that led there', () => {
+    const lead = result({ line: ['e4'], color: 'b' });
+    const miss = result({ line: ['e4', 'c5', 'Nf3'], color: 'b', correct: false });
+    let applied = applyResult(EMPTY_SCORE, tree, lead);
+    expect(nodeStats(applied.state, SICILIAN).rated).toBe(0);
+    const earlier = [lead];
+    applied = applyResult(applied.state, tree, miss, earlier);
+    earlier.push(miss);
+    // The Sicilian takes 1.e4's answer as well as this one; 1.e4 itself only this one more.
+    expect(nodeStats(applied.state, SICILIAN).rated).toBe(2);
+    expect(nodeStats(applied.state, 'e4').rated).toBe(2);
+    expect(nodeStats(applied.state, NAJDORF).rated).toBe(0);
+    const sicilian = applied.moves.find((move) => move.id === SICILIAN)!;
+    expect(sicilian.before).toBe(0);
+    expect(sicilian.after).toBe(nodeStats(applied.state, SICILIAN).rating);
+
+    // The run ends having reached the Najdorf after its last answer.
+    const settled = settleRun(applied.state, tree, earlier, NAJDORF.split(' '));
+    expect(nodeStats(settled.state, NAJDORF).rated).toBe(2);
+    expect(nodeStats(settled.state, SICILIAN).rated).toBe(2);
+    expect(settled.moves.map((move) => move.id)).toContain(NAJDORF);
+    expect(settled.moves.map((move) => move.id)).not.toContain(SICILIAN);
+  });
+
+  it('leaves an opening the run turned away from alone', () => {
+    const lead = result({ line: ['e4', 'c5', 'Nf3'], color: 'b' });
+    const applied = applyResult(EMPTY_SCORE, tree, lead);
+    const settled = settleRun(applied.state, tree, [lead], DRAGON.split(' '));
+    expect(nodeStats(settled.state, NAJDORF).rated).toBe(0);
+    expect(nodeStats(settled.state, DRAGON).rated).toBe(1);
   });
 
   it('pulls a rating down on a miss', () => {
     const up = answered([NAJDORF], 20, true);
-    const down = applyResult(up, tree, [NAJDORF], result({ correct: false }));
+    const down = applyResult(up, tree, result({ correct: false }));
     expect(down.state.nodes[NAJDORF].rating).toBeLessThan(up.nodes[NAJDORF].rating);
     expect(down.moves[0].after).toBeLessThan(down.moves[0].before);
   });
 
   it('records an unrated mode without moving anything', () => {
-    const { state, moves } = applyResult(EMPTY_SCORE, tree, [NAJDORF], result({ mode: 'drill', rated: false }));
+    const { state, moves } = applyResult(EMPTY_SCORE, tree, result({ mode: 'drill', rated: false }));
     expect(moves).toEqual([]);
     expect(nodeStats(state, NAJDORF).rating).toBe(0);
     expect(nodeStats(state, NAJDORF).rated).toBe(0);
@@ -180,9 +215,9 @@ describe('applying a result', () => {
     let state = EMPTY_SCORE;
     let promotions = 0;
     for (let i = 0; i < 20; i += 1) {
-      const applied = applyResult(state, tree, [NAJDORF], result());
+      const applied = applyResult(state, tree, result());
       state = applied.state;
-      promotions += applied.moves.filter((move) => move.promotion === 1).length;
+      promotions += applied.moves.filter((move) => move.id === NAJDORF && move.promotion === 1).length;
     }
     expect(promotions).toBe(1);
     expect(rankOf(nodeStats(state, NAJDORF).rating).heldLabel).toBe('Learning');
@@ -190,17 +225,17 @@ describe('applying a result', () => {
     // Back down through the same rung.
     let demotions = 0;
     for (let i = 0; i < 60; i += 1) {
-      const applied = applyResult(state, tree, [NAJDORF], result({ correct: false }));
+      const applied = applyResult(state, tree, result({ correct: false }));
       state = applied.state;
-      demotions += applied.moves.filter((move) => move.promotion === -1).length;
+      demotions += applied.moves.filter((move) => move.id === NAJDORF && move.promotion === -1).length;
     }
     expect(demotions).toBe(1);
     expect(nodeStats(state, NAJDORF).rating).toBe(RATING.floor);
   });
 
   it('keeps accuracy from answers', () => {
-    let state = applyResult(EMPTY_SCORE, tree, [], result()).state;
-    state = applyResult(state, tree, [], result({ correct: false })).state;
+    let state = applyResult(EMPTY_SCORE, tree, result()).state;
+    state = applyResult(state, tree, result({ correct: false })).state;
     const najdorf = nodeStats(state, NAJDORF);
     expect(najdorf.answered).toBe(2);
     expect(najdorf.correct).toBe(1);
@@ -210,7 +245,7 @@ describe('applying a result', () => {
 
   it('files the day, and where the rating stood at the end of it', () => {
     const at = new Date(2026, 8, 13, 9).getTime();
-    const { state } = applyResult(EMPTY_SCORE, tree, [NAJDORF], result({ at }));
+    const { state } = applyResult(EMPTY_SCORE, tree, result({ at }));
     expect(state.global.days[dayKey(at)]).toEqual({ answered: 1, correct: 1, rounds: 0, rating: null });
     const day = nodeStats(state, NAJDORF).days[dayKey(at)];
     expect(day?.answered).toBe(1);
@@ -218,7 +253,7 @@ describe('applying a result', () => {
   });
 
   it('touches only the global record when the book names nothing on the line', () => {
-    const { state } = applyResult(EMPTY_SCORE, tree, [NAJDORF], result({ line: ['Nh3', 'h6'] }));
+    const { state } = applyResult(EMPTY_SCORE, tree, result({ line: ['Nh3', 'h6'] }));
     expect(state.global.answered).toBe(1);
     expect(Object.keys(state.nodes)).toEqual([]);
   });

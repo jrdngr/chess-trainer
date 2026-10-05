@@ -514,7 +514,7 @@ export function OpeningList({
   const row = (entry: PickerEntry, opts: { meta?: ReactNode; tapPicks?: boolean } = {}) => {
     const deeper = entry.children.length > 0;
     const stats = score.nodes[entry.node.id];
-    const rank = entry.exact && stars.has(entry.node.id) && stats && stats.rated > 0 ? rankOf(stats.rating) : null;
+    const rank = entry.exact && stats && stats.rated > 0 ? rankOf(stats.rating) : null;
     const onTap = () => (deeper && !opts.tapPicks ? go(placeOf(entry)) : pickEntry(entry));
     return (
       <div className={`list-row op-row${entry.exact && chosen(entry.node) ? ' selected' : ''}`} key={entry.key}>

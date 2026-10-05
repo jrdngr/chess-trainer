@@ -3,7 +3,6 @@ import { markSeen } from './freshness';
 import {
   ancestorsOf,
   deepestNodeAlong,
-  insideRegion,
   type OpeningTree,
 } from './openingTree';
 
@@ -176,8 +175,9 @@ export interface DayTally {
 /** Everything one opening — or the whole game — has done. */
 export interface NodeStats {
   /**
-   * The rating. Only openings you have starred are ever rated, and the global
-   * record is never rated at all: it is activity, not assessment.
+   * The rating. Any opening Survival has reached can be rated, favorite or
+   * not; the global record is never rated at all: it is activity, not
+   * assessment.
    */
   rating: number;
   /** Rated results this opening has had, right and wrong. */
@@ -320,7 +320,7 @@ export interface MoveResult {
   correct: boolean;
   /**
    * Whether this moves ratings. Only a prepared position answered in
-   * Autopilot does; everything else is recorded and nothing more.
+   * Survival does; everything else is recorded and nothing more.
    */
   rated: boolean;
   at: number;
@@ -346,19 +346,14 @@ export function creditedNodes(tree: OpeningTree, line: string[]): string[] {
 }
 
 /**
- * Which starred openings a result rates: every one the line is inside, so a
- * Najdorf move moves a starred Najdorf and a starred Sicilian alike, while a
- * Dragon move moves the Sicilian and leaves the Najdorf alone. Regions are
- * matched on positions, so a transposition still counts.
+ * Which openings a rated answer counts for: every one its line has actually
+ * reached, favorite or not — the same openings it counts as activity for.
+ * Matched on positions, so a transposition still counts. An opening the line
+ * could still head into does not: 1.e4 rates the Najdorf only in a run that
+ * gets there, and then through `applyResult`'s catch-up.
  */
-export function ratedNodes(tree: OpeningTree, starred: Iterable<string>, line: string[]): string[] {
-  const out: string[] = [];
-  for (const id of starred) {
-    const node = tree.byId.get(id);
-    if (!node || node.depth === 0 || out.includes(id)) continue;
-    if (insideRegion(tree, node, line)) out.push(id);
-  }
-  return out.sort((a, b) => (tree.byId.get(a)?.depth ?? 0) - (tree.byId.get(b)?.depth ?? 0));
+export function ratedNodes(tree: OpeningTree, line: string[]): string[] {
+  return creditedNodes(tree, line);
 }
 
 function tallyAnswer(stats: NodeStats, result: MoveResult): NodeStats {
@@ -405,32 +400,76 @@ function tallyRating(stats: NodeStats, result: MoveResult): { stats: NodeStats; 
 }
 
 /**
- * Apply one answer: activity against the openings its line names, and the
- * rating of every starred opening it was played inside. Returns the ratings
- * that moved, shallowest opening first, for the bar to show.
+ * Rate one run's answers into the openings `line` has reached. An opening
+ * reached for the first time this run first takes every earlier answer of the
+ * run, in order, so the lead-in to a Najdorf counts once the run becomes one;
+ * then `result`, when there is one, rates every opening reached. Returns one
+ * move per opening touched, from where it stood to where it ends up.
+ */
+function rateRun(
+  nodes: Record<string, NodeStats>,
+  tree: OpeningTree,
+  earlier: MoveResult[],
+  line: string[],
+  result: MoveResult | null,
+): RatingMove[] {
+  const before = new Map<string, number>();
+  const rate = (id: string, answer: MoveResult) => {
+    const stats = nodes[id] ?? emptyNodeStats();
+    if (!before.has(id)) before.set(id, stats.rating);
+    nodes[id] = tallyRating(stats, answer).stats;
+  };
+  const reached = ratedNodes(tree, line);
+  // Lines only grow within a run, so an opening an earlier answer reached
+  // already has every answer before it.
+  const rated = new Set(earlier.flatMap((answer) => ratedNodes(tree, answer.line)));
+  for (const id of reached) if (!rated.has(id)) for (const answer of earlier) rate(id, answer);
+  if (result) for (const id of reached) rate(id, result);
+  return [...before].map(([id, was]) => {
+    const after = nodes[id].rating;
+    const climbed = rankOf(after).reached - rankOf(was).reached;
+    return { id, before: was, after, promotion: climbed > 0 ? 1 : climbed < 0 ? -1 : 0 };
+  });
+}
+
+/**
+ * Apply one answer: activity against the openings its line names, and, when
+ * it is rated, the rating of every opening its line has reached. `earlier` is
+ * the run's rated answers before this one, which an opening reached for the
+ * first time takes too. Returns the ratings that moved, shallowest opening
+ * first, for the bar to show.
  */
 export function applyResult(
   state: ScoreState,
   tree: OpeningTree,
-  starred: Iterable<string>,
   result: MoveResult,
+  earlier: MoveResult[] = [],
 ): { state: ScoreState; moves: RatingMove[] } {
   const nodes = { ...state.nodes };
   for (const id of creditedNodes(tree, result.line)) {
     nodes[id] = tallyAnswer(nodes[id] ?? emptyNodeStats(), result);
   }
-  const moves: RatingMove[] = [];
-  if (result.rated) {
-    for (const id of ratedNodes(tree, starred, result.line)) {
-      const { stats, move } = tallyRating(nodes[id] ?? emptyNodeStats(), result);
-      nodes[id] = stats;
-      moves.push({ ...move, id });
-    }
-  }
+  const moves = result.rated ? rateRun(nodes, tree, earlier, result.line, result) : [];
   return {
     state: { ...state, global: tallyAnswer(state.global, result), nodes },
     moves,
   };
+}
+
+/**
+ * A run is over and its line went further than its last answer: the openings
+ * only that last stretch reached take the run's rated answers too.
+ */
+export function settleRun(
+  state: ScoreState,
+  tree: OpeningTree,
+  earlier: MoveResult[],
+  line: string[],
+): { state: ScoreState; moves: RatingMove[] } {
+  if (earlier.length === 0) return { state, moves: [] };
+  const nodes = { ...state.nodes };
+  const moves = rateRun(nodes, tree, earlier, line, null);
+  return moves.length ? { state: { ...state, nodes }, moves } : { state, moves };
 }
 
 function tallyRound(stats: NodeStats, round: RoundRecord): NodeStats {

@@ -37,6 +37,7 @@ import {
   EMPTY_SCORE,
   normalizeScore,
   recordRound,
+  settleRun,
   type MoveResult,
   type RatingMove,
   type RoundRecord,
@@ -255,10 +256,16 @@ interface StoreState extends PersistedState {
   endSurvival: (line: string[], moves: number) => void;
   /**
    * Record one answer: activity against the openings its line names, and, for
-   * a rated one, the rating of every starred opening it was played inside.
-   * Returns the ratings that moved.
+   * a rated one, the rating of every opening its line has reached. `earlier`
+   * is the run's rated answers so far, which an opening reached for the first
+   * time takes too. Returns the ratings that moved.
    */
-  recordMove: (result: Omit<MoveResult, 'at'>) => RatingMove[];
+  recordMove: (result: Omit<MoveResult, 'at'> & { at?: number }, earlier?: MoveResult[]) => RatingMove[];
+  /**
+   * A run is over: rate its answers into any opening only its last moves
+   * reached. Returns the ratings that moved.
+   */
+  settleRun: (earlier: MoveResult[], line: string[]) => RatingMove[];
   /** Count a finished round against its opening. */
   endRound: (round: Omit<RoundRecord, 'at'>) => void;
   /** Remember a move the user got wrong somewhere in the app. */
@@ -929,14 +936,20 @@ export const useStore = create<StoreState>((set, get) => {
       commit({ survival: recordSurvival(get().survival, openingTree(referenceIndex()), line, moves) });
     },
 
-    recordMove(result) {
+    settleRun(earlier, line) {
+      const { state: score, moves } = settleRun(get().score, openingTree(referenceIndex()), earlier, line);
+      if (moves.length) commit({ score });
+      return moves;
+    },
+
+    recordMove(result, earlier) {
       const state = get();
       const tree = openingTree(referenceIndex());
       const { state: score, moves } = applyResult(
         state.score,
         tree,
-        state.settings.favoriteOpenings,
-        { ...result, at: Date.now() },
+        { ...result, at: result.at ?? Date.now() },
+        earlier,
       );
       // The bar shows the opening you are working in when that is one of the
       // ratings that moved, and otherwise the narrowest one that did.

@@ -9,6 +9,7 @@ import {
   ratingOverTime,
   rollingAccuracy,
   starredOpenings,
+  ratedOpenings,
 } from './stats';
 
 const tree = openingTree(referenceIndex());
@@ -23,9 +24,8 @@ function answered(
   line: string,
   back: number,
   correct = true,
-  starred: string[] = [NAJDORF],
 ): ScoreState {
-  return applyResult(state, tree, starred, {
+  return applyResult(state, tree, {
     mode: 'run', line: line.split(' '), color: 'w', correct, rated: true, at: noon - back * DAY,
   }).state;
 }
@@ -103,13 +103,25 @@ describe('favouriteness', () => {
 describe('your openings', () => {
   it('lists the stars, best rated first, with where they sit', () => {
     const stars = [NAJDORF, DRAGON];
-    let state = answered(EMPTY_SCORE, `${NAJDORF} Be3`, 0, true, stars);
-    state = answered(state, `${NAJDORF} Be3`, 0, true, stars);
+    let state = answered(EMPTY_SCORE, `${NAJDORF} Be3`, 0, true);
+    state = answered(state, `${NAJDORF} Be3`, 0, true);
     const mine = starredOpenings(tree, state, stars);
     expect(mine.map((entry) => entry.node.id)).toEqual([NAJDORF, DRAGON]);
     expect(mine[0].trail).toContain('Sicilian Defence');
     // An untested star is still yours, and reads New.
     expect(rankOf(mine[1].stats.rating, mine[1].stats.rated).heldLabel).toBe('New');
+  });
+
+  it('lists the rated openings that are not favorites, best first', () => {
+    const state = answered(EMPTY_SCORE, `${NAJDORF} Be3`, 0, true);
+    const rated = ratedOpenings(tree, state, [NAJDORF]);
+    const ids = rated.map((entry) => entry.node.id);
+    expect(ids).not.toContain(NAJDORF);
+    expect(ids).toContain('e4 c5');
+    expect(ids).not.toContain(DRAGON);
+    for (let i = 1; i < rated.length; i += 1) {
+      expect(rated[i - 1].stats.rating).toBeGreaterThanOrEqual(rated[i].stats.rating);
+    }
   });
 
   it('leaves out the root and anything starred twice', () => {
