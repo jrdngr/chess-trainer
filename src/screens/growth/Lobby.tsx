@@ -3,7 +3,8 @@ import { START_FEN } from '../../chess/core';
 import { AppBar, Icons, Section, Segmented, toast } from '../../components/ui';
 import { SelectionBar } from '../../components/Selection';
 import { openingTree } from '../../model/openingTree';
-import { colorsOf, regionOf, repertoiresIn } from '../../model/selection';
+import { colorsOf, repertoiresIn } from '../../model/selection';
+import { acrossRegions, isAnyFavorite, regionsBySide } from '../../model/anyFavorite';
 import { growthRows, optionsAt, recommended, unaskedPastBook, type GrowthRow } from '../../model/growth';
 import { useEngineReplies } from '../../engine/engineReplies';
 import { GROWTH_DEPTHS, SHARE_STEPS, shareLabel } from '../../model/modes';
@@ -36,7 +37,8 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
   const selection = state.settings.selection;
   const index = referenceIndex();
   const tree = openingTree(index);
-  const node = regionOf(tree, selection);
+  const favorites = state.settings.favoriteOpenings;
+  const regions = useMemo(() => regionsBySide(tree, selection, favorites), [tree, selection, favorites]);
 
   /** One tree per side the selection asks for, an empty stand-in where there is none. */
   const reps = useMemo(() => {
@@ -83,22 +85,31 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
   const [asked, setAsked] = useState<string[]>([]);
   const pending = useEngineReplies(asked);
   useEffect(() => {
-    const fens = reps.flatMap((rep) =>
-      unaskedPastBook(rep, index, { minShare: prefs.minShare, maxPly: prefs.maxPly, region: { tree, node } }),
+    const fens = acrossRegions(
+      regions,
+      reps,
+      (rep, node) => unaskedPastBook(rep, index, { minShare: prefs.minShare, maxPly: prefs.maxPly, region: { tree, node } }),
+      (fen) => fen,
     );
     setAsked((before) => (fens.length === 0 || fens.every((fen) => before.includes(fen)) ? before : [...before, ...fens]));
-  }, [reps, index, prefs.minShare, prefs.maxPly, tree, node, pending]);
+  }, [reps, index, prefs.minShare, prefs.maxPly, tree, regions, pending]);
   const rows = useMemo(
     () =>
-      growthRows(reps, index, {
-        minShare: prefs.minShare,
-        maxPly: prefs.maxPly,
-        starred,
-        region: { tree, node },
-      }),
+      acrossRegions(
+        regions,
+        reps,
+        (rep, node) =>
+          growthRows([rep], index, {
+            minShare: prefs.minShare,
+            maxPly: prefs.maxPly,
+            starred,
+            region: { tree, node },
+          }),
+        (row) => row.id,
+      ).sort((a, b) => b.score - a.score || a.depth - b.depth || a.name.localeCompare(b.name)),
     // `pending` counts down as the engine answers, and each answer can add replies.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [reps, index, prefs.minShare, prefs.maxPly, starred, tree, node, pending],
+    [reps, index, prefs.minShare, prefs.maxPly, starred, tree, regions, pending],
   );
   const pick = recommended(rows);
 
@@ -148,7 +159,7 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
             <div className="empty">
               <div className="t">{pending > 0 ? 'Looking past the book…' : 'Nothing to extend'}</div>
               <div className="h">
-                {`Your repertoire meets every reply strong players choose in ${prefs.minShare}% of games or more${node.depth > 0 ? ` in ${node.name}` : ''}, down to ${Math.ceil(prefs.maxPly / 2)} moves. Lower the threshold below, or widen the opening, to keep going.`}
+                {`Your repertoire meets every reply strong players choose in ${prefs.minShare}% of games or more${isAnyFavorite(selection) ? ' in your favorites' : regions[0] && regions[0].node.depth > 0 ? ` in ${regions[0].node.name}` : ''}, down to ${Math.ceil(prefs.maxPly / 2)} moves. Lower the threshold below, or widen the opening, to keep going.`}
               </div>
             </div>
           )

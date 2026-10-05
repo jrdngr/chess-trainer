@@ -8,6 +8,7 @@ import { itemsInRegion, regionOf, repertoiresIn } from '../../model/selection';
 import { openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { itemsFor, repertoireList, useStore } from '../../store/useStore';
+import { takeRoundSelection } from '../../store/recommendation';
 
 export interface DrillScreenProps {
   onExit: () => void;
@@ -17,11 +18,16 @@ export interface DrillScreenProps {
 export function DrillScreen({ onExit }: DrillScreenProps) {
   const state = useStore();
   const reps = repertoireList(state);
-  const selection = state.settings.selection;
   const tree = openingTree(referenceIndex());
+  const [running, setRunning] = useState<DrillPrefs | null>(null);
+  /** The session's selection, "Any favorite" resolved to one favorite when it starts. */
+  const [selection, setSelection] = useState(state.settings.selection);
   const region = regionOf(tree, selection);
   const color = selection.color;
-  const [running, setRunning] = useState<DrillPrefs | null>(null);
+  const start = (prefs: DrillPrefs) => {
+    setSelection(takeRoundSelection(useStore.getState()));
+    setRunning(prefs);
+  };
 
   const items = useMemo(() => {
     if (!running) return [];
@@ -40,7 +46,7 @@ export function DrillScreen({ onExit }: DrillScreenProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running]);
 
-  if (!running) return <Setup onStart={setRunning} onExit={onExit} />;
+  if (!running) return <Setup onStart={start} onExit={onExit} />;
 
   if (lineColor) {
     return (

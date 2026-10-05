@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ANY_FAVORITE } from '../model/anyFavorite';
 import { nodeById, openingTree } from '../model/openingTree';
 import { referenceIndex } from '../model/referenceIndex';
 import { NEW_LABEL, nodeStats, rankOf, UNRATED, type Rank } from '../model/scoring';
@@ -133,6 +134,18 @@ export function ScoreStrip() {
   const score = useStore((s) => s.score);
   const openStats = useStore((s) => s.openStats);
   const tree = openingTree(referenceIndex());
+
+  if (selection.opening === ANY_FAVORITE) {
+    return (
+      <button className="score-strip empty" onClick={() => openStats('')} aria-label="Your ratings">
+        <span className="grow">
+          <span className="ttl">Any favorite</span>
+          <span className="sub">Each round rates the favorite it lands on.</span>
+        </span>
+        <Icons.chevron size={18} />
+      </button>
+    );
+  }
 
   if (selection.opening === '') {
     return (

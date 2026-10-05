@@ -32,6 +32,7 @@ import {
 import { addMistake, type Mistake } from '../model/mistakes';
 import { importedOnly, mergeGames, playGames, withPlayGame } from '../model/play';
 import { DEFAULT_SELECTION, type Selection } from '../model/selection';
+import { ANY_FAVORITE } from '../model/anyFavorite';
 import { picksFrom, selectionFor } from '../model/onboarding';
 import {
   applyResult,
@@ -859,7 +860,10 @@ export const useStore = create<StoreState>((set, get) => {
       const starred = settings.favoriteOpenings.includes(openingId)
         ? settings.favoriteOpenings.filter((id) => id !== openingId)
         : [...settings.favoriteOpenings, openingId];
-      commit({ settings: { ...settings, favoriteOpenings: starred } });
+      // "Any favorite" with none left is Any opening.
+      const selection =
+        settings.selection.opening === ANY_FAVORITE && starred.length === 0 ? { ...settings.selection, opening: '' } : settings.selection;
+      commit({ settings: { ...settings, favoriteOpenings: starred, selection } });
     },
 
     /**

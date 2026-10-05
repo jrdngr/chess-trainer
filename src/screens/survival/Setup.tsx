@@ -1,3 +1,4 @@
+import { ANY_FAVORITE } from '../../model/anyFavorite';
 import { AppBar, Section, Segmented, Toggle } from '../../components/ui';
 import { SelectionBar } from '../../components/Selection';
 import { clockLabel, CLOCK_MODES } from '../../model/openingRun';
@@ -22,7 +23,7 @@ export function Setup({ onStart, onExit }: { onStart: (prefs: SurvivalPrefs) => 
   const setPrefs = useStore((s) => s.setSurvivalPrefs);
   const record = useStore((s) => s.survival);
   const selected = useStore((s) => s.settings.selection.opening);
-  const opening = selected ? nodeById(openingTree(referenceIndex()), selected) : null;
+  const opening = selected && selected !== ANY_FAVORITE ? nodeById(openingTree(referenceIndex()), selected) : null;
 
   return (
     <>

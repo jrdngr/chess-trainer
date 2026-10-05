@@ -38,7 +38,7 @@ import {
   type SurvivalStart,
   type ScoreTone,
 } from '../../model/survival';
-import { evidenceIn } from '../../store/recommendation';
+import { evidenceIn, takeRoundSelection } from '../../store/recommendation';
 import { repertoireList, useStore } from '../../store/useStore';
 import type { TidyFind } from '../../model/tidy';
 import { useOpponent } from '../openingRun/useOpponent';
@@ -153,7 +153,6 @@ export function SurvivalScreen({
   const missed = useStore((s) => s.missedInOpeningRun);
   const index = referenceIndex();
   const tree = openingTree(index);
-  const selection = scope ?? settings.selection;
   /** What your games say, read once a visit, for the steers. */
   const [evidence] = useState(() => evidenceIn(state));
 
@@ -372,6 +371,8 @@ export function SurvivalScreen({
   }, [miss]);
 
   const start = (chosen: SurvivalPrefs) => {
+    // Each run starts on its own selection: "Any favorite" lands on one favorite per run.
+    const selection = scope ?? takeRoundSelection(useStore.getState());
     const begun = startSurvival({
       steer: plan ? 'lines' : chosen.steer,
       tree,

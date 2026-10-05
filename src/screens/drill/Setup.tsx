@@ -3,7 +3,8 @@ import { SelectionBar } from '../../components/Selection';
 import { DRAW_LABELS, FORM_LABELS, type DrillDraw, type DrillPrefs } from '../../model/modes';
 import { drillableLines, dueLines } from '../../model/lineDrill';
 import { clockLabel, CLOCK_MODES } from '../../model/openingRun';
-import { itemsInRegion, regionOf, repertoiresIn } from '../../model/selection';
+import { itemsInRegion, repertoiresIn } from '../../model/selection';
+import { acrossRegions, isAnyFavorite, regionsBySide } from '../../model/anyFavorite';
 import { openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { itemsFor, repertoireList, useStore } from '../../store/useStore';
@@ -34,10 +35,10 @@ export function Setup({
   const prefs = state.settings.drill;
   const selection = state.settings.selection;
   const tree = openingTree(referenceIndex());
-  const node = regionOf(tree, selection);
+  const regions = regionsBySide(tree, selection, state.settings.favoriteOpenings);
   const inScope = repertoiresIn(repertoireList(state), selection.color);
-  const items = itemsInRegion(tree, node, inScope.flatMap(itemsFor));
-  const lineList = inScope.flatMap((rep) => drillableLines(rep, tree, node));
+  const items = acrossRegions(regions, inScope, (rep, node) => itemsInRegion(tree, node, itemsFor(rep)), (i) => i.cardId);
+  const lineList = acrossRegions(regions, inScope, (rep, node) => drillableLines(rep, tree, node), (l) => `${l.repertoireId}:${l.tipId}`);
   const lines = lineList.length;
   const due = dueLines(lineList, state.lineCards).length;
   const lineMode = prefs.form === 'lines';
@@ -67,7 +68,7 @@ export function Setup({
             : items.length === 1
               ? '1 position'
               : `${items.length} positions`}{' '}
-          in {node.depth === 0 ? 'your repertoire' : node.name}
+          in {isAnyFavorite(selection) ? 'your favorites' : regions[0].node.depth === 0 ? 'your repertoire' : regions[0].node.name}
           {lineMode && due > 0 ? ` · ${due} due` : ''}
         </div>
 

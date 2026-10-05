@@ -3,10 +3,11 @@ import { Icons, Section, Sheet, Toggle } from '../components/ui';
 import { SelectionBar } from '../components/Selection';
 import { ScoreStrip } from '../components/ScoreBar';
 import { nodeById, openingTree } from '../model/openingTree';
-import { itemsInRegion, regionOf, repertoiresIn } from '../model/selection';
+import { itemsInRegion, repertoiresIn } from '../model/selection';
 import { growthRows } from '../model/growth';
 import { streak } from '../model/scoring';
-import { nextRound, NO_HISTORY, type AutoRound } from '../store/recommendation';
+import { nextRound, NO_HISTORY, peekRoundSelection, withSelection, type AutoRound } from '../store/recommendation';
+import { acrossRegions, regionsBySide } from '../model/anyFavorite';
 import { roundLabel } from '../model/autopilot';
 import { levelById } from '../model/play';
 import { recentForm } from '../model/survival';
@@ -41,7 +42,8 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
   const state = useStore();
   const selection = state.settings.selection;
   const tree = openingTree(referenceIndex());
-  const region = regionOf(tree, selection);
+  const favorites = state.settings.favoriteOpenings;
+  const regions = useMemo(() => regionsBySide(tree, selection, favorites), [tree, selection, favorites]);
   const reps = repertoiresIn(repertoireList(state), selection.color);
   const now = Date.now();
   const [pick, setPick] = useState<RepEntry | null>(null);
@@ -52,14 +54,14 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
   const perRep = useMemo<RepEntry[]>(
     () =>
       reps.map((rep) => {
-        const items = itemsInRegion(tree, region, itemsFor(rep));
+        const items = acrossRegions(regions, [rep], (r, node) => itemsInRegion(tree, node, itemsFor(r)), (i) => i.cardId);
         const cards = items.map((i) => state.cards[i.cardId]).filter(Boolean);
         const unseen = items.length - cards.length;
         const counts = countDue(cards, now);
         return { rep, items, counts, unseen, total: items.length, mastery: masteryBuckets(cards) };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [reps, state.cards, region],
+    [reps, state.cards, regions],
   );
 
   const allCards = Object.values(state.cards);
@@ -90,14 +92,20 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
   const growthPrefs = state.settings.growth;
   const growth = useMemo(
     () =>
-      growthRows(reps, referenceIndex(), {
-        minShare: growthPrefs.minShare,
-        maxPly: growthPrefs.maxPly,
-        starred: state.settings.favoriteOpenings,
-        region: { tree, node: region },
-      }),
+      acrossRegions(
+        regions,
+        reps,
+        (rep, node) =>
+          growthRows([rep], referenceIndex(), {
+            minShare: growthPrefs.minShare,
+            maxPly: growthPrefs.maxPly,
+            starred: state.settings.favoriteOpenings,
+            region: { tree, node },
+          }),
+        (row) => row.id,
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [reps, growthPrefs.minShare, growthPrefs.maxPly, state.settings.favoriteOpenings, region],
+    [reps, growthPrefs.minShare, growthPrefs.maxPly, state.settings.favoriteOpenings, regions],
   );
   const gapCount = growth.reduce((sum, row) => sum + row.holes.length + row.ends.length, 0);
   /**
@@ -108,7 +116,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
   const coverage = totalItems > 0 ? totalItems / (totalItems + gapCount) : 1;
 
   /** What Autopilot would start with, said on its button — or that there is nothing to drill. */
-  const first = useMemo(() => nextRound(state, NO_HISTORY), [state]);
+  const first = useMemo(() => nextRound(withSelection(state, peekRoundSelection(state)), NO_HISTORY), [state]);
   const days = streak(state.score.global);
 
   return (

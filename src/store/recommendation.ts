@@ -1,4 +1,5 @@
 import type { Color } from '../chess/core';
+import { favoritesIn, isAnyFavorite, resolveFavorite } from '../model/anyFavorite';
 import { AUTO_DRILL, AUTO_GROWTH } from '../model/autopilotPrefs';
 import { chooseMode, coldStart, type RoundMode } from '../model/autopilot';
 import { ACCURACY_RUNS } from '../model/recommend';
@@ -21,6 +22,62 @@ type State = ReturnType<typeof useStore.getState>;
  */
 export function withSelection(state: State, selection?: Selection): State {
   return selection ? { ...state, settings: { ...state.settings, selection } } : state;
+}
+
+/* ── Any favorite ────────────────────────────────────────────────────────── */
+
+/** The favorite the last round landed on, so the next one is another. */
+let lastFavorite: string | null = null;
+/** A round already looked ahead at (Home's Autopilot button), kept for the round that starts. */
+let ahead: { key: string; selection: Selection } | null = null;
+
+const aheadKey = (state: State, selection: Selection) =>
+  `${selection.color}|${selection.opening}|${state.settings.favoriteOpenings.join(',')}`;
+
+/**
+ * Resolve "Any favorite" now. Favorites you have something prepared in come
+ * first: a round in one you have nothing for would have nothing to ask.
+ */
+function resolveNow(state: State, selection: Selection): Selection {
+  const tree = openingTree(referenceIndex());
+  const reps = repertoireList(state);
+  const prepared = favoritesIn(tree, state.settings.favoriteOpenings, selection.color)
+    .filter(({ node, side }) => reps.some((rep) => rep.color === side && itemsInRegion(tree, node, itemsFor(rep)).length > 0))
+    .map(({ node }) => node.id);
+  return resolveFavorite(
+    tree,
+    selection,
+    prepared.length ? prepared : state.settings.favoriteOpenings,
+    (id) => state.score.nodes[id]?.lastAt ?? 0,
+    lastFavorite,
+    Math.random,
+  );
+}
+
+/**
+ * The selection the next round starts on: the saved one (or `selection`), with
+ * "Any favorite" resolved to one favorite and its side. The same answer until
+ * a round on it is played (`playedRound`), so saying it ahead of time (Home's
+ * Autopilot button) and starting it agree, and asking twice is harmless.
+ */
+export function peekRoundSelection(state: State, selection: Selection = state.settings.selection): Selection {
+  if (!isAnyFavorite(selection)) return selection;
+  const key = aheadKey(state, selection);
+  if (ahead?.key !== key) ahead = { key, selection: resolveNow(state, selection) };
+  return ahead.selection;
+}
+
+/** A round on `selection` is under way: the next one lands on another favorite. */
+export function playedRound(selection: Selection): void {
+  if (selection.opening) lastFavorite = selection.opening;
+  ahead = null;
+}
+
+/** The next round's selection, taken: for starting a round from a tap. */
+export function takeRoundSelection(state: State, selection: Selection = state.settings.selection): Selection {
+  const taken = peekRoundSelection(state, selection);
+  if (isAnyFavorite(selection)) playedRound(taken);
+  return taken;
 }
 
 /**

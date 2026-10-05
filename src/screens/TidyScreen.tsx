@@ -9,7 +9,8 @@ import { againstReason, goneWith, NOT_IN_BOOK } from '../model/nudge';
 import { openingTree } from '../model/openingTree';
 import { referenceIndex } from '../model/referenceIndex';
 import { pathTo } from '../model/repertoire';
-import { regionOf, repertoiresIn } from '../model/selection';
+import { repertoiresIn } from '../model/selection';
+import { acrossRegions, isAnyFavorite, regionsBySide } from '../model/anyFavorite';
 import { rareReason, rareReplies, type RareReply } from '../model/rareReplies';
 import { findAt, moveLabel, sortFinds, tidyPositions, type TidyFind, type TidyOptions } from '../model/tidy';
 import { repertoireList, useStore } from '../store/useStore';
@@ -44,7 +45,8 @@ export function TidyScreen({ focus, onConsumedFocus }: { focus?: TidyFind | null
   const tidyRemove = useStore((s) => s.tidyRemove);
   const index = referenceIndex();
   const tree = openingTree(index);
-  const region = regionOf(tree, selection);
+  const favorites = useStore((s) => s.settings.favoriteOpenings);
+  const regions = useMemo(() => regionsBySide(tree, selection, favorites), [tree, selection, favorites]);
   const reps = useMemo(
     () => repertoiresIn(repertoireList({ repertoires, repertoireOrder }), selection.color),
     [repertoires, repertoireOrder, selection.color],
@@ -71,7 +73,7 @@ export function TidyScreen({ focus, onConsumedFocus }: { focus?: TidyFind | null
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const first = useRef(true);
   useEffect(() => {
-    const todo = tidyPositions(reps, tree, region);
+    const todo = acrossRegions(regions, reps, (rep, node) => tidyPositions([rep], tree, node), (t) => `${t.rep.id}:${t.node.id}`);
     const found: TidyFind[] = [];
     let at = 0;
     let cancelled = false;
@@ -99,7 +101,7 @@ export function TidyScreen({ focus, onConsumedFocus }: { focus?: TidyFind | null
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [reps, tree, region, index, opts]);
+  }, [reps, tree, regions, index, opts]);
 
   // A pinned find the switch has already dealt with, or that the tree no
   // longer holds, stops being pinned.
@@ -133,8 +135,8 @@ export function TidyScreen({ focus, onConsumedFocus }: { focus?: TidyFind | null
   };
 
   const rare = useMemo(
-    () => rareReplies(reps, index, tree, region, growth.minShare),
-    [reps, index, tree, region, growth.minShare],
+    () => acrossRegions(regions, reps, (rep, node) => rareReplies([rep], index, tree, node, growth.minShare), (r) => r.id),
+    [reps, index, tree, regions, growth.minShare],
   );
 
   const onKeep = (reply: RareReply) => {
@@ -151,7 +153,8 @@ export function TidyScreen({ focus, onConsumedFocus }: { focus?: TidyFind | null
     toast(`Removed ${moveLabel(reply.path.length, reply.san)} · ${moves}`, { label: 'Undo', run: undo });
   };
 
-  const where = region.depth === 0 ? 'your repertoire' : `the ${region.name}`;
+  const region = regions[0]?.node ?? tree.root;
+  const where = isAnyFavorite(selection) ? 'your favorites' : region.depth === 0 ? 'your repertoire' : `the ${region.name}`;
 
   return (
     <>

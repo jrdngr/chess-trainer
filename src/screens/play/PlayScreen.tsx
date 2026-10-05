@@ -20,6 +20,8 @@ import { specificNameForColor } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
 import { lineStatus, nodeById, openingTree } from '../../model/openingTree';
 import { selectionText } from '../../components/Selection';
+import { takeRoundSelection } from '../../store/recommendation';
+import type { Selection } from '../../model/selection';
 import { childrenOf, displayName, fenAt } from '../../model/repertoire';
 import { positionKey } from '../../chess/core';
 import type { Repertoire } from '../../model/types';
@@ -31,9 +33,16 @@ export interface PlayScreenProps {
 }
 
 export function PlayScreen({ onExit }: PlayScreenProps) {
-  const [prefs, setPrefs] = useState<PlayPrefs | null>(null);
-  if (!prefs) return <Setup onStart={setPrefs} onExit={onExit} />;
-  return <Game prefs={prefs} onExit={() => setPrefs(null)} onClose={onExit} />;
+  const [game, setGame] = useState<{ prefs: PlayPrefs; selection: Selection } | null>(null);
+  if (!game) {
+    return (
+      <Setup
+        onStart={(prefs) => setGame({ prefs, selection: takeRoundSelection(useStore.getState()) })}
+        onExit={onExit}
+      />
+    );
+  }
+  return <Game prefs={game.prefs} selection={game.selection} onExit={() => setGame(null)} onClose={onExit} />;
 }
 
 /** What the repertoire prepares at a position, by key, for the off-book warning. */
@@ -56,7 +65,18 @@ function prepIndex(rep: Repertoire | null): Map<string, string[]> {
 }
 
 /** `onExit` is back to the setup for a new game; `onClose` is out of Play altogether. */
-function Game({ prefs, onExit, onClose }: { prefs: PlayPrefs; onExit: () => void; onClose: () => void }) {
+function Game({
+  prefs,
+  selection,
+  onExit,
+  onClose,
+}: {
+  prefs: PlayPrefs;
+  /** The game's selection, "Any favorite" resolved to one favorite for it. */
+  selection: Selection;
+  onExit: () => void;
+  onClose: () => void;
+}) {
   const state = useStore();
   const settings = state.settings;
   const addLine = useStore((s) => s.addLine);
@@ -66,7 +86,6 @@ function Game({ prefs, onExit, onClose }: { prefs: PlayPrefs; onExit: () => void
   const reps = repertoireList(state);
   const index = referenceIndex();
   const level = levelById(prefs.level);
-  const selection = settings.selection;
   const tree = openingTree(index);
   const region = nodeById(tree, selection.opening);
 

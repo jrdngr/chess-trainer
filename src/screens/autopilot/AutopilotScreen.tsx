@@ -9,7 +9,7 @@ import { itemsInRegion, repertoiresIn, type Selection } from '../../model/select
 import type { TidyFind } from '../../model/tidy';
 import { itemsFor, repertoireList, useStore } from '../../store/useStore';
 import { weakestFirst } from '../../model/session';
-import { afterRound, nextRound, NO_HISTORY, withSelection, type AutoHistory, type AutoRound } from '../../store/recommendation';
+import { afterRound, nextRound, NO_HISTORY, peekRoundSelection, playedRound, withSelection, type AutoHistory, type AutoRound } from '../../store/recommendation';
 import { DrillSession } from '../drill/DrillSession';
 import { LineDrill } from '../drill/LineDrill';
 import { LINE_BUDGET, MAX_LINES } from '../../model/lineDrill';
@@ -53,9 +53,15 @@ export function AutopilotScreen({
   scope?: Selection;
 }) {
   const [history, setHistory] = useState<AutoHistory>(NO_HISTORY);
+  /** The selection this round plays in: the scope, or the saved one with "Any favorite" resolved per round. */
+  const [within, setWithin] = useState<Selection>(() => scope ?? peekRoundSelection(useStore.getState()));
   const [round, setRound] = useState<AutoRound | null>(() =>
-    nextRound(withSelection(useStore.getState(), scope), NO_HISTORY),
+    nextRound(withSelection(useStore.getState(), within), NO_HISTORY),
   );
+  /** Once a round is under way the next lands on another favorite, even if this session stops here. */
+  useEffect(() => {
+    if (!scope) playedRound(within);
+  }, [scope, within]);
   /** Autopilot's own options, and the fixed ones every round plays on; never a mode's setup. */
   const autopilotPrefs = useStore((s) => s.settings.autopilot);
   const modes = useMemo(() => autopilotModes(autopilotPrefs), [autopilotPrefs]);
@@ -69,10 +75,11 @@ export function AutopilotScreen({
    */
   const advance = () => {
     if (!round) return;
-    const state = withSelection(useStore.getState(), scope);
-    const played = afterRound(history, round, state.settings.selection);
+    const played = afterRound(history, round, within);
+    const next = scope ?? peekRoundSelection(useStore.getState());
     setHistory(played);
-    setRound(nextRound(state, played));
+    setWithin(next);
+    setRound(nextRound(withSelection(useStore.getState(), next), played));
     setCount((n) => n + 1);
   };
 
@@ -86,7 +93,7 @@ export function AutopilotScreen({
           <SurvivalScreen
             key={count}
             plan={survivalPlanFor(current.pick)}
-            scope={scope}
+            scope={within}
             onNext={advance}
             onExit={onExit}
             onAnalyze={onAnalyze}
