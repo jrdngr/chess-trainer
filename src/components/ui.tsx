@@ -34,6 +34,8 @@ export function Sheet({ open, onClose, title, actions, from = 'bottom', children
       className="sheet-grip-zone"
       onPointerDown={(e) => {
         startY.current = e.clientY;
+        // Keep the drag once the finger leaves the grip, which it does at once.
+        e.currentTarget.setPointerCapture(e.pointerId);
       }}
       onPointerMove={(e) => {
         if (startY.current === null || !sheetRef.current) return;
@@ -47,25 +49,35 @@ export function Sheet({ open, onClose, title, actions, from = 'bottom', children
         startY.current = null;
         if (dy > 90) onClose();
       }}
+      onPointerCancel={() => {
+        // The browser took the gesture over (a scroll, the host's own swipe).
+        if (sheetRef.current) sheetRef.current.style.transform = '';
+        startY.current = null;
+      }}
     >
       <div className="sheet-grip" />
     </div>
   );
-  const head = (title || actions || from === 'top') && (
+  // Every sheet has a close button: a drag can be taken over by the page
+  // around the app, and the backdrop is easy to miss.
+  const head = (
     <div className="sheet-head">
       {typeof title === 'string' ? <h3 className="truncate">{title}</h3> : title}
       {actions}
-      {from === 'top' && (
-        <IconButton label="Close" onClick={onClose}>
-          <Icons.close size={20} />
-        </IconButton>
-      )}
+      <IconButton label="Close" onClick={onClose}>
+        <Icons.close size={20} />
+      </IconButton>
     </div>
   );
 
   return (
     <>
-      <div className="sheet-backdrop" onPointerDown={onClose} />
+      {/*
+        Closed on click, not pointer down: closing on the press took the
+        backdrop away before the tap ended, and on iOS the tap then landed on
+        whatever was underneath.
+      */}
+      <div className="sheet-backdrop" onClick={onClose} />
       <div className={`sheet${from === 'top' ? ' from-top' : ''}`} ref={sheetRef}>
         {from === 'bottom' && grip}
         {head}
