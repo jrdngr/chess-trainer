@@ -13,6 +13,7 @@ import { offPrepHint, type TidyFind } from '../../model/tidy';
 import { OffPrepHint } from '../../components/OffPrepHint';
 import { ScoreRow } from './Setup';
 import { Ratings, type RatingChange } from '../../components/Ratings';
+import { useModePrefs } from '../modePrefs';
 
 /** How long the verdict stays over the board when a run ends. */
 const FLASH_MS = 2000;
@@ -100,11 +101,12 @@ export function End({
   /** The misses whose move was closer to the rest of your lines than your prep, by ply. */
   const repertoires = useStore((s) => s.repertoires);
   const repertoireOrder = useStore((s) => s.repertoireOrder);
+  const modeGrowth = useModePrefs().growth;
   const hints = useMemo(() => {
     const out = new Map<number, TidyFind>();
     if (!onTidy) return out;
     const rep = repertoireList({ repertoires, repertoireOrder }).find((r) => r.color === run.color);
-    const growth = settings.growth;
+    const growth = modeGrowth;
     for (const miss of misses) {
       const find = offPrepHint(rep, referenceIndex(), miss.fen, miss.played, miss.expected, {
         prefs: { priority: growth.nudgePriority, pawns: growth.nudgePawns },
@@ -113,7 +115,7 @@ export function End({
       if (find) out.set(miss.ply, find);
     }
     return out;
-  }, [onTidy, misses, repertoires, repertoireOrder, run.color, settings.growth]);
+  }, [onTidy, misses, repertoires, repertoireOrder, run.color, modeGrowth]);
 
   const fens = useMemo(() => walkSan(run.played).fens, [run.played]);
   const last = run.played.length;

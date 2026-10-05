@@ -45,6 +45,7 @@ import { useOpponent } from '../openingRun/useOpponent';
 import { End, type Ending } from './End';
 import { Setup } from './Setup';
 import { useJudge } from './useJudge';
+import { useModePrefs } from '../modePrefs';
 
 type Phase = 'setup' | 'playing' | 'over' | 'growing';
 
@@ -157,7 +158,8 @@ export function SurvivalScreen({
   const [evidence] = useState(() => evidenceIn(state));
 
   const [phase, setPhase] = useState<Phase>('setup');
-  const [prefs, setPrefs] = useState<SurvivalPrefs>(settings.survival);
+  const modes = useModePrefs();
+  const [prefs, setPrefs] = useState<SurvivalPrefs>(modes.survival);
   const [game, setGame] = useState<Game | null>(null);
   const [ending, setEnding] = useState<Ending | null>(null);
   const [before, setBefore] = useState<SurvivalRecord>(state.survival);
@@ -262,7 +264,7 @@ export function SurvivalScreen({
       opening: offerOpening(tree, nodeById(tree, openingId), entered, played),
       played,
       rounds: now.score.rounds,
-      growth: now.settings.growth,
+      growth: modes.growth,
       starred: now.settings.favoriteOpenings,
     });
   };
@@ -380,7 +382,7 @@ export function SurvivalScreen({
       toward: plan ? nodeById(tree, plan.toward) : undefined,
       enter: plan?.enter,
       weakness: weaknessFromCards(cards, evidence),
-      growth: settings.growth,
+      growth: modes.growth,
       holeWeight: evidenceFor(evidence),
       seen: seenIn(useStore.getState().score),
     });
@@ -407,7 +409,7 @@ export function SurvivalScreen({
 
   // Autopilot's run starts the moment the screen opens, on your saved options.
   useEffect(() => {
-    if (plan) start(settings.survival);
+    if (plan) start(modes.survival);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

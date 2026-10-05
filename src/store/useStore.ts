@@ -13,6 +13,7 @@ import {
 } from '../model/repertoire';
 import { allItems, cardId, type TrainingItem } from '../model/session';
 import { switchMove } from '../model/tidy';
+import { DEFAULT_AUTOPILOT } from '../model/autopilotPrefs';
 import { createCard, createLineCard, lineCardId, review } from '../model/srs';
 import type {
   Card,
@@ -81,6 +82,7 @@ export const DEFAULT_SETTINGS: Settings = {
   drill: { ...DEFAULT_DRILL },
   play: { ...DEFAULT_PLAY },
   growth: { ...DEFAULT_GROWTH },
+  autopilot: { ...DEFAULT_AUTOPILOT },
 };
 
 /**
@@ -103,6 +105,7 @@ function mergeSettings(saved: Partial<Settings> | undefined): Settings {
     drill: { ...DEFAULT_DRILL, ...known.drill },
     play: { ...DEFAULT_PLAY, ...known.play },
     growth: { ...DEFAULT_GROWTH, ...known.growth },
+    autopilot: { ...DEFAULT_AUTOPILOT, ...known.autopilot },
   };
 }
 
@@ -243,7 +246,7 @@ interface StoreState extends PersistedState {
   finishOnboarding: (openingIds: string[]) => void;
   setSurvivalPrefs: (patch: Partial<SurvivalPrefs>) => void;
   /** Patch one mode's own options, without touching the rest of settings. */
-  setModePrefs: <K extends 'drill' | 'growth' | 'play'>(
+  setModePrefs: <K extends 'drill' | 'growth' | 'play' | 'autopilot'>(
     mode: K,
     patch: Partial<Settings[K]>,
   ) => void;

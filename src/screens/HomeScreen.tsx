@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Icons, Section, Sheet } from '../components/ui';
+import { Icons, Section, Sheet, Toggle } from '../components/ui';
 import { SelectionBar } from '../components/Selection';
 import { ScoreStrip } from '../components/ScoreBar';
 import { nodeById, openingTree } from '../model/openingTree';
@@ -45,6 +45,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
   const reps = repertoiresIn(repertoireList(state), selection.color);
   const now = Date.now();
   const [pick, setPick] = useState<RepEntry | null>(null);
+  const [autoSettings, setAutoSettings] = useState(false);
   const survival = state.survival.global;
   const form = recentForm(survival);
 
@@ -117,25 +118,31 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
         <SelectionBar />
         <ScoreStrip />
 
-        <button className="autopilot" onClick={() => onOpenMode(first ? 'autopilot' : 'growth')}>
-          <span className="ico">
-            <Icons.bolt size={22} />
-          </span>
-          <span className="grow" style={{ minWidth: 0 }}>
-            <span className="kicker">Autopilot</span>
-            <span className="name">{first ? roundLabel(first.mode, first.mode === 'survival' ? first.pick.start : undefined) : 'Build'}</span>
-            <span className="first truncate">
-              {first ? firstUp(first) : 'Nothing to practice yet · open Growth'}
+        <div className="autopilot-wrap">
+          <button className="autopilot" onClick={() => onOpenMode(first ? 'autopilot' : 'growth')}>
+            <span className="ico">
+              <Icons.bolt size={22} />
             </span>
-          </span>
-          {days > 0 && (
-            <span className="chip warn streak">
-              {days}
-              {days === 1 ? ' day' : ' days'}
+            <span className="grow" style={{ minWidth: 0 }}>
+              <span className="kicker">Autopilot</span>
+              <span className="name">{first ? roundLabel(first.mode, first.mode === 'survival' ? first.pick.start : undefined) : 'Build'}</span>
+              <span className="first truncate">
+                {first ? firstUp(first) : 'Nothing to practice yet · open Growth'}
+              </span>
             </span>
-          )}
-          <Icons.chevron size={20} />
-        </button>
+            {days > 0 && (
+              <span className="chip warn streak">
+                {days}
+                {days === 1 ? ' day' : ' days'}
+              </span>
+            )}
+            <Icons.chevron size={20} />
+          </button>
+          <button className="autopilot-gear" aria-label="Autopilot settings" onClick={() => setAutoSettings(true)}>
+            <Icons.gear size={16} />
+          </button>
+        </div>
+        <AutopilotSettings open={autoSettings} onClose={() => setAutoSettings(false)} />
 
         <div className="mode-grid">
           <Tile
@@ -424,4 +431,36 @@ function pct(n: number, total: number) {
 
 function dayLabel(ts: number) {
   return new Date(ts).toLocaleDateString(undefined, { weekday: 'narrow' });
+}
+
+/**
+ * Autopilot's own options: matters of taste only. Everything else about a
+ * round is Autopilot's to decide, and no mode's setup reaches it — see
+ * `autopilotPrefs.ts`.
+ */
+function AutopilotSettings({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const prefs = useStore((s) => s.settings.autopilot);
+  const setModePrefs = useStore((s) => s.setModePrefs);
+  return (
+    <Sheet open={open} onClose={onClose} title="Autopilot">
+      <div className="tiny faint" style={{ marginBottom: 12 }}>
+        Autopilot picks every round and how it plays. Your Survival, Drill and Growth setups never change it.
+      </div>
+      <Section title="Survival feedback" />
+      <div className="list">
+        <Toggle
+          label="Move scores"
+          hint="What each move the engine judges cost you, in centipawns, over its square"
+          on={prefs.moveScores}
+          onToggle={() => setModePrefs('autopilot', { moveScores: !prefs.moveScores })}
+        />
+        <Toggle
+          label="Board glow"
+          hint="The board's edge tints green when you are better and red when you are worse"
+          on={prefs.boardGlow}
+          onToggle={() => setModePrefs('autopilot', { boardGlow: !prefs.boardGlow })}
+        />
+      </div>
+    </Sheet>
+  );
 }

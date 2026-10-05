@@ -1,4 +1,5 @@
 import type { Color } from '../chess/core';
+import { AUTO_DRILL, AUTO_GROWTH } from '../model/autopilotPrefs';
 import { chooseMode, coldStart, type RoundMode } from '../model/autopilot';
 import { ACCURACY_RUNS } from '../model/recommend';
 import { growLaunch, lineFinishes, readyToGrow, type GrowLaunch } from '../model/growOffer';
@@ -50,7 +51,7 @@ export function recommendInput(
     repairs: evidenceIn(state),
     score: state.score,
     starred: state.settings.favoriteOpenings,
-    newPerSession: state.settings.drill.newPerSession,
+    newPerSession: AUTO_DRILL.newPerSession,
     recentFocuses,
     recentSteered,
     seen: seenIn(state.score),
@@ -138,8 +139,8 @@ export function nextRound(state: State, history: AutoHistory): AutoRound | null 
       for (const opening of openings) {
         if (!readyToGrow(side.rep, tree, opening, rounds)) continue;
         const launch = growLaunch(side.rep, index, tree, opening, [], {
-          minShare: state.settings.growth.minShare,
-          maxPly: state.settings.growth.maxPly,
+          minShare: AUTO_GROWTH.minShare,
+          maxPly: AUTO_GROWTH.maxPly,
           starred: state.settings.favoriteOpenings,
         });
         if (launch) return { color: side.rep.color, launch };

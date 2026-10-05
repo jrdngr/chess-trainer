@@ -920,6 +920,22 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .autopilot .first { display: block; font-size: 12.5px; color: var(--text-2); margin-top: 1px; }
 .autopilot > svg { flex: none; color: var(--text-3); }
 .autopilot .streak { flex: none; }
+/* Autopilot's own settings: a small gear in the button's corner, outside it so a tap there never starts a round. */
+.autopilot-wrap { position: relative; margin-bottom: 10px; }
+.autopilot-wrap .autopilot { margin-bottom: 0; }
+.autopilot-wrap .autopilot > svg { align-self: flex-end; }
+.autopilot-gear {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  color: var(--text-3);
+}
+.autopilot-gear:active { background: rgba(138, 140, 255, 0.18); }
 
 /* What to do after a round, right under the board: the same two buttons, always in the same place. */
 .next-row { display: flex; gap: 8px; margin-top: 12px; }

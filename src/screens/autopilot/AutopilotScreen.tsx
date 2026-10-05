@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AppBar, Icons } from '../../components/ui';
 import { SelectionBar, selectionText } from '../../components/Selection';
+import { AUTO_DRILL, autopilotModes } from '../../model/autopilotPrefs';
 import { ROUND_SIZE, roundLabel, survivalPlanFor } from '../../model/autopilot';
 import { nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
@@ -14,6 +15,7 @@ import { LineDrill } from '../drill/LineDrill';
 import { LINE_BUDGET, MAX_LINES } from '../../model/lineDrill';
 import { GrowthScreen } from '../growth/GrowthScreen';
 import { SurvivalScreen } from '../survival/SurvivalScreen';
+import { ModePrefsProvider } from '../modePrefs';
 
 /**
  * Autopilot.
@@ -54,6 +56,9 @@ export function AutopilotScreen({
   const [round, setRound] = useState<AutoRound | null>(() =>
     nextRound(withSelection(useStore.getState(), scope), NO_HISTORY),
   );
+  /** Autopilot's own options, and the fixed ones every round plays on; never a mode's setup. */
+  const autopilotPrefs = useStore((s) => s.settings.autopilot);
+  const modes = useMemo(() => autopilotModes(autopilotPrefs), [autopilotPrefs]);
   /** Bumped per round so each mounts fresh. */
   const [count, setCount] = useState(1);
 
@@ -98,7 +103,7 @@ export function AutopilotScreen({
             budget={LINE_BUDGET}
             lean="weak"
             only={new Set(current.only)}
-            prefs={{ ...useStore.getState().settings.drill, draw: 'due' }}
+            prefs={AUTO_DRILL}
             onExit={onExit}
             onNext={advance}
           />
@@ -127,10 +132,10 @@ export function AutopilotScreen({
   })();
 
   return (
-    <>
+    <ModePrefsProvider value={modes}>
       <ModeIntro key={count} name={roundLabel(current.mode, current.mode === 'survival' ? current.pick.start : undefined)} />
       {screen}
-    </>
+    </ModePrefsProvider>
   );
 }
 
@@ -191,10 +196,7 @@ function PositionsRound({
     // Nothing due or new, but your prep is missing in Survival: the positions you answer worst.
     return round.weak ? weakestFirst(all, state.cards).slice(0, ROUND_SIZE.drillPositions * 2) : all;
   });
-  const prefs = useMemo(
-    () => ({ ...state.settings.drill, draw: 'due' as const, weakFirst: round.weak || state.settings.drill.weakFirst }),
-    [state.settings.drill, round.weak],
-  );
+  const prefs = useMemo(() => ({ ...AUTO_DRILL, weakFirst: round.weak }), [round.weak]);
   return (
     <DrillSession
       items={items}

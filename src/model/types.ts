@@ -1,4 +1,5 @@
 import type { Color } from '../chess/core';
+import type { AutopilotPrefs } from './autopilotPrefs';
 import type { SurvivalPrefs } from './survival';
 import type { DrillPrefs, GrowthPrefs, PlayPrefs } from './modes';
 import type { Selection } from './selection';
@@ -207,4 +208,6 @@ export interface Settings {
   drill: DrillPrefs;
   play: PlayPrefs;
   growth: GrowthPrefs;
+  /** Autopilot's own options; it reads no mode's. */
+  autopilot: AutopilotPrefs;
 }

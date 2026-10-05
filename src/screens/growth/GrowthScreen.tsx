@@ -50,6 +50,7 @@ import { selectionText } from '../../components/Selection';
 import { useStore } from '../../store/useStore';
 import { PlayOn } from '../openingRun/PlayOn';
 import { Lobby } from './Lobby';
+import { useModePrefs } from '../modePrefs';
 
 /**
  * Growth opened from the end of a Survival run or a line drill, by its offer
@@ -213,7 +214,7 @@ function Run({
   /** The position a carry-on game starts from, once one is asked for. */
   const [playFrom, setPlayFrom] = useState<string | null>(null);
 
-  const prefs = settings.growth;
+  const prefs = useModePrefs().growth;
   /**
    * What the run looks for holes with: the saved settings, or the wider ones
    * the offer needed. A batch is still sized by the saved depth, so past it a
