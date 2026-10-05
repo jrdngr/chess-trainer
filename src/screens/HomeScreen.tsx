@@ -142,7 +142,6 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
             <Icons.gear size={16} />
           </button>
         </div>
-        <AutopilotSettings open={autoSettings} onClose={() => setAutoSettings(false)} />
 
         <div className="mode-grid">
           <Tile
@@ -262,6 +261,8 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
         </button>
       </div>
 
+      {/* Outside the scrolling screen: on iOS its touch scrolling makes a layer the tab bar would cover. */}
+      <AutopilotSettings open={autoSettings} onClose={() => setAutoSettings(false)} />
       <Sheet open={!!pick} onClose={() => setPick(null)} title={pick ? displayName(pick.rep.name) : ''}>
         {pick && (
           <div className="list">
