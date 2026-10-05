@@ -21,8 +21,9 @@ import type { Card, Repertoire } from './types';
  * What Autopilot's next Survival run should be: an opening inside the
  * selection, a colour, and a focus — what the opponent steers toward.
  *
- * Which mode a round is in is decided above this, in `autopilot.ts`; this
- * decides what a Survival run is about. A run never adds to the repertoire
+ * Which mode a round is in is decided by this engine too — see "Which mode a
+ * round is in" at the end of this file; the first half decides what a
+ * Survival run is about. A run never adds to the repertoire
  * — building is Growth's — so what changes between runs is only what the
  * opponent steers you toward, and that is the focus:
  *
@@ -476,3 +477,147 @@ export const MODE_NAMES: Record<ActivityMode, string> = {
   growth: 'Growth',
   repair: 'Repair',
 };
+
+/* ── Which mode a round is in ──────────────────────────────────────────────
+ *
+ * The other half of the engine: what kind of round comes next. Every mode has
+ * a target share of the session, read off where you stand rather than fixed,
+ * and each round goes to the mode furthest below its share among those that
+ * have work, the mode just played counting half.
+ *
+ * Survival is the backbone. It is the most fun, the only mode that rates,
+ * and the test that shows whether drilling is needed, so it takes whatever
+ * the others leave and never less than `SURVIVAL_FLOOR`:
+ *
+ *   growth         — an opening ready to widen; a lot while the repertoire is
+ *                    small, little once it is big.
+ *   drillPositions — the main drill: more with cards due or never drilled,
+ *                    and more again while Survival shows the prep missing.
+ *   drillLines     — the same, at half the weight: lines new or due.
+ *
+ * Solid prep with little owed plays Survival about three rounds in four; a
+ * new repertoire or prep that keeps missing plays it two in five.
+ *
+ * Two rounds are fixed whatever the shares say. A Drill round, of positions
+ * or of lines, is always followed by Survival: what was just drilled is tested
+ * at once, and two drills never run back to back. And a Growth round that left
+ * lines no round has finished is followed by Drill lines, so what was just
+ * grown is drilled before it is tested.
+ */
+
+export type RoundMode = 'survival' | 'drillPositions' | 'drillLines' | 'growth';
+
+/** In the order ties go: Survival first. */
+export const ROUND_MODES: RoundMode[] = ['survival', 'drillPositions', 'drillLines', 'growth'];
+
+/** The modes after which the next round is always Survival. */
+export const DRILL_MODES: RoundMode[] = ['drillPositions', 'drillLines'];
+
+/** Survival's share never drops below this. */
+export const SURVIVAL_FLOOR = 0.4;
+
+/** The mode the last round played counts this much of its score. */
+export const LAST_BRAKE = 0.5;
+
+/** How many recent Survival runs your prep accuracy is read over. */
+export const ACCURACY_RUNS = 5;
+
+/** What the mix reads, inside the selection. */
+export interface MixSignals {
+  /** Your lines: how big the repertoire is. */
+  lines: number;
+  /** Positions you have an answer to. */
+  positions: number;
+  /** Position cards due. */
+  due: number;
+  /** Positions never drilled. */
+  unseen: number;
+  /** Lines no round has finished clean since they last changed. */
+  unpracticed: number;
+  /** Lines whose own card is due. */
+  dueLines: number;
+  /** Prep moves found over asked, across the last `ACCURACY_RUNS` Survival runs; null with none. */
+  accuracy: number | null;
+  /** Whether an opening is ready to grow. */
+  growReady: boolean;
+}
+
+/** How far your prep is missing: 0 at 95% found or better, 1 at 85% or worse. */
+export function missingPrep(accuracy: number | null): number {
+  return accuracy === null ? 0 : clamp((0.95 - accuracy) / 0.1);
+}
+
+/** Whether a mode has anything to do this round. Survival always has. */
+export function hasWork(mode: RoundMode, s: MixSignals): boolean {
+  const missing = missingPrep(s.accuracy) > 0;
+  switch (mode) {
+    case 'survival':
+      return true;
+    case 'drillPositions':
+      return s.due > 0 || s.unseen > 0 || (missing && s.positions > 0);
+    case 'drillLines':
+      return s.unpracticed + s.dueLines > 0 || (missing && s.lines > 0);
+    case 'growth':
+      return s.growReady;
+  }
+}
+
+/**
+ * Each mode's share of the session, summing to 1. A mode with no work has
+ * none, and what it would have had is Survival's.
+ */
+export function targetShares(s: MixSignals): Record<RoundMode, number> {
+  const missing = missingPrep(s.accuracy);
+  const raw: Record<RoundMode, number> = {
+    survival: 0,
+    // 30% for a repertoire of three lines or fewer, down to 5% at twenty.
+    growth: 0.05 + 0.25 * clamp((20 - s.lines) / 17),
+    drillPositions: 0.1 + 0.1 * saturate(s.due + s.unseen, 12) + 0.2 * missing,
+    drillLines: 0.05 + 0.05 * saturate(s.unpracticed + s.dueLines, 3) + 0.1 * missing,
+  };
+  for (const mode of ROUND_MODES) if (mode !== 'survival' && !hasWork(mode, s)) raw[mode] = 0;
+  const others = raw.growth + raw.drillPositions + raw.drillLines;
+  const scale = others > 1 - SURVIVAL_FLOOR ? (1 - SURVIVAL_FLOOR) / others : 1;
+  const shares = { ...raw };
+  for (const mode of ROUND_MODES) if (mode !== 'survival') shares[mode] = raw[mode] * scale;
+  shares.survival = 1 - shares.growth - shares.drillPositions - shares.drillLines;
+  return shares;
+}
+
+export interface ModeScore {
+  mode: RoundMode;
+  score: number;
+}
+
+/**
+ * Every mode's score for the next round, highest first: its share over the
+ * share it has had so far this session, smoothed so a mode not yet played is
+ * not infinitely behind, and halved for the mode just played. Ties go to the
+ * earlier mode in `ROUND_MODES`. The fixed rounds — Survival after a Drill,
+ * Drill lines after Growth left lines new — leave every other mode at 0.
+ */
+export function rankModes(s: MixSignals, recent: RoundMode[]): ModeScore[] {
+  const shares = targetShares(s);
+  const n = recent.length;
+  const last = recent[n - 1];
+  const scored = ROUND_MODES.map((mode) => {
+    const played = recent.filter((m) => m === mode).length;
+    const score = (shares[mode] * (n + 1)) / (played + 1);
+    return { mode, score: mode === last ? score * LAST_BRAKE : score };
+  });
+  const fixed: RoundMode | null =
+    last !== undefined && DRILL_MODES.includes(last)
+      ? 'survival'
+      : last === 'growth' && s.unpracticed > 0
+        ? 'drillLines'
+        : null;
+  const ruled = fixed ? scored.map((m) => (m.mode === fixed ? m : { ...m, score: 0 })) : scored;
+  return ruled
+    .map((m, i) => ({ ...m, i }))
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map(({ mode, score }) => ({ mode, score }));
+}
+
+export function chooseMode(s: MixSignals, recent: RoundMode[]): RoundMode {
+  return rankModes(s, recent)[0].mode;
+}

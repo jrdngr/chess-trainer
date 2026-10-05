@@ -7,9 +7,11 @@ import { referenceIndex } from '../../model/referenceIndex';
 import { itemsInRegion, repertoiresIn, type Selection } from '../../model/selection';
 import type { TidyFind } from '../../model/tidy';
 import { itemsFor, repertoireList, useStore } from '../../store/useStore';
+import { weakestFirst } from '../../model/session';
 import { afterRound, nextRound, NO_HISTORY, withSelection, type AutoHistory, type AutoRound } from '../../store/recommendation';
 import { DrillSession } from '../drill/DrillSession';
 import { LineDrill } from '../drill/LineDrill';
+import { LINE_BUDGET, MAX_LINES } from '../../model/lineDrill';
 import { GrowthScreen } from '../growth/GrowthScreen';
 import { SurvivalScreen } from '../survival/SurvivalScreen';
 
@@ -92,7 +94,8 @@ export function AutopilotScreen({
             key={count}
             color={current.color}
             openingId={current.openingId}
-            count={ROUND_SIZE.drillLines}
+            count={MAX_LINES}
+            budget={LINE_BUDGET}
             lean="weak"
             only={new Set(current.only)}
             prefs={{ ...useStore.getState().settings.drill, draw: 'due' }}
@@ -184,13 +187,18 @@ function PositionsRound({
   const [items] = useState(() => {
     const tree = openingTree(referenceIndex());
     const reps = repertoiresIn(repertoireList(state), round.color);
-    return itemsInRegion(tree, nodeById(tree, round.openingId), reps.flatMap(itemsFor));
+    const all = itemsInRegion(tree, nodeById(tree, round.openingId), reps.flatMap(itemsFor));
+    // Nothing due or new, but your prep is missing in Survival: the positions you answer worst.
+    return round.weak ? weakestFirst(all, state.cards).slice(0, ROUND_SIZE.drillPositions * 2) : all;
   });
-  const prefs = useMemo(() => ({ ...state.settings.drill, draw: 'due' as const }), [state.settings.drill]);
+  const prefs = useMemo(
+    () => ({ ...state.settings.drill, draw: 'due' as const, weakFirst: round.weak || state.settings.drill.weakFirst }),
+    [state.settings.drill, round.weak],
+  );
   return (
     <DrillSession
       items={items}
-      mode="due"
+      mode={round.weak ? 'cram' : 'due'}
       title="Drill positions"
       prefs={prefs}
       openingId={round.openingId}

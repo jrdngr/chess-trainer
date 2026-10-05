@@ -78,6 +78,24 @@ export function dueLines(lines: DrillLine[], cards: Record<string, LineCard>, no
   });
 }
 
+/** The most of your own moves a round of lines asks, when it is sized — see `drawLines`. */
+export const LINE_BUDGET = 15;
+
+/** The most lines in a sized round. */
+export const MAX_LINES = 3;
+
+/** How many of your own moves a line asks. */
+export function yourMoves(line: DrillLine): number {
+  return line.sans.filter((_, ply) => yoursAt(line.color, ply)).length;
+}
+
+/** How many moves two lines share from the start. */
+export function sharedMoves(a: string[], b: string[]): number {
+  let n = 0;
+  while (n < a.length && n < b.length && a[n] === b[n]) n += 1;
+  return n;
+}
+
 /**
  * Draw up to `count` different lines.
  *
@@ -89,7 +107,16 @@ export function dueLines(lines: DrillLine[], cards: Record<string, LineCard>, no
  * weighted by the book, your own split evenly), and for `weak` that weight is
  * multiplied by how badly the line's card wants practice. With `only` given
  * and any of its lines in reach, the draw is held to those: what Autopilot
- * asks for when lines are new or due.
+ * asks for when lines are new or due. Lines in `avoid` are left out while
+ * anything else is in reach: the group just played, so the next is elsewhere.
+ *
+ * With `budget`, lines are added only while your moves across them stay
+ * within it, and the first line always goes in: short lines come several to
+ * a round, a long one alone.
+ *
+ * With `similar`, the first line is drawn as above and the rest are the
+ * lines that share the most moves with it — its siblings in your tree, which
+ * split late — so a round stays on one idea. Ties go by the draw.
  */
 export function drawLines(opts: {
   rep: Repertoire;
@@ -100,7 +127,10 @@ export function drawLines(opts: {
   cards?: Record<string, LineCard>;
   draw?: DrillDraw;
   only?: Set<string> | null;
+  avoid?: Set<string> | null;
   count: number;
+  budget?: number;
+  similar?: boolean;
   rand: () => number;
   now?: number;
 }): DrillLine[] {
@@ -111,6 +141,10 @@ export function drawLines(opts: {
   if (opts.only?.size) {
     const held = lines.filter((line) => opts.only!.has(line.tipId));
     if (held.length) lines = held;
+  }
+  if (opts.avoid?.size) {
+    const rest = lines.filter((line) => !opts.avoid!.has(line.tipId));
+    if (rest.length) lines = rest;
   }
   if (!lines.length) return [];
   const odds = lineOdds(rep, rep.color, opts.index, new Set(lines.map((line) => line.tipId)));
@@ -130,10 +164,11 @@ export function drawLines(opts: {
     return due.has(line.tipId) ? 0 : fresh ? 1 : 2;
   };
 
-  const out: DrillLine[] = [];
+  // Every line, in the order the draw would take them.
+  const drawn: DrillLine[] = [];
   for (const level of [0, 1, 2]) {
     const pool = lines.filter((line) => tier(line) === level);
-    while (out.length < opts.count && pool.length) {
+    while (pool.length) {
       const total = pool.reduce((sum, line) => sum + weight(line), 0);
       let at = 0;
       if (total > 0) {
@@ -146,11 +181,27 @@ export function drawLines(opts: {
       } else {
         at = Math.floor(opts.rand() * pool.length);
       }
-      out.push(pool[at]);
+      drawn.push(pool[at]);
       pool.splice(at, 1);
     }
   }
-  return out;
+
+  const [first, ...others] = drawn;
+  const order = opts.similar
+    ? others
+        .map((line, i) => ({ line, i, shared: sharedMoves(line.sans, first.sans) }))
+        .sort((a, b) => b.shared - a.shared || a.i - b.i)
+        .map(({ line }) => line)
+    : others;
+  const out: DrillLine[] = [first];
+  let moves = yourMoves(first);
+  for (const line of order) {
+    if (out.length >= opts.count) break;
+    if (opts.budget !== undefined && moves + yourMoves(line) > opts.budget) continue;
+    out.push(line);
+    moves += yourMoves(line);
+  }
+  return opts.count > 0 ? out : [];
 }
 
 /**

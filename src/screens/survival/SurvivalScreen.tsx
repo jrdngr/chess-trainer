@@ -215,6 +215,7 @@ export function SurvivalScreen({
       // whatever the game did after it.
       perfect: !!clean,
       line: clean ?? ended.run.target,
+      prep: { asked: answers.current.length, found: answers.current.filter((answer) => answer.correct).length },
     });
     setGrowOffer(clean ? offerFor(ended.run.color, ended.run.enteredIn, ended.run.openingId, clean) : null);
     buzz(how.kind === 'blunder' || how.kind === 'lost' ? [22, 60, 22] : 14);

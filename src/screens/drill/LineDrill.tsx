@@ -8,7 +8,7 @@ import { DEFAULT_DRILL, type DrillPrefs } from '../../model/modes';
 import { clockSeconds } from '../../model/openingRun';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
-import { continueLine, drawLines, yoursAt, type DrillLine, type LineLean } from '../../model/lineDrill';
+import { continueLine, drawLines, LINE_BUDGET, MAX_LINES, yoursAt, type DrillLine, type LineLean } from '../../model/lineDrill';
 import { checkAnswer, mulberry32, type TrainingItem } from '../../model/session';
 import { gradeForLine } from '../../model/srs';
 import type { Grade, LineCard } from '../../model/types';
@@ -37,6 +37,8 @@ export interface LineDrillProps {
   openingId: string;
   /** Lines in the sitting; a sitting from Drill's own setup draws for as long as you want. */
   count?: number;
+  /** The most of your own moves across the sitting's lines — see `drawLines`. */
+  budget?: number;
   /** Your lines by how often you would meet them, or your weakest. */
   lean: LineLean;
   /** Tip ids to hold the draw to, when any of them are in reach. */
@@ -64,8 +66,12 @@ export interface LineDrillProps {
  * time of your correct moves, on Drill positions' scale) and shown selected;
  * tapping another grade changes it. A line with no miss is a clean finish.
  * Nothing here moves a rating.
+ *
+ * With Batch similar lines on, lines come in groups that share most of their
+ * moves, sized by `LINE_BUDGET`; a sitting from Drill's own setup plays a
+ * group, then starts the next one somewhere else.
  */
-export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, onNext }: LineDrillProps) {
+export function LineDrill({ color, openingId, count, budget, lean, only, prefs, onExit, onNext }: LineDrillProps) {
   const options: DrillPrefs = { ...DEFAULT_DRILL, ...prefs };
   const state = useStore();
   const settings = state.settings;
@@ -78,7 +84,9 @@ export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, 
   const region = nodeById(tree, openingId);
   const rand = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
 
-  const draw = (): DrillLine[] => {
+  const grouped = options.batchSimilar;
+
+  const draw = (avoid?: Set<string>): DrillLine[] => {
     const now = useStore.getState();
     const rep = repertoireList(now).find((r) => r.color === color);
     if (!rep) return [];
@@ -91,12 +99,17 @@ export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, 
       cards: now.lineCards,
       draw: options.draw,
       only,
-      count: count ?? BATCH,
+      avoid,
+      count: count ?? (grouped ? MAX_LINES : BATCH),
+      budget: budget ?? (grouped ? LINE_BUDGET : undefined),
+      similar: grouped,
       rand: rand.current,
     });
   };
 
-  const [batch, setBatch] = useState<DrillLine[]>(draw);
+  const [batch, setBatch] = useState<DrillLine[]>(() => draw());
+  /** Which group of similar lines this is, in a sitting with no end. */
+  const [group, setGroup] = useState(1);
   const [at, setAt] = useState(0);
   const [line, setLine] = useState<DrillLine | null>(batch[0] ?? null);
   const [ply, setPly] = useState(0);
@@ -227,9 +240,10 @@ export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, 
     let lines = batch;
     let next = at + 1;
     if (next >= lines.length) {
-      lines = draw();
+      lines = draw(grouped ? new Set(batch.map((done) => done.tipId)) : undefined);
       next = 0;
       setBatch(lines);
+      setGroup((n) => n + 1);
     }
     setAt(next);
     setLine(lines[next] ?? null);
@@ -334,7 +348,9 @@ export function LineDrill({ color, openingId, count, lean, only, prefs, onExit, 
               {mine ? 'Your move' : 'Their move'}
             </div>
             <div className="ctx">
-              Line {count !== undefined ? `${at + 1} of ${batch.length}` : finished + 1}
+              {count === undefined && grouped
+                ? `${group > 1 && at === 0 ? 'New group' : `Group ${group}`} · line ${at + 1} of ${batch.length}`
+                : `Line ${count !== undefined ? `${at + 1} of ${batch.length}` : finished + 1}`}
               {misses > 0 ? ` · ${misses} miss${misses === 1 ? '' : 'es'}` : ''}
             </div>
           </div>

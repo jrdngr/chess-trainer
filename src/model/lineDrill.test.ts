@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { askedKeys, continueLine, drawLines, drillableLines, dueLines, yoursAt } from './lineDrill';
+import { askedKeys, continueLine, drawLines, drillableLines, dueLines, LINE_BUDGET, MAX_LINES, sharedMoves, yourMoves, yoursAt } from './lineDrill';
 import { createLineCard, DAY, gradeForLine, review } from './srs';
 import { nodeById, openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
@@ -130,5 +130,51 @@ describe('carrying on along another prepared move', () => {
     expect(line?.sans).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bc4']);
     expect(continueLine(both, ['e4', 'e5', 'Nf3'])?.sans.slice(0, 4)).toEqual(['e4', 'e5', 'Nf3', 'Nc6']);
     expect(continueLine(both, ['d4'])).toBeNull();
+  });
+});
+
+describe('sized and grouped rounds of lines', () => {
+  const NAJ_6G3 = 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bg5 e6';
+  const NAJ_BE3 = 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5';
+  const DRAGON = 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6';
+  const wide = rep('b', NAJ_6G3, NAJ_BE3, DRAGON, ALAPIN, FRENCH);
+
+  it('counts your own moves in a line', () => {
+    const [line] = drawLines({ rep: wide, tree, region: nodeById(tree, 'e4 e6'), index, lean: 'popular', count: 1, rand: mulberry32(1) });
+    expect(yourMoves(line)).toBe(2);
+  });
+
+  it('keeps a sized round within the budget, and always plays one line', () => {
+    for (let seed = 1; seed < 20; seed += 1) {
+      const drawn = drawLines({ rep: wide, tree, region: tree.root, index, lean: 'popular', count: MAX_LINES, budget: 8, rand: mulberry32(seed) });
+      expect(drawn.length).toBeGreaterThan(0);
+      const total = drawn.reduce((sum, line) => sum + yourMoves(line), 0);
+      if (drawn.length > 1) expect(total).toBeLessThanOrEqual(8);
+    }
+    const lone = drawLines({ rep: wide, tree, region: tree.root, index, lean: 'popular', count: MAX_LINES, budget: 1, rand: mulberry32(2) });
+    expect(lone).toHaveLength(1);
+    expect(LINE_BUDGET).toBe(15);
+  });
+
+  it('groups the lines closest to the first one', () => {
+    for (let seed = 1; seed < 20; seed += 1) {
+      const [first, ...rest] = drawLines({ rep: wide, tree, region: tree.root, index, lean: 'popular', count: 2, similar: true, rand: mulberry32(seed) });
+      const best = Math.max(
+        ...drillableLines(wide, tree, tree.root)
+          .filter((line) => line.tipId !== first.tipId)
+          .map((line) => sharedMoves(line.sans, first.sans)),
+      );
+      expect(sharedMoves(rest[0].sans, first.sans)).toBe(best);
+    }
+  });
+
+  it('starts the next group away from the one just played', () => {
+    const lines = drillableLines(wide, tree, tree.root);
+    const avoid = new Set(lines.slice(0, 4).map((line) => line.tipId));
+    const [first] = drawLines({ rep: wide, tree, region: tree.root, index, lean: 'popular', count: 1, avoid, rand: mulberry32(5) });
+    expect(first.tipId).toBe(lines[4].tipId);
+    // With nothing else in reach, the avoided lines still play.
+    const all = new Set(lines.map((line) => line.tipId));
+    expect(drawLines({ rep: wide, tree, region: tree.root, index, lean: 'popular', count: 1, avoid: all, rand: mulberry32(5) })).toHaveLength(1);
   });
 });

@@ -118,6 +118,14 @@ export function Setup({
             on={prefs.weakFirst}
             onToggle={() => set({ weakFirst: !prefs.weakFirst })}
           />
+          {lineMode && (
+            <Toggle
+              label="Batch similar lines"
+              hint="Drill a few lines that share most of their moves, then move on to another group"
+              on={prefs.batchSimilar}
+              onToggle={() => set({ batchSimilar: !prefs.batchSimilar })}
+            />
+          )}
           <Toggle
             label="Explain mistakes"
             hint="Offer the engine's refutation after a wrong move"

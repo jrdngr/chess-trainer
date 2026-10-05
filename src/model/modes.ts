@@ -36,6 +36,8 @@ export interface DrillPrefs {
   weakFirst: boolean;
   /** Offer "Why is it wrong?" after a miss. */
   explain: boolean;
+  /** Lines come in groups of similar lines, sized by how long they are. */
+  batchSimilar: boolean;
   /** Seconds for each answer. Timing out only costs the speed bonus. */
   clock: ClockMode;
 }
@@ -47,6 +49,7 @@ export const DEFAULT_DRILL: DrillPrefs = {
   followLine: true,
   weakFirst: false,
   explain: true,
+  batchSimilar: true,
   clock: 'off',
 };
 

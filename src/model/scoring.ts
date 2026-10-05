@@ -205,6 +205,11 @@ export interface RoundRecord {
   perfect: boolean;
   at: number;
   /**
+   * A Survival run's prepared positions: how many it asked and how many you
+   * found. What the round mix reads as your prep accuracy.
+   */
+  prep?: { asked: number; found: number };
+  /**
    * The line the round was about — the one the opponent was steering toward,
    * whether or not it was reached, or the line finished when `perfect`. What
    * the next rounds should not be. Only rounds that play a line carry one.
