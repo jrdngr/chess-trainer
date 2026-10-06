@@ -125,8 +125,7 @@ export function ScoreBar() {
  * Any opening shows its tier, its rating and how far it is from the next
  * tier, and opens its stats. One that is not a favorite carries an outline
  * star by its name: a label, never a button, so nothing here can favorite it
- * by accident. With the whole tree selected there is no one opening to report
- * on, so it points at the list of the ones there are.
+ * by accident. Any opening and Any favorite show nothing.
  */
 export function ScoreStrip() {
   const selection = useStore((s) => s.settings.selection);
@@ -135,28 +134,8 @@ export function ScoreStrip() {
   const openStats = useStore((s) => s.openStats);
   const tree = openingTree(referenceIndex());
 
-  if (selection.opening === ANY_FAVORITE) {
-    return (
-      <button className="score-strip empty" onClick={() => openStats('')} aria-label="Your ratings">
-        <span className="grow">
-          <span className="ttl">Any favorite</span>
-        </span>
-        <Icons.chevron size={18} />
-      </button>
-    );
-  }
-
-  if (selection.opening === '') {
-    return (
-      <button className="score-strip empty" onClick={() => openStats('')} aria-label="Your ratings">
-        <span className="grow">
-          <span className="ttl">No opening selected</span>
-          <span className="sub">Pick an opening above to see its rating.</span>
-        </span>
-        <Icons.chevron size={18} />
-      </button>
-    );
-  }
+  // Any opening and Any favorite have no one opening to report on.
+  if (selection.opening === '' || selection.opening === ANY_FAVORITE) return null;
 
   const node = nodeById(tree, selection.opening);
   const favorite = starredIds.includes(node.id);
