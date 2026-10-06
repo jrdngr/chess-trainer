@@ -140,7 +140,6 @@ export function ScoreStrip() {
       <button className="score-strip empty" onClick={() => openStats('')} aria-label="Your ratings">
         <span className="grow">
           <span className="ttl">Any favorite</span>
-          <span className="sub">Each round rates the favorite it lands on.</span>
         </span>
         <Icons.chevron size={18} />
       </button>

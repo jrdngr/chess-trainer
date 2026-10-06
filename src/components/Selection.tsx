@@ -20,7 +20,7 @@ import {
 import { formatGameCount } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
 import { rankOf, UNRATED } from '../model/scoring';
-import { colorLabel, colorsOf } from '../model/selection';
+import { colorLabel } from '../model/selection';
 import { ANY_FAVORITE } from '../model/anyFavorite';
 import { useStore } from '../store/useStore';
 import { Piece } from './Pieces';
@@ -207,13 +207,11 @@ export function QuickPicker({
 
         <button className={`qp-tile qp-any${isChosen('')}`} onClick={() => choose({ opening: '' })}>
           <span className="qp-any-name">Any opening</span>
-          <span className="qp-any-meta">Everything in the book</span>
         </button>
 
         {mine.length > 0 && (
           <button className={`qp-tile qp-any${isChosen(ANY_FAVORITE)}`} onClick={() => choose({ opening: ANY_FAVORITE })}>
             <span className="qp-any-name">Any favorite</span>
-            <span className="qp-any-meta">{anyFavoriteMeta(mine.filter((fav) => colorsOf(selection.color).includes(fav.side)).length, selection.color)}</span>
           </button>
         )}
 
@@ -268,14 +266,6 @@ export function QuickPicker({
       </div>
     </Sheet>
   );
-}
-
-/** What "Any favorite" will draw from on the side picked. */
-function anyFavoriteMeta(count: number, color: ColorChoice): string {
-  const side = color === 'random' ? '' : ` as ${colorLabel(color)}`;
-  if (count === 0) return `No favorites${side} yet`;
-  if (count === 1) return `Your one favorite${side}, every round`;
-  return `One of your ${count} favorites${side} each round`;
 }
 
 /** A favorite's name as the picker shows it, short where the book's is long. */
