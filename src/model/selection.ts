@@ -40,9 +40,11 @@ export function regionOf(tree: OpeningTree, selection: Selection): OpeningNode {
 /**
  * The training items inside a region.
  *
- * A position is in scope while the line to it can still be part of the
+ * A position is in scope while your answer keeps the line part of the
  * opening: inside it, or on the way in — the choice that gets you there is as
- * much part of the opening as the moves after it.
+ * much part of the opening as the moves after it. The answer decides, not the
+ * position: the book can reach the King's Indian from 1.e4 (1...d6 2.d4 Nf6
+ * 3.Nc3 g6 4.Nf3 Bg7 5.c4), but a 1.e4 card answered 1...c5 never gets there.
  */
 export function itemsInRegion(
   tree: OpeningTree,
@@ -50,7 +52,9 @@ export function itemsInRegion(
   items: TrainingItem[],
 ): TrainingItem[] {
   if (node.depth === 0) return items;
-  return items.filter((item) => lineStatus(tree, node, item.pathSans) !== 'outside');
+  return items.filter((item) =>
+    item.expected.some((answer) => lineStatus(tree, node, [...item.pathSans, answer.san]) !== 'outside'),
+  );
 }
 
 /** Is a line inside a region, or still able to get there? */
