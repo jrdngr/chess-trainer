@@ -50,6 +50,7 @@ import { selectionText } from '../../components/Selection';
 import { useStore } from '../../store/useStore';
 import { PlayOn } from '../openingRun/PlayOn';
 import { Lobby } from './Lobby';
+import { introOpening, useRoundIntro } from '../../components/RoundIntro';
 import { useModePrefs } from '../modePrefs';
 
 /**
@@ -215,6 +216,17 @@ function Run({
   const [playFrom, setPlayFrom] = useState<string | null>(null);
 
   const prefs = useModePrefs().growth;
+
+  /** Each run is announced, and the way to where it starts is played out. */
+  const [opening] = useState(() => {
+    const id = introOpening(region ?? settings.selection.opening, run.path);
+    return { id, name: openingTree(index).root.id === id ? row.name : undefined };
+  });
+  const [startLen] = useState(run.path.length);
+  const intro = useRoundIntro(
+    { key: row.id, mode: 'Growth', opening: opening.id, name: opening.name, color: run.color, path: run.path.slice(0, startLen) },
+    run.path.length > startLen,
+  );
   /**
    * What the run looks for holes with: the saved settings, or the wider ones
    * the offer needed. A batch is still sized by the saved depth, so past it a
@@ -225,7 +237,7 @@ function Run({
 
   /** The opponent answers on its own, after a beat. */
   useEffect(() => {
-    if (phase !== 'walking' || isUsersTurn(run)) return;
+    if (phase !== 'walking' || isUsersTurn(run) || intro.held) return;
     if (atHole(tree, run)) return;
     setThinking(true);
     const timer = setTimeout(() => {
@@ -245,7 +257,7 @@ function Run({
       else setPhase('hole');
     }, 420);
     return () => clearTimeout(timer);
-  }, [phase, run, tree, index, find.minShare, find.maxPly]);
+  }, [phase, run, tree, index, find.minShare, find.maxPly, intro.held]);
 
   /** A line that ends on the opponent's move leaves you to move with nothing. */
   useEffect(() => {
@@ -653,6 +665,7 @@ function Run({
 
   return (
     <>
+      {intro.cover}
       <AppBar
         title="Growth"
         subtitle={selectionText(run.color, region ?? settings.selection.opening)}
@@ -675,16 +688,17 @@ function Run({
         </div>
 
         <Board
-          fen={run.fen}
+          fen={intro.fen ?? run.fen}
           orientation={run.color}
-          interactive={(phase === 'walking' && isUsersTurn(run)) || phase === 'hole'}
+          interactive={!intro.held && ((phase === 'walking' && isUsersTurn(run)) || phase === 'hole')}
           movableFor={run.color}
           allowed={phase === 'hole' ? shown.map((move) => move.san) : undefined}
-          arrows={nudgedArrows(shown)}
+          arrows={intro.held ? [] : nudgedArrows(shown)}
           onMove={onMove}
+          overlay={intro.overlay}
           // The green highlight below stands in for the usual last-move tint on
           // the move that was just added, so the two do not compete.
-          lastMove={answer ? null : lastMoveOf(run.path)}
+          lastMove={intro.fen ? intro.lastMove : answer ? null : lastMoveOf(run.path)}
           highlights={
             answer
               ? [
@@ -715,7 +729,7 @@ function Run({
         )}
 
         <div className="spacer sm" />
-        {run.path.length > 0 && <Strip items={strip} />}
+        {intro.below ?? (run.path.length > 0 && <Strip items={strip} />)}
         <div className="spacer sm" />
 
         {phase === 'walking' && (
@@ -741,7 +755,7 @@ function Run({
           </div>
         )}
 
-        {phase === 'hole' && choices === undefined && (
+        {phase === 'hole' && !intro.held && choices === undefined && (
           <div className="prompt">
             <div className="who">
               <span className={`side ${run.color}`} />
@@ -776,7 +790,7 @@ function Run({
           </>
         )}
 
-        {phase === 'hole' && options.length > 0 && (
+        {phase === 'hole' && !intro.held && options.length > 0 && (
           <>
             <div className="prompt">
               <div className="who">

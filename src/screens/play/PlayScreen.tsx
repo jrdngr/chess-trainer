@@ -26,6 +26,7 @@ import { childrenOf, displayName, fenAt } from '../../model/repertoire';
 import { positionKey } from '../../chess/core';
 import type { Repertoire } from '../../model/types';
 import { repertoireList, useStore } from '../../store/useStore';
+import { useRoundIntro } from '../../components/RoundIntro';
 import { Setup } from './Setup';
 
 export interface PlayScreenProps {
@@ -111,6 +112,12 @@ function Game({
   const status = useMemo(() => positionStatus(fen), [fen]);
   const myTurn = fenTurn(fen) === color && !over;
 
+  /** The game is announced, and its opening stays over the board until your first move. */
+  const intro = useRoundIntro(
+    { key: gameId.current, mode: 'Play', opening: selection.opening, color, path: [] },
+    moves.length >= (color === 'w' ? 1 : 2),
+  );
+
   /** Settle the game when the position is terminal. */
   useEffect(() => {
     if (over || !status.gameOver) return;
@@ -143,7 +150,7 @@ function Game({
    * it searches and picks a move for this level.
    */
   useEffect(() => {
-    if (over || fenTurn(fen) === color || status.gameOver) return;
+    if (over || fenTurn(fen) === color || status.gameOver || intro.held) return;
     const scripted =
       region.depth > 0 &&
       moves.length < region.sans.length &&
@@ -196,7 +203,7 @@ function Game({
       setThinking(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fen, color, level, over, status.gameOver, region, moves.length]);
+  }, [fen, color, level, over, status.gameOver, region, moves.length, intro.held]);
 
   /** A quiet evaluation for the bar, only when asked for. */
   useEffect(() => {
@@ -284,6 +291,7 @@ function Game({
 
   return (
     <>
+      {intro.cover}
       <AppBar
         title="Play"
         subtitle={`${level.name} · ${selectionText(color, selection.opening)}`}
@@ -310,10 +318,11 @@ function Game({
         <Board
           fen={fen}
           orientation={color}
-          interactive={myTurn}
+          interactive={myTurn && !intro.held}
           movableFor={color}
           onMove={onMove}
           lastMove={last}
+          overlay={intro.overlay}
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
           dimmed={!!over}

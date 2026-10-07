@@ -15,6 +15,7 @@ import type { Grade, LineCard } from '../../model/types';
 import type { Color } from '../../chess/core';
 import { itemsFor, repertoireList, useStore } from '../../store/useStore';
 import { GRADE_LABELS, WhySheet } from './DrillSession';
+import { introOpening, useRoundIntro } from '../../components/RoundIntro';
 
 /** How long a correct move stays on the board before the line goes on. */
 const FLASH_MS = 500;
@@ -128,6 +129,21 @@ export function LineDrill({ color, openingId, count, budget, lean, only, prefs, 
   const fen = fens[ply] ?? fens[fens.length - 1] ?? '';
   const mine = !!line && ply < line.sans.length && yoursAt(color, ply);
 
+  /** The sitting is announced, and the opening stays over the board until your first move. */
+  const [sitting] = useState(() => Math.random());
+  const intro = useRoundIntro(
+    line
+      ? {
+          key: sitting,
+          mode: 'Drill lines',
+          opening: region.depth > 0 ? openingId : introOpening(openingId, line.sans),
+          color,
+          path: [],
+        }
+      : null,
+    finished > 0 || times.length > 0 || misses > 0,
+  );
+
   /** Your prep at the position in front of you, as Drill's item for it. */
   const item = useMemo<TrainingItem | null>(() => {
     if (!rep || !mine) return null;
@@ -138,15 +154,15 @@ export function LineDrill({ color, openingId, count, budget, lean, only, prefs, 
   const clock = useMoveClock({
     seconds: clockSeconds(options.clock),
     turnKey: `${at}:${ply}`,
-    active: phase === 'play' && mine && !why,
+    active: phase === 'play' && mine && !why && !intro.held,
   });
 
   /** The opponent's moves play themselves, after a beat. */
   useEffect(() => {
-    if (!line || phase !== 'play' || mine || ply >= line.sans.length) return;
+    if (!line || phase !== 'play' || mine || ply >= line.sans.length || intro.held) return;
     const timer = window.setTimeout(() => setPly((p) => p + 1), REPLY_MS);
     return () => window.clearTimeout(timer);
-  }, [line, phase, mine, ply]);
+  }, [line, phase, mine, ply, intro.held]);
 
   /** The end of the line: counted once, as a round of its own. */
   useEffect(() => {
@@ -300,6 +316,7 @@ export function LineDrill({ color, openingId, count, budget, lean, only, prefs, 
 
   return (
     <>
+      {intro.cover}
       <AppBar
         title="Drill lines"
         subtitle={subtitle}
@@ -318,10 +335,11 @@ export function LineDrill({ color, openingId, count, budget, lean, only, prefs, 
         <Board
           fen={boardFen}
           orientation={color}
-          interactive={phase === 'play' && mine}
+          interactive={phase === 'play' && mine && !intro.held}
           movableFor={color}
           onMove={onBoardMove}
           highlights={highlights}
+          overlay={intro.overlay}
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
           dimmed={phase === 'wrong'}

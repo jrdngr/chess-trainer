@@ -74,3 +74,50 @@ export const COLD_START_LABEL = 'Survival: Cold Start';
 export function roundLabel(mode: RoundMode, start?: Start): string {
   return mode === 'survival' && start === 'first' ? COLD_START_LABEL : MODE_LABELS[mode];
 }
+
+/**
+ * Mode Testing: Autopilot's rounds in a cycle that plays every way a round
+ * can begin before any repeats, for trying out how rounds start.
+ *
+ * The cases are what the round intro treats differently — a run walked into
+ * its opening, a Cold Start from move one, the way to a Drill position played
+ * out, a line drilled from move one, Growth walked to its hole — each on
+ * every side the selection covers, since a side whose opponent moves first
+ * starts differently. A case whose mode has nothing to do is forced where
+ * it can run at all, and skipped where it cannot.
+ */
+export type TestVariant = 'survival' | 'coldStart' | 'drillPositions' | 'drillLines' | 'growth';
+
+export const TEST_VARIANTS: TestVariant[] = ['survival', 'coldStart', 'drillPositions', 'drillLines', 'growth'];
+
+export interface TestCase {
+  variant: TestVariant;
+  color: Color;
+}
+
+/** What a test case asks of the round picker: its mode, and for Survival where it starts. */
+export interface ForcedRound {
+  mode: RoundMode;
+  start?: Start;
+}
+
+export function forcedRound(variant: TestVariant): ForcedRound {
+  switch (variant) {
+    case 'survival':
+      return { mode: 'survival', start: 'inside' };
+    case 'coldStart':
+      return { mode: 'survival', start: 'first' };
+    default:
+      return { mode: variant };
+  }
+}
+
+/** One cycle: every variant on every side, shuffled. */
+export function testCycle(colors: Color[], rand: () => number): TestCase[] {
+  const cases = TEST_VARIANTS.flatMap((variant) => colors.map((color) => ({ variant, color })));
+  for (let i = cases.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rand() * (i + 1));
+    [cases[i], cases[j]] = [cases[j], cases[i]];
+  }
+  return cases;
+}

@@ -30,6 +30,7 @@ import { clockSeconds } from '../../model/openingRun';
 import type { Card, Grade } from '../../model/types';
 import { useStore } from '../../store/useStore';
 import { ClockHud, useMoveClock } from '../../components/Clock';
+import { introOpening, useRoundIntro } from '../../components/RoundIntro';
 import { selectionText } from '../../components/Selection';
 
 export interface DrillSessionProps {
@@ -136,13 +137,28 @@ export function DrillSession({
   const logged = useRef(false);
 
   const item = queue[index];
+
+  /** The sitting is announced, and the way to its first position is played out. */
+  const [first] = useState(() => queue[0] ?? null);
+  const intro = useRoundIntro(
+    first
+      ? {
+          key: first.cardId,
+          mode: 'Drill positions',
+          opening: introOpening(openingId ?? settings.selection.opening, first.pathSans),
+          color: first.orientation === 'black' ? 'b' : 'w',
+          path: first.pathSans,
+        }
+      : null,
+    stats.answered > 0,
+  );
   /** Autopilot's round has had its answers; what is left is the last grade and Next round. */
   const roundDone = !!limit && stats.answered >= limit && phase === 'ask';
 
   const clock = useMoveClock({
     seconds: clockSeconds(options.clock),
     turnKey: `${index}:${item?.cardId ?? ''}`,
-    active: phase === 'ask' && !!item && !explore && !showMoves && !roundDone,
+    active: phase === 'ask' && !!item && !explore && !showMoves && !roundDone && !intro.held,
   });
 
   /** Count the session as one round, against the opening it was played in. */
@@ -359,6 +375,7 @@ export function DrillSession({
 
   return (
     <>
+      {intro.cover}
       <AppBar
         title={title}
         subtitle={selectionText(side, openingId ?? settings.selection.opening)}
@@ -373,17 +390,21 @@ export function DrillSession({
 
       <div className="screen no-nav">
         <Board
-          fen={boardFen}
+          fen={intro.fen ?? boardFen}
           orientation={side}
-          interactive={phase === 'ask' && !roundDone}
+          interactive={phase === 'ask' && !roundDone && !intro.held}
           movableFor={side}
           onMove={onBoardMove}
-          highlights={highlights}
+          highlights={intro.held ? [] : highlights}
+          lastMove={intro.lastMove}
+          overlay={intro.overlay}
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
           dimmed={phase === 'wrong'}
           captured
         />
+
+        {intro.below}
 
         <div className="spacer" />
 
@@ -397,7 +418,7 @@ export function DrillSession({
                 {stats.correct} of {stats.answered} right
               </div>
             ) : (
-              <div className="prompt">
+              <div className="prompt" style={intro.held ? { visibility: 'hidden' } : undefined}>
                 <div className="who">
                   <span className={`side ${side}`} />
                   {sideLabel} to move

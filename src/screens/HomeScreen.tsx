@@ -6,7 +6,7 @@ import { nodeById, openingTree } from '../model/openingTree';
 import { itemsInRegion, repertoiresIn } from '../model/selection';
 import { growthRows } from '../model/growth';
 import { streak } from '../model/scoring';
-import { nextRound, NO_HISTORY, peekRoundSelection, withSelection, type AutoRound } from '../store/recommendation';
+import { NO_HISTORY, pickRound, type AutoRound } from '../store/recommendation';
 import { acrossRegions, regionsBySide } from '../model/anyFavorite';
 import { roundLabel } from '../model/autopilot';
 import { levelById } from '../model/play';
@@ -116,7 +116,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
   const coverage = totalItems > 0 ? totalItems / (totalItems + gapCount) : 1;
 
   /** What Autopilot would start with, said on its button — or that there is nothing to drill. */
-  const first = useMemo(() => nextRound(withSelection(state, peekRoundSelection(state)), NO_HISTORY, state.settings.selection), [state]);
+  const first = useMemo(() => pickRound(state, NO_HISTORY).round, [state]);
   const days = streak(state.score.global);
 
   return (
@@ -468,6 +468,14 @@ function AutopilotSettings({ open, onClose }: { open: boolean; onClose: () => vo
           hint="The board's edge tints green when you are better and red when you are worse"
           on={prefs.boardGlow}
           onToggle={() => setModePrefs('autopilot', { boardGlow: !prefs.boardGlow })}
+        />
+      </div>
+      <Section title="Testing" />
+      <div className="list">
+        <Toggle
+          label="Mode Testing"
+          on={prefs.modeTesting}
+          onToggle={() => setModePrefs('autopilot', { modeTesting: !prefs.modeTesting })}
         />
       </div>
     </Sheet>

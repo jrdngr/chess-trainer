@@ -9,7 +9,7 @@ import { itemsInRegion, repertoiresIn, type Selection } from '../../model/select
 import type { TidyFind } from '../../model/tidy';
 import { itemsFor, repertoireList, useStore } from '../../store/useStore';
 import { weakestFirst } from '../../model/session';
-import { afterRound, nextRound, NO_HISTORY, peekRoundSelection, playedRound, withSelection, type AutoHistory, type AutoRound } from '../../store/recommendation';
+import { afterRound, NO_HISTORY, pickRound, playedRound, tookTest, type AutoHistory, type AutoRound, type PickedRound } from '../../store/recommendation';
 import { DrillSession } from '../drill/DrillSession';
 import { LineDrill } from '../drill/LineDrill';
 import { LINE_BUDGET, MAX_LINES } from '../../model/lineDrill';
@@ -53,15 +53,21 @@ export function AutopilotScreen({
   scope?: Selection;
 }) {
   const [history, setHistory] = useState<AutoHistory>(NO_HISTORY);
-  /** The selection this round plays in: the scope, or the saved one with "Any favorite" resolved per round. */
-  const [within, setWithin] = useState<Selection>(() => scope ?? peekRoundSelection(useStore.getState()));
-  const [round, setRound] = useState<AutoRound | null>(() =>
-    nextRound(withSelection(useStore.getState(), within), NO_HISTORY, scope ?? useStore.getState().settings.selection),
-  );
-  /** Once a round is under way the next lands on another favorite, even if this session stops here. */
+  /**
+   * The round, and the selection it plays in: the scope, or the saved one
+   * with "Any favorite" resolved per round. Under Mode Testing, also the case
+   * it plays — see `pickRound`.
+   */
+  const [picked, setPicked] = useState<PickedRound>(() => pickRound(useStore.getState(), NO_HISTORY, scope));
+  const { round, within } = picked;
+  /**
+   * Once a round is under way the next lands on another favorite, and Mode
+   * Testing's cycle moves on, even if this session stops here.
+   */
   useEffect(() => {
-    if (!scope) playedRound(within);
-  }, [scope, within]);
+    if (!scope) playedRound(picked.within);
+    if (picked.test) tookTest(picked.test);
+  }, [scope, picked]);
   /** Autopilot's own options, and the fixed ones every round plays on; never a mode's setup. */
   const autopilotPrefs = useStore((s) => s.settings.autopilot);
   const modes = useMemo(() => autopilotModes(autopilotPrefs), [autopilotPrefs]);
@@ -76,10 +82,8 @@ export function AutopilotScreen({
   const advance = () => {
     if (!round) return;
     const played = afterRound(history, round, within);
-    const next = scope ?? peekRoundSelection(useStore.getState());
     setHistory(played);
-    setWithin(next);
-    setRound(nextRound(withSelection(useStore.getState(), next), played, scope ?? useStore.getState().settings.selection));
+    setPicked(pickRound(useStore.getState(), played, scope));
     setCount((n) => n + 1);
   };
 
@@ -93,6 +97,7 @@ export function AutopilotScreen({
           <SurvivalScreen
             key={count}
             plan={survivalPlanFor(current.pick)}
+            roundName={roundLabel('survival', current.pick.start)}
             scope={within}
             onNext={advance}
             onExit={onExit}
@@ -140,48 +145,8 @@ export function AutopilotScreen({
 
   return (
     <ModePrefsProvider value={modes}>
-      <ModeIntro key={count} name={roundLabel(current.mode, current.mode === 'survival' ? current.pick.start : undefined)} />
       {screen}
     </ModePrefsProvider>
-  );
-}
-
-/**
- * The round's mode, large over the board as the round begins, then carried up
- * into its place in the app bar. The real title is underneath the whole time,
- * so the name lands where it will stay.
- */
-function ModeIntro({ name }: { name: string }) {
-  const [shown, setShown] = useState(true);
-  /** Where the app bar's title actually sits, measured once the screen is up. */
-  const [land, setLand] = useState<{ x: number; y: number } | null>(null);
-  useEffect(() => {
-    // Measured just before the name sets off rather than on mount: a Survival
-    // round shows its setup for a moment before the run's own bar arrives.
-    const measure = window.setTimeout(() => {
-      const title = document.querySelector('.appbar .appbar-title .line');
-      if (!title) return;
-      const box = title.getBoundingClientRect();
-      setLand({ x: box.left + box.width / 2, y: box.top + box.height / 2 });
-    }, 700);
-    const timer = window.setTimeout(() => setShown(false), 1500);
-    return () => {
-      window.clearTimeout(measure);
-      window.clearTimeout(timer);
-    };
-  }, []);
-  if (!shown) return null;
-  return (
-    <div
-      className="mode-intro"
-      style={{
-        ['--len' as string]: name.length,
-        ...(land ? { ['--land-x' as string]: `${land.x}px`, ['--land-y' as string]: `${land.y}px` } : {}),
-      }}
-      aria-hidden
-    >
-      <span>{name}</span>
-    </div>
   );
 }
 

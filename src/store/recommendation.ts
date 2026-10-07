@@ -1,7 +1,7 @@
 import type { Color } from '../chess/core';
 import { favoritesIn, isAnyFavorite, regionsBySide, resolveFavorite } from '../model/anyFavorite';
 import { AUTO_DRILL, AUTO_GROWTH } from '../model/autopilotPrefs';
-import { chooseMode, coldStart, type RoundMode } from '../model/autopilot';
+import { chooseMode, coldStart, forcedRound, testCycle, type ForcedRound, type RoundMode, type TestCase } from '../model/autopilot';
 import { ACCURACY_RUNS } from '../model/recommend';
 import { growLaunch, lineFinishes, readyToGrow, type GrowLaunch } from '../model/growOffer';
 import { drillableLines, dueLines } from '../model/lineDrill';
@@ -162,10 +162,21 @@ export const NO_HISTORY: AutoHistory = { modes: [], focuses: [], steered: [], st
  * lands on one favorite, but what is owed is read across all of them, and a
  * Drill round goes to the favorite owing the most.
  */
-export function nextRound(state: State, history: AutoHistory, mix: Selection = state.settings.selection): AutoRound | null {
+export function nextRound(
+  state: State,
+  history: AutoHistory,
+  mix: Selection = state.settings.selection,
+  force?: ForcedRound,
+): AutoRound | null {
   const recommended = recommendNow(state, history.focuses, history.steered);
   if (!recommended) return null;
-  const pick = coldStart(recommended, history.starts);
+  let pick = coldStart(recommended, history.starts);
+  if (force) {
+    // Mode Testing says where a Survival run starts. Inside needs an opening
+    // deep enough to start in; from move one is always possible.
+    if (force.start === 'inside' && recommended.start !== 'inside') return null;
+    pick = force.start ? { ...recommended, start: force.start } : recommended;
+  }
   const tree = openingTree(referenceIndex());
   const index = referenceIndex();
   const selection = state.settings.selection;
@@ -204,12 +215,23 @@ export function nextRound(state: State, history: AutoHistory, mix: Selection = s
     new Set(sides.flatMap((side) => each(side))).size;
   const ofRep = (ids: string[], side: (typeof sides)[number]) => ids.map((id) => `${side.rep.id}:${id}`);
 
-  /** An opening ready to widen: the one Survival would run, or the selection itself. */
+  /**
+   * An opening ready to widen: the one Survival would run, or the selection
+   * itself. Mode Testing takes one that is not ready, when none is.
+   */
   const growth = (() => {
     const openings = [pick.opening, ...(region.depth > 0 ? [region] : [])];
+    const passes = force?.mode === 'growth' ? [true, false] : [true];
+    for (const ready of passes) {
+      const found = growthIn(openings, ready);
+      if (found) return found;
+    }
+    return null;
+  })();
+  function growthIn(openings: (typeof pick.opening)[], ready: boolean) {
     for (const rep of reps) {
       for (const opening of openings) {
-        if (!readyToGrow(rep, tree, opening, rounds)) continue;
+        if (ready && !readyToGrow(rep, tree, opening, rounds)) continue;
         const launch = growLaunch(rep, index, tree, opening, [], {
           minShare: AUTO_GROWTH.minShare,
           maxPly: AUTO_GROWTH.maxPly,
@@ -219,9 +241,9 @@ export function nextRound(state: State, history: AutoHistory, mix: Selection = s
       }
     }
     return null;
-  })();
+  }
 
-  const mode = chooseMode(
+  const mode = force?.mode ?? chooseMode(
     {
       lines: count((side) => side.lines),
       positions: count((side) => side.keys),
@@ -236,8 +258,10 @@ export function nextRound(state: State, history: AutoHistory, mix: Selection = s
   );
   switch (mode) {
     case 'drillPositions':
+      if (force && !byPositions?.keys.length) return null;
       return { mode, color: byPositions.rep.color, openingId: byPositions.region.id, weak: toDrill(byPositions) === 0 };
     case 'drillLines':
+      if (force && !byLines?.lines.length) return null;
       return {
         mode,
         color: byLines.rep.color,
@@ -245,10 +269,68 @@ export function nextRound(state: State, history: AutoHistory, mix: Selection = s
         only: [...new Set([...byLines.linesDue, ...byLines.unpracticed])],
       };
     case 'growth':
+      if (force && !growth) return null;
       return growth ? { mode, ...growth } : { mode: 'survival', pick };
     default:
       return { mode: 'survival', pick };
   }
+}
+
+/* ── Mode Testing ───────────────────────────────────────────────────────── */
+
+/** The cases left in this cycle, and what the cycle was built for. */
+let testQueue: TestCase[] = [];
+let testKey = '';
+
+/** The sides a selection covers that you have a repertoire for. */
+function testColors(state: State, selection: Selection): Color[] {
+  const sides: Color[] = selection.color === 'random' ? ['w', 'b'] : [selection.color];
+  const held = sides.filter((side) => repertoireList(state).some((rep) => rep.color === side));
+  return held.length ? held : sides;
+}
+
+/** A round Autopilot is about to play, with the selection it plays in and, under Mode Testing, its case. */
+export interface PickedRound {
+  round: AutoRound | null;
+  within: Selection;
+  test?: TestCase;
+}
+
+/**
+ * Autopilot's next round. Normally `nextRound` on the next selection; with
+ * Mode Testing on, the first case left in the cycle that can run, a fresh
+ * cycle once every case has been played — see `testCycle`. Nothing is taken
+ * from the cycle here: `tookTest` does that once the round is under way, so
+ * Home's button can say what is next.
+ */
+export function pickRound(state: State, history: AutoHistory, scope?: Selection): PickedRound {
+  const saved = scope ?? state.settings.selection;
+  if (state.settings.autopilot.modeTesting) {
+    const colors = testColors(state, saved);
+    const key = `${saved.color}|${saved.opening}|${colors.join('')}`;
+    if (key !== testKey || !testQueue.length) {
+      testKey = key;
+      testQueue = testCycle(colors, Math.random);
+    }
+    for (const attempt of [0, 1]) {
+      for (const test of testQueue) {
+        const sided: Selection = { ...saved, color: test.color };
+        const within = scope ? sided : peekRoundSelection(state, sided);
+        const round = nextRound(withSelection(state, within), history, sided, forcedRound(test.variant));
+        if (round) return { round, within, test };
+      }
+      // Nothing left in this cycle can run: start the next one.
+      if (attempt === 0) testQueue = testCycle(colors, Math.random);
+    }
+  }
+  const within = scope ?? peekRoundSelection(state);
+  return { round: nextRound(withSelection(state, within), history, saved), within };
+}
+
+/** A Mode Testing case has been played: the cycle moves on. */
+export function tookTest(test: TestCase): void {
+  const at = testQueue.findIndex((t) => t.variant === test.variant && t.color === test.color);
+  if (at >= 0) testQueue = [...testQueue.slice(0, at), ...testQueue.slice(at + 1)];
 }
 
 /**

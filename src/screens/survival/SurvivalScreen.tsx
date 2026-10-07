@@ -46,6 +46,7 @@ import { End, type Ending } from './End';
 import { Setup } from './Setup';
 import { useJudge } from './useJudge';
 import { useModePrefs } from '../modePrefs';
+import { introOpening, useRoundIntro } from '../../components/RoundIntro';
 
 type Phase = 'setup' | 'playing' | 'over' | 'growing';
 
@@ -128,6 +129,7 @@ export function SurvivalScreen({
   plan,
   scope,
   onNext,
+  roundName,
 }: {
   onExit: () => void;
   /** Leave for the Analysis tab on this line, seen from this side. */
@@ -142,6 +144,8 @@ export function SurvivalScreen({
   scope?: Selection;
   /** Autopilot's next round, in place of another run. */
   onNext?: () => void;
+  /** What the run is announced as, when not plain Survival: Autopilot's Cold Start. */
+  roundName?: string;
 }) {
   const state = useStore();
   const { settings, cards } = state;
@@ -189,7 +193,25 @@ export function SurvivalScreen({
   const answers = useRef<MoveResult[]>([]);
 
   const run = game?.state.run ?? null;
-  const live = phase === 'playing' && !!run;
+  /**
+   * Each run is announced, and one started inside an opening has its way in
+   * played out first. A run from move one is named by the opening it is
+   * steered toward.
+   */
+  const intro = useRoundIntro(
+    phase === 'playing' && run
+      ? {
+          key: run.id,
+          mode: roundName ?? 'Survival',
+          opening: run.enteredIn ?? (plan ? plan.toward : introOpening(run.openingId, run.played.slice(0, run.opened))),
+          color: run.color,
+          path: run.played.slice(0, run.opened),
+        }
+      : null,
+    (game?.state.moves ?? 0) > 0,
+  );
+  /** Under way: past the intro, and not over. Nothing moves and no clock runs until then. */
+  const live = phase === 'playing' && !!run && !intro.held;
   const myTurn = !!run && fenTurn(run.fen) === run.color;
 
   const buzz = (pattern: number | number[]) => {
@@ -495,6 +517,7 @@ export function SurvivalScreen({
 
   return (
     <>
+      {intro.cover}
       <AppBar
         title="Survival"
         subtitle={selectionText(run.color, run.enteredIn ?? run.openingId)}
@@ -509,12 +532,12 @@ export function SurvivalScreen({
 
       <div className="screen no-nav">
         <Board
-          fen={shownFen}
+          fen={intro.fen ?? shownFen}
           orientation={run.color}
           interactive={live && myTurn && !thinking && !judge.pending}
           movableFor={run.color}
           onMove={onMove}
-          lastMove={lastMoveOf(shownLine)}
+          lastMove={intro.fen ? intro.lastMove : lastMoveOf(shownLine)}
           arrows={miss ? [{ from: miss.from, to: miss.to, color: 'var(--good)' }] : []}
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
@@ -522,6 +545,7 @@ export function SurvivalScreen({
           glow={glow}
           overlay={
             <>
+              {intro.overlay}
               {pop && <MoveScore key={pop.key} pop={pop} orientation={run.color} />}
               {miss && (
                 <div className="board-flash top" onPointerDown={() => setMiss(null)}>
@@ -536,13 +560,14 @@ export function SurvivalScreen({
           }
         />
 
-        {run.opened > 0 && (
-          <div className="center small muted mt-8">From {sansToMoveText(run.played.slice(0, run.opened))}</div>
-        )}
+        {intro.below ??
+          (run.opened > 0 && (
+            <div className="center small muted mt-8">From {sansToMoveText(run.played.slice(0, run.opened))}</div>
+          ))}
 
         <div className="spacer" />
 
-        <div className="prompt">
+        <div className="prompt" style={intro.held ? { visibility: 'hidden' } : undefined}>
           <div className="who">
             {thinking || judge.pending || engineTurn ? (
               <span className="spinner" />

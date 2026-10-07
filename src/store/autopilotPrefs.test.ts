@@ -48,7 +48,7 @@ describe("Autopilot's settings", () => {
       drill: AUTO_DRILL,
       growth: AUTO_GROWTH,
     });
-    expect(autopilotModes({ moveScores: false, boardGlow: false }).survival).toMatchObject({ moveScores: false, boardGlow: false });
+    expect(autopilotModes({ moveScores: false, boardGlow: false, modeTesting: false }).survival).toMatchObject({ moveScores: false, boardGlow: false });
     expect(AUTO_DRILL).toMatchObject({ clock: 'off', explain: true, followLine: true, newPerSession: 8, batchSimilar: true });
     expect(AUTO_GROWTH).toEqual({ minShare: 1, maxPly: 18, nudgePriority: 'transposition', nudgePawns: false });
   });
@@ -56,7 +56,7 @@ describe("Autopilot's settings", () => {
   it('are saved apart from the modes, and come back for an older save', () => {
     useStore.getState().setModePrefs('autopilot', { boardGlow: false });
     const settings = useStore.getState().settings;
-    expect(settings.autopilot).toEqual({ moveScores: true, boardGlow: false });
+    expect(settings.autopilot).toEqual({ moveScores: true, boardGlow: false, modeTesting: false });
     expect(settings.survival.boardGlow).toBe(true);
   });
 
