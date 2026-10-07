@@ -116,7 +116,7 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
   const coverage = totalItems > 0 ? totalItems / (totalItems + gapCount) : 1;
 
   /** What Autopilot would start with, said on its button — or that there is nothing to drill. */
-  const first = useMemo(() => nextRound(withSelection(state, peekRoundSelection(state)), NO_HISTORY), [state]);
+  const first = useMemo(() => nextRound(withSelection(state, peekRoundSelection(state)), NO_HISTORY, state.settings.selection), [state]);
   const days = streak(state.score.global);
 
   return (

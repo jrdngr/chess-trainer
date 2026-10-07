@@ -107,8 +107,14 @@ describe("Autopilot's mix of modes", () => {
     expect(chooseMode(solid, ['growth'])).toBe('survival');
   });
 
-  it('opens a session with Survival', () => {
-    expect(chooseMode({ ...solid, lines: 3, due: 10, unseen: 10, growReady: true }, [])).toBe('survival');
+  it('opens a session on whatever is owed most', () => {
+    expect(chooseMode({ ...solid, due: 30, unseen: 10, accuracy: 0.85 }, [])).toBe('drillPositions');
+    expect(chooseMode({ ...solid, lines: 3, growReady: true }, [])).toBe('growth');
+  });
+
+  it('opens a session with Survival while the prep is solid and little is owed', () => {
+    expect(chooseMode(solid, [])).toBe('survival');
+    expect(chooseMode({ ...solid, due: 2 }, [])).toBe('survival');
   });
 });
 

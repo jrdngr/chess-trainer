@@ -56,7 +56,7 @@ export function AutopilotScreen({
   /** The selection this round plays in: the scope, or the saved one with "Any favorite" resolved per round. */
   const [within, setWithin] = useState<Selection>(() => scope ?? peekRoundSelection(useStore.getState()));
   const [round, setRound] = useState<AutoRound | null>(() =>
-    nextRound(withSelection(useStore.getState(), within), NO_HISTORY),
+    nextRound(withSelection(useStore.getState(), within), NO_HISTORY, scope ?? useStore.getState().settings.selection),
   );
   /** Once a round is under way the next lands on another favorite, even if this session stops here. */
   useEffect(() => {
@@ -79,7 +79,7 @@ export function AutopilotScreen({
     const next = scope ?? peekRoundSelection(useStore.getState());
     setHistory(played);
     setWithin(next);
-    setRound(nextRound(withSelection(useStore.getState(), next), played));
+    setRound(nextRound(withSelection(useStore.getState(), next), played, scope ?? useStore.getState().settings.selection));
     setCount((n) => n + 1);
   };
 

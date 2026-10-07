@@ -1,5 +1,5 @@
 import type { Color } from '../chess/core';
-import { favoritesIn, isAnyFavorite, resolveFavorite } from '../model/anyFavorite';
+import { favoritesIn, isAnyFavorite, regionsBySide, resolveFavorite } from '../model/anyFavorite';
 import { AUTO_DRILL, AUTO_GROWTH } from '../model/autopilotPrefs';
 import { chooseMode, coldStart, type RoundMode } from '../model/autopilot';
 import { ACCURACY_RUNS } from '../model/recommend';
@@ -157,9 +157,12 @@ export const NO_HISTORY: AutoHistory = { modes: [], focuses: [], steered: [], st
  *
  * The recommendation engine picks what a Survival run would be about; the
  * other modes are weighed against it by what they have to do inside the same
- * selection — see `autopilot.ts`.
+ * selection — see `autopilot.ts`. `mix` is the selection the mode is weighed
+ * over when that is wider than the round's own: under "Any favorite" a round
+ * lands on one favorite, but what is owed is read across all of them, and a
+ * Drill round goes to the favorite owing the most.
  */
-export function nextRound(state: State, history: AutoHistory): AutoRound | null {
+export function nextRound(state: State, history: AutoHistory, mix: Selection = state.settings.selection): AutoRound | null {
   const recommended = recommendNow(state, history.focuses, history.steered);
   if (!recommended) return null;
   const pick = coldStart(recommended, history.starts);
@@ -171,36 +174,48 @@ export function nextRound(state: State, history: AutoHistory): AutoRound | null 
   const rounds = state.score.rounds;
   const now = Date.now();
 
-  /** Per side: cards due and never drilled, and lines unpracticed and due. */
-  const sides = reps.map((rep) => {
-    const keys = new Set(itemsInRegion(tree, region, itemsFor(rep)).map((item) => item.cardId));
-    const due = [...keys].filter((id) => state.cards[id] && isDue(state.cards[id], now)).length;
-    const unseen = [...keys].filter((id) => !state.cards[id] || state.cards[id].stage === 'new').length;
-    const lines = drillableLines(rep, tree, region);
+  /** Where the mix reads: each side's repertoire in the round's region, or in each favorite. */
+  const units = isAnyFavorite(mix)
+    ? regionsBySide(tree, mix, state.settings.favoriteOpenings).flatMap(({ side, node }) =>
+        repertoireList(state)
+          .filter((rep) => rep.color === side)
+          .map((rep) => ({ rep, region: node })),
+      )
+    : reps.map((rep) => ({ rep, region }));
+
+  /** Per unit: cards due and never drilled, and lines unpracticed and due. */
+  const sides = units.map(({ rep, region }) => {
+    const keys = [...new Set(itemsInRegion(tree, region, itemsFor(rep)).map((item) => item.cardId))];
+    const due = keys.filter((id) => state.cards[id] && isDue(state.cards[id], now));
+    const unseen = keys.filter((id) => !state.cards[id] || state.cards[id].stage === 'new');
+    const lines = drillableLines(rep, tree, region).map((line) => `${rep.id}:${line.tipId}`);
     const unpracticed = lineFinishes(rep, tree, region, rounds)
       .filter((line) => line.finishes === 0)
       .map((line) => line.tipId);
-    const linesDue = dueLines(lines, state.lineCards, now).map((line) => line.tipId);
-    return { rep, positions: keys.size, due, unseen, lines: lines.length, unpracticed, linesDue };
+    const linesDue = dueLines(drillableLines(rep, tree, region), state.lineCards, now).map((line) => line.tipId);
+    return { rep, region, keys, due, unseen, lines, unpracticed, linesDue };
   });
   const owed = (side: (typeof sides)[number]) => side.unpracticed.length + side.linesDue.length;
-  const toDrill = (side: (typeof sides)[number]) => side.due + side.unseen;
-  const byPositions = [...sides].sort((a, b) => toDrill(b) - toDrill(a) || b.positions - a.positions)[0];
-  const byLines = [...sides].sort((a, b) => owed(b) - owed(a) || b.lines - a.lines)[0];
-  const sum = (key: 'positions' | 'due' | 'unseen' | 'lines') => sides.reduce((n, side) => n + side[key], 0);
+  const toDrill = (side: (typeof sides)[number]) => side.due.length + side.unseen.length;
+  const byPositions = [...sides].sort((a, b) => toDrill(b) - toDrill(a) || b.keys.length - a.keys.length)[0];
+  const byLines = [...sides].sort((a, b) => owed(b) - owed(a) || b.lines.length - a.lines.length)[0];
+  /** How many across all units, each counted once where favorites overlap. */
+  const count = (each: (side: (typeof sides)[number]) => string[]) =>
+    new Set(sides.flatMap((side) => each(side))).size;
+  const ofRep = (ids: string[], side: (typeof sides)[number]) => ids.map((id) => `${side.rep.id}:${id}`);
 
   /** An opening ready to widen: the one Survival would run, or the selection itself. */
   const growth = (() => {
     const openings = [pick.opening, ...(region.depth > 0 ? [region] : [])];
-    for (const side of sides) {
+    for (const rep of reps) {
       for (const opening of openings) {
-        if (!readyToGrow(side.rep, tree, opening, rounds)) continue;
-        const launch = growLaunch(side.rep, index, tree, opening, [], {
+        if (!readyToGrow(rep, tree, opening, rounds)) continue;
+        const launch = growLaunch(rep, index, tree, opening, [], {
           minShare: AUTO_GROWTH.minShare,
           maxPly: AUTO_GROWTH.maxPly,
           starred: state.settings.favoriteOpenings,
         });
-        if (launch) return { color: side.rep.color, launch };
+        if (launch) return { color: rep.color, launch };
       }
     }
     return null;
@@ -208,25 +223,25 @@ export function nextRound(state: State, history: AutoHistory): AutoRound | null 
 
   const mode = chooseMode(
     {
-      lines: sum('lines'),
-      positions: sum('positions'),
-      due: sum('due'),
-      unseen: sum('unseen'),
-      unpracticed: sides.reduce((n, side) => n + side.unpracticed.length, 0),
-      dueLines: sides.reduce((n, side) => n + side.linesDue.length, 0),
-      accuracy: prepAccuracy(rounds, reps.map((rep) => rep.color)),
+      lines: count((side) => side.lines),
+      positions: count((side) => side.keys),
+      due: count((side) => side.due),
+      unseen: count((side) => side.unseen),
+      unpracticed: count((side) => ofRep(side.unpracticed, side)),
+      dueLines: count((side) => ofRep(side.linesDue, side)),
+      accuracy: prepAccuracy(rounds, [...new Set(sides.map((side) => side.rep.color))]),
       growReady: !!growth,
     },
     history.modes,
   );
   switch (mode) {
     case 'drillPositions':
-      return { mode, color: byPositions.rep.color, openingId: region.id, weak: toDrill(byPositions) === 0 };
+      return { mode, color: byPositions.rep.color, openingId: byPositions.region.id, weak: toDrill(byPositions) === 0 };
     case 'drillLines':
       return {
         mode,
         color: byLines.rep.color,
-        openingId: region.id,
+        openingId: byLines.region.id,
         only: [...new Set([...byLines.linesDue, ...byLines.unpracticed])],
       };
     case 'growth':

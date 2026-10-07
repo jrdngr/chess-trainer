@@ -498,6 +498,10 @@ export const MODE_NAMES: Record<ActivityMode, string> = {
  * Solid prep with little owed plays Survival about three rounds in four; a
  * new repertoire or prep that keeps missing plays it two in five.
  *
+ * A session opens on whatever is owed most: its first round is weighed as if
+ * a Survival round had just been played, so a mode with more than a quarter
+ * of Survival's share goes first, and solid prep still opens on Survival.
+ *
  * Two rounds are fixed whatever the shares say. A Drill round, of positions
  * or of lines, is always followed by Survival: what was just drilled is tested
  * at once, and two drills never run back to back. And a Growth round that left
@@ -518,6 +522,9 @@ export const SURVIVAL_FLOOR = 0.4;
 
 /** The mode the last round played counts this much of its score. */
 export const LAST_BRAKE = 0.5;
+
+/** What a session's first round is weighed as following. */
+const OPENING: RoundMode[] = ['survival'];
 
 /** How many recent Survival runs your prep accuracy is read over. */
 export const ACCURACY_RUNS = 5;
@@ -592,16 +599,20 @@ export interface ModeScore {
 /**
  * Every mode's score for the next round, highest first: its share over the
  * share it has had so far this session, smoothed so a mode not yet played is
- * not infinitely behind, and halved for the mode just played. Ties go to the
+ * not infinitely behind, and halved for the mode just played. The first
+ * round is weighed as if Survival had just been played. Ties go to the
  * earlier mode in `ROUND_MODES`. The fixed rounds — Survival after a Drill,
  * Drill lines after Growth left lines new — leave every other mode at 0.
  */
 export function rankModes(s: MixSignals, recent: RoundMode[]): ModeScore[] {
   const shares = targetShares(s);
-  const n = recent.length;
-  const last = recent[n - 1];
+  // A session opens as if a Survival round had just been played, so it starts
+  // on whatever is owed most rather than on Survival every time.
+  const counted = recent.length ? recent : OPENING;
+  const n = counted.length;
+  const last = counted[n - 1];
   const scored = ROUND_MODES.map((mode) => {
-    const played = recent.filter((m) => m === mode).length;
+    const played = counted.filter((m) => m === mode).length;
     const score = (shares[mode] * (n + 1)) / (played + 1);
     return { mode, score: mode === last ? score * LAST_BRAKE : score };
   });
