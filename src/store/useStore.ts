@@ -72,6 +72,7 @@ export const DEFAULT_SETTINGS: Settings = {
   engineEnabled: true,
   boardTheme: 'slate',
   hapticFeedback: true,
+  autoplay: true,
   lichessUsername: '',
   chesscomUsername: '',
   cloudSync: true,

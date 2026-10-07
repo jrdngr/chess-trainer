@@ -188,6 +188,8 @@ export interface Settings {
   engineEnabled: boolean;
   boardTheme: 'slate' | 'walnut' | 'ocean';
   hapticFeedback: boolean;
+  /** Rounds that start inside an opening play the moves into it for you first — see `useRoundIntro`. */
+  autoplay: boolean;
   lichessUsername: string;
   chesscomUsername: string;
   /** Opt in to copying state to your Claude account for other devices. */

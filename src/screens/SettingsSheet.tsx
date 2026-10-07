@@ -43,6 +43,7 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
         </div>
         <Toggle label="Coordinates" on={settings.showCoordinates} onToggle={toggle('showCoordinates')} />
         <Toggle label="Haptics" on={settings.hapticFeedback} onToggle={toggle('hapticFeedback')} />
+        <Toggle label="Autoplay" on={settings.autoplay} onToggle={toggle('autoplay')} />
       </div>
 
       <Section title="Engine" />

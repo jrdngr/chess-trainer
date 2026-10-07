@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { lastMoveOf, sansToMoveText, walkSan, type Color, type Square } from '../chess/core';
 import { deepestNodeWithin, nodeById, openingTree } from '../model/openingTree';
 import { referenceIndex } from '../model/referenceIndex';
+import { useStore } from '../store/useStore';
 import { ColorSquare, selectionTrail } from './Selection';
 
 /**
@@ -81,12 +82,17 @@ export function introOpening(region: string, path: string[]): string {
  */
 export function useRoundIntro(plan: IntroPlan | null, moved: boolean): RoundIntro {
   const [state, setState] = useState<IntroState>(IDLE);
+  /**
+   * With Autoplay off the round starts on its position, and the opening pill
+   * stays until your first move as it does for a round from move one.
+   */
+  const autoplay = useStore((s) => s.settings.autoplay);
 
   // A new round starts its intro at once, in the same render, so the board
   // never shows the round's position before the announcement covers it.
   let current = state;
   if (plan && plan.key !== state.key) {
-    current = { key: plan.key, stage: 'announce', ply: 0, plan, moved: false, pulse: false };
+    current = { key: plan.key, stage: 'announce', ply: 0, plan: autoplay ? plan : { ...plan, path: [] }, moved: false, pulse: false };
     setState(current);
   }
   const shown = current.plan;
