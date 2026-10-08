@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../../components/Board';
 import { AppBar, haptic } from '../../components/ui';
 import { ClockHud, useMoveClock } from '../../components/Clock';
@@ -16,10 +16,11 @@ import type { Color } from '../../chess/core';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { evidenceFor } from '../../model/growth';
-import { seenIn, type MoveResult } from '../../model/scoring';
+import { ratedNodes, seenIn, type MoveResult } from '../../model/scoring';
 import { growOfferAt, offerOpening, type GrowOffer } from '../../model/growOffer';
 import type { Selection } from '../../model/selection';
 import { useRatingTracker } from '../../components/Ratings';
+import { useHeaderRating } from '../../components/ScoreBar';
 import { GrowthScreen } from '../growth/GrowthScreen';
 import { gradeForTime } from '../../model/srs';
 import { mulberry32 } from '../../model/session';
@@ -210,6 +211,14 @@ export function SurvivalScreen({
       : null,
     (game?.state.moves ?? 0) > 0,
   );
+  /** The opening the header names, whose rating rides along its bottom edge. */
+  const headerOpening = run ? (run.enteredIn ?? run.openingId) : '';
+  const played = run?.played;
+  const headerReached = useMemo(
+    () => !!played && ratedNodes(tree, played).includes(headerOpening),
+    [tree, played, headerOpening],
+  );
+  const headerRating = useHeaderRating(headerOpening, headerReached);
   /** Under way: past the intro, and not over. Nothing moves and no clock runs until then. */
   const live = phase === 'playing' && !!run && !intro.held;
   const myTurn = !!run && fenTurn(run.fen) === run.color;
@@ -520,7 +529,13 @@ export function SurvivalScreen({
       {intro.cover}
       <AppBar
         title="Survival"
-        subtitle={selectionText(run.color, run.enteredIn ?? run.openingId)}
+        subtitle={
+          <span className="sub-row">
+            <span className="truncate">{selectionText(run.color, headerOpening)}</span>
+            {headerRating?.label}
+          </span>
+        }
+        edge={headerRating?.edge}
         onClose={onExit}
         actions={
           <div className="row gap-6">

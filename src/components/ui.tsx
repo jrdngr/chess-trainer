@@ -184,6 +184,7 @@ export function AppBar({
   onBack,
   onClose,
   actions,
+  edge,
 }: {
   title?: ReactNode;
   subtitle?: ReactNode;
@@ -191,6 +192,8 @@ export function AppBar({
   onBack?: () => void;
   onClose?: () => void;
   actions?: ReactNode;
+  /** Drawn along the bar's bottom edge, full width. */
+  edge?: ReactNode;
 }) {
   const leading = onBack ? (
     <IconButton label="Back" onClick={onBack}>
@@ -215,6 +218,7 @@ export function AppBar({
         </div>
       )}
       {actions ?? (leading && <span className="appbar-gap" />)}
+      {edge}
     </div>
   );
 }

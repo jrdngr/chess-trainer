@@ -18,9 +18,9 @@ export function deltaText(delta: number): string {
 }
 
 /**
- * The rank bar, the same everywhere it appears: the rung held on the left,
- * the rung being worked toward on the right, each a dot with its name above
- * it, and the bar between them filled in the colour held. At the top of the
+ * The rank bar, the same everywhere it appears: the rung held named on the
+ * left, the rung being worked toward named on the right, and the bar filling
+ * from the left in the colour held, glowing like the header's. At the top of the
  * ladder there is nothing left to work toward, so the right-hand end is the
  * rung held and the bar is full.
  */
@@ -38,85 +38,170 @@ export function RankBar({ rank, centre }: { rank: Rank; centre?: React.ReactNode
         <span className="name">{rank.nextLabel ?? ''}</span>
       </div>
       <div className="rail">
-        <i className="dot" style={{ background: held.color, boxShadow: `0 0 8px ${held.color}` }} />
         <span className="track">
-          <span className="fill" style={{ width: `${rank.progress * 100}%`, background: fill }} />
+          <span
+            className="fill"
+            style={{ width: `${rank.progress * 100}%`, background: fill, ['--glow' as string]: fill }}
+          />
         </span>
-        <i className="dot" style={{ background: next.color, boxShadow: `0 0 8px ${next.color}` }} />
       </div>
     </div>
   );
 }
 
-/** How long the bar stays after a rating moves; longer for a promotion. */
-const SHOW_MS = 2600;
-const TIER_MS = 4200;
+/** How long the fill takes to grow or shrink to where the rating now stands. */
+const GROW_MS = 700;
+/** Filling up to the rung before a promotion, and the flash on crossing it. */
+const TOP_MS = 320;
+const FLASH_MS = 760;
+
+/** What the header draws, which lags the rating while a tier change plays out. */
+interface EdgeView {
+  /** The rating the label names. */
+  rating: number;
+  /** How full the bar is, 0..1. */
+  width: number;
+  color: string;
+  /** How long the width takes to get where it is going; 0 snaps. */
+  speed: number;
+  /** A tier crossed: the bar flashes in this color. */
+  flash: string | null;
+  /** The stretch an answer just added or took away, glowing. */
+  stretch: { key: number; from: number; to: number; gain: boolean } | null;
+  /** What the answer was worth, by the rating. */
+  pop: { key: number; delta: number } | null;
+}
+
+/** The fill's color: below the first rung it climbs in the first rung's color. */
+function fillColor(rating: number): string {
+  const rank = rankOf(rating);
+  return (rank.held ?? rank.next ?? UNRATED).color;
+}
+
+function restingView(rating: number): EdgeView {
+  return {
+    rating,
+    width: rankOf(rating).progress,
+    color: fillColor(rating),
+    speed: 0,
+    flash: null,
+    stretch: null,
+    pop: null,
+  };
+}
 
 /**
- * The rating, at the top of the screen, whenever one moves.
+ * The rating of the opening a Survival round is played in, built into the
+ * round's header: a label for the subtitle and a bar for the header's bottom
+ * edge.
  *
- * It slides in naming the opening that moved, with what the answer was worth
- * and where the rating now stands, fills toward the next rung in that rung's
- * colour, and slides away. Crossing a rung — up or down — flashes the bar,
- * names the rung and buzzes: a promotion is worth celebrating, and a demotion
- * is worth knowing about, which is the point of a rating that can fall.
+ * The bar stays up all round. Each answer grows or shrinks it, with the
+ * stretch it moved glowing and what it was worth popping by the rating.
+ * Crossing a rung up fills the bar, flashes it in the new tier's color,
+ * clears it and grows it from the left with what is left over, so a
+ * promotion never reads as a loss; crossing one down flashes the lower tier's
+ * color full and shrinks to where the rating landed.
+ *
+ * Until the run's line reaches the opening its rating cannot move, so the
+ * bar is dimmed. Any opening has no rating and gets nothing.
  */
-export function ScoreBar() {
-  const feed = useStore((s) => s.feed);
+export function useHeaderRating(
+  openingId: string,
+  reached: boolean,
+): { label: React.ReactNode; edge: React.ReactNode } | null {
+  // Two numbers, not the stats object: an opening never played has none, and a
+  // fresh empty one every render would never settle.
+  const rating = useStore((s) => nodeStats(s.score, openingId).rating);
+  const rated = useStore((s) => nodeStats(s.score, openingId).rated);
   const haptics = useStore((s) => s.settings.hapticFeedback);
-  const openStats = useStore((s) => s.openStats);
-  const [shown, setShown] = useState(false);
-  const [flash, setFlash] = useState<1 | -1 | 0>(0);
-  /** The bar draws the rating before the answer first, so the fill can animate. */
-  const [display, setDisplay] = useState(feed.after);
-  const timer = useRef<number | null>(null);
-  const seen = useRef(feed.seq);
+  const [view, setView] = useState(() => restingView(rating));
+  const shown = useRef({ id: openingId, rating });
+  const seq = useRef(0);
+  const timers = useRef<number[]>([]);
 
   useEffect(() => {
-    if (feed.seq === seen.current) return;
-    seen.current = feed.seq;
-    setShown(true);
-    setDisplay(feed.before);
-    const raise = window.requestAnimationFrame(() => setDisplay(feed.after));
-    setFlash(feed.promotion);
-    if (feed.promotion !== 0 && haptics) {
-      haptic(feed.promotion > 0 ? [20, 40, 20, 40, 60] : [60, 50, 60]);
+    const later = (ms: number, step: () => void) => timers.current.push(window.setTimeout(step, ms));
+    const from = shown.current;
+    const to = rating;
+    if (from.id === openingId && from.rating === to) return;
+    shown.current = { id: openingId, rating: to };
+    timers.current.forEach((t) => window.clearTimeout(t));
+    timers.current = [];
+    // A new round's opening: no story to tell, just where it stands.
+    if (from.id !== openingId) {
+      setView(restingView(to));
+      return;
     }
-    if (timer.current) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(
-      () => {
-        setShown(false);
-        setFlash(0);
-      },
-      feed.promotion !== 0 ? TIER_MS : SHOW_MS,
-    );
-    return () => window.cancelAnimationFrame(raise);
-  }, [feed, haptics]);
+    const was = rankOf(from.rating);
+    const now = rankOf(to);
+    const key = (seq.current += 1);
+    const pop = Math.round(to - from.rating) !== 0 ? { key, delta: to - from.rating } : null;
+    const settle = { rating: to, width: now.progress, color: fillColor(to), speed: GROW_MS, flash: null };
 
-  const tree = openingTree(referenceIndex());
-  const rank = rankOf(display);
-  const delta = feed.after - feed.before;
-  const name = feed.openingId ? nodeById(tree, feed.openingId).name : '';
+    if (now.reached === was.reached) {
+      setView({ ...settle, pop, stretch: { key, from: was.progress, to: now.progress, gain: to > from.rating } });
+      return;
+    }
+    if (haptics) haptic(now.reached > was.reached ? [20, 40, 20, 40, 60] : [60, 50, 60]);
+    if (now.reached > was.reached) {
+      // Up: fill to the rung, flash the new tier, clear, and grow from the left.
+      const color = fillColor(to);
+      setView((v) => ({ ...v, width: 1, speed: TOP_MS, stretch: null, pop }));
+      later(TOP_MS, () => setView((v) => ({ ...v, rating: to, color, flash: color, speed: 0 })));
+      later(TOP_MS + FLASH_MS, () => setView((v) => ({ ...v, width: 0, flash: null, speed: 0 })));
+      later(TOP_MS + FLASH_MS + 40, () => setView((v) => ({ ...v, ...settle })));
+    } else {
+      // Down: flash the lower tier full, then shrink to where the rating landed.
+      const color = fillColor(to);
+      setView({ ...settle, width: 1, speed: 0, flash: color, stretch: null, pop });
+      later(FLASH_MS, () => setView((v) => ({ ...v, ...settle })));
+    }
+  }, [openingId, rating, haptics]);
 
-  return (
-    <div
-      className={`score-bar${shown ? ' shown' : ''}${flash !== 0 ? ' celebrate' : ''}${flash < 0 ? ' demoted' : ''}`}
-      style={{ ['--tier' as string]: (rank.held ?? UNRATED).color }}
-      aria-live="polite"
-      onClick={() => shown && feed.openingId && openStats(feed.openingId)}
-    >
-      <div className="who truncate">{name}</div>
-      <RankBar
-        rank={rank}
-        centre={
-          <>
-            <span className={`gain num${delta < 0 ? ' down' : ''}`}>{deltaText(delta)}</span>
-            <span className="total num">{ratingText(display)}</span>
-          </>
-        }
+  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
+
+  if (openingId === '' || nodeById(openingTree(referenceIndex()), openingId).depth === 0) return null;
+
+  const rank = rankOf(view.rating, rated);
+  const label = (
+    <span className={`header-rating${reached ? '' : ' dim'}`}>
+      <span className="sep">·</span>
+      <span className="tier" style={{ color: rank.held?.color }}>
+        {rated === 0 ? NEW_LABEL : rank.heldLabel}
+      </span>
+      {rated > 0 && <span className="num">{ratingText(view.rating)}</span>}
+      {view.pop && (
+        <span key={view.pop.key} className={`header-pop num${view.pop.delta < 0 ? ' down' : ''}`}>
+          {deltaText(view.pop.delta)}
+        </span>
+      )}
+    </span>
+  );
+  const edge = (
+    <div className={`header-edge${reached ? '' : ' dim'}`} aria-hidden>
+      <span
+        className="fill"
+        style={{
+          width: `${view.width * 100}%`,
+          background: view.color,
+          ['--glow' as string]: view.color,
+          transition: view.speed ? `width ${view.speed}ms cubic-bezier(0.22, 1, 0.36, 1)` : 'none',
+        }}
       />
+      {view.stretch && view.stretch.from !== view.stretch.to && (
+        <span
+          key={view.stretch.key}
+          className={`stretch${view.stretch.gain ? '' : ' loss'}`}
+          style={{
+            left: `${Math.min(view.stretch.from, view.stretch.to) * 100}%`,
+            width: `${Math.abs(view.stretch.to - view.stretch.from) * 100}%`,
+          }}
+        />
+      )}
+      {view.flash && <span className="flash" style={{ ['--glow' as string]: view.flash, background: view.flash }} />}
     </div>
   );
+  return { label, edge };
 }
 
 /**

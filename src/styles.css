@@ -804,33 +804,6 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .list-row.selected .title { color: var(--accent); }
 
 /* ── score bar ─────────────────────────────────────────────────────────── */
-.score-bar {
-  position: fixed;
-  top: calc(var(--safe-top) + 8px);
-  left: 50%;
-  width: min(560px, calc(100% - 24px));
-  transform: translate(-50%, -140%);
-  z-index: 70;
-  background: rgba(23, 23, 28, 0.94);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-radius: 16px;
-  padding: 10px 14px 12px;
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5), inset 0 0 0 1px var(--line);
-  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s;
-  opacity: 0;
-  pointer-events: none;
-}
-.score-bar.shown { transform: translate(-50%, 0); opacity: 1; }
-.score-bar .who { font-size: 12px; font-weight: 700; color: var(--text-3); margin-bottom: 6px; }
-.score-bar .gain { color: var(--good); font-size: 15px; font-weight: 800; animation: gainPop 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
-.score-bar .gain.down { color: var(--bad); }
-.score-bar .total { font-size: 15px; font-weight: 800; color: var(--text); }
-.score-bar.celebrate { animation: celebrate 0.9s ease-out; }
-.score-bar.celebrate .fill { width: 100% !important; animation: fillFlash 0.8s ease-out 2; }
-.score-bar.demoted.celebrate .fill { width: 0 !important; }
-.score-bar.demoted.celebrate .track { animation: fillFlash 0.8s ease-out 2; background: var(--bad-soft); }
-
 /* The milestone bar: the colour held on the left, the next on the right. */
 .milestone { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 .milestone .names { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 700; color: var(--text-2); }
@@ -838,18 +811,89 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .milestone .names .name:last-child { text-align: right; }
 .milestone .names .centre { display: inline-flex; align-items: baseline; gap: 8px; color: var(--text); font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .milestone .rail { display: flex; align-items: center; gap: 8px; }
-.milestone .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
-.milestone .track { flex: 1; height: 8px; border-radius: 4px; background: var(--surface-3); overflow: hidden; display: block; }
-.milestone .fill { display: block; height: 100%; border-radius: 4px; transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
-@keyframes gainPop { from { transform: scale(1.6); opacity: 0; } }
-@keyframes celebrate {
-  0% { transform: translate(-50%, 0) scale(1); }
-  20% { transform: translate(-50%, 0) scale(1.04); }
-  40% { transform: translate(-50%, 0) scale(0.99); }
-  60% { transform: translate(-50%, 0) scale(1.02); }
-  100% { transform: translate(-50%, 0) scale(1); }
+.milestone .track { flex: 1; height: 8px; border-radius: 4px; background: var(--surface-3); display: block; }
+.milestone .fill {
+  position: relative;
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  box-shadow: 0 0 10px -1px var(--glow);
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
-@keyframes fillFlash { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.8); } }
+/* A bright leading tip, so it reads as something filling up. */
+.milestone .fill::after,
+.header-edge .fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75));
+}
+
+/* ── the rating along a round's header ─────────────────────────────────── */
+.appbar { position: relative; }
+.appbar-title .sub-row { display: inline-flex; align-items: baseline; max-width: 100%; }
+.appbar-title .sub-row > .truncate { flex: 0 1 auto; min-width: 0; }
+.header-rating { position: relative; display: inline-flex; align-items: baseline; gap: 4px; flex: none; font-weight: 700; color: var(--text); }
+.header-rating .sep { margin: 0 1px 0 4px; font-weight: 400; color: var(--text-2); }
+.header-rating .tier { color: var(--text-2); }
+.header-rating.dim, .header-edge.dim { opacity: 0.4; }
+.header-pop {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  font-weight: 800;
+  color: var(--good);
+  pointer-events: none;
+  animation: headerPop 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.header-pop.down { color: var(--bad); }
+@keyframes headerPop {
+  0% { transform: translateY(4px) scale(1.5); opacity: 0; }
+  15% { transform: translateY(0) scale(1); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translateY(-6px); opacity: 0; }
+}
+.header-edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 5px;
+  background: var(--surface-3);
+}
+.header-edge .fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  box-shadow: 0 0 12px var(--glow), 0 0 4px var(--glow);
+  border-radius: 0 3px 3px 0;
+}
+.header-edge .stretch {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  background: #fff;
+  box-shadow: 0 0 14px 2px rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+  animation: stretchGlow 1.1s ease-out forwards;
+}
+.header-edge .stretch.loss { background: var(--bad); box-shadow: 0 0 14px 2px var(--bad); }
+@keyframes stretchGlow { 0% { opacity: 0; } 15% { opacity: 0.9; } 100% { opacity: 0; } }
+.header-edge .flash {
+  position: absolute;
+  inset: -2px 0;
+  box-shadow: 0 0 22px 6px var(--glow);
+  animation: edgeFlash 0.76s ease-out forwards;
+}
+@keyframes edgeFlash {
+  0%, 50%, 100% { filter: brightness(1); opacity: 1; }
+  25%, 75% { filter: brightness(1.9); opacity: 0.85; }
+}
 
 /* ── move clock ────────────────────────────────────────────────────────── */
 .clock-hud {
@@ -969,7 +1013,6 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .ladder { display: flex; gap: 3px; margin-top: 8px; }
 .ladder i { flex: 1; height: 6px; border-radius: 3px; opacity: 0.25; }
 .ladder i.held { opacity: 1; }
-.score-bar.shown { pointer-events: auto; cursor: pointer; }
 
 /* Home has no title bar: the selection is the first thing on it. */
 .screen.home { padding-top: calc(var(--safe-top) + 16px); }

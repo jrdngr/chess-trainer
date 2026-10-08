@@ -158,28 +158,9 @@ interface PersistedState {
   events: AppEvent[];
 }
 
-/**
- * The last rating to move, for the score bar to react to.
- *
- * One answer can move several openings at once, and the bar shows one: the
- * opening you have selected if it moved, otherwise the narrowest that did,
- * which is the one the move was most specifically about. `seq` climbs with
- * every move so the same change twice still reads as two events.
- */
-export interface ScoreFeed {
-  seq: number;
-  /** The opening whose rating moved. '' before anything has. */
-  openingId: string;
-  before: number;
-  after: number;
-  /** 1 promoted a tier, -1 demoted, 0 neither. */
-  promotion: 1 | -1 | 0;
-}
-
 interface StoreState extends PersistedState {
   ready: boolean;
   cloud: CloudStatus;
-  feed: ScoreFeed;
   /** An opening whose stats page was asked for, until the Stats tab picks it up. '' is the whole game. */
   statsTarget: string | null;
   openStats: (openingId: string) => void;
@@ -477,7 +458,6 @@ export const useStore = create<StoreState>((set, get) => {
   return {
     ...emptyPersisted(),
     ready: false,
-    feed: { seq: 0, openingId: '', before: 0, after: 0, promotion: 0 },
     statsTarget: null,
     openStats(openingId) {
       set({ statsTarget: openingId });
@@ -959,22 +939,7 @@ export const useStore = create<StoreState>((set, get) => {
         { ...result, at: result.at ?? Date.now() },
         earlier,
       );
-      // The bar shows the opening you are working in when that is one of the
-      // ratings that moved, and otherwise the narrowest one that did.
-      const selected = state.settings.selection.opening;
-      const shown = moves.find((move) => move.id === selected) ?? moves[moves.length - 1];
-      commit({
-        score,
-        feed: shown
-          ? {
-              seq: state.feed.seq + 1,
-              openingId: shown.id,
-              before: shown.before,
-              after: shown.after,
-              promotion: shown.promotion,
-            }
-          : state.feed,
-      });
+      commit({ score });
       return moves;
     },
 
