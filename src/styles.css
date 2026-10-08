@@ -817,10 +817,10 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   display: block;
   height: 100%;
   border-radius: 4px;
-  box-shadow: 0 0 10px -1px var(--glow);
+  box-shadow: 0 0 7px -1px var(--glow);
   transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* A bright leading tip, so it reads as something filling up. */
+/* A leading tip in the next tier's color: what the bar is filling toward. */
 .milestone .fill::after,
 .header-edge .fill::after {
   content: '';
@@ -828,9 +828,9 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   right: 0;
   top: 0;
   bottom: 0;
-  width: 10px;
+  width: 14px;
   border-radius: inherit;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75));
+  background: linear-gradient(90deg, transparent, var(--tip));
 }
 
 /* ── the rating along a round's header ─────────────────────────────────── */
@@ -859,10 +859,11 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 }
 .header-edge {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 20px;
+  right: 20px;
   bottom: 0;
   height: 5px;
+  border-radius: 3px;
   background: var(--surface-3);
 }
 .header-edge .fill {
@@ -870,24 +871,25 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   left: 0;
   top: 0;
   bottom: 0;
-  box-shadow: 0 0 12px var(--glow), 0 0 4px var(--glow);
-  border-radius: 0 3px 3px 0;
+  box-shadow: 0 0 8px -1px var(--glow);
+  border-radius: 3px;
 }
 .header-edge .stretch {
   position: absolute;
   top: -1px;
   bottom: -1px;
   background: #fff;
-  box-shadow: 0 0 14px 2px rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 10px 1px rgba(255, 255, 255, 0.6);
   pointer-events: none;
   animation: stretchGlow 1.1s ease-out forwards;
 }
-.header-edge .stretch.loss { background: var(--bad); box-shadow: 0 0 14px 2px var(--bad); }
+.header-edge .stretch.loss { background: var(--bad); box-shadow: 0 0 10px 1px var(--bad); }
 @keyframes stretchGlow { 0% { opacity: 0; } 15% { opacity: 0.9; } 100% { opacity: 0; } }
 .header-edge .flash {
   position: absolute;
   inset: -2px 0;
-  box-shadow: 0 0 22px 6px var(--glow);
+  border-radius: 3px;
+  box-shadow: 0 0 16px 4px var(--glow);
   animation: edgeFlash 0.76s ease-out forwards;
 }
 @keyframes edgeFlash {

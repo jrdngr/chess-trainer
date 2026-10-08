@@ -110,6 +110,7 @@ export function regionSource(
   const index = tree.index;
   const prep = prepIndex(rep);
   const approach = node.depth === 0 ? null : approachKeys(tree, node);
+  const region = node.depth === 0 ? null : regionOf(tree, node);
 
   /** Every move that can be played here at all, prep first, then the book by popularity. */
   const candidates = (fen: string, played: string[]) => {
@@ -151,7 +152,19 @@ export function regionSource(
     node,
     movesAt: (fen, played) => candidates(fen, played).map((move) => move.san),
     weightsAt: (fen, played) => candidates(fen, played).map((move) => ({ san: move.san, weight: move.games })),
-    prepAt: (fen) => prep.get(positionKey(fen)) ?? [],
+    prepAt: (fen) => {
+      const key = positionKey(fen);
+      const mine = prep.get(key) ?? [];
+      if (!region || region.inside.has(key) || !region.approach.has(key)) return mine;
+      // On the way in, only prep that can still reach the opening is prep for
+      // it: a 1.d4 you keep for the Queen's Gambit is no answer in a Ruy Lopez.
+      return mine.filter((san) => {
+        const after = applySan(fen, san);
+        if (!after) return false;
+        const next = positionKey(after.after);
+        return region.inside.has(next) || region.approach.has(next);
+      });
+    },
   };
 }
 

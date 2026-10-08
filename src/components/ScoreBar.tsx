@@ -41,7 +41,12 @@ export function RankBar({ rank, centre }: { rank: Rank; centre?: React.ReactNode
         <span className="track">
           <span
             className="fill"
-            style={{ width: `${rank.progress * 100}%`, background: fill, ['--glow' as string]: fill }}
+            style={{
+              width: `${rank.progress * 100}%`,
+              background: fill,
+              ['--glow' as string]: fill,
+              ['--tip' as string]: tipColor(rank.rating),
+            }}
           />
         </span>
       </div>
@@ -76,6 +81,12 @@ interface EdgeView {
 function fillColor(rating: number): string {
   const rank = rankOf(rating);
   return (rank.held ?? rank.next ?? UNRATED).color;
+}
+
+/** The fill's leading tip: the tier it is filling toward, or the top tier's own at the top. */
+function tipColor(rating: number): string {
+  const rank = rankOf(rating);
+  return (rank.next ?? rank.held ?? UNRATED).color;
 }
 
 function restingView(rating: number): EdgeView {
@@ -185,6 +196,7 @@ export function useHeaderRating(
           width: `${view.width * 100}%`,
           background: view.color,
           ['--glow' as string]: view.color,
+          ['--tip' as string]: tipColor(view.rating),
           transition: view.speed ? `width ${view.speed}ms cubic-bezier(0.22, 1, 0.36, 1)` : 'none',
         }}
       />

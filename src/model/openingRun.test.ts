@@ -251,6 +251,16 @@ describe('prepared or theory, inside the region', () => {
     expect(fullLine(source, lost.run).length).toBeGreaterThan(2);
   });
 
+  it('on the way in, counts only prep that can still reach the opening', () => {
+    let rep = whiteRep();
+    rep = addLine(rep, ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'], 'seed').rep;
+    const source = regionSource(tree, byName('Ruy Lopez'), rep, 'w');
+    // 1.d4 is prep for the Queen's Gambit, not for the Ruy Lopez.
+    expect(source.prepAt(START_FEN)).toEqual(['e4']);
+    // Anywhere else, prep is prep.
+    expect(regionSource(tree, any, rep, 'w').prepAt(START_FEN).sort()).toEqual(['d4', 'e4']);
+  });
+
   it('accepts every prepared answer, not just the one line drawn', () => {
     const kid = buildSeedRepertoires().find((r) => r.name.includes('King'))!;
     const source = regionSource(tree, any, kid, 'b');
