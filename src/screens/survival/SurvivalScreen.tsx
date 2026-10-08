@@ -16,7 +16,7 @@ import type { Color } from '../../chess/core';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { evidenceFor } from '../../model/growth';
-import { ratedNodes, seenIn, type MoveResult } from '../../model/scoring';
+import { nodeStats, ratedNodes, seenIn, type MoveResult } from '../../model/scoring';
 import { growOfferAt, offerOpening, type GrowOffer } from '../../model/growOffer';
 import type { Selection } from '../../model/selection';
 import { useRatingTracker } from '../../components/Ratings';
@@ -50,6 +50,9 @@ import { useModePrefs } from '../modePrefs';
 import { introOpening, useRoundIntro } from '../../components/RoundIntro';
 
 type Phase = 'setup' | 'playing' | 'over' | 'growing';
+
+/** How long a run's last rating change stays on screen before the end screen: a tier drop's flash and shrink. */
+const RATING_LINGER_MS = 1700;
 
 /**
  * Where you stand against your prep: on it, through to the end of the line,
@@ -220,6 +223,14 @@ export function SurvivalScreen({
     [tree, played, headerOpening],
   );
   const headerRating = useHeaderRating(headerOpening, headerReached);
+  /** The header's rating as last drawn, so a run that ends by moving it can show that first. */
+  const drawnRating = useRef(0);
+  drawnRating.current = useStore((s) => nodeStats(s.score, headerOpening).rating);
+  /** Holds the end screen back while the header plays the run's last rating change. */
+  const lingerTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (lingerTimer.current) window.clearTimeout(lingerTimer.current);
+  }, []);
   /** Under way: past the intro, and not over. Nothing moves and no clock runs until then. */
   const live = phase === 'playing' && !!run && !intro.held;
   const myTurn = !!run && fenTurn(run.fen) === run.color;
@@ -259,7 +270,14 @@ export function SurvivalScreen({
     setPop(null);
     setEngineTurn(false);
     setThinking(false);
-    setPhase('over');
+    // A last answer (or the run's catch-up) that moved the header's rating
+    // plays out on the bar before the end screen covers it.
+    const moved = nodeStats(useStore.getState().score, headerOpening).rating !== drawnRating.current;
+    if (moved && how.kind !== 'ended') {
+      lingerTimer.current = window.setTimeout(() => setPhase('over'), RATING_LINGER_MS);
+    } else {
+      setPhase('over');
+    }
   };
 
   /** After any move: a finished game ends the run. */
@@ -422,6 +440,7 @@ export function SurvivalScreen({
       seen: seenIn(useStore.getState().score),
     });
     if (!begun) return;
+    if (lingerTimer.current) window.clearTimeout(lingerTimer.current);
     over.current = false;
     prepEnd.current = null;
     ratings.reset();
