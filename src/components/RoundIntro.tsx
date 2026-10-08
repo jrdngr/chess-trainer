@@ -3,7 +3,7 @@ import { lastMoveOf, sansToMoveText, walkSan, type Color, type Square } from '..
 import { deepestNodeWithin, nodeById, openingTree } from '../model/openingTree';
 import { referenceIndex } from '../model/referenceIndex';
 import { useStore } from '../store/useStore';
-import { ColorSquare, selectionTrail } from './Selection';
+import { selectionTrail } from './Selection';
 
 /**
  * How a round begins, in every mode and in Autopilot: the mode and the
@@ -151,7 +151,6 @@ export function useRoundIntro(plan: IntroPlan | null, moved: boolean): RoundIntr
           {shown.mode}
         </div>
         <div className="ri-opening">
-          <ColorSquare choice={shown.color} size={24} />
           <span>{trail.join(' › ')}</span>
         </div>
       </div>
