@@ -88,7 +88,7 @@ export function End({
   /** Back to the setup screen; absent when Autopilot set the run up. */
   onChangeOptions?: () => void;
   /**
-   * Open the game in Analysis, up to the position you blundered in, so the
+   * Open the game in Analysis, up to the position you blundered in (or where you ended the run), so the
    * engine's continuation can be stepped through.
    */
   onAnalyze: () => void;
@@ -277,7 +277,7 @@ export function End({
         )}
 
         <div className="next-row">
-          {blunder && (
+          {(blunder || ending.kind === 'ended') && (
             <button className="btn block" onClick={onAnalyze}>
               <Icons.search size={18} />
               Analyze
