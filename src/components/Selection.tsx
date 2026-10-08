@@ -19,11 +19,12 @@ import {
 } from '../model/picker';
 import { formatGameCount } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
-import { rankOf, UNRATED } from '../model/scoring';
+import { rankOf } from '../model/scoring';
 import { colorLabel } from '../model/selection';
 import { ANY_FAVORITE } from '../model/anyFavorite';
 import { useStore } from '../store/useStore';
 import { Piece } from './Pieces';
+import { TierBar } from './ScoreBar';
 import { ChoiceRow, IconButton, Icons, Segmented, Sheet } from './ui';
 
 /** A side as a small square: white, black, or split diagonally for random. */
@@ -221,7 +222,6 @@ export function QuickPicker({
             <div className="qp-grid">
               {shown.map(({ node, side, label }) => {
                 const stats = score.nodes[node.id];
-                const rank = rankOf(stats?.rating ?? 0, stats?.rated ?? 0);
                 return (
                   <button
                     key={node.id}
@@ -232,10 +232,7 @@ export function QuickPicker({
                       <SideDot side={side} />
                       <span className="truncate">{label}</span>
                     </span>
-                    <span className="qp-tier">
-                      <i style={{ background: rank.held?.color ?? UNRATED.color }} />
-                      {rank.heldLabel}
-                    </span>
+                    <TierBar rating={stats?.rating ?? 0} rated={stats?.rated ?? 0} />
                   </button>
                 );
               })}

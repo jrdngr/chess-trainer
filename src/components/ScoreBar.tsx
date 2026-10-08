@@ -48,6 +48,26 @@ export function RankBar({ rank, centre }: { rank: Rank; centre?: React.ReactNode
   );
 }
 
+/**
+ * A tier as a small bar, for tiles: the header's bar in miniature, filled
+ * toward the next tier with the same paint, and the tier's name sitting on it.
+ * Never the number.
+ */
+export function TierBar({ rating, rated }: { rating: number; rated: number }) {
+  const rank = rankOf(rating, rated);
+  const color = fillColor(rating);
+  return (
+    <span className="tier-bar">
+      {rated > 0 && (
+        <span className="fill" style={{ width: `${rank.progress * 100}%`, ['--glow' as string]: color }}>
+          <span className="paint" style={{ background: paintFor(rating) }} />
+        </span>
+      )}
+      <span className="tier-name">{rated === 0 ? NEW_LABEL : rank.heldLabel}</span>
+    </span>
+  );
+}
+
 /** How long the fill takes to grow or shrink to where the rating now stands. */
 const GROW_MS = 700;
 /** Filling up to the rung before a promotion, and the flash on crossing it. */

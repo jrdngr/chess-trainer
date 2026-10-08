@@ -1406,8 +1406,41 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .qp-any-name { font-size: 16px; font-weight: 700; }
 .qp-name { display: flex; align-items: center; gap: 7px; min-width: 0; font-weight: 650; font-size: 14px; line-height: 1.2; }
 .qp-name .op-dot { margin-right: 0; top: 0; }
-.qp-tier { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; color: var(--text-2); }
-.qp-tier i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+/* A tier as a small bar, its name sitting on it — the Survival header's bar in miniature. */
+.tier-bar {
+  position: relative;
+  display: block;
+  height: 5px;
+  margin: 7px 0 6px;
+  border-radius: 3px;
+  background: var(--surface-3);
+  container-type: inline-size;
+}
+.tier-bar .fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  overflow: hidden;
+  border-radius: 3px;
+  box-shadow: 0 0 6px -1px var(--glow);
+}
+.tier-bar .paint { position: absolute; left: 0; top: 0; bottom: 0; width: 100cqw; }
+.tier-bar .tier-name {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0 7px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 15px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.qp-tile:active .tier-bar .tier-name { background: var(--surface-3); }
 .qp-moves { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .qp-move { align-items: center; font-family: var(--mono); font-weight: 700; font-size: 15px; padding: 12px 4px; }
 .qp-browse {
