@@ -125,15 +125,13 @@ function restingView(rating: number): EdgeView {
  * promotion never reads as a loss; crossing one down flashes the lower tier's
  * color full and shrinks to where the rating landed.
  *
- * Until the run's line reaches the opening its rating cannot move: answers
- * given on the way in are banked, and land together when the line gets
- * there. `banked` is where the rating would then stand, drawn as a striped
- * stretch ahead of the fill, or a red one eating into it, so the answers
- * visibly count before they land. Any opening has no rating and gets nothing.
+ * Until the run's line reaches the opening its rating cannot move, so the
+ * bar is dimmed. Any opening has no rating and gets nothing. The rating's
+ * number is never shown here: the tier and the bar are what you play for.
  */
 export function useHeaderRating(
   openingId: string,
-  banked: number | null,
+  reached: boolean,
 ): { label: React.ReactNode; edge: React.ReactNode } | null {
   // Two numbers, not the stats object: an opening never played has none, and a
   // fresh empty one every render would never settle.
@@ -189,14 +187,12 @@ export function useHeaderRating(
   if (openingId === '' || nodeById(openingTree(referenceIndex()), openingId).depth === 0) return null;
 
   const rank = rankOf(view.rating, rated);
-  const bank = bankedStretch(view, banked);
   const label = (
-    <span className="header-rating">
+    <span className={`header-rating${reached ? '' : ' dim'}`}>
       <span className="sep">·</span>
       <span className="tier" style={{ color: rank.held?.color }}>
         {rated === 0 ? NEW_LABEL : rank.heldLabel}
       </span>
-      {rated > 0 && <span className="num">{ratingText(view.rating)}</span>}
       {view.pop && (
         <span key={view.pop.key} className={`header-pop num${view.pop.delta < 0 ? ' down' : ''}`}>
           {deltaText(view.pop.delta)}
@@ -205,17 +201,7 @@ export function useHeaderRating(
     </span>
   );
   const edge = (
-    <div className="header-edge" aria-hidden>
-      {bank && (
-        <span
-          className={`bank${bank.gain ? '' : ' loss'}`}
-          style={{
-            left: `${bank.from * 100}%`,
-            width: `${(bank.to - bank.from) * 100}%`,
-            ['--glow' as string]: fillColor(view.rating),
-          }}
-        />
-      )}
+    <div className={`header-edge${reached ? '' : ' dim'}`} aria-hidden>
       <span
         className="fill"
         style={{
@@ -240,20 +226,6 @@ export function useHeaderRating(
     </div>
   );
   return { label, edge };
-}
-
-/**
- * The banked stretch, on the track: from the fill to where the banked rating
- * would put it, within the tier on show. A bank past the next rung runs to
- * the end; one below the tier's floor runs back to the start.
- */
-function bankedStretch(view: EdgeView, banked: number | null) {
-  if (banked === null || view.flash) return null;
-  const now = rankOf(view.rating);
-  const then = rankOf(banked);
-  const end = then.reached > now.reached ? 1 : then.reached < now.reached ? 0 : then.progress;
-  if (Math.abs(end - view.width) < 0.005) return null;
-  return { from: Math.min(end, view.width), to: Math.max(end, view.width), gain: end > view.width };
 }
 
 /**

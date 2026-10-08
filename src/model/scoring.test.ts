@@ -4,7 +4,6 @@ import { referenceIndex } from './referenceIndex';
 import {
   accuracy,
   applyResult,
-  bankedRating,
   creditedNodes,
   dayKey,
   EMPTY_SCORE,
@@ -186,15 +185,6 @@ describe('applying a result', () => {
     expect(nodeStats(settled.state, SICILIAN).rated).toBe(2);
     expect(settled.moves.map((move) => move.id)).toContain(NAJDORF);
     expect(settled.moves.map((move) => move.id)).not.toContain(SICILIAN);
-  });
-
-  it('banks the answers an opening will take once the line reaches it', () => {
-    const lead = result({ line: ['e4'], color: 'b' });
-    const miss = result({ line: ['e4', 'c5', 'Nf3'], color: 'b', correct: false });
-    const state = applyResult(applyResult(EMPTY_SCORE, tree, lead).state, tree, miss, [lead]).state;
-    const banked = bankedRating(state, NAJDORF, [lead, miss]);
-    const settled = settleRun(state, tree, [lead, miss], NAJDORF.split(' '));
-    expect(banked).toBe(nodeStats(settled.state, NAJDORF).rating);
   });
 
   it('leaves an opening the run turned away from alone', () => {

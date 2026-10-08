@@ -16,7 +16,7 @@ import type { Color } from '../../chess/core';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { evidenceFor } from '../../model/growth';
-import { bankedRating, ratedNodes, seenIn, type MoveResult } from '../../model/scoring';
+import { ratedNodes, seenIn, type MoveResult } from '../../model/scoring';
 import { growOfferAt, offerOpening, type GrowOffer } from '../../model/growOffer';
 import type { Selection } from '../../model/selection';
 import { useRatingTracker } from '../../components/Ratings';
@@ -192,8 +192,6 @@ export function SurvivalScreen({
   const ratings = useRatingTracker();
   /** This run's rated answers, which an opening the line reaches later takes too. */
   const answers = useRef<MoveResult[]>([]);
-  /** How many answers the run has banked, so the header redraws as they come. */
-  const [bankedCount, setBankedCount] = useState(0);
 
   const run = game?.state.run ?? null;
   /**
@@ -220,14 +218,7 @@ export function SurvivalScreen({
     () => !!played && ratedNodes(tree, played).includes(headerOpening),
     [tree, played, headerOpening],
   );
-  const score = useStore((s) => s.score);
-  // Answers before the line reaches the header's opening are banked for it.
-  const banked = useMemo(
-    () => (!run || headerReached ? null : bankedRating(score, headerOpening, answers.current)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [run, headerReached, headerOpening, score, bankedCount],
-  );
-  const headerRating = useHeaderRating(headerOpening, banked);
+  const headerRating = useHeaderRating(headerOpening, headerReached);
   /** Under way: past the intro, and not over. Nothing moves and no clock runs until then. */
   const live = phase === 'playing' && !!run && !intro.held;
   const myTurn = !!run && fenTurn(run.fen) === run.color;
@@ -288,7 +279,6 @@ export function SurvivalScreen({
     const result: MoveResult = { mode: 'survival', line, color: run.color, correct, rated: true, at: Date.now() };
     ratings.track(recordMove(result, answers.current));
     answers.current = [...answers.current, result];
-    setBankedCount(answers.current.length);
   };
 
   /** The way into Growth a clean end of prep earns — see `growOfferAt`. */
@@ -433,7 +423,6 @@ export function SurvivalScreen({
     prepEnd.current = null;
     ratings.reset();
     answers.current = [];
-    setBankedCount(0);
     setGrowOffer(null);
     judge.reset();
     setPrefs(chosen);
