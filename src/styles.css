@@ -1419,18 +1419,14 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  padding: 0 7px;
-  border-radius: 6px;
-  /* See-through, so the bar shows behind the name. */
-  background: color-mix(in srgb, var(--surface-2) 45%, transparent);
-  text-shadow: 0 0 3px var(--surface-2), 0 0 6px var(--surface-2);
+  /* No pill: the bar shows all the way through, and a tight shadow keeps the name readable on any fill. */
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.85);
   font-size: 11px;
   font-weight: 700;
   line-height: 15px;
-  color: var(--text-2);
+  color: var(--text);
   white-space: nowrap;
 }
-.qp-tile:active .tier-bar .tier-name { background: color-mix(in srgb, var(--surface-3) 45%, transparent); }
 .qp-moves { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .qp-move { align-items: center; font-family: var(--mono); font-weight: 700; font-size: 15px; padding: 12px 4px; }
 .qp-browse {
@@ -1481,3 +1477,5 @@ button.home-card:active { background: var(--surface-2); }
 .badge-num { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .badge-name { font-size: 11px; color: var(--text-3); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .badge.won .badge-name { color: var(--text-2); }
+.badge-glyph.streak { display: flex; flex-direction: column; gap: 0; line-height: 1; }
+.badge-glyph.streak .badge-num { font-size: 11px; }

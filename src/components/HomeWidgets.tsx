@@ -3,7 +3,7 @@ import { ANY_FAVORITE } from '../model/anyFavorite';
 import { earned, milestones, nextUp, progress, type Milestone } from '../model/milestones';
 import { openingTree } from '../model/openingTree';
 import { referenceIndex } from '../model/referenceIndex';
-import { ratingChange } from '../model/scoring';
+import { ratingChange, streak } from '../model/scoring';
 import { HISTORY_RUNS, survivalFor } from '../model/survival';
 import { useStore } from '../store/useStore';
 import { TierBar } from './ScoreBar';
@@ -159,8 +159,13 @@ export function useMilestoneToasts() {
 export function MilestonesCard() {
   const list = useMilestones();
   const [open, setOpen] = useState(false);
+  const days = useStore((s) => streak(s.score.global));
   const done = list.filter(earned).length;
-  const next = nextUp(list, 4);
+  // The streak always leads; the three closest of the rest follow it.
+  const next = nextUp(
+    list.filter((m) => m.kind !== 'streak'),
+    3,
+  );
 
   return (
     <>
@@ -172,7 +177,8 @@ export function MilestonesCard() {
           </span>
         </div>
         <div className="badge-row">
-          {(next.length ? next : list.slice(-4)).map((m) => (
+          <StreakBadge days={days} />
+          {(next.length ? next : list.filter((m) => m.kind !== 'streak').slice(-3)).map((m) => (
             <Badge key={m.id} milestone={m} />
           ))}
         </div>
@@ -185,6 +191,43 @@ export function MilestonesCard() {
         </div>
       </Sheet>
     </>
+  );
+}
+
+/** Streak goals the ring climbs toward; past the last one it stays full. */
+const STREAK_STEPS = [3, 7, 30];
+
+/** Your current streak: the days in the middle, ringed toward the next streak milestone. */
+function StreakBadge({ days }: { days: number }) {
+  const goal = STREAK_STEPS.find((n) => n > days);
+  const share = goal ? days / goal : 1;
+  const lit = days > 0;
+  return (
+    <span className={`badge${lit ? ' won' : ''}`} aria-label={`${days} day streak`}>
+      <svg width="52" height="52" viewBox="0 0 52 52" aria-hidden>
+        <circle cx="26" cy="26" r={RING} fill="none" stroke="var(--surface-3)" strokeWidth="4" />
+        {share > 0 && (
+          <circle
+            cx="26"
+            cy="26"
+            r={RING}
+            fill="none"
+            stroke="var(--warn)"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray={`${CIRC * share} ${CIRC}`}
+            transform="rotate(-90 26 26)"
+          />
+        )}
+        <foreignObject x="13" y="13" width="26" height="26">
+          <span className="badge-glyph streak" style={{ color: lit ? 'var(--warn)' : 'var(--text-3)' }}>
+            <Icons.flame size={13} filled={lit} />
+            <b className="badge-num">{days}</b>
+          </span>
+        </foreignObject>
+      </svg>
+      <span className="badge-name">{days === 1 ? '1 day' : `${days} days`}</span>
+    </span>
   );
 }
 
