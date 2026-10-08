@@ -127,8 +127,8 @@ function restingView(rating: number): EdgeView {
  * stretch it moved glowing and what it was worth popping by the rating.
  * Crossing a rung up fills the bar, flashes it in the new tier's color,
  * clears it and grows it from the left with what is left over, so a
- * promotion never reads as a loss; crossing one down flashes the lower tier's
- * color full and shrinks to where the rating landed.
+ * promotion never reads as a loss; crossing one down flashes red full and
+ * shrinks to where the rating landed.
  *
  * Until the run's line reaches the opening its rating cannot move, so the
  * bar is dimmed and names the move it is waiting for: "Rated from 3.Bb5". Any opening has no rating and gets nothing. The rating's
@@ -180,9 +180,9 @@ export function useHeaderRating(
       later(TOP_MS + FLASH_MS, () => setView((v) => ({ ...v, width: 0, flash: null, speed: 0 })));
       later(TOP_MS + FLASH_MS + 40, () => setView((v) => ({ ...v, ...settle })));
     } else {
-      // Down: flash the lower tier full, then shrink to where the rating landed.
-      const color = fillColor(to);
-      setView({ ...settle, width: 1, speed: 0, flash: color, stretch: null, pop });
+      // Down: flash red full, then shrink to where the rating landed. No tier
+      // is red, so it can only read as a drop.
+      setView({ ...settle, width: 1, speed: 0, flash: 'var(--bad)', stretch: null, pop });
       later(FLASH_MS, () => setView((v) => ({ ...v, ...settle })));
     }
   }, [openingId, rating, haptics]);
