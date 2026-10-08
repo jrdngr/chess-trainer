@@ -19,6 +19,7 @@ import {
   prepHere,
   recentForm,
   RECENT_RUNS,
+  HISTORY_RUNS,
   recordEndedSurvival,
   recordSurvival,
   startSurvival,
@@ -129,19 +130,27 @@ describe('the record', () => {
     let record = recordSurvival(EMPTY_SURVIVAL_RECORD, tree, KID, 12);
     record = recordEndedSurvival(record, tree, KID);
     const kid = openingsAlong(tree, KID.slice(0, 6)).find((id) => nodeById(tree, id).name.startsWith("King's Indian"))!;
-    expect(survivalFor(record, '')).toEqual({ best: 12, recent: [12], runs: 1, ended: 1 });
+    expect(survivalFor(record, '')).toEqual({ best: 12, recent: [12], history: [12], runs: 1, ended: 1 });
     expect(survivalFor(record, kid).ended).toBe(1);
   });
 
   it('recent form is the median, and nothing before a run', () => {
     expect(recentForm(undefined)).toBeNull();
-    expect(recentForm({ best: 9, recent: [9, 1, 5], runs: 3, ended: 0 })).toBe(5);
-    expect(recentForm({ best: 9, recent: [2, 4, 9, 6], runs: 4, ended: 0 })).toBe(5);
+    expect(recentForm({ best: 9, recent: [9, 1, 5], history: [], runs: 3, ended: 0 })).toBe(5);
+    expect(recentForm({ best: 9, recent: [2, 4, 9, 6], history: [], runs: 4, ended: 0 })).toBe(5);
   });
 
   it('reads a save with nothing in it', () => {
     expect(normalizeSurvival(undefined)).toEqual(EMPTY_SURVIVAL_RECORD);
-    expect(normalizeSurvival({ global: { best: 3 } as never }).global).toEqual({ best: 3, recent: [], runs: 0, ended: 0 });
+    expect(normalizeSurvival({ global: { best: 3 } as never }).global).toEqual({ best: 3, recent: [], history: [], runs: 0, ended: 0 });
+  });
+
+  it('keeps a longer history than recent form, seeded from it on old saves', () => {
+    let record = EMPTY_SURVIVAL_RECORD;
+    for (let i = 1; i <= HISTORY_RUNS + 3; i += 1) record = recordSurvival(record, tree, KID, i);
+    expect(survivalFor(record, '').history).toHaveLength(HISTORY_RUNS);
+    expect(survivalFor(record, '').history.at(-1)).toBe(HISTORY_RUNS + 3);
+    expect(normalizeSurvival({ global: { best: 5, recent: [3, 5], runs: 2 } as never }).global.history).toEqual([3, 5]);
   });
 });
 

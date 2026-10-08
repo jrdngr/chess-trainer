@@ -1452,3 +1452,32 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .tidy-row { margin-top: 4px; }
 .tidy-row .list-row .ico { flex: none; display: flex; color: var(--accent); }
 .tidy-row .list-row .title { font-weight: 600; }
+
+/* ── Home's cards, under the mode tiles ────────────────────────────────── */
+.home-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.home-card { display: flex; flex-direction: column; gap: 10px; width: 100%; padding: 14px; border-radius: var(--r-lg); text-align: left; color: inherit; }
+button.home-card:active { background: var(--surface-2); }
+.home-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.home-card-head .t { font-weight: 700; font-size: 15px; }
+.home-card-head .aside { color: var(--text-2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.home-card svg text { font-family: var(--font); }
+
+.fav-ladder { display: flex; flex-direction: column; gap: 2px; margin: 0 -6px; }
+.fav-row { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 6px; border-radius: 10px; color: inherit; text-align: left; }
+.fav-row:active { background: var(--surface-2); }
+.fav-row.selected { background: var(--accent-soft); }
+.fav-row .nm { flex: 1; min-width: 0; font-weight: 600; font-size: 14px; }
+.fav-row .tier-bar { flex: none; width: 96px; }
+.fav-row .num { width: 30px; text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-2); }
+.fav-row .chg { width: 38px; text-align: right; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fav-row .chg.up { color: var(--good); }
+.fav-row .chg.down { color: var(--bad); }
+.fav-row .chg.flat { color: var(--text-3); }
+
+.badge-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 14px 6px; padding-bottom: 8px; }
+.badge { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.badge-glyph { width: 26px; height: 26px; display: grid; place-items: center; }
+.badge-num { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.badge-name { font-size: 11px; color: var(--text-3); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.badge.won .badge-name { color: var(--text-2); }

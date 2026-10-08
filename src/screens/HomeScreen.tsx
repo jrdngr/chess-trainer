@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Icons, Section, Sheet, Toggle } from '../components/ui';
 import { SelectionBar } from '../components/Selection';
 import { ScoreStrip } from '../components/ScoreBar';
+import { FavoritesLadder, MilestonesCard, SurvivalRuns } from '../components/HomeWidgets';
 import { nodeById, openingTree } from '../model/openingTree';
 import { streak } from '../model/scoring';
 import { NO_HISTORY, pickRound, type AutoRound } from '../store/recommendation';
@@ -83,6 +84,12 @@ export function HomeScreen({ onOpenMode, onOpenSettings }: HomeScreenProps) {
             icon={<Icons.play size={20} />}
             onClick={() => onOpenMode('play')}
           />
+        </div>
+
+        <div className="home-cards">
+          <SurvivalRuns />
+          <FavoritesLadder />
+          <MilestonesCard />
         </div>
       </div>
 

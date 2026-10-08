@@ -273,6 +273,15 @@ function favoriteLabel(catalog: PickerCatalog, node: OpeningNode): string {
   return shortLabel(entry?.label ?? node.name);
 }
 
+/** Your favorites as the quick picker lists them: the node, the side it is played from, and its short name. */
+export function favoriteEntries(ids: string[]): { node: OpeningNode; side: Color; label: string }[] {
+  const { tree, catalog } = catalogNow();
+  return ids
+    .map((id) => tree.byId.get(id))
+    .filter((node): node is OpeningNode => Boolean(node) && node!.depth > 0)
+    .map((node) => ({ node, side: sideForPick(catalog, node) ?? 'w', label: favoriteLabel(catalog, node) }));
+}
+
 /**
  * The opening picker, over the whole screen.
  *
@@ -860,7 +869,7 @@ function SectionHead({ title, aside }: { title: ReactNode; aside?: ReactNode }) 
   );
 }
 
-function SideDot({ side }: { side: Color }) {
+export function SideDot({ side }: { side: Color }) {
   return <i className={`op-dot ${side}`} aria-label={side === 'w' ? 'White' : 'Black'} />;
 }
 

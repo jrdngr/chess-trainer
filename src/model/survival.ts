@@ -282,12 +282,16 @@ export function moveNumber(ply: number): number {
 
 /** How many runs recent form is read over. */
 export const RECENT_RUNS = 5;
+/** How many runs' lengths are kept for Home's chart. */
+export const HISTORY_RUNS = 16;
 
 export interface SurvivalScore {
   /** The most moves survived. Only ever goes up. */
   best: number;
   /** The last few runs' moves survived, oldest first. */
   recent: number[];
+  /** The last runs' moves survived, oldest first, for Home's chart. Ended runs are not in it. */
+  history: number[];
   runs: number;
   /** Runs you ended yourself: counted here and nowhere else. */
   ended: number;
@@ -300,7 +304,7 @@ export interface SurvivalRecord {
   openings: Record<string, SurvivalScore>;
 }
 
-export const EMPTY_SURVIVAL_SCORE: SurvivalScore = { best: 0, recent: [], runs: 0, ended: 0 };
+export const EMPTY_SURVIVAL_SCORE: SurvivalScore = { best: 0, recent: [], history: [], runs: 0, ended: 0 };
 
 export const EMPTY_SURVIVAL_RECORD: SurvivalRecord = { global: { ...EMPTY_SURVIVAL_SCORE }, openings: {} };
 
@@ -309,6 +313,8 @@ export function normalizeSurvival(saved: Partial<SurvivalRecord> | undefined): S
   const fix = (score: Partial<SurvivalScore> | undefined): SurvivalScore => ({
     best: score?.best ?? 0,
     recent: (score?.recent ?? []).slice(-RECENT_RUNS),
+    // Saves from before the history was kept start it from recent form's runs.
+    history: (score?.history ?? score?.recent ?? []).slice(-HISTORY_RUNS),
     runs: score?.runs ?? 0,
     ended: score?.ended ?? 0,
   });
@@ -338,6 +344,7 @@ function scored(score: SurvivalScore | undefined, moves: number): SurvivalScore 
   return {
     best: Math.max(base.best, moves),
     recent: [...base.recent, moves].slice(-RECENT_RUNS),
+    history: [...base.history, moves].slice(-HISTORY_RUNS),
     runs: base.runs + 1,
     ended: base.ended,
   };

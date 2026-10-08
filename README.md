@@ -66,6 +66,20 @@ npm run build        # production build into dist/
 npm run artifact     # repackage dist/ for publishing as a Claude Artifact
 ```
 
+## Home
+
+Under the selection: the selected opening's tier and rating, Autopilot, and
+the four modes as short tiles. Below them, three cards. **Survival** draws
+the last 16 runs' moves survived, the latest lit, with a dashed line at the
+best; it follows the selection, every run under Any opening and Any favorite,
+and runs you ended yourself are left out. **Favorites** lists each favorite
+with its tier bar, rating, and how far the rating moved this week; tapping one
+selects it. **Milestones** shows the next four of eighteen goals to earn
+(streaks, Survival best, the first opening at each tier, families at Familiar,
+rounds played), ringed by progress; tapping it shows them all. All of them
+are read from the record, so they count what was done before they existed,
+and a toast announces one when the round that earned it ends.
+
 ## The selection
 
 Two controls sit at the top of Home and every setup screen: a colour square

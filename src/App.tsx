@@ -6,6 +6,7 @@ import { ImportScreen } from './screens/ImportScreen';
 import { RepertoireScreen } from './screens/RepertoireScreen';
 import { SettingsSheet } from './screens/SettingsSheet';
 import { HomeScreen, type ModeId } from './screens/HomeScreen';
+import { useMilestoneToasts } from './components/HomeWidgets';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { SurvivalScreen } from './screens/survival/SurvivalScreen';
 import { GrowthScreen } from './screens/growth/GrowthScreen';
@@ -24,6 +25,7 @@ type Tab = 'home' | 'repertoire' | 'stats' | 'analysis';
 
 export default function App() {
   const ready = useStore((s) => s.ready);
+  useMilestoneToasts();
   const init = useStore((s) => s.init);
   const cards = useStore((s) => s.cards);
 

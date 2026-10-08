@@ -546,3 +546,23 @@ export function streak(stats: NodeStats, now = Date.now()): number {
   }
   return count;
 }
+
+/**
+ * Where a rating stood at the end of a day: the last day at or before it that
+ * moved the rating, or the start if none had.
+ */
+export function ratingOn(stats: NodeStats, key: string): number {
+  let at: string | null = null;
+  let rating: number = RATING.start;
+  for (const [day, tally] of Object.entries(stats.days)) {
+    if (tally.rating === null || day > key || (at !== null && day < at)) continue;
+    at = day;
+    rating = tally.rating;
+  }
+  return rating;
+}
+
+/** How far a rating has moved over the last `days` days. */
+export function ratingChange(stats: NodeStats, days: number, now = Date.now()): number {
+  return stats.rating - ratingOn(stats, dayKey(now - days * 86_400_000));
+}
