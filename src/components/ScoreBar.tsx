@@ -240,10 +240,10 @@ function definingMove(sans: string[]): string {
 /**
  * The rating of the opening you have selected, for Home.
  *
- * Any opening shows its tier, its rating and how far it is from the next
- * tier, and opens its stats. One that is not a favorite carries an outline
- * star by its name: a label, never a button, so nothing here can favorite it
- * by accident. Any opening and Any favorite show nothing.
+ * Any opening shows its tier and how far it is from the next tier, never
+ * the rating's number, and opens its stats. One that is not a favorite
+ * carries an outline star by its name: a label, never a button, so nothing
+ * here can favorite it by accident. Any opening and Any favorite show nothing.
  */
 export function ScoreStrip() {
   const selection = useStore((s) => s.settings.selection);
@@ -271,11 +271,8 @@ export function ScoreStrip() {
       </span>
       <RankBar
         rank={rank}
-        centre={
-          <span className="total num">
-            {stats.rated === 0 ? NEW_LABEL : ratingText(stats.rating)}
-          </span>
-        }
+        // The tier says where it stands; the number is not shown here.
+        centre={stats.rated === 0 ? <span className="total">{NEW_LABEL}</span> : null}
       />
     </button>
   );
