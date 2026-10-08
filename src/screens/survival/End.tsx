@@ -28,7 +28,9 @@ export type Ending =
       best: string | null;
       lost: number;
     }
-  | { kind: 'won' | 'lost' | 'draw' };
+  | { kind: 'won' | 'lost' | 'draw' }
+  /** You ended it yourself, off your prep: counted apart from moves survived. */
+  | { kind: 'ended' };
 
 export function endingTitle(ending: Ending, plies: number): string {
   switch (ending.kind) {
@@ -38,6 +40,8 @@ export function endingTitle(ending: Ending, plies: number): string {
       return 'Checkmate, you won';
     case 'lost':
       return 'Checkmate, you lost';
+    case 'ended':
+      return `Ended on move ${moveNumber(plies)}`;
     default:
       return 'Drawn';
   }
@@ -141,7 +145,15 @@ export function End({
   const title = endingTitle(ending, last);
   const verdict = (
     <div className={`verdict ${blunder || ending.kind === 'lost' ? 'no' : ending.kind === 'won' ? 'ok' : 'warn'}`} style={{ padding: 0 }}>
-      <span className="ico">{blunder || ending.kind === 'lost' ? <Icons.cross size={18} /> : <Icons.check size={18} />}</span>
+      <span className="ico">
+        {blunder || ending.kind === 'lost' ? (
+          <Icons.cross size={18} />
+        ) : ending.kind === 'ended' ? (
+          <Icons.close size={18} />
+        ) : (
+          <Icons.check size={18} />
+        )}
+      </span>
       {title}
     </div>
   );
@@ -202,7 +214,7 @@ export function End({
       return true;
     });
   }, [tree, run.played]);
-  const newBest = moves > 0 && moves > before.global.best;
+  const newBest = ending.kind !== 'ended' && moves > 0 && moves > before.global.best;
 
   const playedText = sansToMoveText(blunder ? [...run.played, blunder.played] : run.played);
   const copyPlayed = async () => {

@@ -19,6 +19,7 @@ import {
   prepHere,
   recentForm,
   RECENT_RUNS,
+  recordEndedSurvival,
   recordSurvival,
   startSurvival,
   SURVIVAL_STEERS,
@@ -124,15 +125,23 @@ describe('the record', () => {
     expect(recentForm(survivalFor(record, ''))).toBe(4);
   });
 
+  it('counts a run you ended yourself apart from best and recent form', () => {
+    let record = recordSurvival(EMPTY_SURVIVAL_RECORD, tree, KID, 12);
+    record = recordEndedSurvival(record, tree, KID);
+    const kid = openingsAlong(tree, KID.slice(0, 6)).find((id) => nodeById(tree, id).name.startsWith("King's Indian"))!;
+    expect(survivalFor(record, '')).toEqual({ best: 12, recent: [12], runs: 1, ended: 1 });
+    expect(survivalFor(record, kid).ended).toBe(1);
+  });
+
   it('recent form is the median, and nothing before a run', () => {
     expect(recentForm(undefined)).toBeNull();
-    expect(recentForm({ best: 9, recent: [9, 1, 5], runs: 3 })).toBe(5);
-    expect(recentForm({ best: 9, recent: [2, 4, 9, 6], runs: 4 })).toBe(5);
+    expect(recentForm({ best: 9, recent: [9, 1, 5], runs: 3, ended: 0 })).toBe(5);
+    expect(recentForm({ best: 9, recent: [2, 4, 9, 6], runs: 4, ended: 0 })).toBe(5);
   });
 
   it('reads a save with nothing in it', () => {
     expect(normalizeSurvival(undefined)).toEqual(EMPTY_SURVIVAL_RECORD);
-    expect(normalizeSurvival({ global: { best: 3 } as never }).global).toEqual({ best: 3, recent: [], runs: 0 });
+    expect(normalizeSurvival({ global: { best: 3 } as never }).global).toEqual({ best: 3, recent: [], runs: 0, ended: 0 });
   });
 });
 

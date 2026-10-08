@@ -154,6 +154,7 @@ export function SurvivalScreen({
   const settleRun = useStore((s) => s.settleRun);
   const endRound = useStore((s) => s.endRound);
   const endSurvival = useStore((s) => s.endSurvival);
+  const endSurvivalEarly = useStore((s) => s.endSurvivalEarly);
   const answered = useStore((s) => s.answeredInOpeningRun);
   const missed = useStore((s) => s.missedInOpeningRun);
   const index = referenceIndex();
@@ -233,7 +234,9 @@ export function SurvivalScreen({
     over.current = true;
     setBefore(useStore.getState().survival);
     const line = ended.run.played;
-    endSurvival(line, ended.moves);
+    // A run you end yourself is counted, but says nothing about how long you survive.
+    if (how.kind === 'ended') endSurvivalEarly(line);
+    else endSurvival(line, ended.moves);
     ratings.track(settleRun(answers.current, line));
     const region = nodeById(tree, ended.run.openingId);
     const clean = ended.misses.length === 0 ? prepEnd.current : null;
@@ -595,6 +598,11 @@ export function SurvivalScreen({
             <div className="ctx" style={{ color: PREP_STATUS[prepStatus].color, fontWeight: 600 }}>
               {PREP_STATUS[prepStatus].text}
             </div>
+          )}
+          {prepStatus === 'off' && (
+            <button className="btn sm mt-8" onClick={() => finish(game.state, { kind: 'ended' })}>
+              End run
+            </button>
           )}
           {game.state.misses.length > 0 && (
             <div className="ctx">

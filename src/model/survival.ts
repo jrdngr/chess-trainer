@@ -289,6 +289,8 @@ export interface SurvivalScore {
   /** The last few runs' moves survived, oldest first. */
   recent: number[];
   runs: number;
+  /** Runs you ended yourself: counted here and nowhere else. */
+  ended: number;
 }
 
 export interface SurvivalRecord {
@@ -298,7 +300,7 @@ export interface SurvivalRecord {
   openings: Record<string, SurvivalScore>;
 }
 
-export const EMPTY_SURVIVAL_SCORE: SurvivalScore = { best: 0, recent: [], runs: 0 };
+export const EMPTY_SURVIVAL_SCORE: SurvivalScore = { best: 0, recent: [], runs: 0, ended: 0 };
 
 export const EMPTY_SURVIVAL_RECORD: SurvivalRecord = { global: { ...EMPTY_SURVIVAL_SCORE }, openings: {} };
 
@@ -308,6 +310,7 @@ export function normalizeSurvival(saved: Partial<SurvivalRecord> | undefined): S
     best: score?.best ?? 0,
     recent: (score?.recent ?? []).slice(-RECENT_RUNS),
     runs: score?.runs ?? 0,
+    ended: score?.ended ?? 0,
   });
   return {
     global: fix(saved?.global),
@@ -336,7 +339,13 @@ function scored(score: SurvivalScore | undefined, moves: number): SurvivalScore 
     best: Math.max(base.best, moves),
     recent: [...base.recent, moves].slice(-RECENT_RUNS),
     runs: base.runs + 1,
+    ended: base.ended,
   };
+}
+
+function ended(score: SurvivalScore | undefined): SurvivalScore {
+  const base = score ?? EMPTY_SURVIVAL_SCORE;
+  return { ...base, ended: base.ended + 1 };
 }
 
 /** Log a finished run against the global record and every opening it went through. */
@@ -349,6 +358,16 @@ export function recordSurvival(
   const openings = { ...record.openings };
   for (const id of openingsAlong(tree, line)) openings[id] = scored(openings[id], moves);
   return { global: scored(record.global, moves), openings };
+}
+
+/**
+ * Log a run you ended yourself: a count against the global record and every
+ * opening it went through, and nothing toward best or recent form.
+ */
+export function recordEndedSurvival(record: SurvivalRecord, tree: OpeningTree, line: string[]): SurvivalRecord {
+  const openings = { ...record.openings };
+  for (const id of openingsAlong(tree, line)) openings[id] = ended(openings[id]);
+  return { global: ended(record.global), openings };
 }
 
 /** Recent form: the median of the last few runs, or null before any. */

@@ -61,6 +61,7 @@ import { cloudAvailable, readCloud, writeCloud, type CloudStatus, type WriteResu
 import {
   DEFAULT_SURVIVAL,
   normalizeSurvival,
+  recordEndedSurvival,
   recordSurvival,
   type SurvivalPrefs,
   type SurvivalRecord,
@@ -240,6 +241,8 @@ interface StoreState extends PersistedState {
 
   /** Log a finished Survival run: its moves survived, against every opening its line went through. */
   endSurvival: (line: string[], moves: number) => void;
+  /** Log a Survival run you ended yourself: a count, and nothing toward best or form. */
+  endSurvivalEarly: (line: string[]) => void;
   /**
    * Record one answer: activity against the openings its line names, and, for
    * a rated one, the rating of every opening its line has reached. `earlier`
@@ -922,6 +925,10 @@ export const useStore = create<StoreState>((set, get) => {
 
     endSurvival(line, moves) {
       commit({ survival: recordSurvival(get().survival, openingTree(referenceIndex()), line, moves) });
+    },
+
+    endSurvivalEarly(line) {
+      commit({ survival: recordEndedSurvival(get().survival, openingTree(referenceIndex()), line) });
     },
 
     settleRun(earlier, line) {

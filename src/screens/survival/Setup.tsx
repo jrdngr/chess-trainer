@@ -99,9 +99,15 @@ export function ScoreRow({ name, score, now }: { name: string; score: SurvivalSc
       <span className="grow" style={{ minWidth: 0 }}>
         <div className="title truncate">{name}</div>
         <div className="meta truncate">
-          {score.runs === 0
+          {score.runs === 0 && score.ended === 0
             ? 'No runs yet'
-            : `${score.runs} run${score.runs === 1 ? '' : 's'}${form !== null ? ` · recent form ${form}` : ''}`}
+            : [
+                `${score.runs} run${score.runs === 1 ? '' : 's'}`,
+                score.ended > 0 && `${score.ended} ended`,
+                form !== null && `recent form ${form}`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
         </div>
       </span>
       {now !== undefined && <span className="val num">{now}</span>}
