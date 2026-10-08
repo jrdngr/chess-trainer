@@ -126,7 +126,7 @@ function restingView(rating: number): EdgeView {
  * color full and shrinks to where the rating landed.
  *
  * Until the run's line reaches the opening its rating cannot move, so the
- * bar is dimmed. Any opening has no rating and gets nothing. The rating's
+ * bar is dimmed and names the move it is waiting for: "Rated from 3.Bb5". Any opening has no rating and gets nothing. The rating's
  * number is never shown here: the tier and the bar are what you play for.
  */
 export function useHeaderRating(
@@ -184,7 +184,8 @@ export function useHeaderRating(
 
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
 
-  if (openingId === '' || nodeById(openingTree(referenceIndex()), openingId).depth === 0) return null;
+  const node = openingId === '' ? null : nodeById(openingTree(referenceIndex()), openingId);
+  if (!node || node.depth === 0) return null;
 
   const rank = rankOf(view.rating, rated);
   const label = (
@@ -201,7 +202,8 @@ export function useHeaderRating(
     </span>
   );
   const edge = (
-    <div className={`header-edge${reached ? '' : ' dim'}`} aria-hidden>
+    <div className={`header-edge${reached ? '' : ' dim'}`}>
+      {!reached && <span className="wait">Rated from {definingMove(node.sans)}</span>}
       <span
         className="fill"
         style={{
@@ -226,6 +228,13 @@ export function useHeaderRating(
     </div>
   );
   return { label, edge };
+}
+
+/** The move that makes an opening what it is, numbered: "3.Bb5", "2...c5". */
+function definingMove(sans: string[]): string {
+  const ply = sans.length;
+  const number = Math.ceil(ply / 2);
+  return `${number}${ply % 2 === 1 ? '.' : '...'}${sans[ply - 1] ?? ''}`;
 }
 
 /**
