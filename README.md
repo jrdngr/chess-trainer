@@ -366,7 +366,8 @@ Stats. The clock is pressure only: nothing is paid for speed.
 
 ## Tidy
 
-A tab of its own, under the selection bar like Home. It looks at every move
+A row at the top of the Repertoire tab, with how many finds it has (or
+"clear"), opens it under the selection bar like Home. It looks at every move
 you have chosen inside the selection and asks whether another move there is
 closer to the rest of your lines, by the arrows' rules: it transposes into
 them, heads toward them, or is what you play around that point in your other

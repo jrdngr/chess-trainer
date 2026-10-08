@@ -35,14 +35,16 @@ const CHECK_AHEAD = 12;
  *
  * `focus` is a find handed over from the end of a round, shown first and open.
  */
-export function TidyScreen({ focus, onConsumedFocus }: { focus?: TidyFind | null; onConsumedFocus?: () => void }) {
+/**
+ * The scan behind Tidy, over the selection: every find, a slice at a time, and
+ * the rare replies you added. Shared with the Repertoire screen's Tidy row, so
+ * its count and this list are the same piece of work.
+ */
+function useTidyScan() {
   const repertoires = useStore((s) => s.repertoires);
   const repertoireOrder = useStore((s) => s.repertoireOrder);
   const selection = useStore((s) => s.settings.selection);
   const growth = useStore((s) => s.settings.growth);
-  const tidySwitch = useStore((s) => s.tidySwitch);
-  const tidyKeep = useStore((s) => s.tidyKeep);
-  const tidyRemove = useStore((s) => s.tidyRemove);
   const index = referenceIndex();
   const tree = openingTree(index);
   const favorites = useStore((s) => s.settings.favoriteOpenings);
@@ -55,17 +57,6 @@ export function TidyScreen({ focus, onConsumedFocus }: { focus?: TidyFind | null
     () => ({ prefs: { priority: growth.nudgePriority, pawns: growth.nudgePawns }, minShare: growth.minShare }),
     [growth.nudgePriority, growth.nudgePawns, growth.minShare],
   );
-
-  const [pinned, setPinned] = useState<TidyFind | null>(focus ?? null);
-  const [open, setOpen] = useState<string | null>(focus?.id ?? null);
-  if (focus && focus.id !== pinned?.id) {
-    setPinned(focus);
-    setOpen(focus.id);
-  }
-  useEffect(() => {
-    if (focus) onConsumedFocus?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focus]);
 
   // The scan runs a slice at a time. A rescan after a switch keeps showing
   // the list it had until the new one is whole, so nothing jumps.
@@ -103,15 +94,16 @@ export function TidyScreen({ focus, onConsumedFocus }: { focus?: TidyFind | null
     };
   }, [reps, tree, regions, index, opts]);
 
-  // A pinned find the switch has already dealt with, or that the tree no
-  // longer holds, stops being pinned.
-  const pinnedLive = pinned && repertoires[pinned.repertoireId]?.nodes[pinned.nodeId] ? pinned : null;
-  const list = useMemo(() => {
-    const rest = (finds ?? []).filter((find) => find.id !== pinnedLive?.id);
-    return pinnedLive ? [pinnedLive, ...rest] : rest;
-  }, [finds, pinnedLive]);
+  const rare = useMemo(
+    () => acrossRegions(regions, reps, (rep, node) => rareReplies([rep], index, tree, node, growth.minShare), (r) => r.id),
+    [reps, index, tree, regions, growth.minShare],
+  );
 
-  // Moves the book does not have wait on the engine; one it fails drops out.
+  return { repertoires, selection, tree, regions, reps, opts, finds, progress, rare };
+}
+
+/** Moves the book does not have wait on the engine; one it fails drops out. */
+function useSoundFinds(list: TidyFind[]) {
   const checks = useMemo(
     () =>
       list
@@ -122,6 +114,50 @@ export function TidyScreen({ focus, onConsumedFocus }: { focus?: TidyFind | null
   );
   const sound = useSoundness(checks);
   const shown = list.filter((find) => !find.offBook || sound(find.fen, find.suggestion) !== false);
+  return { sound, shown };
+}
+
+/** How many things Tidy would list right now, or null while it is still looking. */
+export function useTidyCount(): number | null {
+  const { finds, progress, rare } = useTidyScan();
+  const { shown } = useSoundFinds(finds ?? []);
+  return progress ? null : shown.length + rare.length;
+}
+
+export function TidyScreen({
+  focus,
+  onConsumedFocus,
+  onBack,
+}: {
+  focus?: TidyFind | null;
+  onConsumedFocus?: () => void;
+  onBack: () => void;
+}) {
+  const { repertoires, selection, tree, regions, reps, opts, finds, progress, rare } = useTidyScan();
+  const tidySwitch = useStore((s) => s.tidySwitch);
+  const tidyKeep = useStore((s) => s.tidyKeep);
+  const tidyRemove = useStore((s) => s.tidyRemove);
+
+  const [pinned, setPinned] = useState<TidyFind | null>(focus ?? null);
+  const [open, setOpen] = useState<string | null>(focus?.id ?? null);
+  if (focus && focus.id !== pinned?.id) {
+    setPinned(focus);
+    setOpen(focus.id);
+  }
+  useEffect(() => {
+    if (focus) onConsumedFocus?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus]);
+
+  // A pinned find the switch has already dealt with, or that the tree no
+  // longer holds, stops being pinned.
+  const pinnedLive = pinned && repertoires[pinned.repertoireId]?.nodes[pinned.nodeId] ? pinned : null;
+  const list = useMemo(() => {
+    const rest = (finds ?? []).filter((find) => find.id !== pinnedLive?.id);
+    return pinnedLive ? [pinnedLive, ...rest] : rest;
+  }, [finds, pinnedLive]);
+
+  const { sound, shown } = useSoundFinds(list);
 
   const onSwitch = (find: TidyFind) => {
     const undo = tidySwitch(find.repertoireId, find.nodeId, find.suggestion);
@@ -133,11 +169,6 @@ export function TidyScreen({ focus, onConsumedFocus }: { focus?: TidyFind | null
     if (pinned?.id === find.id) setPinned(null);
     toast(`Switched to ${moveLabel(find.path.length, find.suggestion)}`, { label: 'Undo', run: undo });
   };
-
-  const rare = useMemo(
-    () => acrossRegions(regions, reps, (rep, node) => rareReplies([rep], index, tree, node, growth.minShare), (r) => r.id),
-    [reps, index, tree, regions, growth.minShare],
-  );
 
   const onKeep = (reply: RareReply) => {
     tidyKeep(reply.repertoireId, reply.nodeId);
@@ -158,7 +189,7 @@ export function TidyScreen({ focus, onConsumedFocus }: { focus?: TidyFind | null
 
   return (
     <>
-      <AppBar large title="Tidy" />
+      <AppBar title="Tidy" onBack={onBack} />
       <div className="screen">
         <SelectionBar />
         <p className="muted small tidy-intro">

@@ -73,7 +73,8 @@ export function selectionText(color: ColorChoice, openingId: string): string {
  * The square opens the side picker; the trail opens the opening picker, and
  * reads the way the picker's own breadcrumbs do.
  */
-export function SelectionBar() {
+/** `trailing` sits at the bar's right end, like Home's settings gear. */
+export function SelectionBar({ trailing }: { trailing?: ReactNode } = {}) {
   const selection = useStore((s) => s.settings.selection);
   const openStats = useStore((s) => s.openStats);
   const [picking, setPicking] = useState<'color' | 'quick' | 'opening' | null>(null);
@@ -96,6 +97,7 @@ export function SelectionBar() {
           </span>
           <Icons.down size={16} />
         </button>
+        {trailing}
       </div>
       <ColorPicker open={picking === 'color'} onClose={() => setPicking(null)} />
       <QuickPicker

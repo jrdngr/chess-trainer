@@ -578,26 +578,21 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 
 .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .mode-tile {
-  aspect-ratio: 1;
+  min-height: 56px;
   background: var(--surface);
   border-radius: var(--r-lg);
-  padding: 16px;
+  padding: 0 12px;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   text-align: left;
   color: inherit;
   transition: background 0.12s, transform 0.12s;
 }
 .mode-tile:active { background: var(--surface-2); transform: scale(0.98); }
-.mode-tile .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-/* A two-word name wraps rather than shrinking the tag off the edge, and the
-   tag stays pinned to the first line. */
-.mode-tile .name { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; min-width: 0; }
-.mode-tile .sub { font-size: 12.5px; color: var(--text-3); line-height: 1.35; }
-.mode-tile .art { flex: none; }
-/* Pushes the graphic and its caption to the bottom of the square. */
-.mode-tile .fill { flex: 1; min-height: 8px; }
+.mode-tile .ico { flex: none; display: flex; color: var(--accent); }
+.mode-tile .name { flex: 1; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; min-width: 0; }
+.mode-tile .tag { margin-top: 0; }
 
 .tag {
   margin-top: 1px;
@@ -613,9 +608,6 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .tag.accent { background: var(--accent-soft); color: var(--accent); }
 .tag.good { background: var(--good-soft); color: var(--good); }
 .tag.warn { background: var(--warn-soft); color: var(--warn); }
-
-.gauge { width: 100%; height: 8px; border-radius: 4px; background: var(--surface-3); overflow: hidden; display: flex; }
-.gauge i { display: block; height: 100%; }
 
 .spark { display: block; width: 100%; height: 26px; overflow: visible; }
 
@@ -647,8 +639,6 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .forecast .bar.today { background: var(--accent); }
 .forecast .lbl { font-size: 10.5px; color: var(--text-3); font-weight: 600; }
 
-.mini-bar { height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; display: flex; }
-.mini-bar i { display: block; height: 100%; }
 
 /* ── tree ──────────────────────────────────────────────────────────────── */
 .tree-san { font-weight: 700; font-size: 17px; min-width: 56px; font-variant-numeric: tabular-nums; }
@@ -762,9 +752,6 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 
 .strip.wrapped { flex-wrap: wrap; overflow: visible; min-height: 0; }
 
-/* A mode that is an action rather than a queue takes the whole row, and does
-   not have to be square to say so. */
-.mode-tile.wide { grid-column: 1 / -1; aspect-ratio: auto; min-height: 92px; }
 
 /* ── the global selection ──────────────────────────────────────────────── */
 .selection-bar { display: flex; gap: 8px; margin: 2px 0 12px; }
@@ -783,6 +770,7 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 }
 .selection-bar .pick:active { background: var(--surface-2); transform: scale(0.98); }
 .selection-bar .pick.color { flex: none; padding: 0 11px; }
+.selection-bar .pick.gear { flex: none; padding: 0 11px; color: var(--text-2); }
 .selection-bar .pick.opening { flex: 1; min-width: 0; }
 .selection-bar .pick.opening .eco { font-size: 12px; color: var(--text-3); font-weight: 500; flex: none; }
 .selection-bar .pick.opening svg { color: var(--text-3); flex: none; }
@@ -1460,3 +1448,8 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   box-shadow: 0 -10px 16px #141418;
 }
 .qp-browse svg { color: var(--text-3); }
+
+/* Tidy, at the top of the Repertoire list. */
+.tidy-row { margin-top: 4px; }
+.tidy-row .list-row .ico { flex: none; display: flex; color: var(--accent); }
+.tidy-row .list-row .title { font-weight: 600; }

@@ -207,4 +207,19 @@ export const Icons = {
       <path d="M12 6v13.5" />
     </svg>
   ),
+  /** Two stacked cards: Drill. */
+  cards: (p: IconProps = {}) => (
+    <svg {...s(p)}>
+      <rect x="7" y="3.5" width="12" height="15" rx="2" fill={p.filled ? 'currentColor' : 'none'} />
+      <path d="M5 7v11.5a2 2 0 0 0 2 2h9" />
+    </svg>
+  ),
+  /** A shoot with two leaves: Growth. */
+  sprout: (p: IconProps = {}) => (
+    <svg {...s(p)}>
+      <path d="M12 21v-9" />
+      <path d="M12 12C12 8 9.5 5.5 5 5.5c0 4 2.5 6.5 7 6.5z" fill={p.filled ? 'currentColor' : 'none'} />
+      <path d="M12 14c0-3.5 2.2-6 6.5-6 0 3.6-2.3 6-6.5 6z" fill={p.filled ? 'currentColor' : 'none'} />
+    </svg>
+  ),
 };

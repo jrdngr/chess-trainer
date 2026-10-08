@@ -9,9 +9,11 @@ import { lookup, openingNameForPath } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
 import { branchItems, type SessionMode, type TrainingItem } from '../model/session';
 import { describeDue } from '../model/srs';
-import type { AppEvent } from '../model/events';
+import { setEventPlace, type AppEvent } from '../model/events';
 import type { Card, RepMove, Repertoire } from '../model/types';
 import { sourceLabel } from '../model/moveSource';
+import { TidyScreen, useTidyCount } from './TidyScreen';
+import type { TidyFind } from '../model/tidy';
 import { saveFile } from '../store/saveFile';
 import { repertoireList, useStore } from '../store/useStore';
 
@@ -19,6 +21,9 @@ export interface RepertoireScreenProps {
   onStart: (items: TrainingItem[], mode: SessionMode, title: string) => void;
   onImport: () => void;
   onExploreFrom: (sans: string[]) => void;
+  /** A find handed over from the end of a round: Tidy opens on it. */
+  tidyFocus: TidyFind | null;
+  onConsumedTidyFocus: () => void;
 }
 
 /** Where the browser is pointed: one opening, or a whole side's tree. */
@@ -37,7 +42,13 @@ interface Scope {
  * you would describe it out loud ("a King's Indian, a Sicilian") rather than
  * listing the two containers those openings happen to live in.
  */
-export function RepertoireScreen({ onStart, onImport, onExploreFrom }: RepertoireScreenProps) {
+export function RepertoireScreen({
+  onStart,
+  onImport,
+  onExploreFrom,
+  tidyFocus,
+  onConsumedTidyFocus,
+}: RepertoireScreenProps) {
   const state = useStore();
   const reps = repertoireList(state);
   const index = referenceIndex();
@@ -45,6 +56,11 @@ export function RepertoireScreen({ onStart, onImport, onExploreFrom }: Repertoir
   const [adding, setAdding] = useState(false);
   const [openingMenu, setOpeningMenu] = useState<DerivedOpening | null>(null);
   const [sideMenu, setSideMenu] = useState<string | null>(null);
+  const [tidying, setTidying] = useState(false);
+  // A find from the end of a round opens Tidy, whatever was showing.
+  if (tidyFocus && !tidying) setTidying(true);
+  // A switch made in Tidy is logged as made there.
+  setEventPlace(tidying ? 'tidy' : 'repertoire');
 
   const sides = useMemo(
     () =>
@@ -54,6 +70,10 @@ export function RepertoireScreen({ onStart, onImport, onExploreFrom }: Repertoir
         .map((rep) => ({ rep, openings: openingsIn(rep, index) })),
     [reps, index],
   );
+
+  if (tidying) {
+    return <TidyScreen focus={tidyFocus} onConsumedFocus={onConsumedTidyFocus} onBack={() => setTidying(false)} />;
+  }
 
   const scoped = scope ? state.repertoires[scope.repId] : null;
   if (scope && scoped) {
@@ -98,6 +118,8 @@ export function RepertoireScreen({ onStart, onImport, onExploreFrom }: Repertoir
             hint="Build a line in Growth, or save the opening from a game in Play. Practice never writes into your repertoire."
           />
         )}
+
+        {sides.length > 0 && <TidyRow onOpen={() => setTidying(true)} />}
 
         {sides.map(({ rep, openings }) => (
           <div key={rep.id}>
@@ -814,4 +836,25 @@ async function exportReps(reps: Repertoire[], events: AppEvent[]) {
   );
   const outcome = await saveFile(`repertoire-${date}.json`, text);
   if (outcome === 'unavailable') toast('Saving files is not available here');
+}
+
+/** Tidy, at the top of the list: how much it has found in the selection. */
+function TidyRow({ onOpen }: { onOpen: () => void }) {
+  const count = useTidyCount();
+  return (
+    <div className="list tidy-row">
+      <button className="list-row" onClick={onOpen}>
+        <span className="ico">
+          <Icons.merge size={20} />
+        </span>
+        <span className="grow title">Tidy</span>
+        {count === null ? null : count === 0 ? (
+          <span className="chip good">clear</span>
+        ) : (
+          <span className="chip accent">{count}</span>
+        )}
+        <Icons.chevron size={18} />
+      </button>
+    </div>
+  );
 }

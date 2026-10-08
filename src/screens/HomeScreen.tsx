@@ -10,84 +10,43 @@ import { NO_HISTORY, pickRound, type AutoRound } from '../store/recommendation';
 import { acrossRegions, regionsBySide } from '../model/anyFavorite';
 import { roundLabel } from '../model/autopilot';
 import { levelById } from '../model/play';
-import { recentForm } from '../model/survival';
 import { referenceIndex } from '../model/referenceIndex';
-import { displayName } from '../model/repertoire';
-import type { SessionMode, TrainingItem } from '../model/session';
-import { countDue, DAY, forecast, masteryBuckets, retention } from '../model/srs';
+import { countDue } from '../model/srs';
 import { itemsFor, repertoireList, useStore } from '../store/useStore';
-import type { Repertoire } from '../model/types';
 
 export type ModeId = 'drill' | 'survival' | 'growth' | 'play' | 'autopilot';
 
 export interface HomeScreenProps {
-  /** Launching one side's prep straight into a session, from the sheet below. */
-  onStart: (items: TrainingItem[], mode: SessionMode, title: string) => void;
   onOpenMode: (mode: ModeId) => void;
   onOpenSettings: () => void;
 }
 
-type Mode = 'due' | 'cram' | 'new';
-
-interface RepEntry {
-  rep: Repertoire;
-  items: TrainingItem[];
-  counts: ReturnType<typeof countDue>;
-  unseen: number;
-  total: number;
-  mastery: ReturnType<typeof masteryBuckets>;
-}
-
-export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenProps) {
+export function HomeScreen({ onOpenMode, onOpenSettings }: HomeScreenProps) {
   const state = useStore();
   const selection = state.settings.selection;
   const tree = openingTree(referenceIndex());
   const favorites = state.settings.favoriteOpenings;
   const regions = useMemo(() => regionsBySide(tree, selection, favorites), [tree, selection, favorites]);
   const reps = repertoiresIn(repertoireList(state), selection.color);
-  const now = Date.now();
-  const [pick, setPick] = useState<RepEntry | null>(null);
   const [autoSettings, setAutoSettings] = useState(false);
   const survival = state.survival.global;
-  const form = recentForm(survival);
 
-  const perRep = useMemo<RepEntry[]>(
-    () =>
-      reps.map((rep) => {
-        const items = acrossRegions(regions, [rep], (r, node) => itemsInRegion(tree, node, itemsFor(r)), (i) => i.cardId);
-        const cards = items.map((i) => state.cards[i.cardId]).filter(Boolean);
-        const unseen = items.length - cards.length;
-        const counts = countDue(cards, now);
-        return { rep, items, counts, unseen, total: items.length, mastery: masteryBuckets(cards) };
-      }),
+  /** Drill's waiting work in the selection: cards due now, and positions never seen. */
+  const drill = useMemo(() => {
+    const items = acrossRegions(regions, reps, (r, node) => itemsInRegion(tree, node, itemsFor(r)), (i) => i.cardId);
+    const cards = items.map((i) => state.cards[i.cardId]).filter(Boolean);
+    return { total: items.length, due: countDue(cards, Date.now()).due, unseen: items.length - cards.length };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [reps, state.cards, regions],
-  );
-
-  const allCards = Object.values(state.cards);
-  const totalItems = perRep.reduce((s, r) => s + r.total, 0);
-  const totalDue = perRep.reduce((s, r) => s + r.counts.due, 0);
-  const totalUnseen = perRep.reduce((s, r) => s + r.unseen, 0);
-  const mastery = masteryBuckets(allCards);
-  const ret = retention(allCards);
-  const week = forecast(allCards, 7, now);
-  const weekTotal = week.reduce((a, b) => a + b, 0);
-  const maxWeek = Math.max(1, ...week);
-
-  const startRep = (entry: RepEntry, mode: Mode) => {
-    setPick(null);
-    onStart(entry.items, mode, displayName(entry.rep.name));
-  };
+  }, [reps, state.cards, regions]);
 
   // What is waiting, not what one sitting will cover — a session runs until you
   // stop it.
-  const readyCount = totalDue + Math.min(totalUnseen, state.settings.drill.newPerSession);
-  const unseenTotal = totalItems - allCards.length + mastery.unseen;
+  const readyCount = drill.due + Math.min(drill.unseen, state.settings.drill.newPerSession);
 
   /**
    * Replies the database plays that nothing in the repertoire answers, grouped
    * the way Growth's own lobby groups them — so the count on the tile and the
-   * opening Next Up would start on are the same piece of work.
+   * row Growth would start on are the same piece of work.
    */
   const growthPrefs = state.settings.growth;
   const growth = useMemo(
@@ -108,12 +67,6 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
     [reps, growthPrefs.minShare, growthPrefs.maxPly, state.settings.favoriteOpenings, regions],
   );
   const gapCount = growth.reduce((sum, row) => sum + row.holes.length + row.ends.length, 0);
-  /**
-   * Gaps against the breadth of the prep they sit in. A repertoire with two
-   * holes in four hundred positions should not read the same as one with two
-   * holes in six.
-   */
-  const coverage = totalItems > 0 ? totalItems / (totalItems + gapCount) : 1;
 
   /** What Autopilot would start with, said on its button — or that there is nothing to drill. */
   const first = useMemo(() => pickRound(state, NO_HISTORY).round, [state]);
@@ -123,7 +76,13 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
     <>
       <div className="screen home">
         <StorageWarning />
-        <SelectionBar />
+        <SelectionBar
+          trailing={
+            <button className="pick gear" aria-label="Settings" onClick={onOpenSettings}>
+              <Icons.gear size={20} />
+            </button>
+          }
+        />
         <ScoreStrip />
 
         <div className="autopilot-wrap">
@@ -154,150 +113,45 @@ export function HomeScreen({ onStart, onOpenMode, onOpenSettings }: HomeScreenPr
         <div className="mode-grid">
           <Tile
             name="Survival"
+            icon={<Icons.flame size={20} />}
             tag={survival.runs > 0 ? { text: `best ${survival.best}` } : { text: 'new', tone: 'accent' }}
-            art={
-              <Gauge
-                parts={[
-                  { width: form !== null ? pct(form, survival.best) : 0, color: 'var(--accent)' },
-                  { width: 100 - (form !== null ? pct(form, survival.best) : 0), color: 'var(--surface-3)' },
-                ]}
-              />
-            }
             onClick={() => onOpenMode('survival')}
           />
           <Tile
             name="Drill"
+            icon={<Icons.cards size={20} />}
             tag={
-              totalItems === 0
+              drill.total === 0
                 ? { text: 'empty' }
                 : readyCount > 0
                   ? { text: `${readyCount} ready`, tone: 'accent' }
                   : { text: 'clear', tone: 'good' }
             }
-            art={
-              <Gauge
-                parts={[
-                  { width: pct(mastery.mature, totalItems), color: 'var(--good)' },
-                  { width: pct(mastery.young, totalItems), color: '#7dd3fc' },
-                  { width: pct(mastery.learning, totalItems), color: 'var(--warn)' },
-                ]}
-              />
-            }
             onClick={() => onOpenMode('drill')}
           />
           <Tile
             name="Growth"
+            icon={<Icons.sprout size={20} />}
             tag={
-              totalItems === 0
+              drill.total === 0
                 ? { text: 'empty' }
                 : gapCount === 0
                   ? { text: 'clear', tone: 'good' }
                   : { text: `${gapCount}`, tone: 'warn' }
             }
-            art={
-              <Gauge
-                parts={
-                  totalItems === 0
-                    ? []
-                    : [
-                        { width: coverage * 100, color: 'var(--good)' },
-                        { width: (1 - coverage) * 100, color: 'var(--warn)' },
-                      ]
-                }
-              />
-            }
             onClick={() => onOpenMode('growth')}
           />
           <Tile
             name="Play"
+            icon={<Icons.play size={20} />}
             tag={{ text: levelById(state.settings.play.level).name }}
             onClick={() => onOpenMode('play')}
           />
         </div>
-
-        <Section title="Repertoire" />
-        {perRep.length === 0 ? (
-          <div className="card small muted">
-            Nothing prepared yet. Build a line in Growth, or save the opening from a game in Play — everything
-            else here works from what you keep.
-          </div>
-        ) : (
-          <div className="list">
-            {perRep.map((entry) => (
-              <RepertoireRow key={entry.rep.id} entry={entry} onOpen={() => setPick(entry)} />
-            ))}
-          </div>
-        )}
-
-        <Section title="This week" aside={`${weekTotal} reviews`} />
-        <div className="card">
-          <div className="forecast">
-            {week.map((count, i) => (
-              <div className="day" key={i}>
-                <div
-                  className={`bar${i === 0 ? ' today' : ''}`}
-                  style={{ height: `${Math.max(4, (count / maxWeek) * 100)}%` }}
-                  title={`${count}`}
-                />
-                <div className="lbl">{i === 0 ? 'Now' : dayLabel(now + i * DAY)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <Section
-          title="Mastery"
-          aside={ret === null ? `${totalItems} positions` : `${Math.round(ret * 100)}% recall`}
-        />
-        <div className="card">
-          <div className="bar-stack">
-            <i style={{ width: `${pct(mastery.mature, totalItems)}%`, background: 'var(--good)' }} />
-            <i style={{ width: `${pct(mastery.young, totalItems)}%`, background: '#7dd3fc' }} />
-            <i style={{ width: `${pct(mastery.learning, totalItems)}%`, background: 'var(--warn)' }} />
-            <i style={{ width: `${pct(unseenTotal, totalItems)}%`, background: 'var(--surface-3)' }} />
-          </div>
-          <div className="pills mt-12">
-            <span className="pill"><i style={{ background: 'var(--good)' }} /><b>{mastery.mature}</b> mature</span>
-            <span className="pill"><i style={{ background: '#7dd3fc' }} /><b>{mastery.young}</b> young</span>
-            <span className="pill"><i style={{ background: 'var(--warn)' }} /><b>{mastery.learning}</b> learning</span>
-            <span className="pill"><i style={{ background: 'var(--surface-3)' }} /><b>{unseenTotal}</b> unseen</span>
-          </div>
-        </div>
-
-        <button className="btn block mt-16" onClick={onOpenSettings}>
-          Settings
-        </button>
       </div>
 
       {/* Outside the scrolling screen: on iOS its touch scrolling makes a layer the tab bar would cover. */}
       <AutopilotSettings open={autoSettings} onClose={() => setAutoSettings(false)} />
-      <Sheet open={!!pick} onClose={() => setPick(null)} title={pick ? displayName(pick.rep.name) : ''}>
-        {pick && (
-          <div className="list">
-            <button className="list-row" disabled={pick.counts.due === 0} onClick={() => startRep(pick, 'due')}>
-              <span className="grow">
-                <div className="title">Review</div>
-                <div className="meta">{pick.counts.due === 0 ? 'Nothing due' : `${pick.counts.due} due`}</div>
-              </span>
-              <Icons.chevron size={18} />
-            </button>
-            <button className="list-row" disabled={pick.unseen === 0} onClick={() => startRep(pick, 'new')}>
-              <span className="grow">
-                <div className="title">Learn</div>
-                <div className="meta">{pick.unseen === 0 ? 'All seen' : `${pick.unseen} new`}</div>
-              </span>
-              <Icons.chevron size={18} />
-            </button>
-            <button className="list-row" onClick={() => startRep(pick, 'cram')}>
-              <span className="grow">
-                <div className="title">Drill</div>
-                <div className="meta">All {pick.total} positions, ignoring the schedule</div>
-              </span>
-              <Icons.chevron size={18} />
-            </button>
-          </div>
-        )}
-      </Sheet>
     </>
   );
 }
@@ -309,13 +163,6 @@ interface Tag {
   tone?: 'accent' | 'good' | 'warn';
 }
 
-/**
- * One mode as a square.
- *
- * The name says what it is, the tag says where you stand, and the graphic at
- * the foot says it again in a shape you can read without counting. Tapping it
- * opens that mode's own setup screen.
- */
 /**
  * What the first round is about, under its mode's name. A
  * Survival run from move one is a side and nothing more, since it follows
@@ -339,41 +186,14 @@ function firstUp(round: AutoRound): string {
   return about;
 }
 
-function Tile({
-  name,
-  tag,
-  art,
-  wide,
-  onClick,
-}: {
-  name: string;
-  tag: Tag;
-  /** The gauge or bar under the name. Play has no queue to draw. */
-  art?: ReactNode;
-  /** Spans both columns, for a mode that is an action rather than a queue. */
-  wide?: boolean;
-  onClick: () => void;
-}) {
+/** One mode as a short tile: its icon, its name, and where you stand in it. */
+function Tile({ name, icon, tag, onClick }: { name: string; icon: ReactNode; tag: Tag; onClick: () => void }) {
   return (
-    <button className={`mode-tile${wide ? ' wide' : ''}`} onClick={onClick}>
-      <div className="head">
-        <span className="name">{name}</span>
-        <span className={`tag${tag.tone ? ` ${tag.tone}` : ''}`}>{tag.text}</span>
-      </div>
-      <div className="fill" />
-      {art && <div className="art">{art}</div>}
+    <button className="mode-tile" onClick={onClick}>
+      <span className="ico">{icon}</span>
+      <span className="name truncate">{name}</span>
+      <span className={`tag${tag.tone ? ` ${tag.tone}` : ''}`}>{tag.text}</span>
     </button>
-  );
-}
-
-/** A segmented bar. Parts are percentages of the whole width. */
-function Gauge({ parts }: { parts: { width: number; color: string }[] }) {
-  return (
-    <span className="gauge">
-      {parts.map((part, i) => (
-        <i key={i} style={{ width: `${Math.max(0, part.width)}%`, background: part.color }} />
-      ))}
-    </span>
   );
 }
 
@@ -409,37 +229,6 @@ function StorageWarning() {
       )}
     </div>
   );
-}
-
-function RepertoireRow({ entry, onOpen }: { entry: RepEntry; onOpen: () => void }) {
-  const { rep, counts, total, mastery } = entry;
-  return (
-    <button className="list-row" onClick={onOpen}>
-      <span className={`side ${rep.color}`} />
-      <span className="grow">
-        <div className="title truncate">{displayName(rep.name)}</div>
-        <div className="mini-bar" style={{ marginTop: 6 }}>
-          <i style={{ width: `${pct(mastery.mature, total)}%`, background: 'var(--good)' }} />
-          <i style={{ width: `${pct(mastery.young, total)}%`, background: '#7dd3fc' }} />
-          <i style={{ width: `${pct(mastery.learning, total)}%`, background: 'var(--warn)' }} />
-        </div>
-      </span>
-      {counts.due > 0 ? (
-        <span className="chip accent">{counts.due} due</span>
-      ) : (
-        <span className="val">{total}</span>
-      )}
-      <Icons.chevron size={18} />
-    </button>
-  );
-}
-
-function pct(n: number, total: number) {
-  return total ? (n / total) * 100 : 0;
-}
-
-function dayLabel(ts: number) {
-  return new Date(ts).toLocaleDateString(undefined, { weekday: 'narrow' });
 }
 
 /**

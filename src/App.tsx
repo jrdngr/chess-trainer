@@ -4,7 +4,6 @@ import { AnalysisScreen } from './screens/AnalysisScreen';
 import { StatsScreen } from './screens/StatsScreen';
 import { ImportScreen } from './screens/ImportScreen';
 import { RepertoireScreen } from './screens/RepertoireScreen';
-import { TidyScreen } from './screens/TidyScreen';
 import { SettingsSheet } from './screens/SettingsSheet';
 import { HomeScreen, type ModeId } from './screens/HomeScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
@@ -21,7 +20,7 @@ import { countDue } from './model/srs';
 import { needsOnboarding, useStore } from './store/useStore';
 import { setEventPlace } from './model/events';
 
-type Tab = 'home' | 'repertoire' | 'tidy' | 'stats' | 'analysis';
+type Tab = 'home' | 'repertoire' | 'stats' | 'analysis';
 
 export default function App() {
   const ready = useStore((s) => s.ready);
@@ -85,11 +84,11 @@ export default function App() {
     setTab('analysis');
   };
 
-  /** Leave a mode for Tidy, open on the position a round ended at. */
+  /** Leave a mode for Tidy, on the Repertoire tab, open on the position a round ended at. */
   const tidyFrom = (find: TidyFind) => {
     setTidyFocus(find);
     setMode(null);
-    setTab('tidy');
+    setTab('repertoire');
   };
 
   const dueCount = countDue(Object.values(cards)).due;
@@ -152,7 +151,6 @@ export default function App() {
         <>
           {tab === 'home' && (
             <HomeScreen
-              onStart={startSession}
               onOpenMode={(id) => setMode({ id })}
               onOpenSettings={() => setSettingsOpen(true)}
             />
@@ -165,9 +163,10 @@ export default function App() {
                 setExplorePath(sans);
                 setTab('analysis');
               }}
+              tidyFocus={tidyFocus}
+              onConsumedTidyFocus={() => setTidyFocus(null)}
             />
           )}
-          {tab === 'tidy' && <TidyScreen focus={tidyFocus} onConsumedFocus={() => setTidyFocus(null)} />}
           {tab === 'stats' && (
             <StatsScreen target={statsFor} onConsumedTarget={() => setStatsFor(undefined)} />
           )}
@@ -195,12 +194,6 @@ export default function App() {
               active={tab === 'repertoire'}
               onClick={() => setTab('repertoire')}
               icon={<Icons.tree filled={tab === 'repertoire'} />}
-            />
-            <NavButton
-              label="Tidy"
-              active={tab === 'tidy'}
-              onClick={() => setTab('tidy')}
-              icon={<Icons.merge filled={tab === 'tidy'} />}
             />
             <NavButton
               label="Stats"

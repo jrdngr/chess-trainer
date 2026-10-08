@@ -7,6 +7,7 @@ import { itemsInRegion, repertoiresIn } from '../../model/selection';
 import { acrossRegions, isAnyFavorite, regionsBySide } from '../../model/anyFavorite';
 import { openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
+import { DAY, forecast, masteryBuckets, retention } from '../../model/srs';
 import { itemsFor, repertoireList, useStore } from '../../store/useStore';
 
 const FORMS = (['lines', 'positions'] as const).map((value) => ({ value, label: FORM_LABELS[value] }));
@@ -43,6 +44,17 @@ export function Setup({
   const due = dueLines(lineList, state.lineCards).length;
   const lineMode = prefs.form === 'lines';
   const empty = lineMode ? lines === 0 : items.length === 0;
+
+  // The schedule of the position cards in scope: what comes due this week, and
+  // where each card stands.
+  const now = Date.now();
+  const cards = items.map((i) => state.cards[i.cardId]).filter(Boolean);
+  const week = forecast(cards, 7, now);
+  const weekTotal = week.reduce((a, b) => a + b, 0);
+  const maxWeek = Math.max(1, ...week);
+  const mastery = masteryBuckets(cards);
+  const unseen = items.length - cards.length + mastery.unseen;
+  const ret = retention(cards);
 
   const set = (patch: Partial<DrillPrefs>) => setModePrefs('drill', patch);
 
@@ -134,7 +146,50 @@ export function Setup({
             onToggle={() => set({ explain: !prefs.explain })}
           />
         </div>
+
+        <Section title="This week" aside={`${weekTotal} reviews`} />
+        <div className="card">
+          <div className="forecast">
+            {week.map((count, i) => (
+              <div className="day" key={i}>
+                <div
+                  className={`bar${i === 0 ? ' today' : ''}`}
+                  style={{ height: `${Math.max(4, (count / maxWeek) * 100)}%` }}
+                  title={`${count}`}
+                />
+                <div className="lbl">{i === 0 ? 'Now' : dayLabel(now + i * DAY)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <Section
+          title="Mastery"
+          aside={ret === null ? `${items.length} positions` : `${Math.round(ret * 100)}% recall`}
+        />
+        <div className="card">
+          <div className="bar-stack">
+            <i style={{ width: `${pct(mastery.mature, items.length)}%`, background: 'var(--good)' }} />
+            <i style={{ width: `${pct(mastery.young, items.length)}%`, background: '#7dd3fc' }} />
+            <i style={{ width: `${pct(mastery.learning, items.length)}%`, background: 'var(--warn)' }} />
+            <i style={{ width: `${pct(unseen, items.length)}%`, background: 'var(--surface-3)' }} />
+          </div>
+          <div className="pills mt-12">
+            <span className="pill"><i style={{ background: 'var(--good)' }} /><b>{mastery.mature}</b> mature</span>
+            <span className="pill"><i style={{ background: '#7dd3fc' }} /><b>{mastery.young}</b> young</span>
+            <span className="pill"><i style={{ background: 'var(--warn)' }} /><b>{mastery.learning}</b> learning</span>
+            <span className="pill"><i style={{ background: 'var(--surface-3)' }} /><b>{unseen}</b> unseen</span>
+          </div>
+        </div>
       </div>
     </>
   );
+}
+
+function pct(n: number, total: number) {
+  return total ? (n / total) * 100 : 0;
+}
+
+function dayLabel(ts: number) {
+  return new Date(ts).toLocaleDateString(undefined, { weekday: 'narrow' });
 }
