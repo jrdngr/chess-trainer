@@ -592,7 +592,6 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .mode-tile:active { background: var(--surface-2); transform: scale(0.98); }
 .mode-tile .ico { flex: none; display: flex; color: var(--accent); }
 .mode-tile .name { flex: 1; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; min-width: 0; }
-.mode-tile .tag { margin-top: 0; }
 
 .tag {
   margin-top: 1px;

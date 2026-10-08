@@ -3,16 +3,11 @@ import { Icons, Section, Sheet, Toggle } from '../components/ui';
 import { SelectionBar } from '../components/Selection';
 import { ScoreStrip } from '../components/ScoreBar';
 import { nodeById, openingTree } from '../model/openingTree';
-import { itemsInRegion, repertoiresIn } from '../model/selection';
-import { growthRows } from '../model/growth';
 import { streak } from '../model/scoring';
 import { NO_HISTORY, pickRound, type AutoRound } from '../store/recommendation';
-import { acrossRegions, regionsBySide } from '../model/anyFavorite';
 import { roundLabel } from '../model/autopilot';
-import { levelById } from '../model/play';
 import { referenceIndex } from '../model/referenceIndex';
-import { countDue } from '../model/srs';
-import { itemsFor, repertoireList, useStore } from '../store/useStore';
+import { useStore } from '../store/useStore';
 
 export type ModeId = 'drill' | 'survival' | 'growth' | 'play' | 'autopilot';
 
@@ -23,50 +18,7 @@ export interface HomeScreenProps {
 
 export function HomeScreen({ onOpenMode, onOpenSettings }: HomeScreenProps) {
   const state = useStore();
-  const selection = state.settings.selection;
-  const tree = openingTree(referenceIndex());
-  const favorites = state.settings.favoriteOpenings;
-  const regions = useMemo(() => regionsBySide(tree, selection, favorites), [tree, selection, favorites]);
-  const reps = repertoiresIn(repertoireList(state), selection.color);
   const [autoSettings, setAutoSettings] = useState(false);
-  const survival = state.survival.global;
-
-  /** Drill's waiting work in the selection: cards due now, and positions never seen. */
-  const drill = useMemo(() => {
-    const items = acrossRegions(regions, reps, (r, node) => itemsInRegion(tree, node, itemsFor(r)), (i) => i.cardId);
-    const cards = items.map((i) => state.cards[i.cardId]).filter(Boolean);
-    return { total: items.length, due: countDue(cards, Date.now()).due, unseen: items.length - cards.length };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reps, state.cards, regions]);
-
-  // What is waiting, not what one sitting will cover — a session runs until you
-  // stop it.
-  const readyCount = drill.due + Math.min(drill.unseen, state.settings.drill.newPerSession);
-
-  /**
-   * Replies the database plays that nothing in the repertoire answers, grouped
-   * the way Growth's own lobby groups them — so the count on the tile and the
-   * row Growth would start on are the same piece of work.
-   */
-  const growthPrefs = state.settings.growth;
-  const growth = useMemo(
-    () =>
-      acrossRegions(
-        regions,
-        reps,
-        (rep, node) =>
-          growthRows([rep], referenceIndex(), {
-            minShare: growthPrefs.minShare,
-            maxPly: growthPrefs.maxPly,
-            starred: state.settings.favoriteOpenings,
-            region: { tree, node },
-          }),
-        (row) => row.id,
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [reps, growthPrefs.minShare, growthPrefs.maxPly, state.settings.favoriteOpenings, regions],
-  );
-  const gapCount = growth.reduce((sum, row) => sum + row.holes.length + row.ends.length, 0);
 
   /** What Autopilot would start with, said on its button — or that there is nothing to drill. */
   const first = useMemo(() => pickRound(state, NO_HISTORY).round, [state]);
@@ -114,37 +66,21 @@ export function HomeScreen({ onOpenMode, onOpenSettings }: HomeScreenProps) {
           <Tile
             name="Survival"
             icon={<Icons.flame size={20} />}
-            tag={survival.runs > 0 ? { text: `best ${survival.best}` } : { text: 'new', tone: 'accent' }}
             onClick={() => onOpenMode('survival')}
           />
           <Tile
             name="Drill"
             icon={<Icons.cards size={20} />}
-            tag={
-              drill.total === 0
-                ? { text: 'empty' }
-                : readyCount > 0
-                  ? { text: `${readyCount} ready`, tone: 'accent' }
-                  : { text: 'clear', tone: 'good' }
-            }
             onClick={() => onOpenMode('drill')}
           />
           <Tile
             name="Growth"
             icon={<Icons.sprout size={20} />}
-            tag={
-              drill.total === 0
-                ? { text: 'empty' }
-                : gapCount === 0
-                  ? { text: 'clear', tone: 'good' }
-                  : { text: `${gapCount}`, tone: 'warn' }
-            }
             onClick={() => onOpenMode('growth')}
           />
           <Tile
             name="Play"
             icon={<Icons.play size={20} />}
-            tag={{ text: levelById(state.settings.play.level).name }}
             onClick={() => onOpenMode('play')}
           />
         </div>
@@ -158,10 +94,6 @@ export function HomeScreen({ onOpenMode, onOpenSettings }: HomeScreenProps) {
 
 /* ── the grid ───────────────────────────────────────────────────────────── */
 
-interface Tag {
-  text: string;
-  tone?: 'accent' | 'good' | 'warn';
-}
 
 /**
  * What the first round is about, under its mode's name. A
@@ -186,13 +118,12 @@ function firstUp(round: AutoRound): string {
   return about;
 }
 
-/** One mode as a short tile: its icon, its name, and where you stand in it. */
-function Tile({ name, icon, tag, onClick }: { name: string; icon: ReactNode; tag: Tag; onClick: () => void }) {
+/** One mode as a short tile: its icon and its name. */
+function Tile({ name, icon, onClick }: { name: string; icon: ReactNode; onClick: () => void }) {
   return (
     <button className="mode-tile" onClick={onClick}>
       <span className="ico">{icon}</span>
       <span className="name truncate">{name}</span>
-      <span className={`tag${tag.tone ? ` ${tag.tone}` : ''}`}>{tag.text}</span>
     </button>
   );
 }
