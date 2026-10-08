@@ -820,17 +820,16 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   box-shadow: 0 0 7px -1px var(--glow);
   transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* A leading tip in the next tier's color: what the bar is filling toward. */
-.milestone .fill::after,
-.header-edge .fill::after {
-  content: '';
+/* The paint spans the whole track, so its blend toward the next tier sits at
+   fixed points on the track and the fill uncovers it as it grows. */
+.milestone .track, .header-edge { container-type: inline-size; }
+.milestone .fill, .header-edge .fill { overflow: hidden; }
+.milestone .fill .paint, .header-edge .fill .paint {
   position: absolute;
-  right: 0;
+  left: 0;
   top: 0;
   bottom: 0;
-  width: 14px;
-  border-radius: inherit;
-  background: linear-gradient(90deg, transparent, var(--tip));
+  width: 100cqw;
 }
 
 /* ── the rating along a round's header ─────────────────────────────────── */
@@ -840,7 +839,6 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .header-rating { position: relative; display: inline-flex; align-items: baseline; gap: 4px; flex: none; font-weight: 700; color: var(--text); }
 .header-rating .sep { margin: 0 1px 0 4px; font-weight: 400; color: var(--text-2); }
 .header-rating .tier { color: var(--text-2); }
-.header-rating.dim, .header-edge.dim { opacity: 0.4; }
 .header-pop {
   position: absolute;
   right: 0;
@@ -873,6 +871,23 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   bottom: 0;
   box-shadow: 0 0 8px -1px var(--glow);
   border-radius: 3px;
+}
+/* Answers banked on the way in: striped, ahead of the fill or eating into it. */
+.header-edge .bank {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  border-radius: 3px;
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--glow) 70%, transparent) 0 3px,
+    transparent 3px 6px
+  );
+  transition: left 0.5s ease, width 0.5s ease;
+}
+.header-edge .bank.loss {
+  background: repeating-linear-gradient(-45deg, var(--bad) 0 3px, transparent 3px 6px);
 }
 .header-edge .stretch {
   position: absolute;

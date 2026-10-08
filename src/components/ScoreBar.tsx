@@ -39,15 +39,9 @@ export function RankBar({ rank, centre }: { rank: Rank; centre?: React.ReactNode
       </div>
       <div className="rail">
         <span className="track">
-          <span
-            className="fill"
-            style={{
-              width: `${rank.progress * 100}%`,
-              background: fill,
-              ['--glow' as string]: fill,
-              ['--tip' as string]: tipColor(rank.rating),
-            }}
-          />
+          <span className="fill" style={{ width: `${rank.progress * 100}%`, ['--glow' as string]: fill }}>
+            <span className="paint" style={{ background: paintFor(rank.rating) }} />
+          </span>
         </span>
       </div>
     </div>
@@ -83,10 +77,28 @@ function fillColor(rating: number): string {
   return (rank.held ?? rank.next ?? UNRATED).color;
 }
 
-/** The fill's leading tip: the tier it is filling toward, or the top tier's own at the top. */
-function tipColor(rating: number): string {
+/** Where along the track the next tier's color starts to come in, and how much of it the end holds. */
+const BLEND_FROM = 0.8;
+const BLEND_MAX = 0.45;
+
+/** Two hex colors mixed, `amount` of the way from `a` to `b`. */
+function mixHex(a: string, b: string, amount: number): string {
+  const channels = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const [x, y] = [channels(a), channels(b)];
+  return `#${x.map((c, i) => Math.round(c + (y[i] - c) * amount).toString(16).padStart(2, '0')).join('')}`;
+}
+
+/**
+ * The fill's paint, laid along the whole track so it does not stretch as the
+ * fill grows: the tier's color, leaning toward the next tier's from 80% of
+ * the way and growing stronger to the end, never all the way there.
+ */
+function paintFor(rating: number): string {
   const rank = rankOf(rating);
-  return (rank.next ?? rank.held ?? UNRATED).color;
+  const own = fillColor(rating);
+  const next = rank.held && rank.next ? rank.next.color : null;
+  if (!next) return own;
+  return `linear-gradient(90deg, ${own} ${BLEND_FROM * 100}%, ${mixHex(own, next, BLEND_MAX)} 100%)`;
 }
 
 function restingView(rating: number): EdgeView {
@@ -113,12 +125,15 @@ function restingView(rating: number): EdgeView {
  * promotion never reads as a loss; crossing one down flashes the lower tier's
  * color full and shrinks to where the rating landed.
  *
- * Until the run's line reaches the opening its rating cannot move, so the
- * bar is dimmed. Any opening has no rating and gets nothing.
+ * Until the run's line reaches the opening its rating cannot move: answers
+ * given on the way in are banked, and land together when the line gets
+ * there. `banked` is where the rating would then stand, drawn as a striped
+ * stretch ahead of the fill, or a red one eating into it, so the answers
+ * visibly count before they land. Any opening has no rating and gets nothing.
  */
 export function useHeaderRating(
   openingId: string,
-  reached: boolean,
+  banked: number | null,
 ): { label: React.ReactNode; edge: React.ReactNode } | null {
   // Two numbers, not the stats object: an opening never played has none, and a
   // fresh empty one every render would never settle.
@@ -174,8 +189,9 @@ export function useHeaderRating(
   if (openingId === '' || nodeById(openingTree(referenceIndex()), openingId).depth === 0) return null;
 
   const rank = rankOf(view.rating, rated);
+  const bank = bankedStretch(view, banked);
   const label = (
-    <span className={`header-rating${reached ? '' : ' dim'}`}>
+    <span className="header-rating">
       <span className="sep">·</span>
       <span className="tier" style={{ color: rank.held?.color }}>
         {rated === 0 ? NEW_LABEL : rank.heldLabel}
@@ -189,17 +205,27 @@ export function useHeaderRating(
     </span>
   );
   const edge = (
-    <div className={`header-edge${reached ? '' : ' dim'}`} aria-hidden>
+    <div className="header-edge" aria-hidden>
+      {bank && (
+        <span
+          className={`bank${bank.gain ? '' : ' loss'}`}
+          style={{
+            left: `${bank.from * 100}%`,
+            width: `${(bank.to - bank.from) * 100}%`,
+            ['--glow' as string]: fillColor(view.rating),
+          }}
+        />
+      )}
       <span
         className="fill"
         style={{
           width: `${view.width * 100}%`,
-          background: view.color,
           ['--glow' as string]: view.color,
-          ['--tip' as string]: tipColor(view.rating),
           transition: view.speed ? `width ${view.speed}ms cubic-bezier(0.22, 1, 0.36, 1)` : 'none',
         }}
-      />
+      >
+        <span className="paint" style={{ background: paintFor(view.rating) }} />
+      </span>
       {view.stretch && view.stretch.from !== view.stretch.to && (
         <span
           key={view.stretch.key}
@@ -214,6 +240,20 @@ export function useHeaderRating(
     </div>
   );
   return { label, edge };
+}
+
+/**
+ * The banked stretch, on the track: from the fill to where the banked rating
+ * would put it, within the tier on show. A bank past the next rung runs to
+ * the end; one below the tier's floor runs back to the start.
+ */
+function bankedStretch(view: EdgeView, banked: number | null) {
+  if (banked === null || view.flash) return null;
+  const now = rankOf(view.rating);
+  const then = rankOf(banked);
+  const end = then.reached > now.reached ? 1 : then.reached < now.reached ? 0 : then.progress;
+  if (Math.abs(end - view.width) < 0.005) return null;
+  return { from: Math.min(end, view.width), to: Math.max(end, view.width), gain: end > view.width };
 }
 
 /**

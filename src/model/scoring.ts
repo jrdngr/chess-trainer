@@ -69,6 +69,17 @@ export function ratingAfter(rating: number, correct: boolean): number {
   return Math.round(Math.max(RATING.floor, moved) * 100) / 100;
 }
 
+/**
+ * Where an opening's rating would stand once a run's line reaches it: its
+ * rating now with the run's rated answers so far applied, in order — the
+ * catch-up `applyResult` gives an opening reached late.
+ */
+export function bankedRating(state: ScoreState, id: string, answers: MoveResult[]): number {
+  let rating = nodeStats(state, id).rating;
+  for (const answer of answers) if (answer.rated) rating = ratingAfter(rating, answer.correct);
+  return rating;
+}
+
 /** What one result would move a rating by, right and wrong. */
 export function ratingSwing(rating: number): { up: number; down: number } {
   return {
