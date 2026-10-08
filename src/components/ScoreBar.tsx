@@ -77,9 +77,13 @@ function fillColor(rating: number): string {
   return (rank.held ?? rank.next ?? UNRATED).color;
 }
 
-/** Where along the track the next tier's color starts to come in, and how much of it the end holds. */
-const BLEND_FROM = 0.8;
-const BLEND_MAX = 0.45;
+/**
+ * Where along the track the next tier's color starts to come in, how much of
+ * it the three-quarter mark holds (subtle), and how much the end holds.
+ */
+const BLEND_FROM = 0.5;
+const BLEND_MID = 0.2;
+const BLEND_MAX = 0.9;
 
 /** Two hex colors mixed, `amount` of the way from `a` to `b`. */
 function mixHex(a: string, b: string, amount: number): string {
@@ -91,14 +95,16 @@ function mixHex(a: string, b: string, amount: number): string {
 /**
  * The fill's paint, laid along the whole track so it does not stretch as the
  * fill grows: the tier's color, leaning toward the next tier's from 80% of
- * the way and growing stronger to the end, never all the way there.
+ * the way, subtle at first and growing stronger to the end, never all the
+ * way there.
  */
 function paintFor(rating: number): string {
   const rank = rankOf(rating);
   const own = fillColor(rating);
   const next = rank.held && rank.next ? rank.next.color : null;
   if (!next) return own;
-  return `linear-gradient(90deg, ${own} ${BLEND_FROM * 100}%, ${mixHex(own, next, BLEND_MAX)} 100%)`;
+  const mid = (BLEND_FROM + 1) / 2;
+  return `linear-gradient(90deg, ${own} ${BLEND_FROM * 100}%, ${mixHex(own, next, BLEND_MID)} ${mid * 100}%, ${mixHex(own, next, BLEND_MAX)} 100%)`;
 }
 
 function restingView(rating: number): EdgeView {
