@@ -94,9 +94,8 @@ function mixHex(a: string, b: string, amount: number): string {
 
 /**
  * The fill's paint, laid along the whole track so it does not stretch as the
- * fill grows: the tier's color, leaning toward the next tier's from 80% of
- * the way, subtle at first and growing stronger to the end, never all the
- * way there.
+ * fill grows: the tier's color, leaning toward the next tier's from halfway,
+ * subtle at first and growing stronger to the end, never all the way there.
  */
 function paintFor(rating: number): string {
   const rank = rankOf(rating);
