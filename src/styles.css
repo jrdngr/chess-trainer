@@ -850,7 +850,8 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   transform: translate(-50%, -50%);
   padding: 0 8px;
   border-radius: 6px;
-  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 45%, transparent);
+  text-shadow: 0 0 3px var(--bg), 0 0 6px var(--bg);
   font-size: 11px;
   font-weight: 700;
   line-height: 16px;
@@ -1433,14 +1434,16 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   transform: translate(-50%, -50%);
   padding: 0 7px;
   border-radius: 6px;
-  background: var(--surface-2);
+  /* See-through, so the bar shows behind the name. */
+  background: color-mix(in srgb, var(--surface-2) 45%, transparent);
+  text-shadow: 0 0 3px var(--surface-2), 0 0 6px var(--surface-2);
   font-size: 11px;
   font-weight: 700;
   line-height: 15px;
   color: var(--text-2);
   white-space: nowrap;
 }
-.qp-tile:active .tier-bar .tier-name { background: var(--surface-3); }
+.qp-tile:active .tier-bar .tier-name { background: color-mix(in srgb, var(--surface-3) 45%, transparent); }
 .qp-moves { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .qp-move { align-items: center; font-family: var(--mono); font-weight: 700; font-size: 15px; padding: 12px 4px; }
 .qp-browse {
