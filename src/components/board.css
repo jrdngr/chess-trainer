@@ -339,10 +339,11 @@
 .board .lens-arrow.theirs { stroke: rgb(239, 68, 68); }
 .board .lens-arrow.route { stroke: rgba(96, 165, 250, 0.55); stroke-width: 0.09; }
 .board .lens-arrow.threat { stroke: rgb(239, 68, 68); }
-.board .lens-head.mine path { fill: rgb(59, 130, 246); }
-.board .lens-head.theirs path { fill: rgb(239, 68, 68); }
-.board .lens-head.route path { fill: rgba(96, 165, 250, 0.55); }
-.board .lens-head.threat path { fill: rgb(239, 68, 68); }
+.board .lens-head { opacity: 0.9; }
+.board .lens-head.mine { fill: rgb(59, 130, 246); }
+.board .lens-head.theirs { fill: rgb(239, 68, 68); }
+.board .lens-head.route { fill: rgba(96, 165, 250, 0.55); }
+.board .lens-head.threat { fill: rgb(239, 68, 68); }
 
 .lens-caption {
   position: absolute;

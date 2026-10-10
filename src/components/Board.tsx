@@ -352,34 +352,26 @@ export function Board({
 
           {arrows.length > 0 && (
             <svg className="arrows" viewBox="0 0 8 8">
-              <defs>
-                <marker id="ah" markerWidth="3" markerHeight="3" refX="1.6" refY="1.5" orient="auto">
-                  <path d="M0,0 L3,1.5 L0,3 z" fill="currentColor" />
-                </marker>
-              </defs>
-              {arrows.map((a, i) => {
-                const f = squareToCoords(a.from);
-                const t = squareToCoords(a.to);
-                const fx = (orientation === 'w' ? f.file : 7 - f.file) + 0.5;
-                const fy = (orientation === 'w' ? 7 - f.rank : f.rank) + 0.5;
-                const tx = (orientation === 'w' ? t.file : 7 - t.file) + 0.5;
-                const ty = (orientation === 'w' ? 7 - t.rank : t.rank) + 0.5;
+              {(() => {
+                const drawn = arrows.map((a) => {
+                  const f = squareToCoords(a.from);
+                  const t = squareToCoords(a.to);
+                  const from = { x: (orientation === 'w' ? f.file : 7 - f.file) + 0.5, y: (orientation === 'w' ? 7 - f.rank : f.rank) + 0.5 };
+                  const to = { x: (orientation === 'w' ? t.file : 7 - t.file) + 0.5, y: (orientation === 'w' ? 7 - t.rank : t.rank) + 0.5 };
+                  return { color: a.color ?? 'var(--accent)', ...arrowShape(from, to, 0.13) };
+                });
+                // Every shaft first, then every head: a head is never hidden under another arrow's tail.
                 return (
-                  <line
-                    key={i}
-                    x1={fx}
-                    y1={fy}
-                    x2={tx}
-                    y2={ty}
-                    stroke={a.color ?? 'var(--accent)'}
-                    color={a.color ?? 'var(--accent)'}
-                    strokeWidth={0.13}
-                    strokeLinecap="round"
-                    markerEnd="url(#ah)"
-                    opacity={0.85}
-                  />
+                  <>
+                    {drawn.map((d, i) => (
+                      <line key={`s${i}`} {...d.shaft} stroke={d.color} strokeWidth={0.13} strokeLinecap="round" opacity={0.85} />
+                    ))}
+                    {drawn.map((d, i) => (
+                      <polygon key={`h${i}`} points={d.head} fill={d.color} opacity={0.85} />
+                    ))}
+                  </>
                 );
-              })}
+              })()}
             </svg>
           )}
         </div>
@@ -512,46 +504,57 @@ function LensOver({ marks, styleFor, orientation }: { marks: LensMarks; styleFor
       ))}
       {hasSvg && (
         <svg className="arrows lens-lines" viewBox="0 0 8 8">
-          <defs>
-            {(['mine', 'theirs', 'route', 'threat'] as const).map((tone) => (
-              <marker
-                key={tone}
-                id={`lens-ah-${tone}`}
-                className={`lens-head ${tone}`}
-                markerWidth="3"
-                markerHeight="3"
-                refX="1.6"
-                refY="1.5"
-                orient="auto"
-              >
-                <path d="M0,0 L3,1.5 L0,3 z" />
-              </marker>
-            ))}
-          </defs>
           {marks.lines?.map((l, i) => {
             const a = point(l.from);
             const b = point(l.to);
             return <line key={`l${i}`} className="lens-line" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />;
           })}
-          {marks.arrows?.map((l, i) => {
-            const a = point(l.from);
-            const b = point(l.to);
+          {/* Every shaft first, then every head: a head is never hidden under another arrow's tail. */}
+          {(() => {
+            const drawn = (marks.arrows ?? []).map((l) => ({
+              tone: l.tone,
+              ...arrowShape(point(l.from), point(l.to), l.tone === 'route' ? 0.09 : 0.13),
+            }));
             return (
-              <line
-                key={`a${i}`}
-                className={`lens-arrow ${l.tone}`}
-                x1={a.x}
-                y1={a.y}
-                x2={b.x}
-                y2={b.y}
-                markerEnd={`url(#lens-ah-${l.tone})`}
-              />
+              <>
+                {drawn.map((d, i) => (
+                  <line key={`a${i}`} className={`lens-arrow ${d.tone}`} {...d.shaft} />
+                ))}
+                {drawn.map((d, i) => (
+                  <polygon key={`h${i}`} className={`lens-head ${d.tone}`} points={d.head} />
+                ))}
+              </>
             );
-          })}
+          })()}
         </svg>
       )}
     </>
   );
+}
+
+/**
+ * An arrow as a shaft and a separate head, so a board can draw all the
+ * shafts before any head. The head is three stroke widths long and its tip
+ * sits a little past the target square's center; the shaft stops at the
+ * head's base (its round cap just reaching it) so a see-through color does
+ * not darken where they meet.
+ */
+export function arrowShape(from: { x: number; y: number }, to: { x: number; y: number }, width: number) {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+  const tip = { x: to.x + ux * width * 1.4, y: to.y + uy * width * 1.4 };
+  const base = { x: tip.x - ux * width * 3, y: tip.y - uy * width * 3 };
+  const half = width * 1.5;
+  const head = [
+    `${tip.x},${tip.y}`,
+    `${base.x - uy * half},${base.y + ux * half}`,
+    `${base.x + uy * half},${base.y - ux * half}`,
+  ].join(' ');
+    const back = width / 2 - 0.01;
+  return { shaft: { x1: from.x, y1: from.y, x2: base.x - ux * back, y2: base.y - uy * back }, head };
 }
 
 /**
