@@ -13,7 +13,8 @@ import { Icons } from './Icons';
  * until there is something new to say.
  */
 
-const PLAN_COLOR = 'var(--accent)';
+/** Orange reads on both square colors, where the app's violet sank into the dark ones. */
+const PLAN_COLOR = '#ff8a3d';
 const TRADE_COLOR = 'var(--good)';
 
 interface CardArgs {

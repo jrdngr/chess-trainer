@@ -361,13 +361,17 @@ export function Board({
                   return { color: a.color ?? 'var(--accent)', ...arrowShape(from, to, 0.13) };
                 });
                 // Every shaft first, then every head: a head is never hidden under another arrow's tail.
+                // A dark edge under each keeps it readable on light and dark squares alike.
                 return (
                   <>
                     {drawn.map((d, i) => (
-                      <line key={`s${i}`} {...d.shaft} stroke={d.color} strokeWidth={0.13} strokeLinecap="round" opacity={0.85} />
+                      <line key={`e${i}`} {...d.shaft} className="arrow-edge" strokeWidth={0.13 + ARROW_EDGE * 2} strokeLinecap="round" />
                     ))}
                     {drawn.map((d, i) => (
-                      <polygon key={`h${i}`} points={d.head} fill={d.color} opacity={0.85} />
+                      <line key={`s${i}`} {...d.shaft} stroke={d.color} strokeWidth={0.13} strokeLinecap="round" />
+                    ))}
+                    {drawn.map((d, i) => (
+                      <polygon key={`h${i}`} points={d.head} fill={d.color} className="arrow-head" />
                     ))}
                   </>
                 );
@@ -518,6 +522,9 @@ function LensOver({ marks, styleFor, orientation }: { marks: LensMarks; styleFor
             return (
               <>
                 {drawn.map((d, i) => (
+                  <line key={`e${i}`} className={`arrow-edge lens-edge ${d.tone}`} {...d.shaft} />
+                ))}
+                {drawn.map((d, i) => (
                   <line key={`a${i}`} className={`lens-arrow ${d.tone}`} {...d.shaft} />
                 ))}
                 {drawn.map((d, i) => (
@@ -539,6 +546,9 @@ function LensOver({ marks, styleFor, orientation }: { marks: LensMarks; styleFor
  * head's base (its round cap just reaching it) so a see-through color does
  * not darken where they meet.
  */
+/** The dark edge drawn around every arrow, in board squares. */
+const ARROW_EDGE = 0.025;
+
 export function arrowShape(from: { x: number; y: number }, to: { x: number; y: number }, width: number) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;

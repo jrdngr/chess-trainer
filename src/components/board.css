@@ -334,15 +334,14 @@
   stroke-dasharray: 0.18 0.12;
   stroke-linecap: round;
 }
-.board .lens-arrow { stroke-width: 0.13; stroke-linecap: round; opacity: 0.9; }
+.board .lens-arrow { stroke-width: 0.13; stroke-linecap: round; }
 .board .lens-arrow.mine { stroke: rgb(59, 130, 246); }
 .board .lens-arrow.theirs { stroke: rgb(239, 68, 68); }
-.board .lens-arrow.route { stroke: rgba(96, 165, 250, 0.55); stroke-width: 0.09; }
+.board .lens-arrow.route { stroke: rgb(96, 165, 250); stroke-width: 0.09; }
 .board .lens-arrow.threat { stroke: rgb(239, 68, 68); }
-.board .lens-head { opacity: 0.9; }
 .board .lens-head.mine { fill: rgb(59, 130, 246); }
 .board .lens-head.theirs { fill: rgb(239, 68, 68); }
-.board .lens-head.route { fill: rgba(96, 165, 250, 0.55); }
+.board .lens-head.route { fill: rgb(96, 165, 250); }
 .board .lens-head.threat { fill: rgb(239, 68, 68); }
 
 .lens-caption {
@@ -463,7 +462,7 @@
   text-align: left;
   color: inherit;
 }
-.plan-kind { flex: none; font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; }
+.plan-kind { flex: none; font-size: 12px; font-weight: 700; color: #ff8a3d; text-transform: uppercase; letter-spacing: 0.04em; }
 .plan-kind.good { color: var(--good); }
 .plan-chev { flex: none; display: inline-flex; color: var(--text-3); transform: rotate(90deg); transition: transform 0.15s; }
 .plan-chev.open { transform: rotate(-90deg); }
@@ -473,3 +472,10 @@
 .plan-steps li + li { margin-top: 4px; }
 .plan-steps li.done { color: var(--text-3); }
 .plan-done { display: inline-flex; vertical-align: -2px; margin-right: 4px; color: var(--good); }
+
+/* Arrows: a dark edge under every shaft and around every head, so they read on both square colors. */
+.board .arrow-edge { stroke: rgba(10, 12, 20, 0.7); stroke-linecap: round; }
+.board .arrow-head { stroke: rgba(10, 12, 20, 0.7); stroke-width: 0.025; stroke-linejoin: round; paint-order: stroke; }
+.board .lens-edge { stroke-width: 0.18; }
+.board .lens-edge.route { stroke-width: 0.14; }
+.board .lens-head { stroke: rgba(10, 12, 20, 0.7); stroke-width: 0.025; stroke-linejoin: round; }
