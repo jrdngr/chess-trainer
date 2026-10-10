@@ -242,3 +242,168 @@
   .move-score span { animation: none; }
   .board-wrap .board { transition: filter 0.2s; }
 }
+
+/* ── lenses: what a held lens draws over the position ──────────────────── */
+.board .piece.ghost { opacity: 0.18; }
+.board .lens-tint { position: absolute; pointer-events: none; z-index: 1; }
+.board .lens-zone {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
+}
+.board .lens-dot,
+.board .lens-empty,
+.board .lens-tag,
+.board .lens-star,
+.board .lens-pips,
+.board .lens-shield {
+  position: absolute;
+  pointer-events: none;
+  display: flex;
+}
+.board .lens-dot { z-index: 2; align-items: center; justify-content: center; }
+.board .lens-dot i {
+  width: 22%;
+  height: 22%;
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.9);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25);
+}
+.board .lens-empty { z-index: 2; align-items: center; justify-content: center; }
+.board .lens-empty i {
+  width: 52%;
+  height: 52%;
+  border-radius: 50%;
+  border: 2px dashed rgba(239, 68, 68, 0.9);
+}
+.board .lens-ring {
+  position: absolute;
+  pointer-events: none;
+  z-index: 6;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px currentColor;
+}
+.board .lens-ring.bad { color: rgb(239, 68, 68); }
+.board .lens-ring.warn { color: rgb(249, 115, 22); }
+.board .lens-ring.mine { color: rgb(59, 130, 246); }
+.board .lens-ring.theirs { color: rgb(239, 68, 68); }
+.board .lens-tag { z-index: 6; }
+.board .lens-tag i {
+  position: absolute;
+  top: 7%;
+  right: 7%;
+  width: 24%;
+  height: 24%;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
+.board .lens-tag.bad i { background: rgb(239, 68, 68); }
+.board .lens-tag.good i { background: rgb(34, 197, 94); }
+.board .lens-star {
+  z-index: 6;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 2% 6%;
+  font-size: clamp(10px, 3.2vw, 16px);
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.board .lens-star.mine { color: rgb(96, 165, 250); }
+.board .lens-star.theirs { color: rgb(248, 113, 113); }
+.board .lens-pips { z-index: 6; align-items: flex-end; justify-content: center; padding-bottom: 5%; }
+.board .lens-pips span {
+  display: flex;
+  gap: 2px;
+  padding: 2px 3px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+}
+.board .lens-pips i { width: 5px; height: 5px; border-radius: 50%; }
+.board .lens-pips i.atk { background: rgb(248, 113, 113); }
+.board .lens-pips i.def { background: rgb(96, 165, 250); }
+.board .lens-shield { z-index: 7; align-items: flex-start; justify-content: flex-end; padding: 3%; }
+.board .lens-shield svg { width: 38%; height: 38%; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6)); }
+.board .lens-shield.safe svg { fill: rgb(34, 197, 94); }
+.board .lens-shield.exposed svg { fill: rgb(245, 158, 11); }
+.board .lens-shield.attacked svg { fill: rgb(239, 68, 68); }
+.board .lens-lines { z-index: 6; }
+.board .lens-line {
+  stroke: rgba(239, 68, 68, 0.6);
+  stroke-width: 0.07;
+  stroke-dasharray: 0.18 0.12;
+  stroke-linecap: round;
+}
+.board .lens-arrow { stroke-width: 0.13; stroke-linecap: round; opacity: 0.9; }
+.board .lens-arrow.mine { stroke: rgb(59, 130, 246); }
+.board .lens-arrow.theirs { stroke: rgb(239, 68, 68); }
+.board .lens-arrow.route { stroke: rgba(96, 165, 250, 0.55); stroke-width: 0.09; }
+.board .lens-arrow.threat { stroke: rgb(239, 68, 68); }
+.board .lens-head.mine path { fill: rgb(59, 130, 246); }
+.board .lens-head.theirs path { fill: rgb(239, 68, 68); }
+.board .lens-head.route path { fill: rgba(96, 165, 250, 0.55); }
+.board .lens-head.threat path { fill: rgb(239, 68, 68); }
+
+.lens-caption {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 14;
+  pointer-events: none;
+}
+.lens-caption span {
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  max-width: 90%;
+  text-align: center;
+}
+
+.captured.lens-caption-row {
+  font-size: 13px;
+  font-weight: 700;
+  justify-content: center;
+}
+
+.lens-bar {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.lens-bar button {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 2px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text-2, inherit);
+  font-size: 12.5px;
+  font-weight: 650;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.lens-bar button.on { background: var(--accent); color: var(--accent-ink); }
+
+.board-wrap .undefended-flash {
+  position: absolute;
+  pointer-events: none;
+  z-index: 7;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 4px rgb(239, 68, 68), 0 0 18px rgba(239, 68, 68, 0.7);
+  animation: undefendedPulse 0.5s ease-in-out infinite alternate;
+}
+@keyframes undefendedPulse {
+  from { opacity: 0.55; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-wrap .undefended-flash { animation: none; }
+}

@@ -5,6 +5,7 @@ import { applySan, lastMoveOf, sansToMoveText, walkSan, type Square } from '../.
 import { selectionText } from '../../components/Selection';
 import { formatScore, winFraction } from '../../engine/types';
 import { useEngine } from '../../engine/useEngine';
+import { useLens } from '../../components/Lenses';
 import { nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import {
@@ -142,6 +143,7 @@ export function End({
   const shownFen = fens[cursor] ?? run.fen;
   const missAt = misses.find((miss) => miss.ply === cursor) ?? null;
   const onBlunder = !!blunder && cursor === last;
+  const lens = useLens({ fen: shownFen, me: run.color, prevFen: cursor > 0 ? fens[cursor - 1] : null });
 
   /**
    * The eval bar, hidden while you play, shown once the game is over. On the
@@ -283,8 +285,9 @@ export function End({
           highlights={highlights}
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
-          dimmed={onBlunder}
+          dimmed={onBlunder && !lens.marks}
           captured
+          marks={lens.marks}
           overlay={
             flashing && (
               <div className="board-flash" onPointerDown={() => setFlashing(false)}>
@@ -293,6 +296,8 @@ export function End({
             )
           }
         />
+
+        {lens.bar}
 
         {grow && (
           <div className="card grow-offer">

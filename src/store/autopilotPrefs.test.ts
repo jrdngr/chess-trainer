@@ -44,7 +44,7 @@ describe("Autopilot's settings", () => {
 
   it('play every mode on fixed values, with only the feedback toggles yours', () => {
     expect(autopilotModes(DEFAULT_AUTOPILOT)).toEqual({
-      survival: { steer: 'lines', clock: 'off', moveScores: true, boardGlow: true, moments: true, missions: true, combo: true },
+      survival: { steer: 'lines', clock: 'off', moveScores: true, boardGlow: true, moments: true, missions: true, combo: true, undefendedFlash: false },
       drill: AUTO_DRILL,
       growth: AUTO_GROWTH,
     });

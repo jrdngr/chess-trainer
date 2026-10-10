@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../../components/Board';
+import { useLens } from '../../components/Lenses';
+import { newlyLoose } from '../../model/boardHints';
 import { AppBar, haptic } from '../../components/ui';
 import { ClockHud, useMoveClock } from '../../components/Clock';
 import { selectionText } from '../../components/Selection';
@@ -9,6 +11,7 @@ import {
   lastMoveOf,
   positionStatus,
   sansToMoveText,
+  walkSan,
   type LegalMove,
 } from '../../chess/core';
 import { clockSeconds, weaknessFromCards, type LineSource } from '../../model/openingRun';
@@ -81,6 +84,9 @@ const SCORE_MS = 1400;
 
 /** How long a moment's banner, or what a move earned, stays over the board. */
 const NOTE_MS = 1600;
+
+/** How long the Undefended flash holds your move before it lands. */
+const FLASH_MS = 1300;
 
 /** What a judged move earned, said over the board: a moment settled, a mission ended, the combo. */
 function noteFor(earned: Earned, best: string | null): { text: string; tone: 'good' | 'bad' } | null {
@@ -441,6 +447,43 @@ export function SurvivalScreen({
     active: live && myTurn && !judge.pending && !momentShowing,
   });
 
+  /** A move held back by the Undefended flash: what it leaves loose, and a moment to take it back. */
+  const [flash, setFlash] = useState<{ move: LegalMove; loose: LegalMove['to'][] } | null>(null);
+
+  /** Your move stands on the board while the engine judges it, or while the flash holds it. */
+  const shownFen = !run
+    ? null
+    : flash
+      ? flash.move.after
+      : judge.pending
+        ? (applySan(run.fen, judge.pending.san)?.after ?? run.fen)
+        : run.fen;
+  const shownLine = !run ? [] : flash ? [...run.played, flash.move.san] : judge.pending ? [...run.played, judge.pending.san] : run.played;
+  const prevFen = useMemo(() => {
+    if (!shownLine.length) return null;
+    const { fens } = walkSan(shownLine.slice(0, -1));
+    return fens[fens.length - 1];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownLine.join(' ')]);
+  // The flash holds the move for a moment, then it lands unless taken back.
+  useEffect(() => {
+    if (!flash) return;
+    const timer = window.setTimeout(() => {
+      setFlash(null);
+      commitRef.current?.(flash.move);
+    }, FLASH_MS);
+    return () => window.clearTimeout(timer);
+  }, [flash]);
+  /** The latest commit, for the flash's timer to call once it runs out. */
+  const commitRef = useRef<((move: LegalMove) => void) | null>(null);
+
+  const lens = useLens({
+    fen: shownFen ?? '',
+    me: run?.color ?? 'w',
+    prevFen,
+    enabled: phase === 'playing' && !!run && !intro.fen,
+  });
+
   // The opponent answers after a beat, and not while a miss is on the board.
   // From the book while it has a move — steered along the drawn line, redrawn
   // by the same steer when you have stepped off it — then the engine.
@@ -620,6 +663,19 @@ export function SurvivalScreen({
   }
 
   const onMove = (move: LegalMove) => {
+    if (!live || !myTurn || judge.pending || over.current || flash) return;
+    if (prefs.undefendedFlash) {
+      const loose = newlyLoose(run.fen, move.after, run.color, move);
+      if (loose.length) {
+        buzz([12, 40, 12]);
+        setFlash({ move, loose });
+        return;
+      }
+    }
+    commit(move);
+  };
+
+  const commit = (move: LegalMove) => {
     if (!live || !myTurn || judge.pending || over.current) return;
     setMiss(null);
     const prep = prepHere(game.source, game.state);
@@ -635,10 +691,8 @@ export function SurvivalScreen({
     }
     judge.submit(run.fen, move);
   };
+  commitRef.current = commit;
 
-  /** Your move stands on the board while the engine judges it. */
-  const shownFen = judge.pending ? (applySan(run.fen, judge.pending.san)?.after ?? run.fen) : run.fen;
-  const shownLine = judge.pending ? [...run.played, judge.pending.san] : run.played;
   const glow = prefs.boardGlow && evalCp !== null ? glowFor(run.color, evalCp) : null;
 
   return (
@@ -664,9 +718,9 @@ export function SurvivalScreen({
 
       <div className="screen no-nav">
         <Board
-          fen={intro.fen ?? shownFen}
+          fen={intro.fen ?? shownFen ?? run.fen}
           orientation={run.color}
-          interactive={live && myTurn && !thinking && !judge.pending}
+          interactive={live && myTurn && !thinking && !judge.pending && !flash}
           movableFor={run.color}
           onMove={onMove}
           lastMove={intro.fen ? intro.lastMove : lastMoveOf(shownLine)}
@@ -681,9 +735,22 @@ export function SurvivalScreen({
           theme={settings.boardTheme}
           captured
           glow={glow}
+          marks={lens.marks}
           overlay={
             <>
               {intro.overlay}
+              {flash && (
+                <>
+                  {flash.loose.map((square) => (
+                    <FlashRing key={square} square={square} orientation={run.color} />
+                  ))}
+                  <div className="board-flash top" style={{ animation: 'none' }}>
+                    <button className="btn sm" onClick={() => setFlash(null)}>
+                      Take back
+                    </button>
+                  </div>
+                </>
+              )}
               {pop && <MoveScore key={pop.key} pop={pop} orientation={run.color} />}
               {note && !miss && (
                 <div key={note.key} className="board-flash top pass">
@@ -706,6 +773,8 @@ export function SurvivalScreen({
             </>
           }
         />
+
+        {!intro.held && lens.bar}
 
         {intro.below ??
           (run.opened > 0 && (
@@ -754,6 +823,20 @@ export function SurvivalScreen({
         </div>
       </div>
     </>
+  );
+}
+
+/** A piece your held move leaves undefended, ringed while the Undefended flash shows. */
+function FlashRing({ square, orientation }: { square: LegalMove['to']; orientation: 'w' | 'b' }) {
+  const file = square.charCodeAt(0) - 97;
+  const rank = Number(square[1]) - 1;
+  const col = orientation === 'w' ? file : 7 - file;
+  const row = orientation === 'w' ? 7 - rank : rank;
+  return (
+    <div
+      className="undefended-flash"
+      style={{ left: `${col * 12.5}%`, top: `${row * 12.5}%`, width: '12.5%', height: '12.5%' }}
+    />
   );
 }
 

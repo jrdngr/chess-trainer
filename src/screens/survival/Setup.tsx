@@ -75,6 +75,11 @@ export function Setup({ onStart, onExit }: { onStart: (prefs: SurvivalPrefs) => 
             on={prefs.boardGlow}
             onToggle={() => setPrefs({ boardGlow: !prefs.boardGlow })}
           />
+          <Toggle
+            label="Undefended flash"
+            on={prefs.undefendedFlash}
+            onToggle={() => setPrefs({ undefendedFlash: !prefs.undefendedFlash })}
+          />
         </div>
 
         <Section title="Past the opening" />

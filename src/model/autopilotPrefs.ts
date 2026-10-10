@@ -54,6 +54,8 @@ export function autoSurvival(prefs: AutopilotPrefs): SurvivalPrefs {
     moments: true,
     missions: true,
     combo: true,
+    // A hint you opt into on Survival's own setup; Autopilot plays without it.
+    undefendedFlash: false,
   };
 }
 

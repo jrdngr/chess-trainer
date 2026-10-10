@@ -13,6 +13,7 @@ import {
   type Square,
 } from '../chess/core';
 import { Piece } from './Pieces';
+import type { LensMarks, TintColor } from '../model/boardHints';
 import './board.css';
 
 export type BoardTheme = 'slate' | 'walnut' | 'ocean';
@@ -52,7 +53,20 @@ export interface BoardProps {
   allowed?: string[];
   /** A tint around the board's edge, e.g. Survival's hint of who is better. */
   glow?: { tone: 'green' | 'yellow' | 'red'; strength: number } | null;
+  /** What a held lens draws over the position — see `model/boardHints.ts`. */
+  marks?: LensMarks | null;
 }
+
+const TINT_RGB: Record<TintColor, string> = {
+  blue: '59, 130, 246',
+  red: '239, 68, 68',
+  purple: '168, 85, 247',
+  'purple-blue': '125, 105, 250',
+  'purple-red': '205, 80, 190',
+  green: '34, 197, 94',
+  amber: '245, 158, 11',
+};
+const TINT_ALPHA = { 1: 0.3, 2: 0.44, 3: 0.58 } as const;
 
 interface Placed {
   key: string;
@@ -110,6 +124,7 @@ export function Board({
   overlay,
   allowed,
   glow = null,
+  marks = null,
 }: BoardProps) {
   const [selected, setSelected] = useState<Square | null>(null);
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
@@ -259,7 +274,12 @@ export function Board({
 
   return (
     <>
-      {captured && <Captured fen={fen} orientation={orientation} />}
+      {captured &&
+        (marks?.caption ? (
+          <div className="captured lens-caption-row">{marks.caption}</div>
+        ) : (
+          <Captured fen={fen} orientation={orientation} />
+        ))}
       <div
         className={`board-wrap${dimmed ? ' dimmed' : ''}${glow ? ` glow glow-${glow.tone}` : ''}`}
         style={glow ? ({ '--glow-k': 0.2 + 0.8 * glow.strength } as CSSProperties) : undefined}
@@ -302,15 +322,19 @@ export function Board({
             );
           })}
 
+          {marks && <LensUnder marks={marks} styleFor={styleFor} />}
+
           {placed.map((p) => (
             <div
               key={p.key}
-              className={`piece${dragging === p.square ? ' dragging' : ''}`}
+              className={`piece${dragging === p.square ? ' dragging' : ''}${marks?.ghost && p.type !== 'p' ? ' ghost' : ''}`}
               style={styleFor(p.square)}
             >
               <Piece type={p.type} color={p.color} />
             </div>
           ))}
+
+          {marks && <LensOver marks={marks} styleFor={styleFor} orientation={orientation} />}
 
           {[...targets.keys()].map((square) => {
             const isCapture = placed.some((p) => p.square === square);
@@ -403,8 +427,129 @@ export function Board({
           </div>
         )}
 
+        {marks?.caption && !captured && (
+          <div className="lens-caption">
+            <span>{marks.caption}</span>
+          </div>
+        )}
+
         {overlay}
       </div>
+    </>
+  );
+}
+
+type StyleFor = (square: Square) => CSSProperties;
+
+/** A lens's marks that sit under the pieces: tints, a king's zone, holes, missing shield pawns. */
+function LensUnder({ marks, styleFor }: { marks: LensMarks; styleFor: StyleFor }) {
+  return (
+    <>
+      {marks.tints?.map((t) => (
+        <div
+          key={`tint-${t.square}`}
+          className="lens-tint"
+          style={{ ...styleFor(t.square), background: `rgba(${TINT_RGB[t.color]}, ${TINT_ALPHA[t.strength]})` }}
+        />
+      ))}
+      {marks.zone?.map((square) => (
+        <div key={`zone-${square}`} className="lens-zone" style={styleFor(square)} />
+      ))}
+      {marks.dots?.map((square) => (
+        <div key={`dot-${square}`} className="lens-dot" style={styleFor(square)}>
+          <i />
+        </div>
+      ))}
+      {marks.emptyPawns?.map((square) => (
+        <div key={`empty-${square}`} className="lens-empty" style={styleFor(square)}>
+          <i />
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** A lens's marks over the pieces: rings, tags, stars, pips, shields, lines and arrows. */
+function LensOver({ marks, styleFor, orientation }: { marks: LensMarks; styleFor: StyleFor; orientation: Color }) {
+  const point = (square: Square) => {
+    const { file, rank } = squareToCoords(square);
+    return { x: (orientation === 'w' ? file : 7 - file) + 0.5, y: (orientation === 'w' ? 7 - rank : rank) + 0.5 };
+  };
+  const hasSvg = !!marks.lines?.length || !!marks.arrows?.length;
+  return (
+    <>
+      {marks.rings?.map((r) => (
+        <div key={`ring-${r.square}`} className={`lens-ring ${r.tone}`} style={styleFor(r.square)} />
+      ))}
+      {marks.tags?.map((t) => (
+        <div key={`tag-${t.square}`} className={`lens-tag ${t.tone}`} style={styleFor(t.square)}>
+          <i />
+        </div>
+      ))}
+      {marks.stars?.map((s) => (
+        <div key={`star-${s.square}`} className={`lens-star ${s.side}`} style={styleFor(s.square)}>
+          <span>★</span>
+        </div>
+      ))}
+      {marks.pips?.map((p) => (
+        <div key={`pip-${p.square}`} className="lens-pips" style={styleFor(p.square)}>
+          <span>
+            {Array.from({ length: Math.min(p.attackers, 4) }, (_, i) => (
+              <i key={`a${i}`} className="atk" />
+            ))}
+            {Array.from({ length: Math.min(p.defenders, 4) }, (_, i) => (
+              <i key={`d${i}`} className="def" />
+            ))}
+          </span>
+        </div>
+      ))}
+      {marks.shields?.map((s) => (
+        <div key={`shield-${s.square}`} className={`lens-shield ${s.grade}`} style={styleFor(s.square)}>
+          <svg viewBox="0 0 24 24" aria-hidden>
+            <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3z" />
+          </svg>
+        </div>
+      ))}
+      {hasSvg && (
+        <svg className="arrows lens-lines" viewBox="0 0 8 8">
+          <defs>
+            {(['mine', 'theirs', 'route', 'threat'] as const).map((tone) => (
+              <marker
+                key={tone}
+                id={`lens-ah-${tone}`}
+                className={`lens-head ${tone}`}
+                markerWidth="3"
+                markerHeight="3"
+                refX="1.6"
+                refY="1.5"
+                orient="auto"
+              >
+                <path d="M0,0 L3,1.5 L0,3 z" />
+              </marker>
+            ))}
+          </defs>
+          {marks.lines?.map((l, i) => {
+            const a = point(l.from);
+            const b = point(l.to);
+            return <line key={`l${i}`} className="lens-line" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />;
+          })}
+          {marks.arrows?.map((l, i) => {
+            const a = point(l.from);
+            const b = point(l.to);
+            return (
+              <line
+                key={`a${i}`}
+                className={`lens-arrow ${l.tone}`}
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
+                markerEnd={`url(#lens-ah-${l.tone})`}
+              />
+            );
+          })}
+        </svg>
+      )}
     </>
   );
 }

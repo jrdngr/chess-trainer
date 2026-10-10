@@ -67,6 +67,8 @@ export interface SurvivalPrefs {
   missions: boolean;
   /** Moves close to the engine's best build a multiplier on the points each move earns. */
   combo: boolean;
+  /** Before your move lands, what it leaves undefended flashes, with a moment to take it back. */
+  undefendedFlash: boolean;
 }
 
 export const DEFAULT_SURVIVAL: SurvivalPrefs = {
@@ -77,6 +79,7 @@ export const DEFAULT_SURVIVAL: SurvivalPrefs = {
   moments: true,
   missions: true,
   combo: true,
+  undefendedFlash: false,
 };
 
 /* ── feedback ───────────────────────────────────────────────────────────── */
