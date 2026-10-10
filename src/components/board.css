@@ -445,3 +445,30 @@
 .lens-legend .sw-pip { width: 8px; height: 8px; margin: 5px; border-radius: 50%; }
 .lens-legend .sw-zone { border-radius: 3px; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7); }
 .lens-legend .sw-empty { border-radius: 50%; border: 2px dashed rgba(239, 68, 68, 0.9); width: 14px; height: 14px; margin: 2px; }
+
+/* ── plan and Cash out cards, past the end of prep ─────────────────────── */
+.card.plan-card { margin-top: 8px; padding: 4px 4px 4px 12px; }
+.card.plan-card + .card.plan-card { margin-top: 6px; }
+.plan-head { display: flex; align-items: center; gap: 4px; }
+.plan-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  color: inherit;
+}
+.plan-kind { flex: none; font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; }
+.plan-kind.good { color: var(--good); }
+.plan-chev { flex: none; display: inline-flex; color: var(--text-3); transform: rotate(90deg); transition: transform 0.15s; }
+.plan-chev.open { transform: rotate(-90deg); }
+.plan-x { flex: none; width: 32px; height: 32px; }
+.plan-x svg { width: 16px; height: 16px; }
+.plan-steps { margin: 0 8px 8px 0; padding-left: 20px; font-size: 13.5px; line-height: 1.4; color: var(--text-2); }
+.plan-steps li + li { margin-top: 4px; }
+.plan-steps li.done { color: var(--text-3); }
+.plan-done { display: inline-flex; vertical-align: -2px; margin-right: 4px; color: var(--good); }

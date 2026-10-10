@@ -8,6 +8,7 @@ import {
   type PieceType,
   type Square,
 } from '../chess/core';
+import { structureLabel, structureOf } from './structures';
 
 /**
  * Reading a middlegame position for the lenses: the pawns, the pieces, who
@@ -230,39 +231,6 @@ export function holes(fen: string, color: Color): Square[] {
   return out;
 }
 
-/** A named pawn structure, when the pawns match one. */
-export function structureName(fen: string): string | null {
-  const grid = gridOf(fen);
-  const FILES = 'abcdefgh';
-  /** A pawn of this color on this file, on this rank counted from its own side (1..8). */
-  const has = (color: Color, file: string, relRank: number) => {
-    const man = grid.at(FILES.indexOf(file), color === 'w' ? relRank - 1 : 8 - relRank);
-    return !!man && man.type === 'p' && man.color === color;
-  };
-  const none = (color: Color, file: string) =>
-    !pawnsOf(grid, color).some((p) => p.file === FILES.indexOf(file));
-  const sideName = (color: Color) => (color === 'w' ? 'White' : 'Black');
-
-  for (const a of ['w', 'b'] as Color[]) {
-    const b = other(a);
-    if (has(a, 'c', 3) && has(a, 'd', 4) && has(a, 'e', 3) && has(a, 'f', 4)) return `Stonewall (${sideName(a)})`;
-    if (has(a, 'd', 4) && none(a, 'c') && has(b, 'd', 4) && has(b, 'c', 3) && none(b, 'e')) return 'Carlsbad';
-    if (has(a, 'd', 4) && has(a, 'e', 5) && has(b, 'd', 4) && has(b, 'e', 3)) return 'French chain';
-    if (has(a, 'd', 5) && has(a, 'e', 4) && has(b, 'd', 3) && has(b, 'e', 4)) return "King's Indian chain";
-    if (has(a, 'd', 5) && none(a, 'c') && has(b, 'c', 4) && has(b, 'd', 3) && none(b, 'e')) return 'Benoni';
-    if (has(a, 'c', 4) && has(a, 'e', 4) && none(a, 'd') && none(b, 'c') && has(b, 'd', 3)) {
-      return has(b, 'b', 3) && has(b, 'e', 3) ? 'Hedgehog' : 'Maróczy bind';
-    }
-    if (none(a, 'd') && has(a, 'e', 4) && none(b, 'c') && has(b, 'd', 3) && has(b, 'e', 3)) return 'Scheveningen';
-    if (none(a, 'd') && has(a, 'e', 4) && none(b, 'c') && has(b, 'd', 3) && has(b, 'e', 4)) return 'Sicilian ...e5 (d5 hole)';
-    if ((has(a, 'c', 4) && has(a, 'd', 4)) && none(a, 'b') && none(a, 'e')) return `Hanging pawns (${sideName(a)})`;
-    const isolatedD = pawnsOf(grid, a).some((p) => p.file === 3) && none(a, 'c') && none(a, 'e');
-    if (isolatedD) return `Isolated queen pawn (${sideName(a)})`;
-  }
-  if (none('w', 'd') && none('w', 'e') && none('b', 'd') && none('b', 'e')) return 'Open center';
-  return null;
-}
-
 /**
  * The same position with this side to move, for asking what it would play
  * here. Null when that cannot be a real position: the other side in check.
@@ -313,7 +281,7 @@ export function pawnsLens(fen: string): LensMarks {
     ghost: true,
     tags,
     dots: [...holes(fen, 'w'), ...holes(fen, 'b')],
-    caption: structureName(fen) ?? undefined,
+    caption: structureCaption(fen),
   };
 }
 
@@ -451,6 +419,46 @@ export function piecesLens(fen: string, me: Color): LensMarks {
     for (let i = 1; i < path.length; i += 1) arrows.push({ from: path[i - 1], to: path[i], tone: 'route' });
   }
   return { tints, rings, stars, arrows };
+}
+
+/**
+ * How one of your pieces gets to a plan's square, as route arrows: a knight
+ * by its shortest hops, a pawn pushed up its file, anything else only when it
+ * already reaches the square. `done` when a piece of that kind stands there.
+ */
+export function goalRoute(
+  fen: string,
+  me: Color,
+  goal: { piece: PieceType; to: Square },
+): { done: boolean; arrows: { from: Square; to: Square }[] } {
+  const grid = gridOf(fen);
+  const target = squareToCoords(goal.to);
+  const there = grid.at(target.file, target.rank);
+  if (there && there.color === me && there.type === goal.piece) return { done: true, arrows: [] };
+  if (there && there.color === me) return { done: false, arrows: [] };
+  const pairs = (path: Square[]) => path.slice(1).map((to, i) => ({ from: path[i], to }));
+  if (goal.piece === 'n') {
+    const path = knightRoute(grid, me, goal.to);
+    return { done: false, arrows: path ? pairs(path) : [] };
+  }
+  if (goal.piece === 'p') {
+    // The nearest pawn behind the square on its file, with nothing in the way.
+    const behind = pawnsOf(grid, me)
+      .filter((p) => p.file === target.file && rel(me, p.rank) < rel(me, target.rank))
+      .sort((a, b) => rel(me, b.rank) - rel(me, a.rank))[0];
+    if (!behind || there) return { done: false, arrows: [] };
+    for (let r = behind.rank + forward(me); r !== target.rank; r += forward(me)) {
+      if (grid.at(target.file, r)) return { done: false, arrows: [] };
+    }
+    return { done: false, arrows: [{ from: behind.square, to: goal.to }] };
+  }
+  const reach = grid.men.find(
+    (man) =>
+      man.color === me &&
+      man.type === goal.piece &&
+      attacksOf(grid, man).some((a) => a.file === target.file && a.rank === target.rank),
+  );
+  return { done: false, arrows: reach ? [{ from: reach.square, to: goal.to }] : [] };
 }
 
 /* ── space ─────────────────────────────────────────────────────────────── */
@@ -740,4 +748,9 @@ export function lensMarks(kind: LensKind, fen: string, me: Color, prevFen?: stri
     case 'threats':
       return threatsLens(fen, me, prevFen);
   }
+}
+
+function structureCaption(fen: string): string | undefined {
+  const structure = structureOf(fen);
+  return structure ? structureLabel(structure) : undefined;
 }

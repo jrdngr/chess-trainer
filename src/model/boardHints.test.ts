@@ -14,9 +14,14 @@ import {
   piecesLens,
   spaceCount,
   spaceLens,
-  structureName,
   threatsLens,
 } from './boardHints';
+import { structureLabel, structureOf } from './structures';
+
+const structureName = (fen: string) => {
+  const s = structureOf(fen);
+  return s ? structureLabel(s) : null;
+};
 
 const feature = (fen: string, square: string) => pawnFeatures(fen).find((p) => p.square === square)!;
 

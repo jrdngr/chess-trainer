@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../../components/Board';
 import { useLens } from '../../components/Lenses';
+import { useCashOutCard, usePlanCard } from '../../components/PlanCards';
+import { CASH_OUT_FROM } from '../../engine/cashOut';
 import { newlyLoose } from '../../model/boardHints';
 import { AppBar, haptic } from '../../components/ui';
 import { ClockHud, useMoveClock } from '../../components/Clock';
@@ -522,6 +524,22 @@ export function SurvivalScreen({
     if (baselineCp !== null) setEvalCp(baselineCp);
   }, [baselineCp]);
 
+  // Past the end of prep: the plan for the structure on the board, and Cash out when well ahead.
+  const pastPrep = prepStatus !== 'on';
+  const planCard = usePlanCard({
+    fen: shownFen ?? '',
+    me: run?.color ?? 'w',
+    enabled: phase === 'playing' && !!run && pastPrep && !intro.held,
+    resetKey: run?.id ?? '',
+  });
+  const myCp = baselineCp === null || !run ? null : run.color === 'w' ? baselineCp : -baselineCp;
+  const cashOut = useCashOutCard({
+    fen: run?.fen ?? '',
+    me: run?.color ?? 'w',
+    enabled: live && myTurn && pastPrep && !judge.pending && !flash && !momentHere && myCp !== null && myCp >= CASH_OUT_FROM,
+    resetKey: run?.id ?? '',
+  });
+
   // Where the prep runs out, the first mission is set from the eval in front of you.
   useEffect(() => {
     if (!game || !run || !live || !myTurn || baselineCp === null) return;
@@ -729,7 +747,7 @@ export function SurvivalScreen({
               ? [{ from: miss.from, to: miss.to, color: 'var(--good)' }]
               : missedBest
                 ? [{ from: missedBest.from, to: missedBest.to, color: 'var(--good)' }]
-                : []
+                : [...planCard.arrows, ...cashOut.arrows]
           }
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
@@ -782,6 +800,9 @@ export function SurvivalScreen({
           (run.opened > 0 && (
             <div className="center small muted mt-8">From {sansToMoveText(run.played.slice(0, run.opened))}</div>
           ))}
+
+        {cashOut.card}
+        {planCard.card}
 
         <div className="spacer" />
 

@@ -10,6 +10,7 @@ import { mainline, parsePgn, toPgn, wrapPgn } from '../chess/pgn';
 import { formatScore, winFraction } from '../engine/types';
 import { useEngine } from '../engine/useEngine';
 import { useLens } from '../components/Lenses';
+import { usePlanCard } from '../components/PlanCards';
 import { openingNameForPath } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
 import { useStore } from '../store/useStore';
@@ -57,6 +58,7 @@ export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInit
   const fen = fens[fens.length - 1];
   const status = useMemo(() => positionStatus(fen), [fen]);
   const lens = useLens({ fen, me: orientation, prevFen: fens.length > 1 ? fens[fens.length - 2] : null });
+  const planCard = usePlanCard({ fen, me: orientation, enabled: true, resetKey: '' });
 
   const { snapshot, sanLines, backend } = useEngine(settings.engineEnabled ? fen : null, {
     enabled: settings.engineEnabled,
@@ -173,7 +175,7 @@ export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInit
           lastMove={lastMoveOf(visible)}
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
-          arrows={lens.marks ? [] : bestArrow}
+          arrows={lens.marks ? [] : planCard.arrows.length ? planCard.arrows : bestArrow}
           captured
           marks={lens.marks}
         />
@@ -182,6 +184,7 @@ export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInit
         {lens.legend}
         <div style={{ display: lens.legend ? 'none' : 'contents' }}>
 
+        {planCard.card}
         <div className="spacer sm" />
         <MoveStrip sans={sans} cursor={cursor} onSeek={setCursor} hint="Play a move" />
 
