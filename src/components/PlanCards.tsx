@@ -13,8 +13,8 @@ import { Icons } from './Icons';
  * until there is something new to say.
  */
 
-/** Orange reads on both square colors, where the app's violet sank into the dark ones. */
-const PLAN_COLOR = '#ff8a3d';
+/** Cyan reads on both square colors, where the app's violet sank into the dark ones (Jordan picked it from five). */
+const PLAN_COLOR = '#22c3e6';
 const TRADE_COLOR = 'var(--good)';
 
 interface CardArgs {
