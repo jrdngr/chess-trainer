@@ -13,6 +13,8 @@ import {
   isMoment,
   judgedExtras,
   missionFor,
+  missionText,
+  planMission,
   momentBonus,
   MISSION_BONUS,
   MISSION_BREAK,
@@ -304,5 +306,39 @@ describe('past the opening', () => {
     expect(extras.mission).toBeNull();
     expect(firstMission(NO_EXTRAS, off, 'w', 0)).toBe(NO_EXTRAS);
     expect(firstMission(NO_EXTRAS, all, 'w', 0).mission?.kind).toBe('lead');
+  });
+});
+
+describe('plan and Convert it missions', () => {
+  const carlsbad = 'r1bq1rk1/pp1nbppp/2p2n2/3p2B1/3P4/2NBP3/PPQ2PPP/R3K1NR w KQ - 0 1';
+  const all = { missions: true };
+
+  it('sets the plan as the first mission where the pawns form a structure', () => {
+    const mission = planMission(carlsbad, 'w', 30)!;
+    expect(mission).toMatchObject({ kind: 'plan', goal: { piece: 'p', to: 'b5' }, start: 30 });
+    expect(missionText(mission)).toBe('Follow the plan · pawn to b5 · 8 moves left');
+    expect(firstMission(NO_EXTRAS, all, 'w', 30, carlsbad).mission?.kind).toBe('plan');
+    // No structure, no plan: the eval's mission as before.
+    expect(planMission('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', 'w', 0)).toBeNull();
+  });
+
+  it('completes the plan once the piece is there, and fails it on a lost pawn or the clock', () => {
+    const mission = planMission(carlsbad, 'w', 30)!;
+    const there = 'r1bq1rk1/pp1nbppp/2p2n2/1P1p2B1/3P4/2NBP3/P1Q2PPP/R3K1NR b KQ - 0 1';
+    expect(stepMission(mission, 'w', 20, there).result).toBe('done');
+    expect(stepMission(mission, 'w', -90, there).result).toBe('failed');
+    let waiting = mission;
+    for (let i = 0; i < 7; i++) waiting = stepMission(waiting, 'w', 30, carlsbad).mission;
+    expect(stepMission(waiting, 'w', 30, carlsbad).result).toBe('failed');
+  });
+
+  it('asks you to convert when well ahead, done once a piece each has come off', () => {
+    const mission = missionFor('w', 250, carlsbad);
+    expect(mission).toMatchObject({ kind: 'convert', pieces: { mine: 7, theirs: 7 } });
+    expect(missionFor('w', 250).kind).toBe('edge');
+    const traded = 'r1bq1rk1/pp1nbppp/2p5/3p2B1/3P4/3BP3/PPQ2PPP/R3K1NR w KQ - 0 1';
+    expect(stepMission(mission, 'w', 260, traded).result).toBe('done');
+    expect(stepMission(mission, 'w', 150, traded).result).toBe(null);
+    expect(stepMission(mission, 'w', 80, carlsbad).result).toBe('failed');
   });
 });

@@ -1,4 +1,6 @@
-import { applySan, positionKey, walkSan } from '../chess/core';
+import { applySan, piecesFromFen, positionKey, walkSan, type PieceType, type Square } from '../chess/core';
+import { goalRoute } from './boardHints';
+import { planFor, structureOf } from './structures';
 import { lookup, type ReferenceIndex } from './reference';
 import { ancestorsOf, type OpeningNode, type OpeningTree } from './openingTree';
 import {
@@ -204,7 +206,7 @@ export function momentBonus(streak: number): number {
   return MOMENT_BONUS + MOMENT_STREAK_BONUS * streak;
 }
 
-export type MissionKind = 'edge' | 'lead' | 'dig';
+export type MissionKind = 'edge' | 'lead' | 'dig' | 'plan' | 'convert';
 
 export interface Mission {
   kind: MissionKind;
@@ -212,6 +214,12 @@ export interface Mission {
   moves: number;
   /** Keep your edge: your moves at +1 or better so far. */
   held: number;
+  /** Follow the plan: the piece and the square the structure's plan sends it to. */
+  goal?: { piece: PieceType; to: Square };
+  /** Follow the plan: where you stood when it was set, in centipawns from your side. */
+  start?: number;
+  /** Convert it: the pieces, pawns and kings aside, each side had when it was set. */
+  pieces?: { mine: number; theirs: number };
 }
 
 /** Keep your edge: stay at +1 or better for this many of your moves. */
@@ -222,6 +230,14 @@ export const MISSION_WINDOW = 15;
 export const MISSION_LEAD = 100;
 /** Dig in: back to here or better. */
 export const MISSION_DUG = -50;
+/** Follow the plan: this many of your moves to get the piece there. */
+export const PLAN_WINDOW = 8;
+/** Follow the plan: how much of where you stood you may give up on the way. */
+export const PLAN_SLACK = 100;
+/** Convert it: set from this far ahead, and this far ahead it must stay once the trade is done. */
+export const CONVERT_FROM = 200;
+/** Convert it: this many of your moves to trade a piece. */
+export const CONVERT_WINDOW = 6;
 /** A mission completed pays this. */
 export const MISSION_BONUS = 15;
 /** Your moves between one mission ending and the next being set. */
@@ -232,28 +248,89 @@ function mine(color: 'w' | 'b', cp: number): number {
   return color === 'w' ? cp : -cp;
 }
 
-/** The mission the eval calls for, in White's frame. */
-export function missionFor(color: 'w' | 'b', cp: number): Mission {
+/** Each side's pieces on the board, pawns and kings aside. */
+function pieceCount(fen: string, color: 'w' | 'b'): { mine: number; theirs: number } {
+  const pieces = piecesFromFen(fen).filter((p) => p.type !== 'p' && p.type !== 'k');
+  const own = pieces.filter((p) => p.color === color).length;
+  return { mine: own, theirs: pieces.length - own };
+}
+
+/**
+ * The mission the eval calls for, in White's frame. Well ahead with pieces
+ * left to trade, that is Convert it; otherwise keep, take or dig back to a lead.
+ */
+export function missionFor(color: 'w' | 'b', cp: number, fen?: string): Mission {
   const at = mine(color, cp);
+  if (fen && at >= CONVERT_FROM) {
+    const pieces = pieceCount(fen, color);
+    if (pieces.mine > 0 && pieces.theirs > 0) return { kind: 'convert', moves: 0, held: 0, pieces };
+  }
   const kind: MissionKind = at >= MISSION_LEAD ? 'edge' : at <= -MISSION_LEAD ? 'dig' : 'lead';
   return { kind, moves: 0, held: 0 };
 }
 
-export function missionTitle(kind: MissionKind): string {
-  return kind === 'edge' ? 'Keep your edge' : kind === 'lead' ? 'Take the lead' : 'Dig in';
+/**
+ * The plan's first step that sends a piece somewhere it can go from here, as
+ * a mission, when the pawns form a named structure.
+ */
+export function planMission(fen: string, color: 'w' | 'b', cp: number): Mission | null {
+  const structure = structureOf(fen);
+  if (!structure) return null;
+  for (const step of planFor(structure, color)) {
+    if (!step.goal) continue;
+    const route = goalRoute(fen, color, step.goal);
+    if (route.done || !route.arrows.length) continue;
+    return { kind: 'plan', moves: 0, held: 0, goal: step.goal, start: mine(color, cp) };
+  }
+  return null;
 }
+
+export function missionTitle(kind: MissionKind): string {
+  switch (kind) {
+    case 'edge':
+      return 'Keep your edge';
+    case 'lead':
+      return 'Take the lead';
+    case 'dig':
+      return 'Dig in';
+    case 'plan':
+      return 'Follow the plan';
+    case 'convert':
+      return 'Convert it';
+  }
+}
+
+const PIECE_NAME: Record<PieceType, string> = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
 
 /** The mission's line under "Your move": its name and where it stands. */
 export function missionText(mission: Mission): string {
-  if (mission.kind === 'edge') return `${missionTitle(mission.kind)} · ${mission.held} of ${EDGE_MOVES}`;
-  return `${missionTitle(mission.kind)} · ${MISSION_WINDOW - mission.moves} moves left`;
+  const left = (window: number) => {
+    const n = window - mission.moves;
+    return `${n} move${n === 1 ? '' : 's'} left`;
+  };
+  switch (mission.kind) {
+    case 'edge':
+      return `${missionTitle(mission.kind)} · ${mission.held} of ${EDGE_MOVES}`;
+    case 'plan':
+      return mission.goal
+        ? `${missionTitle(mission.kind)} · ${PIECE_NAME[mission.goal.piece]} to ${mission.goal.to} · ${left(PLAN_WINDOW)}`
+        : `${missionTitle(mission.kind)} · ${left(PLAN_WINDOW)}`;
+    case 'convert':
+      return `${missionTitle(mission.kind)} · trade a piece · ${left(CONVERT_WINDOW)}`;
+    default:
+      return `${missionTitle(mission.kind)} · ${left(MISSION_WINDOW)}`;
+  }
 }
 
-/** One of your judged moves against a mission, with the eval after it in White's frame. */
+/**
+ * One of your judged moves against a mission, with the eval after it in
+ * White's frame and the position after it, which the plan and Convert it read.
+ */
 export function stepMission(
   mission: Mission,
   color: 'w' | 'b',
   cp: number,
+  fen?: string,
 ): { mission: Mission; result: 'done' | 'failed' | null } {
   const at = mine(color, cp);
   const next = { ...mission, moves: mission.moves + 1 };
@@ -268,6 +345,22 @@ export function stepMission(
     case 'dig':
       if (at >= MISSION_DUG) return { mission: next, result: 'done' };
       return { mission: next, result: next.moves >= MISSION_WINDOW ? 'failed' : null };
+    case 'plan': {
+      const floor = (mission.start ?? 0) - PLAN_SLACK;
+      if (at < floor) return { mission: next, result: 'failed' };
+      if (fen && mission.goal && goalRoute(fen, color, mission.goal).done) return { mission: next, result: 'done' };
+      return { mission: next, result: next.moves >= PLAN_WINDOW ? 'failed' : null };
+    }
+    case 'convert': {
+      if (at < MISSION_LEAD) return { mission: next, result: 'failed' };
+      // Traded: each side has a piece fewer than when it was set, and the lead held through it.
+      const now = fen ? pieceCount(fen, color) : null;
+      const was = mission.pieces;
+      if (now && was && now.mine < was.mine && now.theirs < was.theirs && at >= CONVERT_FROM) {
+        return { mission: next, result: 'done' };
+      }
+      return { mission: next, result: next.moves >= CONVERT_WINDOW ? 'failed' : null };
+    }
   }
 }
 
@@ -310,7 +403,7 @@ export function judgedExtras(
   extras: Extras,
   prefs: Pick<SurvivalPrefs, 'moments' | 'missions' | 'combo'>,
   color: 'w' | 'b',
-  move: { lost: number; after: number; moment: boolean; found: boolean },
+  move: { lost: number; after: number; moment: boolean; found: boolean; fen?: string },
 ): { extras: Extras; earned: Earned } {
   const was = extras.combo;
   let combo = prefs.combo ? comboAfter(was, move.lost) : 0;
@@ -334,7 +427,7 @@ export function judgedExtras(
   let missionEarned: Earned['mission'] = null;
   if (prefs.missions) {
     if (mission) {
-      const stepped = stepMission(mission, color, move.after);
+      const stepped = stepMission(mission, color, move.after, move.fen);
       if (stepped.result) {
         const bonus = stepped.result === 'done' ? MISSION_BONUS : 0;
         missionEarned = { kind: mission.kind, result: stepped.result, bonus };
@@ -346,7 +439,7 @@ export function judgedExtras(
       } else mission = stepped.mission;
     } else if (missionBreak > 0) {
       missionBreak -= 1;
-      if (missionBreak === 0) mission = missionFor(color, move.after);
+      if (missionBreak === 0) mission = missionFor(color, move.after, move.fen);
     }
   }
   const up = comboMultiplier(combo) > comboMultiplier(was);
@@ -370,12 +463,21 @@ export function prepExtras(extras: Extras): Extras {
   return { ...extras, points: extras.points + 1 };
 }
 
-/** The first mission, set where the prep runs out, from the eval in front of you. */
-export function firstMission(extras: Extras, prefs: Pick<SurvivalPrefs, 'missions'>, color: 'w' | 'b', cp: number): Extras {
+/**
+ * The first mission, set where the prep runs out: a step of the structure's
+ * plan when the pawns form one, else from the eval in front of you.
+ */
+export function firstMission(
+  extras: Extras,
+  prefs: Pick<SurvivalPrefs, 'missions'>,
+  color: 'w' | 'b',
+  cp: number,
+  fen?: string,
+): Extras {
   if (!prefs.missions || extras.mission || extras.missionBreak > 0 || extras.missions.done + extras.missions.failed > 0) {
     return extras;
   }
-  return { ...extras, mission: missionFor(color, cp) };
+  return { ...extras, mission: (fen ? planMission(fen, color, cp) : null) ?? missionFor(color, cp, fen) };
 }
 
 /* ── a run ──────────────────────────────────────────────────────────────── */

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../../components/Board';
 import { useLens } from '../../components/Lenses';
-import { useCashOutCard, usePlanCard } from '../../components/PlanCards';
+import { PLAN_COLOR, useCashOutCard, usePlanCard } from '../../components/PlanCards';
+import { goalRoute } from '../../model/boardHints';
 import { CASH_OUT_FROM } from '../../engine/cashOut';
 import { newlyLoose } from '../../model/boardHints';
 import { AppBar, haptic } from '../../components/ui';
@@ -406,6 +407,7 @@ export function SurvivalScreen({
         after: judged.after,
         moment: judged.moment && !expected.length,
         found: judged.found,
+        fen: applySan(run.fen, judged.san)?.after,
       });
       const told = noteFor(scored.earned, judged.best);
       setNote(told ? { key: Date.now(), ...told } : null);
@@ -532,6 +534,12 @@ export function SurvivalScreen({
     enabled: phase === 'playing' && !!run && pastPrep && !intro.held,
     resetKey: run?.id ?? '',
   });
+  // Follow the plan: its route drawn on your turn, as the plan card draws it.
+  const mission = game?.state.extras.mission ?? null;
+  const missionArrows = useMemo(() => {
+    if (!run || !live || !myTurn || mission?.kind !== 'plan' || !mission.goal) return [];
+    return goalRoute(run.fen, run.color, mission.goal).arrows.map((a) => ({ ...a, color: PLAN_COLOR }));
+  }, [run, live, myTurn, mission]);
   const myCp = baselineCp === null || !run ? null : run.color === 'w' ? baselineCp : -baselineCp;
   const cashOut = useCashOutCard({
     fen: run?.fen ?? '',
@@ -544,7 +552,7 @@ export function SurvivalScreen({
   useEffect(() => {
     if (!game || !run || !live || !myTurn || baselineCp === null) return;
     if (prepHere(game.source, game.state).length) return;
-    const extras = firstMission(game.state.extras, prefs, run.color, baselineCp);
+    const extras = firstMission(game.state.extras, prefs, run.color, baselineCp, run.fen);
     if (extras !== game.state.extras) setGame({ ...game, state: { ...game.state, extras } });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baselineCp, live, myTurn]);
@@ -747,7 +755,9 @@ export function SurvivalScreen({
               ? [{ from: miss.from, to: miss.to, color: 'var(--good)' }]
               : missedBest
                 ? [{ from: missedBest.from, to: missedBest.to, color: 'var(--good)' }]
-                : [...planCard.arrows, ...cashOut.arrows]
+                : [...planCard.arrows, ...cashOut.arrows, ...missionArrows].filter(
+                    (a, i, all) => all.findIndex((b) => b.from === a.from && b.to === a.to) === i,
+                  )
           }
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}

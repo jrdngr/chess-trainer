@@ -14,7 +14,7 @@ import { Icons } from './Icons';
  */
 
 /** Cyan reads on both square colors, where the app's violet sank into the dark ones (Jordan picked it from five). */
-const PLAN_COLOR = '#22c3e6';
+export const PLAN_COLOR = '#22c3e6';
 const TRADE_COLOR = 'var(--good)';
 
 interface CardArgs {
