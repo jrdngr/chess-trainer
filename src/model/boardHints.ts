@@ -432,7 +432,7 @@ export function piecesLens(fen: string, me: Color): LensMarks {
     const own = acts.filter((a) => a.color === color);
     if (!own.length) continue;
     const worst = own.reduce((low, a) => (a.ratio < low.ratio ? a : low));
-    rings.push({ square: worst.square, tone: color === me ? 'mine' : 'theirs' });
+    rings.push({ square: worst.square, tone: 'bad' });
   }
   const stars: NonNullable<LensMarks['stars']> = [];
   const arrows: NonNullable<LensMarks['arrows']> = [];

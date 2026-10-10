@@ -407,3 +407,41 @@
 @media (prefers-reduced-motion: reduce) {
   .board-wrap .undefended-flash { animation: none; }
 }
+
+/* The key to a held lens, in place of whatever sits under the board. */
+.lens-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+}
+.lens-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 0;
+}
+.lens-legend .sw {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-style: normal;
+}
+.lens-legend .sw-tint { border-radius: 4px; }
+.lens-legend .sw-tag { width: 10px; height: 10px; margin: 4px; border-radius: 50%; }
+.lens-legend .sw-tag.bad { background: rgb(239, 68, 68); }
+.lens-legend .sw-tag.good { background: rgb(34, 197, 94); }
+.lens-legend .sw-dot { width: 10px; height: 10px; margin: 4px; border-radius: 50%; background: rgba(245, 158, 11, 0.9); }
+.lens-legend .sw-ring { border-radius: 50%; box-shadow: inset 0 0 0 2.5px currentColor; }
+.lens-legend .sw-star { font-size: 15px; }
+.lens-legend .sw-pip { width: 8px; height: 8px; margin: 5px; border-radius: 50%; }
+.lens-legend .sw-zone { border-radius: 3px; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7); }
+.lens-legend .sw-empty { border-radius: 50%; border: 2px dashed rgba(239, 68, 68, 0.9); width: 14px; height: 14px; margin: 2px; }

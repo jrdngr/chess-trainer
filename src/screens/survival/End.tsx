@@ -298,6 +298,8 @@ export function End({
         />
 
         {lens.bar}
+        {lens.legend}
+        <div style={{ display: lens.legend ? 'none' : 'contents' }}>
 
         {grow && (
           <div className="card grow-offer">
@@ -416,6 +418,7 @@ export function End({
             {growEngine ? 'Grow this line with the engine' : 'Grow this line'}
           </button>
         )}
+        </div>
       </div>
     </>
   );

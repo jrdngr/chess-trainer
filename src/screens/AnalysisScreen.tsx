@@ -179,6 +179,8 @@ export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInit
         />
 
         {lens.bar}
+        {lens.legend}
+        <div style={{ display: lens.legend ? 'none' : 'contents' }}>
 
         <div className="spacer sm" />
         <MoveStrip sans={sans} cursor={cursor} onSeek={setCursor} hint="Play a move" />
@@ -272,6 +274,7 @@ export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInit
             ))}
           </div>
         )}
+        </div>
       </div>
 
       <Sheet open={showPgn} onClose={() => setShowPgn(false)} title="PGN">

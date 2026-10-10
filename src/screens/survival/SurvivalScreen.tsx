@@ -775,6 +775,8 @@ export function SurvivalScreen({
         />
 
         {!intro.held && lens.bar}
+        {lens.legend}
+        <div style={{ display: lens.legend ? 'none' : 'contents' }}>
 
         {intro.below ??
           (run.opened > 0 && (
@@ -820,6 +822,7 @@ export function SurvivalScreen({
               {game.state.misses.length} miss{game.state.misses.length === 1 ? '' : 'es'} so far
             </div>
           )}
+        </div>
         </div>
       </div>
     </>

@@ -94,8 +94,9 @@ describe('pieces', () => {
 
   it('rings one worst piece per side', () => {
     const marks = piecesLens(sicilian, 'w');
-    expect(marks.rings?.filter((r) => r.tone === 'mine')).toHaveLength(1);
-    expect(marks.rings?.filter((r) => r.tone === 'theirs')).toHaveLength(1);
+    // Red for both sides: a ring means "worst", whoever's piece it is.
+    expect(marks.rings).toHaveLength(2);
+    expect(marks.rings?.every((r) => r.tone === 'bad')).toBe(true);
   });
 });
 
