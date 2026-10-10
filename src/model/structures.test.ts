@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { START_FEN } from '../chess/core';
 import { goalRoute } from './boardHints';
-import { planFor, placeSquare, STRUCTURE_TEMPLATES, structureLabel, structureOf } from './structures';
+import { planFor, placeSquare, stepText, STRUCTURE_TEMPLATES, structureLabel, structureOf } from './structures';
 
 const id = (fen: string) => structureOf(fen)?.template.id ?? null;
 const side = (fen: string) => structureOf(fen)?.a ?? null;
@@ -88,5 +88,29 @@ describe('goalRoute', () => {
 
   it('calls a step done once the piece is there', () => {
     expect(goalRoute(carlsbad, 'w', { piece: 'n', to: 'c3' })).toEqual({ done: true, arrows: [] });
+  });
+});
+
+describe('stepText', () => {
+  it('gives Black its dots and leaves White plain', () => {
+    expect(stepText('Break with {c5}', 'w', 'b')).toBe('Break with ...c5');
+    expect(stepText('Stop <b5> with {a4}', 'w', 'w')).toBe('Stop ...b5 with a4');
+  });
+
+  it('mirrors the squares when Black owns the structure', () => {
+    // The Dutch Stonewall: Black's knight goes to e4, its pawn storm is ...g5–g4.
+    expect(stepText('Plant a knight on e5', 'b', 'b')).toBe('Plant a knight on e4');
+    expect(stepText('rook lift, or {g4–g5}', 'b', 'b')).toBe('rook lift, or ...g5–g4');
+    expect(stepText('Break with {c5} to open the queenside', 'b', 'w')).toBe('Break with c4 to open the queenside');
+  });
+
+  it('leaves no markers in any plan', () => {
+    for (const template of STRUCTURE_TEMPLATES) {
+      for (const a of ['w', 'b'] as const) {
+        for (const me of ['w', 'b'] as const) {
+          for (const step of planFor({ template, a }, me)) expect(step.text).not.toMatch(/[{}<>]/);
+        }
+      }
+    }
   });
 });
