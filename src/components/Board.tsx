@@ -364,6 +364,19 @@ export function Board({
                 // A dark edge under each keeps it readable on light and dark squares alike.
                 return (
                   <>
+                    {arrows.map((a, i) =>
+                      arrows.some((b) => b.to === a.from) ? null : (
+                        // Where a run of arrows starts: a disc under the piece that moves first.
+                        <circle
+                          key={`o${i}`}
+                          className="arrow-origin"
+                          cx={drawn[i].shaft.x1}
+                          cy={drawn[i].shaft.y1}
+                          r={0.4}
+                          fill={drawn[i].color}
+                        />
+                      ),
+                    )}
                     {drawn.map((d, i) => (
                       <line key={`e${i}`} {...d.shaft} className="arrow-edge" strokeWidth={0.13 + ARROW_EDGE * 2} strokeLinecap="round" />
                     ))}

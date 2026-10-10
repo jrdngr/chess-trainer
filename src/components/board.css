@@ -95,7 +95,8 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 5;
+  /* Under the pieces: an arrow never hides what it points at. */
+  z-index: 2;
 }
 
 .drag-layer {
@@ -327,7 +328,7 @@
 .board .lens-shield.safe svg { fill: rgb(34, 197, 94); }
 .board .lens-shield.exposed svg { fill: rgb(245, 158, 11); }
 .board .lens-shield.attacked svg { fill: rgb(239, 68, 68); }
-.board .lens-lines { z-index: 6; }
+.board .lens-lines { z-index: 2; }
 .board .lens-line {
   stroke: rgba(239, 68, 68, 0.6);
   stroke-width: 0.07;
@@ -479,3 +480,4 @@
 .board .lens-edge { stroke-width: 0.18; }
 .board .lens-edge.route { stroke-width: 0.14; }
 .board .lens-head { stroke: rgba(10, 12, 20, 0.7); stroke-width: 0.025; stroke-linejoin: round; }
+.board .arrow-origin { opacity: 0.45; stroke: rgba(10, 12, 20, 0.7); stroke-width: 0.025; }
