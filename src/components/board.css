@@ -180,6 +180,10 @@
   padding-top: 10px;
   background: none;
 }
+/* A note that never gets in the way of a move: taps go through to the board. */
+.board-flash.pass {
+  pointer-events: none;
+}
 @keyframes boardFlash {
   0% { opacity: 0; }
   8%, 80% { opacity: 1; }

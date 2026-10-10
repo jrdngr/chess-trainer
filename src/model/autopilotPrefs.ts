@@ -45,7 +45,16 @@ export const AUTO_GROWTH: GrowthPrefs = {
 
 /** Survival rounds: Autopilot steers, there is no clock, the feedback is yours. */
 export function autoSurvival(prefs: AutopilotPrefs): SurvivalPrefs {
-  return { steer: 'lines', clock: 'off', moveScores: prefs.moveScores, boardGlow: prefs.boardGlow };
+  // Moments, missions and the combo are always on in Autopilot, not a setting.
+  return {
+    steer: 'lines',
+    clock: 'off',
+    moveScores: prefs.moveScores,
+    boardGlow: prefs.boardGlow,
+    moments: true,
+    missions: true,
+    combo: true,
+  };
 }
 
 /** Every mode's options as an Autopilot round plays them. */

@@ -129,6 +129,13 @@ export const Icons = {
       <path d="M5 12v7h14v-7" />
     </svg>
   ),
+  /** The engine: a chip, for moves only it has. */
+  engine: (p: IconProps = {}) => (
+    <svg {...s(p)}>
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+      <path d="M10 10h4v4h-4zM9 2.5V6M15 2.5V6M9 18v3.5M15 18v3.5M2.5 9H6M2.5 15H6M18 9h3.5M18 15h3.5" />
+    </svg>
+  ),
   trash: (p: IconProps = {}) => (
     <svg {...s(p)}>
       <path d="M4 6h16M9 6V4h6v2M7 6l1 14h8l1-14" />

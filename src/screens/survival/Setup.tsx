@@ -77,6 +77,13 @@ export function Setup({ onStart, onExit }: { onStart: (prefs: SurvivalPrefs) => 
           />
         </div>
 
+        <Section title="Past the opening" />
+        <div className="list">
+          <Toggle label="Moments" on={prefs.moments} onToggle={() => setPrefs({ moments: !prefs.moments })} />
+          <Toggle label="Missions" on={prefs.missions} onToggle={() => setPrefs({ missions: !prefs.missions })} />
+          <Toggle label="Combo" on={prefs.combo} onToggle={() => setPrefs({ combo: !prefs.combo })} />
+        </div>
+
         {record.global.runs > 0 && (
           <>
             <Section title="Moves survived" />

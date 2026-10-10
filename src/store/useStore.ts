@@ -240,7 +240,7 @@ interface StoreState extends PersistedState {
   recordPlayGame: (game: ImportedGame) => void;
 
   /** Log a finished Survival run: its moves survived, against every opening its line went through. */
-  endSurvival: (line: string[], moves: number) => void;
+  endSurvival: (line: string[], moves: number, points?: number) => void;
   /** Log a Survival run you ended yourself: a count, and nothing toward best or form. */
   endSurvivalEarly: (line: string[]) => void;
   /**
@@ -923,8 +923,8 @@ export const useStore = create<StoreState>((set, get) => {
       commit({ importedGames: withPlayGame(get().importedGames, game) });
     },
 
-    endSurvival(line, moves) {
-      commit({ survival: recordSurvival(get().survival, openingTree(referenceIndex()), line, moves) });
+    endSurvival(line, moves, points) {
+      commit({ survival: recordSurvival(get().survival, openingTree(referenceIndex()), line, moves, points) });
     },
 
     endSurvivalEarly(line) {

@@ -32,6 +32,8 @@ import {
   findLineEnds,
   firstEnd,
   needsEngine,
+  pastTheBook,
+  startsPastBook,
   startGrowthAtEnd,
   unaskedPastBook,
   type Hole,
@@ -628,6 +630,26 @@ describe('growing past the book', () => {
     expect(findHoles(albin, index, { minShare: 5 }).filter((hole) => hole.path.length === 11)).toHaveLength(3);
     expect(choicesAt(index, end.fen)!.map((choice) => choice.san)).toEqual(['Ng6', 'Nf5', 'Be6']);
     clearEngineReplies();
+  });
+
+  it('knows a row on a line end starts past the book', () => {
+    clearEngineReplies();
+    // Only its end: a row with holes too starts at a hole, inside the book.
+    const row = { ...growthRows([albin], index).find((r) => r.ends.length > 0)!, holes: [] };
+    expect(pastTheBook(index, firstEnd(row)!.fen)).toBe(true);
+    expect(startsPastBook(index, row)).toBe(true);
+    // An engine reply is past the book too, once the engine has given it.
+    rememberEngineReplies(firstEnd(row)!.fen, ['Ng6', 'Nf5', 'Be6']);
+    const [hole] = findHoles(albin, index).filter((h) => h.path.length === 11);
+    expect(startsPastBook(index, row, hole)).toBe(true);
+    clearEngineReplies();
+  });
+
+  it('knows a row inside the book does not', () => {
+    const rep = thin('w', 'd4 d5 c4');
+    const row = growthRows([rep], index).find((r) => r.holes.length > 0)!;
+    expect(pastTheBook(index, START_FEN)).toBe(false);
+    expect(startsPastBook(index, row)).toBe(false);
   });
 
   it('starts a run on a line end with the opponent to move', () => {

@@ -46,7 +46,7 @@ describe('milestones', () => {
   });
 
   it('reads Survival best and rounds played', () => {
-    const survival: SurvivalRecord = { ...EMPTY_SURVIVAL_RECORD, global: { best: 22, recent: [], history: [], runs: 1, ended: 0 } };
+    const survival: SurvivalRecord = { ...EMPTY_SURVIVAL_RECORD, global: { best: 22, recent: [], history: [], runs: 1, ended: 0, bestPoints: 0 } };
     const global = emptyNodeStats();
     global.byMode.survival.rounds = 80;
     global.byMode.drill.rounds = 40;
@@ -58,7 +58,7 @@ describe('milestones', () => {
   });
 
   it('puts the closest unearned ones next', () => {
-    const survival: SurvivalRecord = { ...EMPTY_SURVIVAL_RECORD, global: { best: 18, recent: [], history: [], runs: 1, ended: 0 } };
+    const survival: SurvivalRecord = { ...EMPTY_SURVIVAL_RECORD, global: { best: 18, recent: [], history: [], runs: 1, ended: 0, bestPoints: 0 } };
     const next = nextUp(milestones(EMPTY_SCORE, survival, tree), 2).map((m) => m.id);
     expect(next).toEqual(['survival-20', 'survival-30']);
   });

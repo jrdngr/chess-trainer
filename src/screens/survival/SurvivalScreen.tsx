@@ -18,6 +18,7 @@ import { referenceIndex } from '../../model/referenceIndex';
 import { evidenceFor } from '../../model/growth';
 import { nodeStats, ratedNodes, seenIn, type MoveResult } from '../../model/scoring';
 import { growOfferAt, offerOpening, type GrowOffer } from '../../model/growOffer';
+import { startsPastBook } from '../../model/growth';
 import type { Selection } from '../../model/selection';
 import { useRatingTracker } from '../../components/Ratings';
 import { useHeaderRating } from '../../components/ScoreBar';
@@ -26,7 +27,13 @@ import { gradeForTime } from '../../model/srs';
 import { mulberry32 } from '../../model/session';
 import {
   bookReply,
+  comboMultiplier,
+  firstMission,
   glowFor,
+  judgedExtras,
+  missionText,
+  missionTitle,
+  type Earned,
   evalSwing,
   moveScore,
   playTheirs,
@@ -71,6 +78,31 @@ const MISS_MS = 2000;
 
 /** How long a move's score floats over its square. */
 const SCORE_MS = 1400;
+
+/** How long a moment's banner, or what a move earned, stays over the board. */
+const NOTE_MS = 1600;
+
+/** What a judged move earned, said over the board: a moment settled, a mission ended, the combo. */
+function noteFor(earned: Earned, best: string | null): { text: string; tone: 'good' | 'bad' } | null {
+  const parts: { text: string; good: boolean }[] = [];
+  if (earned.moment) {
+    parts.push(
+      earned.moment.found
+        ? { text: `Found it · +${earned.moment.bonus}`, good: true }
+        : { text: best ? `Missed it · ${best} was there` : 'Missed it', good: false },
+    );
+  }
+  if (earned.mission) {
+    parts.push(
+      earned.mission.result === 'done'
+        ? { text: `${missionTitle(earned.mission.kind)} complete · +${earned.mission.bonus}`, good: true }
+        : { text: `${missionTitle(earned.mission.kind)} failed`, good: false },
+    );
+  }
+  if (!earned.moment && earned.combo === 'broke') parts.push({ text: 'Combo broken', good: false });
+  if (!parts.length) return null;
+  return { text: parts.map((part) => part.text).join(' · '), tone: parts.every((part) => part.good) ? 'good' : 'bad' };
+}
 
 /** What one of your moves cost, floating up from the square it landed on. */
 interface ScorePop {
@@ -168,6 +200,8 @@ export function SurvivalScreen({
   const [phase, setPhase] = useState<Phase>('setup');
   const modes = useModePrefs();
   const [prefs, setPrefs] = useState<SurvivalPrefs>(modes.survival);
+  /** With moments, missions or the combo on, a run is scored in points as well as moves. */
+  const scoredInPoints = prefs.moments || prefs.missions || prefs.combo;
   const [game, setGame] = useState<Game | null>(null);
   const [ending, setEnding] = useState<Ending | null>(null);
   const [before, setBefore] = useState<SurvivalRecord>(state.survival);
@@ -176,6 +210,10 @@ export function SurvivalScreen({
   const [engineTurn, setEngineTurn] = useState(false);
   const [miss, setMiss] = useState<MissFlash | null>(null);
   const [pop, setPop] = useState<ScorePop | null>(null);
+  /** What your last judged move earned, or "There's something here", over the board. */
+  const [note, setNote] = useState<{ key: number; text: string; tone: 'good' | 'bad' | 'accent' } | null>(null);
+  /** The moment's move you missed, drawn green while its note shows. */
+  const [missedBest, setMissedBest] = useState<{ from: LegalMove['from']; to: LegalMove['to'] } | null>(null);
   const [prepStatus, setPrepStatus] = useState<PrepStatus>('on');
   /** Whether your prep has answered anything yet this run: with nothing prepared, there is no status to show. */
   const [prepSeen, setPrepSeen] = useState(false);
@@ -247,7 +285,7 @@ export function SurvivalScreen({
     const line = ended.run.played;
     // A run you end yourself is counted, but says nothing about how long you survive.
     if (how.kind === 'ended') endSurvivalEarly(line);
-    else endSurvival(line, ended.moves);
+    else endSurvival(line, ended.moves, scoredInPoints ? ended.extras.points : ended.moves);
     ratings.track(settleRun(answers.current, line));
     const region = nodeById(tree, ended.run.openingId);
     const clean = ended.misses.length === 0 ? prepEnd.current : null;
@@ -268,6 +306,8 @@ export function SurvivalScreen({
     setEnding(how);
     setMiss(null);
     setPop(null);
+    setNote(null);
+    setMissedBest(null);
     setEngineTurn(false);
     setThinking(false);
     // A last answer (or the run's catch-up) that moved the header's rating
@@ -325,6 +365,7 @@ export function SurvivalScreen({
     color: run?.color ?? 'w',
     // Kept warm where the engine is sure to be asked: past your prep.
     active: live && myTurn && !!game && prepHere(game.source, game.state).length === 0,
+    moments: prefs.moments,
     onJudged: (judged) => {
       if (!game || !run || over.current) return;
       const expected = prepHere(game.source, game.state);
@@ -351,7 +392,18 @@ export function SurvivalScreen({
         const right = applySan(run.fen, expected[0]);
         if (right) setMiss({ expected: expected[0], from: right.from, to: right.to });
       }
-      afterMove({ ...game, state: playYours(game.state, judged.san, expected[0]) });
+      // Moments are a thing past your prep; a prepared position is the prep's to judge.
+      const scored = judgedExtras(game.state.extras, prefs, run.color, {
+        lost: judged.lost,
+        after: judged.after,
+        moment: judged.moment && !expected.length,
+        found: judged.found,
+      });
+      const told = noteFor(scored.earned, judged.best);
+      setNote(told ? { key: Date.now(), ...told } : null);
+      const shown = scored.earned.moment && !scored.earned.moment.found && judged.best ? applySan(run.fen, judged.best) : null;
+      setMissedBest(shown ? { from: shown.from, to: shown.to } : null);
+      afterMove({ ...game, state: playYours(game.state, judged.san, expected[0], scored.extras) });
     },
   });
 
@@ -365,10 +417,28 @@ export function SurvivalScreen({
     },
   });
 
+  /**
+   * A moment: one move here is far better than the rest. Said over the board
+   * when your turn comes, with the clock held while it shows.
+   */
+  const momentHere =
+    prefs.moments &&
+    live &&
+    myTurn &&
+    !judge.pending &&
+    !!run &&
+    !!game &&
+    judge.momentAt === run.fen &&
+    prepHere(game.source, game.state).length === 0;
+  useEffect(() => {
+    if (momentHere) setNote({ key: Date.now(), text: "There's something here", tone: 'accent' });
+  }, [momentHere]);
+  const momentShowing = momentHere && note?.tone === 'accent';
+
   const clock = useMoveClock({
     seconds: clockSeconds(prefs.clock),
     turnKey: `${run?.id ?? ''}:${run?.played.length ?? 0}`,
-    active: live && myTurn && !judge.pending,
+    active: live && myTurn && !judge.pending && !momentShowing,
   });
 
   // The opponent answers after a beat, and not while a miss is on the board.
@@ -408,6 +478,24 @@ export function SurvivalScreen({
   useEffect(() => {
     if (baselineCp !== null) setEvalCp(baselineCp);
   }, [baselineCp]);
+
+  // Where the prep runs out, the first mission is set from the eval in front of you.
+  useEffect(() => {
+    if (!game || !run || !live || !myTurn || baselineCp === null) return;
+    if (prepHere(game.source, game.state).length) return;
+    const extras = firstMission(game.state.extras, prefs, run.color, baselineCp);
+    if (extras !== game.state.extras) setGame({ ...game, state: { ...game.state, extras } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baselineCp, live, myTurn]);
+
+  useEffect(() => {
+    if (!note) return;
+    const timer = window.setTimeout(() => {
+      setNote(null);
+      setMissedBest(null);
+    }, NOTE_MS);
+    return () => window.clearTimeout(timer);
+  }, [note]);
 
   useEffect(() => {
     if (!pop) return;
@@ -451,6 +539,8 @@ export function SurvivalScreen({
     setEnding(null);
     setMiss(null);
     setPop(null);
+    setNote(null);
+    setMissedBest(null);
     setPrepStatus('on');
     setPrepSeen(false);
     setEvalCp(null);
@@ -474,6 +564,8 @@ export function SurvivalScreen({
   }
 
   const next = onNext ?? (() => start(prefs));
+  /** The grow offer starts past the book, so its button says the engine comes with it. */
+  const growEngine = !!growOffer && startsPastBook(index, growOffer.launch.row, growOffer.launch.hole);
 
   if (phase === 'growing' && growOffer) {
     const { launch } = growOffer;
@@ -493,6 +585,7 @@ export function SurvivalScreen({
           pointBack: growOffer.kind === 'line' ? 'batch' : 'cap',
           widened: launch.widened,
           next: onNext,
+          engine: growEngine,
         }}
       />
     );
@@ -512,9 +605,11 @@ export function SurvivalScreen({
         ending={ending}
         before={before}
         moved={shown}
-        grow={growOffer?.kind === 'opening' ? { text: growOffer.text, onGrow: () => setPhase('growing') } : null}
+        grow={growOffer?.kind === 'opening' ? { text: growOffer.text, engine: growEngine, onGrow: () => setPhase('growing') } : null}
         growLine={growOffer?.kind === 'line' ? () => setPhase('growing') : null}
+        growEngine={growEngine}
         nextLabel={onNext ? 'Next round' : 'Next run'}
+        prefs={prefs}
         onNext={next}
         onChangeOptions={plan ? undefined : () => setPhase('setup')}
         onAnalyze={() => onAnalyze(game.state.run.played, game.state.run.color)}
@@ -562,7 +657,7 @@ export function SurvivalScreen({
         actions={
           <div className="row gap-6">
             {live && myTurn && <ClockHud clock={clock} />}
-            <span className="chip num wide">{game.state.moves}</span>
+            <span className="chip num wide">{scoredInPoints ? game.state.extras.points : game.state.moves}</span>
           </div>
         }
       />
@@ -575,7 +670,13 @@ export function SurvivalScreen({
           movableFor={run.color}
           onMove={onMove}
           lastMove={intro.fen ? intro.lastMove : lastMoveOf(shownLine)}
-          arrows={miss ? [{ from: miss.from, to: miss.to, color: 'var(--good)' }] : []}
+          arrows={
+            miss
+              ? [{ from: miss.from, to: miss.to, color: 'var(--good)' }]
+              : missedBest
+                ? [{ from: missedBest.from, to: missedBest.to, color: 'var(--good)' }]
+                : []
+          }
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
           captured
@@ -584,6 +685,15 @@ export function SurvivalScreen({
             <>
               {intro.overlay}
               {pop && <MoveScore key={pop.key} pop={pop} orientation={run.color} />}
+              {note && !miss && (
+                <div key={note.key} className="board-flash top pass">
+                  <div className="flash-pill">
+                    <div className={`verdict ${note.tone === 'good' ? 'ok' : note.tone === 'bad' ? 'no' : 'accent'}`} style={{ padding: 0 }}>
+                      {note.text}
+                    </div>
+                  </div>
+                </div>
+              )}
               {miss && (
                 <div className="board-flash top" onPointerDown={() => setMiss(null)}>
                   <div className="flash-pill">
@@ -616,6 +726,19 @@ export function SurvivalScreen({
           {(prepSeen || prepStatus === 'off' || (prepStatus === 'on' && prepHere(game.source, game.state).length > 0)) && (
             <div className="ctx" style={{ color: PREP_STATUS[prepStatus].color, fontWeight: 600 }}>
               {PREP_STATUS[prepStatus].text}
+            </div>
+          )}
+          {momentHere && (
+            <div className="ctx" style={{ color: 'var(--accent)', fontWeight: 600 }}>
+              There's something here
+            </div>
+          )}
+          {prefs.missions && game.state.extras.mission && (
+            <div className="ctx">{missionText(game.state.extras.mission)}</div>
+          )}
+          {prefs.combo && comboMultiplier(game.state.extras.combo) > 1 && (
+            <div className="ctx num" style={{ color: 'var(--good)', fontWeight: 600 }}>
+              Combo ×{comboMultiplier(game.state.extras.combo)}
             </div>
           )}
           {prepStatus === 'off' && (

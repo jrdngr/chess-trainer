@@ -61,9 +61,23 @@ export interface SurvivalPrefs {
   moveScores: boolean;
   /** A tint around the board for who is better, in place of an eval bar. */
   boardGlow: boolean;
+  /** Past prep, a pause where one move is far better than the rest: find it for a bonus. */
+  moments: boolean;
+  /** Past prep, a goal sized to the eval, one after another. */
+  missions: boolean;
+  /** Moves close to the engine's best build a multiplier on the points each move earns. */
+  combo: boolean;
 }
 
-export const DEFAULT_SURVIVAL: SurvivalPrefs = { steer: 'lines', clock: 'off', moveScores: true, boardGlow: true };
+export const DEFAULT_SURVIVAL: SurvivalPrefs = {
+  steer: 'lines',
+  clock: 'off',
+  moveScores: true,
+  boardGlow: true,
+  moments: true,
+  missions: true,
+  combo: true,
+};
 
 /* ── feedback ───────────────────────────────────────────────────────────── */
 
@@ -125,6 +139,242 @@ export function glowFor(color: 'w' | 'b', cp: number): Glow | null {
   return null;
 }
 
+/* ── past the opening: points, moments, missions, combo ─────────────────── */
+
+/**
+ * What keeps a run interesting once the prep runs out. Each is a toggle;
+ * Autopilot plays with all three on.
+ *
+ * Every move survived earns a point, times the combo's multiplier, and
+ * moments found and missions completed pay bonuses on top. With all three off
+ * a run's points are its moves survived. Moves survived stays the record it
+ * always was; points are kept beside it.
+ */
+
+/** A move within this many centipawns of the engine's best extends the combo. */
+export const COMBO_CLEAN = 20;
+/** Past clean but within this, the combo holds; worse than this breaks it. */
+export const COMBO_HOLD = 40;
+
+/** The combo after a judged move that cost `lost` centipawns against the best. */
+export function comboAfter(streak: number, lost: number): number {
+  if (lost <= COMBO_CLEAN) return streak + 1;
+  if (lost <= COMBO_HOLD) return streak;
+  return 0;
+}
+
+/** What each move earns at this combo: ×1, then ×2 from 3 in a row, ×3 from 6, ×4 from 10. */
+export function comboMultiplier(streak: number): number {
+  if (streak >= 10) return 4;
+  if (streak >= 6) return 3;
+  if (streak >= 3) return 2;
+  return 1;
+}
+
+/** How far ahead of the second-best move the best must be for a moment. */
+export const MOMENT_GAP = 150;
+/** Where the best move must leave you, at least, for a moment: a real gain, not an escape. */
+export const MOMENT_FLOOR = 100;
+/** A move this close to the best finds the moment. */
+export const MOMENT_FOUND = 50;
+/** A moment found pays this, and each found in a row after it this much more. */
+export const MOMENT_BONUS = 10;
+export const MOMENT_STREAK_BONUS = 5;
+
+const MATE = 10_000;
+
+/**
+ * Whether a position is a moment: the engine's best move, in White's frame,
+ * against its second best. A mate the second move does not also have always
+ * counts. A position with only one legal move is not a moment.
+ */
+export function isMoment(color: 'w' | 'b', best: number, second: number | null): boolean {
+  if (second === null) return false;
+  const top = color === 'w' ? best : -best;
+  const next = color === 'w' ? second : -second;
+  if (top >= MATE) return next < MATE;
+  return top >= MOMENT_FLOOR && top - next >= MOMENT_GAP;
+}
+
+/** The bonus for a moment found, with `streak` found in a row before it. */
+export function momentBonus(streak: number): number {
+  return MOMENT_BONUS + MOMENT_STREAK_BONUS * streak;
+}
+
+export type MissionKind = 'edge' | 'lead' | 'dig';
+
+export interface Mission {
+  kind: MissionKind;
+  /** Your judged moves since it was set. */
+  moves: number;
+  /** Keep your edge: your moves at +1 or better so far. */
+  held: number;
+}
+
+/** Keep your edge: stay at +1 or better for this many of your moves. */
+export const EDGE_MOVES = 10;
+/** Take the lead and Dig in: this many of your moves to get there. */
+export const MISSION_WINDOW = 15;
+/** Where you stand, in centipawns from your side, to keep or take the lead. */
+export const MISSION_LEAD = 100;
+/** Dig in: back to here or better. */
+export const MISSION_DUG = -50;
+/** A mission completed pays this. */
+export const MISSION_BONUS = 15;
+/** Your moves between one mission ending and the next being set. */
+export const MISSION_BREAK = 3;
+
+/** Your side's view of a score in White's frame. */
+function mine(color: 'w' | 'b', cp: number): number {
+  return color === 'w' ? cp : -cp;
+}
+
+/** The mission the eval calls for, in White's frame. */
+export function missionFor(color: 'w' | 'b', cp: number): Mission {
+  const at = mine(color, cp);
+  const kind: MissionKind = at >= MISSION_LEAD ? 'edge' : at <= -MISSION_LEAD ? 'dig' : 'lead';
+  return { kind, moves: 0, held: 0 };
+}
+
+export function missionTitle(kind: MissionKind): string {
+  return kind === 'edge' ? 'Keep your edge' : kind === 'lead' ? 'Take the lead' : 'Dig in';
+}
+
+/** The mission's line under "Your move": its name and where it stands. */
+export function missionText(mission: Mission): string {
+  if (mission.kind === 'edge') return `${missionTitle(mission.kind)} · ${mission.held} of ${EDGE_MOVES}`;
+  return `${missionTitle(mission.kind)} · ${MISSION_WINDOW - mission.moves} moves left`;
+}
+
+/** One of your judged moves against a mission, with the eval after it in White's frame. */
+export function stepMission(
+  mission: Mission,
+  color: 'w' | 'b',
+  cp: number,
+): { mission: Mission; result: 'done' | 'failed' | null } {
+  const at = mine(color, cp);
+  const next = { ...mission, moves: mission.moves + 1 };
+  switch (mission.kind) {
+    case 'edge':
+      if (at < MISSION_LEAD) return { mission: next, result: 'failed' };
+      next.held = mission.held + 1;
+      return { mission: next, result: next.held >= EDGE_MOVES ? 'done' : null };
+    case 'lead':
+      if (at >= MISSION_LEAD) return { mission: next, result: 'done' };
+      return { mission: next, result: next.moves >= MISSION_WINDOW ? 'failed' : null };
+    case 'dig':
+      if (at >= MISSION_DUG) return { mission: next, result: 'done' };
+      return { mission: next, result: next.moves >= MISSION_WINDOW ? 'failed' : null };
+  }
+}
+
+/** Where a run's extras stand. */
+export interface Extras {
+  points: number;
+  combo: number;
+  bestCombo: number;
+  moments: { found: number; missed: number; streak: number };
+  mission: Mission | null;
+  /** Your judged moves still to go before the next mission is set. */
+  missionBreak: number;
+  missions: { done: number; failed: number };
+}
+
+export const NO_EXTRAS: Extras = {
+  points: 0,
+  combo: 0,
+  bestCombo: 0,
+  moments: { found: 0, missed: 0, streak: 0 },
+  mission: null,
+  missionBreak: 0,
+  missions: { done: 0, failed: 0 },
+};
+
+/** What a judged move did, for the screen to show. */
+export interface Earned {
+  points: number;
+  moment: { found: boolean; bonus: number } | null;
+  mission: { kind: MissionKind; result: 'done' | 'failed'; bonus: number } | null;
+  /** The combo went up a multiplier, or broke. */
+  combo: 'up' | 'broke' | null;
+}
+
+/**
+ * One of your moves the engine judged, past prep or off it: the combo moves,
+ * the move earns its points, a moment is settled, a mission steps.
+ */
+export function judgedExtras(
+  extras: Extras,
+  prefs: Pick<SurvivalPrefs, 'moments' | 'missions' | 'combo'>,
+  color: 'w' | 'b',
+  move: { lost: number; after: number; moment: boolean; found: boolean },
+): { extras: Extras; earned: Earned } {
+  const was = extras.combo;
+  let combo = prefs.combo ? comboAfter(was, move.lost) : 0;
+  let moments = extras.moments;
+  let momentEarned: Earned['moment'] = null;
+  if (prefs.moments && move.moment) {
+    if (move.found) {
+      const bonus = momentBonus(moments.streak);
+      moments = { ...moments, found: moments.found + 1, streak: moments.streak + 1 };
+      momentEarned = { found: true, bonus };
+    } else {
+      moments = { ...moments, missed: moments.missed + 1, streak: 0 };
+      momentEarned = { found: false, bonus: 0 };
+      combo = 0;
+    }
+  }
+  let points = extras.points + comboMultiplier(combo) + (momentEarned?.bonus ?? 0);
+  let mission = extras.mission;
+  let missionBreak = extras.missionBreak;
+  let missions = extras.missions;
+  let missionEarned: Earned['mission'] = null;
+  if (prefs.missions) {
+    if (mission) {
+      const stepped = stepMission(mission, color, move.after);
+      if (stepped.result) {
+        const bonus = stepped.result === 'done' ? MISSION_BONUS : 0;
+        missionEarned = { kind: mission.kind, result: stepped.result, bonus };
+        points += bonus;
+        missions =
+          stepped.result === 'done' ? { ...missions, done: missions.done + 1 } : { ...missions, failed: missions.failed + 1 };
+        mission = null;
+        missionBreak = MISSION_BREAK;
+      } else mission = stepped.mission;
+    } else if (missionBreak > 0) {
+      missionBreak -= 1;
+      if (missionBreak === 0) mission = missionFor(color, move.after);
+    }
+  }
+  const up = comboMultiplier(combo) > comboMultiplier(was);
+  const broke = prefs.combo && was >= 3 && combo === 0;
+  return {
+    extras: {
+      points,
+      combo,
+      bestCombo: Math.max(extras.bestCombo, combo),
+      moments,
+      mission,
+      missionBreak,
+      missions,
+    },
+    earned: { points: points - extras.points, moment: momentEarned, mission: missionEarned, combo: up ? 'up' : broke ? 'broke' : null },
+  };
+}
+
+/** A move your prep answered: a point, at ×1. */
+export function prepExtras(extras: Extras): Extras {
+  return { ...extras, points: extras.points + 1 };
+}
+
+/** The first mission, set where the prep runs out, from the eval in front of you. */
+export function firstMission(extras: Extras, prefs: Pick<SurvivalPrefs, 'missions'>, color: 'w' | 'b', cp: number): Extras {
+  if (!prefs.missions || extras.mission || extras.missionBreak > 0 || extras.missions.done + extras.missions.failed > 0) {
+    return extras;
+  }
+  return { ...extras, mission: missionFor(color, cp) };
+}
+
 /* ── a run ──────────────────────────────────────────────────────────────── */
 
 /** A prepared position answered with a different, sound move. */
@@ -147,6 +397,8 @@ export interface SurvivalRun {
   /** Your own moves so far, every one the referee passed. The score. */
   moves: number;
   misses: Miss[];
+  /** Points, combo, moments and missions — see `judgedExtras`. */
+  extras: Extras;
 }
 
 export interface SurvivalStart {
@@ -212,7 +464,7 @@ export function startSurvival(opts: StartOptions): SurvivalStart | null {
     source = { ...begun.source, prepAt: regionSource(opts.tree, opts.node, rep, side).prepAt };
     begun.run.repertoireId = rep?.id;
   }
-  return { source, state: { run: begun.run, moves: 0, misses: [] }, redraw: begun.redraw };
+  return { source, state: { run: begun.run, moves: 0, misses: [], extras: NO_EXTRAS }, redraw: begun.redraw };
 }
 
 /** Your prep's answers here, best first; empty where it says nothing. */
@@ -224,7 +476,7 @@ export function prepHere(source: LineSource, state: SurvivalRun): string[] {
  * One of your moves, passed by your prep or by the engine. A miss is the
  * prepared move you did not play, logged on the run for the end screen.
  */
-export function playYours(state: SurvivalRun, san: string, missed?: string): SurvivalRun {
+export function playYours(state: SurvivalRun, san: string, missed?: string, extras?: Extras): SurvivalRun {
   const { run } = state;
   const move = applySan(run.fen, san);
   if (!move) return state;
@@ -232,6 +484,7 @@ export function playYours(state: SurvivalRun, san: string, missed?: string): Sur
   return {
     run: { ...run, fen: move.after, played: [...run.played, san], survived: run.survived + 1, target },
     moves: state.moves + 1,
+    extras: extras ?? prepExtras(state.extras),
     misses: missed
       ? [...state.misses, { ply: run.played.length, fen: run.fen, played: san, expected: missed }]
       : state.misses,
@@ -295,6 +548,8 @@ export interface SurvivalScore {
   runs: number;
   /** Runs you ended yourself: counted here and nowhere else. */
   ended: number;
+  /** The most points a run has scored. Only ever goes up. */
+  bestPoints: number;
 }
 
 export interface SurvivalRecord {
@@ -304,7 +559,7 @@ export interface SurvivalRecord {
   openings: Record<string, SurvivalScore>;
 }
 
-export const EMPTY_SURVIVAL_SCORE: SurvivalScore = { best: 0, recent: [], history: [], runs: 0, ended: 0 };
+export const EMPTY_SURVIVAL_SCORE: SurvivalScore = { best: 0, recent: [], history: [], runs: 0, ended: 0, bestPoints: 0 };
 
 export const EMPTY_SURVIVAL_RECORD: SurvivalRecord = { global: { ...EMPTY_SURVIVAL_SCORE }, openings: {} };
 
@@ -317,6 +572,7 @@ export function normalizeSurvival(saved: Partial<SurvivalRecord> | undefined): S
     history: (score?.history ?? score?.recent ?? []).slice(-HISTORY_RUNS),
     runs: score?.runs ?? 0,
     ended: score?.ended ?? 0,
+    bestPoints: score?.bestPoints ?? 0,
   });
   return {
     global: fix(saved?.global),
@@ -339,7 +595,7 @@ export function openingsAlong(tree: OpeningTree, line: string[]): string[] {
   return [...out];
 }
 
-function scored(score: SurvivalScore | undefined, moves: number): SurvivalScore {
+function scored(score: SurvivalScore | undefined, moves: number, points: number): SurvivalScore {
   const base = score ?? EMPTY_SURVIVAL_SCORE;
   return {
     best: Math.max(base.best, moves),
@@ -347,6 +603,7 @@ function scored(score: SurvivalScore | undefined, moves: number): SurvivalScore 
     history: [...base.history, moves].slice(-HISTORY_RUNS),
     runs: base.runs + 1,
     ended: base.ended,
+    bestPoints: Math.max(base.bestPoints ?? 0, points),
   };
 }
 
@@ -361,10 +618,12 @@ export function recordSurvival(
   tree: OpeningTree,
   line: string[],
   moves: number,
+  /** The run's points; its moves when it scored none apart. */
+  points = moves,
 ): SurvivalRecord {
   const openings = { ...record.openings };
-  for (const id of openingsAlong(tree, line)) openings[id] = scored(openings[id], moves);
-  return { global: scored(record.global, moves), openings };
+  for (const id of openingsAlong(tree, line)) openings[id] = scored(openings[id], moves, points);
+  return { global: scored(record.global, moves, points), openings };
 }
 
 /**

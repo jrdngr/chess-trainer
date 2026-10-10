@@ -85,7 +85,9 @@ export type AppEvent =
   /** An answer Growth wrote in, and what else was on offer beside it. */
   | (Base & { kind: 'growth-pick'; color: Color; line: string; picked: string; offered: string[] })
   /** Growth's Undo or Undo all. */
-  | (Base & { kind: 'growth-undo'; color: Color; line: string; all: boolean });
+  | (Base & { kind: 'growth-undo'; color: Color; line: string; all: boolean })
+  /** Growth's reveal at the end of the book, taken up on going on with the engine. */
+  | (Base & { kind: 'growth-past-book'; color: Color; line: string });
 
 /** Distribute Omit over the union, so each kind keeps its own fields. */
 type Without<T, K extends keyof never> = T extends unknown ? Omit<T, K> : never;

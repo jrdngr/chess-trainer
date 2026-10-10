@@ -5,7 +5,7 @@ import { SelectionBar } from '../../components/Selection';
 import { openingTree } from '../../model/openingTree';
 import { colorsOf, repertoiresIn } from '../../model/selection';
 import { acrossRegions, isAnyFavorite, regionsBySide } from '../../model/anyFavorite';
-import { growthRows, optionsAt, recommended, unaskedPastBook, type GrowthRow } from '../../model/growth';
+import { growthRows, optionsAt, recommended, startsPastBook, unaskedPastBook, type GrowthRow } from '../../model/growth';
 import { useEngineReplies } from '../../engine/engineReplies';
 import { GROWTH_DEPTHS, SHARE_STEPS, shareLabel } from '../../model/modes';
 import { referenceIndex } from '../../model/referenceIndex';
@@ -28,7 +28,14 @@ const STAND_IN = 'growth_stand_in_';
  * first move is not a reply to anything, so it is picked from the book, and
  * Black's answers to it are the holes from there.
  */
-export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; onExit: () => void }) {
+export function Lobby({
+  onStart,
+  onExit,
+}: {
+  /** `engine`: the row was taken knowing it starts past the book. */
+  onStart: (row: GrowthRow, engine: boolean) => void;
+  onExit: () => void;
+}) {
   const state = useStore();
   const setModePrefs = useStore((s) => s.setModePrefs);
   const ensureRepertoire = useStore((s) => s.ensureRepertoire);
@@ -67,8 +74,9 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
       picked: row.name,
       start: how,
     });
-    if (!row.repertoireId.startsWith(STAND_IN)) return onStart(row);
-    onStart({ ...row, repertoireId: ensureRepertoire(row.color) });
+    const engine = startsPastBook(index, row);
+    if (!row.repertoireId.startsWith(STAND_IN)) return onStart(row, engine);
+    onStart({ ...row, repertoireId: ensureRepertoire(row.color) }, engine);
   };
 
   const keepFirstMove = (san: string) => {
@@ -126,7 +134,14 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
 
         {pick && (
           <button className="btn primary block xl" onClick={() => start(pick, 'Start button')}>
-            Start
+            {startsPastBook(index, pick) ? (
+              <>
+                <Icons.engine size={18} />
+                Start with the engine
+              </>
+            ) : (
+              'Start'
+            )}
           </button>
         )}
 
@@ -175,6 +190,11 @@ export function Lobby({ onStart, onExit }: { onStart: (row: GrowthRow) => void; 
                       {row.starred && (
                         <span style={{ color: 'var(--accent)', marginRight: 5 }}>
                           <Icons.star size={12} filled />
+                        </span>
+                      )}
+                      {startsPastBook(index, row) && (
+                        <span style={{ color: 'var(--text-3)', marginRight: 5 }}>
+                          <Icons.engine size={12} />
                         </span>
                       )}
                       {row.name}

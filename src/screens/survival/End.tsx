@@ -7,7 +7,15 @@ import { formatScore, winFraction } from '../../engine/types';
 import { useEngine } from '../../engine/useEngine';
 import { nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
-import { moveNumber, openingsAlong, survivalFor, type SurvivalRecord, type SurvivalRun } from '../../model/survival';
+import {
+  comboMultiplier,
+  moveNumber,
+  openingsAlong,
+  survivalFor,
+  type SurvivalPrefs,
+  type SurvivalRecord,
+  type SurvivalRun,
+} from '../../model/survival';
 import { repertoireList, useStore } from '../../store/useStore';
 import { offPrepHint, type TidyFind } from '../../model/tidy';
 import { OffPrepHint } from '../../components/OffPrepHint';
@@ -65,7 +73,9 @@ export function End({
   moved,
   grow,
   growLine,
+  growEngine,
   nextLabel,
+  prefs,
   onNext,
   onChangeOptions,
   onAnalyze,
@@ -79,11 +89,15 @@ export function End({
   /** The ratings this run moved that the end screen names: favorites and the run's own opening. */
   moved: RatingChange[];
   /** The offer to grow the opening, on a clean end of prep with every line held. */
-  grow: { text: string; onGrow: () => void } | null;
+  grow: { text: string; engine: boolean; onGrow: () => void } | null;
   /** Grow the line just finished, from where your prep ran out. */
   growLine: (() => void) | null;
+  /** Growing this line starts past the book, with the engine. */
+  growEngine: boolean;
   /** "Next run", or Autopilot's "Next round". */
   nextLabel: string;
+  /** Which of moments, missions and the combo the run played with. */
+  prefs: Pick<SurvivalPrefs, 'moments' | 'missions' | 'combo'>;
   onNext: () => void;
   /** Back to the setup screen; absent when Autopilot set the run up. */
   onChangeOptions?: () => void;
@@ -215,6 +229,20 @@ export function End({
     });
   }, [tree, run.played]);
   const newBest = ending.kind !== 'ended' && moves > 0 && moves > before.global.best;
+  const { extras } = state;
+  /** With moments, missions or the combo on, the run is scored in points. */
+  const scoredInPoints = prefs.moments || prefs.missions || prefs.combo;
+  const newBestPoints =
+    scoredInPoints && ending.kind !== 'ended' && extras.points > 0 && extras.points > (before.global.bestPoints ?? 0);
+  const extraStats = [
+    prefs.moments &&
+      extras.moments.found + extras.moments.missed > 0 &&
+      `Moments ${extras.moments.found} of ${extras.moments.found + extras.moments.missed}`,
+    prefs.missions &&
+      extras.missions.done + extras.missions.failed > 0 &&
+      `Missions ${extras.missions.done} of ${extras.missions.done + extras.missions.failed}`,
+    prefs.combo && extras.bestCombo >= 3 && `Best combo ×${comboMultiplier(extras.bestCombo)}`,
+  ].filter(Boolean);
 
   const playedText = sansToMoveText(blunder ? [...run.played, blunder.played] : run.played);
   const copyPlayed = async () => {
@@ -270,8 +298,8 @@ export function End({
           <div className="card grow-offer">
             <span className="grow small">{grow.text}</span>
             <button className="btn accent sm" onClick={grow.onGrow}>
-              <Icons.plus size={16} />
-              Grow it
+              {grow.engine ? <Icons.engine size={16} /> : <Icons.plus size={16} />}
+              {grow.engine ? 'Grow it with the engine' : 'Grow it'}
             </button>
           </div>
         )}
@@ -297,12 +325,24 @@ export function End({
 
         <div className="card center">
           <div className="small muted">{title}</div>
-          <div className="title" style={{ fontSize: 22, marginTop: 4 }}>
-            Survived {moves} move{moves === 1 ? '' : 's'}
-          </div>
-          {newBest && (
+          {scoredInPoints ? (
+            <>
+              <div className="title num" style={{ fontSize: 26, marginTop: 4 }}>
+                {extras.points} point{extras.points === 1 ? '' : 's'}
+              </div>
+              <div className="small mt-4">
+                Survived {moves} move{moves === 1 ? '' : 's'}
+              </div>
+              {extraStats.length > 0 && <div className="small muted mt-4">{extraStats.join(' · ')}</div>}
+            </>
+          ) : (
+            <div className="title" style={{ fontSize: 22, marginTop: 4 }}>
+              Survived {moves} move{moves === 1 ? '' : 's'}
+            </div>
+          )}
+          {(newBest || newBestPoints) && (
             <div className="small mt-8" style={{ color: 'var(--good)' }}>
-              New best
+              {newBestPoints && newBest ? 'New best, in points and moves' : newBestPoints ? 'New best score' : 'New best'}
             </div>
           )}
         </div>
@@ -367,8 +407,8 @@ export function End({
         )}
         {growLine && (
           <button className="btn plain block mt-8" onClick={growLine}>
-            <Icons.plus size={18} />
-            Grow this line
+            {growEngine ? <Icons.engine size={18} /> : <Icons.plus size={18} />}
+            {growEngine ? 'Grow this line with the engine' : 'Grow this line'}
           </button>
         )}
       </div>

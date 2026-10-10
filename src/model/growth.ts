@@ -752,6 +752,23 @@ export function firstEnd(row: GrowthRow): LineEnd | null {
   );
 }
 
+/** Nothing in the book for whoever is to move here: past the book, where only the engine has moves. */
+export function pastTheBook(index: ReferenceIndex, fen: string): boolean {
+  return popularReplies(index, fen, 0).length === 0;
+}
+
+/**
+ * Whether a run on this row starts past the book, so the engine is in it from
+ * the first thing it asks — standing on this hole, or else where the row
+ * itself would start.
+ */
+export function startsPastBook(index: ReferenceIndex, row: GrowthRow, hole: Hole | null = null): boolean {
+  const at = hole ?? firstHole(index, row);
+  if (at) return !!at.engine || pastTheBook(index, at.fen) || pastTheBook(index, at.after);
+  const end = firstEnd(row);
+  return !!end && pastTheBook(index, end.fen);
+}
+
 /**
  * A run that begins at the tip of a line past the book, with the opponent to
  * move: the engine picks their reply, and that is the first hole.
