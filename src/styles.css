@@ -1316,9 +1316,10 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   color: var(--accent);
   animation: riOpening 0.6s 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+/* Opaque from the first frame, so the board never shows through as the
+   announcement arrives; only its words come in. It fades out to the board. */
 @keyframes roundIntro {
-  0% { opacity: 0; }
-  8%, 88% { opacity: 1; }
+  0%, 88% { opacity: 1; }
   100% { opacity: 0; }
 }
 @keyframes riMode {
