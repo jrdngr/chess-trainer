@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { START_FEN } from '../../chess/core';
+import { sansToMoveText, START_FEN } from '../../chess/core';
 import { AppBar, Icons, Section, Segmented, toast } from '../../components/ui';
 import { SelectionBar } from '../../components/Selection';
 import { openingTree } from '../../model/openingTree';
 import { colorsOf, repertoiresIn } from '../../model/selection';
-import { acrossRegions, isAnyFavorite, regionsBySide } from '../../model/anyFavorite';
-import { growthRows, optionsAt, recommended, startsPastBook, unaskedPastBook, type GrowthRow } from '../../model/growth';
+import { acrossRegions, isAnyFavorite, regionsBySide, type SideRegion } from '../../model/anyFavorite';
+import { growthRows, optionsAt, reachesOpening, recommended, startsPastBook, unaskedPastBook, type GrowthRow } from '../../model/growth';
 import { useEngineReplies } from '../../engine/engineReplies';
 import { GROWTH_DEPTHS, SHARE_STEPS, shareLabel } from '../../model/modes';
 import { referenceIndex } from '../../model/referenceIndex';
@@ -79,6 +79,11 @@ export function Lobby({
     onStart({ ...row, repertoireId: ensureRepertoire(row.color) }, engine);
   };
 
+  const startOpening = ({ side, node }: SideRegion) => {
+    addLine(ensureRepertoire(side), node.sans, 'picker', 'growth');
+    toast(`${node.name} kept · now answer the replies`);
+  };
+
   const keepFirstMove = (san: string) => {
     addLine(ensureRepertoire('w'), [san], 'growth', 'growth');
     toast(`1.${san} kept · now answer Black's replies`);
@@ -119,6 +124,21 @@ export function Lobby({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [reps, index, prefs.minShare, prefs.maxPly, starred, tree, regions, pending],
   );
+  /**
+   * Selected openings a side has no line into and no work on the way to:
+   * nothing to extend there until their own moves are kept.
+   */
+  const unstarted = useMemo(
+    () =>
+      regions.filter(({ side, node }) => {
+        const rep = reps.find((r) => r.color === side);
+        if (!rep || reachesOpening(rep, tree, node)) return false;
+        const opts = { minShare: prefs.minShare, maxPly: prefs.maxPly, region: { tree, node } };
+        return growthRows([rep], index, opts).length === 0;
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [regions, reps, tree, index, prefs.minShare, prefs.maxPly, pending],
+  );
   const pick = recommended(rows);
 
   return (
@@ -145,7 +165,34 @@ export function Lobby({
           </button>
         )}
 
-        {whiteEmpty && (
+        {!pick && unstarted.length > 0 && (
+          <button className="btn primary block xl" onClick={() => startOpening(unstarted[0])}>
+            Start {unstarted[0].node.name}
+          </button>
+        )}
+        {unstarted.length > (pick ? 0 : 1) && (
+          <>
+            <Section title="Not in your repertoire yet" />
+            <div className="list">
+              {unstarted.slice(pick ? 0 : 1).map((region) => (
+                <button
+                  key={`${region.side} ${region.node.id}`}
+                  className="list-row"
+                  onClick={() => startOpening(region)}
+                >
+                  <span className={`side ${region.side}`} />
+                  <span className="grow" style={{ minWidth: 0 }}>
+                    <div className="title truncate">Start {region.node.name}</div>
+                    <div className="meta truncate">{sansToMoveText(region.node.sans)}</div>
+                  </span>
+                  <Icons.chevron size={18} />
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {whiteEmpty && !unstarted.some((region) => region.side === 'w') && (
           <>
             <Section title="Your first move as White" aside="from the book" />
             <div className="empty" style={{ paddingTop: 0 }}>
@@ -170,7 +217,8 @@ export function Lobby({
         )}
 
         {rows.length === 0 ? (
-          hasMoves && (
+          hasMoves &&
+          unstarted.length === 0 && (
             <div className="empty">
               <div className="t">{pending > 0 ? 'Looking past the book…' : 'Nothing to extend'}</div>
               <div className="h">
@@ -292,3 +340,4 @@ function depthLabel(plies: number): string {
   if (plies === 0) return 'from move 1';
   return `after ${Math.ceil(plies / 2)} ${plies <= 2 ? 'move' : 'moves'}`;
 }
+

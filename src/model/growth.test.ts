@@ -33,6 +33,7 @@ import {
   firstEnd,
   needsEngine,
   pastTheBook,
+  reachesOpening,
   startsPastBook,
   startGrowthAtEnd,
   unaskedPastBook,
@@ -845,3 +846,27 @@ describe('which way a run is steered', () => {
     expect(steer(rep, index, run)!.san).toBe('Nf6');
   });
 });
+
+describe('reachesOpening', () => {
+  // The bug: delete the Ruy Lopez from a White repertoire that is otherwise
+  // 1.d4, keep it selected, and Growth said "Nothing to extend" with no way in.
+  const tree = openingTree(index);
+  const ruy = nodeById(tree, 'e4 e5 Nf3 Nc6 Bb5');
+  const d4Only = addLine(createRepertoire('White', 'w'), ['d4', 'd5', 'c4'], 'manual').rep;
+
+  it('is false for an opening no line of yours gets to, with nothing to grow there', () => {
+    expect(reachesOpening(d4Only, tree, ruy)).toBe(false);
+    expect(growthRows([d4Only], index, { region: { tree, node: ruy } })).toEqual([]);
+  });
+
+  it('is true once its own moves are kept, and its replies become rows', () => {
+    const started = addLine(d4Only, ruy.sans, 'picker').rep;
+    expect(reachesOpening(started, tree, ruy)).toBe(true);
+    expect(growthRows([started], index, { region: { tree, node: ruy } }).length).toBeGreaterThan(0);
+  });
+
+  it('counts the root as reached by anything', () => {
+    expect(reachesOpening(createRepertoire('White', 'w'), tree, tree.root)).toBe(true);
+  });
+});
+

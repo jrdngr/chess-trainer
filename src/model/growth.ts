@@ -8,7 +8,7 @@ import {
   type ReferenceIndex,
 } from './reference';
 import { lineInRegion } from './selection';
-import { ancestorsOf, descendantsOf, lineStatus, type OpeningNode, type OpeningTree } from './openingTree';
+import { ancestorsOf, descendantsOf, lineStatus, regionOf, type OpeningNode, type OpeningTree } from './openingTree';
 import { childrenOf, fenAt } from './repertoire';
 import { engineReplies } from './engineReplies';
 import { PREPARED_FLOOR, withFloor } from './prepFloor';
@@ -564,6 +564,19 @@ function isStarred(starred: string[][], sans: string[]): boolean {
   return starred.some(
     (fav) => fav.length > 0 && fav.length <= sans.length && fav.every((san, i) => sans[i] === san),
   );
+}
+
+/**
+ * Whether a repertoire has a position inside an opening, by any move order.
+ *
+ * Growth extends lines you have, so an opening none of them reach has nothing
+ * to extend: deleting it from the repertoire, or selecting one you do not play
+ * yet, leaves it there. Its own moves are where it starts instead.
+ */
+export function reachesOpening(rep: Repertoire, tree: OpeningTree, node: OpeningNode): boolean {
+  if (node.depth === 0) return true;
+  const { inside } = regionOf(tree, node);
+  return Object.values(rep.nodes).some((move) => inside.has(positionKey(move.fenAfter)));
 }
 
 /**
