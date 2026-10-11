@@ -35,6 +35,15 @@ describe('the answers in the engine\'s order', () => {
   it('puts the best delta on top and the unweighed last', () => {
     expect(byDelta(moves, (san) => cps[san]).map((m) => m.san)).toEqual(['Ne3', 'Ne5', 'Ng5', 'g3', 'h3']);
   });
+  it('breaks a tie as shown by the share of strong players\' replies', () => {
+    const answers = [
+      { san: 'Qe2', share: 0.015 },
+      { san: 'Qxd8+', share: 0.984 },
+      { san: 'Qd4', share: 0.001 },
+    ];
+    const deltas: Record<string, number> = { Qe2: 0, 'Qxd8+': -4, Qd4: -990 };
+    expect(byDelta(answers, (san) => deltas[san]).map((m) => m.san)).toEqual(['Qxd8+', 'Qe2', 'Qd4']);
+  });
   it('keeps the order it came in until the engine has weighed them', () => {
     expect(byDelta(moves, () => null).map((m) => m.san)).toEqual(['Ng5', 'Ne5', 'Ne3', 'g3', 'h3']);
   });

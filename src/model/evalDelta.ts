@@ -41,16 +41,29 @@ export function deltaTone(cp: number): 'good' | 'bad' | 'even' {
   return cp > 0 ? 'good' : 'bad';
 }
 
+/** A delta as the list shows it, so two answers that read the same count as tied. */
+function shownCp(cp: number): number {
+  return Math.abs(cp) < EVEN_CP ? 0 : Math.sign(cp) * Math.round(Math.min(Math.abs(cp), 990) / 10);
+}
+
 /**
  * Moves in the engine's order: the best delta first, then anything it has not
- * weighed yet, in the order it came.
+ * weighed yet, in the order it came. Answers that read the same go to the one
+ * strong players reply with most.
  */
-export function byDelta<T extends { san: string }>(moves: readonly T[], deltaOf: (san: string) => number | null): T[] {
+export function byDelta<T extends { san: string; share?: number }>(
+  moves: readonly T[],
+  deltaOf: (san: string) => number | null,
+): T[] {
   return moves
     .map((move, at) => ({ move, at, cp: deltaOf(move.san) }))
     .sort((a, b) => {
       if (a.cp === null || b.cp === null) return a.cp === null ? (b.cp === null ? a.at - b.at : 1) : -1;
-      return b.cp - a.cp || a.at - b.at;
+      return (
+        shownCp(b.cp) - shownCp(a.cp) ||
+        (b.move.share ?? 0) - (a.move.share ?? 0) ||
+        a.at - b.at
+      );
     })
     .map(({ move }) => move);
 }

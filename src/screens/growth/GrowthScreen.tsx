@@ -404,6 +404,8 @@ function Run({
     [weighedOrder, nudge, run.fen, pastBook, unweighed],
   );
   const toneOf = (san: string) => shown.find((move) => move.san === san)?.tone;
+  /** What the board lets you play at a hole: every listed answer, and anything with an arrow. */
+  const playable = [...new Set([...listed.map((option) => option.san), ...shown.map((move) => move.san)])];
 
   /** What each hole put in front of you, logged once per position when its moves are in. */
   const offeredAt = useRef<string | null>(null);
@@ -460,8 +462,8 @@ function Run({
 
   const onMove = (move: LegalMove) => {
     if (phase === 'hole') {
-      // The board only offers the drawn moves, and taking one is the choice.
-      if (shown.some((drawn) => drawn.san === move.san)) choose(move.san);
+      // The board only offers the listed answers, and taking one is the choice.
+      if (playable.includes(move.san)) choose(move.san);
       return;
     }
     if (phase !== 'walking' || !isUsersTurn(run)) return;
@@ -743,7 +745,7 @@ function Run({
           orientation={run.color}
           interactive={!intro.held && ((phase === 'walking' && isUsersTurn(run)) || phase === 'hole')}
           movableFor={run.color}
-          allowed={phase === 'hole' ? shown.map((move) => move.san) : undefined}
+          allowed={phase === 'hole' ? playable : undefined}
           arrows={intro.held ? [] : nudgedArrows(shown)}
           onMove={onMove}
           overlay={
