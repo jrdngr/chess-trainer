@@ -8,6 +8,7 @@ import {
   checkAnswer,
   extraPractice,
   interleave,
+  leadWithAWayIn,
   mulberry32,
   shuffle,
   weakestFirst,
@@ -241,5 +242,25 @@ describe('weakest first', () => {
   it('leaves equally weak positions in the order they arrived', () => {
     const ordered = weakestFirst(items, {});
     expect(ordered.map((i) => i.cardId)).toEqual(items.map((i) => i.cardId));
+  });
+});
+
+describe('the first position of a sitting', () => {
+  let white = createRepertoire('White', 'w', 'rep_w');
+  white = addLine(white, ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'Nf6', 'O-O', 'Nxe4'], 'seed').rep;
+  const items = allItems([white]);
+
+  it('is not the move-one position when a later one has moves leading to it', () => {
+    const shallowFirst = buildSession(items, {}, { mode: 'new', now: T0, maxItems: 10, maxNew: 10 });
+    expect(shallowFirst[0].pathSans).toEqual([]);
+    const queue = leadWithAWayIn(shallowFirst);
+    expect(queue[0].pathSans.length).toBeGreaterThan(0);
+    expect(queue[1].pathSans).toEqual([]);
+    expect([...queue].sort((a, b) => a.depth - b.depth)).toEqual(shallowFirst);
+  });
+
+  it('stays put when it is the only position', () => {
+    const root = items.filter((item) => item.pathSans.length === 0);
+    expect(leadWithAWayIn(root)).toEqual(root);
   });
 });

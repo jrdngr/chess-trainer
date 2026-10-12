@@ -87,6 +87,22 @@ export function branchItems(rep: Repertoire, nodeId: string): TrainingItem[] {
   return items;
 }
 
+/**
+ * The sitting opens on a position with moves leading to it.
+ *
+ * Only the first position is played out by the intro, and new positions come
+ * shallow first, so the move-one position tended to open a sitting: nothing to
+ * replay, you play 1.e4, and the next position arrives deep in the opening
+ * with no way in shown. Moved behind the first position that has a way in, it
+ * is still asked, just not first.
+ */
+export function leadWithAWayIn(queue: TrainingItem[]): TrainingItem[] {
+  if (!queue.length || queue[0].pathSans.length > 0) return queue;
+  const at = queue.findIndex((item) => item.pathSans.length > 0);
+  if (at < 0) return queue;
+  return [queue[at], ...queue.slice(0, at), ...queue.slice(at + 1)];
+}
+
 export type SessionMode = 'due' | 'branch' | 'repertoire' | 'cram' | 'new';
 
 export interface SessionOptions {

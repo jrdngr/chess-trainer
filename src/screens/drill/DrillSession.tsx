@@ -19,6 +19,7 @@ import {
   buildSession,
   checkAnswer,
   extraPractice,
+  leadWithAWayIn,
   mulberry32,
   weakestFirst,
   type SessionMode,
@@ -107,16 +108,18 @@ export function DrillSession({
   const weakFirst = options.weakFirst;
   const shuffler = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
   const [queue, setQueue] = useState<TrainingItem[]>(() =>
-    order(
-      buildSession(items, cards, {
-        mode,
-        now: Date.now(),
-        maxItems: BATCH,
-        maxNew,
-        seed: Math.floor(Date.now() / 60000),
-      }),
-      cards,
-      weakFirst,
+    leadWithAWayIn(
+      order(
+        buildSession(items, cards, {
+          mode,
+          now: Date.now(),
+          maxItems: BATCH,
+          maxNew,
+          seed: Math.floor(Date.now() / 60000),
+        }),
+        cards,
+        weakFirst,
+      ),
     ),
   );
   const [index, setIndex] = useState(0);
