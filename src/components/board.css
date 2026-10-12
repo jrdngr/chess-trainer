@@ -251,7 +251,9 @@
   position: absolute;
   pointer-events: none;
   z-index: 1;
-  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
+  /* A dark wash plus a dark-then-light edge, so the zone reads on light and dark squares alike. */
+  background: rgba(15, 23, 42, 0.3);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.6), inset 0 0 0 3.5px rgba(255, 255, 255, 0.9);
 }
 .board .lens-dot,
 .board .lens-empty,
@@ -444,7 +446,11 @@
 .lens-legend .sw-ring { border-radius: 50%; box-shadow: inset 0 0 0 2.5px currentColor; }
 .lens-legend .sw-star { font-size: 15px; }
 .lens-legend .sw-pip { width: 8px; height: 8px; margin: 5px; border-radius: 50%; }
-.lens-legend .sw-zone { border-radius: 3px; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7); }
+.lens-legend .sw-zone {
+  border-radius: 3px;
+  background: rgba(15, 23, 42, 0.3);
+  box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.6), inset 0 0 0 3px rgba(255, 255, 255, 0.9);
+}
 .lens-legend .sw-empty { border-radius: 50%; border: 2px dashed rgba(239, 68, 68, 0.9); width: 14px; height: 14px; margin: 2px; }
 
 /* ── plan and Cash out cards, past the end of prep ─────────────────────── */
