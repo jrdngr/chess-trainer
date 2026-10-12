@@ -779,9 +779,10 @@ export function SurvivalScreen({
                   </div>
                 </>
               )}
-              {pop && <MoveScore key={pop.key} pop={pop} orientation={run.color} />}
+              {/* Kept apart: the popup and the note are often set in the same millisecond, and a shared key leaks copies. */}
+              {pop && <MoveScore key={`score-${pop.key}`} pop={pop} orientation={run.color} />}
               {note && !miss && (
-                <div key={note.key} className="board-flash top pass">
+                <div key={`note-${note.key}`} className="board-flash top pass">
                   <div className="flash-pill">
                     <div className={`verdict ${note.tone === 'good' ? 'ok' : note.tone === 'bad' ? 'no' : 'accent'}`} style={{ padding: 0 }}>
                       {note.text}
