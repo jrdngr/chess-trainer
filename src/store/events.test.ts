@@ -95,3 +95,18 @@ describe('the event log', () => {
     expect(event.count).toBe(41);
   });
 });
+
+describe('deleting with undo', () => {
+  it('deletes one line back to where it splits, and puts it back', () => {
+    const repId = state().ensureRepertoire('w');
+    state().addLine(repId, 'e4 e5 Nf3 Nc6 Bb5 a6'.split(' '), 'book');
+    state().addLine(repId, 'e4 e5 Nf3 Nc6 Bc4 Bc5 c3'.split(' '), 'book');
+    const tip = nodeAtLine(repertoireList(state())[0], 'e4 e5 Nf3 Nc6 Bc4 Bc5 c3'.split(' '))!;
+    const undo = state().removeLine(repId, tip.id)!;
+    expect(last()).toMatchObject({ kind: 'remove-line', count: 3 });
+    expect(Object.keys(state().repertoires[repId].nodes)).toHaveLength(6);
+    undo();
+    expect(last()).toMatchObject({ kind: 'remove-undo' });
+    expect(Object.keys(state().repertoires[repId].nodes)).toHaveLength(9);
+  });
+});

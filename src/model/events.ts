@@ -51,6 +51,10 @@ export type AppEvent =
   | (RepertoireBase & { kind: 'remove'; line: string; removed: string[]; count: number })
   /** A derived opening deleted, with the move order that only led to it. */
   | (RepertoireBase & { kind: 'remove-opening'; line: string; removed: string[]; count: number })
+  /** One line of an opening deleted, with the moves only it had. */
+  | (RepertoireBase & { kind: 'remove-line'; line: string; removed: string[]; count: number })
+  /** A `remove` or `remove-line` taken back from its toast. */
+  | (RepertoireBase & { kind: 'remove-undo'; line: string })
   /** A whole side's tree deleted. */
   | (RepertoireBase & { kind: 'remove-repertoire'; count: number })
   /** A move made the preferred one at its position. */

@@ -365,6 +365,7 @@ export function Strip({
   max = 0,
   onSeek,
   hint,
+  trailing,
 }: {
   items: StripItem[];
   cursor?: number;
@@ -374,6 +375,8 @@ export function Strip({
       nowhere to scrub to. */
   onSeek?: (n: number) => void;
   hint?: string;
+  /** A control after the forward arrow, such as a delete for what follows. */
+  trailing?: ReactNode;
 }) {
   const strip = useRef<HTMLDivElement>(null);
 
@@ -420,6 +423,7 @@ export function Strip({
           <Icons.next size={18} />
         </IconButton>
       )}
+      {trailing}
     </div>
   );
 }

@@ -175,7 +175,10 @@ interface StoreState extends PersistedState {
 
   /** `via` says where the change came from, when the screen it happened on does not. */
   addLine: (repId: string, sans: string[], source: SourceFor, via?: EventPlace) => { added: number };
-  removeNode: (repId: string, nodeId: string, via?: EventPlace) => void;
+  /** Delete a move and everything after it. Returns an undo, or null when there was nothing to delete. */
+  removeNode: (repId: string, nodeId: string, via?: EventPlace) => (() => void) | null;
+  /** Delete one line: its last move back to where it parts from another line. Returns an undo. */
+  removeLine: (repId: string, tipId: string) => (() => void) | null;
   preferMove: (repId: string, nodeId: string) => void;
   /** Record something worth knowing later that changed nothing — what Growth offered, say. */
   logEvent: (event: NewEvent) => void;
@@ -458,6 +461,23 @@ export const useStore = create<StoreState>((set, get) => {
     });
   };
 
+  /** Put a tree back as it was before a delete, with what the delete took from cards, log and mistakes. */
+  const undoFor = (repId: string, nodeId: string): (() => void) | null => {
+    const before = get();
+    const rep = before.repertoires[repId];
+    if (!rep?.nodes[nodeId]) return null;
+    const saved = { rep, cards: before.cards, log: before.log, mistakes: before.mistakes };
+    return () => {
+      commit({
+        repertoires: { ...get().repertoires, [repId]: saved.rep },
+        cards: saved.cards,
+        log: saved.log,
+        mistakes: saved.mistakes,
+        events: logged({ kind: 'remove-undo', repertoireId: repId, color: saved.rep.color, line: lineAt(saved.rep, nodeId) }),
+      });
+    };
+  };
+
   return {
     ...emptyPersisted(),
     ready: false,
@@ -590,6 +610,8 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     removeNode(repId, nodeId, via) {
+      const undo = undoFor(repId, nodeId);
+      if (!undo) return null;
       shrinkRep(
         repId,
         (rep) => removeSubtree(rep, nodeId),
@@ -602,6 +624,24 @@ export const useStore = create<StoreState>((set, get) => {
           ...(via ? { via } : {}),
         }),
       );
+      return undo;
+    },
+
+    removeLine(repId, tipId) {
+      const undo = undoFor(repId, tipId);
+      if (!undo) return null;
+      shrinkRep(
+        repId,
+        (rep) => pruneLine(rep, tipId),
+        (before, after) => ({
+          kind: 'remove-line',
+          repertoireId: repId,
+          color: before.color,
+          line: lineAt(before, tipId),
+          ...removedBetween(before, after),
+        }),
+      );
+      return undo;
     },
 
     logEvent(event) {

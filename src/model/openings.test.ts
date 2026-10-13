@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { openingsAcross, openingsIn } from './openings';
+import { linesOf, openingsAcross, openingsIn } from './openings';
 import { referenceIndex } from './referenceIndex';
 import { nameAt } from './reference';
 import { addLine, createRepertoire, pruneCount, pruneLine, repertoireName } from './repertoire';
@@ -163,5 +163,40 @@ describe('deleting an opening', () => {
     const rep = build('w', ['e4 e5']);
     expect(pruneLine(rep, 'nope')).toBe(rep);
     expect(pruneCount(rep, 'nope')).toBe(0);
+  });
+});
+
+describe('the lines of an opening', () => {
+  const RUY = 'e4 e5 Nf3 Nc6 Bb5';
+  const rep = build('w', [
+    `${RUY} Nf6 O-O Nxe4 d4`,
+    `${RUY} Nf6 O-O Nxe4 Re1`,
+    `${RUY} a6 Ba4 Nf6 O-O Be7 Re1`,
+  ]);
+  const ruy = openingsIn(rep, index).find((o) => o.name === 'Ruy Lopez')!;
+  const lines = linesOf(rep, ruy, index);
+
+  it('lists every line, named without the opening in front', () => {
+    expect(lines).toHaveLength(3);
+    expect(lines.every((line) => !line.name.startsWith('Ruy Lopez'))).toBe(true);
+  });
+
+  it('tells lines with the same name apart by where they split', () => {
+    const berlin = lines.filter((line) => line.path.includes('Nf6') && line.path[5] === 'Nf6');
+    expect(berlin).toHaveLength(2);
+    expect(berlin.map((line) => line.split)).toEqual(['5.d4', '5.Re1']);
+    expect(lines.filter((line) => line.split)).toHaveLength(2);
+  });
+
+  it('counts the moves only that line owns', () => {
+    expect(lines.map((line) => line.removes)).toEqual([1, 1, 6]);
+  });
+
+  it('takes the opening with its last line', () => {
+    const one = build('w', [`${RUY} a6`]);
+    const only = openingsIn(one, index)[0];
+    const [line] = linesOf(one, only, index);
+    expect(line.removes).toBe(6);
+    expect(Object.keys(pruneLine(one, line.tipId).nodes)).toHaveLength(0);
   });
 });

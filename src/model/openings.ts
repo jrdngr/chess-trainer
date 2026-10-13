@@ -210,3 +210,86 @@ function moveLabel(path: string[]): string {
   const san = path[ply - 1];
   return `${Math.floor((ply - 1) / 2) + 1}.${ply % 2 === 1 ? '' : '..'}${san}`;
 }
+
+/** One line of an opening: a path from the start to a move with nothing after it. */
+export interface OpeningLine {
+  /** The last move of the line. */
+  tipId: string;
+  path: string[];
+  /** The deepest book name the line reaches, without the opening's own name in front. */
+  name: string;
+  /** "5.Re1": where it parts from a line with the same name, when one has it. */
+  split?: string;
+  /**
+   * Moves only this line owns: what deleting it removes. Climbs past the
+   * opening's first move when this is its only line, since then the opening
+   * goes with it.
+   */
+  removes: number;
+}
+
+/**
+ * Every line of one opening, in tree order, each named for where it goes.
+ *
+ * Two lines often reach the same deepest name and only part ways later; those
+ * get the move they split off at, which is what tells them apart at a glance.
+ */
+export function linesOf(rep: Repertoire, opening: DerivedOpening, index: ReferenceIndex): OpeningLine[] {
+  const root = rep.nodes[opening.rootId];
+  if (!root) return [];
+  const raw: { tipId: string; path: string[]; name: string; split: number }[] = [];
+
+  const visit = (node: RepMove, path: string[], name: string) => {
+    const here = [...path, node.san];
+    const named = nameAt(index, node.fenAfter)?.name ?? name;
+    const kids = childrenOf(rep, node.id);
+    if (!kids.length) {
+      raw.push({ tipId: node.id, path: here, name: named, split: splitPly(rep, node.id) });
+      return;
+    }
+    for (const kid of kids) visit(kid, here, named);
+  };
+  visit(root, opening.path.slice(0, -1), opening.name);
+
+  const counts = new Map<string, number>();
+  for (const line of raw) counts.set(line.name, (counts.get(line.name) ?? 0) + 1);
+  return raw.map((line) => {
+    const base = shortName(line.name, opening.name);
+    const clash = (counts.get(line.name) ?? 0) > 1 && line.split > 0;
+    return {
+      tipId: line.tipId,
+      path: line.path,
+      name: base,
+      ...(clash ? { split: moveLabel(line.path.slice(0, line.split)) } : {}),
+      removes: pruneCount(rep, line.tipId),
+    };
+  });
+}
+
+/** "Ruy Lopez: Berlin Defence" under the Ruy Lopez reads "Berlin Defence". */
+function shortName(name: string, family: string): string {
+  if (name === family) return name;
+  for (const sep of [': ', ', ']) {
+    if (name.startsWith(family + sep)) return name.slice(family.length + sep.length);
+  }
+  // A variation's own name repeats only the family, e.g. "Ruy Lopez: Closed, Delayed Exchange" under "Ruy Lopez: Closed".
+  const colon = family.indexOf(': ');
+  if (colon > 0 && name.startsWith(family.slice(0, colon + 2))) return name.slice(colon + 2);
+  return name;
+}
+
+/** Ply of the first move only this line has: where it parts from the others. */
+function splitPly(rep: Repertoire, tipId: string): number {
+  let ply = 0;
+  for (let id: string | null = tipId; id; id = rep.nodes[id]?.parentId ?? null) ply += 1;
+  let childId = tipId;
+  let parentId = rep.nodes[tipId]?.parentId ?? null;
+  while (parentId) {
+    const parent = rep.nodes[parentId];
+    if (!parent || parent.children.some((id) => id !== childId)) break;
+    ply -= 1;
+    childId = parentId;
+    parentId = parent.parentId;
+  }
+  return ply;
+}

@@ -3,7 +3,7 @@ import { Board } from '../components/Board';
 import { ExplorerPanel } from '../components/ExplorerPanel';
 import { AppBar, Empty, IconButton, Icons, Section, Sheet, Strip, toast } from '../components/ui';
 import { fenTurn, lastMoveOf, sansToMoveText, type Color, type LegalMove } from '../chess/core';
-import { openingsIn, type DerivedOpening } from '../model/openings';
+import { linesOf, openingAt, openingsIn, type DerivedOpening } from '../model/openings';
 import { childrenOf, fenAt, pathTo, repertoireName, subtreeIds } from '../model/repertoire';
 import { lookup, openingNameForPath } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
@@ -182,6 +182,10 @@ export function RepertoireScreen({
           setOpeningMenu(null);
           onStart(items, 'branch', title);
         }}
+        onOpenLine={(repId, tipId, title) => {
+          setOpeningMenu(null);
+          setScope({ repId, nodeId: tipId, title });
+        }}
       />
       <SideMenu repId={sideMenu} onClose={() => setSideMenu(null)} />
     </>
@@ -224,32 +228,48 @@ function OpeningRow({
 }
 
 /**
- * What can be done to one opening.
+ * What can be done to one opening: drill it, open or delete one of its lines,
+ * or delete the whole thing.
  *
- * Deleting takes the move order that only led there with it, which is usually
- * more moves than the opening's own region holds, so the count says so before
- * you commit. It asks twice — the same two-tap confirm Settings uses for the
- * other irreversible things.
+ * The opening is re-derived from the live tree, so the list keeps up as lines
+ * go (and the sheet closes when the last one takes the opening with it).
+ * Deleting a whole opening takes the move order that only led there with it,
+ * which is usually more moves than the opening's own region holds, so the
+ * count says so before you commit. Both deletes ask twice, the same two-tap
+ * confirm Settings uses for the other irreversible things; a line also gets an
+ * Undo toast, since pruning several in a row is the point of the list.
  */
 function OpeningMenu({
-  opening,
+  opening: picked,
   onClose,
   onDrill,
+  onOpenLine,
 }: {
   opening: DerivedOpening | null;
   onClose: () => void;
   onDrill: (items: TrainingItem[], title: string) => void;
+  onOpenLine: (repId: string, tipId: string, title: string) => void;
 }) {
-  const rep = useStore((s) => (opening ? s.repertoires[opening.repertoireId] : null));
+  const rep = useStore((s) => (picked ? s.repertoires[picked.repertoireId] : null));
   const removeOpening = useStore((s) => s.removeOpening);
+  const removeLine = useStore((s) => s.removeLine);
   const [confirming, setConfirming] = useState(false);
+  const [confirmingLine, setConfirmingLine] = useState<string | null>(null);
+
+  const index = referenceIndex();
+  const opening = useMemo(
+    () => (picked && rep ? openingAt(openingsIn(rep, index), picked.rootId) : null),
+    [picked, rep, index],
+  );
+  const lines = useMemo(() => (opening && rep ? linesOf(rep, opening, index) : []), [opening, rep, index]);
 
   const close = () => {
     setConfirming(false);
+    setConfirmingLine(null);
     onClose();
   };
 
-  if (!opening || !rep) return null;
+  if (!picked || !rep || !opening) return null;
 
   return (
     <Sheet open onClose={close} title={opening.name}>
@@ -257,7 +277,7 @@ function OpeningMenu({
         {sansToMoveText(opening.path)}
       </div>
 
-      <div className="list">
+      <div className="list" onClick={() => setConfirmingLine(null)}>
         <button
           className="list-row"
           onClick={() => {
@@ -275,10 +295,38 @@ function OpeningMenu({
           </span>
           <Icons.chevron size={18} />
         </button>
-        {opening.variations.map((variation) => (
-          <div className="list-row kv" key={variation.id}>
-            <span className="k grow truncate">{variation.name}</span>
-            <span className="v num">{variation.moves}</span>
+        {lines.map((line) => (
+          <div className="list-row" key={line.tipId} style={{ paddingRight: 8 }}>
+            <button
+              className="row grow"
+              style={{ minWidth: 0, gap: 12 }}
+              onClick={() => onOpenLine(rep.id, line.tipId, opening.name)}
+            >
+              <span className="grow row" style={{ minWidth: 0, gap: 6, color: 'var(--text-2)' }}>
+                <span className="truncate">{line.name}</span>
+                {line.split && <span style={{ flexShrink: 0, color: 'var(--text)' }}>{line.split}</span>}
+              </span>
+              <span className="num" style={{ fontWeight: 700 }}>{line.removes}</span>
+            </button>
+            {/* A tap anywhere else in the list cancels a pending delete; this one must not. */}
+            <span onClick={(e) => e.stopPropagation()}>
+              {confirmingLine === line.tipId ? (
+                <button
+                  className="btn danger sm"
+                  onClick={() => {
+                    const undo = removeLine(rep.id, line.tipId);
+                    setConfirmingLine(null);
+                    if (undo) toast(`Deleted ${line.removes} move${line.removes === 1 ? '' : 's'}`, { label: 'Undo', run: undo });
+                  }}
+                >
+                  Delete?
+                </button>
+              ) : (
+                <IconButton label={`Delete ${line.name}${line.split ? ` ${line.split}` : ''}`} plain onClick={() => setConfirmingLine(line.tipId)}>
+                  <Icons.trash size={18} />
+                </IconButton>
+              )}
+            </span>
           </div>
         ))}
       </div>
@@ -443,10 +491,30 @@ function RepertoireBrowser({
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [showReference, setShowReference] = useState(false);
   const [sideMenu, setSideMenu] = useState(false);
+  /** The node whose moves the confirm sheet is about to delete. */
+  const [cutting, setCutting] = useState<string | null>(null);
+  const removeNode = useStore((s) => s.removeNode);
+  // The line you came in on stays on the strip while you step back along it,
+  // so you can see what comes after and cut it from any point. Going off it
+  // makes wherever you went the new line.
+  const [lineTip, setLineTip] = useState<string | null>(startNodeId);
 
   const fen = fenAt(rep, nodeId);
   const path = useMemo(() => pathTo(rep, nodeId), [rep, nodeId]);
   const pathSans = path.map((n) => n.san);
+  const line = useMemo(() => {
+    const full = lineTip && rep.nodes[lineTip] ? pathTo(rep, lineTip) : [];
+    const onIt = nodeId === null || full.some((n) => n.id === nodeId);
+    return onIt && full.length >= path.length ? full : path;
+  }, [rep, lineTip, nodeId, path]);
+  /** The move after where you stand on the line: deleting cuts from it. */
+  const next = line[path.length] ?? null;
+  const cutCount = cutting ? subtreeIds(rep, cutting).length : 0;
+
+  const goTo = (id: string | null) => {
+    setNodeId(id);
+    if (id && !line.some((n) => n.id === id)) setLineTip(id);
+  };
   const kids = childrenOf(rep, nodeId);
   const ourTurn = fenTurn(fen) === rep.color;
   const opening = useMemo(() => openingNameForPath(referenceIndex(), pathSans), [pathSans]);
@@ -455,7 +523,7 @@ function RepertoireBrowser({
   const onBoardMove = (move: LegalMove) => {
     const existing = kids.find((k) => k.san === move.san);
     if (existing) {
-      setNodeId(existing.id);
+      goTo(existing.id);
       return;
     }
     setPendingMove(move);
@@ -464,7 +532,10 @@ function RepertoireBrowser({
   const descendTo = (san: string) => {
     const fresh = useStore.getState().repertoires[rep.id];
     const child = childrenOf(fresh, nodeId).find((k) => k.san === san);
-    if (child) setNodeId(child.id);
+    if (child) {
+      setNodeId(child.id);
+      setLineTip(child.id);
+    }
   };
 
   const commitPending = () => {
@@ -518,16 +589,24 @@ function RepertoireBrowser({
         <div className="spacer sm" />
 
         <Strip
-          items={path.map((node, i) => ({
+          items={line.map((node, i) => ({
             san: node.san,
             label: i % 2 === 0 ? `${i / 2 + 1}.` : undefined,
             current: node.id === nodeId,
+            tone: i >= path.length ? ('ghost' as const) : undefined,
             seek: i + 1,
           }))}
           cursor={path.length}
-          max={path.length}
-          onSeek={(n) => setNodeId(n === 0 ? null : (path[n - 1]?.id ?? null))}
+          max={line.length}
+          onSeek={(n) => setNodeId(n === 0 ? null : (line[n - 1]?.id ?? null))}
           hint="Play a move"
+          trailing={
+            next ? (
+              <IconButton label="Delete the moves after here" onClick={() => setCutting(next.id)}>
+                <Icons.trash size={18} />
+              </IconButton>
+            ) : undefined
+          }
         />
 
         {pendingMove && (
@@ -562,7 +641,7 @@ function RepertoireBrowser({
                 node={kid}
                 card={state.cards[`${rep.id}#${kid.key}`]}
                 ourTurn={ourTurn}
-                onOpen={() => setNodeId(kid.id)}
+                onOpen={() => goTo(kid.id)}
                 onMenu={() => setMenuFor(kid.id)}
               />
             ))}
@@ -609,13 +688,47 @@ function RepertoireBrowser({
         onClose={() => setMenuFor(null)}
         onNavigate={(id) => {
           setMenuFor(null);
-          setNodeId(id);
+          goTo(id);
+        }}
+        onDelete={(id) => {
+          setMenuFor(null);
+          setCutting(id);
         }}
         onDrill={(items, drillTitle) => {
           setMenuFor(null);
           onStart(items, 'branch', drillTitle);
         }}
       />
+
+      <Sheet
+        open={!!cutting}
+        onClose={() => setCutting(null)}
+        title={`Delete ${cutCount} move${cutCount === 1 ? '' : 's'}?`}
+      >
+        {cutting && rep.nodes[cutting] && (
+          <div className="movetext" style={{ marginBottom: 12 }}>
+            {sansToMoveText(pathTo(rep, cutting).map((n) => n.san))}
+          </div>
+        )}
+        <div className="row gap-8">
+          <button className="btn grow" onClick={() => setCutting(null)}>
+            Cancel
+          </button>
+          <button
+            className="btn danger grow"
+            onClick={() => {
+              if (!cutting) return;
+              const count = cutCount;
+              const undo = removeNode(rep.id, cutting);
+              setCutting(null);
+              if (undo) toast(`Deleted ${count} move${count === 1 ? '' : 's'}`, { label: 'Undo', run: undo });
+            }}
+          >
+            <Icons.trash size={18} /> Delete
+          </button>
+        </div>
+        <div className="spacer" />
+      </Sheet>
 
       <Sheet open={showReference} onClose={() => setShowReference(false)} title="The book">
         <div className="movetext" style={{ marginBottom: 10 }}>
@@ -689,16 +802,18 @@ function NodeMenu({
   onClose,
   onNavigate,
   onDrill,
+  onDelete,
 }: {
   rep: Repertoire;
   nodeId: string | null;
   onClose: () => void;
   onNavigate: (id: string) => void;
   onDrill: (items: TrainingItem[], title: string) => void;
+  /** Ask before deleting the move and everything after it. */
+  onDelete: (id: string) => void;
 }) {
   const prefer = useStore((s) => s.preferMove);
   const annotate = useStore((s) => s.annotate);
-  const remove = useStore((s) => s.removeNode);
   const reorder = useStore((s) => s.reorder);
   const node = nodeId ? rep.nodes[nodeId] : null;
   const [note, setNote] = useState('');
@@ -811,11 +926,7 @@ function NodeMenu({
           <div className="spacer sm" />
           <button
             className="btn danger block"
-            onClick={() => {
-              remove(rep.id, node.id);
-              onClose();
-              toast(`Removed ${below} move${below === 1 ? '' : 's'}`);
-            }}
+            onClick={() => onDelete(node.id)}
           >
             <Icons.trash size={18} /> Delete branch
           </button>
