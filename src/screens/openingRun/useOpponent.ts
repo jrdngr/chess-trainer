@@ -1,10 +1,15 @@
 import { useEffect, useRef } from 'react';
 import { applyUci, positionStatus } from '../../chess/core';
-import { getEngine } from '../../engine/useEngine';
+import { createHeuristicEngine } from '../../engine/heuristic';
+import type { Engine, EngineSnapshot } from '../../engine/types';
+import { engineReady } from '../../engine/useEngine';
 import { chooseMove, levelById, type Level } from '../../model/play';
 
 /** The engine plays the opponent at Club, once the book has nothing left. */
 export const OPPONENT_LEVEL: Level = levelById('club');
+
+/** How long the opponent waits on the engine before the heuristic answers instead. */
+const GIVE_UP_MS = 15_000;
 
 /**
  * The engine as opponent, for the part of a run the book has run out on.
@@ -33,21 +38,40 @@ export function useOpponent({
   useEffect(() => {
     if (!enabled || !fen || positionStatus(fen).gameOver) return;
     let cancelled = false;
-    const { engine, backend } = getEngine();
-    void backend.then(() => {
+    let engine: Engine | null = null;
+    /** Play the first usable answer, from whichever engine gives it. */
+    const answer = (snap: EngineSnapshot) => {
+      const uci = chooseMove(snap.lines, OPPONENT_LEVEL, rand.current);
+      const chosen = uci ? applyUci(fen, uci) : null;
+      if (!chosen) return false;
+      cancelled = true;
+      window.clearTimeout(watchdog);
+      move.current(chosen.san);
+      return true;
+    };
+    // Never leave the run waiting on an engine with nothing to say: an empty
+    // answer, or none at all, and the heuristic picks the move instead.
+    const fallBack = () => {
       if (cancelled) return;
-      engine.analyse(fen, { depth: OPPONENT_LEVEL.depth, multiPv: OPPONENT_LEVEL.multiPv }, (snap) => {
+      engine?.stop();
+      const backup = createHeuristicEngine();
+      backup.analyse(fen, { depth: OPPONENT_LEVEL.depth, multiPv: OPPONENT_LEVEL.multiPv }, (snap) => {
+        if (!cancelled && !snap.thinking) answer(snap);
+      });
+    };
+    const watchdog = window.setTimeout(fallBack, GIVE_UP_MS);
+    void engineReady().then((ready) => {
+      if (cancelled) return;
+      engine = ready;
+      ready.analyse(fen, { depth: OPPONENT_LEVEL.depth, multiPv: OPPONENT_LEVEL.multiPv }, (snap) => {
         if (cancelled || snap.thinking) return;
-        const uci = chooseMove(snap.lines, OPPONENT_LEVEL, rand.current);
-        const chosen = uci ? applyUci(fen, uci) : null;
-        if (!chosen) return;
-        cancelled = true;
-        move.current(chosen.san);
+        if (!answer(snap)) fallBack();
       });
     });
     return () => {
       cancelled = true;
-      engine.stop();
+      window.clearTimeout(watchdog);
+      engine?.stop();
     };
   }, [fen, enabled]);
 }

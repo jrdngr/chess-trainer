@@ -25,6 +25,17 @@ export function getEngine(): { engine: Engine; backend: Promise<EngineBackend> }
   return { engine: singleton, backend: backendPromise! };
 }
 
+/**
+ * The page's engine once it has settled on a backend.
+ *
+ * Take the engine from here, not from `getEngine()` before waiting: when
+ * Stockfish cannot start in time it is disposed and the heuristic takes its
+ * place, and a search handed to the disposed one answers with nothing at all.
+ */
+export function engineReady(): Promise<Engine> {
+  return getEngine().backend.then(() => getEngine().engine);
+}
+
 const EMPTY: EngineSnapshot = { lines: [], depth: 0, nodes: 0, thinking: false, fen: null };
 
 export interface UseEngineOptions extends EngineLimits {

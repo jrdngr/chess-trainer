@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { applyUci, positionStatus, type LegalMove } from '../../chess/core';
-import type { EngineLine, EngineSnapshot } from '../../engine/types';
-import { getEngine } from '../../engine/useEngine';
+import type { Engine, EngineLine, EngineSnapshot } from '../../engine/types';
+import { engineReady } from '../../engine/useEngine';
 import { judgeByEval } from '../../model/openingRun';
 import { isMoment, MOMENT_FOUND } from '../../model/survival';
 import type { Color } from '../../chess/core';
@@ -113,10 +113,11 @@ export function useJudge({
   useEffect(() => {
     if (!wanted || haveBaseline) return;
     let cancelled = false;
-    const { engine, backend } = getEngine();
-    void backend.then(() => {
+    let engine: Engine | null = null;
+    void engineReady().then((ready) => {
       if (cancelled) return;
-      engine.analyse(wanted, { movetime: THINK_MS, multiPv: moments ? 2 : 1 }, (snap) => {
+      engine = ready;
+      ready.analyse(wanted, { movetime: THINK_MS, multiPv: moments ? 2 : 1 }, (snap) => {
         if (cancelled) return;
         const line = settled(snap, wanted);
         if (!line) return;
@@ -135,7 +136,7 @@ export function useJudge({
     });
     return () => {
       cancelled = true;
-      engine.stop();
+      engine?.stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wanted, haveBaseline]);
@@ -143,7 +144,7 @@ export function useJudge({
   useEffect(() => {
     if (!pending || baseline?.fen !== pending.from) return;
     let cancelled = false;
-    const { engine, backend } = getEngine();
+    let engine: Engine | null = null;
     const { best, bestUci } = baseline;
     const theirs = bestUci && bestUci !== pending.uci ? bestUci : null;
     const moment = moments && isMoment(color, baseline.cp, baseline.second?.cp ?? null);
@@ -176,9 +177,10 @@ export function useJudge({
       return { ok, lost: result.lost, before, after: yourCp, found };
     };
 
-    void backend.then(() => {
+    void engineReady().then((ready) => {
       if (cancelled) return;
-      engine.analyse(
+      engine = ready;
+      ready.analyse(
         pending.from,
         {
           depth: CONFIRM_DEPTH,
@@ -195,7 +197,7 @@ export function useJudge({
           // A sound move is settled at the quick check; a blunder waits for the whole search.
           if (!finished && !(passed && Date.now() - started >= THINK_MS)) return;
           cancelled = true;
-          if (!finished) engine.stop();
+          if (!finished) ready.stop();
           setPending(null);
           const judgement = verdict ?? { ok: true, lost: 0, before: baseline.cp, after: baseline.cp, found: false };
           judged.current({
@@ -211,7 +213,7 @@ export function useJudge({
     });
     return () => {
       cancelled = true;
-      engine.stop();
+      engine?.stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending, baseline, color]);

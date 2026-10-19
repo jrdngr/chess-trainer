@@ -12,8 +12,8 @@ import {
   type Color,
   type LegalMove,
 } from '../../chess/core';
-import { getEngine } from '../../engine/useEngine';
-import { formatScore, winFraction, type EngineSnapshot } from '../../engine/types';
+import { engineReady } from '../../engine/useEngine';
+import { formatScore, winFraction, type Engine, type EngineSnapshot } from '../../engine/types';
 import { chooseMove, levelById, openingLine, playedGame, type GameResult } from '../../model/play';
 import type { PlayPrefs } from '../../model/modes';
 import { specificNameForColor } from '../../model/reference';
@@ -172,11 +172,12 @@ function Game({
     }
     let cancelled = false;
     setThinking(true);
-    const { engine, backend } = getEngine();
-    void backend.then(() => {
+    let engine: Engine | null = null;
+    void engineReady().then((ready) => {
       if (cancelled) return;
+      engine = ready;
       let best: EngineSnapshot | null = null;
-      engine.analyse(fen, { depth: level.depth, multiPv: level.multiPv }, (snap) => {
+      ready.analyse(fen, { depth: level.depth, multiPv: level.multiPv }, (snap) => {
         if (cancelled) return;
         best = snap;
         if (snap.thinking) return;
@@ -199,7 +200,7 @@ function Game({
     });
     return () => {
       cancelled = true;
-      engine.stop();
+      engine?.stop();
       setThinking(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -210,10 +211,9 @@ function Game({
     if (!prefs.showEval || !settings.engineEnabled || over) return;
     if (fenTurn(fen) !== color) return;
     let cancelled = false;
-    const { engine, backend } = getEngine();
-    void backend.then(() => {
+    void engineReady().then((ready) => {
       if (cancelled) return;
-      engine.analyse(fen, { depth: 10, multiPv: 1 }, (snap) => {
+      ready.analyse(fen, { depth: 10, multiPv: 1 }, (snap) => {
         if (!cancelled && snap.lines[0]) setEval(snap.lines[0]);
       });
     });
