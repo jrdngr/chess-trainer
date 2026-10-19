@@ -20,8 +20,12 @@ function hintEngine() {
     const made: { engine: Engine; ready: Promise<void> } = { engine: stockfish, ready: Promise.resolve() };
     made.ready = stockfish.ready().then((ok) => {
       if (ok) return;
-      stockfish.dispose();
       made.engine = createHeuristicEngine();
+      // Slow rather than broken: Stockfish takes the next hint once it answers.
+      void stockfish.loaded().then((late) => {
+        if (late) made.engine = stockfish;
+        else stockfish.dispose();
+      });
     });
     hint = made;
   }

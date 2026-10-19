@@ -56,7 +56,9 @@ export function useOpponent({
       engine?.stop();
       const backup = createHeuristicEngine();
       backup.analyse(fen, { depth: OPPONENT_LEVEL.depth, multiPv: OPPONENT_LEVEL.multiPv }, (snap) => {
-        if (!cancelled && !snap.thinking) answer(snap);
+        if (snap.thinking) return;
+        if (!cancelled) answer(snap);
+        backup.dispose();
       });
     };
     const watchdog = window.setTimeout(fallBack, GIVE_UP_MS);

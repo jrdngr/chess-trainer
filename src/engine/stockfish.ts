@@ -7,6 +7,8 @@ import type { Engine, EngineLimits, EngineLine, EngineSnapshot } from './types';
  * with no WebAssembly and no runtime fetches, which is what makes it usable
  * inside sandboxes that block network requests. If the worker cannot start,
  * `ready()` resolves false and the caller falls back to the heuristic engine.
+ * A slow start is not given up on: `loaded()` resolves once it does answer,
+ * so the caller can switch over then.
  */
 const ENGINE_URL = `${import.meta.env.BASE_URL}engine/stockfish.js`;
 
@@ -30,9 +32,18 @@ interface Pending {
   limits: EngineLimits;
 }
 
-export function createStockfishEngine(): Engine {
+export interface StockfishEngine extends Engine {
+  /** Resolves true whenever the engine answers, however long that takes; false if it fails. */
+  loaded(): Promise<boolean>;
+}
+
+export function createStockfishEngine(): StockfishEngine {
   let worker: Worker | null = null;
   let readyPromise: Promise<boolean> | null = null;
+  let markLoaded: (ok: boolean) => void = () => {};
+  const loadedPromise = new Promise<boolean>((resolve) => {
+    markLoaded = resolve;
+  });
   let current: Pending | null = null;
   let lines = new Map<number, EngineLine>();
   let depth = 0;
@@ -145,9 +156,13 @@ export function createStockfishEngine(): Engine {
           worker = new Worker(ENGINE_URL);
         } catch {
           finish(false);
+          markLoaded(false);
           return;
         }
-        worker.onerror = () => finish(false);
+        worker.onerror = () => {
+          finish(false);
+          markLoaded(false);
+        };
         worker.onmessage = (event: MessageEvent) => {
           const text = typeof event.data === 'string' ? event.data : String(event.data ?? '');
           if (text.includes('uciok')) {
@@ -158,12 +173,15 @@ export function createStockfishEngine(): Engine {
             worker?.postMessage('isready');
           } else if (text.includes('readyok')) {
             finish(true);
+            markLoaded(true);
           } else {
             handleLine(text);
           }
         };
         worker.postMessage('uci');
-        // asm.js Stockfish takes a moment to compile; be patient but bounded.
+        // asm.js Stockfish takes a moment to compile, longer on a slow phone or
+        // connection. Past this the backup engine fills in, but the worker keeps
+        // loading: `loaded()` says when it is there after all.
         setTimeout(() => finish(false), 12_000);
       });
       return readyPromise;
@@ -188,10 +206,16 @@ export function createStockfishEngine(): Engine {
       worker?.postMessage('stop');
     },
 
+    loaded() {
+      void this.ready();
+      return loadedPromise;
+    },
+
     dispose() {
       worker?.terminate();
       worker = null;
       readyPromise = null;
+      markLoaded(false);
     },
   };
 }

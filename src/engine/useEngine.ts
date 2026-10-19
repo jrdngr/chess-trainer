@@ -6,10 +6,12 @@ import type { Engine, EngineBackend, EngineLimits, EngineSnapshot } from './type
 
 let singleton: Engine | null = null;
 let backendPromise: Promise<EngineBackend> | null = null;
+const switched = new Set<(backend: EngineBackend) => void>();
 
 /**
  * One engine per page. Tries real Stockfish first and falls back to the
  * heuristic evaluator if the worker cannot start (some sandboxes block it).
+ * When Stockfish was only slow, it takes over the moment it answers.
  */
 export function getEngine(): { engine: Engine; backend: Promise<EngineBackend> } {
   if (!singleton) {
@@ -17,12 +19,27 @@ export function getEngine(): { engine: Engine; backend: Promise<EngineBackend> }
     singleton = stockfish;
     backendPromise = stockfish.ready().then((ok) => {
       if (ok) return 'stockfish' as const;
-      stockfish.dispose();
+      // The backup is never disposed: a search already handed to it must still answer.
       singleton = createHeuristicEngine();
+      void stockfish.loaded().then((late) => {
+        if (!late) {
+          stockfish.dispose();
+          return;
+        }
+        singleton = stockfish;
+        backendPromise = Promise.resolve('stockfish');
+        for (const listener of switched) listener('stockfish');
+      });
       return 'heuristic' as const;
     });
   }
   return { engine: singleton, backend: backendPromise! };
+}
+
+/** Called when the page's engine changes after it first settled. */
+export function onEngineSwitch(listener: (backend: EngineBackend) => void): () => void {
+  switched.add(listener);
+  return () => switched.delete(listener);
 }
 
 /**
@@ -61,8 +78,14 @@ export function useEngine(fen: string | null, opts: UseEngineOptions) {
         engineRef.current = getEngine().engine;
       }
     });
+    const unsubscribe = onEngineSwitch((b) => {
+      if (cancelled) return;
+      engineRef.current = getEngine().engine;
+      setBackend(b);
+    });
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, [enabled]);
 
