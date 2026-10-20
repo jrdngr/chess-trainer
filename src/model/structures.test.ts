@@ -56,8 +56,8 @@ describe('plans', () => {
     expect(placeSquare('e5', 'w')).toBe('e5');
     const dutch = structureOf('rnbq1rk1/pp2b1pp/2p1pn2/3p1p2/2PP4/5NP1/PP2PPBP/RNBQ1RK1 w - - 0 1')!;
     // Black's knight wants e4; White's wants the hole on e5.
-    expect(planFor(dutch, 'b')[0].goal).toEqual({ piece: 'n', to: 'e4' });
-    expect(planFor(dutch, 'w')[0].goal).toEqual({ piece: 'n', to: 'e5' });
+    expect(planFor(dutch, 'b')[0].goals).toEqual([{ piece: 'n', to: 'e4' }]);
+    expect(planFor(dutch, 'w')[0].goals).toEqual([{ piece: 'n', to: 'e5' }]);
   });
 
   it('gives each side its own steps', () => {

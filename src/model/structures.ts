@@ -18,8 +18,8 @@ import { piecesFromFen, squareToCoords, type Color, type PieceType, type Square 
 
 export interface PlanStep {
   text: string;
-  /** A pawn push or a piece heading for a square, drawn from the current position. */
-  goal?: { piece: PieceType; to: Square };
+  /** The pawn pushes or piece squares the step names; reaching any of them completes it. */
+  goals?: { piece: PieceType; to: Square }[];
 }
 
 export interface StructureTemplate {
@@ -59,8 +59,8 @@ function pawnsOf(fen: string): Pawns {
   };
 }
 
-const step = (text: string, piece?: PieceType, to?: Square): PlanStep =>
-  piece && to ? { text, goal: { piece, to } } : { text };
+const step = (text: string, piece?: PieceType, ...to: Square[]): PlanStep =>
+  piece && to.length ? { text, goals: to.map((sq) => ({ piece, to: sq })) } : { text };
 
 /**
  * The templates, most specific first: the first whose test passes names the
@@ -127,7 +127,7 @@ const TEMPLATES: { template: StructureTemplate; test: (p: Pawns, a: Color, b: Co
       a: [
         step('Use the kingside space; chase the bishop with {g4} or {h4}'),
         step('Keep d4 solid against <c5>'),
-        step('Knight to f4 or e5 when it fits', 'n', 'f4'),
+        step('Knight to f4 or e5 when it fits', 'n', 'f4', 'e5'),
       ],
       b: [
         step('Get the light-squared bishop out before {e6}'),
@@ -144,7 +144,7 @@ const TEMPLATES: { template: StructureTemplate; test: (p: Pawns, a: Color, b: Co
       a: [
         step('Queenside: {a3} and {b4} to open lines', 'p', 'b4'),
         step('Kingside space with {g3} and {f4}'),
-        step('Knight to b5 or d3', 'n', 'd3'),
+        step('Knight to b5 or d3', 'n', 'b5', 'd3'),
       ],
       b: [
         step('Break with {f5}', 'p', 'f5'),
@@ -160,12 +160,12 @@ const TEMPLATES: { template: StructureTemplate; test: (p: Pawns, a: Color, b: Co
       name: "King's Indian chain",
       a: [
         step('Attack on the queenside: {c4–c5} to break', 'p', 'c5'),
-        step('Knights toward c5 via d3 or b3', 'n', 'd3'),
+        step('Knights toward c5 via d3 or b3', 'n', 'c5', 'd3', 'b3'),
         step('Answer <f5> calmly; keep the king safe first'),
       ],
       b: [
         step('Storm the kingside: {f5}, {f4}, then {g5}', 'p', 'f5'),
-        step('Bring the knight round via {Ne8} or {Nh5}', 'n', 'e8'),
+        step('Bring the knight round via {Ne8} or {Nh5}', 'n', 'e8', 'h5'),
         step('Race: your attack must land before theirs on the queenside'),
       ],
     },
@@ -200,8 +200,8 @@ const TEMPLATES: { template: StructureTemplate; test: (p: Pawns, a: Color, b: Co
       ],
       b: [
         step('Wait behind the pawns, pieces ready'),
-        step('Break with {b5} or {d5} at the right moment', 'p', 'd5'),
-        step('A knight on e5 or c5 hits the pawns', 'n', 'e5'),
+        step('Break with {b5} or {d5} at the right moment', 'p', 'b5', 'd5'),
+        step('A knight on e5 or c5 hits the pawns', 'n', 'e5', 'c5'),
       ],
     },
   },
@@ -217,7 +217,7 @@ const TEMPLATES: { template: StructureTemplate; test: (p: Pawns, a: Color, b: Co
       ],
       b: [
         step('Hit the hole on d4', 'n', 'd4'),
-        step('Break with {b5} or {f5}', 'p', 'f5'),
+        step('Break with {b5} or {f5}', 'p', 'b5', 'f5'),
         step('Trade the knight that wants d5'),
       ],
     },
@@ -234,8 +234,8 @@ const TEMPLATES: { template: StructureTemplate; test: (p: Pawns, a: Color, b: Co
       ],
       b: [
         step('Trade pieces to ease the cramp'),
-        step('Break with {b5} or {f5}', 'p', 'b5'),
-        step('Dark squares are yours: c5 and e5', 'n', 'c5'),
+        step('Break with {b5} or {f5}', 'p', 'b5', 'f5'),
+        step('Dark squares are yours: c5 and e5', 'n', 'c5', 'e5'),
       ],
     },
   },
@@ -251,7 +251,7 @@ const TEMPLATES: { template: StructureTemplate; test: (p: Pawns, a: Color, b: Co
       ],
       b: [
         step('Rook to c8 and the c-file; {Rxc3} is a common sacrifice'),
-        step('Knight to c4 or e5', 'n', 'c4'),
+        step('Knight to c4 or e5', 'n', 'c4', 'e5'),
         step('Push {b5} to open lines on their king'),
       ],
     },
@@ -267,7 +267,7 @@ const TEMPLATES: { template: StructureTemplate; test: (p: Pawns, a: Color, b: Co
         step('Watch for <d5> and <e5> breaks'),
       ],
       b: [
-        step('Break in the center with {d5} or {e5}', 'p', 'd5'),
+        step('Break in the center with {d5} or {e5}', 'p', 'd5', 'e5'),
         step('Queenside counterplay: {b5} and the c-file', 'p', 'b5'),
         step('Keep d6 defended'),
       ],
@@ -297,7 +297,7 @@ const TEMPLATES: { template: StructureTemplate; test: (p: Pawns, a: Color, b: Co
       sided: true,
       name: 'Hanging pawns',
       a: [
-        step('Push {c5} or {d5} at the right moment to free your pieces', 'p', 'd5'),
+        step('Push {c5} or {d5} at the right moment to free your pieces', 'p', 'c5', 'd5'),
         step('Keep the pawns side by side; use the half-open files'),
         step('Rooks behind the pawns'),
       ],
@@ -332,7 +332,7 @@ const TEMPLATES: { template: StructureTemplate; test: (p: Pawns, a: Color, b: Co
       id: 'big-center',
       name: 'Big center',
       a: [
-        step('Support the center; push {d5} or {e5} when it gains space', 'p', 'd5'),
+        step('Support the center; push {d5} or {e5} when it gains space', 'p', 'd5', 'e5'),
         step('Develop behind the pawns'),
         step('Do not let the center be undermined by <c5>'),
       ],
@@ -366,7 +366,7 @@ const TEMPLATES: { template: StructureTemplate; test: (p: Pawns, a: Color, b: Co
       id: 'symmetrical',
       name: 'Symmetrical center',
       a: [
-        step('Outposts on e5 and e4 are the fight', 'n', 'e5'),
+        step('Outposts on e5 and e4 are the fight', 'n', 'e5', 'e4'),
         step('The open e-file: rooks there first'),
         step('A minority attack or {c4} break makes the imbalance', 'p', 'c4'),
       ],
@@ -426,7 +426,7 @@ export function planFor(structure: Structure, me: Color): PlanStep[] {
   const steps = structure.a === me ? structure.template.a : structure.template.b;
   return steps.map((s) => ({
     text: stepText(s.text, structure.a, me),
-    ...(s.goal ? { goal: { ...s.goal, to: placeSquare(s.goal.to, structure.a) } } : {}),
+    ...(s.goals ? { goals: s.goals.map((g) => ({ ...g, to: placeSquare(g.to, structure.a) })) } : {}),
   }));
 }
 

@@ -315,8 +315,10 @@ describe('plan and Convert it missions', () => {
 
   it('sets the plan as the first mission where the pawns form a structure', () => {
     const mission = planMission(carlsbad, 'w', 30)!;
-    expect(mission).toMatchObject({ kind: 'plan', goal: { piece: 'p', to: 'b5' }, start: 30 });
-    expect(missionText(mission)).toBe('Follow the plan · pawn to b5 · 8 moves left');
+    expect(mission).toMatchObject({ kind: 'plan', start: 30 });
+    // Every square the plan names, so no one push is the "right" move.
+    expect(mission.goals).toEqual(expect.arrayContaining([{ piece: 'p', to: 'b5' }, { piece: 'n', to: 'e5' }]));
+    expect(missionText(mission)).toBe('Follow the plan · 8 moves left');
     expect(firstMission(NO_EXTRAS, all, 'w', 30, carlsbad).mission?.kind).toBe('plan');
     // No structure, no plan: the eval's mission as before.
     expect(planMission('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', 'w', 0)).toBeNull();
@@ -327,6 +329,11 @@ describe('plan and Convert it missions', () => {
     const there = 'r1bq1rk1/pp1nbppp/2p2n2/1P1p2B1/3P4/2NBP3/P1Q2PPP/R3K1NR b KQ - 0 1';
     expect(stepMission(mission, 'w', 20, there).result).toBe('done');
     expect(stepMission(mission, 'w', -90, there).result).toBe('failed');
+    // Any of the plan's squares will do: a knight on e5 instead of the minority attack.
+    const knight = 'r1bq1rk1/pp1nbppp/2p2n2/3pN1B1/3P4/2NBP3/PPQ2PPP/R3K2R b KQ - 0 1';
+    expect(stepMission(mission, 'w', 20, knight).result).toBe('done');
+    // A mission saved with one square still completes on it.
+    expect(stepMission({ kind: 'plan', moves: 0, held: 0, goal: { piece: 'p', to: 'b5' }, start: 30 }, 'w', 20, there).result).toBe('done');
     let waiting = mission;
     for (let i = 0; i < 7; i++) waiting = stepMission(waiting, 'w', 30, carlsbad).mission;
     expect(stepMission(waiting, 'w', 30, carlsbad).result).toBe('failed');

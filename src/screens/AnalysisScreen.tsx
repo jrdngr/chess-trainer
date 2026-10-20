@@ -175,7 +175,7 @@ export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInit
           lastMove={lastMoveOf(visible)}
           showCoordinates={settings.showCoordinates}
           theme={settings.boardTheme}
-          arrows={lens.marks ? [] : planCard.arrows.length ? planCard.arrows : bestArrow}
+          arrows={lens.marks ? [] : bestArrow}
           captured
           marks={lens.marks}
         />

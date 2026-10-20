@@ -9,12 +9,11 @@ import { Icons } from './Icons';
 /**
  * The cards past the end of prep: the plan for the pawn structure on the
  * board, and Cash out when you are well ahead. Each is a row under the board
- * that opens on a tap and draws its arrows while open; the × puts it away
- * until there is something new to say.
+ * that opens on a tap; the × puts it away until there is something new to say.
+ * The plan is words only: its pushes are not always sound, so it draws no
+ * move on the board. Cash out draws its trade while open.
  */
 
-/** Cyan reads on both square colors, where the app's violet sank into the dark ones (Jordan picked it from five). */
-export const PLAN_COLOR = '#22c3e6';
 const TRADE_COLOR = 'var(--good)';
 
 interface CardArgs {
@@ -25,10 +24,7 @@ interface CardArgs {
   resetKey: string;
 }
 
-export function usePlanCard({ fen, me, enabled, resetKey }: CardArgs): {
-  card: ReactNode;
-  arrows: Arrow[];
-} {
+export function usePlanCard({ fen, me, enabled, resetKey }: CardArgs): { card: ReactNode } {
   const structure = useMemo(() => (enabled ? structureOf(fen) : null), [fen, enabled]);
   const [open, setOpen] = useState(false);
   /** The structure whose card was put away; a new structure brings it back. */
@@ -37,14 +33,11 @@ export function usePlanCard({ fen, me, enabled, resetKey }: CardArgs): {
   const steps = useMemo(
     () =>
       structure && shown
-        ? planFor(structure, me).map((s) => ({ ...s, route: s.goal ? goalRoute(fen, me, s.goal) : null }))
+        ? planFor(structure, me).map((s) => ({ ...s, done: !!s.goals?.some((g) => goalRoute(fen, me, g).done) }))
         : [],
     [structure, shown, fen, me],
   );
-  if (!structure || !shown) return { card: null, arrows: [] };
-  const arrows: Arrow[] = open
-    ? steps.flatMap((s) => (s.route?.done ? [] : (s.route?.arrows ?? []).map((a) => ({ ...a, color: PLAN_COLOR }))))
-    : [];
+  if (!structure || !shown) return { card: null };
   const card = (
     <div className="card plan-card">
       <div className="plan-head">
@@ -67,8 +60,8 @@ export function usePlanCard({ fen, me, enabled, resetKey }: CardArgs): {
       {open && (
         <ol className="plan-steps">
           {steps.map((s) => (
-            <li key={s.text} className={s.route?.done ? 'done' : undefined}>
-              {s.route?.done && <span className="plan-done">{Icons.check({ size: 14 })}</span>}
+            <li key={s.text} className={s.done ? 'done' : undefined}>
+              {s.done && <span className="plan-done">{Icons.check({ size: 14 })}</span>}
               {s.text}
             </li>
           ))}
@@ -76,7 +69,7 @@ export function usePlanCard({ fen, me, enabled, resetKey }: CardArgs): {
       )}
     </div>
   );
-  return { card, arrows };
+  return { card };
 }
 
 export function useCashOutCard({ fen, me, enabled, resetKey }: CardArgs): {

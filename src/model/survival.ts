@@ -214,7 +214,9 @@ export interface Mission {
   moves: number;
   /** Keep your edge: your moves at +1 or better so far. */
   held: number;
-  /** Follow the plan: the piece and the square the structure's plan sends it to. */
+  /** Follow the plan: every square the structure's plan names; reaching any of them completes it. */
+  goals?: { piece: PieceType; to: Square }[];
+  /** Follow the plan as saved before it took every step's squares. */
   goal?: { piece: PieceType; to: Square };
   /** Follow the plan: where you stood when it was set, in centipawns from your side. */
   start?: number;
@@ -270,19 +272,18 @@ export function missionFor(color: 'w' | 'b', cp: number, fen?: string): Mission 
 }
 
 /**
- * The plan's first step that sends a piece somewhere it can go from here, as
- * a mission, when the pawns form a named structure.
+ * The plan as a mission, when the pawns form a named structure and one of its
+ * squares is in reach: any square the plan names, not yet reached, completes
+ * it. It names no move, since the plan's pushes are not always sound.
  */
 export function planMission(fen: string, color: 'w' | 'b', cp: number): Mission | null {
   const structure = structureOf(fen);
   if (!structure) return null;
-  for (const step of planFor(structure, color)) {
-    if (!step.goal) continue;
-    const route = goalRoute(fen, color, step.goal);
-    if (route.done || !route.arrows.length) continue;
-    return { kind: 'plan', moves: 0, held: 0, goal: step.goal, start: mine(color, cp) };
-  }
-  return null;
+  const goals = planFor(structure, color)
+    .flatMap((step) => step.goals ?? [])
+    .filter((goal) => !goalRoute(fen, color, goal).done);
+  if (!goals.some((goal) => goalRoute(fen, color, goal).arrows.length)) return null;
+  return { kind: 'plan', moves: 0, held: 0, goals, start: mine(color, cp) };
 }
 
 export function missionTitle(kind: MissionKind): string {
@@ -300,8 +301,6 @@ export function missionTitle(kind: MissionKind): string {
   }
 }
 
-const PIECE_NAME: Record<PieceType, string> = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
-
 /** The mission's line under "Your move": its name and where it stands. */
 export function missionText(mission: Mission): string {
   const left = (window: number) => {
@@ -312,9 +311,7 @@ export function missionText(mission: Mission): string {
     case 'edge':
       return `${missionTitle(mission.kind)} · ${mission.held} of ${EDGE_MOVES}`;
     case 'plan':
-      return mission.goal
-        ? `${missionTitle(mission.kind)} · ${PIECE_NAME[mission.goal.piece]} to ${mission.goal.to} · ${left(PLAN_WINDOW)}`
-        : `${missionTitle(mission.kind)} · ${left(PLAN_WINDOW)}`;
+      return `${missionTitle(mission.kind)} · ${left(PLAN_WINDOW)}`;
     case 'convert':
       return `${missionTitle(mission.kind)} · trade a piece · ${left(CONVERT_WINDOW)}`;
     default:
@@ -348,7 +345,8 @@ export function stepMission(
     case 'plan': {
       const floor = (mission.start ?? 0) - PLAN_SLACK;
       if (at < floor) return { mission: next, result: 'failed' };
-      if (fen && mission.goal && goalRoute(fen, color, mission.goal).done) return { mission: next, result: 'done' };
+      const goals = mission.goals ?? (mission.goal ? [mission.goal] : []);
+      if (fen && goals.some((goal) => goalRoute(fen, color, goal).done)) return { mission: next, result: 'done' };
       return { mission: next, result: next.moves >= PLAN_WINDOW ? 'failed' : null };
     }
     case 'convert': {
