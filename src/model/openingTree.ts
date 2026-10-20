@@ -38,6 +38,12 @@ export interface OpeningNode {
   games: number;
   /** 0 for the root, 1 for a first move, 2 for a family, 3 and up for variations. */
   depth: number;
+  /**
+   * A line the book does not name on its own, picked by playing it out on the
+   * picker's board. It carries the name of the deepest opening along it and
+   * hangs under that opening, but no catalogue entry points at it.
+   */
+  custom?: boolean;
   parentId: string | null;
   children: OpeningNode[];
 }
@@ -210,9 +216,46 @@ export function buildOpeningTree(index: ReferenceIndex): OpeningTree {
   return { root, byId, byKey, index };
 }
 
-/** The node with this id, or the root for '' and for an id the tree lacks. */
+/**
+ * The node with this id, or the root for ''.
+ *
+ * An id the tree lacks is still a move order, and a legal one is a line: the
+ * picker selects exactly what is on its board, so "the Slav and two moves
+ * more" is a selection like any named one. It becomes a custom node under the
+ * deepest opening it passes through. Anything else is the root.
+ */
 export function nodeById(tree: OpeningTree, id: string): OpeningNode {
-  return tree.byId.get(id) ?? tree.root;
+  return tree.byId.get(id) ?? lineNode(tree, id) ?? tree.root;
+}
+
+const lineNodes = new WeakMap<OpeningTree, Map<string, OpeningNode | null>>();
+
+function lineNode(tree: OpeningTree, id: string): OpeningNode | null {
+  if (!id) return null;
+  let made = lineNodes.get(tree);
+  if (!made) lineNodes.set(tree, (made = new Map()));
+  if (made.has(id)) return made.get(id)!;
+  const sans = id.split(' ');
+  const { keys, legal } = walkKeys(sans);
+  let node: OpeningNode | null = null;
+  if (legal) {
+    const parent = deepestNodeAlong(tree, sans) ?? tree.root;
+    node = {
+      id,
+      name: parent.name,
+      eco: parent.eco,
+      sans,
+      key: keys[keys.length - 1],
+      pathKeys: keys,
+      games: 0,
+      depth: parent.depth + 1,
+      parentId: parent.id,
+      children: [],
+      custom: true,
+    };
+  }
+  made.set(id, node);
+  return node;
 }
 
 /** The node and everything above it, the root excluded, shallowest first. */

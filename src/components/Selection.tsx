@@ -23,6 +23,7 @@ import { rankOf } from '../model/scoring';
 import { colorLabel } from '../model/selection';
 import { ANY_FAVORITE } from '../model/anyFavorite';
 import { useStore } from '../store/useStore';
+import { BrowsePicker } from './BrowsePicker';
 import { Piece } from './Pieces';
 import { TierBar } from './ScoreBar';
 import { ChoiceRow, IconButton, Icons, Segmented, Sheet } from './ui';
@@ -59,7 +60,24 @@ export function selectionTrail(openingId: string): string[] {
   const node = nodeById(tree, openingId);
   if (node.depth === 0) return ['Any opening'];
   const entry = entryForNode(catalog, node);
-  return entry ? entryTrail(entry).map((e) => shortLabel(e.label)) : [node.name];
+  const trail = entry ? entryTrail(entry).map((e) => shortLabel(e.label)) : [node.name];
+  if (!node.custom) return trail;
+  // A line played past its name: the name, then the moves it goes on with.
+  const named = node.parentId ? tree.byId.get(node.parentId) : undefined;
+  const from = named && named.sans.every((san, i) => node.sans[i] === san) ? named.sans.length : 0;
+  return from ? [...trail, moveRange(node.sans, from)] : trail;
+}
+
+/** "6.e3 e6" — the moves of a line from one ply on, numbered as played. */
+function moveRange(sans: string[], from: number): string {
+  return sans
+    .slice(from)
+    .map((san, i) => {
+      const ply = from + i;
+      const n = Math.floor(ply / 2) + 1;
+      return ply % 2 === 0 ? `${n}.${san}` : i === 0 ? `${n}...${san}` : san;
+    })
+    .join(' ');
 }
 
 /** "White · Sicilian › Najdorf" — the selection as a subtitle. */
@@ -76,7 +94,6 @@ export function selectionText(color: ColorChoice, openingId: string): string {
 /** `trailing` sits at the bar's right end, like Home's settings gear. */
 export function SelectionBar({ trailing }: { trailing?: ReactNode } = {}) {
   const selection = useStore((s) => s.settings.selection);
-  const openStats = useStore((s) => s.openStats);
   const [picking, setPicking] = useState<'color' | 'quick' | 'opening' | null>(null);
   const trail = selectionTrail(selection.opening);
 
@@ -109,10 +126,6 @@ export function SelectionBar({ trailing }: { trailing?: ReactNode } = {}) {
         open={picking === 'opening'}
         onClose={() => setPicking(null)}
         onBack={() => setPicking('quick')}
-        onStats={(id) => {
-          setPicking(null);
-          openStats(id);
-        }}
       />
     </>
   );
@@ -283,36 +296,23 @@ export function favoriteEntries(ids: string[]): { node: OpeningNode; side: Color
 }
 
 /**
- * The opening picker, over the whole screen.
- *
- * Families first, as a grid under their first move; a family opens on its
- * branches, grouped where the family is big; a branch opens on its lines. A
- * sticky header carries the trail back up, the position, and the one button
- * that trains whatever you are looking at.
+ * The opening picker, over the whole screen: a board to play the line on, and
+ * lists under it that set the board up (see `BrowsePicker`).
  */
 export function OpeningPicker({
   open,
   onClose,
   onBack,
-  onStats,
 }: {
   open: boolean;
   onClose: () => void;
-  /** Where the back button goes from the picker's first page, when it was opened from somewhere. */
+  /** Back to where the picker was opened from. */
   onBack?: () => void;
-  /** Open a stats page for a node, when the picker is used from somewhere that has one. */
-  onStats?: (id: string) => void;
 }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="op-screen" role="dialog" aria-label="Opening">
-      <OpeningList onChose={onClose} onClose={onClose} onBack={onBack} onStats={onStats} />
+    <div className="op-screen bp-screen" role="dialog" aria-label="Opening">
+      <BrowsePicker onClose={onClose} onBack={onBack} />
     </div>
   );
 }

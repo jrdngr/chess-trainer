@@ -14,6 +14,7 @@ import {
   approachKeys,
   insideRegion,
   lineStatus,
+  nodeById,
   regionOf,
   type OpeningNode,
   type OpeningTree,
@@ -1005,7 +1006,7 @@ export function bookHas(index: ReferenceIndex, fen: string, san: string): boolea
 
 /** Is this line still inside the run's region? */
 export function staysInside(tree: OpeningTree, run: Run, san: string): boolean {
-  const node = tree.byId.get(run.openingId) ?? tree.root;
+  const node = nodeById(tree, run.openingId);
   return insideRegion(tree, node, [...run.played, san]);
 }
 
