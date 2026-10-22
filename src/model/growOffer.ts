@@ -1,6 +1,7 @@
 import { fenTurn, positionKey, walkSan } from '../chess/core';
 import {
   growthRows,
+  holePastBook,
   optionsAt,
   recommended,
   type GrowthOptions,
@@ -281,11 +282,12 @@ export function growLaunch(
   tree: OpeningTree,
   opening: OpeningNode,
   played: string[],
-  opts: Pick<GrowthOptions, 'minShare' | 'maxPly' | 'starred'>,
+  opts: Pick<GrowthOptions, 'minShare' | 'maxPly' | 'starred' | 'bookOnly'>,
 ): GrowLaunch | null {
   const maxPly = opts.maxPly ?? 18;
-  const hole = holeAtEnd(rep, index, played, maxPly);
-  const end = hole ? null : endAtEnd(rep, played, maxPly);
+  const found = holeAtEnd(rep, index, played, maxPly);
+  const hole = opts.bookOnly && found && holePastBook(index, found) ? null : found;
+  const end = found || opts.bookOnly ? null : endAtEnd(rep, played, maxPly);
   if (end) {
     const row: GrowthRow = {
       id: `${rep.id}#${opening.name}`,

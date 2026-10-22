@@ -96,6 +96,12 @@ export interface GrowthOptions {
    * openings the selection covers — see `openingsInSelection`.
    */
   region?: { tree: OpeningTree; node: OpeningNode };
+  /**
+   * Only work the book can play: no hole the engine found or that leads past
+   * the book, and no line tip waiting on the engine. Autopilot stops at the
+   * book's edge, so a round started beyond it would end before it began.
+   */
+  bookOnly?: boolean;
 }
 
 /**
@@ -665,11 +671,12 @@ export function growthRows(
     // Past the book the engine answers, so every hole is somewhere a run can
     // offer a choice.
     for (const hole of findHoles(rep, index, opts)) {
+      if (opts.bookOnly && holePastBook(index, hole)) continue;
       const row = rowFor([...hole.path, hole.san], moveLabel(hole), hole.path.length);
       row.holes.push(hole);
       row.topShare = Math.max(row.topShare, holeShare(hole));
     }
-    for (const end of findLineEnds(rep, index, opts)) {
+    for (const end of opts.bookOnly ? [] : findLineEnds(rep, index, opts)) {
       const row = rowFor(end.path, endLabel(end), end.path.length);
       row.ends.push(end);
     }
@@ -770,6 +777,11 @@ export function pastTheBook(index: ReferenceIndex, fen: string): boolean {
   return popularReplies(index, fen, 0).length === 0;
 }
 
+/** A hole the engine found, or one either side of which the book has nothing. */
+export function holePastBook(index: ReferenceIndex, hole: Hole): boolean {
+  return !!hole.engine || pastTheBook(index, hole.fen) || pastTheBook(index, hole.after);
+}
+
 /**
  * Whether a run on this row starts past the book, so the engine is in it from
  * the first thing it asks — standing on this hole, or else where the row
@@ -777,7 +789,7 @@ export function pastTheBook(index: ReferenceIndex, fen: string): boolean {
  */
 export function startsPastBook(index: ReferenceIndex, row: GrowthRow, hole: Hole | null = null): boolean {
   const at = hole ?? firstHole(index, row);
-  if (at) return !!at.engine || pastTheBook(index, at.fen) || pastTheBook(index, at.after);
+  if (at) return holePastBook(index, at);
   const end = firstEnd(row);
   return !!end && pastTheBook(index, end.fen);
 }

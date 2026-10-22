@@ -32,6 +32,7 @@ import {
   findLineEnds,
   firstEnd,
   needsEngine,
+  holePastBook,
   pastTheBook,
   reachesOpening,
   startsPastBook,
@@ -651,6 +652,20 @@ describe('growing past the book', () => {
     const row = growthRows([rep], index).find((r) => r.holes.length > 0)!;
     expect(pastTheBook(index, START_FEN)).toBe(false);
     expect(startsPastBook(index, row)).toBe(false);
+  });
+
+  it('leaves out everything past the book when asked for book work only', () => {
+    clearEngineReplies();
+    const [end] = findLineEnds(albin, index);
+    rememberEngineReplies(end.fen, ['Ng6', 'Nf5', 'Be6']);
+    const all = growthRows([albin], index).flatMap((row) => row.holes);
+    expect(all.some((hole) => hole.engine)).toBe(true);
+    const book = growthRows([albin], index, { bookOnly: true });
+    expect(book.flatMap((row) => row.ends)).toHaveLength(0);
+    expect(book.flatMap((row) => row.holes).some((hole) => holePastBook(index, hole))).toBe(false);
+    expect(book.length).toBeGreaterThan(0);
+    expect(book.every((row) => !startsPastBook(index, row))).toBe(true);
+    clearEngineReplies();
   });
 
   it('starts a run on a line end with the opponent to move', () => {

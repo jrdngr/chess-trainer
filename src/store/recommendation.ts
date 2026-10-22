@@ -236,6 +236,7 @@ export function nextRound(
           minShare: AUTO_GROWTH.minShare,
           maxPly: AUTO_GROWTH.maxPly,
           starred: state.settings.favoriteOpenings,
+          bookOnly: true,
         });
         if (launch) return { color: rep.color, launch };
       }
