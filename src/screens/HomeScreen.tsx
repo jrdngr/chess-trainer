@@ -45,6 +45,10 @@ export function HomeScreen({ onOpenMode, onOpenSettings }: HomeScreenProps) {
           {first ? (
             <button className="autopilot plate" onClick={() => onOpenMode('autopilot')}>
               <PlateBoard sans={first.pick.opening.sans} color={first.pick.color} size={176} />
+              <span className="plate-tag">
+                <Icons.bolt size={11} />
+                Autopilot
+              </span>
               <SideSquare color={first.pick.color} />
               <span className="name truncate">{selectionTrail(first.pick.opening.id).at(-1)}</span>
               <PrepSegments span={span} className="edge" />

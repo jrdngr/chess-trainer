@@ -986,6 +986,24 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
 }
 .autopilot.plate .side-square { position: relative; }
+.autopilot.plate .name, .autopilot.plate .side-square { margin-top: 14px; }
+/* What the button starts, in its corner. */
+.plate-tag {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 999px;
+  background: rgba(139, 140, 248, 0.2);
+  color: #c4c5ff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 .plate-board {
   position: absolute;
   right: -14px;
