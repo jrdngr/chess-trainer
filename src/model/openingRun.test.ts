@@ -734,6 +734,27 @@ describe('starting inside an opening', () => {
   });
 });
 
+describe('starting at a position', () => {
+  it('plays the moves to it for you and draws the line on through it', () => {
+    const at = ['d4', 'd5', 'c4', 'c6', 'Nf3', 'Nf6'];
+    const { run } = start([whiteRep()], 'w', 1, any, { at, enter: true });
+    expect(run.played).toEqual(at);
+    expect(run.opened).toBe(at.length);
+    expect(run.fen).toBe(walkSan(at).fens[at.length]);
+    expect(run.target.slice(0, at.length + 1)).toEqual([...at, 'Nc3']);
+    expect(isUsersTurn(run)).toBe(true);
+    // Named for the deepest opening the way there reaches.
+    expect(run.enteredIn).not.toBeNull();
+    expect(lineStatus(tree, nodeById(tree, run.enteredIn!), at)).toBe('reached');
+  });
+
+  it('starts from move one when the moves do not reach a position', () => {
+    const { run } = start([whiteRep()], 'w', 1, any, { at: ['d4', 'e4'] });
+    expect(run.opened).toBe(0);
+    expect(run.played).toEqual([]);
+  });
+});
+
 describe('following the player', () => {
   const SLAV = ['d4', 'd5', 'c4', 'c6', 'Nf3', 'Nf6', 'Nc3', 'dxc4', 'a4'];
 

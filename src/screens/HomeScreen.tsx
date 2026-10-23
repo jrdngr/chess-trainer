@@ -3,11 +3,9 @@ import { Icons, Section, Sheet, Toggle } from '../components/ui';
 import { SelectionBar } from '../components/Selection';
 import { ScoreStrip } from '../components/ScoreBar';
 import { FavoritesLadder, MilestonesCard, SurvivalRuns } from '../components/HomeWidgets';
-import { nodeById, openingTree } from '../model/openingTree';
 import { streak } from '../model/scoring';
 import { NO_HISTORY, pickRound, type AutoRound } from '../store/recommendation';
 import { roundLabel } from '../model/autopilot';
-import { referenceIndex } from '../model/referenceIndex';
 import { useStore } from '../store/useStore';
 
 export type ModeId = 'drill' | 'survival' | 'growth' | 'play' | 'autopilot';
@@ -45,7 +43,7 @@ export function HomeScreen({ onOpenMode, onOpenSettings }: HomeScreenProps) {
             </span>
             <span className="grow" style={{ minWidth: 0 }}>
               <span className="kicker">Autopilot</span>
-              <span className="name">{first ? roundLabel(first.mode, first.mode === 'survival' ? first.pick.start : undefined) : 'Build'}</span>
+              <span className="name">{first ? roundLabel(first.pick.start) : 'Build'}</span>
               <span className="first truncate">
                 {first ? firstUp(first) : 'Nothing to practice yet · open Growth'}
               </span>
@@ -103,26 +101,14 @@ export function HomeScreen({ onOpenMode, onOpenSettings }: HomeScreenProps) {
 
 
 /**
- * What the first round is about, under its mode's name. A
- * Survival run from move one is a side and nothing more, since it follows
- * whatever is played; one that starts inside an opening is that opening.
+ * What the first run is about. One from move one is a side and nothing more,
+ * since it follows whatever is played; one that starts inside an opening, or
+ * at a position in it, is that opening.
  */
 function firstUp(round: AutoRound): string {
-  const side = (color: 'w' | 'b') => (color === 'w' ? 'White' : 'Black');
-  const tree = openingTree(referenceIndex());
-  const about = (() => {
-    switch (round.mode) {
-      case 'survival':
-        return round.pick.start === 'inside' ? round.pick.opening.name : `${side(round.pick.color)}, from move one`;
-      case 'growth':
-        return round.launch.opening.name;
-      default: {
-        const opening = nodeById(tree, round.openingId);
-        return opening.depth === 0 ? side(round.color) : opening.name;
-      }
-    }
-  })();
-  return about;
+  const { pick } = round;
+  if (pick.start === 'inside') return pick.opening.name;
+  return `${pick.color === 'w' ? 'White' : 'Black'}, from move one`;
 }
 
 /** One mode as a short tile: its icon and its name. */

@@ -44,6 +44,9 @@ import {
   playTheirs,
   playYours,
   prepHere,
+  prepSummary,
+  secondsText,
+  speedTone,
   startSurvival,
   type SurvivalPrefs,
   type SurvivalRecord,
@@ -112,12 +115,17 @@ function noteFor(earned: Earned, best: string | null): { text: string; tone: 'go
   return { text: parts.map((part) => part.text).join(' · '), tone: parts.every((part) => part.good) ? 'good' : 'bad' };
 }
 
-/** What one of your moves cost, floating up from the square it landed on. */
+/**
+ * What one of your moves cost, floating up from the square it landed on — or,
+ * in Autopilot, a prepared move found, ticked, with how long it took.
+ */
 interface ScorePop {
   key: number;
   square: LegalMove['to'];
-  cp: number;
+  text: string;
   tone: ScoreTone;
+  /** A prepared move found: the tick goes in front of its time. */
+  found?: boolean;
 }
 
 /**
@@ -129,6 +137,8 @@ export interface SurvivalPlan {
   toward: string;
   enter: boolean;
   lean: 'popular' | 'weak';
+  /** The moves to a position to start at, played for you: one your cards say is due. */
+  at?: string[] | null;
 }
 
 interface Game {
@@ -242,6 +252,8 @@ export function SurvivalScreen({
   const ratings = useRatingTracker();
   /** This run's rated answers, which an opening the line reaches later takes too. */
   const answers = useRef<MoveResult[]>([]);
+  /** How long each prepared move you found took, in seconds: Autopilot's speed. */
+  const prepTimes = useRef<number[]>([]);
 
   const run = game?.state.run ?? null;
   /**
@@ -395,7 +407,9 @@ export function SurvivalScreen({
       lastScored.current = judged.after;
       const score = prefs.moveScores && swing !== null ? moveScore(swing) : null;
       const landed = score ? applySan(run.fen, judged.san) : null;
-      if (score && landed) setPop({ key: Date.now(), square: landed.to, ...score });
+      if (score && landed) {
+        setPop({ key: Date.now(), square: landed.to, text: score.cp > 0 ? `+${score.cp}` : `−${-score.cp}`, tone: score.tone });
+      }
       if (expected.length) {
         const right = applySan(run.fen, expected[0]);
         if (right) setMiss({ expected: expected[0], from: right.from, to: right.to });
@@ -584,6 +598,7 @@ export function SurvivalScreen({
       lean: plan?.lean,
       toward: plan ? nodeById(tree, plan.toward) : undefined,
       enter: plan?.enter,
+      at: plan?.at,
       weakness: weaknessFromCards(cards, evidence),
       growth: modes.growth,
       holeWeight: evidenceFor(evidence),
@@ -595,6 +610,7 @@ export function SurvivalScreen({
     prepEnd.current = null;
     ratings.reset();
     answers.current = [];
+    prepTimes.current = [];
     setGrowOffer(null);
     judge.reset();
     setPrefs(chosen);
@@ -670,6 +686,15 @@ export function SurvivalScreen({
         grow={growOffer?.kind === 'opening' ? { text: growOffer.text, engine: growEngine, onGrow: () => setPhase('growing') } : null}
         growLine={growOffer?.kind === 'line' ? () => setPhase('growing') : null}
         growEngine={growEngine}
+        prep={
+          plan
+            ? prepSummary(
+                answers.current.filter((answer) => answer.correct).length,
+                answers.current.length,
+                prepTimes.current,
+              )
+            : null
+        }
         nextLabel={onNext ? 'Next round' : 'Next run'}
         prefs={prefs}
         onNext={next}
@@ -701,8 +726,12 @@ export function SurvivalScreen({
     if (prep.includes(move.san)) {
       buzz(10);
       // A position your prep answers is a card on the schedule, and finding
-      // the answer reviews it.
-      if (run.repertoireId) answered(run.repertoireId, run.fen, move.san, gradeForTime(clock.elapsedNow()));
+      // the answer reviews it, graded by how long it took.
+      const seconds = clock.elapsedNow();
+      if (run.repertoireId) answered(run.repertoireId, run.fen, move.san, gradeForTime(seconds));
+      prepTimes.current = [...prepTimes.current, seconds];
+      // Autopilot says so on the board: the tick, and the time in the grade's color.
+      if (plan) setPop({ key: Date.now(), square: move.to, text: secondsText(seconds), tone: speedTone(seconds), found: true });
       tally(run.played, true);
       setPrepSeen(true);
       afterMove({ ...game, state: playYours(game.state, move.san) });
@@ -874,7 +903,10 @@ function MoveScore({ pop, orientation }: { pop: ScorePop; orientation: 'w' | 'b'
   const row = orientation === 'w' ? 7 - rank : rank;
   return (
     <div className={`move-score ${pop.tone}`} style={{ left: `${col * 12.5}%`, top: `${row * 12.5}%` }}>
-      <span>{pop.cp > 0 ? `+${pop.cp}` : `−${-pop.cp}`}</span>
+      <span>
+        {pop.found && <b className="tick">✓</b>}
+        {pop.text}
+      </span>
     </div>
   );
 }

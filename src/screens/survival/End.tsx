@@ -75,6 +75,7 @@ export function End({
   grow,
   growLine,
   growEngine,
+  prep,
   nextLabel,
   prefs,
   onNext,
@@ -95,6 +96,8 @@ export function End({
   growLine: (() => void) | null;
   /** Growing this line starts past the book, with the engine. */
   growEngine: boolean;
+  /** How the run went on your prep, found and how fast — Autopilot's; null to leave it out. */
+  prep?: string | null;
   /** "Next run", or Autopilot's "Next round". */
   nextLabel: string;
   /** Which of moments, missions and the combo the run played with. */
@@ -347,6 +350,7 @@ export function End({
               Survived {moves} move{moves === 1 ? '' : 's'}
             </div>
           )}
+          {prep && <div className="small muted mt-4 num">{prep}</div>}
           {(newBest || newBestPoints) && (
             <div className="small mt-8" style={{ color: 'var(--good)' }}>
               {newBestPoints && newBest ? 'New best, in points and moves' : newBestPoints ? 'New best score' : 'New best'}

@@ -233,6 +233,7 @@
 .move-score.up span { color: var(--good); }
 .move-score.slight span { color: var(--warn); }
 .move-score.bad span { color: var(--bad); }
+.move-score .tick { color: var(--good); margin-right: 4px; }
 @keyframes moveScore {
   0% { opacity: 0; transform: translateY(6px); }
   15% { opacity: 1; transform: translateY(0); }

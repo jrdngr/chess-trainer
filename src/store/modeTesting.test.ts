@@ -35,11 +35,11 @@ beforeEach(() => {
 
 /** The case a round is, read off the round itself. */
 function variantOf(round: AutoRound): TestVariant {
-  if (round.mode !== 'survival') return round.mode;
+  if (round.at) return 'position';
   return round.pick.start === 'first' ? 'coldStart' : 'survival';
 }
 
-const colorOf = (round: AutoRound) => (round.mode === 'survival' ? round.pick.color : round.color);
+const colorOf = (round: AutoRound) => round.pick.color;
 
 describe('Mode Testing', () => {
   it('builds a cycle of every variant on every side', () => {
@@ -51,7 +51,7 @@ describe('Mode Testing', () => {
   it('plays every case once, on its side, before any repeats', () => {
     let history: AutoHistory = NO_HISTORY;
     const seen: string[] = [];
-    for (let i = 0; i < 10; i += 1) {
+    for (let i = 0; i < 6; i += 1) {
       const picked = pickRound(useStore.getState(), history);
       expect(picked.round).not.toBeNull();
       const round = picked.round!;
@@ -64,7 +64,7 @@ describe('Mode Testing', () => {
       history = afterRound(history, round, picked.within);
     }
     // Every case runs here, once each.
-    expect(new Set(seen).size).toBe(10);
+    expect(new Set(seen).size).toBe(6);
   });
 
   it('leaves the mix alone when off', () => {

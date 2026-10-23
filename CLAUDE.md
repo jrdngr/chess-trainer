@@ -28,3 +28,8 @@ existing artifact rather than creating a new one:
 
 Run `npm test` and `npm run typecheck` before publishing. Commit the change and
 the republish together, so the repo and the live artifact never drift apart.
+
+## Autopilot's intent
+
+Before changing Autopilot, read [docs/autopilot.md](docs/autopilot.md). It
+says what Autopilot is for, and each change should pass its tests.

@@ -1,27 +1,25 @@
 import type { Color } from '../chess/core';
-import type { Focus, Recommendation, RoundMode, Start } from './recommend';
+import type { Card } from './types';
+import { missingPrep, type Focus, type Recommendation, type Start } from './recommend';
+import { weakestFirst, type TrainingItem } from './session';
+import { isDue } from './srs';
 
 /**
- * Autopilot: one round after another, each in the mode the work asks for,
- * without going back to Home in between.
+ * Autopilot: one Survival run after another, without going back to Home in
+ * between. See `docs/autopilot.md` for what it is for.
  *
- * A round is one sitting of a mode, cut to a size that plays in a few
- * minutes: a Survival run, eight positions of Drill, a few lines of Drill up
- * to `LINE_BUDGET` of your moves, or one batch of Growth. Which mode comes
- * next is the recommendation engine's — see "Which mode a round is in" in
- * `recommend.ts` — as is the opening, the side and what the mode would
- * otherwise ask on its setup screen; your own saved options in each mode
- * decide how it plays — the clock, the feedback, the explanations.
+ * Every round is a run: it plays past your prep and ends on your first
+ * blunder. What makes it Autopilot is that it decides each run for you — the
+ * opening, the side and what the opponent steers into come from the
+ * recommendation engine (`recommend.ts`) — and where the run starts, which is
+ * how the drilling gets done without leaving the game:
  *
- * A Survival run that starts from move one is a Cold Start: nothing is set
- * up for you, and you find your own way into the opening. Every `COLD_EVERY`th
- * run is one, whatever the recommendation's start — see `coldStart`.
+ *   inside   — the way into the opening is played for you. The default.
+ *   position — the way to a position you're due on, or answer worst while
+ *              your prep keeps missing, is played for you — see `positionStart`.
+ *   first    — a Cold Start from move one, every `COLD_EVERY`th run, so the
+ *              way in is tested too — see `coldStart`.
  */
-export { chooseMode, DRILL_MODES, rankModes, ROUND_MODES, type ModeScore, type RoundMode } from './recommend';
-
-/** The size of a round of Drill positions. Drill lines is sized by `LINE_BUDGET`. */
-export const ROUND_SIZE = { drillPositions: 8 } as const;
-
 /**
  * How often a Survival run starts from move one even where the
  * recommendation would start it inside an opening: once the last
@@ -47,68 +45,84 @@ export function coldStart(pick: Recommendation, recentStarts: Start[]): Recommen
   return due ? { ...pick, start: 'first' } : pick;
 }
 
+/**
+ * Where a run starts at a position, when it does: the one you're most
+ * overdue on, or, with nothing due while your prep keeps missing in runs
+ * (`missingPrep`), the one you answer worst. Never two runs running, so the
+ * openings themselves still get played into, and never on a Cold Start.
+ * A position at move one is no start at all: that is a Cold Start.
+ */
+export function positionStart(
+  items: TrainingItem[],
+  cards: Record<string, Card>,
+  opts: { accuracy: number | null; lastWasPosition: boolean; now?: number },
+): TrainingItem | null {
+  if (opts.lastWasPosition) return null;
+  const now = opts.now ?? Date.now();
+  const reachable = items.filter((item) => item.pathSans.length > 0);
+  const due = reachable
+    .filter((item) => cards[item.cardId] && isDue(cards[item.cardId], now))
+    .sort((a, b) => cards[a.cardId].due - cards[b.cardId].due);
+  if (due.length) return due[0];
+  if (missingPrep(opts.accuracy) === 0) return null;
+  return weakestFirst(reachable.filter((item) => cards[item.cardId]), cards)[0] ?? null;
+}
+
 /** What each recommendation focus asks of a Survival run: the lines you would meet, or your weakest. */
 export const LEAN_FOR: Record<Focus, 'popular' | 'weak'> = { test: 'popular', review: 'weak' };
 
-/** What Autopilot decided a Survival round should be — see `SurvivalPlan`. */
-export function survivalPlanFor(pick: Recommendation): { color: Color; toward: string; enter: boolean; lean: 'popular' | 'weak' } {
+/** What Autopilot decided a run should be — see `SurvivalPlan`. */
+export function survivalPlanFor(
+  pick: Recommendation,
+  at: string[] | null = null,
+): { color: Color; toward: string; enter: boolean; lean: 'popular' | 'weak'; at: string[] | null } {
   return {
     color: pick.color,
     toward: pick.opening.id,
     enter: pick.start === 'inside',
     lean: LEAN_FOR[pick.focus],
+    at,
   };
 }
 
-export const MODE_LABELS: Record<RoundMode, string> = {
-  survival: 'Survival',
-  drillPositions: 'Drill positions',
-  drillLines: 'Drill lines',
-  growth: 'Growth',
-};
-
-/** A Survival run from move one, by its banner name. */
+/** A run from move one, by its banner name. */
 export const COLD_START_LABEL = 'Survival: Cold Start';
 
-/** A round's name as Autopilot announces it. */
-export function roundLabel(mode: RoundMode, start?: Start): string {
-  return mode === 'survival' && start === 'first' ? COLD_START_LABEL : MODE_LABELS[mode];
+/** A run's name as Autopilot announces it. */
+export function roundLabel(start: Start): string {
+  return start === 'first' ? COLD_START_LABEL : 'Survival';
 }
 
 /**
- * Mode Testing: Autopilot's rounds in a cycle that plays every way a round
- * can begin before any repeats, for trying out how rounds start.
+ * Mode Testing: Autopilot's runs in a cycle that plays every way a run can
+ * begin before any repeats, for trying out how runs start.
  *
  * The cases are what the round intro treats differently — a run walked into
- * its opening, a Cold Start from move one, the way to a Drill position played
- * out, a line drilled from move one, Growth walked to its hole — each on
+ * its opening, one walked to a position, a Cold Start from move one — each on
  * every side the selection covers, since a side whose opponent moves first
- * starts differently. A case whose mode has nothing to do is forced where
- * it can run at all, and skipped where it cannot.
+ * starts differently. A position start takes any position when none is owed;
+ * a case that cannot run at all is skipped.
  */
-export type TestVariant = 'survival' | 'coldStart' | 'drillPositions' | 'drillLines' | 'growth';
+export type TestVariant = 'survival' | 'position' | 'coldStart';
 
-export const TEST_VARIANTS: TestVariant[] = ['survival', 'coldStart', 'drillPositions', 'drillLines', 'growth'];
+export const TEST_VARIANTS: TestVariant[] = ['survival', 'position', 'coldStart'];
 
 export interface TestCase {
   variant: TestVariant;
   color: Color;
 }
 
-/** What a test case asks of the round picker: its mode, and for Survival where it starts. */
-export interface ForcedRound {
-  mode: RoundMode;
-  start?: Start;
-}
+/** Where a test case starts its run. */
+export type ForcedStart = Start | 'position';
 
-export function forcedRound(variant: TestVariant): ForcedRound {
+export function forcedStart(variant: TestVariant): ForcedStart {
   switch (variant) {
     case 'survival':
-      return { mode: 'survival', start: 'inside' };
+      return 'inside';
     case 'coldStart':
-      return { mode: 'survival', start: 'first' };
+      return 'first';
     default:
-      return { mode: variant };
+      return 'position';
   }
 }
 

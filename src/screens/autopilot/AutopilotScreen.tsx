@@ -1,33 +1,25 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppBar, Icons } from '../../components/ui';
 import { SelectionBar, selectionText } from '../../components/Selection';
-import { AUTO_DRILL, autopilotModes } from '../../model/autopilotPrefs';
-import { ROUND_SIZE, roundLabel, survivalPlanFor } from '../../model/autopilot';
-import { nodeById, openingTree } from '../../model/openingTree';
-import { referenceIndex } from '../../model/referenceIndex';
-import { itemsInRegion, repertoiresIn, type Selection } from '../../model/selection';
+import { autopilotModes } from '../../model/autopilotPrefs';
+import { roundLabel, survivalPlanFor } from '../../model/autopilot';
+import type { Selection } from '../../model/selection';
 import type { TidyFind } from '../../model/tidy';
-import { itemsFor, repertoireList, useStore } from '../../store/useStore';
-import { weakestFirst } from '../../model/session';
-import { afterRound, NO_HISTORY, pickRound, playedRound, tookTest, type AutoHistory, type AutoRound, type PickedRound } from '../../store/recommendation';
-import { DrillSession } from '../drill/DrillSession';
-import { LineDrill } from '../drill/LineDrill';
-import { LINE_BUDGET, MAX_LINES } from '../../model/lineDrill';
-import { GrowthScreen } from '../growth/GrowthScreen';
+import { useStore } from '../../store/useStore';
+import { afterRound, NO_HISTORY, pickRound, playedRound, tookTest, type AutoHistory, type PickedRound } from '../../store/recommendation';
 import { SurvivalScreen } from '../survival/SurvivalScreen';
 import { ModePrefsProvider } from '../modePrefs';
 
 /**
  * Autopilot.
  *
- * Every round is a sitting of one mode — a Survival run, a few positions or
- * lines of Drill, a batch of Growth — chosen by what the work inside the
- * selection asks for, with Survival the default (see `autopilot.ts`). Each
- * round is the mode's own screen, set up by Autopilot and played on your own
- * saved options, and its end screen offers Next round right under the board:
- * no Home in between, no setup screens, one tap per round. A session never
- * ends on its own. Stop is the close button in the app bar, and stopping goes
- * Home.
+ * Every round is a Survival run, set up by Autopilot — the opening, the side,
+ * where it starts (see `autopilot.ts`) — and played on Autopilot's own
+ * options. Its end screen offers Next round right under the board, and a run
+ * that reached the end of your prep offers to grow the line there, one batch
+ * of Growth before the next round: no Home in between, no setup screens, one
+ * tap per round. A session never ends on its own. Stop is the close button in
+ * the app bar, and stopping goes Home.
  *
  * With nothing prepared inside the selection there is nothing to practice,
  * and it says so and points at Growth.
@@ -89,97 +81,19 @@ export function AutopilotScreen({
 
   if (!round) return <NothingToDrill onExit={onExit} onGrow={onGrow} />;
 
-  const current = round;
-  const screen = ((): ReactNode => {
-    switch (current.mode) {
-      case 'survival':
-        return (
-          <SurvivalScreen
-            key={count}
-            plan={survivalPlanFor(current.pick)}
-            roundName={roundLabel('survival', current.pick.start)}
-            scope={within}
-            onNext={advance}
-            onExit={onExit}
-            onAnalyze={onAnalyze}
-            onTidy={onTidy}
-          />
-        );
-      case 'drillLines':
-        return (
-          <LineDrill
-            key={count}
-            color={current.color}
-            openingId={current.openingId}
-            count={MAX_LINES}
-            budget={LINE_BUDGET}
-            lean="weak"
-            only={new Set(current.only)}
-            prefs={AUTO_DRILL}
-            onExit={onExit}
-            onNext={advance}
-          />
-        );
-      case 'drillPositions':
-        return <PositionsRound key={count} round={current} onExit={onExit} onNext={advance} />;
-      case 'growth':
-        return (
-          <GrowthScreen
-            key={count}
-            onExit={onExit}
-            onAnalyze={onAnalyze}
-            launch={{
-              row: current.launch.row,
-              hole: current.launch.hole,
-              region: current.launch.opening.id,
-              backLabel: 'Next round',
-              onBack: advance,
-              pointBack: 'cap',
-              widened: current.launch.widened,
-              next: advance,
-            }}
-          />
-        );
-    }
-  })();
-
   return (
     <ModePrefsProvider value={modes}>
-      {screen}
+      <SurvivalScreen
+        key={count}
+        plan={survivalPlanFor(round.pick, round.at)}
+        roundName={roundLabel(round.pick.start)}
+        scope={within}
+        onNext={advance}
+        onExit={onExit}
+        onAnalyze={onAnalyze}
+        onTidy={onTidy}
+      />
     </ModePrefsProvider>
-  );
-}
-
-/** Drill's positions, the scheduled ones first, for a round's worth of answers. */
-function PositionsRound({
-  round,
-  onExit,
-  onNext,
-}: {
-  round: Extract<AutoRound, { mode: 'drillPositions' }>;
-  onExit: () => void;
-  onNext: () => void;
-}) {
-  const state = useStore.getState();
-  const [items] = useState(() => {
-    const tree = openingTree(referenceIndex());
-    const reps = repertoiresIn(repertoireList(state), round.color);
-    const all = itemsInRegion(tree, nodeById(tree, round.openingId), reps.flatMap(itemsFor));
-    // Nothing due or new, but your prep is missing in Survival: the positions you answer worst.
-    return round.weak ? weakestFirst(all, state.cards).slice(0, ROUND_SIZE.drillPositions * 2) : all;
-  });
-  const prefs = useMemo(() => ({ ...AUTO_DRILL, weakFirst: round.weak }), [round.weak]);
-  return (
-    <DrillSession
-      items={items}
-      mode={round.weak ? 'cram' : 'due'}
-      title="Drill positions"
-      prefs={prefs}
-      openingId={round.openingId}
-      limit={ROUND_SIZE.drillPositions}
-      onExit={onExit}
-      onNext={onNext}
-    />
   );
 }
 

@@ -16,6 +16,7 @@ import {
 import type { Hole } from './growth';
 import type { Seen } from './freshness';
 import type { Repertoire } from './types';
+import { gradeForTime } from './srs';
 
 /**
  * Survival: how far you get before your first blunder.
@@ -109,6 +110,37 @@ export function moveScore(swing: number): { cp: number; tone: ScoreTone } | null
 export function evalSwing(color: 'w' | 'b', from: number, to: number): number | null {
   if (Math.abs(from) >= 10_000 || Math.abs(to) >= 10_000) return null;
   return color === 'w' ? to - from : from - to;
+}
+
+/**
+ * How fast a prepared move was, on the same scale that grades its card
+ * (`gradeForTime`): Easy in green, Good in yellow, Hard in red.
+ */
+export function speedTone(seconds: number): ScoreTone {
+  const grade = gradeForTime(seconds);
+  return grade === 'easy' ? 'up' : grade === 'good' ? 'slight' : 'bad';
+}
+
+/** A move's time as shown: tenths under ten seconds, whole seconds past. */
+export function secondsText(seconds: number): string {
+  return seconds < 10 ? `${seconds.toFixed(1)}s` : `${Math.round(seconds)}s`;
+}
+
+/**
+ * How a run went on your prep, for its end screen: found of asked, and the
+ * times of the ones found — their average, and how many were fast enough to
+ * grade Easy. Null where your prep asked nothing.
+ */
+export function prepSummary(found: number, asked: number, seconds: number[]): string | null {
+  if (!asked) return null;
+  const parts = [`Prep ${found} of ${asked}`];
+  if (seconds.length) {
+    const average = seconds.reduce((sum, s) => sum + s, 0) / seconds.length;
+    parts.push(`${secondsText(average)} average`);
+    const fast = seconds.filter((s) => gradeForTime(s) === 'easy').length;
+    parts.push(`${fast} fast`);
+  }
+  return parts.join(' · ');
 }
 
 /**
@@ -532,6 +564,8 @@ export interface StartOptions {
   toward?: OpeningNode;
   /** Start inside `toward` rather than from move one — see `BeginOptions.enter`. */
   enter?: boolean;
+  /** Start at the position these moves reach — see `BeginOptions.at`. */
+  at?: string[] | null;
 }
 
 /**
@@ -549,6 +583,7 @@ export function startSurvival(opts: StartOptions): SurvivalStart | null {
     steer: opts.steer === 'gaps' ? 'gaps' : (opts.lean ?? 'weak'),
     toward: opts.toward,
     enter: opts.enter,
+    at: opts.at,
     weakness: opts.weakness ?? null,
     growth: opts.growth,
     holeWeight: opts.holeWeight,

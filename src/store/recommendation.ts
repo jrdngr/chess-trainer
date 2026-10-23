@@ -1,17 +1,14 @@
 import type { Color } from '../chess/core';
-import { favoritesIn, isAnyFavorite, regionsBySide, resolveFavorite } from '../model/anyFavorite';
-import { AUTO_DRILL, AUTO_GROWTH } from '../model/autopilotPrefs';
-import { chooseMode, coldStart, forcedRound, testCycle, type ForcedRound, type RoundMode, type TestCase } from '../model/autopilot';
+import { favoritesIn, isAnyFavorite, resolveFavorite } from '../model/anyFavorite';
+import { AUTO_DRILL } from '../model/autopilotPrefs';
+import { coldStart, forcedStart, positionStart, testCycle, type ForcedStart, type TestCase } from '../model/autopilot';
 import { ACCURACY_RUNS } from '../model/recommend';
-import { growLaunch, lineFinishes, readyToGrow, type GrowLaunch } from '../model/growOffer';
-import { drillableLines, dueLines } from '../model/lineDrill';
 import { buildRepairs, type RepairItem } from '../model/repair';
 import { openingTree } from '../model/openingTree';
 import { isSteered, recommend, type Focus, type RecommendInput, type Recommendation, type Start } from '../model/recommend';
 import { referenceIndex } from '../model/referenceIndex';
 import { seenIn, type RoundRecord } from '../model/scoring';
 import { itemsInRegion, lineInRegion, regionOf, repertoiresIn, type Selection } from '../model/selection';
-import { isDue } from '../model/srs';
 import { itemsFor, repertoireList, useStore } from './useStore';
 
 type State = ReturnType<typeof useStore.getState>;
@@ -131,150 +128,56 @@ export function recommendNow(
 
 /* ── Autopilot's rounds ─────────────────────────────────────────────────── */
 
-/** What Autopilot's next round is, with what its mode needs to start. */
-export type AutoRound =
-  | { mode: 'survival'; pick: Recommendation }
-  /** `weak`: nothing due or new, so the round asks the positions you answer worst. */
-  | { mode: 'drillPositions'; color: Color; openingId: string; weak: boolean }
-  | { mode: 'drillLines'; color: Color; openingId: string; only: string[] }
-  | { mode: 'growth'; color: Color; launch: GrowLaunch };
-
-/** What a session remembers of its rounds so far, oldest first. Nothing is saved. */
-export interface AutoHistory {
-  modes: RoundMode[];
-  /** The focuses of its Survival rounds, for the recommendation's brake. */
-  focuses: Focus[];
-  /** For each of those, whether it was steered into an opening below the selection. */
-  steered: boolean[];
-  /** Where each of those started, for the Cold Start rule — see `coldStart`. */
-  starts: Start[];
+/**
+ * What Autopilot's next run is: the recommendation it plays, and, for a run
+ * that starts at a position, the moves to it.
+ */
+export interface AutoRound {
+  pick: Recommendation;
+  at: string[] | null;
 }
 
-export const NO_HISTORY: AutoHistory = { modes: [], focuses: [], steered: [], starts: [] };
+/** What a session remembers of its runs so far, oldest first. Nothing is saved. */
+export interface AutoHistory {
+  /** Their focuses, for the recommendation's brake. */
+  focuses: Focus[];
+  /** For each, whether it was steered into an opening below the selection. */
+  steered: boolean[];
+  /** Where each started, for the Cold Start rule — see `coldStart`. */
+  starts: Start[];
+  /** Whether each started at a position — see `positionStart`. */
+  positions: boolean[];
+}
+
+export const NO_HISTORY: AutoHistory = { focuses: [], steered: [], starts: [], positions: [] };
 
 /**
- * Autopilot's next round, or null with nothing prepared inside the selection.
+ * Autopilot's next run, or null with nothing prepared inside the selection.
  *
- * The recommendation engine picks what a Survival run would be about; the
- * other modes are weighed against it by what they have to do inside the same
- * selection — see `autopilot.ts`. `mix` is the selection the mode is weighed
- * over when that is wider than the round's own: under "Any favorite" a round
- * lands on one favorite, but what is owed is read across all of them, and a
- * Drill round goes to the favorite owing the most.
+ * The recommendation engine picks what the run is about; every 4th starts
+ * from move one, and the rest may start at a position your cards say is due
+ * — see `autopilot.ts`. `force` is Mode Testing's: where this run starts,
+ * whatever is owed, or null where it cannot.
  */
-export function nextRound(
-  state: State,
-  history: AutoHistory,
-  mix: Selection = state.settings.selection,
-  force?: ForcedRound,
-): AutoRound | null {
+export function nextRound(state: State, history: AutoHistory, force?: ForcedStart): AutoRound | null {
   const recommended = recommendNow(state, history.focuses, history.steered);
   if (!recommended) return null;
-  let pick = coldStart(recommended, history.starts);
-  if (force) {
-    // Mode Testing says where a Survival run starts. Inside needs an opening
-    // deep enough to start in; from move one is always possible.
-    if (force.start === 'inside' && recommended.start !== 'inside') return null;
-    pick = force.start ? { ...recommended, start: force.start } : recommended;
-  }
+  if (force === 'inside' && recommended.start !== 'inside') return null;
+  if (force === 'inside' || force === 'first') return { pick: { ...recommended, start: force }, at: null };
+  const pick = force ? { ...recommended, start: 'inside' as const } : coldStart(recommended, history.starts);
+  if (pick.start === 'first') return { pick, at: null };
+
   const tree = openingTree(referenceIndex());
-  const index = referenceIndex();
-  const selection = state.settings.selection;
-  const region = regionOf(tree, selection);
-  const reps = repertoiresIn(repertoireList(state), selection.color);
-  const rounds = state.score.rounds;
-  const now = Date.now();
-
-  /** Where the mix reads: each side's repertoire in the round's region, or in each favorite. */
-  const units = isAnyFavorite(mix)
-    ? regionsBySide(tree, mix, state.settings.favoriteOpenings).flatMap(({ side, node }) =>
-        repertoireList(state)
-          .filter((rep) => rep.color === side)
-          .map((rep) => ({ rep, region: node })),
-      )
-    : reps.map((rep) => ({ rep, region }));
-
-  /** Per unit: cards due and never drilled, and lines unpracticed and due. */
-  const sides = units.map(({ rep, region }) => {
-    const keys = [...new Set(itemsInRegion(tree, region, itemsFor(rep)).map((item) => item.cardId))];
-    const due = keys.filter((id) => state.cards[id] && isDue(state.cards[id], now));
-    const unseen = keys.filter((id) => !state.cards[id] || state.cards[id].stage === 'new');
-    const lines = drillableLines(rep, tree, region).map((line) => `${rep.id}:${line.tipId}`);
-    const unpracticed = lineFinishes(rep, tree, region, rounds)
-      .filter((line) => line.finishes === 0)
-      .map((line) => line.tipId);
-    const linesDue = dueLines(drillableLines(rep, tree, region), state.lineCards, now).map((line) => line.tipId);
-    return { rep, region, keys, due, unseen, lines, unpracticed, linesDue };
+  const rep = repertoireList(state).find((r) => r.color === pick.color);
+  const items = rep ? itemsInRegion(tree, pick.opening, itemsFor(rep)) : [];
+  const owed = positionStart(items, state.cards, {
+    accuracy: prepAccuracy(state.score.rounds, [pick.color]),
+    lastWasPosition: !force && history.positions[history.positions.length - 1] === true,
   });
-  const owed = (side: (typeof sides)[number]) => side.unpracticed.length + side.linesDue.length;
-  const toDrill = (side: (typeof sides)[number]) => side.due.length + side.unseen.length;
-  const byPositions = [...sides].sort((a, b) => toDrill(b) - toDrill(a) || b.keys.length - a.keys.length)[0];
-  const byLines = [...sides].sort((a, b) => owed(b) - owed(a) || b.lines.length - a.lines.length)[0];
-  /** How many across all units, each counted once where favorites overlap. */
-  const count = (each: (side: (typeof sides)[number]) => string[]) =>
-    new Set(sides.flatMap((side) => each(side))).size;
-  const ofRep = (ids: string[], side: (typeof sides)[number]) => ids.map((id) => `${side.rep.id}:${id}`);
-
-  /**
-   * An opening ready to widen: the one Survival would run, or the selection
-   * itself. Mode Testing takes one that is not ready, when none is.
-   */
-  const growth = (() => {
-    const openings = [pick.opening, ...(region.depth > 0 ? [region] : [])];
-    const passes = force?.mode === 'growth' ? [true, false] : [true];
-    for (const ready of passes) {
-      const found = growthIn(openings, ready);
-      if (found) return found;
-    }
-    return null;
-  })();
-  function growthIn(openings: (typeof pick.opening)[], ready: boolean) {
-    for (const rep of reps) {
-      for (const opening of openings) {
-        if (ready && !readyToGrow(rep, tree, opening, rounds)) continue;
-        const launch = growLaunch(rep, index, tree, opening, [], {
-          minShare: AUTO_GROWTH.minShare,
-          maxPly: AUTO_GROWTH.maxPly,
-          starred: state.settings.favoriteOpenings,
-          bookOnly: true,
-        });
-        if (launch) return { color: rep.color, launch };
-      }
-    }
-    return null;
-  }
-
-  const mode = force?.mode ?? chooseMode(
-    {
-      lines: count((side) => side.lines),
-      positions: count((side) => side.keys),
-      due: count((side) => side.due),
-      unseen: count((side) => side.unseen),
-      unpracticed: count((side) => ofRep(side.unpracticed, side)),
-      dueLines: count((side) => ofRep(side.linesDue, side)),
-      accuracy: prepAccuracy(rounds, [...new Set(sides.map((side) => side.rep.color))]),
-      growReady: !!growth,
-    },
-    history.modes,
-  );
-  switch (mode) {
-    case 'drillPositions':
-      if (force && !byPositions?.keys.length) return null;
-      return { mode, color: byPositions.rep.color, openingId: byPositions.region.id, weak: toDrill(byPositions) === 0 };
-    case 'drillLines':
-      if (force && !byLines?.lines.length) return null;
-      return {
-        mode,
-        color: byLines.rep.color,
-        openingId: byLines.region.id,
-        only: [...new Set([...byLines.linesDue, ...byLines.unpracticed])],
-      };
-    case 'growth':
-      if (force && !growth) return null;
-      return growth ? { mode, ...growth } : { mode: 'survival', pick };
-    default:
-      return { mode: 'survival', pick };
-  }
+  // Mode Testing takes any position the opening has, when none is owed.
+  const at = owed ?? (force ? (items.find((item) => item.pathSans.length > 0) ?? null) : null);
+  if (force && !at) return null;
+  return { pick, at: at ? at.pathSans : null };
 }
 
 /* ── Mode Testing ───────────────────────────────────────────────────────── */
@@ -317,7 +220,7 @@ export function pickRound(state: State, history: AutoHistory, scope?: Selection)
       for (const test of testQueue) {
         const sided: Selection = { ...saved, color: test.color };
         const within = scope ? sided : peekRoundSelection(state, sided);
-        const round = nextRound(withSelection(state, within), history, sided, forcedRound(test.variant));
+        const round = nextRound(withSelection(state, within), history, forcedStart(test.variant));
         if (round) return { round, within, test };
       }
       // Nothing left in this cycle can run: start the next one.
@@ -325,7 +228,7 @@ export function pickRound(state: State, history: AutoHistory, scope?: Selection)
     }
   }
   const within = scope ?? peekRoundSelection(state);
-  return { round: nextRound(withSelection(state, within), history, saved), within };
+  return { round: nextRound(withSelection(state, within), history), within };
 }
 
 /** A Mode Testing case has been played: the cycle moves on. */
@@ -345,12 +248,12 @@ export function prepAccuracy(rounds: RoundRecord[], colors: Color[]): number | n
   return asked ? recent.reduce((n, round) => n + round.prep!.found, 0) / asked : null;
 }
 
-/** A round played: what the session remembers of it. */
+/** A run played: what the session remembers of it. */
 export function afterRound(history: AutoHistory, round: AutoRound, selection: Selection): AutoHistory {
   return {
-    modes: [...history.modes, round.mode],
-    focuses: round.mode === 'survival' ? [...history.focuses, round.pick.focus] : history.focuses,
-    steered: round.mode === 'survival' ? [...history.steered, isSteered(round.pick, selection)] : history.steered,
-    starts: round.mode === 'survival' ? [...history.starts, round.pick.start] : history.starts,
+    focuses: [...history.focuses, round.pick.focus],
+    steered: [...history.steered, isSteered(round.pick, selection)],
+    starts: [...history.starts, round.pick.start],
+    positions: [...history.positions, round.at !== null],
   };
 }

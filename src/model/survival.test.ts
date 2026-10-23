@@ -6,6 +6,9 @@ import { referenceIndex } from './referenceIndex';
 import { mulberry32 } from './session';
 import {
   bookReply,
+  prepSummary,
+  secondsText,
+  speedTone,
   DEFAULT_SURVIVAL,
   comboAfter,
   comboMultiplier,
@@ -347,5 +350,21 @@ describe('plan and Convert it missions', () => {
     expect(stepMission(mission, 'w', 260, traded).result).toBe('done');
     expect(stepMission(mission, 'w', 150, traded).result).toBe(null);
     expect(stepMission(mission, 'w', 80, carlsbad).result).toBe('failed');
+  });
+});
+
+describe("Autopilot's prep speed", () => {
+  it('colors a time by the grade it earns its card', () => {
+    expect(speedTone(1.2)).toBe('up');
+    expect(speedTone(5)).toBe('slight');
+    expect(speedTone(12)).toBe('bad');
+    expect(secondsText(2.345)).toBe('2.3s');
+    expect(secondsText(14.6)).toBe('15s');
+  });
+
+  it('sums a run up as found of asked, the average time and how many were fast', () => {
+    expect(prepSummary(3, 4, [1, 2, 6])).toBe('Prep 3 of 4 · 3.0s average · 2 fast');
+    expect(prepSummary(0, 2, [])).toBe('Prep 0 of 2');
+    expect(prepSummary(0, 0, [])).toBeNull();
   });
 });

@@ -12,6 +12,7 @@ import { findHoles, holeShare, movesToFit, optionsAt, type Hole } from './growth
 import { deepestName, lookup, type ReferenceIndex } from './reference';
 import {
   approachKeys,
+  deepestNodeWithin,
   insideRegion,
   lineStatus,
   nodeById,
@@ -555,6 +556,12 @@ export interface BeginOptions extends Partial<OpeningRunOptions> {
    * a family or deeper is worth entering; a first move is left alone.
    */
   enter?: boolean;
+  /**
+   * Start at this position instead — the moves to it, played for you — with
+   * the line drawn through it. Overrides `enter`. A position the moves do not
+   * reach is ignored.
+   */
+  at?: string[] | null;
 }
 
 /**
@@ -646,13 +653,19 @@ export function beginRun(opts: BeginOptions): Begun | null {
     return { target: line.sans, gap: null, firstLine };
   };
 
-  const first = draw({ fen: START_FEN, played: [] });
+  // A round started at a position: the moves to it are played for you, and
+  // the line is drawn on from there. Failing that, from the start.
+  const atWalk = opts.at?.length ? walkSan(opts.at) : null;
+  const atFen = atWalk && atWalk.moves.length === opts.at!.length ? atWalk.fens[opts.at!.length] : null;
+  const first = atFen ? draw({ fen: atFen, played: opts.at! }) : draw({ fen: START_FEN, played: [] });
   // A round started inside the opening: the drawn line's way in is played
   // for you, up to the first position the opening names.
-  const way = opts.enter && aim.depth >= 2 ? wayIn(tree, aim, first.target) : [];
+  const way = atFen ? opts.at! : opts.enter && aim.depth >= 2 ? wayIn(tree, aim, first.target) : [];
   const entered = walkSan(way);
   const opened = entered.moves.length === way.length ? way.length : 0;
   const fen = entered.fens[opened] ?? START_FEN;
+  /** The opening a run started inside is named for: the aim, or the deepest the way to a position reaches. */
+  const startedIn = opened === 0 ? null : atFen ? deepestNodeWithin(tree, aim, way) : aim;
 
   /** What the round may add: the allowance, fitted to the line it walks. */
   const budgetFor = (): number => {
@@ -674,7 +687,7 @@ export function beginRun(opts: BeginOptions): Begun | null {
 
   const run: Run = {
     id: newRunId(),
-    sourceLabel: opened > 0 ? aim.name : node.name,
+    sourceLabel: startedIn ? startedIn.name : node.name,
     openingId: node.id,
     repertoireId: rep?.id,
     leftPrep: false,
@@ -693,7 +706,7 @@ export function beginRun(opts: BeginOptions): Begun | null {
     target: first.target,
     drawn: first.target,
     opened,
-    enteredIn: opened > 0 ? aim.id : null,
+    enteredIn: startedIn && startedIn.depth > 0 ? startedIn.id : null,
     prepDone: null,
     hints: opts.hints ?? DEFAULT_OPTIONS.hints,
     hintsUsed: 0,
