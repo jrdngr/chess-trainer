@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { COLD_EVERY, coldStart, COLD_START_LABEL, positionStart, roundLabel, survivalPlanFor } from './autopilot';
+import { COLD_EVERY, coldStart, positionStart, prepDepth, roundSpan, survivalPlanFor } from './autopilot';
 import { nodeById, openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
 import type { TrainingItem } from './session';
+import { addLine, createRepertoire } from './repertoire';
 import { createCard } from './srs';
 import type { Card } from './types';
 
@@ -51,11 +52,6 @@ describe('Cold Start', () => {
     expect(starts.filter((s) => s === 'first')).toHaveLength(12 / COLD_EVERY);
     expect(starts.slice(0, COLD_EVERY)).toEqual([...insides, 'first']);
   });
-
-  it('is announced by its own name, wherever its start came from', () => {
-    expect(roundLabel('first')).toBe(COLD_START_LABEL);
-    expect(roundLabel('inside')).toBe('Survival');
-  });
 });
 
 describe('a run that starts at a position', () => {
@@ -96,5 +92,38 @@ describe('a run that starts at a position', () => {
 
   it('never starts two runs running at a position', () => {
     expect(positionStart(items, { a: card('a', NOW - 10) }, { ...opts, lastWasPosition: true })).toBeNull();
+  });
+});
+
+describe('how far into your prep a run starts', () => {
+  const tree = openingTree(referenceIndex());
+  const ruy = nodeById(tree, 'e4 e5 Nf3 Nc6 Bb5');
+  const line = 'e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O'.split(' ');
+  const rep = addLine(createRepertoire('White', 'w'), line).rep;
+
+  it('counts up to your last prepared move, and stops at the first one you lack', () => {
+    const prepAt = (fen: string) => (fen.includes(' w ') ? ['e4', 'Nf3', 'Bb5', 'Ba4', 'O-O'] : []);
+    expect(prepDepth(line, 'w', prepAt)).toBe(9);
+    expect(prepDepth(['e4', 'e5', 'Nc3'], 'w', prepAt)).toBe(1);
+  });
+
+  it('counts the moves played for you whatever they were', () => {
+    expect(prepDepth(['d4', 'd5', 'c4'], 'w', () => [], 2)).toBe(2);
+  });
+
+  it('starts a run inside the opening that far along the prep', () => {
+    expect(roundSpan(rep, { focus: 'test', opening: ruy, color: 'w', start: 'inside' }, null)).toEqual({ played: 5, total: 9 });
+  });
+
+  it('starts from move one with nothing played', () => {
+    expect(roundSpan(rep, { focus: 'test', opening: ruy, color: 'w', start: 'first' }, null)).toEqual({ played: 0, total: 9 });
+  });
+
+  it('starts at a position that far along', () => {
+    expect(roundSpan(rep, { focus: 'test', opening: ruy, color: 'w', start: 'inside' }, line.slice(0, 7))).toEqual({ played: 7, total: 9 });
+  });
+
+  it('has nothing to show without a repertoire', () => {
+    expect(roundSpan(null, { focus: 'test', opening: ruy, color: 'w', start: 'inside' }, null)).toEqual({ played: 0, total: 0 });
   });
 });

@@ -971,7 +971,54 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .autopilot .name { display: block; font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
 .autopilot .first { display: block; font-size: 12.5px; color: var(--text-2); margin-top: 1px; }
 .autopilot > svg { flex: none; color: var(--text-3); }
-.autopilot .streak { flex: none; }
+/* Autopilot's next run: the opening's position faded in behind its name, how far into your prep it starts along the bottom edge. */
+.autopilot.plate {
+  position: relative;
+  overflow: hidden;
+  height: 96px;
+  gap: 9px;
+  padding: 0 20px;
+}
+.autopilot.plate .name {
+  position: relative;
+  min-width: 0;
+  font-size: 21px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+.autopilot.plate .side-square { position: relative; }
+.plate-board {
+  position: absolute;
+  right: -14px;
+  top: -40px;
+  opacity: 0.85;
+  transform: rotate(-8deg);
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 60%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 60%);
+}
+.plate-board .op-board { border-radius: 0; }
+.op-board > .hl { box-shadow: inset 0 0 0 100px rgba(170, 160, 255, 0.55); }
+.autopilot-wrap:has(.plate) .autopilot-gear { background: rgba(0, 0, 0, 0.35); color: var(--text-2); }
+
+.side-square {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex: none;
+  box-sizing: border-box;
+}
+.side-square.w { background: #f2f2f5; }
+.side-square.b { background: #1a1a1f; border: 1.5px solid #6b6b78; }
+
+/* How far into your prep: a segment a ply, lit to where the run stands. */
+.prep-segs { display: flex; gap: 3px; }
+.prep-segs > i { flex: 1 1 0; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.14); }
+.prep-segs > i.past { background: var(--accent); }
+.prep-segs > i.here { background: #f2f2f5; box-shadow: 0 0 8px rgba(139, 140, 248, 0.9); }
+.prep-segs.edge { position: absolute; left: 0; right: 0; bottom: 0; gap: 2px; }
+.prep-segs.edge > i { height: 4px; border-radius: 0; }
+.prep-segs.bar { width: 150px; max-width: 100%; margin: 6px auto 2px; }
+
 /* Autopilot's own settings: a small gear in the button's corner, outside it so a tap there never starts a round. */
 .autopilot-wrap { position: relative; margin-bottom: 10px; }
 .autopilot-wrap .autopilot { margin-bottom: 0; }
@@ -1316,6 +1363,41 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   color: var(--accent);
   animation: riOpening 0.6s 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+/* Autopilot's round, announced by its plate: the same look as its Home button, larger. */
+.intro-plate {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 380px);
+  height: 220px;
+  border-radius: 18px;
+  background: var(--surface);
+  animation: riOpening 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.intro-plate .plate-board {
+  left: 50%;
+  top: 50%;
+  right: auto;
+  opacity: 0.3;
+  transform: translate(-50%, -50%);
+  -webkit-mask-image: radial-gradient(circle, #000 30%, transparent 70%);
+  mask-image: radial-gradient(circle, #000 30%, transparent 70%);
+}
+.intro-plate .ip-name {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 88%;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.8);
+}
+.intro-plate .prep-segs.edge { gap: 3px; }
+.intro-plate .prep-segs.edge > i { height: 5px; }
 /* Opaque from the first frame, so the board never shows through as the
    announcement arrives; only its words come in. It fades out to the board. */
 @keyframes roundIntro {
@@ -1372,7 +1454,7 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   100% { box-shadow: 0 0 0 14px rgba(0, 0, 0, 0), inset 0 0 0 0 rgba(0, 0, 0, 0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .round-intro, .round-intro .ri-mode, .round-intro .ri-opening, .intro-pill { animation: none; }
+  .round-intro, .round-intro .ri-mode, .round-intro .ri-opening, .intro-plate, .intro-pill { animation: none; }
 }
 
 /* ── quick picker ──────────────────────────────────────────────────────── */

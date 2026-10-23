@@ -68,6 +68,7 @@ export function endingTitle(ending: Ending, plies: number): string {
  * opening is held, the quiet button at the bottom otherwise.
  */
 export function End({
+  name,
   state,
   ending,
   before,
@@ -98,6 +99,8 @@ export function End({
   growEngine: boolean;
   /** How the run went on your prep, found and how fast — Autopilot's; null to leave it out. */
   prep?: string | null;
+  /** Autopilot's name for the run, the opening, in place of "Survival" and the selection. */
+  name?: string;
   /** "Next run", or Autopilot's "Next round". */
   nextLabel: string;
   /** Which of moments, missions and the combo the run played with. */
@@ -263,8 +266,8 @@ export function End({
   return (
     <>
       <AppBar
-        title="Survival"
-        subtitle={selectionText(run.color, run.enteredIn ?? run.openingId)}
+        title={name ?? 'Survival'}
+        subtitle={name ? undefined : selectionText(run.color, run.enteredIn ?? run.openingId)}
         onClose={onExit}
         actions={<span className="chip num wide">{moves}</span>}
       />

@@ -1,0 +1,56 @@
+import type { Color } from '../chess/core';
+import type { PrepSpan } from '../model/autopilot';
+import { MiniBoard } from './Selection';
+
+/** The most segments the track is cut into; a longer prep is shown to scale. */
+const MAX_SEGMENTS = 16;
+
+/**
+ * How far into your prep a run is, as a row of segments: lit up to where it
+ * stands, the one it is on bright. Nothing when there is no prep to measure.
+ */
+export function PrepSegments({ span, className }: { span: PrepSpan | null; className?: string }) {
+  if (!span || span.total <= 0) return null;
+  const count = Math.min(span.total, MAX_SEGMENTS);
+  const lit = Math.round((Math.min(span.played, span.total) / span.total) * count);
+  const label = span.played === 0 ? 'From the first move' : `${Math.min(span.played, span.total)} of ${span.total} prep moves in`;
+  return (
+    <span className={`prep-segs${className ? ` ${className}` : ''}`} role="img" aria-label={label}>
+      {Array.from({ length: count }, (_, i) => (
+        <i key={i} className={i < lit ? 'past' : i === lit ? 'here' : undefined} />
+      ))}
+    </span>
+  );
+}
+
+/** The side you play, as a small square. */
+export function SideSquare({ color }: { color: Color }) {
+  return <span className={`side-square ${color}`} aria-label={color === 'w' ? 'White' : 'Black'} />;
+}
+
+/** An opening's position behind its name, the move that reached it lit. */
+export function PlateBoard({ sans, color, size }: { sans: string[]; color: Color; size: number }) {
+  return (
+    <span className="plate-board" aria-hidden>
+      <MiniBoard sans={sans} orientation={color} size={size} lastMove />
+    </span>
+  );
+}
+
+/**
+ * Autopilot's round as its intro announces it: the opening's position faded
+ * in behind its name, and along the bottom edge how far into your prep the
+ * run starts.
+ */
+export function IntroPlate({ name, sans, color, span }: { name: string; sans: string[]; color: Color; span: PrepSpan | null }) {
+  return (
+    <div className="intro-plate">
+      <PlateBoard sans={sans} color={color} size={300} />
+      <span className="ip-name">
+        <SideSquare color={color} />
+        <span className="truncate">{name}</span>
+      </span>
+      <PrepSegments span={span} className="edge" />
+    </div>
+  );
+}

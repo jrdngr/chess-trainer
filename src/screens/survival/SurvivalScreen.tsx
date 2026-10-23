@@ -6,7 +6,9 @@ import { CASH_OUT_FROM } from '../../engine/cashOut';
 import { newlyLoose } from '../../model/boardHints';
 import { AppBar, haptic } from '../../components/ui';
 import { ClockHud, useMoveClock } from '../../components/Clock';
-import { selectionText } from '../../components/Selection';
+import { selectionText, selectionTrail } from '../../components/Selection';
+import { IntroPlate, PrepSegments } from '../../components/OpeningPlate';
+import { prepDepth, type PrepSpan } from '../../model/autopilot';
 import {
   applySan,
   fenTurn,
@@ -16,7 +18,7 @@ import {
   walkSan,
   type LegalMove,
 } from '../../chess/core';
-import { clockSeconds, weaknessFromCards, type LineSource } from '../../model/openingRun';
+import { clockSeconds, fullLine, weaknessFromCards, type LineSource } from '../../model/openingRun';
 import type { Color } from '../../chess/core';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
@@ -183,7 +185,6 @@ export function SurvivalScreen({
   plan,
   scope,
   onNext,
-  roundName,
 }: {
   onExit: () => void;
   /** Leave for the Analysis tab on this line, seen from this side. */
@@ -198,8 +199,6 @@ export function SurvivalScreen({
   scope?: Selection;
   /** Autopilot's next round, in place of another run. */
   onNext?: () => void;
-  /** What the run is announced as, when not plain Survival: Autopilot's Cold Start. */
-  roundName?: string;
 }) {
   const state = useStore();
   const { settings, cards } = state;
@@ -257,16 +256,35 @@ export function SurvivalScreen({
 
   const run = game?.state.run ?? null;
   /**
+   * Autopilot's measure of the run: how far into your prep it stands, out of
+   * how far your prep goes along the line it is on. Held where it was once
+   * you step off your prep.
+   */
+  const spanHeld = useRef<PrepSpan | null>(null);
+  const span = useMemo(() => {
+    if (!plan || !game) return null;
+    const now = game.state.run;
+    if (prepStatus !== 'off') {
+      const total = prepDepth(fullLine(game.source, now), now.color, (fen) => game.source.prepAt(fen), now.opened);
+      spanHeld.current = { played: Math.min(now.played.length, total), total };
+    }
+    return spanHeld.current;
+  }, [plan, game, prepStatus]);
+  /**
    * Each run is announced, and one started inside an opening has its way in
    * played out first. A run from move one is named by the opening it is
-   * steered toward.
+   * steered toward. Autopilot's is announced by its plate, with no mode.
    */
+  const introId = run ? (run.enteredIn ?? (plan ? plan.toward : introOpening(run.openingId, run.played.slice(0, run.opened)))) : '';
   const intro = useRoundIntro(
     phase === 'playing' && run
       ? {
           key: run.id,
-          mode: roundName ?? 'Survival',
-          opening: run.enteredIn ?? (plan ? plan.toward : introOpening(run.openingId, run.played.slice(0, run.opened))),
+          mode: 'Survival',
+          opening: introId,
+          plate: plan ? (
+            <IntroPlate name={openingName(introId)} sans={nodeById(tree, introId).sans} color={run.color} span={span} />
+          ) : undefined,
           color: run.color,
           path: run.played.slice(0, run.opened),
         }
@@ -679,6 +697,7 @@ export function SurvivalScreen({
     );
     return (
       <End
+        name={plan ? openingName(headerOpening) : undefined}
         state={game.state}
         ending={ending}
         before={before}
@@ -747,19 +766,27 @@ export function SurvivalScreen({
     <>
       {intro.cover}
       <AppBar
-        title="Survival"
+        title={plan ? openingName(headerOpening) : 'Survival'}
         subtitle={
-          <span className="sub-row">
-            <span className="truncate">{selectionText(run.color, headerOpening)}</span>
-            {headerRating?.label}
-          </span>
+          plan ? (
+            <PrepSegments span={span} className="bar" />
+          ) : (
+            <span className="sub-row">
+              <span className="truncate">{selectionText(run.color, headerOpening)}</span>
+              {headerRating?.label}
+            </span>
+          )
         }
         edge={headerRating?.edge}
         onClose={onExit}
         actions={
           <div className="row gap-6">
             {live && myTurn && <ClockHud clock={clock} />}
-            <span className="chip num wide">{scoredInPoints ? game.state.extras.points : game.state.moves}</span>
+            {plan ? (
+              <RatingGained delta={ratings.moved.find((change) => change.id === headerOpening)?.delta ?? 0} />
+            ) : (
+              <span className="chip num wide">{scoredInPoints ? game.state.extras.points : game.state.moves}</span>
+            )}
           </div>
         }
       />
@@ -878,6 +905,21 @@ export function SurvivalScreen({
         </div>
       </div>
     </>
+  );
+}
+
+/** An opening by the last of its trail: "Berlin Defence", not "Ruy Lopez › Berlin Defence". */
+function openingName(id: string): string {
+  return selectionTrail(id).at(-1) ?? '';
+}
+
+/** What this run has done to the opening's rating so far, in the app bar. */
+function RatingGained({ delta }: { delta: number }) {
+  const n = Math.round(delta);
+  return (
+    <span className={`chip num wide${n > 0 ? ' good' : n < 0 ? ' bad' : ''}`} aria-label={`Rating ${n >= 0 ? 'gained' : 'lost'} this run`}>
+      {n < 0 ? `−${-n}` : `+${n}`}
+    </span>
   );
 }
 

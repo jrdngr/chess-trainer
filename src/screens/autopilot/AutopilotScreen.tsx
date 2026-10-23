@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AppBar, Icons } from '../../components/ui';
 import { SelectionBar, selectionText } from '../../components/Selection';
 import { autopilotModes } from '../../model/autopilotPrefs';
-import { roundLabel, survivalPlanFor } from '../../model/autopilot';
+import { survivalPlanFor } from '../../model/autopilot';
 import type { Selection } from '../../model/selection';
 import type { TidyFind } from '../../model/tidy';
 import { useStore } from '../../store/useStore';
@@ -86,7 +86,6 @@ export function AutopilotScreen({
       <SurvivalScreen
         key={count}
         plan={survivalPlanFor(round.pick, round.at)}
-        roundName={roundLabel(round.pick.start)}
         scope={within}
         onNext={advance}
         onExit={onExit}

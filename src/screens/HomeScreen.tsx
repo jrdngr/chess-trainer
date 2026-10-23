@@ -1,12 +1,12 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Icons, Section, Sheet, Toggle } from '../components/ui';
-import { SelectionBar } from '../components/Selection';
+import { SelectionBar, selectionTrail } from '../components/Selection';
+import { PlateBoard, PrepSegments, SideSquare } from '../components/OpeningPlate';
 import { ScoreStrip } from '../components/ScoreBar';
 import { FavoritesLadder, MilestonesCard, SurvivalRuns } from '../components/HomeWidgets';
-import { streak } from '../model/scoring';
-import { NO_HISTORY, pickRound, type AutoRound } from '../store/recommendation';
-import { roundLabel } from '../model/autopilot';
-import { useStore } from '../store/useStore';
+import { NO_HISTORY, pickRound } from '../store/recommendation';
+import { roundSpan } from '../model/autopilot';
+import { repertoireList, useStore } from '../store/useStore';
 
 export type ModeId = 'drill' | 'survival' | 'growth' | 'play' | 'autopilot';
 
@@ -21,7 +21,12 @@ export function HomeScreen({ onOpenMode, onOpenSettings }: HomeScreenProps) {
 
   /** What Autopilot would start with, said on its button — or that there is nothing to drill. */
   const first = useMemo(() => pickRound(state, NO_HISTORY).round, [state]);
-  const days = streak(state.score.global);
+  /** How far into your prep it would start, for the segments along the button's bottom edge. */
+  const span = useMemo(() => {
+    if (!first) return null;
+    const rep = repertoireList(state).find((r) => r.color === first.pick.color) ?? null;
+    return roundSpan(rep, first.pick, first.at);
+  }, [state, first]);
 
   return (
     <>
@@ -37,25 +42,26 @@ export function HomeScreen({ onOpenMode, onOpenSettings }: HomeScreenProps) {
         <ScoreStrip />
 
         <div className="autopilot-wrap">
-          <button className="autopilot" onClick={() => onOpenMode(first ? 'autopilot' : 'growth')}>
-            <span className="ico">
-              <Icons.bolt size={22} />
-            </span>
-            <span className="grow" style={{ minWidth: 0 }}>
-              <span className="kicker">Autopilot</span>
-              <span className="name">{first ? roundLabel(first.pick.start) : 'Build'}</span>
-              <span className="first truncate">
-                {first ? firstUp(first) : 'Nothing to practice yet · open Growth'}
+          {first ? (
+            <button className="autopilot plate" onClick={() => onOpenMode('autopilot')}>
+              <PlateBoard sans={first.pick.opening.sans} color={first.pick.color} size={176} />
+              <SideSquare color={first.pick.color} />
+              <span className="name truncate">{selectionTrail(first.pick.opening.id).at(-1)}</span>
+              <PrepSegments span={span} className="edge" />
+            </button>
+          ) : (
+            <button className="autopilot" onClick={() => onOpenMode('growth')}>
+              <span className="ico">
+                <Icons.bolt size={22} />
               </span>
-            </span>
-            {days > 0 && (
-              <span className="chip warn streak">
-                {days}
-                {days === 1 ? ' day' : ' days'}
+              <span className="grow" style={{ minWidth: 0 }}>
+                <span className="kicker">Autopilot</span>
+                <span className="name">Build</span>
+                <span className="first truncate">Nothing to practice yet · open Growth</span>
               </span>
-            )}
-            <Icons.chevron size={20} />
-          </button>
+              <Icons.chevron size={20} />
+            </button>
+          )}
           <button className="autopilot-gear" aria-label="Autopilot settings" onClick={() => setAutoSettings(true)}>
             <Icons.gear size={16} />
           </button>
@@ -99,17 +105,6 @@ export function HomeScreen({ onOpenMode, onOpenSettings }: HomeScreenProps) {
 
 /* ── the grid ───────────────────────────────────────────────────────────── */
 
-
-/**
- * What the first run is about. One from move one is a side and nothing more,
- * since it follows whatever is played; one that starts inside an opening, or
- * at a position in it, is that opening.
- */
-function firstUp(round: AutoRound): string {
-  const { pick } = round;
-  if (pick.start === 'inside') return pick.opening.name;
-  return `${pick.color === 'w' ? 'White' : 'Black'}, from move one`;
-}
 
 /** One mode as a short tile: its icon and its name. */
 function Tile({ name, icon, onClick }: { name: string; icon: ReactNode; onClick: () => void }) {

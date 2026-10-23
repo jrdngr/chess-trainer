@@ -20,10 +20,12 @@ import { selectionTrail } from './Selection';
 export interface IntroPlan {
   /** A new key is a new round, announced again. */
   key: string | number;
-  /** The mode as the round is called, e.g. "Survival: Cold Start". */
+  /** The mode as the round is called, e.g. "Survival". */
   mode: string;
   /** The opening the round is in, an opening tree node id. */
   opening: string;
+  /** In place of the mode and the opening in words: Autopilot's round, as its plate shows it. */
+  plate?: ReactNode;
   /** What to call it where the node says too little, e.g. a Growth row's own name over "Any opening". */
   name?: string;
   color: Color;
@@ -147,12 +149,16 @@ export function useRoundIntro(plan: IntroPlan | null, moved: boolean): RoundIntr
     lastMove: held ? lastMoveOf(path.slice(0, current.ply)) : null,
     cover: announcing ? (
       <div className="round-intro" onPointerDown={toBoard} role="presentation">
-        <div className="ri-mode" style={{ ['--len' as string]: shown.mode.length }}>
-          {shown.mode}
-        </div>
-        <div className="ri-opening">
-          <span>{trail.join(' › ')}</span>
-        </div>
+        {shown.plate ?? (
+          <>
+            <div className="ri-mode" style={{ ['--len' as string]: shown.mode.length }}>
+              {shown.mode}
+            </div>
+            <div className="ri-opening">
+              <span>{trail.join(' › ')}</span>
+            </div>
+          </>
+        )}
       </div>
     ) : null,
     overlay:

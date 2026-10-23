@@ -47,7 +47,17 @@ Every change should pass these tests:
 | --- | --- | --- |
 | Inside an opening | The moves into the opening are played for you | Default |
 | At a position | The moves to a position you're due on are played for you. With nothing due while your prep keeps missing, it uses the position you answer worst | Never two runs in a row |
-| Cold Start | The run starts from move one, and the opponent steers toward the opening | Every 4th run |
+| From move one | The run starts from move one, and the opponent steers toward the opening | Every 4th run |
+
+## How a run is shown
+
+Autopilot never names a mode. A run is called by its opening, with the side as
+a small square, and the opening's position faded in behind the name. A row of
+segments along the bottom edge shows how far into your prep the run starts:
+one segment a ply, lit up to where you take over. Home's button, the round
+intro and the end screen all use this. During the run, the app bar shows the
+opening, the same segments counting up as you play, and the rating the run has
+gained so far.
 
 ## Free and paid
 

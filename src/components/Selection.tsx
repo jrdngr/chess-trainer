@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { walkSan, piecesFromFen, START_FEN, type Color } from '../chess/core';
+import { lastMoveOf, walkSan, piecesFromFen, START_FEN, type Color } from '../chess/core';
 import type { ColorChoice } from '../model/openingRun';
 import { nodeById, openingTree, type OpeningNode, type OpeningTree } from '../model/openingTree';
 import {
@@ -920,13 +920,30 @@ function FamilyCard({
   );
 }
 
-/** A still board of the position a move order reaches, for the picker's header. */
-export function MiniBoard({ sans, orientation, size = 96 }: { sans: string[]; orientation: Color; size?: number }) {
+/**
+ * A still board of the position a move order reaches, for the picker's
+ * header. `lastMove` lights the move that reached it.
+ */
+export function MiniBoard({
+  sans,
+  orientation,
+  size = 96,
+  lastMove = false,
+}: {
+  sans: string[];
+  orientation: Color;
+  size?: number;
+  lastMove?: boolean;
+}) {
   const key = sans.join(' ');
   const pieces = useMemo(() => {
     const { fens } = walkSan(key ? key.split(' ') : []);
     return piecesFromFen(fens[fens.length - 1] ?? START_FEN);
   }, [key]);
+  const lit = useMemo(() => {
+    const move = lastMove && key ? lastMoveOf(key.split(' ')) : null;
+    return move ? [move.from, move.to] : [];
+  }, [key, lastMove]);
   const at = new Map(pieces.map((p) => [p.square, p]));
   const files = 'abcdefgh';
   const squares = [];
@@ -937,7 +954,7 @@ export function MiniBoard({ sans, orientation, size = 96 }: { sans: string[]; or
       const square = `${files[file]}${rank + 1}`;
       const piece = at.get(square as never);
       squares.push(
-        <div key={square} className={(file + rank) % 2 === 0 ? 'd' : 'l'}>
+        <div key={square} className={`${(file + rank) % 2 === 0 ? 'd' : 'l'}${lit.includes(square as never) ? ' hl' : ''}`}>
           {piece && <Piece type={piece.type} color={piece.color} />}
         </div>,
       );

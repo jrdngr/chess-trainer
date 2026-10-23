@@ -1,5 +1,6 @@
-import type { Color } from '../chess/core';
-import type { Card } from './types';
+import { applySan, fenTurn, positionKey, START_FEN, walkSan, type Color } from '../chess/core';
+import { prepIndex } from './openingRun';
+import type { Card, Repertoire } from './types';
 import { missingPrep, type Focus, type Recommendation, type Start } from './recommend';
 import { weakestFirst, type TrainingItem } from './session';
 import { isDue } from './srs';
@@ -85,12 +86,60 @@ export function survivalPlanFor(
   };
 }
 
-/** A run from move one, by its banner name. */
-export const COLD_START_LABEL = 'Survival: Cold Start';
+/**
+ * Where a run stands in your prep, for the segments Autopilot shows it with:
+ * the plies played so far, out of the plies your prep reaches along the line.
+ */
+export interface PrepSpan {
+  played: number;
+  total: number;
+}
 
-/** A run's name as Autopilot announces it. */
-export function roundLabel(start: Start): string {
-  return start === 'first' ? COLD_START_LABEL : 'Survival';
+/**
+ * How many plies into `line` your prep reaches: up to and including your
+ * last prepared move along it, stopping at the first move of yours it does
+ * not have. The first `from` plies were played for you and count whatever
+ * they were.
+ */
+export function prepDepth(line: string[], color: Color, prepAt: (fen: string) => string[], from = 0): number {
+  let fen = START_FEN;
+  let depth = 0;
+  for (let i = 0; i < line.length; i += 1) {
+    if (i < from) depth = i + 1;
+    else if (fenTurn(fen) === color) {
+      if (!prepAt(fen).includes(line[i])) break;
+      depth = i + 1;
+    }
+    const move = applySan(fen, line[i]);
+    if (!move) break;
+    fen = move.after;
+  }
+  return depth;
+}
+
+/**
+ * Where Autopilot's next run would start in your prep, for its button: the
+ * way in played for you, out of how far your prep goes from there, on its
+ * first choice in every position.
+ */
+export function roundSpan(rep: Repertoire | null, pick: Recommendation, at: string[] | null, limit = 60): PrepSpan {
+  if (!rep) return { played: 0, total: 0 };
+  const index = prepIndex(rep);
+  const prepAt = (fen: string) => index.get(positionKey(fen)) ?? [];
+  const way = at ?? (pick.start === 'inside' ? pick.opening.sans : []);
+  const line = [...(at ?? pick.opening.sans)];
+  const { fens } = walkSan(line);
+  line.length = fens.length - 1;
+  let fen = fens[fens.length - 1];
+  while (line.length < limit) {
+    const san = prepAt(fen)[0];
+    const move = san ? applySan(fen, san) : null;
+    if (!move) break;
+    line.push(san);
+    fen = move.after;
+  }
+  const total = prepDepth(line, pick.color, prepAt, way.length);
+  return { played: Math.min(way.length, total), total };
 }
 
 /**
