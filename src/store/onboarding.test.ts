@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_SELECTION } from '../model/selection';
 import { countNodes } from '../model/repertoire';
+import { seedFor, setSeed, starterSet } from '../model/starterSets';
+import type { Repertoire } from '../model/types';
 import { DEFAULT_SETTINGS, needsOnboarding, repertoireList, useStore } from './useStore';
 
 const NAJDORF = 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6';
@@ -22,6 +24,7 @@ beforeEach(() => {
 });
 
 const state = () => useStore.getState();
+const seed = (line: string) => seedFor(line.split(' '));
 const repFor = (color: 'w' | 'b') => repertoireList(state()).find((rep) => rep.color === color);
 
 describe('the opening question', () => {
@@ -30,7 +33,7 @@ describe('the opening question', () => {
   });
 
   it('is not asked again once answered', () => {
-    state().finishOnboarding([NAJDORF]);
+    state().finishOnboarding([seed(NAJDORF)]);
     expect(needsOnboarding(state())).toBe(false);
   });
 
@@ -49,49 +52,46 @@ describe('the opening question', () => {
 
 describe('answering it', () => {
   it('stars every pick', () => {
-    state().finishOnboarding([NAJDORF, RUY]);
+    state().finishOnboarding([seed(NAJDORF), seed(RUY)]);
     expect(state().settings.favoriteOpenings).toEqual([NAJDORF, RUY]);
   });
 
   it('builds one tree per side, named for the side', () => {
-    state().finishOnboarding([NAJDORF, RUY]);
+    state().finishOnboarding([seed(NAJDORF), seed(RUY)]);
     expect(repertoireList(state()).map((rep) => rep.color).sort()).toEqual(['b', 'w']);
     expect(repFor('b')!.name).toContain('Black');
   });
 
-  it('adds the opening’s own move order and nothing else', () => {
-    state().finishOnboarding([NAJDORF]);
-    expect(countNodes(repFor('b')!)).toBe(10);
+  it('adds the opening and a few of your moves past it', () => {
+    state().finishOnboarding([seed(NAJDORF)]);
+    const black = repFor('b')!;
+    expect(lineIn(black, NAJDORF)).toBe(true);
+    expect(countNodes(black)).toBeGreaterThan(10);
     expect(repFor('w')).toBeUndefined();
   });
 
-  it('shares the moves two picks have in common', () => {
-    state().finishOnboarding([SICILIAN, NAJDORF]);
-    // 1.e4 c5 is the first two moves of the Najdorf, not two more.
-    expect(countNodes(repFor('b')!)).toBe(10);
-  });
-
-  it('leaves the player somewhere to answer from', () => {
-    state().finishOnboarding([NAJDORF]);
+  it('gives each of your positions one answer', () => {
+    state().finishOnboarding([seed(SICILIAN), seed(NAJDORF)]);
     const black = repFor('b')!;
-    // The line ends on Black's move, so the last thing in it is an answer of
-    // the player's own — a position Drill can ask about.
-    const last = Object.values(black.nodes).find((node) => node.children.length === 0)!;
-    expect(last.san).toBe('a6');
+    for (const node of Object.values(black.nodes)) {
+      if (node.children.length === 0) continue;
+      const replyColor = black.nodes[node.children[0]].fenBefore.split(' ')[1];
+      if (replyColor === 'b') expect(node.children).toHaveLength(1);
+    }
   });
 
   it('points the selection at a single pick', () => {
-    state().finishOnboarding([NAJDORF]);
+    state().finishOnboarding([seed(NAJDORF)]);
     expect(state().settings.selection).toEqual({ color: 'b', opening: NAJDORF });
   });
 
   it('keeps the side when the picks agree on one', () => {
-    state().finishOnboarding([NAJDORF, 'e4 e6']);
+    state().finishOnboarding([seed(NAJDORF), seed('e4 e6')]);
     expect(state().settings.selection).toEqual({ color: 'b', opening: '' });
   });
 
   it('ignores an opening the book does not know', () => {
-    state().finishOnboarding(['not an opening']);
+    state().finishOnboarding([{ sans: ['not', 'an', 'opening'], color: 'w' }]);
     expect(state().repertoireOrder).toHaveLength(0);
     expect(state().settings.favoriteOpenings).toHaveLength(0);
     expect(state().settings.onboarded).toBe(true);
@@ -100,9 +100,28 @@ describe('answering it', () => {
   it('adds to a side that already has a tree rather than making a second one', () => {
     const existing = state().addRepertoire('Black', 'b');
     state().addLine(existing, ['e4', 'e5'], 'manual');
-    state().finishOnboarding([NAJDORF]);
+    state().finishOnboarding([seed(NAJDORF)]);
     expect(repertoireList(state()).filter((rep) => rep.color === 'b')).toHaveLength(1);
-    // 1.e4 is already there, so the Najdorf costs nine moves rather than ten.
-    expect(countNodes(state().repertoires[existing])).toBe(11);
+    expect(lineIn(state().repertoires[existing], NAJDORF)).toBe(true);
+  });
+
+  it('builds a whole starter set', () => {
+    const set = starterSet('solid')!;
+    state().finishOnboarding(setSeed(set), set.plays);
+    expect(repertoireList(state()).map((rep) => rep.color).sort()).toEqual(['b', 'w']);
+    // The Berlin, not the book's 3...a6, against the Ruy Lopez.
+    expect(lineIn(repFor('b')!, 'e4 e5 Nf3 Nc6 Bb5 Nf6')).toBe(true);
+    expect(lineIn(repFor('b')!, 'e4 e5 Nf3 Nc6 Bb5 a6')).toBe(false);
   });
 });
+
+/** Whether a move order is in a tree from its root. */
+function lineIn(rep: Repertoire, line: string): boolean {
+  let children = rep.rootChildren;
+  for (const san of line.split(' ')) {
+    const next = children.map((id) => rep.nodes[id]).find((node) => node.san === san);
+    if (!next) return false;
+    children = next.children;
+  }
+  return true;
+}

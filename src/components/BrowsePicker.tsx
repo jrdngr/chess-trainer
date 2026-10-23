@@ -53,7 +53,16 @@ function moveText(sans: string[]): string {
  * the selection as it was. Nothing is selected by tapping a row, which only
  * plays its line out and opens what is under it.
  */
-export function BrowsePicker({ onClose, onBack }: { onClose: () => void; onBack?: () => void }) {
+export function BrowsePicker({
+  onClose,
+  onBack,
+  onChoose,
+}: {
+  onClose: () => void;
+  onBack?: () => void;
+  /** Hand the board's line over instead of selecting it: onboarding collects openings this way. */
+  onChoose?: (sans: string[], side: Color | null) => void;
+}) {
   const selection = useStore((s) => s.settings.selection);
   const favorites = useStore((s) => s.settings.favoriteOpenings);
   const repertoires = useStore((s) => s.repertoires);
@@ -117,6 +126,11 @@ export function BrowsePicker({ onClose, onBack }: { onClose: () => void; onBack?
   const choose = () => {
     // The book's own move order where it has one for this position, so ratings and favorites line up.
     const id = moves.length ? node?.id ?? moves.join(' ') : '';
+    if (onChoose) {
+      if (id) onChoose(id.split(' '), side);
+      onClose();
+      return;
+    }
     setSelection(id ? { opening: id, ...(side ? { color: side } : {}) } : { opening: '' });
     onClose();
   };

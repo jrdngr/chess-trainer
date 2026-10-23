@@ -33,7 +33,8 @@ import { addMistake, type Mistake } from '../model/mistakes';
 import { importedOnly, mergeGames, playGames, withPlayGame } from '../model/play';
 import { DEFAULT_SELECTION, type Selection } from '../model/selection';
 import { ANY_FAVORITE } from '../model/anyFavorite';
-import { picksFrom, selectionFor } from '../model/onboarding';
+import { selectionFor } from '../model/onboarding';
+import { seedLines, type SeedOpening } from '../model/starterSets';
 import {
   applyResult,
   EMPTY_SCORE,
@@ -230,7 +231,8 @@ interface StoreState extends PersistedState {
    * and point the global selection at what was picked. An empty list is the
    * player saying they have none, which only records that they were asked.
    */
-  finishOnboarding: (openingIds: string[]) => void;
+  /** Build the first Playbook from the openings onboarding chose, and never ask again. */
+  finishOnboarding: (openings: SeedOpening[], plays?: [string, string][]) => void;
   setSurvivalPrefs: (patch: Partial<SurvivalPrefs>) => void;
   /** Patch one mode's own options, without touching the rest of settings. */
   setModePrefs: <K extends 'drill' | 'growth' | 'play' | 'autopilot'>(
@@ -891,13 +893,14 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     /**
-     * One commit for the whole answer: a half-built profile — trees created but
-     * the flag unset, say — would ask the question again on the next launch
+     * One commit for the whole answer: a half-built profile (trees created but
+     * the flag unset, say) would ask the question again on the next launch
      * with the lines already in.
      */
-    finishOnboarding(openingIds) {
+    finishOnboarding(openings, plays = []) {
       const state = get();
-      const picks = picksFrom(openingTree(referenceIndex()), openingIds);
+      const tree = openingTree(referenceIndex());
+      const lines = seedLines(referenceIndex(), openings, plays);
       const repertoires = { ...state.repertoires };
       const order = [...state.repertoireOrder];
       const byColor = new Map<Color, string>(
@@ -905,29 +908,35 @@ export const useStore = create<StoreState>((set, get) => {
       );
 
       let events = state.events;
-      for (const pick of picks) {
-        let repId = byColor.get(pick.color);
+      for (const line of lines) {
+        let repId = byColor.get(line.color);
         if (!repId) {
-          const rep = createRepertoire(repertoireName(pick.color), pick.color);
+          const rep = createRepertoire(repertoireName(line.color), line.color);
           repertoires[rep.id] = rep;
           order.push(rep.id);
-          byColor.set(pick.color, rep.id);
+          byColor.set(line.color, rep.id);
           repId = rep.id;
         }
-        const res = addLine(repertoires[repId], pick.sans, 'picker');
+        const res = addLine(repertoires[repId], line.sans, 'picker');
         repertoires[repId] = res.rep;
         if (res.added > 0) {
           events = appendEvent(events, {
             kind: 'add',
             repertoireId: repId,
-            color: pick.color,
-            line: pick.sans.join(' '),
+            color: line.color,
+            line: line.sans.join(' '),
             added: res.added,
             source: 'picker',
             via: 'onboarding',
           });
         }
       }
+
+      // Starred where the book names them, so they lead the quick picker and Home's ladder.
+      const picks = openings
+        .map((opening) => ({ opening, node: tree.byId.get(opening.sans.join(' ')) }))
+        .filter(({ node }) => node && node.depth > 0)
+        .map(({ opening, node }) => ({ id: node!.id, name: node!.name, color: opening.color, sans: opening.sans }));
 
       commit({
         repertoires,

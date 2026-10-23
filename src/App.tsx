@@ -94,7 +94,16 @@ export default function App() {
   };
 
   const dueCount = countDue(Object.values(cards)).due;
-  const onboarding = useStore(needsOnboarding);
+  const needed = useStore(needsOnboarding);
+  /**
+   * Held open past its answer, so the screen that says what went in is seen:
+   * the answer itself is what makes the profile no longer need onboarding.
+   */
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  useEffect(() => {
+    if (needed) setOnboardingOpen(true);
+  }, [needed]);
+  const onboarding = needed || onboardingOpen;
 
   /** Where you are, so a change to the repertoire can be logged with where it was made. */
   setEventPlace(
@@ -109,7 +118,13 @@ export default function App() {
   ) : onboarding ? (
     // Ahead of everything: a profile with nothing in it has nothing to show on
     // any of the tabs until this is answered.
-    <OnboardingScreen />
+    <OnboardingScreen
+      onDone={(next) => {
+        setOnboardingOpen(false);
+        setTab('home');
+        if (next === 'autopilot') setMode({ id: 'autopilot' });
+      }}
+    />
   ) : mode?.id === 'autopilot' ? (
     <AutopilotScreen
       key={mode.scope ? `${mode.scope.color}:${mode.scope.opening}` : 'autopilot'}

@@ -1,76 +1,341 @@
-import { useMemo } from 'react';
-import { AppBar } from '../components/ui';
-import { ColorSquare, OpeningList } from '../components/Selection';
+import { useMemo, useState } from 'react';
+import type { Color } from '../chess/core';
+import { AppBar, IconButton, Icons } from '../components/ui';
+import { MiniBoard, OpeningPicker, selectionTrail, shortLabel } from '../components/Selection';
+import { PlateBoard, PrepSegments, SideSquare } from '../components/OpeningPlate';
+import { roundSpan } from '../model/autopilot';
 import { openingTree } from '../model/openingTree';
-import { picksFrom } from '../model/onboarding';
 import { referenceIndex } from '../model/referenceIndex';
-import { useStore } from '../store/useStore';
+import {
+  countOwnMoves,
+  seedFor,
+  seedLines,
+  setOpenings,
+  setSeed,
+  SLOT_COLOR,
+  SLOT_LABELS,
+  STARTER_SETS,
+  type SeedLine,
+  type SeedOpening,
+  type SetSlot,
+  type StarterSet,
+} from '../model/starterSets';
+import { NO_HISTORY, pickRound } from '../store/recommendation';
+import { repertoireList, useStore } from '../store/useStore';
 
 /**
- * The first screen a new profile sees, and the only one it is asked anything on.
+ * The first screens a new profile sees: building the first Playbook.
  *
- * Everything else in the app works on a repertoire, and a fresh install has
- * none — so the question is which openings are already yours. Picks are stars,
- * because that is what a star means everywhere else: the openings you mean to
- * play. Each one puts its own move order into the tree for the side that plays
- * it, and nothing more; Growth is where the lines get longer.
+ * Everything in the app works on a Playbook, and a fresh install has none.
+ * There are two ways in: a starter set, picked by style, or the openings you
+ * already play, picked one at a time. Either way each opening goes in a few
+ * of your moves past its name (see `seedLines`), so the first Autopilot run
+ * has prep to drill rather than a name to sit through.
  *
- * Skipping is a real answer, not a failure. It leaves the profile exactly as it
- * was and is never asked again, short of a full reset.
+ * Skipping is a real answer, not a failure. It leaves the profile as it was
+ * and is never asked again, short of a full reset.
  */
-export function OnboardingScreen() {
-  const starred = useStore((s) => s.settings.favoriteOpenings);
-  const finishOnboarding = useStore((s) => s.finishOnboarding);
-  const tree = openingTree(referenceIndex());
 
-  // Read back through the tree rather than counted raw: a star the book no
-  // longer knows is not an opening that can be added.
-  const picks = useMemo(() => picksFrom(tree, starred), [tree, starred]);
-  const white = picks.filter((pick) => pick.color === 'w').length;
-  const black = picks.length - white;
+type Step =
+  | { kind: 'path' }
+  | { kind: 'sets' }
+  | { kind: 'set'; id: string }
+  | { kind: 'pick' }
+  | { kind: 'ready'; rows: AddedRow[] };
+
+/** One opening as the ready screen lists what went in. */
+interface AddedRow {
+  key: string;
+  name: string;
+  color: Color;
+  moves: number;
+}
+
+/** A picked opening, waiting to go in. */
+interface Picked {
+  sans: string[];
+  color: Color;
+  name: string;
+}
+
+export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'home') => void }) {
+  const finishOnboarding = useStore((s) => s.finishOnboarding);
+  const [step, setStep] = useState<Step>({ kind: 'path' });
+
+  const finish = (openings: SeedOpening[], rows: AddedRow[], plays?: [string, string][]) => {
+    finishOnboarding(openings, plays);
+    setStep({ kind: 'ready', rows });
+  };
+
+  const skip = () => {
+    finishOnboarding([]);
+    onDone('home');
+  };
+
+  if (step.kind === 'sets') {
+    return <SetList onBack={() => setStep({ kind: 'path' })} onOpen={(id) => setStep({ kind: 'set', id })} />;
+  }
+  if (step.kind === 'set') {
+    const set = STARTER_SETS.find((s) => s.id === step.id)!;
+    return (
+      <SetDetail
+        set={set}
+        onBack={() => setStep({ kind: 'sets' })}
+        onUse={() => finish(setSeed(set), setRows(set), set.plays)}
+      />
+    );
+  }
+  if (step.kind === 'pick') {
+    return (
+      <PickOpenings
+        onBack={() => setStep({ kind: 'path' })}
+        onAdd={(picked) =>
+          finish(
+            picked.map((pick) => seedFor(pick.sans, pick.color)),
+            picked.map((pick) => ({
+              key: pick.sans.join(' '),
+              name: pick.name,
+              color: pick.color,
+              moves: countOwnMoves(seedLines(referenceIndex(), [seedFor(pick.sans, pick.color)])),
+            })),
+          )
+        }
+      />
+    );
+  }
+  if (step.kind === 'ready') return <Ready rows={step.rows} onDone={onDone} />;
 
   return (
     <>
-      <AppBar title="Your openings" large />
-      <div className="screen no-nav">
-        <div className="note">
-          Pick the openings you already play, at whatever depth you know them.
+      <AppBar title="Build your Playbook" large />
+      <div className="screen no-nav onboard">
+        <div className="onboard-paths">
+          <button className="onboard-path main" onClick={() => setStep({ kind: 'sets' })}>
+            <span className="ico">
+              <Icons.star size={22} />
+            </span>
+            <span className="name">Suggest a set</span>
+            <Icons.chevron size={18} />
+          </button>
+          <button className="onboard-path" onClick={() => setStep({ kind: 'pick' })}>
+            <span className="ico">
+              <Icons.tree size={22} />
+            </span>
+            <span className="name">Pick openings</span>
+            <Icons.chevron size={18} />
+          </button>
         </div>
-
-        <div className="op-inline">
-          <OpeningList multi />
-        </div>
+        <button className="onboard-skip" onClick={skip}>
+          Skip for now
+        </button>
       </div>
+    </>
+  );
+}
 
+/* ── starter sets ─────────────────────────────────────────────────────── */
+
+/** An opening's name as a set shows it: the set's own label, else the book's, shortened. */
+function openingName(id: string, label?: string): string {
+  if (label) return label;
+  const node = openingTree(referenceIndex()).byId.get(id);
+  return node ? shortLabel(node.name) : id;
+}
+
+/** A slot's openings by name, the same name once. */
+function slotNames(set: StarterSet, slot: SetSlot): string[] {
+  return [...new Set(set.slots[slot].map((opening) => openingName(opening.id, opening.label)))];
+}
+
+/** Your moves a set puts in, all of them or one slot's. */
+function setMoves(set: StarterSet, slot?: SetSlot): number {
+  const openings = setOpenings(set).filter((opening) => !slot || opening.slot === slot);
+  // Seeded with the whole set, so a slot counts the moves the set really plays.
+  const lines = seedLines(referenceIndex(), setSeed(set), set.plays);
+  const mine = (line: SeedLine) =>
+    openings.some((opening) => opening.color === line.color && `${line.sans.join(' ')} `.startsWith(`${opening.id} `));
+  return countOwnMoves(lines.filter(mine));
+}
+
+function setRows(set: StarterSet): AddedRow[] {
+  return (Object.keys(set.slots) as SetSlot[]).map((slot) => ({
+    key: slot,
+    name: slotNames(set, slot).join(' · '),
+    color: SLOT_COLOR[slot],
+    moves: setMoves(set, slot),
+  }));
+}
+
+function SetList({ onBack, onOpen }: { onBack: () => void; onOpen: (id: string) => void }) {
+  const totals = useMemo(() => new Map(STARTER_SETS.map((set) => [set.id, setMoves(set)])), []);
+  return (
+    <>
+      <AppBar title="Pick a style" large onBack={onBack} />
+      <div className="screen no-nav onboard">
+        {STARTER_SETS.map((set) => (
+          <button key={set.id} className="card tap onboard-set" onClick={() => onOpen(set.id)}>
+            <span className="top">
+              <span className="title">{set.name}</span>
+              <span className="count">{totals.get(set.id)} moves</span>
+            </span>
+            <span className="desc">{set.description}</span>
+            <span className="chips">
+              {(Object.keys(set.slots) as SetSlot[]).map((slot) => (
+                <span key={slot} className="onboard-chip">
+                  <SideSquare color={SLOT_COLOR[slot]} />
+                  {slotNames(set, slot).join(' · ')}
+                </span>
+              ))}
+            </span>
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function SetDetail({ set, onBack, onUse }: { set: StarterSet; onBack: () => void; onUse: () => void }) {
+  const rows = useMemo(() => setRows(set), [set]);
+  return (
+    <>
+      <AppBar title={set.name} large onBack={onBack} />
+      <div className="screen no-nav onboard">
+        <p className="onboard-desc">{set.description}</p>
+        {rows.map((row) => {
+          const slot = row.key as SetSlot;
+          const first = set.slots[slot][0];
+          return (
+            <div key={slot} className="card onboard-slot">
+              <MiniBoard sans={first.id.split(' ')} orientation={row.color} size={88} lastMove />
+              <span className="info">
+                <span className="label">
+                  <SideSquare color={row.color} />
+                  {SLOT_LABELS[slot]}
+                </span>
+                <span className="name">{row.name}</span>
+                <span className="count">{row.moves} moves</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
       <div className="onboard-bar">
-        {picks.length > 0 && (
-          <div className="onboard-tally">
-            {white > 0 && (
-              <span className="side-count">
-                <ColorSquare choice="w" size={14} /> {white}
-              </span>
-            )}
-            {black > 0 && (
-              <span className="side-count">
-                <ColorSquare choice="b" size={14} /> {black}
-              </span>
-            )}
+        <button className="btn accent block xl" onClick={onUse}>
+          Use {set.name}
+        </button>
+      </div>
+    </>
+  );
+}
+
+/* ── picking openings ─────────────────────────────────────────────────── */
+
+function PickOpenings({ onBack, onAdd }: { onBack: () => void; onAdd: (picked: Picked[]) => void }) {
+  const [picked, setPicked] = useState<Picked[]>([]);
+  const [picking, setPicking] = useState(false);
+
+  const add = (sans: string[], side: Color | null) => {
+    const key = sans.join(' ');
+    if (picked.some((pick) => pick.sans.join(' ') === key)) return;
+    const node = openingTree(referenceIndex()).byId.get(key);
+    const { color } = seedFor(sans, side ?? undefined);
+    setPicked([...picked, { sans, color, name: node ? shortLabel(node.name) : key }]);
+  };
+
+  return (
+    <>
+      <AppBar title="Your openings" large onBack={onBack} />
+      <div className="screen no-nav onboard">
+        {picked.length > 0 && (
+          <div className="list onboard-picked">
+            {picked.map((pick, i) => (
+              <div key={pick.sans.join(' ')} className="list-row">
+                <SideSquare color={pick.color} />
+                <span className="title grow truncate">{pick.name}</span>
+                <IconButton label={`Remove ${pick.name}`} onClick={() => setPicked(picked.filter((_, j) => j !== i))}>
+                  <Icons.close size={16} />
+                </IconButton>
+              </div>
+            ))}
           </div>
         )}
+        <button className="btn soft block onboard-add" onClick={() => setPicking(true)}>
+          <Icons.plus size={18} />
+          Add an opening
+        </button>
+      </div>
+      <div className="onboard-bar">
         <button
-          className={`btn block xl${picks.length ? ' primary' : ''}`}
-          onClick={() => finishOnboarding(picks.map((pick) => pick.id))}
+          className={`btn block xl${picked.length ? ' accent' : ''}`}
+          disabled={!picked.length}
+          onClick={() => onAdd(picked)}
         >
-          {/* Named while there is one, because a name is worth more than a
-              count — truncated, because some of them are very long. */}
           <span className="truncate">
-            {picks.length === 0
-              ? 'Not yet — start empty'
-              : picks.length === 1
-                ? `Add ${picks[0].name}`
-                : `Add ${picks.length} openings`}
+            {picked.length === 1 ? `Add ${picked[0].name}` : `Add ${picked.length || ''} openings`.replace('  ', ' ')}
           </span>
         </button>
+      </div>
+      <OpeningPicker open={picking} onClose={() => setPicking(false)} onChoose={add} />
+    </>
+  );
+}
+
+/* ── done ─────────────────────────────────────────────────────────────── */
+
+function Ready({ rows, onDone }: { rows: AddedRow[]; onDone: (next: 'autopilot' | 'home') => void }) {
+  const state = useStore();
+  const first = useMemo(() => pickRound(state, NO_HISTORY).round, [state]);
+  const span = useMemo(() => {
+    if (!first) return null;
+    const rep = repertoireList(state).find((r) => r.color === first.pick.color) ?? null;
+    return roundSpan(rep, first.pick, first.at);
+  }, [state, first]);
+  const moves = rows.reduce((sum, row) => sum + row.moves, 0);
+
+  return (
+    <>
+      <div className="screen no-nav onboard ready">
+        <span className="onboard-check">
+          <Icons.check size={22} />
+        </span>
+        <h1>Your Playbook is ready</h1>
+        <p className="onboard-desc">
+          {moves} moves across {rows.length} {rows.length === 1 ? 'opening' : 'openings'}
+        </p>
+        <div className="list">
+          {rows.map((row) => (
+            <div key={row.key} className="list-row">
+              <SideSquare color={row.color} />
+              <span className="title grow truncate">{row.name}</span>
+              <span className="val">{row.moves} moves</span>
+            </div>
+          ))}
+        </div>
+        <div className="grow" />
+        {first && (
+          <div className="autopilot-wrap">
+            <button className="autopilot plate" onClick={() => onDone('autopilot')}>
+              <PlateBoard sans={first.pick.opening.sans} color={first.pick.color} size={176} />
+              <span className="plate-tag">
+                <Icons.bolt size={11} />
+                Autopilot
+              </span>
+              <SideSquare color={first.pick.color} />
+              <span className="name truncate">{selectionTrail(first.pick.opening.id).at(-1)}</span>
+              <PrepSegments span={span} className="edge" />
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="onboard-bar">
+        <button className="btn accent block xl" onClick={() => onDone(first ? 'autopilot' : 'home')}>
+          {first ? 'Play your first run' : 'Go to Home'}
+        </button>
+        {first && (
+          <button className="onboard-skip" onClick={() => onDone('home')}>
+            Go to Home
+          </button>
+        )}
       </div>
     </>
   );
