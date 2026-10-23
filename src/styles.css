@@ -1015,8 +1015,8 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .prep-segs > i { flex: 1 1 0; height: 5px; border-radius: 3px; background: #3a3a48; }
 .prep-segs > i.past { background: var(--accent); }
 .prep-segs > i.here { background: #f2f2f5; box-shadow: 0 0 8px rgba(139, 140, 248, 0.9); }
-/* Solid, gaps included, so the board behind never shows through. */
-.prep-segs.edge { position: absolute; left: 0; right: 0; bottom: 0; gap: 2px; background: var(--bg); }
+/* Solid, gaps included, so the board behind never shows through; clear of the rounded corners at each end. */
+.prep-segs.edge { position: absolute; left: 18px; right: 18px; bottom: 0; gap: 2px; background: var(--bg); }
 .prep-segs.edge > i { height: 4px; border-radius: 0; }
 .prep-segs.bar { width: 150px; max-width: 100%; margin: 6px auto 2px; }
 
