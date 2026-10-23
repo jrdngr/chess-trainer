@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ANY_FAVORITE } from './anyFavorite';
 import { openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
 import { familyName } from './reference';
@@ -107,13 +108,13 @@ describe('the selection the picks imply', () => {
     expect(selectionFor(picksFrom(tree(), [NAJDORF]))).toEqual({ color: 'b', opening: NAJDORF });
   });
 
-  it('keeps the side, but not the opening, when several share one', () => {
-    expect(selectionFor(picksFrom(tree(), [NAJDORF, FRENCH]))).toEqual({ color: 'b', opening: '' });
+  it('keeps the side, under any favorite, when several share one', () => {
+    expect(selectionFor(picksFrom(tree(), [NAJDORF, FRENCH]))).toEqual({ color: 'b', opening: ANY_FAVORITE });
   });
 
   it('goes random when the picks span both sides', () => {
     const selection = selectionFor(picksFrom(tree(), [NAJDORF, RUY]));
-    expect(selection).toEqual({ color: 'random', opening: '' });
+    expect(selection).toEqual({ color: 'random', opening: ANY_FAVORITE });
   });
 
   it('says nothing when nothing was picked', () => {
@@ -123,7 +124,7 @@ describe('the selection the picks imply', () => {
   it('treats a family and a variation of it as two picks, not one', () => {
     expect(selectionFor(picksFrom(tree(), [SICILIAN, NAJDORF]))).toEqual({
       color: 'b',
-      opening: '',
+      opening: ANY_FAVORITE,
     });
   });
 });

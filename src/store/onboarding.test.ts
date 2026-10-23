@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { ANY_FAVORITE } from '../model/anyFavorite';
 import { DEFAULT_SELECTION } from '../model/selection';
 import { countNodes } from '../model/repertoire';
 import { seedFor, setSeed, starterSet } from '../model/starterSets';
@@ -87,7 +88,7 @@ describe('answering it', () => {
 
   it('keeps the side when the picks agree on one', () => {
     state().finishOnboarding([seed(NAJDORF), seed('e4 e6')]);
-    expect(state().settings.selection).toEqual({ color: 'b', opening: '' });
+    expect(state().settings.selection).toEqual({ color: 'b', opening: ANY_FAVORITE });
   });
 
   it('ignores an opening the book does not know', () => {

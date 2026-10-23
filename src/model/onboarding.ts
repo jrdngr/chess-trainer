@@ -1,5 +1,6 @@
 import type { Color } from '../chess/core';
 import type { OpeningTree } from './openingTree';
+import { ANY_FAVORITE } from './anyFavorite';
 import { DEFAULT_SELECTION, type Selection } from './selection';
 
 /**
@@ -88,8 +89,9 @@ export function picksFrom(tree: OpeningTree, ids: Iterable<string>): OpeningPick
  * Picking only Black openings is a statement about which side you play, and
  * Home is read through the selection, so carrying it over is the difference
  * between landing on a screen that is ready and one that is generic. One
- * opening names itself; several stay under "any", where the starred rows float
- * to the top of the picker anyway. Picking nothing says nothing.
+ * opening names itself; several go under "Any favorite", since the picks are
+ * starred, so the first run starts inside one of them rather than from
+ * anywhere. Picking nothing says nothing.
  */
 export function selectionFor(picks: OpeningPick[]): Selection {
   if (picks.length === 0) return { ...DEFAULT_SELECTION };
@@ -97,6 +99,6 @@ export function selectionFor(picks: OpeningPick[]): Selection {
   const [only] = colors;
   return {
     color: colors.size === 1 ? only : 'random',
-    opening: picks.length === 1 ? picks[0].id : '',
+    opening: picks.length === 1 ? picks[0].id : ANY_FAVORITE,
   };
 }
