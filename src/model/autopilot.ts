@@ -93,6 +93,8 @@ export function survivalPlanFor(
 export interface PrepSpan {
   played: number;
   total: number;
+  /** Plies played in the book past the prep, once its book phase has begun. */
+  book?: number;
 }
 
 /**

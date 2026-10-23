@@ -7,17 +7,30 @@ const MAX_SEGMENTS = 16;
 
 /**
  * How far into your prep a run is, as a row of segments: lit up to where it
- * stands, the one it is on bright. Nothing when there is no prep to measure.
+ * stands, the one it is on bright. Past the prep, the plies played in the
+ * book follow in their own color. Nothing when there is nothing to measure.
  */
 export function PrepSegments({ span, className }: { span: PrepSpan | null; className?: string }) {
-  if (!span || span.total <= 0) return null;
-  const count = Math.min(span.total, MAX_SEGMENTS);
-  const lit = Math.round((Math.min(span.played, span.total) / span.total) * count);
-  const label = span.played === 0 ? 'From the first move' : `${Math.min(span.played, span.total)} of ${span.total} prep moves in`;
+  const book = span?.book ?? 0;
+  if (!span || span.total + book <= 0) return null;
+  const all = span.total + book;
+  const count = Math.min(all, MAX_SEGMENTS);
+  const prepCount = book ? Math.round((span.total / all) * count) : count;
+  const lit = book ? prepCount : Math.round((Math.min(span.played, span.total) / span.total) * count);
+  const label = book
+    ? `${span.total} prep moves and ${book} in the book`
+    : span.played === 0
+      ? 'From the first move'
+      : `${Math.min(span.played, span.total)} of ${span.total} prep moves in`;
   return (
     <span className={`prep-segs${className ? ` ${className}` : ''}`} role="img" aria-label={label}>
       {Array.from({ length: count }, (_, i) => (
-        <i key={i} className={i < lit ? 'past' : i === lit ? 'here' : undefined} />
+        <i
+          key={i}
+          className={
+            i >= prepCount ? (i === count - 1 ? 'book here' : 'book') : i < lit ? 'past' : i === lit ? 'here' : undefined
+          }
+        />
       ))}
     </span>
   );

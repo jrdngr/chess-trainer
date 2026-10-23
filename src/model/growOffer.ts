@@ -2,6 +2,7 @@ import { fenTurn, positionKey, walkSan } from '../chess/core';
 import {
   growthRows,
   holePastBook,
+  pastTheBook,
   optionsAt,
   recommended,
   type GrowthOptions,
@@ -230,8 +231,8 @@ export function holeAtEnd(
 /**
  * The line end a round finished on: your own move, the last one prepared, with
  * the opponent to move and nothing prepared for what they play. Growth starts
- * there and has them reply — from the book when it knows the position, from
- * the engine when it does not. Null when the round ended anywhere else.
+ * there and has the book reply; past the book there is nothing to grow. Null
+ * when the round ended anywhere else.
  */
 export function endAtEnd(rep: Repertoire, played: string[], maxPly: number): LineEnd | null {
   if (played.length === 0 || played.length >= maxPly) return null;
@@ -282,12 +283,14 @@ export function growLaunch(
   tree: OpeningTree,
   opening: OpeningNode,
   played: string[],
-  opts: Pick<GrowthOptions, 'minShare' | 'maxPly' | 'starred' | 'bookOnly'>,
+  opts: Pick<GrowthOptions, 'minShare' | 'maxPly' | 'starred'>,
 ): GrowLaunch | null {
   const maxPly = opts.maxPly ?? 18;
   const found = holeAtEnd(rep, index, played, maxPly);
-  const hole = opts.bookOnly && found && holePastBook(index, found) ? null : found;
-  const end = found || opts.bookOnly ? null : endAtEnd(rep, played, maxPly);
+  // Growth stops where the book does, so nothing past it is offered.
+  const hole = found && holePastBook(index, found) ? null : found;
+  const tip = found ? null : endAtEnd(rep, played, maxPly);
+  const end = tip && !pastTheBook(index, tip.fen) ? tip : null;
   if (end) {
     const row: GrowthRow = {
       id: `${rep.id}#${opening.name}`,
@@ -396,7 +399,8 @@ export function growOfferAt(args: {
   // theirs still to come: either way the line has room to grow right here.
   // Past Growth's depth it adds a move at a time.
   const hole = holeAtEnd(rep, index, played, Infinity);
-  if (!hole && !endAtEnd(rep, played, Infinity)) return null;
+  const tip = hole ? null : endAtEnd(rep, played, Infinity);
+  if (!hole && (!tip || pastTheBook(index, tip.fen))) return null;
   const launch = growLaunch(rep, index, tree, opening, played, { ...opts, maxPly: Infinity });
   return launch ? { kind: 'line', text: 'Grow this line', launch } : null;
 }

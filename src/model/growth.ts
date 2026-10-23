@@ -96,12 +96,6 @@ export interface GrowthOptions {
    * openings the selection covers — see `openingsInSelection`.
    */
   region?: { tree: OpeningTree; node: OpeningNode };
-  /**
-   * Only work the book can play: no hole the engine found or that leads past
-   * the book, and no line tip waiting on the engine. Autopilot stops at the
-   * book's edge, so a round started beyond it would end before it began.
-   */
-  bookOnly?: boolean;
 }
 
 /**
@@ -327,9 +321,8 @@ export function findHoles(
 }
 
 /**
- * The tip of a line past the book, where the opponent is to move and nothing
- * says what they play: the book never got this far, and the engine has not
- * been asked yet. Growth starts there by asking it.
+ * The tip of a line, where the opponent is to move and nothing of yours says
+ * what they play. Growth starts there and has the book reply.
  */
 export interface LineEnd {
   /** Moves from the start to the tip — the opponent is to move. */
@@ -339,30 +332,6 @@ export interface LineEnd {
   nodeId: string | null;
   /** The share of games that get this far, 0..1 — see `Hole.reach`. */
   reach: number;
-}
-
-/** Every line past the book that the engine has not yet been asked to extend. */
-export function findLineEnds(rep: Repertoire, index: ReferenceIndex, opts: GrowthOptions = {}): LineEnd[] {
-  const ends: LineEnd[] = [];
-  walkChoices(rep, index, opts, (choice) => {
-    if (choice.path.length === 0 || choice.prepared.size > 0 || !choice.bookless) return;
-    if (engineReplies(choice.fen) !== undefined) return;
-    ends.push({ path: choice.path, fen: choice.fen, nodeId: choice.nodeId, reach: choice.reach });
-  });
-  return ends;
-}
-
-/**
- * Positions in your prep past the book where the opponent chooses and the
- * engine has not been asked what they would play. Asking turns tips into
- * holes, and finds the replies a line past the book does not meet yet.
- */
-export function unaskedPastBook(rep: Repertoire, index: ReferenceIndex, opts: GrowthOptions = {}): string[] {
-  const out: string[] = [];
-  walkChoices(rep, index, opts, (choice) => {
-    if (choice.bookless && engineReplies(choice.fen) === undefined) out.push(choice.fen);
-  });
-  return out;
 }
 
 /* ── breadth ──────────────────────────────────────────────────────────── */
@@ -519,7 +488,7 @@ export interface GrowthRow {
   /** Urgency with starring folded in. Orders the list and picks Recommended. */
   score: number;
   holes: Hole[];
-  /** Lines past the book the engine can extend — see `LineEnd`. */
+  /** Line tips with the opponent to move, the book's to reply to — see `LineEnd`. */
   ends: LineEnd[];
 }
 
@@ -668,17 +637,13 @@ export function growthRows(
       row.starred = row.starred || isStarred(starred, line);
       return row;
     };
-    // Past the book the engine answers, so every hole is somewhere a run can
-    // offer a choice.
+    // Growth stops where the book does: your lines end with the book, and
+    // past it the run is real chess, not more to memorize.
     for (const hole of findHoles(rep, index, opts)) {
-      if (opts.bookOnly && holePastBook(index, hole)) continue;
+      if (holePastBook(index, hole)) continue;
       const row = rowFor([...hole.path, hole.san], moveLabel(hole), hole.path.length);
       row.holes.push(hole);
       row.topShare = Math.max(row.topShare, holeShare(hole));
-    }
-    for (const end of opts.bookOnly ? [] : findLineEnds(rep, index, opts)) {
-      const row = rowFor(end.path, endLabel(end), end.path.length);
-      row.ends.push(end);
     }
     rows.push(...[...byName.values()].filter((row) => !offered || offered.has(row.name)));
   }
@@ -707,12 +672,6 @@ export function recommended(rows: GrowthRow[]): GrowthRow | null {
 /** A move the book has no name for, called after the move itself: "vs 1.g3". */
 function moveLabel(hole: Hole): string {
   return `vs ${Math.floor(hole.path.length / 2) + 1}.${hole.path.length % 2 === 0 ? '' : '..'}${hole.san}`;
-}
-
-/** A line end the book has no name for, called after your last move: "after 9.g3". */
-function endLabel(end: LineEnd): string {
-  const ply = end.path.length - 1;
-  return `after ${Math.floor(ply / 2) + 1}.${ply % 2 === 0 ? '' : '..'}${end.path[ply] ?? ''}`;
 }
 
 /* ── the run ────────────────────────────────────────────────────────────── */
@@ -783,20 +742,8 @@ export function holePastBook(index: ReferenceIndex, hole: Hole): boolean {
 }
 
 /**
- * Whether a run on this row starts past the book, so the engine is in it from
- * the first thing it asks — standing on this hole, or else where the row
- * itself would start.
- */
-export function startsPastBook(index: ReferenceIndex, row: GrowthRow, hole: Hole | null = null): boolean {
-  const at = hole ?? firstHole(index, row);
-  if (at) return holePastBook(index, at);
-  const end = firstEnd(row);
-  return !!end && pastTheBook(index, end.fen);
-}
-
-/**
- * A run that begins at the tip of a line past the book, with the opponent to
- * move: the engine picks their reply, and that is the first hole.
+ * A run that begins at the tip of your line, with the opponent to move: the
+ * book picks their reply, and that is the first hole.
  */
 export function startGrowthAtEnd(rep: Repertoire, row: GrowthRow, end: LineEnd): GrowthRun {
   return { ...startGrowth(rep, row), path: end.path, fen: end.fen, nodeId: end.nodeId };

@@ -93,7 +93,7 @@ export function RepertoireScreen({
     <>
       <AppBar
         large
-        title="Repertoire"
+        title="Playbook"
         actions={
           <>
             {reps.length > 0 && (
@@ -115,7 +115,7 @@ export function RepertoireScreen({
         {sides.length === 0 && (
           <Empty
             title="No openings yet"
-            hint="Build a line in Growth, or save the opening from a game in Play. Practice never writes into your repertoire."
+            hint="Build a line in Growth, or save the opening from a game in Play. Practice never writes into your Playbook."
           />
         )}
 
@@ -152,7 +152,7 @@ export function RepertoireScreen({
                   <Icons.chevron size={18} />
                 </button>
                 <IconButton
-                  label={`Options for the ${rep.color === 'w' ? 'White' : 'Black'} repertoire`}
+                  label={`Options for the ${rep.color === 'w' ? 'White' : 'Black'} Playbook`}
                   onClick={() => setSideMenu(rep.id)}
                 >
                   <Icons.more size={18} />
@@ -568,7 +568,7 @@ function RepertoireBrowser({
             <IconButton label="The book" onClick={() => setShowReference(true)}>
               <Icons.book size={20} />
             </IconButton>
-            <IconButton label="Repertoire options" onClick={() => setSideMenu(true)}>
+            <IconButton label="Playbook options" onClick={() => setSideMenu(true)}>
               <Icons.more size={20} />
             </IconButton>
           </>

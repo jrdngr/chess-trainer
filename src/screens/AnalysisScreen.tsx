@@ -245,9 +245,9 @@ export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInit
               </button>
               <button
                 className="btn primary grow"
-                onClick={() => setAddLine({ sans: visible, title: 'Add to repertoire' })}
+                onClick={() => setAddLine({ sans: visible, title: 'Add to Playbook' })}
               >
-                <Icons.plus size={18} /> Add to repertoire
+                <Icons.plus size={18} /> Add to Playbook
               </button>
             </div>
           </>
@@ -346,7 +346,7 @@ export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInit
         note={addLine?.note}
         preferColor={addLine?.color}
         source="analysis"
-        title={addLine?.title ?? 'Add to repertoire'}
+        title={addLine?.title ?? 'Add to Playbook'}
       />
     </>
   );

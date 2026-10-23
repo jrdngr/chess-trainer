@@ -1,7 +1,7 @@
 import { applySan, piecesFromFen, positionKey, walkSan, type PieceType, type Square } from '../chess/core';
 import { goalRoute } from './boardHints';
 import { planFor, structureOf } from './structures';
-import { lookup, type ReferenceIndex } from './reference';
+import { lookup, totalGamesAt, type ReferenceIndex } from './reference';
 import { ancestorsOf, type OpeningNode, type OpeningTree } from './openingTree';
 import {
   beginRun,
@@ -112,6 +112,44 @@ export function evalSwing(color: 'w' | 'b', from: number, to: number): number | 
   return color === 'w' ? to - from : from - to;
 }
 
+/* ── the book phase ─────────────────────────────────────────────────────── */
+
+/**
+ * Once your prep runs out, the run is still in the book for a while, and a
+ * move strong players actually play there is a good opening move whether or
+ * not you prepared it. That is the book phase: a short opening still gets
+ * real opening play, judged by theory rather than by your memory.
+ *
+ * A book move is one at least `BOOK_SHARE` of strong players' games choose at
+ * the position, which the engine does not read as a mistake (worse than
+ * `SCORE_SLIGHT`, where a move's score turns red). It counts for the run's
+ * points and combo only: never a rating or a card, which measure what you
+ * chose to learn. The phase ends at your first move that is not a book move,
+ * or where the book has nothing more to say.
+ */
+export const BOOK_SHARE = 0.05;
+
+/** The book moves at a position, most played first; empty where the book has nothing. */
+export function bookMoves(index: ReferenceIndex, fen: string): string[] {
+  const entry = lookup(index, fen);
+  const total = totalGamesAt(entry);
+  if (!entry || total <= 0) return [];
+  return [...entry.moves]
+    .filter((move) => move.games / total >= BOOK_SHARE)
+    .sort((a, b) => b.games - a.games)
+    .map((move) => move.san);
+}
+
+/** Whether the book has anything at all here: where it does not, the book phase is over. */
+export function inTheBook(index: ReferenceIndex, fen: string): boolean {
+  return totalGamesAt(lookup(index, fen)) > 0;
+}
+
+/** Whether a move the engine passed, costing `lost` against its best, is a book move here. */
+export function isBookMove(index: ReferenceIndex, fen: string, san: string, lost: number): boolean {
+  return lost <= SCORE_SLIGHT && bookMoves(index, fen).includes(san);
+}
+
 /**
  * How fast a prepared move was, on the same scale that grades its card
  * (`gradeForTime`): Easy in green, Good in yellow, Hard in red.
@@ -129,17 +167,22 @@ export function secondsText(seconds: number): string {
 /**
  * How a run went on your prep, for its end screen: found of asked, and the
  * times of the ones found — their average, and how many were fast enough to
- * grade Easy. Null where your prep asked nothing.
+ * grade Easy — then the book moves played past it. Null where neither your
+ * prep nor the book asked anything.
  */
-export function prepSummary(found: number, asked: number, seconds: number[]): string | null {
-  if (!asked) return null;
-  const parts = [`Prep ${found} of ${asked}`];
-  if (seconds.length) {
-    const average = seconds.reduce((sum, s) => sum + s, 0) / seconds.length;
-    parts.push(`${secondsText(average)} average`);
-    const fast = seconds.filter((s) => gradeForTime(s) === 'easy').length;
-    parts.push(`${fast} fast`);
+export function prepSummary(found: number, asked: number, seconds: number[], book = 0): string | null {
+  if (!asked && !book) return null;
+  const parts: string[] = [];
+  if (asked) {
+    parts.push(`Prep ${found} of ${asked}`);
+    if (seconds.length) {
+      const average = seconds.reduce((sum, s) => sum + s, 0) / seconds.length;
+      parts.push(`${secondsText(average)} average`);
+      const fast = seconds.filter((s) => gradeForTime(s) === 'easy').length;
+      parts.push(`${fast} fast`);
+    }
   }
+  if (book) parts.push(`${book} book move${book === 1 ? '' : 's'}`);
   return parts.join(' · ');
 }
 

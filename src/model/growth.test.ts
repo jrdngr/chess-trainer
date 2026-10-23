@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applySan, fenTurn, positionKey, START_FEN } from '../chess/core';
+import { applySan, fenTurn, positionKey, START_FEN, walkSan } from '../chess/core';
 import { deepestName, familyName, lookup } from './reference';
 import {
   addsToFit,
@@ -28,16 +28,12 @@ import {
   type GrowthRun,
   firstHole,
   startGrowthAt,
-  choicesAt,
-  findLineEnds,
   firstEnd,
   needsEngine,
   holePastBook,
   pastTheBook,
   reachesOpening,
-  startsPastBook,
   startGrowthAtEnd,
-  unaskedPastBook,
   type Hole,
 } from './growth';
 import { PREPARED_FLOOR } from './prepFloor';
@@ -270,13 +266,12 @@ describe('the lobby', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('keeps the family row pointing at every hole it absorbed, past the book too', () => {
-    // A hole past the book is answered by the engine, so none is dropped.
+  it('keeps the family row pointing at every hole it absorbed, inside the book', () => {
     const rows = growthRows([black], index);
     const family = prepRow(rows);
     const total = rows.reduce((sum, row) => sum + row.holes.length, 0);
     expect(family.holes.length).toBeGreaterThan(1);
-    expect(total).toBe(findHoles(black, index).length);
+    expect(total).toBe(findHoles(black, index).filter((hole) => !holePastBook(index, hole)).length);
   });
 
   it('starts a run standing on the hole the row most wants answered', () => {
@@ -606,76 +601,36 @@ describe('answering a hole', () => {
   });
 });
 
-describe('growing past the book', () => {
+describe('stopping at the book', () => {
   /** The Albin line from a real repertoire, ending past the book on Black's move. */
   const albin = thin('w', 'd4 d5 c4 e5 dxe5 d4 Nf3 Nc6 g3 Nge7 Bg2');
 
-  it('lists a line past the book as an end until the engine is asked', () => {
+  it('offers nothing past the book, even with the engine asked', () => {
     clearEngineReplies();
-    const ends = findLineEnds(albin, index);
-    expect(ends.map((end) => end.path.join(' '))).toEqual(['d4 d5 c4 e5 dxe5 d4 Nf3 Nc6 g3 Nge7 Bg2']);
-    const row = growthRows([albin], index).find((r) => r.ends.length > 0)!;
-    expect(row).toBeDefined();
-    expect(firstEnd(row)!.path).toHaveLength(11);
-    expect(unaskedPastBook(albin, index)).toContain(ends[0].fen);
-  });
-
-  it("turns the engine's moves into replies to answer once it has them", () => {
-    clearEngineReplies();
-    const [end] = findLineEnds(albin, index);
-    rememberEngineReplies(end.fen, ['Ng6', 'Nf5', 'Be6']);
-    expect(findLineEnds(albin, index)).toHaveLength(0);
-    const holes = findHoles(albin, index).filter((hole) => hole.path.length === 11);
-    expect(holes.map((hole) => hole.san)).toEqual(['Ng6', 'Nf5', 'Be6']);
-    expect(holes.every((hole) => hole.engine && hole.share === 0)).toBe(true);
-    // Every one of them survives the threshold, which only the book can be held to.
-    expect(findHoles(albin, index, { minShare: 5 }).filter((hole) => hole.path.length === 11)).toHaveLength(3);
-    expect(choicesAt(index, end.fen)!.map((choice) => choice.san)).toEqual(['Ng6', 'Nf5', 'Be6']);
+    const tip = walkSan('d4 d5 c4 e5 dxe5 d4 Nf3 Nc6 g3 Nge7 Bg2'.split(' ')).fens.at(-1)!;
+    expect(pastTheBook(index, tip)).toBe(true);
+    rememberEngineReplies(tip, ['Ng6', 'Nf5', 'Be6']);
+    expect(findHoles(albin, index).some((hole) => hole.engine)).toBe(true);
+    const rows = growthRows([albin], index);
+    expect(rows.flatMap((row) => row.ends)).toHaveLength(0);
+    expect(rows.flatMap((row) => row.holes).some((hole) => holePastBook(index, hole))).toBe(false);
+    expect(rows.length).toBeGreaterThan(0);
     clearEngineReplies();
   });
 
-  it('knows a row on a line end starts past the book', () => {
-    clearEngineReplies();
-    // Only its end: a row with holes too starts at a hole, inside the book.
-    const row = { ...growthRows([albin], index).find((r) => r.ends.length > 0)!, holes: [] };
-    expect(pastTheBook(index, firstEnd(row)!.fen)).toBe(true);
-    expect(startsPastBook(index, row)).toBe(true);
-    // An engine reply is past the book too, once the engine has given it.
-    rememberEngineReplies(firstEnd(row)!.fen, ['Ng6', 'Nf5', 'Be6']);
-    const [hole] = findHoles(albin, index).filter((h) => h.path.length === 11);
-    expect(startsPastBook(index, row, hole)).toBe(true);
-    clearEngineReplies();
-  });
-
-  it('knows a row inside the book does not', () => {
-    const rep = thin('w', 'd4 d5 c4');
-    const row = growthRows([rep], index).find((r) => r.holes.length > 0)!;
+  it('knows a position inside the book is not past it', () => {
     expect(pastTheBook(index, START_FEN)).toBe(false);
-    expect(startsPastBook(index, row)).toBe(false);
-  });
-
-  it('leaves out everything past the book when asked for book work only', () => {
-    clearEngineReplies();
-    const [end] = findLineEnds(albin, index);
-    rememberEngineReplies(end.fen, ['Ng6', 'Nf5', 'Be6']);
-    const all = growthRows([albin], index).flatMap((row) => row.holes);
-    expect(all.some((hole) => hole.engine)).toBe(true);
-    const book = growthRows([albin], index, { bookOnly: true });
-    expect(book.flatMap((row) => row.ends)).toHaveLength(0);
-    expect(book.flatMap((row) => row.holes).some((hole) => holePastBook(index, hole))).toBe(false);
-    expect(book.length).toBeGreaterThan(0);
-    expect(book.every((row) => !startsPastBook(index, row))).toBe(true);
-    clearEngineReplies();
   });
 
   it('starts a run on a line end with the opponent to move', () => {
-    clearEngineReplies();
-    const row = growthRows([albin], index).find((r) => r.ends.length > 0)!;
-    const end = firstEnd(row)!;
-    const run = startGrowthAtEnd(albin, row, end);
+    const rep = thin('w', 'd4 d5 c4');
+    const tip = walkSan(['d4', 'd5', 'c4']).fens.at(-1)!;
+    const end = { path: ['d4', 'd5', 'c4'], fen: tip, nodeId: rep.nodes[Object.keys(rep.nodes).at(-1)!].id, reach: 0 };
+    const row = { ...growthRows([rep], index)[0], holes: [], ends: [end] };
+    expect(firstEnd(row)).toBe(end);
+    const run = startGrowthAtEnd(rep, row, end);
     expect(run.path).toEqual(end.path);
     expect(isUsersTurn(run)).toBe(false);
-    expect(nextHole(index, run)).toBeUndefined();
   });
 });
 

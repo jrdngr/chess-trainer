@@ -18,14 +18,14 @@ const KID = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6';
 
 describe('naming the stored tree', () => {
   it('names it for the side, never for an opening', () => {
-    expect(repertoireName('w')).toBe('White repertoire');
-    expect(repertoireName('b')).toBe('Black repertoire');
+    expect(repertoireName('w')).toBe('White Playbook');
+    expect(repertoireName('b')).toBe('Black Playbook');
   });
 });
 
 describe('deriving openings', () => {
   it('finds nothing in an empty tree', () => {
-    expect(openingsIn(createRepertoire('Black repertoire', 'b', 'e'), index)).toEqual([]);
+    expect(openingsIn(createRepertoire('Black Playbook', 'b', 'e'), index)).toEqual([]);
   });
 
   it('names a Black opening after what Black did, not what White did', () => {

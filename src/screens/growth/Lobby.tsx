@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { sansToMoveText, START_FEN } from '../../chess/core';
 import { AppBar, Icons, Section, Segmented, toast } from '../../components/ui';
 import { SelectionBar } from '../../components/Selection';
 import { openingTree } from '../../model/openingTree';
 import { colorsOf, repertoiresIn } from '../../model/selection';
 import { acrossRegions, isAnyFavorite, regionsBySide, type SideRegion } from '../../model/anyFavorite';
-import { growthRows, optionsAt, reachesOpening, recommended, startsPastBook, unaskedPastBook, type GrowthRow } from '../../model/growth';
-import { useEngineReplies } from '../../engine/engineReplies';
+import { growthRows, optionsAt, reachesOpening, recommended, type GrowthRow } from '../../model/growth';
 import { GROWTH_DEPTHS, SHARE_STEPS, shareLabel } from '../../model/modes';
 import { referenceIndex } from '../../model/referenceIndex';
 import { createRepertoire } from '../../model/repertoire';
@@ -32,8 +31,7 @@ export function Lobby({
   onStart,
   onExit,
 }: {
-  /** `engine`: the row was taken knowing it starts past the book. */
-  onStart: (row: GrowthRow, engine: boolean) => void;
+  onStart: (row: GrowthRow) => void;
   onExit: () => void;
 }) {
   const state = useStore();
@@ -70,13 +68,12 @@ export function Lobby({
     logEvent({
       kind: 'growth-start',
       via: 'growth',
-      rows: rows.map((r) => `${r.name} (${r.holes.length} replies, ${r.ends.length} ends)`),
+      rows: rows.map((r) => `${r.name} (${r.holes.length} replies)`),
       picked: row.name,
       start: how,
     });
-    const engine = startsPastBook(index, row);
-    if (!row.repertoireId.startsWith(STAND_IN)) return onStart(row, engine);
-    onStart({ ...row, repertoireId: ensureRepertoire(row.color) }, engine);
+    if (!row.repertoireId.startsWith(STAND_IN)) return onStart(row);
+    onStart({ ...row, repertoireId: ensureRepertoire(row.color) });
   };
 
   const startOpening = ({ side, node }: SideRegion) => {
@@ -90,22 +87,6 @@ export function Lobby({
   };
 
   const starred = state.settings.favoriteOpenings;
-  /**
-   * Your lines past the book, worked out by the engine in the background: what
-   * the opponent would play there becomes replies to answer, as each position
-   * comes in.
-   */
-  const [asked, setAsked] = useState<string[]>([]);
-  const pending = useEngineReplies(asked);
-  useEffect(() => {
-    const fens = acrossRegions(
-      regions,
-      reps,
-      (rep, node) => unaskedPastBook(rep, index, { minShare: prefs.minShare, maxPly: prefs.maxPly, region: { tree, node } }),
-      (fen) => fen,
-    );
-    setAsked((before) => (fens.length === 0 || fens.every((fen) => before.includes(fen)) ? before : [...before, ...fens]));
-  }, [reps, index, prefs.minShare, prefs.maxPly, tree, regions, pending]);
   const rows = useMemo(
     () =>
       acrossRegions(
@@ -120,9 +101,7 @@ export function Lobby({
           }),
         (row) => row.id,
       ).sort((a, b) => b.score - a.score || a.depth - b.depth || a.name.localeCompare(b.name)),
-    // `pending` counts down as the engine answers, and each answer can add replies.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [reps, index, prefs.minShare, prefs.maxPly, starred, tree, regions, pending],
+    [reps, index, prefs.minShare, prefs.maxPly, starred, tree, regions],
   );
   /**
    * Selected openings a side has no line into and no work on the way to:
@@ -136,8 +115,7 @@ export function Lobby({
         const opts = { minShare: prefs.minShare, maxPly: prefs.maxPly, region: { tree, node } };
         return growthRows([rep], index, opts).length === 0;
       }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [regions, reps, tree, index, prefs.minShare, prefs.maxPly, pending],
+    [regions, reps, tree, index, prefs.minShare, prefs.maxPly],
   );
   const pick = recommended(rows);
 
@@ -154,14 +132,7 @@ export function Lobby({
 
         {pick && (
           <button className="btn primary block xl" onClick={() => start(pick, 'Start button')}>
-            {startsPastBook(index, pick) ? (
-              <>
-                <Icons.engine size={18} />
-                Start with the engine
-              </>
-            ) : (
-              'Start'
-            )}
+            Start
           </button>
         )}
 
@@ -172,7 +143,7 @@ export function Lobby({
         )}
         {unstarted.length > (pick ? 0 : 1) && (
           <>
-            <Section title="Not in your repertoire yet" />
+            <Section title="Not in your Playbook yet" />
             <div className="list">
               {unstarted.slice(pick ? 0 : 1).map((region) => (
                 <button
@@ -220,9 +191,9 @@ export function Lobby({
           hasMoves &&
           unstarted.length === 0 && (
             <div className="empty">
-              <div className="t">{pending > 0 ? 'Looking past the book…' : 'Nothing to extend'}</div>
+              <div className="t">Nothing to extend</div>
               <div className="h">
-                {`Your repertoire meets every reply strong players choose in ${prefs.minShare}% of games or more${isAnyFavorite(selection) ? ' in your favorites' : regions[0] && regions[0].node.depth > 0 ? ` in ${regions[0].node.name}` : ''}, down to ${Math.ceil(prefs.maxPly / 2)} moves. Lower the threshold below, or widen the opening, to keep going.`}
+                {`Your Playbook meets every reply strong players choose in ${prefs.minShare}% of games or more${isAnyFavorite(selection) ? ' in your favorites' : regions[0] && regions[0].node.depth > 0 ? ` in ${regions[0].node.name}` : ''}, down to ${Math.ceil(prefs.maxPly / 2)} moves. Lower the threshold below, or widen the opening, to keep going.`}
               </div>
             </div>
           )
@@ -238,11 +209,6 @@ export function Lobby({
                       {row.starred && (
                         <span style={{ color: 'var(--accent)', marginRight: 5 }}>
                           <Icons.star size={12} filled />
-                        </span>
-                      )}
-                      {startsPastBook(index, row) && (
-                        <span style={{ color: 'var(--text-3)', marginRight: 5 }}>
-                          <Icons.engine size={12} />
                         </span>
                       )}
                       {row.name}
@@ -323,13 +289,12 @@ export function Lobby({
   );
 }
 
-/** What a row holds: replies to answer, and lines past the book the engine can extend. */
+/** What a row holds: replies to answer. */
 function rowMeta(row: GrowthRow): string {
   const parts: string[] = [];
   if (row.holes.length) {
     parts.push(`${row.holes.length === 1 ? '1 reply' : `${row.holes.length} replies`} unanswered`);
   }
-  if (row.ends.length) parts.push(row.ends.length === 1 ? '1 line past the book' : `${row.ends.length} lines past the book`);
   // The book's own share, not the floor a kept reply is ranked at.
   const top = Math.max(0, ...row.holes.map((hole) => hole.share));
   if (top > 0) parts.push(`up to ${top}% of strong players' games`);

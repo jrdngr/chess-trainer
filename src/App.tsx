@@ -192,7 +192,7 @@ export default function App() {
               icon={<Icons.home filled={tab === 'home'} />}
             />
             <NavButton
-              label="Repertoire"
+              label="Playbook"
               active={tab === 'repertoire'}
               onClick={() => setTab('repertoire')}
               icon={<Icons.tree filled={tab === 'repertoire'} />}

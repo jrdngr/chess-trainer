@@ -323,7 +323,7 @@ function GameReview({
               </div>
               {finding.expected.length > 0 && (
                 <div className="list-row kv">
-                  <span className="k">Repertoire</span>
+                  <span className="k">Playbook</span>
                   <span className="v" style={{ color: 'var(--good)' }}>{finding.expected.join(', ')}</span>
                 </div>
               )}
@@ -354,7 +354,7 @@ function GameReview({
         onClose={() => setAddSans(null)}
         sans={addSans ?? []}
         source="import"
-        title="Add to repertoire"
+        title="Add to Playbook"
       />
     </>
   );

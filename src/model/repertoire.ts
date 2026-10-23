@@ -375,7 +375,7 @@ export function subtreeIds(rep: Repertoire, nodeId: string): string[] {
  * has to say which side it is for.
  */
 export function repertoireName(color: Color): string {
-  return color === 'w' ? 'White repertoire' : 'Black repertoire';
+  return color === 'w' ? 'White Playbook' : 'Black Playbook';
 }
 
 /**

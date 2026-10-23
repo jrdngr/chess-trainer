@@ -75,7 +75,6 @@ export function End({
   moved,
   grow,
   growLine,
-  growEngine,
   prep,
   nextLabel,
   prefs,
@@ -92,11 +91,9 @@ export function End({
   /** The ratings this run moved that the end screen names: favorites and the run's own opening. */
   moved: RatingChange[];
   /** The offer to grow the opening, on a clean end of prep with every line held. */
-  grow: { text: string; engine: boolean; onGrow: () => void } | null;
+  grow: { text: string; onGrow: () => void } | null;
   /** Grow the line just finished, from where your prep ran out. */
   growLine: (() => void) | null;
-  /** Growing this line starts past the book, with the engine. */
-  growEngine: boolean;
   /** How the run went on your prep, found and how fast — Autopilot's; null to leave it out. */
   prep?: string | null;
   /** Autopilot's name for the run, the opening, in place of "Survival" and the selection. */
@@ -311,8 +308,8 @@ export function End({
           <div className="card grow-offer">
             <span className="grow small">{grow.text}</span>
             <button className="btn accent sm" onClick={grow.onGrow}>
-              {grow.engine ? <Icons.engine size={16} /> : <Icons.plus size={16} />}
-              {grow.engine ? 'Grow it with the engine' : 'Grow it'}
+              <Icons.plus size={16} />
+              Grow it
             </button>
           </div>
         )}
@@ -421,8 +418,8 @@ export function End({
         )}
         {growLine && (
           <button className="btn plain block mt-8" onClick={growLine}>
-            {growEngine ? <Icons.engine size={18} /> : <Icons.plus size={18} />}
-            {growEngine ? 'Grow this line with the engine' : 'Grow this line'}
+            <Icons.plus size={18} />
+            Grow this line
           </button>
         )}
         </div>

@@ -80,7 +80,7 @@ export function Setup({
             : items.length === 1
               ? '1 position'
               : `${items.length} positions`}{' '}
-          in {isAnyFavorite(selection) ? 'your favorites' : regions[0].node.depth === 0 ? 'your repertoire' : regions[0].node.name}
+          in {isAnyFavorite(selection) ? 'your favorites' : regions[0].node.depth === 0 ? 'your Playbook' : regions[0].node.name}
           {lineMode && due > 0 ? ` · ${due} due` : ''}
         </div>
 

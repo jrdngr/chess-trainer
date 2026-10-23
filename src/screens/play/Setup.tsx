@@ -38,7 +38,7 @@ export function Setup({
         <div className="list">
           <Toggle
             label="Save the opening"
-            hint={`Write the first ${OPENING_PLIES / 2} moves into your repertoire when the game ends`}
+            hint={`Write the first ${OPENING_PLIES / 2} moves into your Playbook when the game ends`}
             on={prefs.save}
             onToggle={() => set({ save: !prefs.save })}
           />

@@ -25,7 +25,6 @@ import { referenceIndex } from '../../model/referenceIndex';
 import { evidenceFor } from '../../model/growth';
 import { nodeStats, ratedNodes, seenIn, type MoveResult } from '../../model/scoring';
 import { growOfferAt, offerOpening, type GrowOffer } from '../../model/growOffer';
-import { startsPastBook } from '../../model/growth';
 import type { Selection } from '../../model/selection';
 import { useRatingTracker } from '../../components/Ratings';
 import { useHeaderRating } from '../../components/ScoreBar';
@@ -37,6 +36,8 @@ import {
   comboMultiplier,
   firstMission,
   glowFor,
+  inTheBook,
+  isBookMove,
   judgedExtras,
   missionText,
   missionTitle,
@@ -77,10 +78,11 @@ const RATING_LINGER_MS = 1700;
  */
 type PrepStatus = 'on' | 'complete' | 'off';
 
-const PREP_STATUS: Record<PrepStatus, { text: string; color: string }> = {
+const PREP_STATUS: Record<PrepStatus | 'book', { text: string; color: string }> = {
   on: { text: 'On prep', color: 'var(--warn)' },
   complete: { text: 'Prep complete', color: 'var(--good)' },
   off: { text: 'Off prep', color: 'var(--bad)' },
+  book: { text: 'In the book', color: 'var(--book)' },
 };
 
 /** How long a miss stays over the board before the game goes on. */
@@ -128,6 +130,8 @@ interface ScorePop {
   tone: ScoreTone;
   /** A prepared move found: the tick goes in front of its time. */
   found?: boolean;
+  /** A book move past your prep: the tick and "Book" in the book's color. */
+  book?: boolean;
 }
 
 /**
@@ -234,6 +238,17 @@ export function SurvivalScreen({
   const [prepStatus, setPrepStatus] = useState<PrepStatus>('on');
   /** Whether your prep has answered anything yet this run: with nothing prepared, there is no status to show. */
   const [prepSeen, setPrepSeen] = useState(false);
+  /**
+   * The book phase, once a clean prep runs out: the ply count it has reached
+   * (null before it begins), and whether it is over — at your first move that
+   * is not a book move, or where the book has nothing. See `BOOK_SHARE`.
+   */
+  const [bookTo, setBookTo] = useState<number | null>(null);
+  const [bookOver, setBookOver] = useState(false);
+  /** Book moves played this run, for the end screen. */
+  const bookMovesPlayed = useRef(0);
+  /** How long your move took, kept from the moment you played it while the engine judges it. */
+  const judgedSeconds = useRef(0);
   /** The engine's last word on the game, White's side, for the glow. */
   const [evalCp, setEvalCp] = useState<number | null>(null);
   /** The engine's score after your last scored move, White's side: where the next popup counts from. */
@@ -266,10 +281,11 @@ export function SurvivalScreen({
     const now = game.state.run;
     if (prepStatus !== 'off') {
       const total = prepDepth(fullLine(game.source, now), now.color, (fen) => game.source.prepAt(fen), now.opened);
-      spanHeld.current = { played: Math.min(now.played.length, total), total };
+      const book = prepStatus === 'complete' && bookTo !== null ? Math.max(0, bookTo - total) : 0;
+      spanHeld.current = { played: Math.min(now.played.length, total), total, ...(book ? { book } : {}) };
     }
     return spanHeld.current;
-  }, [plan, game, prepStatus]);
+  }, [plan, game, prepStatus, bookTo]);
   /**
    * Each run is announced, and one started inside an opening has its way in
    * played out first. A run from move one is named by the opening it is
@@ -419,13 +435,25 @@ export function SurvivalScreen({
         finish(game.state, { kind: 'blunder', played: judged.san, best: judged.best, lost: judged.lost });
         return;
       }
+      // Past a clean prep, still in the book: a move strong players play is a
+      // good opening move, prepared or not. Anything else ends the phase.
+      const bookPhase = !expected.length && prepStatus === 'complete' && !bookOver;
+      const book = bookPhase && isBookMove(index, run.fen, judged.san, judged.lost);
+      if (bookPhase && !book) setBookOver(true);
+      if (book) {
+        setBookTo(run.played.length + 1);
+        bookMovesPlayed.current += 1;
+      }
       buzz(expected.length ? 14 : 10);
       setEvalCp(judged.after);
       const swing = evalSwing(run.color, lastScored.current ?? judged.before, judged.after);
       lastScored.current = judged.after;
       const score = prefs.moveScores && swing !== null ? moveScore(swing) : null;
-      const landed = score ? applySan(run.fen, judged.san) : null;
-      if (score && landed) {
+      const landed = applySan(run.fen, judged.san);
+      if (book && plan && landed) {
+        const seconds = judgedSeconds.current;
+        setPop({ key: Date.now(), square: landed.to, text: secondsText(seconds), tone: speedTone(seconds), found: true, book: true });
+      } else if (score && landed) {
         setPop({ key: Date.now(), square: landed.to, text: score.cp > 0 ? `+${score.cp}` : `−${-score.cp}`, tone: score.tone });
       }
       if (expected.length) {
@@ -433,8 +461,9 @@ export function SurvivalScreen({
         if (right) setMiss({ expected: expected[0], from: right.from, to: right.to });
       }
       // Moments are a thing past your prep; a prepared position is the prep's to judge.
+      // A book move keeps the combo going whatever the engine's own preference.
       const scored = judgedExtras(game.state.extras, prefs, run.color, {
-        lost: judged.lost,
+        lost: book ? 0 : judged.lost,
         after: judged.after,
         moment: judged.moment && !expected.length,
         found: judged.found,
@@ -546,10 +575,19 @@ export function SurvivalScreen({
   useEffect(() => {
     if (!prepRanOut || prepStatus !== 'on') return;
     setPrepStatus('complete');
+    if (run && inTheBook(index, run.fen)) setBookTo(run.played.length);
+    else setBookOver(true);
     // Only a line your prep actually asked you something on is finished.
     if (prepSeen && run && !game?.state.misses.length) prepEnd.current = run.played;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prepRanOut]);
+
+  // The book phase ends where the book has nothing more to say, whoever left it.
+  const bookRanOut = live && myTurn && prepStatus === 'complete' && bookTo !== null && !bookOver && !inTheBook(index, run.fen);
+  useEffect(() => {
+    if (bookRanOut) setBookOver(true);
+  }, [bookRanOut]);
+  const inBook = prepStatus === 'complete' && bookTo !== null && !bookOver;
 
   // The engine's score for the position in front of you steers the glow.
   const baselineCp = judge.baseline && run && judge.baseline.fen === run.fen ? judge.baseline.cp : null;
@@ -629,6 +667,9 @@ export function SurvivalScreen({
     ratings.reset();
     answers.current = [];
     prepTimes.current = [];
+    bookMovesPlayed.current = 0;
+    setBookTo(null);
+    setBookOver(false);
     setGrowOffer(null);
     judge.reset();
     setPrefs(chosen);
@@ -660,8 +701,6 @@ export function SurvivalScreen({
   }
 
   const next = onNext ?? (() => start(prefs));
-  /** The grow offer starts past the book, so its button says the engine comes with it. */
-  const growEngine = !!growOffer && startsPastBook(index, growOffer.launch.row, growOffer.launch.hole);
 
   if (phase === 'growing' && growOffer) {
     const { launch } = growOffer;
@@ -681,7 +720,6 @@ export function SurvivalScreen({
           pointBack: growOffer.kind === 'line' ? 'batch' : 'cap',
           widened: launch.widened,
           next: onNext,
-          engine: growEngine,
         }}
       />
     );
@@ -702,15 +740,15 @@ export function SurvivalScreen({
         ending={ending}
         before={before}
         moved={shown}
-        grow={growOffer?.kind === 'opening' ? { text: growOffer.text, engine: growEngine, onGrow: () => setPhase('growing') } : null}
+        grow={growOffer?.kind === 'opening' ? { text: growOffer.text, onGrow: () => setPhase('growing') } : null}
         growLine={growOffer?.kind === 'line' ? () => setPhase('growing') : null}
-        growEngine={growEngine}
         prep={
           plan
             ? prepSummary(
                 answers.current.filter((answer) => answer.correct).length,
                 answers.current.length,
                 prepTimes.current,
+                bookMovesPlayed.current,
               )
             : null
         }
@@ -756,6 +794,7 @@ export function SurvivalScreen({
       afterMove({ ...game, state: playYours(game.state, move.san) });
       return;
     }
+    judgedSeconds.current = clock.elapsedNow();
     judge.submit(run.fen, move);
   };
   commitRef.current = commit;
@@ -873,10 +912,16 @@ export function SurvivalScreen({
             )}
             {judge.pending ? 'Judging' : thinking || engineTurn || !myTurn ? 'Reply' : 'Your move'}
           </div>
-          {(prepSeen || prepStatus === 'off' || (prepStatus === 'on' && prepHere(game.source, game.state).length > 0)) && (
-            <div className="ctx" style={{ color: PREP_STATUS[prepStatus].color, fontWeight: 600 }}>
-              {PREP_STATUS[prepStatus].text}
+          {inBook ? (
+            <div className="ctx" style={{ color: PREP_STATUS.book.color, fontWeight: 600 }}>
+              {PREP_STATUS.book.text}
             </div>
+          ) : (
+            (prepSeen || prepStatus === 'off' || (prepStatus === 'on' && prepHere(game.source, game.state).length > 0)) && (
+              <div className="ctx" style={{ color: PREP_STATUS[prepStatus].color, fontWeight: 600 }}>
+                {PREP_STATUS[prepStatus].text}
+              </div>
+            )
           )}
           {momentHere && (
             <div className="ctx" style={{ color: 'var(--accent)', fontWeight: 600 }}>
@@ -946,7 +991,8 @@ function MoveScore({ pop, orientation }: { pop: ScorePop; orientation: 'w' | 'b'
   return (
     <div className={`move-score ${pop.tone}`} style={{ left: `${col * 12.5}%`, top: `${row * 12.5}%` }}>
       <span>
-        {pop.found && <b className="tick">✓</b>}
+        {pop.found && <b className={`tick${pop.book ? ' book' : ''}`}>✓</b>}
+        {pop.book && <b className="book-word">Book</b>}
         {pop.text}
       </span>
     </div>

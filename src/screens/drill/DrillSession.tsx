@@ -497,7 +497,7 @@ export function DrillSession({
             </div>
             <div className="compare mt-8">
               <div className="good">
-                <div className="k">Repertoire</div>
+                <div className="k">Playbook</div>
                 <div className="v">{answer?.preferred?.san}</div>
               </div>
               <div className="bad">
@@ -685,7 +685,7 @@ export function WhySheet({
           <div className="v">{score(found.played) ?? '…'}</div>
         </div>
         <div className="good">
-          <div className="k">{expectedSan ?? 'Repertoire'}</div>
+          <div className="k">{expectedSan ?? 'Playbook'}</div>
           <div className="v">{expected ? (score(found.best) ?? '…') : '—'}</div>
         </div>
       </div>

@@ -276,7 +276,7 @@ function Game({
     const { added } = addLine(repId, line, 'play');
     setSaved(true);
     const named = specificNameForColor(index, line, color)?.name;
-    if (added === 0) toast('Already in your repertoire');
+    if (added === 0) toast('Already in your Playbook');
     else toast(named ? `${added} moves saved to ${named}` : `${added} moves saved`);
   };
 

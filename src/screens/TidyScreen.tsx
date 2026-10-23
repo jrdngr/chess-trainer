@@ -185,7 +185,7 @@ export function TidyScreen({
   };
 
   const region = regions[0]?.node ?? tree.root;
-  const where = isAnyFavorite(selection) ? 'your favorites' : region.depth === 0 ? 'your repertoire' : `the ${region.name}`;
+  const where = isAnyFavorite(selection) ? 'your favorites' : region.depth === 0 ? 'your Playbook' : `the ${region.name}`;
 
   return (
     <>

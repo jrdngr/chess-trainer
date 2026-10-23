@@ -259,12 +259,18 @@ describe('growing a line that ends on your own move', () => {
     expect(endAtEnd(white, played, played.length)).toBeNull();
   });
 
-  it('launches Growth on that end rather than finding nothing', () => {
+  it('does not launch Growth on that end, since the book has nothing there', () => {
     const tree = openingTree(index);
-    const launch = growLaunch(white, index, tree, nodeById(tree, 'd4 d5 c4'), played, { maxPly: Infinity })!;
+    const launch = growLaunch(white, index, tree, nodeById(tree, 'd4 d5 c4'), played, { maxPly: Infinity });
+    expect(launch?.row.ends ?? []).toEqual([]);
+  });
+
+  it('launches Growth on an end the book still has replies at', () => {
+    const tree = openingTree(index);
+    const short = rep('w', 'd4 d5 c4');
+    const launch = growLaunch(short, index, tree, nodeById(tree, 'd4 d5 c4'), ['d4', 'd5', 'c4'], { maxPly: Infinity })!;
     expect(launch).not.toBeNull();
-    expect(launch.hole).toBeNull();
-    expect(launch.row.ends.map((end) => end.path.join(' '))).toEqual([line]);
+    expect(launch.row.ends.map((end) => end.path.join(' '))).toEqual(['d4 d5 c4']);
   });
 });
 

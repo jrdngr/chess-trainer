@@ -81,11 +81,6 @@ export interface GrowthLaunch {
    * hands the session back to Autopilot.
    */
   next?: () => void;
-  /**
-   * The button that opened it said it starts past the book, with the engine:
-   * that tap was the choice, so the run goes straight on past the edge.
-   */
-  engine?: boolean;
 }
 
 export interface GrowthScreenProps {
@@ -107,12 +102,8 @@ export function GrowthScreen({ onExit, launch, onPractice, onAnalyze }: GrowthSc
    * on the same row is a run of its own, not the last one carrying on.
    */
   const [started, setStarted] = useState(0);
-  /** The run was started knowing it begins past the book. */
-  const [engine, setEngine] = useState(!!launch?.engine);
-
-  const start = (next: GrowthRow, withEngine = false) => {
+  const start = (next: GrowthRow) => {
     setRow(next);
-    setEngine(withEngine);
     setStarted((n) => n + 1);
   };
 
@@ -129,7 +120,6 @@ export function GrowthScreen({ onExit, launch, onPractice, onAnalyze }: GrowthSc
       widened={launch?.widened ?? null}
       onPractice={launch ? undefined : onPractice}
       nextRound={launch?.next}
-      engineChosen={engine}
       onAgain={start}
       onAnalyze={onAnalyze}
       onExit={launch ? launch.onBack : () => setRow(null)}
@@ -149,7 +139,6 @@ function Run({
   widened,
   onPractice,
   nextRound,
-  engineChosen,
   onAgain,
   onAnalyze,
   onExit,
@@ -170,8 +159,6 @@ function Run({
   onPractice?: (scope: Selection) => void;
   /** Autopilot's next round, in place of New run. */
   nextRound?: () => void;
-  /** Started knowing it begins past the book: no stop at the edge. */
-  engineChosen: boolean;
   /** Start another run, on the row this one's work leaves most worth doing. */
   onAgain: (row: GrowthRow) => void;
   /** Leave for the Analysis tab on this line, seen from this side. */
@@ -196,7 +183,7 @@ function Run({
   const [tree] = useState(() => rep);
   /** Where the run starts: the hole it was handed, or the one the row most wants answered. */
   const [start] = useState(() => hole ?? firstHole(index, row));
-  /** A row with only lines past the book starts at the tip of one, for the engine to reply. */
+  /** A launch at the end of your line starts at its tip, for the book to reply. */
   const [end] = useState(() => (start ? null : firstEnd(row)));
   const [run, setRun] = useState<GrowthRun>(() =>
     start ? startGrowthAt(tree, row, start) : end ? startGrowthAtEnd(tree, row, end) : startGrowth(tree, row),
@@ -231,13 +218,9 @@ function Run({
   const prefs = useModePrefs().growth;
 
   /**
-   * Past the book only the engine has moves, and lines grow fast there: three
-   * of its replies to every one of yours. So the run never crosses that edge
-   * on its own. It stops where the book ends, and going on is a tap on the
-   * reveal — or the button that started the run already said so.
+   * Growth stops where the book does: your lines end with the book, and past
+   * it a run is real chess rather than more to memorize.
    */
-  const [engineOn, setEngineOn] = useState(engineChosen);
-  /** The run stopped at the book's edge, and the reveal offers to go on with the engine. */
   const [edge, setEdge] = useState(false);
   /** "End of the book", flashed over the board when the run stops there. */
   const [flash, setFlash] = useState(false);
@@ -596,31 +579,22 @@ function Run({
     return () => clearTimeout(timer);
   }, [phase, run, index, thinkingFor]);
 
-  /** Standing past the book without having chosen to go there: stop, and say so. */
+  /** Standing past the book: stop, and say so. */
   useEffect(() => {
-    if (engineOn || intro.held) return;
+    if (intro.held) return;
     if (phase !== 'hole' && phase !== 'answered') return;
     if (!pastTheBook(index, run.fen)) return;
     setAnswer(null);
     setEdge(true);
     setFlash(true);
     setPhase('done');
-  }, [engineOn, intro.held, phase, run.fen, index]);
+  }, [intro.held, phase, run.fen, index]);
 
   useEffect(() => {
     if (!flash) return;
     const timer = setTimeout(() => setFlash(false), 2000);
     return () => clearTimeout(timer);
   }, [flash]);
-
-  /** Past the book with the engine, from the reveal at the edge. */
-  const keepGoing = () => {
-    setEngineOn(true);
-    setEdge(false);
-    setFlash(false);
-    logEvent({ kind: 'growth-past-book', via: 'growth', color: run.color, line: run.path.join(' ') });
-    addMore();
-  };
 
   const addedSans = added.map((ply) => run.path[ply]).filter(Boolean);
 
@@ -841,7 +815,7 @@ function Run({
             </div>
             <div className="compare mt-8">
               <div className="good">
-                <div className="k">Repertoire</div>
+                <div className="k">Playbook</div>
                 <div className="v">{expected.map((e) => e.san).join(' / ') || '—'}</div>
               </div>
               <div className="bad">
@@ -862,7 +836,7 @@ function Run({
               {run.hole && (
                 <div className="ctx">
                   {run.hole.kept
-                    ? 'In your repertoire, with no answer yet'
+                    ? 'In your Playbook, with no answer yet'
                     : run.hole.engine
                       ? "Engine's pick · past the book"
                       : `${run.hole.share}% of strong players' games · ${formatGameCount(run.hole.games)}`}
@@ -951,13 +925,13 @@ function Run({
             {!more && (
               <div className="card small muted mt-8">There are no moves left to answer here.</div>
             )}
-            {more && (
-              <button className="btn block mt-12" onClick={edge ? keepGoing : addMore}>
-                {edge ? <Icons.engine size={18} /> : <Icons.plus size={18} />}
-                {edge ? 'Keep going with the engine' : 'Add more moves'}
+            {more && !edge && (
+              <button className="btn block mt-12" onClick={addMore}>
+                <Icons.plus size={18} />
+                Add more moves
               </button>
             )}
-            <button className={`btn block ${more ? 'mt-8' : 'mt-12'}`} onClick={() => setPlayFrom(run.fen)}>
+            <button className={`btn block ${more && !edge ? 'mt-8' : 'mt-12'}`} onClick={() => setPlayFrom(run.fen)}>
               <Icons.play size={18} />
               Play from here
             </button>

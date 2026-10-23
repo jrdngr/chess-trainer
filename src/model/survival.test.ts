@@ -5,6 +5,10 @@ import { addLine, createRepertoire } from './repertoire';
 import { referenceIndex } from './referenceIndex';
 import { mulberry32 } from './session';
 import {
+  bookMoves,
+  inTheBook,
+  isBookMove,
+  SCORE_SLIGHT,
   bookReply,
   prepSummary,
   secondsText,
@@ -366,5 +370,39 @@ describe("Autopilot's prep speed", () => {
     expect(prepSummary(3, 4, [1, 2, 6])).toBe('Prep 3 of 4 · 3.0s average · 2 fast');
     expect(prepSummary(0, 2, [])).toBe('Prep 0 of 2');
     expect(prepSummary(0, 0, [])).toBeNull();
+  });
+});
+
+describe('the book phase', () => {
+  const qg = walkSan(['d4', 'd5', 'c4']).fens.at(-1)!;
+
+  it('takes the moves strong players play, most played first', () => {
+    const moves = bookMoves(index, qg);
+    expect(moves.length).toBeGreaterThan(1);
+    expect(moves).toContain('e6');
+    expect(moves).toContain('c6');
+  });
+
+  it('leaves out a legal move the book has no games of', () => {
+    expect(bookMoves(index, qg)).not.toContain('a5');
+  });
+
+  it('passes a book move only when the engine does not call it a mistake', () => {
+    expect(isBookMove(index, qg, 'e6', 0)).toBe(true);
+    expect(isBookMove(index, qg, 'e6', SCORE_SLIGHT)).toBe(true);
+    expect(isBookMove(index, qg, 'e6', SCORE_SLIGHT + 1)).toBe(false);
+    expect(isBookMove(index, qg, 'a5', 0)).toBe(false);
+  });
+
+  it('ends where the book has nothing', () => {
+    expect(inTheBook(index, qg)).toBe(true);
+    const silly = walkSan(['a4', 'h5', 'Ra3', 'Rh6', 'Rg3', 'Ra6']).fens.at(-1)!;
+    expect(inTheBook(index, silly)).toBe(false);
+    expect(bookMoves(index, silly)).toEqual([]);
+  });
+
+  it('counts book moves on the end screen', () => {
+    expect(prepSummary(2, 2, [1, 2], 3)).toBe('Prep 2 of 2 · 1.5s average · 2 fast · 3 book moves');
+    expect(prepSummary(0, 0, [], 1)).toBe('1 book move');
   });
 });

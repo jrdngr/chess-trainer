@@ -248,7 +248,7 @@ export function BrowsePicker({ onClose, onBack }: { onClose: () => void; onBack?
             <button key={move.san} className="bp-move" onClick={() => play(move.san)}>
               <span className="bp-san">{move.label}</span>
               <span className="bp-move-name">{move.name}</span>
-              {move.mine && <i className="bp-mine" aria-label="In your repertoire" />}
+              {move.mine && <i className="bp-mine" aria-label="In your Playbook" />}
               <span className="bp-share">{Math.round(move.share)}%</span>
             </button>
           ))}

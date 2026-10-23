@@ -390,7 +390,7 @@ export function LineDrill({ color, openingId, count, budget, lean, only, prefs, 
             </div>
             <div className="compare mt-8">
               <div className="good">
-                <div className="k">Repertoire</div>
+                <div className="k">Playbook</div>
                 <div className="v">{expected}</div>
               </div>
               <div className="bad">

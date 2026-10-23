@@ -27,7 +27,7 @@ export function AddLineSheet({
   open,
   onClose,
   sans,
-  title = 'Add to repertoire',
+  title = 'Add to Playbook',
   source = 'book',
   preferColor,
   note,
@@ -88,7 +88,7 @@ export function AddLineSheet({
       if (tip) annotate(target.id, tip.id, note);
     }
     onAdded?.(target.id, res.added);
-    toast(res.added > 0 ? `${res.added} added` : 'Already in your repertoire');
+    toast(res.added > 0 ? `${res.added} added` : 'Already in your Playbook');
     onClose();
   };
 
