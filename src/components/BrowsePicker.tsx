@@ -80,12 +80,12 @@ export function BrowsePicker({
     selection.opening === ANY_FAVORITE ? [] : nodeById(tree, selection.opening).sans,
   );
   /**
-   * The side the line is played from. Playing moves never changes it: only
-   * the side square, or tapping a named opening in a list, does. It starts on
-   * the selection's side, or White.
+   * The side the line is played from, and the side the board is seen from:
+   * flipping the board is choosing the other side. Playing moves never
+   * changes it; the side square, the flip button or tapping a named opening
+   * in a list does. It starts on the selection's side, or White.
    */
-  const [sideSet, setSide] = useState<Color | null>(() => (selection.color === 'b' ? 'b' : selection.color === 'w' ? 'w' : null));
-  const [flipped, setFlipped] = useState(false);
+  const [sideSet, setSide] = useState<Color>(() => (selection.color === 'b' ? 'b' : 'w'));
   const [chip, setChip] = useState<Chip | null>(null);
   const [trail, setTrail] = useState<{ label: string; items: () => BrowseItem[] }[]>([]);
   const [filter, setFilter] = useState<SideFilter>('both');
@@ -98,9 +98,9 @@ export function BrowsePicker({
   const fen = fens[fens.length - 1] ?? START_FEN;
   const node = moves.length ? nodeAt(tree, moves) : null;
   const exact = node && node.depth > 0 && !node.custom ? node : null;
-  const side: Color | null = moves.length ? (sideSet ?? 'w') : null;
-  const viewSide: Color = side ?? (selection.color === 'b' ? 'b' : 'w');
-  const orientation: Color = flipped ? (viewSide === 'w' ? 'b' : 'w') : viewSide;
+  const side: Color | null = moves.length ? sideSet : null;
+  const orientation: Color = sideSet;
+  const swapSide = () => setSide(sideSet === 'w' ? 'b' : 'w');
 
   const stars = new Set(favorites);
   const stats = exact ? score.nodes[exact.id] : undefined;
@@ -324,7 +324,7 @@ export function BrowsePicker({
         <IconButton label="Undo" onClick={undo} disabled={!moves.length}>
           <Icons.undo size={20} />
         </IconButton>
-        <IconButton label="Flip board" onClick={() => setFlipped(!flipped)}>
+        <IconButton label="Flip board" onClick={swapSide}>
           <Icons.flip size={20} />
         </IconButton>
         <IconButton
@@ -359,13 +359,12 @@ export function BrowsePicker({
         <button
           className="bp-side"
           aria-label="Side"
-          disabled={!moves.length}
-          onClick={() => setSide(viewSide === 'w' ? 'b' : 'w')}
+          onClick={swapSide}
         >
-          <ColorSquare choice={side ?? selection.color} size={16} />
+          <ColorSquare choice={sideSet} size={16} />
         </button>
         <span className="bp-name">
-          <b className="truncate">{lineName(tree, catalog, moves)}</b>
+          <b className="name-wrap">{lineName(tree, catalog, moves)}</b>
           <span className="truncate">{moves.length ? moveText(moves) : 'Every line'}</span>
         </span>
         {rank?.held && (
