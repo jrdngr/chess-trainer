@@ -50,7 +50,7 @@ describe("Autopilot's settings", () => {
     });
     expect(autopilotModes({ moveScores: false, boardGlow: false, modeTesting: false }).survival).toMatchObject({ moveScores: false, boardGlow: false });
     expect(AUTO_DRILL).toMatchObject({ clock: 'off', explain: true, followLine: true, newPerSession: 8, batchSimilar: true });
-    expect(AUTO_GROWTH).toEqual({ minShare: 1, maxPly: 18, nudgePriority: 'transposition', nudgePawns: false });
+    expect(AUTO_GROWTH).toEqual({ minShare: 1, maxPly: 18, nudgePriority: 'transposition', nudgePawns: false, pastBook: false });
   });
 
   it('are saved apart from the modes, and come back for an older save', () => {

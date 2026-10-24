@@ -14,10 +14,20 @@ import { positionKey } from '../chess/core';
  * see `src/engine/engineReplies.ts`. Kept for the page's lifetime.
  */
 
-/** How many moves the engine offers past the book, for either side. */
-export const ENGINE_REPLIES = 3;
+/** How many moves the engine is asked for past the book. */
+export const ENGINE_REPLIES = 4;
+/** How many of them the opponent is prepared for: their replies past the book. */
+export const ENGINE_THEIR_REPLIES = 2;
+/**
+ * How close to the engine's best a move of yours must be to be offered past
+ * the book, in centipawns: a line grown there should be one a strong player
+ * would play, not merely one that survives.
+ */
+export const NEAR_BEST = 20;
 
 const known = new Map<string, string[]>();
+/** What each of those moves gives away against the best, by position and move. */
+const losses = new Map<string, Map<string, number>>();
 const listeners = new Set<() => void>();
 
 /** The engine's moves here, best first; undefined when it has not been asked yet. */
@@ -25,9 +35,20 @@ export function engineReplies(fen: string): string[] | undefined {
   return known.get(positionKey(fen));
 }
 
-/** Record the engine's moves for a position. An empty list means there are none. */
-export function rememberEngineReplies(fen: string, sans: string[]): void {
-  known.set(positionKey(fen), sans.slice(0, ENGINE_REPLIES));
+/** What a remembered move gives away against the engine's best; undefined when unknown. */
+export function engineLoss(fen: string, san: string): number | undefined {
+  return losses.get(positionKey(fen))?.get(san);
+}
+
+/**
+ * Record the engine's moves for a position, best first, with what each gives
+ * away against the best when the search said. An empty list means there are
+ * none.
+ */
+export function rememberEngineReplies(fen: string, sans: string[], lost?: number[]): void {
+  const kept = sans.slice(0, ENGINE_REPLIES);
+  known.set(positionKey(fen), kept);
+  if (lost) losses.set(positionKey(fen), new Map(kept.map((san, i) => [san, lost[i] ?? 0])));
   for (const listen of listeners) listen();
 }
 
@@ -42,4 +63,5 @@ export function onEngineReplies(listen: () => void): () => void {
 /** Forget everything — for tests. */
 export function clearEngineReplies(): void {
   known.clear();
+  losses.clear();
 }

@@ -41,6 +41,8 @@ export const AUTO_GROWTH: GrowthPrefs = {
   maxPly: 18,
   nudgePriority: 'transposition',
   nudgePawns: false,
+  // Autopilot never grows past the book.
+  pastBook: false,
 };
 
 /** Survival rounds: Autopilot steers, there is no clock, the feedback is yours. */

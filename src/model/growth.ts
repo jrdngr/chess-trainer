@@ -10,7 +10,7 @@ import {
 import { lineInRegion } from './selection';
 import { ancestorsOf, descendantsOf, lineStatus, regionOf, type OpeningNode, type OpeningTree } from './openingTree';
 import { childrenOf, fenAt } from './repertoire';
-import { engineReplies } from './engineReplies';
+import { ENGINE_THEIR_REPLIES, engineLoss, engineReplies, NEAR_BEST } from './engineReplies';
 import { PREPARED_FLOOR, withFloor } from './prepFloor';
 import type { ExplorerMove, RepMove, Repertoire } from './types';
 
@@ -96,6 +96,12 @@ export interface GrowthOptions {
    * openings the selection covers — see `openingsInSelection`.
    */
   region?: { tree: OpeningTree; node: OpeningNode };
+  /**
+   * Grow past the book: holes where the book has nothing are offered, with
+   * the engine's top replies as what they play. Off, Growth stops where the
+   * book does.
+   */
+  pastBook?: boolean;
 }
 
 /**
@@ -205,7 +211,10 @@ function walkChoices(
       if (!seen.has(key)) {
         seen.add(key);
         const bookless = popularReplies(index, fen, 0).length === 0;
-        const replies: Reply[] = bookless ? engineAsReplies(fen) : popularReplies(index, fen, minShare);
+        // Past the book they are prepared for the engine's top replies, no more.
+        const replies: Reply[] = bookless
+          ? engineAsReplies(fen).slice(0, ENGINE_THEIR_REPLIES)
+          : popularReplies(index, fen, minShare);
         const answered = kids.filter(
           (kid) => childrenOf(rep, kid.id).length > 0 || preparedAt.has(positionKey(kid.fenAfter)),
         );
@@ -637,10 +646,11 @@ export function growthRows(
       row.starred = row.starred || isStarred(starred, line);
       return row;
     };
-    // Growth stops where the book does: your lines end with the book, and
-    // past it the run is real chess, not more to memorize.
+    // Growth stops where the book does unless asked to go past it: your
+    // lines end with the book, and past it the run is real chess, not more
+    // to memorize.
     for (const hole of findHoles(rep, index, opts)) {
-      if (holePastBook(index, hole)) continue;
+      if (!opts.pastBook && holePastBook(index, hole)) continue;
       const row = rowFor([...hole.path, hole.san], moveLabel(hole), hole.path.length);
       row.holes.push(hole);
       row.topShare = Math.max(row.topShare, holeShare(hole));
@@ -955,13 +965,29 @@ export function optionsAt(
 
 /**
  * What a run offers you at a hole: the book's moves, or past the book the
- * engine's. Undefined while the engine has not been asked about it yet.
+ * engine's within `NEAR_BEST` of its best. Undefined while the engine has not
+ * been asked about it yet.
  */
 export function choicesAt(index: ReferenceIndex, fen: string, limit = 4): Reply[] | undefined {
   const book = optionsAt(index, fen, limit);
   if (book.length) return book;
   if (engineReplies(fen) === undefined) return undefined;
-  return engineAsReplies(fen).slice(0, limit);
+  return engineAsReplies(fen)
+    .filter((reply) => (engineLoss(fen, reply.san) ?? 0) <= NEAR_BEST)
+    .slice(0, limit);
+}
+
+/**
+ * The positions past the book where the opponent chooses in a tree, which
+ * the engine has not been asked about yet: what Growth past the book needs
+ * worked out before it can offer their holes.
+ */
+export function enginePositions(rep: Repertoire, index: ReferenceIndex, opts: GrowthOptions = {}): string[] {
+  const out: string[] = [];
+  walkChoices(rep, index, opts, (choice) => {
+    if (choice.bookless && engineReplies(choice.fen) === undefined) out.push(choice.fen);
+  });
+  return out;
 }
 
 /** Whether a position needs the engine before a run can offer or play anything there. */

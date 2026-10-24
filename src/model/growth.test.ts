@@ -31,6 +31,8 @@ import {
   firstEnd,
   needsEngine,
   holePastBook,
+  choicesAt,
+  enginePositions,
   pastTheBook,
   reachesOpening,
   startGrowthAtEnd,
@@ -615,6 +617,28 @@ describe('stopping at the book', () => {
     expect(rows.flatMap((row) => row.ends)).toHaveLength(0);
     expect(rows.flatMap((row) => row.holes).some((hole) => holePastBook(index, hole))).toBe(false);
     expect(rows.length).toBeGreaterThan(0);
+    clearEngineReplies();
+  });
+
+  it('offers the engine\'s top two replies past the book once Past the book is on', () => {
+    clearEngineReplies();
+    const tip = walkSan('d4 d5 c4 e5 dxe5 d4 Nf3 Nc6 g3 Nge7 Bg2'.split(' ')).fens.at(-1)!;
+    expect(enginePositions(albin, index).map((fen) => positionKey(fen))).toContain(positionKey(tip));
+    rememberEngineReplies(tip, ['Ng6', 'Nf5', 'Be6'], [0, 10, 40]);
+    expect(enginePositions(albin, index).map((fen) => positionKey(fen))).not.toContain(positionKey(tip));
+    const past = growthRows([albin], index, { pastBook: true })
+      .flatMap((row) => row.holes)
+      .filter((hole) => hole.engine)
+      .map((hole) => hole.san);
+    expect(past).toEqual(['Ng6', 'Nf5']);
+    clearEngineReplies();
+  });
+
+  it('offers your moves past the book only near the engine\'s best', () => {
+    clearEngineReplies();
+    const tip = walkSan('d4 d5 c4 e5 dxe5 d4 Nf3 Nc6 g3 Nge7 Bg2 Ng6'.split(' ')).fens.at(-1)!;
+    rememberEngineReplies(tip, ['O-O', 'h4', 'Bf4', 'a3'], [0, 12, 20, 45]);
+    expect(choicesAt(index, tip)?.map((choice) => choice.san)).toEqual(['O-O', 'h4', 'Bf4']);
     clearEngineReplies();
   });
 

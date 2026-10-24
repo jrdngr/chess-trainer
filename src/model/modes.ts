@@ -102,6 +102,8 @@ export interface GrowthPrefs {
   nudgePriority: NudgePriority;
   /** Count reaching your usual pawns as a habit. */
   nudgePawns: boolean;
+  /** Grow lines past the book with the engine's moves, as extensions. */
+  pastBook: boolean;
 }
 
 export const DEFAULT_GROWTH: GrowthPrefs = {
@@ -109,6 +111,7 @@ export const DEFAULT_GROWTH: GrowthPrefs = {
   maxPly: 18,
   nudgePriority: 'transposition',
   nudgePawns: false,
+  pastBook: false,
 };
 
 export function shareLabel(share: number): string {

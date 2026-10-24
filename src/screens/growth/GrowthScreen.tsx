@@ -219,7 +219,8 @@ function Run({
 
   /**
    * Growth stops where the book does: your lines end with the book, and past
-   * it a run is real chess rather than more to memorize.
+   * it a run is real chess rather than more to memorize. Past the book, when
+   * it is on, carries on with the engine's moves instead.
    */
   const [edge, setEdge] = useState(false);
   /** "End of the book", flashed over the board when the run stops there. */
@@ -536,6 +537,7 @@ function Run({
       growthRows([live], index, {
         minShare: find.minShare,
         maxPly: find.maxPly,
+        pastBook: prefs.pastBook,
         starred: settings.favoriteOpenings,
         region: { tree: catalogue, node: region ? nodeById(catalogue, region) : regionOf(catalogue, settings.selection) },
       }),
@@ -583,12 +585,12 @@ function Run({
   useEffect(() => {
     if (intro.held) return;
     if (phase !== 'hole' && phase !== 'answered') return;
-    if (!pastTheBook(index, run.fen)) return;
+    if (prefs.pastBook || !pastTheBook(index, run.fen)) return;
     setAnswer(null);
     setEdge(true);
     setFlash(true);
     setPhase('done');
-  }, [intro.held, phase, run.fen, index]);
+  }, [intro.held, phase, run.fen, index, prefs.pastBook]);
 
   useEffect(() => {
     if (!flash) return;

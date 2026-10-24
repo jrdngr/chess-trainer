@@ -5,7 +5,8 @@ import { SelectionBar } from '../../components/Selection';
 import { openingTree } from '../../model/openingTree';
 import { colorsOf, repertoiresIn } from '../../model/selection';
 import { acrossRegions, isAnyFavorite, regionsBySide, type SideRegion } from '../../model/anyFavorite';
-import { growthRows, optionsAt, reachesOpening, recommended, type GrowthRow } from '../../model/growth';
+import { enginePositions, growthRows, optionsAt, reachesOpening, recommended, type GrowthRow } from '../../model/growth';
+import { useEngineReplies } from '../../engine/engineReplies';
 import { GROWTH_DEPTHS, SHARE_STEPS, shareLabel } from '../../model/modes';
 import { referenceIndex } from '../../model/referenceIndex';
 import { createRepertoire } from '../../model/repertoire';
@@ -87,6 +88,15 @@ export function Lobby({
   };
 
   const starred = state.settings.favoriteOpenings;
+  /** Past the book, the engine says what they play at the ends of your lines; rows fill in as it does. */
+  const asking = useMemo(
+    () =>
+      prefs.pastBook
+        ? reps.flatMap((rep) => enginePositions(rep, index, { minShare: prefs.minShare, maxPly: prefs.maxPly }))
+        : [],
+    [prefs.pastBook, reps, index, prefs.minShare, prefs.maxPly],
+  );
+  const working = useEngineReplies(asking);
   const rows = useMemo(
     () =>
       acrossRegions(
@@ -96,12 +106,15 @@ export function Lobby({
           growthRows([rep], index, {
             minShare: prefs.minShare,
             maxPly: prefs.maxPly,
+            pastBook: prefs.pastBook,
             starred,
             region: { tree, node },
           }),
         (row) => row.id,
       ).sort((a, b) => b.score - a.score || a.depth - b.depth || a.name.localeCompare(b.name)),
-    [reps, index, prefs.minShare, prefs.maxPly, starred, tree, regions],
+    // `working` counts down as the engine answers, and each answer can add a row.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [reps, index, prefs.minShare, prefs.maxPly, prefs.pastBook, starred, tree, regions, working],
   );
   /**
    * Selected openings a side has no line into and no work on the way to:
@@ -112,10 +125,10 @@ export function Lobby({
       regions.filter(({ side, node }) => {
         const rep = reps.find((r) => r.color === side);
         if (!rep || reachesOpening(rep, tree, node)) return false;
-        const opts = { minShare: prefs.minShare, maxPly: prefs.maxPly, region: { tree, node } };
+        const opts = { minShare: prefs.minShare, maxPly: prefs.maxPly, pastBook: prefs.pastBook, region: { tree, node } };
         return growthRows([rep], index, opts).length === 0;
       }),
-    [regions, reps, tree, index, prefs.minShare, prefs.maxPly],
+    [regions, reps, tree, index, prefs.minShare, prefs.maxPly, prefs.pastBook],
   );
   const pick = recommended(rows);
 
@@ -187,7 +200,11 @@ export function Lobby({
           </>
         )}
 
-        {rows.length === 0 ? (
+        {rows.length === 0 && working > 0 ? (
+          <div className="empty">
+            <div className="spinner" />
+          </div>
+        ) : rows.length === 0 ? (
           hasMoves &&
           unstarted.length === 0 && (
             <div className="empty">
@@ -242,6 +259,16 @@ export function Lobby({
             label: `${Math.ceil(ply / 2)} moves`,
           }))}
           onChange={(ply) => setModePrefs('growth', { maxPly: Number(ply) })}
+        />
+
+        <Section title="Past the book" />
+        <Segmented
+          value={prefs.pastBook ? 'on' : 'off'}
+          options={[
+            { value: 'off', label: 'Off' },
+            { value: 'on', label: 'On' },
+          ]}
+          onChange={(on) => setModePrefs('growth', { pastBook: on === 'on' })}
         />
 
         <Section title="Nudge toward" />

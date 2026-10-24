@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { applyUci, positionKey } from '../chess/core';
+import { applyUci, fenTurn, positionKey } from '../chess/core';
+import { whiteCp } from '../model/evalDelta';
+import { evalLoss } from '../model/openingRun';
 import { ENGINE_REPLIES, engineReplies, onEngineReplies, rememberEngineReplies } from '../model/engineReplies';
 import { queueSearch } from './searchQueue';
 
@@ -27,9 +29,14 @@ let busy = false;
 async function work(fen: string): Promise<void> {
   const snap = await queueSearch(fen, { depth: DEPTH, movetime: THINK_MS, multiPv: ENGINE_REPLIES }, THINK_MS * 6);
   const sans: string[] = [];
+  const lost: number[] = [];
+  const best = whiteCp(snap?.lines[0]);
   for (const line of snap?.lines ?? []) {
     const move = line.pv[0] ? applyUci(fen, line.pv[0]) : null;
-    if (move && !sans.includes(move.san)) sans.push(move.san);
+    if (!move || sans.includes(move.san)) continue;
+    sans.push(move.san);
+    const cp = whiteCp(line);
+    lost.push(best === null || cp === null ? 0 : Math.max(0, evalLoss(fenTurn(fen), best, cp)));
   }
   // A search that never settled is asked again next time rather than
   // remembered as a position with no moves in it.
@@ -37,7 +44,7 @@ async function work(fen: string): Promise<void> {
     asked.delete(positionKey(fen));
     return;
   }
-  rememberEngineReplies(fen, sans);
+  rememberEngineReplies(fen, sans, lost);
 }
 
 async function pump(): Promise<void> {
