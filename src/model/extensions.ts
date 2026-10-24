@@ -1,4 +1,4 @@
-import { walkSan, START_FEN, type Color } from '../chess/core';
+import { positionKey, walkSan, START_FEN, type Color } from '../chess/core';
 import { BLUNDER_LIMIT } from './openingRun';
 import { lookup, totalGamesAt, type ReferenceIndex } from './reference';
 import { BOOK_SHARE } from './survival';
@@ -82,4 +82,26 @@ export function treeKinds(rep: Repertoire, index: ReferenceIndex): Map<string, M
 /** Whether the side that plays move `ply` (0 is White's first) is `color`. */
 export function movedBy(ply: number, color: Color): boolean {
   return (ply % 2 === 0) === (color === 'w');
+}
+
+/**
+ * What the engine said of each move in your trees, by position and move: the
+ * one stored thing a played line needs to be classified, since the line a run
+ * plays is matched to your prep by position rather than by node.
+ */
+export function lossesIn(reps: Repertoire[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const rep of reps) {
+    for (const node of Object.values(rep.nodes)) {
+      if (node.lost !== undefined) out.set(`${positionKey(node.fenBefore)} ${node.san}`, node.lost);
+    }
+  }
+  return out;
+}
+
+/** A played line by kind, with your trees' stored losses for its moves. */
+export function playedKinds(index: ReferenceIndex, sans: string[], losses: Map<string, number>): MoveKind[] {
+  const { fens } = walkSan(sans, START_FEN);
+  const lost = sans.map((san, i) => (fens[i] ? losses.get(`${positionKey(fens[i])} ${san}`) : undefined));
+  return lineKinds(index, sans, lost);
 }

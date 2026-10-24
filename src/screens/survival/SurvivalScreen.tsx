@@ -13,6 +13,7 @@ import {
   applySan,
   fenTurn,
   lastMoveOf,
+  positionKey,
   positionStatus,
   sansToMoveText,
   walkSan,
@@ -23,6 +24,7 @@ import type { Color } from '../../chess/core';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { evidenceFor } from '../../model/growth';
+import { bookLength, lossesIn, playedKinds, type MoveKind } from '../../model/extensions';
 import { nodeStats, ratedNodes, seenIn, type MoveResult } from '../../model/scoring';
 import { growOfferAt, offerOpening, type GrowOffer } from '../../model/growOffer';
 import type { Selection } from '../../model/selection';
@@ -132,6 +134,8 @@ interface ScorePop {
   found?: boolean;
   /** A book move past your prep: the tick and "Book" in the book's color. */
   book?: boolean;
+  /** A prepared move that is an extension: the tick and "Ext", outlined in the extension color. */
+  ext?: boolean;
 }
 
 /**
@@ -215,6 +219,10 @@ export function SurvivalScreen({
   const missed = useStore((s) => s.missedInOpeningRun);
   const index = referenceIndex();
   const tree = openingTree(index);
+  /** What the engine said of your saved moves, for telling an extension's mistakes apart. */
+  const losses = useMemo(() => lossesIn(repertoireList(state)), [state.repertoires]);
+  /** What the move `san` is where `line` stands: book, or one of the extension kinds. */
+  const kindOf = (line: string[], san: string): MoveKind => playedKinds(index, [...line, san], losses).at(-1) ?? 'book';
   /** What your games say, read once a visit, for the steers. */
   const [evidence] = useState(() => evidenceIn(state));
 
@@ -282,10 +290,18 @@ export function SurvivalScreen({
     if (prepStatus !== 'off') {
       const total = prepDepth(fullLine(game.source, now), now.color, (fen) => game.source.prepAt(fen), now.opened);
       const book = prepStatus === 'complete' && bookTo !== null ? Math.max(0, bookTo - total) : 0;
-      spanHeld.current = { played: Math.min(now.played.length, total), total, ...(book ? { book } : {}) };
+      // Where the prep leaves the book, its segments from there on are drawn as an extension.
+      const ext = bookLength(playedKinds(index, fullLine(game.source, now).slice(0, total), losses));
+      spanHeld.current = {
+        played: Math.min(now.played.length, total),
+        total,
+        ...(book ? { book } : {}),
+        ...(ext < total ? { ext } : {}),
+      };
     }
     return spanHeld.current;
-  }, [plan, game, prepStatus, bookTo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan, game, prepStatus, bookTo, losses]);
   /**
    * Each run is announced, and one started inside an opening has its way in
    * played out first. A run from move one is named by the opening it is
@@ -387,11 +403,20 @@ export function SurvivalScreen({
   /**
    * One prepared position answered: a rated result for every opening the run
    * has reached, credited to the position asked rather than wherever the move
-   * went.
+   * went. Past where the line left the book it rates the Extensions rating;
+   * a saved mistake is not rated at all, though its card still is reviewed.
    */
-  const tally = (line: string[], correct: boolean) => {
+  const tally = (line: string[], correct: boolean, kind: MoveKind) => {
     if (!run) return;
-    const result: MoveResult = { mode: 'survival', line, color: run.color, correct, rated: true, at: Date.now() };
+    const result: MoveResult = {
+      mode: 'survival',
+      line,
+      color: run.color,
+      correct,
+      rated: kind !== 'mistake',
+      ...(kind !== 'book' ? { ext: true } : {}),
+      at: Date.now(),
+    };
     ratings.track(recordMove(result, answers.current));
     answers.current = [...answers.current, result];
   };
@@ -426,7 +451,7 @@ export function SurvivalScreen({
       if (expected.length) {
         // A move your prep does not have, where it had one: a miss, logged
         // now whatever the engine says, because the drill lives in review.
-        tally(run.played, false);
+        tally(run.played, false, kindOf(run.played, expected[0]));
         setPrepStatus('off');
         prepEnd.current = null;
         if (run.repertoireId) missed(run.repertoireId, run.fen, judged.san, expected[0]);
@@ -787,9 +812,23 @@ export function SurvivalScreen({
       const seconds = clock.elapsedNow();
       if (run.repertoireId) answered(run.repertoireId, run.fen, move.san, gradeForTime(seconds));
       prepTimes.current = [...prepTimes.current, seconds];
+      const kind = kindOf(run.played, move.san);
+      const lost = losses.get(`${positionKey(run.fen)} ${move.san}`);
+      const cost = kind === 'mistake' && lost !== undefined ? moveScore(-lost) : null;
+      // A saved mistake is still yours to play, and the board says what it gives away.
+      if (cost) setPop({ key: Date.now(), square: move.to, text: `−${-cost.cp}`, tone: cost.tone });
       // Autopilot says so on the board: the tick, and the time in the grade's color.
-      if (plan) setPop({ key: Date.now(), square: move.to, text: secondsText(seconds), tone: speedTone(seconds), found: true });
-      tally(run.played, true);
+      else if (plan) {
+        setPop({
+          key: Date.now(),
+          square: move.to,
+          text: secondsText(seconds),
+          tone: speedTone(seconds),
+          found: true,
+          ...(kind !== 'book' ? { ext: true } : {}),
+        });
+      }
+      tally(run.played, true, kind);
       setPrepSeen(true);
       afterMove({ ...game, state: playYours(game.state, move.san) });
       return;
@@ -822,7 +861,7 @@ export function SurvivalScreen({
           <div className="row gap-6">
             {live && myTurn && <ClockHud clock={clock} />}
             {plan ? (
-              <RatingGained delta={ratings.moved.find((change) => change.id === headerOpening)?.delta ?? 0} />
+              <RatingGained delta={ratings.moved.find((change) => change.id === headerOpening && !change.ext)?.delta ?? 0} />
             ) : (
               <span className="chip num wide">{scoredInPoints ? game.state.extras.points : game.state.moves}</span>
             )}
@@ -989,10 +1028,11 @@ function MoveScore({ pop, orientation }: { pop: ScorePop; orientation: 'w' | 'b'
   const col = orientation === 'w' ? file : 7 - file;
   const row = orientation === 'w' ? 7 - rank : rank;
   return (
-    <div className={`move-score ${pop.tone}`} style={{ left: `${col * 12.5}%`, top: `${row * 12.5}%` }}>
+    <div className={`move-score ${pop.tone}${pop.ext ? ' ext' : ''}`} style={{ left: `${col * 12.5}%`, top: `${row * 12.5}%` }}>
       <span>
-        {pop.found && <b className={`tick${pop.book ? ' book' : ''}`}>✓</b>}
+        {pop.found && <b className={`tick${pop.book ? ' book' : pop.ext ? ' ext' : ''}`}>✓</b>}
         {pop.book && <b className="book-word">Book</b>}
+        {pop.ext && <b className="ext-word">Ext</b>}
         {pop.text}
       </span>
     </div>

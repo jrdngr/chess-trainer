@@ -95,6 +95,8 @@ export interface PrepSpan {
   total: number;
   /** Plies played in the book past the prep, once its book phase has begun. */
   book?: number;
+  /** The ply the prep leaves the book at, when it does: its segments from there are an extension's. */
+  ext?: number;
 }
 
 /**

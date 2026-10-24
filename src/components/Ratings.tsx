@@ -7,6 +7,8 @@ import { deltaText, ratingText } from './ScoreBar';
 /** One opening's rating, as a round left it. */
 export interface RatingChange {
   id: string;
+  /** The opening's Extensions rating rather than its main one. */
+  ext?: boolean;
   name: string;
   /** Points gained or lost across the whole round. */
   delta: number;
@@ -20,13 +22,14 @@ export interface RatingChange {
  * of a round reads it in the same tick an answer writes it.
  */
 export function useRatingTracker() {
-  const seen = useRef(new Map<string, { before: number; after: number }>());
+  const seen = useRef(new Map<string, { id: string; ext: boolean; before: number; after: number }>());
   const [moved, setMoved] = useState<RatingChange[]>([]);
   const changes = (): RatingChange[] => {
     const tree = openingTree(referenceIndex());
-    return [...seen.current]
-      .map(([id, rating]) => ({
+    return [...seen.current.values()]
+      .map(({ id, ext, ...rating }) => ({
         id,
+        ...(ext ? { ext } : {}),
         name: nodeById(tree, id).name,
         delta: rating.after - rating.before,
         after: rating.after,
@@ -35,9 +38,10 @@ export function useRatingTracker() {
   };
   const track = (moves: RatingMove[]) => {
     for (const move of moves) {
-      const rating = seen.current.get(move.id);
+      const key = `${move.id}${move.ext ? ' ext' : ''}`;
+      const rating = seen.current.get(key);
       if (rating) rating.after = move.after;
-      else seen.current.set(move.id, { before: move.before, after: move.after });
+      else seen.current.set(key, { id: move.id, ext: !!move.ext, before: move.before, after: move.after });
     }
     setMoved(changes());
   };
@@ -60,11 +64,14 @@ export function Ratings({ moved }: { moved: RatingChange[] }) {
         const rank = rankOf(change.after);
         const color = (rank.held ?? UNRATED).color;
         return (
-          <div className="list-row" key={change.id}>
+          <div className="list-row" key={`${change.id}${change.ext ? ' ext' : ''}`}>
             <span className="side" style={{ background: color }} />
             <span className="grow" style={{ minWidth: 0 }}>
               <div className="title truncate">{change.name}</div>
-              <div className="meta truncate">{rank.heldLabel}</div>
+              <div className="meta truncate">
+                {change.ext && <span className="ext-pill sm">Extensions</span>}
+                {rank.heldLabel}
+              </div>
             </span>
             <span className={`val num ${change.delta < 0 ? 'bad' : 'good'}`}>{deltaText(change.delta)}</span>
             <span className="val num muted">{ratingText(change.after)}</span>

@@ -182,6 +182,14 @@ export interface NodeStats {
   rating: number;
   /** Rated results this opening has had, right and wrong. */
   rated: number;
+  /**
+   * The opening's Extensions rating: the same ladder, moved only by answers
+   * given past where the line left the book. The main rating takes book
+   * answers only, so a line of your own on top of an opening is never credit
+   * for knowing the opening itself.
+   */
+  extRating: number;
+  extRated: number;
   answered: number;
   correct: number;
   byMode: Record<ActivityMode, ModeTally>;
@@ -239,6 +247,8 @@ export function emptyNodeStats(): NodeStats {
   return {
     rating: RATING.start,
     rated: 0,
+    extRating: RATING.start,
+    extRated: 0,
     answered: 0,
     correct: 0,
     byMode: { run: emptyTally(), survival: emptyTally(), drill: emptyTally(), growth: emptyTally(), repair: emptyTally() },
@@ -285,6 +295,8 @@ export function normalizeScore(
       ...empty,
       rating: stats?.rating ?? RATING.start,
       rated: stats?.rated ?? 0,
+      extRating: stats?.extRating ?? RATING.start,
+      extRated: stats?.extRated ?? 0,
       answered: stats?.answered ?? 0,
       correct: stats?.correct ?? 0,
       bestRun: stats?.bestRun ?? 0,
@@ -328,12 +340,20 @@ export interface MoveResult {
    * Survival does; everything else is recorded and nothing more.
    */
   rated: boolean;
+  /**
+   * The answer was an extension: the line had left the book by the move
+   * asked. Decided when the answer is given, so a later book update does not
+   * move it between ratings. It rates the Extensions rating, not the main one.
+   */
+  ext?: boolean;
   at: number;
 }
 
 /** How one opening's rating moved. */
 export interface RatingMove {
   id: string;
+  /** The opening's Extensions rating rather than its main one. */
+  ext?: boolean;
   before: number;
   after: number;
   /** 1 promoted a tier, -1 demoted, 0 neither. */
@@ -387,20 +407,18 @@ function tallyAnswer(stats: NodeStats, result: MoveResult): NodeStats {
   };
 }
 
-function tallyRating(stats: NodeStats, result: MoveResult): { stats: NodeStats; move: RatingMove } {
-  const before = stats.rating;
-  const after = ratingAfter(before, result.correct);
+function tallyRating(stats: NodeStats, result: MoveResult): NodeStats {
+  if (result.ext) {
+    return { ...stats, extRating: ratingAfter(stats.extRating, result.correct), extRated: stats.extRated + 1 };
+  }
+  const after = ratingAfter(stats.rating, result.correct);
   const key = dayKey(result.at);
   const day = stats.days[key] ?? { answered: 0, correct: 0, rounds: 0, rating: null };
-  const climbed = rankOf(after).reached - rankOf(before).reached;
   return {
-    stats: {
-      ...stats,
-      rating: after,
-      rated: stats.rated + 1,
-      days: { ...stats.days, [key]: { ...day, rating: after } },
-    },
-    move: { id: '', before, after, promotion: climbed > 0 ? 1 : climbed < 0 ? -1 : 0 },
+    ...stats,
+    rating: after,
+    rated: stats.rated + 1,
+    days: { ...stats.days, [key]: { ...day, rating: after } },
   };
 }
 
@@ -408,8 +426,12 @@ function tallyRating(stats: NodeStats, result: MoveResult): { stats: NodeStats; 
  * Rate one run's answers into the openings `line` has reached. An opening
  * reached for the first time this run first takes every earlier answer of the
  * run, in order, so the lead-in to a Najdorf counts once the run becomes one;
- * then `result`, when there is one, rates every opening reached. Returns one
- * move per opening touched, from where it stood to where it ends up.
+ * then `result`, when there is one, rates every opening reached. Each answer
+ * goes to the rating its kind names: book answers to the main rating,
+ * extension answers, which only ever come from where the line left the book
+ * on, to the Extensions rating. Answers that are not rated (a saved mistake)
+ * take no part. Returns one move per rating touched, from where it stood to
+ * where it ends up.
  */
 function rateRun(
   nodes: Record<string, NodeStats>,
@@ -418,22 +440,25 @@ function rateRun(
   line: string[],
   result: MoveResult | null,
 ): RatingMove[] {
-  const before = new Map<string, number>();
+  const before = new Map<string, { id: string; ext: boolean; was: number }>();
   const rate = (id: string, answer: MoveResult) => {
     const stats = nodes[id] ?? emptyNodeStats();
-    if (!before.has(id)) before.set(id, stats.rating);
-    nodes[id] = tallyRating(stats, answer).stats;
+    const ext = !!answer.ext;
+    const key = `${id}${ext ? ' ext' : ''}`;
+    if (!before.has(key)) before.set(key, { id, ext, was: ext ? stats.extRating : stats.rating });
+    nodes[id] = tallyRating(stats, answer);
   };
   const reached = ratedNodes(tree, line);
+  const counted = earlier.filter((answer) => answer.rated);
   // Lines only grow within a run, so an opening an earlier answer reached
   // already has every answer before it.
-  const rated = new Set(earlier.flatMap((answer) => ratedNodes(tree, answer.line)));
-  for (const id of reached) if (!rated.has(id)) for (const answer of earlier) rate(id, answer);
-  if (result) for (const id of reached) rate(id, result);
-  return [...before].map(([id, was]) => {
-    const after = nodes[id].rating;
+  const rated = new Set(counted.flatMap((answer) => ratedNodes(tree, answer.line)));
+  for (const id of reached) if (!rated.has(id)) for (const answer of counted) rate(id, answer);
+  if (result?.rated) for (const id of reached) rate(id, result);
+  return [...before.values()].map(({ id, ext, was }) => {
+    const after = ext ? nodes[id].extRating : nodes[id].rating;
     const climbed = rankOf(after).reached - rankOf(was).reached;
-    return { id, before: was, after, promotion: climbed > 0 ? 1 : climbed < 0 ? -1 : 0 };
+    return { id, ...(ext ? { ext } : {}), before: was, after, promotion: climbed > 0 ? 1 : climbed < 0 ? -1 : 0 };
   });
 }
 

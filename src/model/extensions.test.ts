@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { walkSan } from '../chess/core';
-import { bookLength, lineKinds, moveKind, treeKinds } from './extensions';
+import { bookLength, lineKinds, lossesIn, moveKind, playedKinds, treeKinds } from './extensions';
 import { referenceIndex } from './referenceIndex';
 import { addLine, createRepertoire, recordLosses } from './repertoire';
 
@@ -51,5 +51,14 @@ describe('a line by kind', () => {
     const kindOf = (san: string) => kinds.get(Object.values(rep.nodes).find((n) => n.san === san)!.id);
     expect(kindOf('Bc5')).toBe('book');
     expect(kindOf('Ng5')).toBe('mistake');
+  });
+
+  it('classifies a played line by position, with the losses your trees keep', () => {
+    let rep = createRepertoire('White Playbook', 'w', 'w');
+    rep = addLine(rep, `${ITALIAN} d3 Nf6 Ng5`.split(' '), 'board').rep;
+    rep = recordLosses(rep, `${ITALIAN} d3 Nf6 Ng5`.split(' '), [, , , , , , , , 120]);
+    // Reached by another move order, the same move is the same mistake.
+    const kinds = playedKinds(index, 'e4 e5 Bc4 Nc6 Nf3 Bc5 d3 Nf6 Ng5'.split(' '), lossesIn([rep]));
+    expect(kinds.at(-1)).toBe('mistake');
   });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { ANY_FAVORITE } from '../model/anyFavorite';
 import { earned, milestones, nextUp, progress, type Milestone } from '../model/milestones';
 import { openingTree } from '../model/openingTree';
@@ -85,6 +85,8 @@ export function FavoritesLadder() {
           ...entry,
           rating: stats?.rating ?? 0,
           rated,
+          extRating: stats?.extRating ?? 0,
+          extRated: stats?.extRated ?? 0,
           change: stats && rated > 0 ? Math.round(ratingChange(stats, 7, now)) : null,
         };
       })
@@ -100,19 +102,28 @@ export function FavoritesLadder() {
       </div>
       <div className="fav-ladder">
         {rows.map((row) => (
-          <button
-            key={row.node.id}
-            className={`fav-row${selection.opening === row.node.id ? ' selected' : ''}`}
-            onClick={() => setSelection({ opening: row.node.id, color: row.side })}
-          >
-            <SideDot side={row.side} />
-            <span className="nm truncate">{row.label}</span>
-            <TierBar rating={row.rating} rated={row.rated} />
-            <span className="num">{row.rated > 0 ? Math.round(row.rating) : ''}</span>
-            <span className={`chg${row.change === null || row.change === 0 ? ' flat' : row.change > 0 ? ' up' : ' down'}`}>
-              {row.change === null ? '' : row.change === 0 ? '–' : `${row.change > 0 ? '▲' : '▼'}${Math.abs(row.change)}`}
-            </span>
-          </button>
+          <Fragment key={row.node.id}>
+            <button
+              className={`fav-row${selection.opening === row.node.id ? ' selected' : ''}`}
+              onClick={() => setSelection({ opening: row.node.id, color: row.side })}
+            >
+              <SideDot side={row.side} />
+              <span className="nm truncate">{row.label}</span>
+              <TierBar rating={row.rating} rated={row.rated} />
+              <span className="num">{row.rated > 0 ? Math.round(row.rating) : ''}</span>
+              <span className={`chg${row.change === null || row.change === 0 ? ' flat' : row.change > 0 ? ' up' : ' down'}`}>
+                {row.change === null ? '' : row.change === 0 ? '–' : `${row.change > 0 ? '▲' : '▼'}${Math.abs(row.change)}`}
+              </span>
+            </button>
+            {row.extRated > 0 && (
+              <button className="fav-row ext" onClick={() => setSelection({ opening: row.node.id, color: row.side })}>
+                <span className="nm truncate">Extensions</span>
+                <TierBar rating={row.extRating} rated={row.extRated} />
+                <span className="num">{Math.round(row.extRating)}</span>
+                <span className="chg" />
+              </button>
+            )}
+          </Fragment>
         ))}
       </div>
     </div>

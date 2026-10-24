@@ -24,14 +24,13 @@ export function PrepSegments({ span, className }: { span: PrepSpan | null; class
       : `${Math.min(span.played, span.total)} of ${span.total} prep moves in`;
   return (
     <span className={`prep-segs${className ? ` ${className}` : ''}`} role="img" aria-label={label}>
-      {Array.from({ length: count }, (_, i) => (
-        <i
-          key={i}
-          className={
-            i >= prepCount ? (i === count - 1 ? 'book here' : 'book') : i < lit ? 'past' : i === lit ? 'here' : undefined
-          }
-        />
-      ))}
+      {Array.from({ length: count }, (_, i) => {
+        const state =
+          i >= prepCount ? (i === count - 1 ? 'book here' : 'book') : i < lit ? 'past' : i === lit ? 'here' : '';
+        // A segment holding any ply past where the prep leaves the book is drawn outlined.
+        const ext = i < prepCount && span.ext !== undefined && ((i + 1) * span.total) / prepCount > span.ext;
+        return <i key={i} className={`${state}${ext ? ' ext' : ''}`.trim() || undefined} />;
+      })}
     </span>
   );
 }

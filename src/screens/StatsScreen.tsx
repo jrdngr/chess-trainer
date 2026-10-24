@@ -226,15 +226,13 @@ function Tier({ stats }: { stats: NodeStats }) {
 }
 
 /** Where a rating stands on its ladder, and the rungs already held. */
-function Ladder({ stats }: { stats: NodeStats }) {
-  const rank = rankOf(stats.rating, stats.rated);
+function Ladder({ rating, rated }: { rating: number; rated: number }) {
+  const rank = rankOf(rating, rated);
   return (
     <div className="milestone-bar">
       <RankBar
         rank={rank}
-        centre={
-          <span className="num">{stats.rated === 0 ? NEW_LABEL : `${ratingText(stats.rating)}/${rank.ceiling}`}</span>
-        }
+        centre={<span className="num">{rated === 0 ? NEW_LABEL : `${ratingText(rating)}/${rank.ceiling}`}</span>}
       />
       <div className="ladder" aria-hidden>
         {TIERS.map((tier, i) => (
@@ -330,7 +328,13 @@ function OpeningPage({
             )}
           </div>
           <div className="spacer" />
-          <Ladder stats={stats} />
+          <Ladder rating={stats.rating} rated={stats.rated} />
+          {stats.extRated > 0 && (
+            <div className="stats-ext">
+              <div className="lbl">Extensions</div>
+              <Ladder rating={stats.extRating} rated={stats.extRated} />
+            </div>
+          )}
         </div>
 
         <div className="row gap-8 mt-12">

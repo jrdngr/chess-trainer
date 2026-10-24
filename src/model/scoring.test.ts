@@ -252,6 +252,37 @@ describe('applying a result', () => {
     expect(day?.rating).toBe(nodeStats(state, NAJDORF).rating);
   });
 
+  it('rates an extension answer into the Extensions rating only', () => {
+    const { state, moves } = applyResult(EMPTY_SCORE, tree, result({ ext: true }));
+    const najdorf = nodeStats(state, NAJDORF);
+    expect(najdorf.rating).toBe(0);
+    expect(najdorf.rated).toBe(0);
+    expect(najdorf.extRating).toBeGreaterThan(0);
+    expect(najdorf.extRated).toBe(1);
+    expect(moves.every((move) => move.ext)).toBe(true);
+    expect(moves.find((move) => move.id === NAJDORF)?.after).toBe(najdorf.extRating);
+  });
+
+  it('catches up each rating with its own kind of answers', () => {
+    const book = result({ line: ['e4'], color: 'b' });
+    const ext = result({ line: ['e4', 'c5', 'Nf3'], color: 'b', ext: true, correct: false });
+    let applied = applyResult(EMPTY_SCORE, tree, book);
+    applied = applyResult(applied.state, tree, ext, [book]);
+    const sicilian = nodeStats(applied.state, SICILIAN);
+    expect(sicilian.rated).toBe(1);
+    expect(sicilian.extRated).toBe(1);
+    expect(applied.moves.filter((move) => move.id === SICILIAN).map((move) => !!move.ext).sort()).toEqual([false, true]);
+  });
+
+  it('leaves a saved mistake unrated, earlier or now', () => {
+    const mistake = result({ line: ['e4'], color: 'b', ext: true, rated: false });
+    let applied = applyResult(EMPTY_SCORE, tree, mistake);
+    expect(applied.moves).toEqual([]);
+    applied = applyResult(applied.state, tree, result({ line: ['e4', 'c5', 'Nf3'], color: 'b' }), [mistake]);
+    expect(nodeStats(applied.state, SICILIAN).extRated).toBe(0);
+    expect(nodeStats(applied.state, SICILIAN).rated).toBe(1);
+  });
+
   it('touches only the global record when the book names nothing on the line', () => {
     const { state } = applyResult(EMPTY_SCORE, tree, result({ line: ['Nh3', 'h6'] }));
     expect(state.global.answered).toBe(1);

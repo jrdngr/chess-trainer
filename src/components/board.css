@@ -491,3 +491,8 @@
 .board .lens-edge.route { stroke-width: 0.14; }
 .board .lens-head { stroke: rgba(10, 12, 20, 0.7); stroke-width: 0.025; stroke-linejoin: round; }
 .board .arrow-origin { opacity: 0.45; stroke: rgba(10, 12, 20, 0.7); stroke-width: 0.025; }
+
+/* A prepared move that is an extension: "✓ Ext", a solid outline in the extension color. */
+.move-score.ext span { box-shadow: inset 0 0 0 1.5px var(--accent), 0 4px 14px rgba(0, 0, 0, 0.45); }
+.move-score .tick.ext { color: var(--ext); }
+.move-score .ext-word { color: var(--ext); margin-right: 4px; }
