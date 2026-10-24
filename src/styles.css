@@ -1787,3 +1787,40 @@ button.home-card:active { background: var(--surface-2); }
 .bp-shelf span { font-size: 13px; color: var(--text-2); }
 .bp-empty { color: var(--text-3); font-size: 14px; padding: 16px 4px; }
 .bp-empty.inset { padding: 12px 14px 16px; }
+
+/* Extensions: Playbook moves that aren't book moves, drawn as prep outlined. */
+:root { --ext: #c4c5ff; --ext-soft: rgba(138, 140, 255, 0.08); }
+
+/* The Save sheet: the line split where it leaves the book. */
+.save-split { margin-top: 14px; background: var(--surface-2); border-radius: 14px; overflow: hidden; }
+.save-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; }
+.save-row + .save-row { border-top: 1px solid var(--line); }
+.save-row .label { flex-grow: 1; font-size: 14px; color: var(--text-2); }
+.save-row .line { font-family: var(--mono); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.save-row .val { font-size: 13px; color: var(--text-3); white-space: nowrap; }
+.save-row.ext .label { font-weight: 650; color: var(--ext); }
+.save-row.ext .line, .save-row.ext .val { color: var(--ext); }
+.save-row.ext.good { background: var(--ext-soft); color: var(--accent); }
+.save-row.ext.warn { background: rgba(251, 191, 36, 0.1); color: var(--warn); }
+.save-row.ext.warn .label, .save-row.ext.warn .line, .save-row.ext.warn .val { color: var(--warn); }
+.save-row svg { flex-shrink: 0; }
+.arrows .arrow-label text { font-size: 0.24px; font-weight: 800; fill: var(--accent-ink); font-family: var(--font); }
+.arrows .arrow-label rect { stroke: rgba(0, 0, 0, 0.45); stroke-width: 0.02; }
+
+/* Play on the board. */
+.build-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.build-side { flex: none; }
+.build-side button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 12px; }
+.build-side .side-square { width: 12px; height: 12px; }
+.build-replies { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; border-radius: 12px; background: var(--surface); font-size: 14px; font-weight: 650; transition: box-shadow 0.2s; }
+.build-replies .state { font-size: 12px; font-weight: 800; border-radius: 999px; padding: 2px 8px; background: var(--surface-3); color: var(--text-2); }
+.build-replies .state.on { background: var(--accent); color: var(--accent-ink); }
+.build-replies.coach { box-shadow: 0 0 0 2px var(--accent), 0 0 18px rgba(138, 140, 255, 0.7); }
+.build-styles { display: flex; flex-wrap: wrap; gap: 6px; }
+.build-styles .chip { font-size: 14px; padding: 8px 14px; background: var(--surface); color: var(--text); }
+.build-styles .chip.on { background: var(--accent); color: var(--accent-ink); }
+.build-saved { align-items: flex-start; }
+.build-saved .side-square { margin-top: 5px; flex: none; }
+.build-saved .movetext { font-size: 12.5px; line-height: 1.5; }
+.build-bar { display: flex; gap: 10px; }
+.build-bar .build-done { flex: 0 0 110px; background: var(--surface-2); }

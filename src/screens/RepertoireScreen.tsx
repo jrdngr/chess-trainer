@@ -10,7 +10,9 @@ import { referenceIndex } from '../model/referenceIndex';
 import { branchItems, type SessionMode, type TrainingItem } from '../model/session';
 import { describeDue } from '../model/srs';
 import { setEventPlace, type AppEvent } from '../model/events';
-import type { Card, RepMove, Repertoire } from '../model/types';
+import type { Card, MoveSource, RepMove, Repertoire } from '../model/types';
+import { bookLength, lineKinds } from '../model/extensions';
+import { SaveSheet } from '../components/SaveSheet';
 import { sourceLabel } from '../model/moveSource';
 import { TidyScreen, useTidyCount } from './TidyScreen';
 import type { TidyFind } from '../model/tidy';
@@ -20,6 +22,8 @@ import { repertoireList, useStore } from '../store/useStore';
 export interface RepertoireScreenProps {
   onStart: (items: TrainingItem[], mode: SessionMode, title: string) => void;
   onImport: () => void;
+  /** Play on the board. */
+  onBuild: () => void;
   onExploreFrom: (sans: string[]) => void;
   /** A find handed over from the end of a round: Tidy opens on it. */
   tidyFocus: TidyFind | null;
@@ -45,6 +49,7 @@ interface Scope {
 export function RepertoireScreen({
   onStart,
   onImport,
+  onBuild,
   onExploreFrom,
   tidyFocus,
   onConsumedTidyFocus,
@@ -163,7 +168,10 @@ export function RepertoireScreen({
         ))}
 
         <div className="spacer" />
-        <button className="btn soft block" onClick={onImport}>
+        <button className="btn soft block" onClick={onBuild}>
+          <Icons.play size={18} /> Play on the board
+        </button>
+        <button className="btn soft block mt-8" onClick={onImport}>
           <Icons.download size={18} /> Import games
         </button>
       </div>
@@ -520,13 +528,35 @@ function RepertoireBrowser({
   const opening = useMemo(() => openingNameForPath(referenceIndex(), pathSans), [pathSans]);
   const refEntry = useMemo(() => lookup(referenceIndex(), fen), [fen]);
 
+  /** A line that leaves the book goes through the Save sheet, which checks the move first. */
+  const [saving, setSaving] = useState<{ sans: string[]; source: MoveSource } | null>(null);
+  const leavesBook = (san: string) => {
+    const kinds = lineKinds(referenceIndex(), [...pathSans, san]);
+    return bookLength(kinds) < kinds.length;
+  };
+
   const onBoardMove = (move: LegalMove) => {
     const existing = kids.find((k) => k.san === move.san);
     if (existing) {
       goTo(existing.id);
       return;
     }
+    if (leavesBook(move.san)) {
+      setSaving({ sans: [...pathSans, move.san], source: 'manual' });
+      return;
+    }
     setPendingMove(move);
+  };
+
+  const addFromBook = (san: string) => {
+    if (leavesBook(san)) {
+      setSaving({ sans: [...pathSans, san], source: 'book' });
+      return false;
+    }
+    addLine(rep.id, [...pathSans, san], 'book');
+    descendTo(san);
+    toast(`${san} added`);
+    return true;
   };
 
   const descendTo = (san: string) => {
@@ -657,9 +687,7 @@ function RepertoireBrowser({
               inRepertoire={kids.map((k) => k.san)}
               compact
               onPlay={(san) => {
-                addLine(rep.id, [...pathSans, san], 'book');
-                descendTo(san);
-                toast(`${san} added`);
+                addFromBook(san);
               }}
             />
           </>
@@ -730,6 +758,17 @@ function RepertoireBrowser({
         <div className="spacer" />
       </Sheet>
 
+      <SaveSheet
+        open={!!saving}
+        onClose={() => setSaving(null)}
+        sans={saving?.sans ?? []}
+        color={rep.color}
+        source={saving?.source ?? 'manual'}
+        onSaved={(_, __, line) => {
+          if (line.length === saving?.sans.length) descendTo(line[line.length - 1]);
+        }}
+      />
+
       <Sheet open={showReference} onClose={() => setShowReference(false)} title="The book">
         <div className="movetext" style={{ marginBottom: 10 }}>
           {sansToMoveText(pathSans) || 'Start'}
@@ -739,10 +778,8 @@ function RepertoireBrowser({
           path={pathSans}
           inRepertoire={kids.map((k) => k.san)}
           onPlay={(san) => {
-            addLine(rep.id, [...pathSans, san], 'book');
-            descendTo(san);
+            addFromBook(san);
             setShowReference(false);
-            toast(`${san} added`);
           }}
         />
       </Sheet>

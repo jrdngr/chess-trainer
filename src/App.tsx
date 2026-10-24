@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Icons, ToastHost } from './components/ui';
 import { AnalysisScreen } from './screens/AnalysisScreen';
 import { StatsScreen } from './screens/StatsScreen';
+import { BoardScreen } from './screens/BoardScreen';
 import { ImportScreen } from './screens/ImportScreen';
 import { RepertoireScreen } from './screens/RepertoireScreen';
 import { SettingsSheet } from './screens/SettingsSheet';
@@ -39,6 +40,8 @@ export default function App() {
   const [mode, setMode] = useState<{ id: ModeId; scope?: Selection } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importing, setImporting] = useState(false);
+  /** Play on the board, opened from the Playbook tab. */
+  const [building, setBuilding] = useState(false);
   const [explorePath, setExplorePath] = useState<string[] | undefined>();
   /** The side the Analysis tab opens from, with the line it was sent. */
   const [exploreSide, setExploreSide] = useState<'w' | 'b' | undefined>();
@@ -59,7 +62,7 @@ export default function App() {
    */
   useEffect(() => {
     if (statsTarget === null) return;
-    if (!mode && !session && !importing) {
+    if (!mode && !session && !importing && !building) {
       setStatsFor(statsTarget);
       setTab('stats');
     }
@@ -107,7 +110,7 @@ export default function App() {
 
   /** Where you are, so a change to the repertoire can be logged with where it was made. */
   setEventPlace(
-    onboarding ? 'onboarding' : mode ? mode.id : session ? 'session' : importing ? 'import' : tab,
+    onboarding ? 'onboarding' : mode ? mode.id : session ? 'session' : importing ? 'import' : building ? 'board' : tab,
   );
 
   /** Screens that take over the whole app, with no tab bar underneath. */
@@ -160,6 +163,8 @@ export default function App() {
     />
   ) : importing ? (
     <ImportScreen onBack={() => setImporting(false)} />
+  ) : building ? (
+    <BoardScreen onBack={() => setBuilding(false)} onDone={() => setBuilding(false)} />
   ) : null;
 
   return (
@@ -176,6 +181,7 @@ export default function App() {
             <RepertoireScreen
               onStart={startSession}
               onImport={() => setImporting(true)}
+              onBuild={() => setBuilding(true)}
               onExploreFrom={(sans) => {
                 setExplorePath(sans);
                 setTab('analysis');

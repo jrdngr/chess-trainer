@@ -22,6 +22,8 @@ export interface Arrow {
   from: Square;
   to: Square;
   color?: string;
+  /** A short tag drawn on the arrow's target square, such as the move's share of games. */
+  label?: string;
 }
 
 export interface BoardProps {
@@ -386,6 +388,22 @@ export function Board({
                     {drawn.map((d, i) => (
                       <polygon key={`h${i}`} points={d.head} fill={d.color} className="arrow-head" />
                     ))}
+                    {arrows.map((a, i) => {
+                      if (!a.label) return null;
+                      // Partway along the shaft rather than at the head, so two arrows into one square keep their tags apart.
+                      const { x1, y1, x2, y2 } = drawn[i].shaft;
+                      const x = x1 + (x2 - x1) * 0.62;
+                      const y = y1 + (y2 - y1) * 0.62;
+                      const w = 0.2 + a.label.length * 0.16;
+                      return (
+                        <g key={`l${i}`} className="arrow-label">
+                          <rect x={x - w / 2} y={y - 0.17} width={w} height={0.34} rx={0.17} fill={drawn[i].color} />
+                          <text x={x} y={y} textAnchor="middle" dominantBaseline="central">
+                            {a.label}
+                          </text>
+                        </g>
+                      );
+                    })}
                   </>
                 );
               })()}

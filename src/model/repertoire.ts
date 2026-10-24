@@ -169,6 +169,28 @@ export function addLine(
   return { rep: current, added, tipId: parentId };
 }
 
+/**
+ * Keep what the engine said of each move along a line, where it said
+ * anything: `lost[i]` is for the line's move i. Moves the line does not reach
+ * in the tree are left alone.
+ */
+export function recordLosses(rep: Repertoire, sans: string[], lost: (number | undefined)[]): Repertoire {
+  let nodes: Record<string, RepMove> | null = null;
+  let parentId: string | null = null;
+  for (let i = 0; i < sans.length; i++) {
+    const kids: string[] = parentId === null ? rep.rootChildren : (rep.nodes[parentId]?.children ?? []);
+    const node = kids.map((id) => rep.nodes[id]).find((n) => n?.san === sans[i]);
+    if (!node) break;
+    const value = lost[i];
+    if (value !== undefined && node.lost !== value) {
+      nodes ??= { ...rep.nodes };
+      nodes[node.id] = { ...node, lost: value };
+    }
+    parentId = node.id;
+  }
+  return nodes ? { ...rep, nodes } : rep;
+}
+
 /** Remove a node and everything below it. */
 export function removeSubtree(rep: Repertoire, nodeId: string): Repertoire {
   const node = rep.nodes[nodeId];

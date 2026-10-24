@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { positionKey, type Color } from '../chess/core';
 import {
   addLine,
+  recordLosses,
   createRepertoire,
   moveSibling,
   pruneLine,
@@ -175,7 +176,8 @@ interface StoreState extends PersistedState {
   resetProgress: () => void;
 
   /** `via` says where the change came from, when the screen it happened on does not. */
-  addLine: (repId: string, sans: string[], source: SourceFor, via?: EventPlace) => { added: number };
+  /** `lost` is what the engine said of each move of the line, where it was asked: see `recordLosses`. */
+  addLine: (repId: string, sans: string[], source: SourceFor, via?: EventPlace, lost?: (number | undefined)[]) => { added: number };
   /** Delete a move and everything after it. Returns an undo, or null when there was nothing to delete. */
   removeNode: (repId: string, nodeId: string, via?: EventPlace) => (() => void) | null;
   /** Delete one line: its last move back to where it parts from another line. Returns an undo. */
@@ -232,7 +234,12 @@ interface StoreState extends PersistedState {
    * player saying they have none, which only records that they were asked.
    */
   /** Build the first Playbook from the openings onboarding chose, and never ask again. */
-  finishOnboarding: (openings: SeedOpening[], plays?: [string, string][]) => void;
+  /**
+   * Answer onboarding: seed the openings into the Playbook and star them. With
+   * `seed` false the moves are already in (played on the board) and the
+   * openings are only starred.
+   */
+  finishOnboarding: (openings: SeedOpening[], plays?: [string, string][], opts?: { seed?: boolean }) => void;
   setSurvivalPrefs: (patch: Partial<SurvivalPrefs>) => void;
   /** Patch one mode's own options, without touching the rest of settings. */
   setModePrefs: <K extends 'drill' | 'growth' | 'play' | 'autopilot'>(
@@ -588,12 +595,12 @@ export const useStore = create<StoreState>((set, get) => {
       commit({ cards: {}, lineCards: {}, log: [] });
     },
 
-    addLine(repId, sans, source, via) {
+    addLine(repId, sans, source, via, lost) {
       const rep = get().repertoires[repId];
       if (!rep) return { added: 0 };
       const res = addLine(rep, sans, source);
       commit({
-        repertoires: { ...get().repertoires, [repId]: res.rep },
+        repertoires: { ...get().repertoires, [repId]: lost?.length ? recordLosses(res.rep, sans, lost) : res.rep },
         ...(res.added > 0
           ? {
               events: logged({
@@ -897,10 +904,10 @@ export const useStore = create<StoreState>((set, get) => {
      * the flag unset, say) would ask the question again on the next launch
      * with the lines already in.
      */
-    finishOnboarding(openings, plays = []) {
+    finishOnboarding(openings, plays = [], { seed = true } = {}) {
       const state = get();
       const tree = openingTree(referenceIndex());
-      const lines = seedLines(referenceIndex(), openings, plays);
+      const lines = seed ? seedLines(referenceIndex(), openings, plays) : [];
       const repertoires = { ...state.repertoires };
       const order = [...state.repertoireOrder];
       const byColor = new Map<Color, string>(

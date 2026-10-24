@@ -18,6 +18,7 @@ export const SOURCE_LABELS: Record<MoveSource, string> = {
   import: 'Imported games',
   play: 'Play game',
   tidy: 'Tidy switch',
+  board: 'Play on the board',
   seed: 'Sample',
 };
 

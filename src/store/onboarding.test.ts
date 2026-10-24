@@ -126,3 +126,22 @@ function lineIn(rep: Repertoire, line: string): boolean {
   }
   return true;
 }
+
+describe('a Playbook played on the board', () => {
+  it('stars what was played without adding a move to it', () => {
+    const repId = state().ensureRepertoire('w');
+    state().addLine(repId, RUY.split(' '), 'board');
+    const before = countNodes(state().repertoires[repId]);
+    state().finishOnboarding([seed(RUY)], [], { seed: false });
+    expect(countNodes(state().repertoires[repId])).toBe(before);
+    expect(state().settings.favoriteOpenings).toContain(RUY);
+    expect(needsOnboarding(state())).toBe(false);
+  });
+
+  it('keeps what the engine said of a saved move', () => {
+    const repId = state().ensureRepertoire('w');
+    state().addLine(repId, ['e4', 'e5', 'Qh5'], 'board', undefined, [undefined, undefined, 120]);
+    const queen = Object.values(state().repertoires[repId].nodes).find((node) => node.san === 'Qh5');
+    expect(queen?.lost).toBe(120);
+  });
+});

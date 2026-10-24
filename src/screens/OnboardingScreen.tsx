@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react';
-import type { Color } from '../chess/core';
+import { fenTurn, walkSan, type Color } from '../chess/core';
+import { BoardScreen, type BoardLine } from './BoardScreen';
+import { openingsIn } from '../model/openings';
+import { pathTo, subtreeIds } from '../model/repertoire';
 import { AppBar, IconButton, Icons } from '../components/ui';
 import { MiniBoard, OpeningPicker, selectionTrail, shortLabel } from '../components/Selection';
 import { PlateBoard, PrepSegments, SideSquare } from '../components/OpeningPlate';
@@ -41,6 +44,7 @@ type Step =
   | { kind: 'sets' }
   | { kind: 'set'; id: string }
   | { kind: 'pick' }
+  | { kind: 'board' }
   | { kind: 'ready'; rows: AddedRow[] };
 
 /** One opening as the ready screen lists what went in. */
@@ -103,6 +107,26 @@ export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'hom
       />
     );
   }
+  if (step.kind === 'board') {
+    return (
+      <BoardScreen
+        onBack={() => setStep({ kind: 'path' })}
+        onDone={(saved) => {
+          if (!saved.length) {
+            setStep({ kind: 'path' });
+            return;
+          }
+          const rows = boardRows(saved);
+          finishOnboarding(
+            rows.map((row) => ({ sans: row.path, color: row.color })),
+            [],
+            { seed: false },
+          );
+          setStep({ kind: 'ready', rows });
+        }}
+      />
+    );
+  }
   if (step.kind === 'ready') return <Ready rows={step.rows} onDone={onDone} />;
 
   return (
@@ -122,6 +146,13 @@ export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'hom
               <Icons.tree size={22} />
             </span>
             <span className="name">Pick openings</span>
+            <Icons.chevron size={18} />
+          </button>
+          <button className="onboard-path" onClick={() => setStep({ kind: 'board' })}>
+            <span className="ico">
+              <Icons.play size={22} />
+            </span>
+            <span className="name">Play on the board</span>
             <Icons.chevron size={18} />
           </button>
         </div>
@@ -280,6 +311,39 @@ function PickOpenings({ onBack, onAdd }: { onBack: () => void; onAdd: (picked: P
   );
 }
 
+/* ── played on the board ──────────────────────────────────────────────── */
+
+/**
+ * What the board put in, as the Playbook lists it: each opening a saved line
+ * ends in, with your moves in it. Read from the store, since the Save sheet
+ * has already written the lines.
+ */
+function boardRows(saved: BoardLine[]): (AddedRow & { path: string[] })[] {
+  const state = useStore.getState();
+  const index = referenceIndex();
+  const rows = new Map<string, AddedRow & { path: string[] }>();
+  for (const rep of repertoireList(state)) {
+    const tips = saved
+      .filter((line) => line.color === rep.color)
+      .map((line) => {
+        const fen = walkSan(line.sans).fens.at(-1);
+        return Object.values(rep.nodes).find((node) => node.fenAfter === fen && node.san === line.sans.at(-1));
+      })
+      .filter((tip) => !!tip);
+    for (const opening of openingsIn(rep, index)) {
+      const inside = new Set(subtreeIds(rep, opening.rootId));
+      const mine = tips.filter((tip) => inside.has(tip.id));
+      if (!mine.length) continue;
+      // Your moves on the way to each line, the moves before the name included.
+      const own = new Set(mine.flatMap((tip) => pathTo(rep, tip.id)).filter((node) => fenTurn(node.fenBefore) === rep.color).map((node) => node.id));
+      // An opening called by Black's first move ("1...e5") is starred at that move, as a starter set stars it.
+      const path = /^\d/.test(opening.name) ? opening.path.slice(0, 2) : opening.path;
+      rows.set(opening.id, { key: opening.id, name: opening.name, color: rep.color, moves: own.size, path });
+    }
+  }
+  return [...rows.values()];
+}
+
 /* ── done ─────────────────────────────────────────────────────────────── */
 
 function Ready({ rows, onDone }: { rows: AddedRow[]; onDone: (next: 'autopilot' | 'home') => void }) {
@@ -307,7 +371,7 @@ function Ready({ rows, onDone }: { rows: AddedRow[]; onDone: (next: 'autopilot' 
             <div key={row.key} className="list-row">
               <SideSquare color={row.color} />
               <span className="title grow truncate">{row.name}</span>
-              <span className="val">{row.moves} moves</span>
+              <span className="val">{row.moves} {row.moves === 1 ? 'move' : 'moves'}</span>
             </div>
           ))}
         </div>

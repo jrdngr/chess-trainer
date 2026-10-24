@@ -1,12 +1,10 @@
 import { useMemo, useState } from 'react';
-import { AddLineSheet } from '../components/AddLineSheet';
 import { Board } from '../components/Board';
 import { AppBar, Empty, IconButton, Icons, Section, Segmented, Sheet, toast } from '../components/ui';
 
 import {
   analyseAgainstRepertoire,
   buildPlayerTree,
-  findingToLine,
   measureCoverage,
   type Finding,
 } from '../model/gameAnalysis';
@@ -193,12 +191,6 @@ function GameReview({
   const rep = state.repertoires[repId] ?? reps[0] ?? null;
   const [kind, setKind] = useState<'gap' | 'deviation' | null>(null);
   const [finding, setFinding] = useState<Finding | null>(null);
-  const [addSans, setAddSans] = useState<string[] | null>(null);
-
-  const add = (sans: string[]) => {
-    setFinding(null);
-    setAddSans(sans);
-  };
 
   const tree = useMemo(
     () => (rep ? buildPlayerTree(games, rep.color) : null),
@@ -334,28 +326,9 @@ function GameReview({
                 </span>
               </div>
             </div>
-            <div className="spacer" />
-            <div className="actions">
-              <button className="btn primary block" onClick={() => add(findingToLine(finding))}>
-                <Icons.plus size={18} /> Add {finding.played[0]?.san ?? 'line'}
-              </button>
-              {finding.expected.length > 0 && (
-                <button className="btn block" onClick={() => add([...finding.path, finding.expected[0]])}>
-                  Drill {finding.expected[0]} instead
-                </button>
-              )}
-            </div>
           </>
         )}
       </Sheet>
-
-      <AddLineSheet
-        open={!!addSans}
-        onClose={() => setAddSans(null)}
-        sans={addSans ?? []}
-        source="import"
-        title="Add to Playbook"
-      />
     </>
   );
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from '../../components/Board';
+import { SaveSheet } from '../../components/SaveSheet';
 import { AppBar, haptic, Icons, Section, Strip, toast, type StripItem } from '../../components/ui';
 import {
   applySan,
@@ -16,7 +17,6 @@ import { engineReady } from '../../engine/useEngine';
 import { formatScore, winFraction, type Engine, type EngineSnapshot } from '../../engine/types';
 import { chooseMove, levelById, openingLine, playedGame, type GameResult } from '../../model/play';
 import type { PlayPrefs } from '../../model/modes';
-import { specificNameForColor } from '../../model/reference';
 import { referenceIndex } from '../../model/referenceIndex';
 import { lineStatus, nodeById, openingTree } from '../../model/openingTree';
 import { selectionText } from '../../components/Selection';
@@ -80,8 +80,6 @@ function Game({
 }) {
   const state = useStore();
   const settings = state.settings;
-  const addLine = useStore((s) => s.addLine);
-  const ensureRepertoire = useStore((s) => s.ensureRepertoire);
   const logMistake = useStore((s) => s.logMistake);
   const recordPlayGame = useStore((s) => s.recordPlayGame);
   const reps = repertoireList(state);
@@ -259,25 +257,18 @@ function Game({
   };
 
   /**
-   * Write the opening into the repertoire for the side you played.
-   *
-   * The opening it becomes is derived from the moves, so nothing here has to
-   * name anything: the toast says which opening it landed in, taking the name
-   * from the side you played, since "Queen's Pawn Opening" would describe what
-   * a Black game's opponent did.
+   * Write the opening into the repertoire for the side you played, through
+   * the Save sheet: the opening it becomes is derived from the moves, and the
+   * sheet splits off whatever part of it is not in the book.
    */
+  const [saving, setSaving] = useState<string[] | null>(null);
   const save = () => {
     const line = openingLine(moves, color);
     if (!line.length) {
       toast('Too short to save');
       return;
     }
-    const repId = ensureRepertoire(color);
-    const { added } = addLine(repId, line, 'play');
-    setSaved(true);
-    const named = specificNameForColor(index, line, color)?.name;
-    if (added === 0) toast('Already in your Playbook');
-    else toast(named ? `${added} moves saved to ${named}` : `${added} moves saved`);
+    setSaving(line);
   };
 
   const strip: StripItem[] = moves.map((san, i) => ({
@@ -411,6 +402,14 @@ function Game({
           </>
         )}
       </div>
+      <SaveSheet
+        open={!!saving}
+        onClose={() => setSaving(null)}
+        sans={saving ?? []}
+        color={color}
+        source="play"
+        onSaved={() => setSaved(true)}
+      />
     </>
   );
 }

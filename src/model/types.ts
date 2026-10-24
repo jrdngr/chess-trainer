@@ -16,6 +16,7 @@ export type MoveSource =
   | 'import'
   | 'play'
   | 'tidy'
+  | 'board'
   | 'seed';
 
 /** A single move edge in the repertoire tree. */
@@ -41,6 +42,13 @@ export interface RepMove {
    * back only once something under it is newer.
    */
   keptAt?: number;
+  /**
+   * Centipawns the move gave away against the engine's best, from the side
+   * that played it, when it was checked on the way in. Only extensions are
+   * checked: it is what tells a saved mistake from a rare move. See
+   * `model/extensions.ts`.
+   */
+  lost?: number;
 }
 
 export interface Repertoire {

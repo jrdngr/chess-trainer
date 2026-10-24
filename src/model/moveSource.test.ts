@@ -12,9 +12,10 @@ const KID = ['d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4', 'd6'];
 
 describe('source labels', () => {
   it('names every source', () => {
-    expect(Object.keys(SOURCE_LABELS)).toHaveLength(10);
+    expect(Object.keys(SOURCE_LABELS)).toHaveLength(11);
     expect(sourceLabel('manual')).toBe('Entered by hand');
     expect(sourceLabel('import')).toBe('Imported games');
+    expect(sourceLabel('board')).toBe('Play on the board');
   });
 
   it('tells your additions from the book and the engine', () => {

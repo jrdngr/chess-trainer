@@ -27,6 +27,7 @@ export type EventPlace =
   | 'play'
   | 'import'
   | 'onboarding'
+  | 'board'
   | 'session'
   | 'unknown';
 

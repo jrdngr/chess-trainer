@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AddLineSheet } from '../components/AddLineSheet';
+import { SaveSheet } from '../components/SaveSheet';
 import { Board } from '../components/Board';
 import { ExplorerPanel } from '../components/ExplorerPanel';
 import { copyText, Empty, haptic, IconButton, Icons, MoveStrip, Section, Sheet, toast } from '../components/ui';
@@ -245,7 +245,7 @@ export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInit
               </button>
               <button
                 className="btn primary grow"
-                onClick={() => setAddLine({ sans: visible, title: 'Add to Playbook' })}
+                onClick={() => setAddLine({ sans: visible, title: 'Save line' })}
               >
                 <Icons.plus size={18} /> Add to Playbook
               </button>
@@ -339,14 +339,15 @@ export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInit
         )}
       </Sheet>
 
-      <AddLineSheet
+      <SaveSheet
         open={!!addLine}
         onClose={() => setAddLine(null)}
         sans={addLine?.sans ?? []}
         note={addLine?.note}
         preferColor={addLine?.color}
+        trim
         source="analysis"
-        title={addLine?.title ?? 'Add to Playbook'}
+        title={addLine?.title}
       />
     </>
   );
