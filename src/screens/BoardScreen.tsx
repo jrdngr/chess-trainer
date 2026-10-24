@@ -8,7 +8,6 @@ import {
   arrowChoices,
   bookChoices,
   goals,
-  shareText,
   shownStyles,
   stylePick,
   STYLES,
@@ -37,7 +36,7 @@ const OTHER_ARROW = 'rgba(138, 140, 255, 0.5)';
  *
  * You play your side and the book answers for the other, with its most
  * played reply, unless Book replies is off and you play both. The arrows are
- * the book's most played moves with their share of games, one highlighted by
+ * the book's most played moves, one highlighted by
  * the style you pick. Save a line, step back and play another, and save
  * again. The same screen serves a first Playbook in onboarding and adding to
  * one from the Playbook tab.
@@ -81,7 +80,7 @@ export function BoardScreen({
       arrowChoices(choices, highlight).flatMap((choice) => {
         const move = walkSan([...visible, choice.san]).moves.at(-1);
         return move
-          ? [{ from: move.from, to: move.to, label: shareText(choice.share), color: choice.san === highlight ? 'var(--accent)' : OTHER_ARROW }]
+          ? [{ from: move.from, to: move.to, color: choice.san === highlight ? 'var(--accent)' : OTHER_ARROW }]
           : [];
       })
         // Longest first, so a short arrow along the same file as a long one is drawn on top of it.

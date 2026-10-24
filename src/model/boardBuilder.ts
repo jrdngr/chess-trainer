@@ -130,11 +130,6 @@ export function arrowChoices(choices: BookChoice[], highlight: string | null): B
   return picked ? [...top.slice(0, 2), picked] : top;
 }
 
-/** "47%": a share as the arrows show it. */
-export function shareText(share: number): string {
-  return `${Math.max(1, Math.round(share * 100))}%`;
-}
-
 /* ── goals ────────────────────────────────────────────────────────────── */
 
 export interface Goal {
