@@ -80,10 +80,9 @@ export function BrowsePicker({
     selection.opening === ANY_FAVORITE ? [] : nodeById(tree, selection.opening).sans,
   );
   /**
-   * The side the line is played from, and the side the board is seen from:
-   * flipping the board is choosing the other side. Playing moves never
-   * changes it; the side square, the flip button or tapping a named opening
-   * in a list does. It starts on the selection's side, or White.
+   * The side the line is played from, and the side the board is seen from.
+   * Playing moves never changes it; the White/Black switch or tapping a
+   * named opening in a list does. It starts on the selection's side, or White.
    */
   const [sideSet, setSide] = useState<Color>(() => (selection.color === 'b' ? 'b' : 'w'));
   const [chip, setChip] = useState<Chip | null>(null);
@@ -100,7 +99,6 @@ export function BrowsePicker({
   const exact = node && node.depth > 0 && !node.custom ? node : null;
   const side: Color | null = moves.length ? sideSet : null;
   const orientation: Color = sideSet;
-  const swapSide = () => setSide(sideSet === 'w' ? 'b' : 'w');
 
   const stars = new Set(favorites);
   const stats = exact ? score.nodes[exact.id] : undefined;
@@ -320,12 +318,17 @@ export function BrowsePicker({
             <Icons.close size={20} />
           </IconButton>
         )}
-        <span className="bp-title">Openings</span>
+        <div className="segmented build-side bp-sides" role="group" aria-label="Side">
+          {(['w', 'b'] as Color[]).map((c) => (
+            <button key={c} className={c === sideSet ? 'active' : ''} onClick={() => setSide(c)}>
+              <ColorSquare choice={c} size={12} />
+              {c === 'w' ? 'White' : 'Black'}
+            </button>
+          ))}
+        </div>
+        <span className="grow" />
         <IconButton label="Undo" onClick={undo} disabled={!moves.length}>
           <Icons.undo size={20} />
-        </IconButton>
-        <IconButton label="Flip board" onClick={swapSide}>
-          <Icons.flip size={20} />
         </IconButton>
         <IconButton
           label="Search"
@@ -356,13 +359,6 @@ export function BrowsePicker({
       </div>
 
       <div className="bp-bar">
-        <button
-          className="bp-side"
-          aria-label="Side"
-          onClick={swapSide}
-        >
-          <ColorSquare choice={sideSet} size={16} />
-        </button>
         <span className="bp-name">
           <b className="name-wrap">{lineName(tree, catalog, moves)}</b>
           <span className="truncate">{moves.length ? moveText(moves) : 'Every line'}</span>
