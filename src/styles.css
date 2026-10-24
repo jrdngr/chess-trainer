@@ -1824,3 +1824,44 @@ button.home-card:active { background: var(--surface-2); }
 .build-saved .movetext { font-size: 12.5px; line-height: 1.5; }
 .build-bar { display: flex; gap: 10px; }
 .build-bar .build-done { flex: 0 0 110px; background: var(--surface-2); }
+
+/* The Extensions review's graph. */
+.ext-graph { display: block; }
+.ext-graph .band-n { fill: var(--text-3); font-size: 12px; font-weight: 700; text-anchor: middle; font-family: var(--font); }
+.ext-graph .band { fill: rgba(255, 255, 255, 0.025); }
+.ext-graph .root { fill: var(--accent); }
+.ext-graph .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
+.ext-graph .edge.ext { stroke-opacity: 0.65; }
+.ext-graph .edge.join { stroke-dasharray: 2 2; }
+.ext-graph .cell { cursor: pointer; }
+.ext-graph .cell text { font-family: var(--mono); font-size: 12px; font-weight: 750; text-anchor: middle; fill: var(--ext); }
+.ext-graph .cell text.small { font-size: 11px; }
+.ext-graph .cell .node { fill: var(--bg); stroke: var(--accent); stroke-width: 1.5; }
+.ext-graph .cell.book .node { fill: var(--accent); }
+.ext-graph .cell.book text { fill: var(--accent-ink); }
+.ext-graph .cell.join, .ext-graph .cell.more { cursor: default; }
+.ext-graph .cell.join .node, .ext-graph .cell.more .node { fill: var(--surface); stroke: #3a3a44; }
+.ext-graph .cell.join text, .ext-graph .cell.more text { fill: var(--text-2); }
+.ext-graph .ring { fill: none; stroke: var(--text); stroke-width: 2; }
+.ext-graph .warn { fill: var(--bg); stroke: var(--warn); stroke-width: 1.8; stroke-linejoin: round; }
+.ext-graph .row-n { fill: #3a3a44; font-size: 10px; text-anchor: end; font-family: var(--font); }
+
+.ext-scroll { position: relative; overflow-x: auto; margin: 0 -16px; padding: 0 16px; -webkit-overflow-scrolling: touch; }
+.ext-head { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; text-align: left; font-size: 20px; font-weight: 800; padding: 4px 2px 12px; }
+.ext-head .truncate { min-width: 0; }
+.ext-head .side-square { width: 11px; height: 11px; flex: none; }
+.ext-peek { display: flex; gap: 12px; align-items: center; background: var(--surface); border-radius: 18px; padding: 10px; }
+.ext-peek .info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ext-peek .count { font-size: 14px; color: var(--text-2); }
+.move-tag { font-family: var(--mono); font-size: 18px; font-weight: 750; border-radius: 9px; padding: 4px 9px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; align-self: flex-start; background: var(--accent); color: var(--accent-ink); }
+.move-tag.ext { background: transparent; color: var(--ext); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.move-tag.ext svg { color: var(--warn); }
+.ext-prefix { display: flex; align-items: center; gap: 8px; margin: 14px 0 8px; }
+.ext-prefix .movetext { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; line-height: 1.3; }
+.ext-prefix .segmented { margin-left: auto; flex: none; }
+.ext-prefix .segmented button { padding: 0 10px; min-height: 30px; }
+.ext-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+
+/* An extension in a list: the move outlined in prep, with its kind. */
+.ext-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 650; padding: 2px 8px; border-radius: 999px; color: var(--ext); box-shadow: inset 0 0 0 1.5px var(--accent); white-space: nowrap; }
+.ext-pill.mistake { color: var(--warn); box-shadow: inset 0 0 0 1.5px var(--warn); }

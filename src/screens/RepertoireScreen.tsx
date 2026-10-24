@@ -11,7 +11,8 @@ import { branchItems, type SessionMode, type TrainingItem } from '../model/sessi
 import { describeDue } from '../model/srs';
 import { setEventPlace, type AppEvent } from '../model/events';
 import type { Card, MoveSource, RepMove, Repertoire } from '../model/types';
-import { bookLength, lineKinds } from '../model/extensions';
+import { bookLength, lineKinds, treeKinds, type MoveKind } from '../model/extensions';
+import { ExtensionsScreen, useExtensionOpenings, type ExtensionOpening } from './ExtensionsScreen';
 import { SaveSheet } from '../components/SaveSheet';
 import { sourceLabel } from '../model/moveSource';
 import { TidyScreen, useTidyCount } from './TidyScreen';
@@ -62,6 +63,9 @@ export function RepertoireScreen({
   const [openingMenu, setOpeningMenu] = useState<DerivedOpening | null>(null);
   const [sideMenu, setSideMenu] = useState<string | null>(null);
   const [tidying, setTidying] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+  const extensions = useExtensionOpenings();
+  const extCount = useMemo(() => new Map(extensions.map((e) => [e.opening.id, e.roots.length])), [extensions]);
   // A find from the end of a round opens Tidy, whatever was showing.
   if (tidyFocus && !tidying) setTidying(true);
   // A switch made in Tidy is logged as made there.
@@ -76,6 +80,7 @@ export function RepertoireScreen({
     [reps, index],
   );
 
+  if (reviewing) return <ExtensionsScreen onBack={() => setReviewing(false)} />;
   if (tidying) {
     return <TidyScreen focus={tidyFocus} onConsumedFocus={onConsumedTidyFocus} onBack={() => setTidying(false)} />;
   }
@@ -124,7 +129,13 @@ export function RepertoireScreen({
           />
         )}
 
-        {sides.length > 0 && <TidyRow onOpen={() => setTidying(true)} />}
+        {sides.length > 0 && (
+          <TidyRow
+            onOpen={() => setTidying(true)}
+            extensions={extensions}
+            onExtensions={() => setReviewing(true)}
+          />
+        )}
 
         {sides.map(({ rep, openings }) => (
           <div key={rep.id}>
@@ -137,6 +148,7 @@ export function RepertoireScreen({
                 <OpeningRow
                   key={opening.id}
                   opening={opening}
+                  extensions={extCount.get(opening.id) ?? 0}
                   onOpen={() =>
                     setScope({ repId: rep.id, nodeId: opening.rootId, title: opening.name })
                   }
@@ -202,10 +214,13 @@ export function RepertoireScreen({
 
 function OpeningRow({
   opening,
+  extensions,
   onOpen,
   onMenu,
 }: {
   opening: DerivedOpening;
+  /** How many extensions it holds, drawn as an outlined count. */
+  extensions: number;
   onOpen: () => void;
   onMenu: () => void;
 }) {
@@ -226,6 +241,7 @@ function OpeningRow({
           <div className="title truncate">{opening.name}</div>
           <div className="meta truncate">{meta}</div>
         </span>
+        {extensions > 0 && <span className="ext-pill">+{extensions}</span>}
         <Icons.chevron size={18} />
       </button>
       <IconButton label={`Options for ${opening.name}`} onClick={onMenu}>
@@ -524,6 +540,7 @@ function RepertoireBrowser({
     if (id && !line.some((n) => n.id === id)) setLineTip(id);
   };
   const kids = childrenOf(rep, nodeId);
+  const kinds = useMemo(() => treeKinds(rep, referenceIndex()), [rep]);
   const ourTurn = fenTurn(fen) === rep.color;
   const opening = useMemo(() => openingNameForPath(referenceIndex(), pathSans), [pathSans]);
   const refEntry = useMemo(() => lookup(referenceIndex(), fen), [fen]);
@@ -669,6 +686,7 @@ function RepertoireBrowser({
                 key={kid.id}
                 rep={rep}
                 node={kid}
+                kind={kinds.get(kid.id)}
                 card={state.cards[`${rep.id}#${kid.key}`]}
                 ourTurn={ourTurn}
                 onOpen={() => goTo(kid.id)}
@@ -787,9 +805,12 @@ function RepertoireBrowser({
   );
 }
 
+const KIND_LABEL: Record<MoveKind, string> = { book: 'Book', rare: 'Rare', mistake: 'Mistake', past: 'Past the book' };
+
 function TreeRow({
   rep,
   node,
+  kind,
   card,
   ourTurn,
   onOpen,
@@ -797,6 +818,8 @@ function TreeRow({
 }: {
   rep: Repertoire;
   node: RepMove;
+  /** What the move is against the book. */
+  kind?: MoveKind;
   card: Card | undefined;
   ourTurn: boolean;
   onOpen: () => void;
@@ -824,6 +847,12 @@ function TreeRow({
             </span>
           )}
         </span>
+        {kind && kind !== 'book' && (
+          <span className={`ext-pill${kind === 'mistake' ? ' mistake' : ''}`}>
+            {kind === 'mistake' && <Icons.warn size={12} />}
+            {KIND_LABEL[kind]}
+          </span>
+        )}
         {node.preferred && ourTurn && <span className="chip accent">main</span>}
       </button>
       <IconButton label="Options" onClick={onMenu} plain>
@@ -987,8 +1016,18 @@ async function exportReps(reps: Repertoire[], events: AppEvent[]) {
 }
 
 /** Tidy, at the top of the list: how much it has found in the selection. */
-function TidyRow({ onOpen }: { onOpen: () => void }) {
+function TidyRow({
+  onOpen,
+  extensions,
+  onExtensions,
+}: {
+  onOpen: () => void;
+  extensions: ExtensionOpening[];
+  onExtensions: () => void;
+}) {
   const count = useTidyCount();
+  const open = extensions.reduce((sum, e) => sum + e.open, 0);
+  const mistakes = extensions.reduce((sum, e) => sum + e.mistakes, 0);
   return (
     <div className="list tidy-row">
       <button className="list-row" onClick={onOpen}>
@@ -1003,6 +1042,22 @@ function TidyRow({ onOpen }: { onOpen: () => void }) {
         )}
         <Icons.chevron size={18} />
       </button>
+      {extensions.length > 0 && (
+        <button className="list-row" onClick={onExtensions}>
+          <span className="ico">
+            <Icons.sprout size={20} />
+          </span>
+          <span className="grow title">Extensions</span>
+          {mistakes > 0 && (
+            <span className="ext-pill mistake">
+              <Icons.warn size={12} />
+              {mistakes}
+            </span>
+          )}
+          {open > 0 ? <span className="ext-pill">{open}</span> : <span className="chip good">reviewed</span>}
+          <Icons.chevron size={18} />
+        </button>
+      )}
     </div>
   );
 }

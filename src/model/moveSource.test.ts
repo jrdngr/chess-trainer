@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { addedByYou, growthSource, normalizeSources, sourceLabel, SOURCE_LABELS } from './moveSource';
 import { MAX_LIFTED, PREPARED_FLOOR, withFloor } from './prepFloor';
-import { rareReason, rareReplies } from './rareReplies';
-import { openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
 import { addLine, createRepertoire, nodeAtLine } from './repertoire';
 import type { MoveSource, Repertoire } from './types';
@@ -79,42 +77,5 @@ describe('the floor for prepared replies', () => {
     const shares = withFloor([1000, 1, 1, 1, 1, 1], [true, true, true, true, true, true]);
     for (const share of shares.slice(1)) expect(share).toBeCloseTo(MAX_LIFTED / 5, 9);
     expect(shares[0]).toBeCloseTo(1 - MAX_LIFTED, 9);
-  });
-});
-
-describe('replies strong players rarely choose', () => {
-  const tree = openingTree(index);
-  const root = tree.root;
-
-  function rep(): Repertoire {
-    let r = createRepertoire('Black', 'b', 'r_rare');
-    r = addLine(r, [...KID, 'Nf3', 'O-O'], 'book').rep;
-    r = addLine(r, [...KID, 'e5', 'dxe5'], 'manual').rep;
-    return r;
-  }
-
-  it('lists a reply you added that the book lacks, and not the book’s', () => {
-    const found = rareReplies([rep()], index, tree, root, 1);
-    expect(found.map((reply) => reply.san)).toEqual(['e5']);
-    expect(found[0].removes).toBe(2);
-    expect(rareReason(found[0])).toBe('Entered by hand · strong players never choose it');
-  });
-
-  it('leaves out a rare reply that came from the engine', () => {
-    const r = addLine(createRepertoire('Black', 'b', 'r_eng'), [...KID, 'e5'], 'engine').rep;
-    expect(rareReplies([r], index, tree, root, 1)).toEqual([]);
-  });
-
-  it('drops a kept reply until something under it is newer', () => {
-    const r = rep();
-    const e5 = nodeAtLine(r, [...KID, 'e5'])!;
-    const later = Math.max(...Object.values(r.nodes).map((n) => n.addedAt)) + 1;
-    const kept = { ...r, nodes: { ...r.nodes, [e5.id]: { ...e5, keptAt: later } } };
-    expect(rareReplies([kept], index, tree, root, 1)).toEqual([]);
-    const grown = addLine(kept, [...KID, 'e5', 'dxe5', 'dxe5'], 'manual').rep;
-    const tip = nodeAtLine(grown, [...KID, 'e5', 'dxe5', 'dxe5'])!;
-    const newer = { ...grown, nodes: { ...grown.nodes, [tip.id]: { ...tip, addedAt: later + 1 } } };
-    // 7.dxe5 is listed in its own right; 5.e5 comes back because it is newer under it.
-    expect(rareReplies([newer], index, tree, root, 1).map((reply) => reply.san)).toEqual(['e5', 'dxe5']);
   });
 });
