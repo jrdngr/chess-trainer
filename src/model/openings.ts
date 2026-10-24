@@ -1,5 +1,5 @@
 import type { Color } from '../chess/core';
-import { nameAt, type ReferenceIndex } from './reference';
+import { familyName, nameAt, type ReferenceIndex } from './reference';
 import { childrenOf, pruneCount } from './repertoire';
 import type { RepMove, Repertoire } from './types';
 
@@ -104,7 +104,29 @@ export function openingsIn(rep: Repertoire, index: ReferenceIndex): DerivedOpeni
 
   for (const root of childrenOf(rep, null)) visit(root, [], null);
 
-  return sorted(collapse(tops).map((region) => finish(rep, region)));
+  const openings = collapse(tops);
+  if (rep.color === 'b') nameForBlack(openings, index);
+  return sorted(openings.map((region) => finish(rep, region)));
+}
+
+/**
+ * The book's names for the White openings Black meets without naming a
+ * defense of its own: 1.e4 e5 2.Nf3 Nc6 is "King's Knight Opening: Normal
+ * Variation", which is what White did, and a Black Playbook holding 1...e5
+ * listed it under that name. The `collapse` rules are right about where the
+ * opening starts and only the name is wrong, so these are called after Black's
+ * first move instead. Only when that is unambiguous: two of them under one
+ * first move keep their book names, which at least tell them apart.
+ */
+const WHITE_NAMES = new Set(["King's Pawn Game", "King's Knight Opening", "Queen's Pawn Game", 'Zukertort Opening']);
+
+function nameForBlack(openings: Region[], index: ReferenceIndex) {
+  const renamed = openings
+    .filter((region) => region.path.length >= 2 && WHITE_NAMES.has(familyName(index, region.name)))
+    .map((region) => ({ region, label: moveLabel(region.path.slice(0, 2)) }));
+  const counts = new Map<string, number>();
+  for (const { label } of renamed) counts.set(label, (counts.get(label) ?? 0) + 1);
+  for (const { region, label } of renamed) if (counts.get(label) === 1) region.name = label;
 }
 
 /** Every opening across both sides, each still knowing which tree it came from. */

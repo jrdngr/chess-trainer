@@ -38,6 +38,19 @@ describe('deriving openings', () => {
     expect(openings[0].path).toEqual(['d4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4']);
   });
 
+  it("calls 1...e5 by Black's move when the book only names White's", () => {
+    // 2...Nc6 is "King's Knight Opening: Normal Variation" in the book, which
+    // is how the Classical starter set's 1...e5 was listed on the Playbook.
+    const openings = openingsIn(build('b', ['e4 e5 Nf3 Nc6 Bc4 Bc5', 'e4 e5 Nf3 Nc6 Bb5 a6']), index);
+    expect(openings.map((o) => o.name)).toEqual(['1...e5']);
+    expect(openings[0].variations).toHaveLength(2);
+  });
+
+  it('keeps the book names when two would share one move label', () => {
+    const openings = openingsIn(build('b', ['e4 e5 Nf3 Nc6 Bc4 Bc5', 'e4 e5 Nf3 Nc6 Bb5 a6', 'e4 e5 Qh5 Nc6']), index);
+    expect(openings.map((o) => o.name)).not.toContain('1...e5');
+  });
+
   it('splits one first move into the openings it answers', () => {
     // 1.e4 is one move but three openings. Listing "King's Pawn Game" with
     // everything inside it is the same mistake in the other direction.
