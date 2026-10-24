@@ -138,6 +138,13 @@ describe('a Playbook played on the board', () => {
     expect(needsOnboarding(state())).toBe(false);
   });
 
+  it('adds a picked opening as exactly its own moves', () => {
+    state().finishOnboarding([seed('d4 d5 c4')], [], { seed: false });
+    const rep = Object.values(state().repertoires).find((r) => r.color === 'w')!;
+    expect(countNodes(rep)).toBe(3);
+    expect(state().settings.favoriteOpenings).toContain('d4 d5 c4');
+  });
+
   it('keeps what the engine said of a saved move', () => {
     const repId = state().ensureRepertoire('w');
     state().addLine(repId, ['e4', 'e5', 'Qh5'], 'board', undefined, [undefined, undefined, 120]);

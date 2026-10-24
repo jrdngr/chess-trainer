@@ -236,8 +236,9 @@ interface StoreState extends PersistedState {
   /** Build the first Playbook from the openings onboarding chose, and never ask again. */
   /**
    * Answer onboarding: seed the openings into the Playbook and star them. With
-   * `seed` false the moves are already in (played on the board) and the
-   * openings are only starred.
+   * `seed` false each opening goes in as exactly its own moves, nothing past
+   * them: the openings you pick one at a time, and the lines played on the
+   * board, which are already in.
    */
   finishOnboarding: (openings: SeedOpening[], plays?: [string, string][], opts?: { seed?: boolean }) => void;
   setSurvivalPrefs: (patch: Partial<SurvivalPrefs>) => void;
@@ -907,7 +908,9 @@ export const useStore = create<StoreState>((set, get) => {
     finishOnboarding(openings, plays = [], { seed = true } = {}) {
       const state = get();
       const tree = openingTree(referenceIndex());
-      const lines = seed ? seedLines(referenceIndex(), openings, plays) : [];
+      const lines = seed
+        ? seedLines(referenceIndex(), openings, plays)
+        : openings.map((opening) => ({ color: opening.color, sans: opening.sans }));
       const repertoires = { ...state.repertoires };
       const order = [...state.repertoireOrder];
       const byColor = new Map<Color, string>(

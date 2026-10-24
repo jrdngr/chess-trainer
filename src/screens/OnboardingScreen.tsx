@@ -31,9 +31,10 @@ import { repertoireList, useStore } from '../store/useStore';
  *
  * Everything in the app works on a Playbook, and a fresh install has none.
  * There are two ways in: a starter set, picked by style, or the openings you
- * already play, picked one at a time. Either way each opening goes in a few
- * of your moves past its name (see `seedLines`), so the first Autopilot run
- * has prep to drill rather than a name to sit through.
+ * already play, picked one at a time. A starter set's openings go in a few
+ * of your moves past their names (see `seedLines`), so the first Autopilot
+ * run has prep to drill; an opening you pick goes in as exactly the moves you
+ * picked, since nothing past them was ever shown to you.
  *
  * Skipping is a real answer, not a failure. It leaves the profile as it was
  * and is never asked again, short of a full reset.
@@ -100,17 +101,22 @@ export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'hom
     return (
       <PickOpenings
         onBack={() => setStep({ kind: added.length ? 'ready' : 'path' })}
-        onAdd={(picked) =>
-          finish(
+        onAdd={(picked) => {
+          // Exactly the moves you picked: nothing past them goes in unseen.
+          finishOnboarding(
             picked.map((pick) => seedFor(pick.sans, pick.color)),
+            [],
+            { seed: false },
+          );
+          ready(
             picked.map((pick) => ({
               key: pick.sans.join(' '),
               name: pick.name,
               color: pick.color,
-              moves: countOwnMoves(seedLines(referenceIndex(), [seedFor(pick.sans, pick.color)])),
+              moves: countOwnMoves([seedFor(pick.sans, pick.color)]),
             })),
-          )
-        }
+          );
+        }}
       />
     );
   }
