@@ -45,7 +45,7 @@ type Step =
   | { kind: 'set'; id: string }
   | { kind: 'pick' }
   | { kind: 'board' }
-  | { kind: 'ready'; rows: AddedRow[] };
+  | { kind: 'ready' };
 
 /** One opening as the ready screen lists what went in. */
 interface AddedRow {
@@ -65,10 +65,17 @@ interface Picked {
 export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'home') => void }) {
   const finishOnboarding = useStore((s) => s.finishOnboarding);
   const [step, setStep] = useState<Step>({ kind: 'path' });
+  /** Everything put in so far: the ready screen can send you back to pick more. */
+  const [added, setAdded] = useState<AddedRow[]>([]);
+
+  const ready = (rows: AddedRow[]) => {
+    setAdded((had) => [...had.filter((row) => !rows.some((r) => r.key === row.key)), ...rows]);
+    setStep({ kind: 'ready' });
+  };
 
   const finish = (openings: SeedOpening[], rows: AddedRow[], plays?: [string, string][]) => {
     finishOnboarding(openings, plays);
-    setStep({ kind: 'ready', rows });
+    ready(rows);
   };
 
   const skip = () => {
@@ -92,7 +99,7 @@ export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'hom
   if (step.kind === 'pick') {
     return (
       <PickOpenings
-        onBack={() => setStep({ kind: 'path' })}
+        onBack={() => setStep({ kind: added.length ? 'ready' : 'path' })}
         onAdd={(picked) =>
           finish(
             picked.map((pick) => seedFor(pick.sans, pick.color)),
@@ -122,12 +129,12 @@ export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'hom
             [],
             { seed: false },
           );
-          setStep({ kind: 'ready', rows });
+          ready(rows);
         }}
       />
     );
   }
-  if (step.kind === 'ready') return <Ready rows={step.rows} onDone={onDone} />;
+  if (step.kind === 'ready') return <Ready rows={added} onMore={() => setStep({ kind: 'pick' })} onDone={onDone} />;
 
   return (
     <>
@@ -282,7 +289,7 @@ function PickOpenings({ onBack, onAdd }: { onBack: () => void; onAdd: (picked: P
             {picked.map((pick, i) => (
               <div key={pick.sans.join(' ')} className="list-row">
                 <SideSquare color={pick.color} />
-                <span className="title grow truncate">{pick.name}</span>
+                <span className="title grow name-wrap">{pick.name}</span>
                 <IconButton label={`Remove ${pick.name}`} onClick={() => setPicked(picked.filter((_, j) => j !== i))}>
                   <Icons.close size={16} />
                 </IconButton>
@@ -346,7 +353,15 @@ function boardRows(saved: BoardLine[]): (AddedRow & { path: string[] })[] {
 
 /* ── done ─────────────────────────────────────────────────────────────── */
 
-function Ready({ rows, onDone }: { rows: AddedRow[]; onDone: (next: 'autopilot' | 'home') => void }) {
+function Ready({
+  rows,
+  onMore,
+  onDone,
+}: {
+  rows: AddedRow[];
+  onMore: () => void;
+  onDone: (next: 'autopilot' | 'home') => void;
+}) {
   const state = useStore();
   const first = useMemo(() => pickRound(state, NO_HISTORY).round, [state]);
   const span = useMemo(() => {
@@ -370,11 +385,15 @@ function Ready({ rows, onDone }: { rows: AddedRow[]; onDone: (next: 'autopilot' 
           {rows.map((row) => (
             <div key={row.key} className="list-row">
               <SideSquare color={row.color} />
-              <span className="title grow truncate">{row.name}</span>
+              <span className="title grow name-wrap">{row.name}</span>
               <span className="val">{row.moves} {row.moves === 1 ? 'move' : 'moves'}</span>
             </div>
           ))}
         </div>
+        <button className="btn soft block onboard-add" onClick={onMore}>
+          <Icons.plus size={18} />
+          Add more openings
+        </button>
         <div className="grow" />
         {first && (
           <div className="autopilot-wrap">
@@ -385,7 +404,7 @@ function Ready({ rows, onDone }: { rows: AddedRow[]; onDone: (next: 'autopilot' 
                 Autopilot
               </span>
               <SideSquare color={first.pick.color} />
-              <span className="name truncate">{selectionTrail(first.pick.opening.id).at(-1)}</span>
+              <span className="name">{selectionTrail(first.pick.opening.id).at(-1)}</span>
               <PrepSegments span={span} className="edge" />
             </button>
           </div>

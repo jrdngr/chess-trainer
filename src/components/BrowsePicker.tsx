@@ -18,7 +18,7 @@ import {
 } from '../model/browse';
 import { ANY_FAVORITE } from '../model/anyFavorite';
 import { nodeById, openingTree } from '../model/openingTree';
-import { pickerCatalog, sideForPick } from '../model/picker';
+import { pickerCatalog } from '../model/picker';
 import { referenceIndex } from '../model/referenceIndex';
 import { rankOf } from '../model/scoring';
 import { useStore } from '../store/useStore';
@@ -79,10 +79,12 @@ export function BrowsePicker({
   const [moves, setMoves] = useState<string[]>(() =>
     selection.opening === ANY_FAVORITE ? [] : nodeById(tree, selection.opening).sans,
   );
-  /** The side the line is played from, once a row or the square has said so. */
-  const [sideSet, setSide] = useState<Color | null>(() =>
-    selection.opening && selection.color !== 'random' ? selection.color : null,
-  );
+  /**
+   * The side the line is played from. Playing moves never changes it: only
+   * the side square, or tapping a named opening in a list, does. It starts on
+   * the selection's side, or White.
+   */
+  const [sideSet, setSide] = useState<Color | null>(() => (selection.color === 'b' ? 'b' : selection.color === 'w' ? 'w' : null));
   const [flipped, setFlipped] = useState(false);
   const [chip, setChip] = useState<Chip | null>(null);
   const [trail, setTrail] = useState<{ label: string; items: () => BrowseItem[] }[]>([]);
@@ -96,9 +98,7 @@ export function BrowsePicker({
   const fen = fens[fens.length - 1] ?? START_FEN;
   const node = moves.length ? nodeAt(tree, moves) : null;
   const exact = node && node.depth > 0 && !node.custom ? node : null;
-  const side: Color | null = moves.length
-    ? sideSet ?? (node ? sideForPick(catalog, node) : null) ?? sideForPick(catalog, nodeById(tree, moves.join(' ')))
-    : null;
+  const side: Color | null = moves.length ? (sideSet ?? 'w') : null;
   const viewSide: Color = side ?? (selection.color === 'b' ? 'b' : 'w');
   const orientation: Color = flipped ? (viewSide === 'w' ? 'b' : 'w') : viewSide;
 
@@ -109,7 +109,6 @@ export function BrowsePicker({
   const goTo = (sans: string[], rowSide?: Color) => {
     setMoves(sans);
     if (rowSide) setSide(rowSide);
-    else if (!sans.length) setSide(null);
   };
 
   const play = (san: string) => {

@@ -60,7 +60,7 @@ export function IntroPlate({ name, sans, color, span }: { name: string; sans: st
       <PlateBoard sans={sans} color={color} size={300} />
       <span className="ip-name">
         <SideSquare color={color} />
-        <span className="truncate">{name}</span>
+        <span className={`ip-text${name.length > 20 ? ' long' : ''}`}>{name}</span>
       </span>
       <PrepSegments span={span} className="edge" />
     </div>

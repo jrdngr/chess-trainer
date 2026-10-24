@@ -977,18 +977,20 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .autopilot.plate {
   position: relative;
   overflow: hidden;
-  height: 96px;
+  min-height: 96px;
   gap: 9px;
-  padding: 0 20px;
+  padding: 42px 20px 16px;
 }
 .autopilot.plate .name {
   position: relative;
   min-width: 0;
+  line-height: 1.15;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
   font-size: 21px;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
 }
 .autopilot.plate .side-square { position: relative; }
-.autopilot.plate .name, .autopilot.plate .side-square { margin-top: 14px; }
 /* What the button starts, in its corner. */
 .plate-tag {
   position: absolute;
@@ -1464,7 +1466,7 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .intro-plate .ip-name {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   max-width: 88%;
   font-size: 28px;
@@ -1472,6 +1474,10 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
   letter-spacing: -0.02em;
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.8);
 }
+/* Opening names run long ("Queen's Gambit Declined"), so they wrap rather than cut off. */
+.intro-plate .ip-text { min-width: 0; line-height: 1.12; text-wrap: balance; overflow-wrap: anywhere; }
+.intro-plate .ip-text.long { font-size: 24px; }
+.intro-plate .ip-name .side-square { flex: none; margin-top: 0.3em; }
 .intro-plate .prep-segs.edge { gap: 3px; }
 .intro-plate .prep-segs.edge > i { height: 5px; }
 /* Opaque from the first frame, so the board never shows through as the
@@ -1873,3 +1879,5 @@ button.home-card:active { background: var(--surface-2); }
 .ext-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 650; padding: 2px 8px; border-radius: 999px; color: var(--ext); box-shadow: inset 0 0 0 1.5px var(--accent); white-space: nowrap; }
 .ext-pill.sm { font-size: 11px; padding: 0 6px; margin-right: 6px; vertical-align: 1px; }
 .ext-pill.mistake { color: var(--warn); box-shadow: inset 0 0 0 1.5px var(--warn); }
+/* An opening's full name, on as many lines as it takes. */
+.name-wrap { min-width: 0; overflow-wrap: anywhere; line-height: 1.25; }

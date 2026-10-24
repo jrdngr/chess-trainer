@@ -50,7 +50,7 @@ export function HomeScreen({ onOpenMode, onOpenSettings }: HomeScreenProps) {
                 Autopilot
               </span>
               <SideSquare color={first.pick.color} />
-              <span className="name truncate">{selectionTrail(first.pick.opening.id).at(-1)}</span>
+              <span className="name">{selectionTrail(first.pick.opening.id).at(-1)}</span>
               <PrepSegments span={span} className="edge" />
             </button>
           ) : (
