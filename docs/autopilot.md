@@ -51,6 +51,10 @@ Every change should pass these tests:
 | Inside start | The moves to one position deeper inside the opening are played for you: the one most overdue, or, with nothing due while your prep keeps missing, the one you answer worst | When it needs it more than a cold start does, never two runs in a row |
 | Cold start | Nothing is played for you. The run starts from move one and the opponent steers toward the opening | When the way in has gone unplayed long enough, never two runs in a row, and at least every 3rd run |
 
+The first run of any opening is always a position start, whatever is owed,
+so you see how the opening is reached before you are asked to reach it
+yourself. Inside starts only go to positions a run has already asked you.
+
 Need is counted in runs, not days. Someone who plays thirty runs a day and
 someone who plays one a week both get repetition that fits how much they
 play:
