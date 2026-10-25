@@ -358,7 +358,7 @@ export function yourLastMove(played: string[], color: 'w' | 'b'): string | null 
  *
  *   opening — the offer: every line in the opening is finished clean, or the
  *             round asked nothing because the opening stops at its own
- *             moves. A card
+ *             moves, which gets a plain "Grow this opening" button. A card
  *             above the end screen's buttons says why, and Growth points back
  *             once the opening owes its cap of practice.
  *   line    — the quiet button at the bottom, at any other clean end of prep:
@@ -366,7 +366,8 @@ export function yourLastMove(played: string[], color: 'w' | 'b'): string | null 
  */
 export interface GrowOffer {
   kind: 'opening' | 'line';
-  text: string;
+  /** Why the card offers it; null for a stub, which gets a plain button. */
+  text: string | null;
   launch: GrowLaunch;
 }
 
@@ -393,7 +394,7 @@ export function growOfferAt(args: {
   const opts = { minShare: args.growth.minShare, maxPly: args.growth.maxPly, starred: args.starred };
   if (args.stub) {
     const launch = growLaunch(rep, index, tree, opening, played, opts);
-    if (launch) return { kind: 'opening', text: `Your ${opening.name} ends here.`, launch };
+    if (launch) return { kind: 'opening', text: null, launch };
   }
   if (readyToGrow(rep, tree, opening, rounds)) {
     const launch = growLaunch(rep, index, tree, opening, played, opts);

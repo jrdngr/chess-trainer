@@ -303,6 +303,7 @@ describe('the way into Growth at a clean end of prep', () => {
     const played = 'd4 Nf6 c4 g6'.split(' ');
     const offer = growOfferAt({ rep: stubRep, index, tree, opening: kidNode, played, rounds: [], growth, starred: [], stub: true });
     expect(offer?.kind).toBe('opening');
+    expect(offer?.text).toBeNull();
     expect(offer?.launch.row.ends.map((end) => end.path.join(' '))).toEqual(['d4 Nf6 c4 g6']);
   });
 });

@@ -91,7 +91,7 @@ export function End({
   /** The ratings this run moved that the end screen names: favorites and the run's own opening. */
   moved: RatingChange[];
   /** The offer to grow the opening, on a clean end of prep with every line held. */
-  grow: { text: string; onGrow: () => void } | null;
+  grow: { text: string | null; onGrow: () => void } | null;
   /** Grow the line just finished, from where your prep ran out. */
   growLine: (() => void) | null;
   /** How the run went on your prep, found and how fast — Autopilot's; null to leave it out. */
@@ -304,7 +304,13 @@ export function End({
         {lens.legend}
         <div style={{ display: lens.legend ? 'none' : 'contents' }}>
 
-        {grow && (
+        {grow && !grow.text && (
+          <button className="btn accent block" onClick={grow.onGrow}>
+            <Icons.plus size={18} />
+            Grow this opening
+          </button>
+        )}
+        {grow?.text && (
           <div className="card grow-offer">
             <span className="grow small">{grow.text}</span>
             <button className="btn accent sm" onClick={grow.onGrow}>
