@@ -65,9 +65,9 @@ export function endingTitle(ending: Ending, plies: number): string {
  * — prepared positions answered with something else — are listed, and each
  * one jumps the board there. One way on: Next run.
  *
- * The board opens on where your prep ended, since the game can go on for
- * twenty moves past it and that is the position a run is about: "End of prep"
- * and "Final position" switch between the two. A run with room to grow where
+ * The board opens on the final position. The game can go on for twenty
+ * moves past your prep, so "End of prep" jumps back to where it ran out, and
+ * "Final position" returns. A run with room to grow where
  * its prep ran out offers it in one button, the same wherever it shows.
  */
 export function End({
@@ -148,7 +148,7 @@ export function End({
   const fens = useMemo(() => walkSan(run.played).fens, [run.played]);
   const last = run.played.length;
   const prepAt = prepPly !== null && prepPly < last ? prepPly : null;
-  const [cursor, setCursor] = useState(prepAt ?? last);
+  const [cursor, setCursor] = useState(last);
   const seek = (n: number) => setCursor(Math.max(0, Math.min(last, n)));
   const shownFen = fens[cursor] ?? run.fen;
   const missAt = misses.find((miss) => miss.ply === cursor) ?? null;

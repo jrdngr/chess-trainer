@@ -96,8 +96,9 @@ Grow this line, so you can drill just your openings when you want to. It is
 quiet on purpose: playing on past your prep is the game, and it is what makes
 you care which moves you grow.
 
-The end screen opens on where your prep ended, with "End of prep" and
-"Final position" to switch between that and where the run finished.
+The end screen opens on the final position, with "End of prep" and "Final
+position" to switch between where your prep ran out and where the run
+finished.
 
 ## How a run is shown
 
