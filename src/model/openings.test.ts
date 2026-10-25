@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { linesOf, openingsAcross, openingsIn } from './openings';
+import { familiesIn, linesOf, openingsAcross, openingsIn, tipsOf } from './openings';
 import { referenceIndex } from './referenceIndex';
 import { nameAt } from './reference';
 import { addLine, createRepertoire, pruneCount, pruneLine, repertoireName } from './repertoire';
@@ -211,5 +211,39 @@ describe('the lines of an opening', () => {
     const [line] = linesOf(one, only, index);
     expect(line.removes).toBe(6);
     expect(Object.keys(pruneLine(one, line.tipId).nodes)).toHaveLength(0);
+  });
+});
+
+describe('the Playbook by family', () => {
+  const NAJDORF = 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5 Nb3 Be6 f3 Nbd7 g4 Be7';
+
+  it('lists a Sicilian as the Sicilian, however deep one line goes', () => {
+    const rep = build('b', [NAJDORF]);
+    expect(openingsIn(rep, index)[0].name).toMatch(/Najdorf/);
+    const families = familiesIn(rep, index);
+    expect(families.map((f) => f.name)).toEqual(['Sicilian Defence']);
+    expect(families[0].path).toEqual(['e4', 'c5']);
+    // Its lines are named after the family, so the variation still shows.
+    expect(linesOf(rep, families[0], index)[0].name).toMatch(/^Najdorf/);
+  });
+
+  it('gives a family found inside another its own row, kept out of the outer one', () => {
+    const rep = build('b', ['d4 Nf6 c3 g6 Nf3 Bg7', KID]);
+    const families = familiesIn(rep, index);
+    const names = families.map((f) => f.name);
+    expect(names).toEqual(expect.arrayContaining(['Indian Defence', "King's Indian Defence"]));
+    const indian = families.find((f) => f.name === 'Indian Defence')!;
+    expect(indian.lines).toBe(1);
+    expect(linesOf(rep, indian, index).map((l) => l.path.join(' '))).toEqual(['d4 Nf6 c3 g6 Nf3 Bg7']);
+    // Deleting the Indian Defence leaves the King's Indian whole.
+    let after = rep;
+    for (const tip of tipsOf(rep, indian)) after = pruneLine(after, tip);
+    expect(indian.removes).toBe(Object.keys(rep.nodes).length - Object.keys(after.nodes).length);
+    expect(familiesIn(after, index).map((f) => f.name)).toEqual(["King's Indian Defence"]);
+  });
+
+  it('does not list the first move a family is reached by', () => {
+    const names = familiesIn(build('w', ['e4 c5 Nf3 d6', 'e4 e6 d4 d5 Nc3']), index).map((f) => f.name);
+    expect(names.sort()).toEqual(['French Defence', 'Sicilian Defence']);
   });
 });

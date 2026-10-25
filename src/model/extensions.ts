@@ -1,4 +1,4 @@
-import { positionKey, walkSan, START_FEN, type Color } from '../chess/core';
+import { fenTurn, positionKey, walkSan, START_FEN, type Color } from '../chess/core';
 import { BLUNDER_LIMIT } from './openingRun';
 import { lookup, totalGamesAt, type ReferenceIndex } from './reference';
 import { BOOK_SHARE } from './survival';
@@ -19,8 +19,11 @@ import type { RepMove, Repertoire } from './types';
  *   line Survival ends a run at.
  * - **Past the book**: the book has no games at the position at all.
  *
- * Once a line leaves the book, everything under it is an extension too: a
- * handful of games after a rare move are not the book's word on what to play.
+ * Only your own moves are ever extensions. The opponent's moves are theirs
+ * to choose, however rare: a reply to 2.c3 is prep for 2.c3, not you going
+ * off on your own. Once one of your moves leaves the book, your moves under it
+ * are extensions too: a handful of games after a rare move are not the book's
+ * word on what to play.
  *
  * Nothing here is stored. The kind is worked out from whichever book is
  * loaded, so a book update reclassifies a move by itself. The one thing kept
@@ -48,12 +51,25 @@ function underExtension(kind: MoveKind): MoveKind {
   return kind === 'book' ? 'rare' : kind;
 }
 
-/** Each move of a line from the start position, by kind. `lost[i]` is what the engine said of move i. */
-export function lineKinds(index: ReferenceIndex, sans: string[], lost: (number | undefined)[] = []): MoveKind[] {
+/**
+ * Each move of a line from the start position, by kind, for the player of
+ * `color`. `lost[i]` is what the engine said of move i. The opponent's moves
+ * always read as book.
+ */
+export function lineKinds(
+  index: ReferenceIndex,
+  sans: string[],
+  color: Color,
+  lost: (number | undefined)[] = [],
+): MoveKind[] {
   const { fens } = walkSan(sans, START_FEN);
   const out: MoveKind[] = [];
   let off = false;
   for (let i = 0; i < sans.length && i < fens.length - 1; i++) {
+    if (!movedBy(i, color)) {
+      out.push('book');
+      continue;
+    }
     const kind = moveKind(index, fens[i], sans[i], lost[i]);
     out.push(off ? underExtension(kind) : kind);
     off ||= kind !== 'book';
@@ -67,11 +83,11 @@ export function bookLength(kinds: MoveKind[]): number {
   return at < 0 ? kinds.length : at;
 }
 
-/** Every move of a tree by kind, keyed by node id. */
+/** Every move of a tree by kind, keyed by node id. The opponent's moves always read as book. */
 export function treeKinds(rep: Repertoire, index: ReferenceIndex): Map<string, MoveKind> {
   const out = new Map<string, MoveKind>();
   const visit = (node: RepMove, off: boolean) => {
-    const own = moveKind(index, node.fenBefore, node.san, node.lost);
+    const own = fenTurn(node.fenBefore) === rep.color ? moveKind(index, node.fenBefore, node.san, node.lost) : 'book';
     out.set(node.id, off ? underExtension(own) : own);
     for (const kid of childrenOf(rep, node.id)) visit(kid, off || own !== 'book');
   };
@@ -99,9 +115,14 @@ export function lossesIn(reps: Repertoire[]): Map<string, number> {
   return out;
 }
 
-/** A played line by kind, with your trees' stored losses for its moves. */
-export function playedKinds(index: ReferenceIndex, sans: string[], losses: Map<string, number>): MoveKind[] {
+/** A played line by kind for the player of `color`, with your trees' stored losses for its moves. */
+export function playedKinds(
+  index: ReferenceIndex,
+  sans: string[],
+  color: Color,
+  losses: Map<string, number>,
+): MoveKind[] {
   const { fens } = walkSan(sans, START_FEN);
   const lost = sans.map((san, i) => (fens[i] ? losses.get(`${positionKey(fens[i])} ${san}`) : undefined));
-  return lineKinds(index, sans, lost);
+  return lineKinds(index, sans, color, lost);
 }

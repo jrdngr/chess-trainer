@@ -4,6 +4,7 @@ import { planFor, structureOf } from './structures';
 import { lookup, totalGamesAt, type ReferenceIndex } from './reference';
 import { ancestorsOf, type OpeningNode, type OpeningTree } from './openingTree';
 import {
+  BOOK_SHARE,
   beginRun,
   opponentReply,
   regionSource,
@@ -127,7 +128,7 @@ export function evalSwing(color: 'w' | 'b', from: number, to: number): number | 
  * chose to learn. The phase ends at your first move that is not a book move,
  * or where the book has nothing more to say.
  */
-export const BOOK_SHARE = 0.05;
+export { BOOK_SHARE };
 
 /** The book moves at a position, most played first; empty where the book has nothing. */
 export function bookMoves(index: ReferenceIndex, fen: string): string[] {
@@ -689,9 +690,13 @@ export function bookReply(
     const next = opponentReply(source, run, rand);
     return next.played.length > run.played.length ? next.played[next.played.length - 1] : null;
   }
-  const book = lookup(index, run.fen)?.moves ?? [];
+  const moves = lookup(index, run.fen)?.moves ?? [];
+  const all = moves.reduce((sum, move) => sum + Math.max(0, move.games), 0);
+  if (!moves.length || all <= 0) return null;
+  // Book moves only, where there are any: the opponent does not roll a 0.6% move.
+  const common = moves.filter((move) => move.games / all >= BOOK_SHARE);
+  const book = common.length ? common : moves;
   const total = book.reduce((sum, move) => sum + Math.max(0, move.games), 0);
-  if (!book.length || total <= 0) return null;
   let roll = rand() * total;
   for (const move of book) {
     roll -= Math.max(0, move.games);

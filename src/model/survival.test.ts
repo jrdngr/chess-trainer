@@ -111,6 +111,23 @@ describe('playing', () => {
     expect(bookReply(begun.source, index, { ...inBook, run: { ...inBook.run, ...runAt(nowhere) } }, rand)).toBeNull();
   });
 
+  it('only plays book moves, plus the replies you prepared', () => {
+    const indian = nodeById(tree, 'd4 Nf6');
+    let stub = createRepertoire('Black', 'b', 'rep_b');
+    stub = addLine(stub, ['d4', 'Nf6'], 'picker').rep;
+    const run = startSurvival({ steer: 'lines', tree, reps: [stub], node: indian, color: 'b', seed: 1 })!;
+    const at = { ...run.state, run: { ...run.state.run, ...runAt(['d4', 'Nf6']) } };
+    const seen = new Set<string>();
+    const rand = mulberry32(7);
+    for (let i = 0; i < 400; i++) seen.add(bookReply(run.source, index, at, rand)!);
+    // 2.c3 and the other sub-5% moves are never rolled.
+    expect([...seen].sort()).toEqual(['Nf3', 'c4', 'Nc3', 'Bg5'].sort());
+    // A reply you prepared is still played, however rare.
+    stub = addLine(stub, ['d4', 'Nf6', 'c3', 'g6'], 'growth').rep;
+    const kept = startSurvival({ steer: 'lines', tree, reps: [stub], node: indian, color: 'b', seed: 1 })!;
+    expect(kept.source.weightsAt(at.run.fen, at.run.played).map((w) => w.san)).toContain('c3');
+  });
+
   it('numbers moves the way a score sheet does', () => {
     expect(moveNumber(0)).toBe(1);
     expect(moveNumber(1)).toBe(1);

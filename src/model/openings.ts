@@ -44,6 +44,13 @@ export interface DerivedOpening {
   depth: number;
   /** Named regions one level further in. */
   variations: DerivedOpening[];
+  /**
+   * Roots of other openings that sit inside this one's subtree and are listed
+   * on their own: a King's Indian under the Indian Defence's 1...Nf6. Their
+   * moves are not this opening's, so they are left out of its lines, its
+   * counts, and what deleting it takes.
+   */
+  nested?: string[];
 }
 
 interface Region {
@@ -63,6 +70,13 @@ interface Region {
 
 /** Every opening in one repertoire, the biggest first. */
 export function openingsIn(rep: Repertoire, index: ReferenceIndex): DerivedOpening[] {
+  const openings = collapse(regionsOf(rep, index));
+  if (rep.color === 'b') nameForBlack(openings, index);
+  return sorted(openings.map((region) => finish(rep, region)));
+}
+
+/** Every named region of a tree, nested as the book names them, before anything is dropped. */
+function regionsOf(rep: Repertoire, index: ReferenceIndex): Region[] {
   const tops: Region[] = [];
 
   const visit = (node: RepMove, path: string[], enclosing: Region | null) => {
@@ -103,10 +117,109 @@ export function openingsIn(rep: Repertoire, index: ReferenceIndex): DerivedOpeni
   };
 
   for (const root of childrenOf(rep, null)) visit(root, [], null);
+  return tops;
+}
 
-  const openings = collapse(tops);
-  if (rep.color === 'b') nameForBlack(openings, index);
-  return sorted(openings.map((region) => finish(rep, region)));
+/**
+ * The Playbook's rows: one per opening family, "Sicilian Defence" however
+ * deep the lines under it go.
+ *
+ * `openingsIn` names an opening after the deepest name its lines share, so a
+ * Sicilian that grew one Najdorf line was listed as the Najdorf, and renamed
+ * again as soon as a second line went in. A family stays put. Each region
+ * joins the row of the family it belongs to; a region of another family
+ * starts its own row, even inside one — the King's Indian under the Indian
+ * Defence's 1...Nf6 is its own family in the book, and its own row here. A
+ * row with no lines of its own (the 1.d4 a King's Indian passes through) is
+ * only a way in, and is not listed.
+ */
+export function familiesIn(rep: Repertoire, index: ReferenceIndex): DerivedOpening[] {
+  interface Row {
+    name: string;
+    eco?: string;
+    rootId: string;
+    path: string[];
+    ownLines: number;
+    nested: string[];
+  }
+  const rows: Row[] = [];
+  const visit = (region: Region, row: Row | null) => {
+    const family = familyName(index, region.name);
+    let here = row;
+    if (!here || family !== here.name) {
+      here = { name: family, rootId: region.rootId, path: region.path, ownLines: 0, nested: [] };
+      row?.nested.push(region.rootId);
+      rows.push(here);
+    }
+    // The ECO of the family's own position, where the tree passes through it.
+    if (region.name === family || here.eco === undefined) here.eco = region.eco ?? here.eco;
+    here.ownLines += region.ownLines;
+    for (const child of region.children) visit(child, here);
+  };
+  for (const region of regionsOf(rep, index)) visit(region, null);
+
+  const listed = rows.filter((row) => row.ownLines > 0);
+  if (rep.color === 'b') nameForBlack(listed, index);
+  return sorted(
+    listed.map((row) => {
+      const skip = new Set(row.nested);
+      const stats = subtreeStats(rep, row.rootId, row.path.length, skip);
+      return {
+        id: `${rep.id}#${row.rootId}`,
+        repertoireId: rep.id,
+        color: rep.color,
+        name: row.name,
+        eco: row.eco,
+        rootId: row.rootId,
+        path: row.path,
+        moves: stats.moves,
+        removes: row.nested.length ? removedWith(rep, stats.tips) : pruneCount(rep, row.rootId),
+        lines: stats.lines,
+        depth: stats.depth,
+        variations: [],
+        ...(row.nested.length ? { nested: row.nested } : {}),
+      };
+    }),
+  );
+}
+
+/**
+ * Whether a node belongs to an opening: inside its subtree but not in one
+ * nested in it, or on the move order that leads to it.
+ */
+export function holdsNode(rep: Repertoire, opening: DerivedOpening, nodeId: string): boolean {
+  const nested = new Set(opening.nested ?? []);
+  let inside = false;
+  for (let id: string | null = nodeId; id; id = rep.nodes[id]?.parentId ?? null) {
+    if (nested.has(id)) return false;
+    if (id === opening.rootId) {
+      inside = true;
+      break;
+    }
+  }
+  if (inside) return true;
+  for (let id: string | null = opening.rootId; id; id = rep.nodes[id]?.parentId ?? null) if (id === nodeId) return true;
+  return false;
+}
+
+/** The ends of every line an opening holds, leaving out the openings nested in it. */
+export function tipsOf(rep: Repertoire, opening: DerivedOpening): string[] {
+  return subtreeStats(rep, opening.rootId, opening.path.length, new Set(opening.nested ?? [])).tips;
+}
+
+/** How many moves go when these lines are deleted: every move all of whose lines are among them. */
+function removedWith(rep: Repertoire, tips: string[]): number {
+  const gone = new Set(tips);
+  let count = 0;
+  const visit = (node: RepMove): boolean => {
+    const kids = childrenOf(rep, node.id);
+    let all = kids.length ? true : gone.has(node.id);
+    for (const kid of kids) if (!visit(kid)) all = false;
+    if (all) count += 1;
+    return all;
+  };
+  for (const root of childrenOf(rep, null)) visit(root);
+  return count;
 }
 
 /**
@@ -120,7 +233,7 @@ export function openingsIn(rep: Repertoire, index: ReferenceIndex): DerivedOpeni
  */
 const WHITE_NAMES = new Set(["King's Pawn Game", "King's Knight Opening", "Queen's Pawn Game", 'Zukertort Opening']);
 
-function nameForBlack(openings: Region[], index: ReferenceIndex) {
+function nameForBlack(openings: { name: string; path: string[] }[], index: ReferenceIndex) {
   const renamed = openings
     .filter((region) => region.path.length >= 2 && WHITE_NAMES.has(familyName(index, region.name)))
     .map((region) => ({ region, label: moveLabel(region.path.slice(0, 2)) }));
@@ -211,19 +324,25 @@ function subtreeStats(
   rep: Repertoire,
   nodeId: string,
   ply: number,
-): { moves: number; lines: number; depth: number } {
-  const kids = childrenOf(rep, nodeId);
-  if (!kids.length) return { moves: 1, lines: 1, depth: ply };
+  skip: Set<string> = new Set(),
+): { moves: number; lines: number; depth: number; tips: string[] } {
+  const all = childrenOf(rep, nodeId);
+  if (!all.length) return { moves: 1, lines: 1, depth: ply, tips: [nodeId] };
+  // Only the way into an opening listed on its own: a move, but no line.
+  const kids = all.filter((kid) => !skip.has(kid.id));
+  if (!kids.length) return { moves: 1, lines: 0, depth: 0, tips: [] };
   let moves = 1;
   let lines = 0;
   let depth = ply;
+  const tips: string[] = [];
   for (const kid of kids) {
-    const below = subtreeStats(rep, kid.id, ply + 1);
+    const below = subtreeStats(rep, kid.id, ply + 1, skip);
     moves += below.moves;
     lines += below.lines;
     depth = Math.max(depth, below.depth);
+    tips.push(...below.tips);
   }
-  return { moves, lines, depth };
+  return { moves, lines, depth, tips };
 }
 
 /** "1.b3" — an opening the book has no name for, called after its first move. */
@@ -261,11 +380,13 @@ export function linesOf(rep: Repertoire, opening: DerivedOpening, index: Referen
   if (!root) return [];
   const raw: { tipId: string; path: string[]; name: string; split: number }[] = [];
 
+  const nested = new Set(opening.nested ?? []);
   const visit = (node: RepMove, path: string[], name: string) => {
     const here = [...path, node.san];
     const named = nameAt(index, node.fenAfter)?.name ?? name;
-    const kids = childrenOf(rep, node.id);
-    if (!kids.length) {
+    const all = childrenOf(rep, node.id);
+    const kids = all.filter((kid) => !nested.has(kid.id));
+    if (!all.length) {
       raw.push({ tipId: node.id, path: here, name: named, split: splitPly(rep, node.id) });
       return;
     }

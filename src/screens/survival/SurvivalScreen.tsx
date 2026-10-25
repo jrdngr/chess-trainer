@@ -223,8 +223,9 @@ export function SurvivalScreen({
   const tree = openingTree(index);
   /** What the engine said of your saved moves, for telling an extension's mistakes apart. */
   const losses = useMemo(() => lossesIn(repertoireList(state)), [state.repertoires]);
-  /** What the move `san` is where `line` stands: book, or one of the extension kinds. */
-  const kindOf = (line: string[], san: string): MoveKind => playedKinds(index, [...line, san], losses).at(-1) ?? 'book';
+  /** What your move `san` is where `line` stands: book, or one of the extension kinds. */
+  const kindOf = (line: string[], san: string): MoveKind =>
+    playedKinds(index, [...line, san], line.length % 2 === 0 ? 'w' : 'b', losses).at(-1) ?? 'book';
   /** What your games say, read once a visit, for the steers. */
   const [evidence] = useState(() => evidenceIn(state));
 
@@ -293,7 +294,7 @@ export function SurvivalScreen({
       const total = prepDepth(fullLine(game.source, now), now.color, (fen) => game.source.prepAt(fen), now.opened);
       const book = prepStatus === 'complete' && bookTo !== null ? Math.max(0, bookTo - total) : 0;
       // Where the prep leaves the book, its segments from there on are drawn as an extension.
-      const ext = bookLength(playedKinds(index, fullLine(game.source, now).slice(0, total), losses));
+      const ext = bookLength(playedKinds(index, fullLine(game.source, now).slice(0, total), now.color, losses));
       spanHeld.current = {
         played: Math.min(now.played.length, total),
         total,

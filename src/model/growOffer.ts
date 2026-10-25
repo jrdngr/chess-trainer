@@ -22,6 +22,7 @@ import { familyName, type ReferenceIndex } from './reference';
 import { childrenOf, leafLines, pathTo } from './repertoire';
 import type { RoundRecord } from './scoring';
 import type { RepMove, Repertoire } from './types';
+import { movedBy } from './extensions';
 
 /**
  * The offer to grow: when a Survival run gets through your prep clean, and
@@ -393,7 +394,11 @@ export function growOfferAt(args: {
   const { rep, index, tree, opening, played, rounds } = args;
   const opts = { minShare: args.growth.minShare, maxPly: args.growth.maxPly, starred: args.starred };
   if (args.stub) {
-    const launch = growLaunch(rep, index, tree, opening, played, opts);
+    // Growing an opening starts on your own last move, and Growth picks their
+    // reply its own way: whatever the round's opponent happened to roll there
+    // (a 0.6% 2.c3, say) is not the line to build on.
+    const mine = played.length - (movedBy(played.length - 1, rep.color) ? 0 : 1);
+    const launch = growLaunch(rep, index, tree, opening, played.slice(0, Math.max(0, mine)), opts);
     if (launch) return { kind: 'opening', text: null, launch };
   }
   if (readyToGrow(rep, tree, opening, rounds)) {

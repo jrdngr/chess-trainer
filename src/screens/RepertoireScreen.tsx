@@ -3,7 +3,7 @@ import { Board } from '../components/Board';
 import { ExplorerPanel } from '../components/ExplorerPanel';
 import { AppBar, Empty, IconButton, Icons, Section, Sheet, Strip, toast } from '../components/ui';
 import { fenTurn, lastMoveOf, sansToMoveText, type Color, type LegalMove } from '../chess/core';
-import { linesOf, openingAt, openingsIn, type DerivedOpening } from '../model/openings';
+import { familiesIn, holdsNode, linesOf, openingAt, tipsOf, type DerivedOpening } from '../model/openings';
 import { childrenOf, fenAt, pathTo, repertoireName, subtreeIds } from '../model/repertoire';
 import { lookup, openingNameForPath } from '../model/reference';
 import { referenceIndex } from '../model/referenceIndex';
@@ -43,7 +43,7 @@ interface Scope {
  * Your repertoire: the whole collection, listed as the openings in it.
  *
  * Two trees are stored, one per side, and an opening is a named region of one of
- * them — see `openingsIn`. So this screen lists what you have prepared the way
+ * them — see `openingsIn` — and listed here by family (`familiesIn`), the way
  * you would describe it out loud ("a King's Indian, a Sicilian") rather than
  * listing the two containers those openings happen to live in.
  */
@@ -65,7 +65,7 @@ export function RepertoireScreen({
   const [tidying, setTidying] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const extensions = useExtensionOpenings();
-  const extCount = useMemo(() => new Map(extensions.map((e) => [e.opening.id, e.roots.length])), [extensions]);
+
   // A find from the end of a round opens Tidy, whatever was showing.
   if (tidyFocus && !tidying) setTidying(true);
   // A switch made in Tidy is logged as made there.
@@ -76,9 +76,22 @@ export function RepertoireScreen({
       (['w', 'b'] as Color[])
         .map((color) => reps.find((rep) => rep.color === color))
         .filter((rep): rep is Repertoire => !!rep)
-        .map((rep) => ({ rep, openings: openingsIn(rep, index) })),
+        .map((rep) => ({ rep, openings: familiesIn(rep, index) })),
     [reps, index],
   );
+
+  /** Extensions per family row, counted once however many of its variations they sit in. */
+  const extCount = useMemo(() => {
+    const out = new Map<string, number>();
+    for (const { rep, openings } of sides) {
+      const roots = new Set(extensions.filter((e) => e.rep.id === rep.id).flatMap((e) => e.roots));
+      for (const opening of openings) {
+        const held = [...roots].filter((id) => holdsNode(rep, opening, id)).length;
+        if (held) out.set(opening.id, held);
+      }
+    }
+    return out;
+  }, [sides, extensions]);
 
   if (reviewing) return <ExtensionsScreen onBack={() => setReviewing(false)} />;
   if (tidying) {
@@ -282,7 +295,7 @@ function OpeningMenu({
 
   const index = referenceIndex();
   const opening = useMemo(
-    () => (picked && rep ? openingAt(openingsIn(rep, index), picked.rootId) : null),
+    () => (picked && rep ? openingAt(familiesIn(rep, index), picked.rootId) : null),
     [picked, rep, index],
   );
   const lines = useMemo(() => (opening && rep ? linesOf(rep, opening, index) : []), [opening, rep, index]);
@@ -363,7 +376,7 @@ function OpeningMenu({
             setConfirming(true);
             return;
           }
-          removeOpening(opening.repertoireId, opening.rootId);
+          removeOpening(opening.repertoireId, opening.rootId, opening.nested ? tipsOf(rep, opening) : undefined);
           close();
           toast(`${opening.name} deleted`);
         }}
@@ -548,7 +561,7 @@ function RepertoireBrowser({
   /** A line that leaves the book goes through the Save sheet, which checks the move first. */
   const [saving, setSaving] = useState<{ sans: string[]; source: MoveSource } | null>(null);
   const leavesBook = (san: string) => {
-    const kinds = lineKinds(referenceIndex(), [...pathSans, san]);
+    const kinds = lineKinds(referenceIndex(), [...pathSans, san], rep.color);
     return bookLength(kinds) < kinds.length;
   };
 

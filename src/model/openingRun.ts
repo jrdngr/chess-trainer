@@ -9,7 +9,7 @@ import {
   type Square,
 } from '../chess/core';
 import { findHoles, holeShare, movesToFit, optionsAt, type Hole } from './growth';
-import { deepestName, lookup, type ReferenceIndex } from './reference';
+import { deepestName, lookup, totalGamesAt, type ReferenceIndex } from './reference';
 import {
   approachKeys,
   deepestNodeWithin,
@@ -52,6 +52,13 @@ import type { Card, RepMove, Repertoire } from './types';
  * A `LineSource` answers those questions about a position, and everything
  * else (judging, revealing, scoring) is shared.
  */
+/**
+ * The share of strong players' games a move needs to be a book move: what the
+ * opponent picks from, and what the book phase and extensions judge by. See
+ * `survival.ts` for the book phase it was named for.
+ */
+export const BOOK_SHARE = 0.05;
+
 export interface LineSource {
   /** Named after the region the run was drawn from. */
   label: string;
@@ -153,7 +160,16 @@ export function regionSource(
     color,
     node,
     movesAt: (fen, played) => candidates(fen, played).map((move) => move.san),
-    weightsAt: (fen, played) => candidates(fen, played).map((move) => ({ san: move.san, weight: move.games })),
+    weightsAt: (fen, played) => {
+      // The opponent plays book moves and the replies you prepared, not every
+      // move a handful of strong players once tried: a 0.6% 2.c3 is noise.
+      const all = candidates(fen, played);
+      const entry = lookup(index, fen);
+      const total = totalGamesAt(entry);
+      const shareOf = (san: string) => (total > 0 ? (entry?.moves.find((m) => m.san === san)?.games ?? 0) / total : 0);
+      const picked = all.filter((move) => move.prepared || shareOf(move.san) >= BOOK_SHARE);
+      return (picked.length ? picked : all).map((move) => ({ san: move.san, weight: move.games }));
+    },
     prepAt: (fen) => {
       const key = positionKey(fen);
       const mine = prep.get(key) ?? [];
@@ -951,7 +967,9 @@ export function opponentReply(source: LineSource, run: Run, rand: () => number):
   const options = source.weightsAt(run.fen, run.played);
   if (!options.length) return { ...run, over: true };
 
-  let san = onLine && options.some((o) => o.san === onLine) ? onLine : null;
+  // The drawn line is followed even through a move under the book's share:
+  // it was drawn on purpose, from your prep, a gap, or the opening's own name.
+  let san = onLine && source.movesAt(run.fen, run.played).includes(onLine) ? onLine : null;
   if (!san) {
     // Prefer replies the source can still answer, so a run does not dead-end
     // on the opponent's move when a real continuation exists.

@@ -306,4 +306,15 @@ describe('the way into Growth at a clean end of prep', () => {
     expect(offer?.text).toBeNull();
     expect(offer?.launch.row.ends.map((end) => end.path.join(' '))).toEqual(['d4 Nf6 c4 g6']);
   });
+
+  it('starts on your last move when the round went on to a reply, so Growth picks their move', () => {
+    const stubRep = rep('b', 'd4 Nf6');
+    const indian = nodeById(tree, 'd4 Nf6');
+    // The round's opponent rolled a rare 2.c3; growing must not start from it.
+    const played = 'd4 Nf6 c3'.split(' ');
+    const offer = growOfferAt({ rep: stubRep, index, tree, opening: indian, played, rounds: [], growth, starred: [], stub: true });
+    expect(offer?.kind).toBe('opening');
+    expect(offer?.launch.hole).toBeNull();
+    expect(offer?.launch.row.ends.map((end) => end.path.join(' '))).toEqual(['d4 Nf6']);
+  });
 });

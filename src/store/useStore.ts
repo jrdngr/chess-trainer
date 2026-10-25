@@ -196,7 +196,8 @@ interface StoreState extends PersistedState {
    * Delete a derived opening: the region, and the move order that only led to
    * it. `rootId` is the opening's own root node.
    */
-  removeOpening: (repId: string, rootId: string) => void;
+  /** Delete an opening; with `tips`, only those lines, so the openings nested in it stay. */
+  removeOpening: (repId: string, rootId: string, tips?: string[]) => void;
   /** Delete one side's tree outright, with everything that only existed for it. */
   removeRepertoire: (repId: string) => void;
   /**
@@ -761,10 +762,10 @@ export const useStore = create<StoreState>((set, get) => {
       };
     },
 
-    removeOpening(repId, rootId) {
+    removeOpening(repId, rootId, tips) {
       shrinkRep(
         repId,
-        (rep) => pruneLine(rep, rootId),
+        (rep) => (tips ? tips.reduce((next, tip) => pruneLine(next, tip), rep) : pruneLine(rep, rootId)),
         (before, after) => ({
           kind: 'remove-opening',
           repertoireId: repId,

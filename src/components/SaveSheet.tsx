@@ -68,7 +68,7 @@ export function SaveSheet({
   const side: Color = color ?? picked ?? preferColor ?? (slice.length % 2 === 1 ? 'w' : 'b');
 
   const index = referenceIndex();
-  const book = useMemo(() => bookLength(lineKinds(index, slice)), [index, slice]);
+  const book = useMemo(() => bookLength(lineKinds(index, slice, side)), [index, slice, side]);
   const extPlies = useMemo(
     () => Array.from({ length: Math.max(0, Math.min(slice.length, book + CHECK_PLIES) - book) }, (_, i) => book + i),
     [slice.length, book],
