@@ -297,4 +297,12 @@ describe('the way into Growth at a clean end of prep', () => {
     expect(offer?.kind).toBe('opening');
     expect(offer?.text).toContain('cleanly');
   });
+
+  it('is the card when the round asked nothing, since the opening stops at its own moves', () => {
+    const stubRep = rep('b', 'd4 Nf6 c4 g6');
+    const played = 'd4 Nf6 c4 g6'.split(' ');
+    const offer = growOfferAt({ rep: stubRep, index, tree, opening: kidNode, played, rounds: [], growth, starred: [], stub: true });
+    expect(offer?.kind).toBe('opening');
+    expect(offer?.launch.row.ends.map((end) => end.path.join(' '))).toEqual(['d4 Nf6 c4 g6']);
+  });
 });

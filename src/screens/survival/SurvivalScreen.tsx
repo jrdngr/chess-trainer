@@ -359,6 +359,9 @@ export function SurvivalScreen({
     ratings.track(settleRun(answers.current, line));
     const region = nodeById(tree, ended.run.openingId);
     const clean = ended.misses.length === 0 ? prepEnd.current : null;
+    // Prep that asked you nothing is an opening saved as its own moves: an
+    // offer to grow it, but not a clean finish of anything.
+    const stub = !!clean && answers.current.length === 0;
     endRound({
       mode: 'survival',
       openingId: deepestNodeWithin(tree, region, line).id,
@@ -367,11 +370,11 @@ export function SurvivalScreen({
       correct: ended.moves,
       // A clean finish is your prep played to its end without a miss,
       // whatever the game did after it.
-      perfect: !!clean,
+      perfect: !!clean && !stub,
       line: clean ?? ended.run.target,
       prep: { asked: answers.current.length, found: answers.current.filter((answer) => answer.correct).length },
     });
-    setGrowOffer(clean ? offerFor(ended.run.color, ended.run.enteredIn, ended.run.openingId, clean) : null);
+    setGrowOffer(clean ? offerFor(ended.run.color, ended.run.enteredIn, ended.run.openingId, clean, stub) : null);
     buzz(how.kind === 'blunder' || how.kind === 'lost' ? [22, 60, 22] : 14);
     setEnding(how);
     setMiss(null);
@@ -422,7 +425,13 @@ export function SurvivalScreen({
   };
 
   /** The way into Growth a clean end of prep earns — see `growOfferAt`. */
-  const offerFor = (color: Color, enteredIn: string | null | undefined, openingId: string, played: string[]) => {
+  const offerFor = (
+    color: Color,
+    enteredIn: string | null | undefined,
+    openingId: string,
+    played: string[],
+    stub = false,
+  ) => {
     const now = useStore.getState();
     const rep = repertoireList(now).find((r) => r.color === color);
     if (!rep) return null;
@@ -436,6 +445,7 @@ export function SurvivalScreen({
       rounds: now.score.rounds,
       growth: modes.growth,
       starred: now.settings.favoriteOpenings,
+      stub,
     });
   };
 
@@ -602,8 +612,8 @@ export function SurvivalScreen({
     setPrepStatus('complete');
     if (run && inTheBook(index, run.fen)) setBookTo(run.played.length);
     else setBookOver(true);
-    // Only a line your prep actually asked you something on is finished.
-    if (prepSeen && run && !game?.state.misses.length) prepEnd.current = run.played;
+    // Where growing would start, even when the prep asked you nothing.
+    if (run && !game?.state.misses.length) prepEnd.current = run.played;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prepRanOut]);
 

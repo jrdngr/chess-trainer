@@ -63,11 +63,11 @@ describe('answering it', () => {
     expect(repFor('b')!.name).toContain('Black');
   });
 
-  it('adds the opening and a few of your moves past it', () => {
+  it('adds the opening and nothing past it', () => {
     state().finishOnboarding([seed(NAJDORF)]);
     const black = repFor('b')!;
     expect(lineIn(black, NAJDORF)).toBe(true);
-    expect(countNodes(black)).toBeGreaterThan(10);
+    expect(countNodes(black)).toBe(NAJDORF.split(' ').length);
     expect(repFor('w')).toBeUndefined();
   });
 
@@ -108,7 +108,7 @@ describe('answering it', () => {
 
   it('builds a whole starter set', () => {
     const set = starterSet('solid')!;
-    state().finishOnboarding(setSeed(set), set.plays);
+    state().finishOnboarding(setSeed(set));
     expect(repertoireList(state()).map((rep) => rep.color).sort()).toEqual(['b', 'w']);
     // The Berlin, not the book's 3...a6, against the Ruy Lopez.
     expect(lineIn(repFor('b')!, 'e4 e5 Nf3 Nc6 Bb5 Nf6')).toBe(true);
@@ -132,14 +132,14 @@ describe('a Playbook played on the board', () => {
     const repId = state().ensureRepertoire('w');
     state().addLine(repId, RUY.split(' '), 'board');
     const before = countNodes(state().repertoires[repId]);
-    state().finishOnboarding([seed(RUY)], [], { seed: false });
+    state().finishOnboarding([seed(RUY)]);
     expect(countNodes(state().repertoires[repId])).toBe(before);
     expect(state().settings.favoriteOpenings).toContain(RUY);
     expect(needsOnboarding(state())).toBe(false);
   });
 
   it('adds a picked opening as exactly its own moves', () => {
-    state().finishOnboarding([seed('d4 d5 c4')], [], { seed: false });
+    state().finishOnboarding([seed('d4 d5 c4')]);
     const rep = Object.values(state().repertoires).find((r) => r.color === 'w')!;
     expect(countNodes(rep)).toBe(3);
     expect(state().settings.favoriteOpenings).toContain('d4 d5 c4');

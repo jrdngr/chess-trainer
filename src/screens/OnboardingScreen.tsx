@@ -12,13 +12,11 @@ import { referenceIndex } from '../model/referenceIndex';
 import {
   countOwnMoves,
   seedFor,
-  seedLines,
   setOpenings,
   setSeed,
   SLOT_COLOR,
   SLOT_LABELS,
   STARTER_SETS,
-  type SeedLine,
   type SeedOpening,
   type SetSlot,
   type StarterSet,
@@ -31,10 +29,9 @@ import { repertoireList, useStore } from '../store/useStore';
  *
  * Everything in the app works on a Playbook, and a fresh install has none.
  * There are two ways in: a starter set, picked by style, or the openings you
- * already play, picked one at a time. A starter set's openings go in a few
- * of your moves past their names (see `seedLines`), so the first Autopilot
- * run has prep to drill; an opening you pick goes in as exactly the moves you
- * picked, since nothing past them was ever shown to you.
+ * already play, picked one at a time. Either way an opening goes in as
+ * exactly its own moves, since nothing past them was ever shown to you; the
+ * end screen's offer to grow a line brings in the rest.
  *
  * Skipping is a real answer, not a failure. It leaves the profile as it was
  * and is never asked again, short of a full reset.
@@ -74,8 +71,8 @@ export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'hom
     setStep({ kind: 'ready' });
   };
 
-  const finish = (openings: SeedOpening[], rows: AddedRow[], plays?: [string, string][]) => {
-    finishOnboarding(openings, plays);
+  const finish = (openings: SeedOpening[], rows: AddedRow[]) => {
+    finishOnboarding(openings);
     ready(rows);
   };
 
@@ -93,7 +90,7 @@ export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'hom
       <SetDetail
         set={set}
         onBack={() => setStep({ kind: 'sets' })}
-        onUse={() => finish(setSeed(set), setRows(set), set.plays)}
+        onUse={() => finish(setSeed(set), setRows(set))}
       />
     );
   }
@@ -102,13 +99,8 @@ export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'hom
       <PickOpenings
         onBack={() => setStep({ kind: added.length ? 'ready' : 'path' })}
         onAdd={(picked) => {
-          // Exactly the moves you picked: nothing past them goes in unseen.
-          finishOnboarding(
+          finish(
             picked.map((pick) => seedFor(pick.sans, pick.color)),
-            [],
-            { seed: false },
-          );
-          ready(
             picked.map((pick) => ({
               key: pick.sans.join(' '),
               name: pick.name,
@@ -130,12 +122,10 @@ export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'hom
             return;
           }
           const rows = boardRows(saved);
-          finishOnboarding(
+          finish(
             rows.map((row) => ({ sans: row.path, color: row.color })),
-            [],
-            { seed: false },
+            rows,
           );
-          ready(rows);
         }}
       />
     );
@@ -194,11 +184,7 @@ function slotNames(set: StarterSet, slot: SetSlot): string[] {
 /** Your moves a set puts in, all of them or one slot's. */
 function setMoves(set: StarterSet, slot?: SetSlot): number {
   const openings = setOpenings(set).filter((opening) => !slot || opening.slot === slot);
-  // Seeded with the whole set, so a slot counts the moves the set really plays.
-  const lines = seedLines(referenceIndex(), setSeed(set), set.plays);
-  const mine = (line: SeedLine) =>
-    openings.some((opening) => opening.color === line.color && `${line.sans.join(' ')} `.startsWith(`${opening.id} `));
-  return countOwnMoves(lines.filter(mine));
+  return countOwnMoves(openings.map(({ id, color }) => ({ sans: id.split(' '), color })));
 }
 
 function setRows(set: StarterSet): AddedRow[] {
@@ -257,7 +243,7 @@ function SetDetail({ set, onBack, onUse }: { set: StarterSet; onBack: () => void
                   {SLOT_LABELS[slot]}
                 </span>
                 <span className="name">{row.name}</span>
-                <span className="count">{row.moves} moves</span>
+                <span className="count">{row.moves} {row.moves === 1 ? 'move' : 'moves'}</span>
               </span>
             </div>
           );
@@ -385,7 +371,7 @@ function Ready({
         </span>
         <h1>Your Playbook is ready</h1>
         <p className="onboard-desc">
-          {moves} moves across {rows.length} {rows.length === 1 ? 'opening' : 'openings'}
+          {moves} {moves === 1 ? 'move' : 'moves'} across {rows.length} {rows.length === 1 ? 'opening' : 'openings'}
         </p>
         <div className="list">
           {rows.map((row) => (

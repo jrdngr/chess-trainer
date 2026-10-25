@@ -356,7 +356,9 @@ export function yourLastMove(played: string[], color: 'w' | 'b'): string | null 
 /**
  * The end-of-round way into Growth, and where growing starts.
  *
- *   opening — the offer: every line in the opening is finished clean. A card
+ *   opening — the offer: every line in the opening is finished clean, or the
+ *             round asked nothing because the opening stops at its own
+ *             moves. A card
  *             above the end screen's buttons says why, and Growth points back
  *             once the opening owes its cap of practice.
  *   line    — the quiet button at the bottom, at any other clean end of prep:
@@ -384,9 +386,15 @@ export function growOfferAt(args: {
   rounds: RoundRecord[];
   growth: { minShare: number; maxPly: number };
   starred: string[];
+  /** The round asked you nothing: the opening is saved as its own moves and no further. */
+  stub?: boolean;
 }): GrowOffer | null {
   const { rep, index, tree, opening, played, rounds } = args;
   const opts = { minShare: args.growth.minShare, maxPly: args.growth.maxPly, starred: args.starred };
+  if (args.stub) {
+    const launch = growLaunch(rep, index, tree, opening, played, opts);
+    if (launch) return { kind: 'opening', text: `Your ${opening.name} ends here.`, launch };
+  }
   if (readyToGrow(rep, tree, opening, rounds)) {
     const launch = growLaunch(rep, index, tree, opening, played, opts);
     if (launch) {

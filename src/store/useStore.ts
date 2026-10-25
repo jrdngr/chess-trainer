@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { positionKey, type Color } from '../chess/core';
+import { positionKey, walkSan, type Color } from '../chess/core';
 import {
   addLine,
   recordLosses,
@@ -35,7 +35,7 @@ import { importedOnly, mergeGames, playGames, withPlayGame } from '../model/play
 import { DEFAULT_SELECTION, type Selection } from '../model/selection';
 import { ANY_FAVORITE } from '../model/anyFavorite';
 import { selectionFor } from '../model/onboarding';
-import { seedLines, type SeedOpening } from '../model/starterSets';
+import type { SeedOpening } from '../model/starterSets';
 import {
   applyResult,
   EMPTY_SCORE,
@@ -228,19 +228,14 @@ interface StoreState extends PersistedState {
   setSelection: (patch: Partial<Selection>) => void;
   toggleStar: (openingId: string) => void;
   /**
-   * Answer the opening question a fresh profile is asked: star each picked
-   * opening, put its own move order into the tree for the side that plays it,
-   * and point the global selection at what was picked. An empty list is the
-   * player saying they have none, which only records that they were asked.
+   * Answer the opening question a fresh profile is asked: star each opening,
+   * put exactly its own move order into the tree for the side that plays it,
+   * and point the global selection at what was picked. Nothing past an
+   * opening's moves goes in, so nothing is tested that was never shown. An
+   * empty list is the player saying they have none, which only records that
+   * they were asked.
    */
-  /** Build the first Playbook from the openings onboarding chose, and never ask again. */
-  /**
-   * Answer onboarding: seed the openings into the Playbook and star them. With
-   * `seed` false each opening goes in as exactly its own moves, nothing past
-   * them: the openings you pick one at a time, and the lines played on the
-   * board, which are already in.
-   */
-  finishOnboarding: (openings: SeedOpening[], plays?: [string, string][], opts?: { seed?: boolean }) => void;
+  finishOnboarding: (openings: SeedOpening[]) => void;
   setSurvivalPrefs: (patch: Partial<SurvivalPrefs>) => void;
   /** Patch one mode's own options, without touching the rest of settings. */
   setModePrefs: <K extends 'drill' | 'growth' | 'play' | 'autopilot'>(
@@ -905,12 +900,11 @@ export const useStore = create<StoreState>((set, get) => {
      * the flag unset, say) would ask the question again on the next launch
      * with the lines already in.
      */
-    finishOnboarding(openings, plays = [], { seed = true } = {}) {
+    finishOnboarding(openings) {
       const state = get();
       const tree = openingTree(referenceIndex());
-      const lines = seed
-        ? seedLines(referenceIndex(), openings, plays)
-        : openings.map((opening) => ({ color: opening.color, sans: opening.sans }));
+      // Only what the board can play: a move order that is not legal is not an opening.
+      const lines = openings.filter(({ sans }) => walkSan(sans).fens.length === sans.length + 1);
       const repertoires = { ...state.repertoires };
       const order = [...state.repertoireOrder];
       const byColor = new Map<Color, string>(
