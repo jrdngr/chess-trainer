@@ -21,6 +21,8 @@ export interface AnalysisScreenProps {
   /** The side to look from, with the starting line: a Survival run is seen from the side you played. */
   initialOrientation?: 'w' | 'b';
   onConsumedInitial?: () => void;
+  /** Opened over a mode's end screen: back returns to it, and there is no tab bar. */
+  onBack?: () => void;
 }
 
 /**
@@ -30,7 +32,7 @@ export interface AnalysisScreenProps {
  * moves, so it lives here now: the engine's lines above, the book's moves
  * and games below, and the named lines the book knows from this position.
  */
-export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInitial }: AnalysisScreenProps) {
+export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInitial, onBack }: AnalysisScreenProps) {
   const settings = useStore((s) => s.settings);
   const setSettings = useStore((s) => s.setSettings);
   const [sans, setSans] = useState<string[]>(initialPath ?? []);
@@ -134,10 +136,15 @@ export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInit
   return (
     <>
       <div className="appbar">
+        {onBack && (
+          <IconButton label="Back" onClick={onBack}>
+            <Icons.back size={20} />
+          </IconButton>
+        )}
         <div className="appbar-title">
           {opening ? (
             <>
-              <div className="line" style={{ fontSize: 20 }}>{opening.name}</div>
+              <div className="name-wrap" style={{ fontSize: 20, fontWeight: 700 }}>{opening.name}</div>
               <div className="sub">{opening.eco}</div>
             </>
           ) : (
@@ -152,7 +159,7 @@ export function AnalysisScreen({ initialPath, initialOrientation, onConsumedInit
         </IconButton>
       </div>
 
-      <div className="screen">
+      <div className={onBack ? 'screen no-nav' : 'screen'}>
         {settings.engineEnabled && (
           <div className="row" style={{ gap: 10, marginBottom: 10, padding: '0 2px' }}>
             <span className="num" style={{ minWidth: 50, fontWeight: 700, fontSize: 15 }}>

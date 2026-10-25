@@ -75,19 +75,21 @@ export default function App() {
     setSession({ items, mode, title });
   };
 
+  const [analyzing, setAnalyzing] = useState<{ sans: string[]; side: 'w' | 'b' } | null>(null);
+
   /** Leaving a mode, from anywhere inside it, lands on Home. */
   const leaveMode = () => {
+    setAnalyzing(null);
     setMode(null);
     setTab('home');
   };
 
-  /** Leave a mode for the Analysis tab, on a line and from the side you played it. */
-  const analyzeFrom = (sans: string[], side: 'w' | 'b') => {
-    setExplorePath(sans);
-    setExploreSide(side);
-    setMode(null);
-    setTab('analysis');
-  };
+  /**
+   * Analysis over a mode, on a line and from the side you played it. The mode
+   * stays mounted underneath, so back returns to its end screen with the
+   * offer to grow still there.
+   */
+  const analyzeFrom = (sans: string[], side: 'w' | 'b') => setAnalyzing({ sans, side });
 
   /** Leave a mode for Tidy, on the Repertoire tab, open on the position a round ended at. */
   const tidyFrom = (find: TidyFind) => {
@@ -169,7 +171,16 @@ export default function App() {
 
   return (
     <div className="app">
-      {overlay ?? (
+      {overlay && analyzing && (
+        <AnalysisScreen
+          key={analyzing.sans.join(' ')}
+          initialPath={analyzing.sans}
+          initialOrientation={analyzing.side}
+          onBack={() => setAnalyzing(null)}
+        />
+      )}
+      {overlay && <div style={{ display: analyzing ? 'none' : 'contents' }}>{overlay}</div>}
+      {!overlay && (
         <>
           {tab === 'home' && (
             <HomeScreen
