@@ -301,7 +301,7 @@ function PickOpenings({ onBack, onAdd }: { onBack: () => void; onAdd: (picked: P
           onClick={() => onAdd(picked)}
         >
           <span className="truncate">
-            {picked.length === 1 ? `Add ${picked[0].name}` : `Add ${picked.length || ''} openings`.replace('  ', ' ')}
+            {picked.length ? `Add ${picked.length} opening${picked.length === 1 ? '' : 's'}` : 'Add openings'}
           </span>
         </button>
       </div>
