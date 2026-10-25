@@ -830,20 +830,29 @@ function Run({
 
         {phase === 'hole' && !intro.held && options.length > 0 && (
           <>
-            <div className="prompt">
-              <div className="who">
-                <span className={`side ${run.color}`} />
-                {run.hole ? `They played ${run.hole.san}` : 'Your prep ends here'}
-              </div>
-              {run.hole && (
-                <div className="ctx">
-                  {run.hole.kept
-                    ? 'In your Playbook, with no answer yet'
-                    : run.hole.engine
-                      ? "Engine's pick · past the book"
-                      : `${run.hole.share}% of strong players' games · ${formatGameCount(run.hole.games)}`}
+            {/* Undo and Stop here flank the prompt as icons, where a new player sees them from the first reply. */}
+            <div className="growth-prompt-row">
+              <button className="icon-btn growth-side-btn" aria-label="Undo" title="Undo" onClick={() => undo()} disabled={history.length === 0}>
+                <Icons.undo size={18} />
+              </button>
+              <div className="prompt">
+                <div className="who">
+                  <span className={`side ${run.color}`} />
+                  {run.hole ? `They played ${run.hole.san}` : 'Your prep ends here'}
                 </div>
-              )}
+                {run.hole && (
+                  <div className="ctx">
+                    {run.hole.kept
+                      ? 'In your Playbook, with no answer yet'
+                      : run.hole.engine
+                        ? "Engine's pick · past the book"
+                        : `${run.hole.share}% of strong players' games · ${formatGameCount(run.hole.games)}`}
+                  </div>
+                )}
+              </div>
+              <button className="icon-btn growth-side-btn" aria-label="Stop here" title="Stop here" onClick={() => setPhase('done')}>
+                <Icons.stop size={18} />
+              </button>
             </div>
 
             <NudgeReasons moves={shown} />
@@ -872,17 +881,6 @@ function Run({
                 </button>
               ))}
             </div>
-            {history.length > 0 && (
-              <div className="row mt-8">
-                <button className="btn grow" onClick={() => undo()}>
-                  <Icons.undo size={18} />
-                  Undo
-                </button>
-                <button className="btn grow" onClick={() => setPhase('done')}>
-                  Stop here
-                </button>
-              </div>
-            )}
           </>
         )}
 
