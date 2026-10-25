@@ -1,5 +1,5 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import { Icons, Section, Sheet, Toggle } from '../components/ui';
+import { useMemo, type ReactNode } from 'react';
+import { Icons } from '../components/ui';
 import { SelectionBar, selectionTrail } from '../components/Selection';
 import { PlateBoard, PrepSegments, SideSquare } from '../components/OpeningPlate';
 import { ScoreStrip } from '../components/ScoreBar';
@@ -17,7 +17,6 @@ export interface HomeScreenProps {
 
 export function HomeScreen({ onOpenMode, onOpenSettings }: HomeScreenProps) {
   const state = useStore();
-  const [autoSettings, setAutoSettings] = useState(false);
 
   /** What Autopilot would start with, said on its button — or that there is nothing to drill. */
   const first = useMemo(() => pickRound(state, NO_HISTORY).round, [state]);
@@ -66,9 +65,6 @@ export function HomeScreen({ onOpenMode, onOpenSettings }: HomeScreenProps) {
               <Icons.chevron size={20} />
             </button>
           )}
-          <button className="autopilot-gear" aria-label="Autopilot settings" onClick={() => setAutoSettings(true)}>
-            <Icons.gear size={16} />
-          </button>
         </div>
 
         <div className="mode-grid">
@@ -100,9 +96,6 @@ export function HomeScreen({ onOpenMode, onOpenSettings }: HomeScreenProps) {
           <MilestonesCard />
         </div>
       </div>
-
-      {/* Outside the scrolling screen: on iOS its touch scrolling makes a layer the tab bar would cover. */}
-      <AutopilotSettings open={autoSettings} onClose={() => setAutoSettings(false)} />
     </>
   );
 }
@@ -151,45 +144,5 @@ function StorageWarning() {
         </button>
       )}
     </div>
-  );
-}
-
-/**
- * Autopilot's own options: matters of taste only. Everything else about a
- * round is Autopilot's to decide, and no mode's setup reaches it — see
- * `autopilotPrefs.ts`.
- */
-function AutopilotSettings({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const prefs = useStore((s) => s.settings.autopilot);
-  const setModePrefs = useStore((s) => s.setModePrefs);
-  return (
-    <Sheet open={open} onClose={onClose} title="Autopilot">
-      <div className="tiny faint" style={{ marginBottom: 12 }}>
-        Autopilot picks every round and how it plays. Your Survival, Drill and Growth setups never change it.
-      </div>
-      <Section title="Survival feedback" />
-      <div className="list">
-        <Toggle
-          label="Move scores"
-          hint="What each move the engine judges cost you, in centipawns, over its square"
-          on={prefs.moveScores}
-          onToggle={() => setModePrefs('autopilot', { moveScores: !prefs.moveScores })}
-        />
-        <Toggle
-          label="Board glow"
-          hint="The board's edge tints green when you are better and red when you are worse"
-          on={prefs.boardGlow}
-          onToggle={() => setModePrefs('autopilot', { boardGlow: !prefs.boardGlow })}
-        />
-      </div>
-      <Section title="Testing" />
-      <div className="list">
-        <Toggle
-          label="Mode Testing"
-          on={prefs.modeTesting}
-          onToggle={() => setModePrefs('autopilot', { modeTesting: !prefs.modeTesting })}
-        />
-      </div>
-    </Sheet>
   );
 }

@@ -7,7 +7,7 @@ import type { SurvivalPrefs } from './survival';
  * Autopilot is curated: it decides what each round is and how it is played,
  * so it never reads a mode's setup. Changing Survival, Drill or Growth on
  * their own screens changes those modes and nothing here. The only choices
- * left to the player are matters of taste, kept on Autopilot's own sheet.
+ * left to the player are matters of taste, kept in Autopilot's section of Settings.
  *
  * The fixed values are written out rather than spread from each mode's
  * defaults, so a change to a mode's defaults does not reach Autopilot either.

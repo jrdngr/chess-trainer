@@ -12,6 +12,8 @@ const THEMES = (['slate', 'walnut', 'ocean'] as const).map((value) => ({
 export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const settings = useStore((s) => s.settings);
   const setSettings = useStore((s) => s.setSettings);
+  const autopilot = settings.autopilot;
+  const setModePrefs = useStore((s) => s.setModePrefs);
   const resetProgress = useStore((s) => s.resetProgress);
   const resetAll = useStore((s) => s.resetAll);
   /**
@@ -44,6 +46,27 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
         <Toggle label="Coordinates" on={settings.showCoordinates} onToggle={toggle('showCoordinates')} />
         <Toggle label="Haptics" on={settings.hapticFeedback} onToggle={toggle('hapticFeedback')} />
         <Toggle label="Autoplay" on={settings.autoplay} onToggle={toggle('autoplay')} />
+      </div>
+
+      <Section title="Autopilot" />
+      <div className="list">
+        <Toggle
+          label="Move scores"
+          hint="What each move the engine judges cost you, in centipawns, over its square"
+          on={autopilot.moveScores}
+          onToggle={() => setModePrefs('autopilot', { moveScores: !autopilot.moveScores })}
+        />
+        <Toggle
+          label="Board glow"
+          hint="The board's edge tints green when you are better and red when you are worse"
+          on={autopilot.boardGlow}
+          onToggle={() => setModePrefs('autopilot', { boardGlow: !autopilot.boardGlow })}
+        />
+        <Toggle
+          label="Mode Testing"
+          on={autopilot.modeTesting}
+          onToggle={() => setModePrefs('autopilot', { modeTesting: !autopilot.modeTesting })}
+        />
       </div>
 
       <Section title="Engine" />

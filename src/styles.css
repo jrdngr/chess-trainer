@@ -1026,7 +1026,6 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 }
 .plate-board .op-board { border-radius: 0; }
 .op-board > .hl { box-shadow: inset 0 0 0 100px rgba(170, 160, 255, 0.55); }
-.autopilot-wrap:has(.plate) .autopilot-gear { background: rgba(0, 0, 0, 0.35); color: var(--text-2); }
 
 .side-square {
   width: 14px;
@@ -1057,18 +1056,6 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .autopilot-wrap { position: relative; margin-bottom: 10px; }
 .autopilot-wrap .autopilot { margin-bottom: 0; }
 .autopilot-wrap .autopilot > svg { align-self: flex-end; }
-.autopilot-gear {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  color: var(--text-3);
-}
-.autopilot-gear:active { background: rgba(138, 140, 255, 0.18); }
 
 /* What to do after a round, right under the board: the same two buttons, always in the same place. */
 .next-row { display: flex; gap: 8px; margin-top: 12px; }
