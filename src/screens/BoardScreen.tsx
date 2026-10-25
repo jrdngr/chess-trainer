@@ -23,6 +23,8 @@ import { useStore } from '../store/useStore';
 export interface BoardLine {
   color: Color;
   sans: string[];
+  /** What the engine said of each move, kept for a line held back from the Playbook. */
+  lost?: (number | undefined)[];
 }
 
 /** How long the book waits before it answers your move. */
@@ -45,10 +47,13 @@ export function BoardScreen({
   onBack,
   onDone,
   doneLabel = 'Done',
+  hold = false,
 }: {
   onBack: () => void;
   onDone: (saved: BoardLine[]) => void;
   doneLabel?: string;
+  /** Hand the saved lines to `onDone` without putting them in the Playbook. */
+  hold?: boolean;
 }) {
   const settings = useStore((s) => s.settings);
   const index = referenceIndex();
@@ -230,6 +235,7 @@ export function BoardScreen({
         color={color}
         source="board"
         onSaved={(_, __, line) => setSaved((list) => [...list, { color, sans: line }])}
+        onKeep={hold ? (line, _, lost) => setSaved((list) => [...list, { color, sans: line, lost }]) : undefined}
       />
     </>
   );

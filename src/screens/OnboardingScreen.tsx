@@ -13,7 +13,6 @@ import {
   countOwnMoves,
   seedFor,
   setOpenings,
-  setSeed,
   SLOT_COLOR,
   SLOT_LABELS,
   STARTER_SETS,
@@ -22,16 +21,19 @@ import {
   type StarterSet,
 } from '../model/starterSets';
 import { NO_HISTORY, pickRound } from '../store/recommendation';
-import { repertoireList, useStore } from '../store/useStore';
+import { onboarded, repertoireList, useStore } from '../store/useStore';
 
 /**
  * The first screens a new profile sees: building the first Playbook.
  *
  * Everything in the app works on a Playbook, and a fresh install has none.
- * There are two ways in: a starter set, picked by style, or the openings you
- * already play, picked one at a time. Either way an opening goes in as
- * exactly its own moves, since nothing past them was ever shown to you; the
- * end screen's offer to grow a line brings in the rest.
+ * There are three ways in: a starter set, picked by style, the openings you
+ * already play, picked one at a time, or lines played in on the board. An
+ * opening goes in as exactly its own moves, since nothing past them was ever
+ * shown to you; the end screen's offer to grow a line brings in the rest.
+ *
+ * Nothing goes in until you leave the ready screen. Until then the openings
+ * are only held here, so "Add more openings" can still list and drop them.
  *
  * Skipping is a real answer, not a failure. It leaves the profile as it was
  * and is never asked again, short of a full reset.
@@ -45,35 +47,41 @@ type Step =
   | { kind: 'board' }
   | { kind: 'ready' };
 
-/** One opening as the ready screen lists what went in. */
-interface AddedRow {
+/** An opening waiting to go in, as the ready screen and the picked list show it. */
+interface Pending {
   key: string;
   name: string;
   color: Color;
   moves: number;
+  /** Its own moves: starred once it goes in. */
+  sans: string[];
+  /** The lines played on the board that put it in, for an opening from the board. */
+  lines?: BoardLine[];
 }
 
-/** A picked opening, waiting to go in. */
-interface Picked {
-  sans: string[];
-  color: Color;
-  name: string;
+/** One line a side, however many openings it put in. */
+function boardLines(pending: Pending[]): BoardLine[] {
+  const lines = new Map<string, BoardLine>();
+  for (const line of pending.flatMap((row) => row.lines ?? [])) lines.set(`${line.color} ${line.sans.join(' ')}`, line);
+  return [...lines.values()];
 }
+
+const seedsOf = (pending: Pending[]): SeedOpening[] => pending.map((row) => ({ sans: row.sans, color: row.color }));
 
 export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'home') => void }) {
   const finishOnboarding = useStore((s) => s.finishOnboarding);
   const [step, setStep] = useState<Step>({ kind: 'path' });
-  /** Everything put in so far: the ready screen can send you back to pick more. */
-  const [added, setAdded] = useState<AddedRow[]>([]);
+  /** Everything picked so far, held until the ready screen is left. */
+  const [pending, setPending] = useState<Pending[]>([]);
 
-  const ready = (rows: AddedRow[]) => {
-    setAdded((had) => [...had.filter((row) => !rows.some((r) => r.key === row.key)), ...rows]);
+  const ready = (rows: Pending[]) => {
+    setPending((had) => [...had.filter((row) => !rows.some((r) => r.key === row.key)), ...rows]);
     setStep({ kind: 'ready' });
   };
 
-  const finish = (openings: SeedOpening[], rows: AddedRow[]) => {
-    finishOnboarding(openings);
-    ready(rows);
+  const confirm = (next: 'autopilot' | 'home') => {
+    finishOnboarding(seedsOf(pending), boardLines(pending));
+    onDone(next);
   };
 
   const skip = () => {
@@ -90,24 +98,18 @@ export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'hom
       <SetDetail
         set={set}
         onBack={() => setStep({ kind: 'sets' })}
-        onUse={() => finish(setSeed(set), setRows(set))}
+        onUse={() => ready(pendingFromSet(set))}
       />
     );
   }
   if (step.kind === 'pick') {
     return (
       <PickOpenings
-        onBack={() => setStep({ kind: added.length ? 'ready' : 'path' })}
+        initial={pending}
+        onBack={() => setStep({ kind: pending.length ? 'ready' : 'path' })}
         onAdd={(picked) => {
-          finish(
-            picked.map((pick) => seedFor(pick.sans, pick.color)),
-            picked.map((pick) => ({
-              key: pick.sans.join(' '),
-              name: pick.name,
-              color: pick.color,
-              moves: countOwnMoves([seedFor(pick.sans, pick.color)]),
-            })),
-          );
+          setPending(picked);
+          setStep({ kind: 'ready' });
         }}
       />
     );
@@ -115,22 +117,19 @@ export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'hom
   if (step.kind === 'board') {
     return (
       <BoardScreen
+        hold
         onBack={() => setStep({ kind: 'path' })}
         onDone={(saved) => {
           if (!saved.length) {
             setStep({ kind: 'path' });
             return;
           }
-          const rows = boardRows(saved);
-          finish(
-            rows.map((row) => ({ sans: row.path, color: row.color })),
-            rows,
-          );
+          ready(boardRows(saved));
         }}
       />
     );
   }
-  if (step.kind === 'ready') return <Ready rows={added} onMore={() => setStep({ kind: 'pick' })} onDone={onDone} />;
+  if (step.kind === 'ready') return <Ready rows={pending} onMore={() => setStep({ kind: 'pick' })} onDone={confirm} />;
 
   return (
     <>
@@ -187,7 +186,16 @@ function setMoves(set: StarterSet, slot?: SetSlot): number {
   return countOwnMoves(openings.map(({ id, color }) => ({ sans: id.split(' '), color })));
 }
 
-function setRows(set: StarterSet): AddedRow[] {
+/** A set's openings, one by one, as they wait to go in. */
+function pendingFromSet(set: StarterSet): Pending[] {
+  return setOpenings(set).map(({ id, color, label }) => {
+    const sans = id.split(' ');
+    return { key: id, name: openingName(id, label), color, moves: countOwnMoves([{ sans, color }]), sans };
+  });
+}
+
+/** A set's slots, as its page shows them. */
+function setRows(set: StarterSet): { key: string; name: string; color: Color; moves: number }[] {
   return (Object.keys(set.slots) as SetSlot[]).map((slot) => ({
     key: slot,
     name: slotNames(set, slot).join(' · '),
@@ -260,16 +268,32 @@ function SetDetail({ set, onBack, onUse }: { set: StarterSet; onBack: () => void
 
 /* ── picking openings ─────────────────────────────────────────────────── */
 
-function PickOpenings({ onBack, onAdd }: { onBack: () => void; onAdd: (picked: Picked[]) => void }) {
-  const [picked, setPicked] = useState<Picked[]>([]);
+/**
+ * The openings picked so far, from any path, and more to add. Removing one
+ * here drops it before it ever goes in.
+ */
+function PickOpenings({
+  initial,
+  onBack,
+  onAdd,
+}: {
+  initial: Pending[];
+  onBack: () => void;
+  onAdd: (picked: Pending[]) => void;
+}) {
+  const [picked, setPicked] = useState<Pending[]>(initial);
   const [picking, setPicking] = useState(false);
+  const added = picked.filter((pick) => !initial.some((row) => row.key === pick.key)).length;
 
   const add = (sans: string[], side: Color | null) => {
     const key = sans.join(' ');
-    if (picked.some((pick) => pick.sans.join(' ') === key)) return;
+    if (picked.some((pick) => pick.key === key)) return;
     const node = openingTree(referenceIndex()).byId.get(key);
-    const { color } = seedFor(sans, side ?? undefined);
-    setPicked([...picked, { sans, color, name: node ? shortLabel(node.name) : key }]);
+    const seed = seedFor(sans, side ?? undefined);
+    setPicked([
+      ...picked,
+      { key, sans, color: seed.color, name: node ? shortLabel(node.name) : key, moves: countOwnMoves([seed]) },
+    ]);
   };
 
   return (
@@ -279,7 +303,7 @@ function PickOpenings({ onBack, onAdd }: { onBack: () => void; onAdd: (picked: P
         {picked.length > 0 && (
           <div className="list onboard-picked">
             {picked.map((pick, i) => (
-              <div key={pick.sans.join(' ')} className="list-row">
+              <div key={pick.key} className="list-row">
                 <SideSquare color={pick.color} />
                 <span className="title grow name-wrap">{pick.name}</span>
                 <IconButton label={`Remove ${pick.name}`} onClick={() => setPicked(picked.filter((_, j) => j !== i))}>
@@ -301,7 +325,7 @@ function PickOpenings({ onBack, onAdd }: { onBack: () => void; onAdd: (picked: P
           onClick={() => onAdd(picked)}
         >
           <span className="truncate">
-            {picked.length ? `Add ${picked.length} opening${picked.length === 1 ? '' : 's'}` : 'Add openings'}
+            {added ? `Add ${added} opening${added === 1 ? '' : 's'}` : initial.length ? 'Done' : 'Add openings'}
           </span>
         </button>
       </div>
@@ -313,31 +337,44 @@ function PickOpenings({ onBack, onAdd }: { onBack: () => void; onAdd: (picked: P
 /* ── played on the board ──────────────────────────────────────────────── */
 
 /**
- * What the board put in, as the Playbook lists it: each opening a saved line
- * ends in, with your moves in it. Read from the store, since the Save sheet
- * has already written the lines.
+ * What the board would put in, as the Playbook would list it: each opening a
+ * saved line ends in, with your moves in it and the lines that reach it. Read
+ * from the Playbook the lines would make, since none of them is in yet.
  */
-function boardRows(saved: BoardLine[]): (AddedRow & { path: string[] })[] {
-  const state = useStore.getState();
+function boardRows(saved: BoardLine[]): Pending[] {
+  const now = useStore.getState();
+  const state = { ...now, ...onboarded(now, [], saved) };
   const index = referenceIndex();
-  const rows = new Map<string, AddedRow & { path: string[] }>();
+  const rows = new Map<string, Pending>();
   for (const rep of repertoireList(state)) {
     const tips = saved
       .filter((line) => line.color === rep.color)
-      .map((line) => {
+      .flatMap((line) => {
         const fen = walkSan(line.sans).fens.at(-1);
-        return Object.values(rep.nodes).find((node) => node.fenAfter === fen && node.san === line.sans.at(-1));
-      })
-      .filter((tip) => !!tip);
+        const tip = Object.values(rep.nodes).find((node) => node.fenAfter === fen && node.san === line.sans.at(-1));
+        return tip ? [{ tip, line }] : [];
+      });
     for (const opening of openingsIn(rep, index)) {
       const inside = new Set(subtreeIds(rep, opening.rootId));
-      const mine = tips.filter((tip) => inside.has(tip.id));
+      const mine = tips.filter(({ tip }) => inside.has(tip.id));
       if (!mine.length) continue;
       // Your moves on the way to each line, the moves before the name included.
-      const own = new Set(mine.flatMap((tip) => pathTo(rep, tip.id)).filter((node) => fenTurn(node.fenBefore) === rep.color).map((node) => node.id));
+      const own = new Set(
+        mine
+          .flatMap(({ tip }) => pathTo(rep, tip.id))
+          .filter((node) => fenTurn(node.fenBefore) === rep.color)
+          .map((node) => node.id),
+      );
       // An opening called by Black's first move ("1...e5") is starred at that move, as a starter set stars it.
-      const path = /^\d/.test(opening.name) ? opening.path.slice(0, 2) : opening.path;
-      rows.set(opening.id, { key: opening.id, name: opening.name, color: rep.color, moves: own.size, path });
+      const sans = /^\d/.test(opening.name) ? opening.path.slice(0, 2) : opening.path;
+      rows.set(opening.id, {
+        key: opening.id,
+        name: opening.name,
+        color: rep.color,
+        moves: own.size,
+        sans,
+        lines: mine.map(({ line }) => line),
+      });
     }
   }
   return [...rows.values()];
@@ -350,11 +387,13 @@ function Ready({
   onMore,
   onDone,
 }: {
-  rows: AddedRow[];
+  rows: Pending[];
   onMore: () => void;
   onDone: (next: 'autopilot' | 'home') => void;
 }) {
-  const state = useStore();
+  const now = useStore();
+  // The Playbook as it will be: nothing goes in until one of the buttons below is tapped.
+  const state = useMemo(() => ({ ...now, ...onboarded(now, seedsOf(rows), boardLines(rows)) }), [now, rows]);
   const first = useMemo(() => pickRound(state, NO_HISTORY).round, [state]);
   const span = useMemo(() => {
     if (!first) return null;

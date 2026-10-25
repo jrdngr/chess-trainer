@@ -24,6 +24,11 @@ export interface SaveSheetProps {
   /** A note for the line's last move. */
   note?: string;
   onSaved?: (repertoireId: string, added: number, sans: string[]) => void;
+  /**
+   * Take the line instead of saving it, with what the engine said of its
+   * moves: onboarding holds its lines until the Playbook is confirmed.
+   */
+  onKeep?: (sans: string[], color: Color, lost: (number | undefined)[]) => void;
 }
 
 /** The most an extension is checked for, from where it leaves the book. */
@@ -49,6 +54,7 @@ export function SaveSheet({
   source,
   note,
   onSaved,
+  onKeep,
 }: SaveSheetProps) {
   const addLine = useStore((s) => s.addLine);
   const annotate = useStore((s) => s.annotate);
@@ -85,6 +91,12 @@ export function SaveSheet({
   const save = (upTo: number) => {
     const line = slice.slice(0, upTo);
     if (!line.length) return;
+    if (onKeep) {
+      onKeep(line, side, lost.slice(0, upTo));
+      toast('Saved');
+      onClose();
+      return;
+    }
     const repId = ensureRepertoire(side);
     const res = addLine(repId, line, source, undefined, lost.slice(0, upTo));
     if (note && upTo === slice.length) {

@@ -236,9 +236,10 @@ interface StoreState extends PersistedState {
    * and point the global selection at what was picked. Nothing past an
    * opening's moves goes in, so nothing is tested that was never shown. An
    * empty list is the player saying they have none, which only records that
-   * they were asked.
+   * they were asked. `lines` are lines played in on the board, in before the
+   * openings and kept with what the engine said of their moves.
    */
-  finishOnboarding: (openings: SeedOpening[]) => void;
+  finishOnboarding: (openings: SeedOpening[], lines?: OnboardingLine[]) => void;
   setSurvivalPrefs: (patch: Partial<SurvivalPrefs>) => void;
   /** Patch one mode's own options, without touching the rest of settings. */
   setModePrefs: <K extends 'drill' | 'growth' | 'play' | 'autopilot'>(
@@ -399,6 +400,81 @@ function testedInRun(
 function settled(mistakes: Mistake[], repertoireId: string, key: string): Mistake[] {
   const id = `${repertoireId}#${key}`;
   return mistakes.some((m) => m.id === id) ? mistakes.filter((m) => m.id !== id) : mistakes;
+}
+
+/** A line played in on the board during onboarding, and what the engine said of its moves. */
+export interface OnboardingLine extends SeedOpening {
+  lost?: (number | undefined)[];
+}
+
+/**
+ * What answering the opening question changes, without changing it:
+ * onboarding shows its ready screen from this and commits it only once the
+ * player leaves that screen. See `finishOnboarding`.
+ */
+export function onboarded(
+  state: Pick<StoreState, 'repertoires' | 'repertoireOrder' | 'events' | 'settings'>,
+  openings: SeedOpening[],
+  boardLines: OnboardingLine[] = [],
+): Pick<StoreState, 'repertoires' | 'repertoireOrder' | 'events' | 'settings'> {
+  const tree = openingTree(referenceIndex());
+  // Only what the board can play: a move order that is not legal is not an opening.
+  const legal = <T extends SeedOpening>(list: T[]) => list.filter(({ sans }) => walkSan(sans).fens.length === sans.length + 1);
+  const lines: (OnboardingLine & { source: 'board' | 'picker' })[] = [
+    ...legal(boardLines).map((line) => ({ ...line, source: 'board' as const })),
+    ...legal(openings).map((line) => ({ ...line, source: 'picker' as const })),
+  ];
+  const repertoires = { ...state.repertoires };
+  const order = [...state.repertoireOrder];
+  const byColor = new Map<Color, string>(
+    order.map((id) => repertoires[id]).filter((rep) => !!rep).map((rep) => [rep.color, rep.id]),
+  );
+
+  let events = state.events;
+  for (const line of lines) {
+    let repId = byColor.get(line.color);
+    if (!repId) {
+      const rep = createRepertoire(repertoireName(line.color), line.color);
+      repertoires[rep.id] = rep;
+      order.push(rep.id);
+      byColor.set(line.color, rep.id);
+      repId = rep.id;
+    }
+    const res = addLine(repertoires[repId], line.sans, line.source);
+    repertoires[repId] = line.lost?.length ? recordLosses(res.rep, line.sans, line.lost) : res.rep;
+    if (res.added > 0) {
+      events = appendEvent(events, {
+        kind: 'add',
+        repertoireId: repId,
+        color: line.color,
+        line: line.sans.join(' '),
+        added: res.added,
+        source: line.source,
+        via: 'onboarding',
+      });
+    }
+  }
+
+  // Starred where the book names them, so they lead the quick picker and Home's ladder.
+  const picks = openings
+    .map((opening) => ({ opening, node: tree.byId.get(opening.sans.join(' ')) }))
+    .filter(({ node }) => node && node.depth > 0)
+    .map(({ opening, node }) => ({ id: node!.id, name: node!.name, color: opening.color, sans: opening.sans }));
+
+  return {
+    repertoires,
+    repertoireOrder: order,
+    events,
+    settings: {
+      ...state.settings,
+      favoriteOpenings: [
+        ...new Set([...state.settings.favoriteOpenings, ...picks.map((pick) => pick.id)]),
+      ],
+      // Nothing picked says nothing about which side they play.
+      selection: picks.length ? selectionFor(picks) : state.settings.selection,
+      onboarded: true,
+    },
+  };
 }
 
 export const useStore = create<StoreState>((set, get) => {
@@ -914,62 +990,8 @@ export const useStore = create<StoreState>((set, get) => {
      * the flag unset, say) would ask the question again on the next launch
      * with the lines already in.
      */
-    finishOnboarding(openings) {
-      const state = get();
-      const tree = openingTree(referenceIndex());
-      // Only what the board can play: a move order that is not legal is not an opening.
-      const lines = openings.filter(({ sans }) => walkSan(sans).fens.length === sans.length + 1);
-      const repertoires = { ...state.repertoires };
-      const order = [...state.repertoireOrder];
-      const byColor = new Map<Color, string>(
-        repertoireList(state).map((rep) => [rep.color, rep.id]),
-      );
-
-      let events = state.events;
-      for (const line of lines) {
-        let repId = byColor.get(line.color);
-        if (!repId) {
-          const rep = createRepertoire(repertoireName(line.color), line.color);
-          repertoires[rep.id] = rep;
-          order.push(rep.id);
-          byColor.set(line.color, rep.id);
-          repId = rep.id;
-        }
-        const res = addLine(repertoires[repId], line.sans, 'picker');
-        repertoires[repId] = res.rep;
-        if (res.added > 0) {
-          events = appendEvent(events, {
-            kind: 'add',
-            repertoireId: repId,
-            color: line.color,
-            line: line.sans.join(' '),
-            added: res.added,
-            source: 'picker',
-            via: 'onboarding',
-          });
-        }
-      }
-
-      // Starred where the book names them, so they lead the quick picker and Home's ladder.
-      const picks = openings
-        .map((opening) => ({ opening, node: tree.byId.get(opening.sans.join(' ')) }))
-        .filter(({ node }) => node && node.depth > 0)
-        .map(({ opening, node }) => ({ id: node!.id, name: node!.name, color: opening.color, sans: opening.sans }));
-
-      commit({
-        repertoires,
-        repertoireOrder: order,
-        events,
-        settings: {
-          ...state.settings,
-          favoriteOpenings: [
-            ...new Set([...state.settings.favoriteOpenings, ...picks.map((pick) => pick.id)]),
-          ],
-          // Nothing picked says nothing about which side they play.
-          selection: picks.length ? selectionFor(picks) : state.settings.selection,
-          onboarded: true,
-        },
-      });
+    finishOnboarding(openings, lines = []) {
+      commit(onboarded(get(), openings, lines));
     },
 
     setSurvivalPrefs(patch) {

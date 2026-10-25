@@ -4,7 +4,7 @@ import { DEFAULT_SELECTION } from '../model/selection';
 import { countNodes } from '../model/repertoire';
 import { seedFor, setSeed, starterSet } from '../model/starterSets';
 import type { Repertoire } from '../model/types';
-import { DEFAULT_SETTINGS, needsOnboarding, repertoireList, useStore } from './useStore';
+import { DEFAULT_SETTINGS, needsOnboarding, onboarded, repertoireList, useStore } from './useStore';
 
 const NAJDORF = 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6';
 const SICILIAN = 'e4 c5';
@@ -150,5 +150,22 @@ describe('a Playbook played on the board', () => {
     state().addLine(repId, ['e4', 'e5', 'Qh5'], 'board', undefined, [undefined, undefined, 120]);
     const queen = Object.values(state().repertoires[repId].nodes).find((node) => node.san === 'Qh5');
     expect(queen?.lost).toBe(120);
+  });
+});
+
+describe('before it is answered', () => {
+  it('shows what would go in without putting anything in', () => {
+    const draft = onboarded(state(), [seed(RUY)], [{ color: 'b', sans: SICILIAN.split(' ') }]);
+    expect(repertoireList(draft).map((rep) => rep.color).sort()).toEqual(['b', 'w']);
+    expect(draft.settings.favoriteOpenings).toEqual([RUY]);
+    expect(state().repertoireOrder).toHaveLength(0);
+    expect(state().settings.favoriteOpenings).toEqual([]);
+    expect(needsOnboarding(state())).toBe(true);
+  });
+
+  it('puts lines from the board in once answered, without starring them', () => {
+    state().finishOnboarding([seed(RUY)], [{ color: 'b', sans: SICILIAN.split(' ') }]);
+    expect(countNodes(repFor('b')!)).toBe(2);
+    expect(state().settings.favoriteOpenings).toEqual([RUY]);
   });
 });
