@@ -37,8 +37,9 @@ Every change should pass these tests:
 - It is not a mode picker. The paid modes are deeper versions of its parts
   that you configure yourself.
 - It is not a Playbook editor. Its only way to add moves is the end
-  screen's offer to grow a line where your prep ran out. That plays one batch
-  of Growth and then goes on to the next run.
+  screen's Grow this line, one button that looks the same wherever it shows,
+  which grows the line where your prep ran out. That plays one batch of
+  Growth and then goes on to the next run.
 - It is not where you choose an exact line, side, steer or clock. Standalone
   Survival does that.
 
@@ -46,9 +47,21 @@ Every change should pass these tests:
 
 | Start | What happens | When |
 | --- | --- | --- |
-| Inside an opening | The moves into the opening are played for you | Default |
-| At a position | The moves to a position you're due on are played for you. With nothing due while your prep keeps missing, it uses the position you answer worst | Never two runs in a row |
-| From move one | The run starts from move one, and the opponent steers toward the opening | Every 4th run |
+| Position start | The moves up to the opening's own position are played for you | Default |
+| Inside start | The moves to one position deeper inside the opening are played for you: the one most overdue, or, with nothing due while your prep keeps missing, the one you answer worst | When it needs it more than a cold start does, never two runs in a row |
+| Cold start | Nothing is played for you. The run starts from move one and the opponent steers toward the opening | When the way in has gone unplayed long enough, never two runs in a row, and at least every 3rd run |
+
+Need is counted in runs, not days. Someone who plays thirty runs a day and
+someone who plays one a week both get repetition that fits how much they
+play:
+
+- A position's need grows with every run that didn't ask it, and resets when
+  a run does. A position still being learned comes back every other run; a
+  known one after its interval in runs, three runs for each day of it.
+- The way in is needed when its stalest move has gone 6 runs without you
+  playing it yourself.
+- Where runs started is saved, so the every-3rd-run cold start counts across
+  sessions.
 
 ## Past your prep: the book phase
 
@@ -68,8 +81,19 @@ the book:
 - The prep segments keep counting through the book phase, in the book's
   color, so a short opening still fills out the bar.
 
-After the book, the middlegame extras take over: moments, missions, the
-combo, plan cards and lenses.
+After the book comes **Out of book**, and the middlegame extras take over:
+moments, missions, the combo, plan cards and lenses.
+
+## Ending a round
+
+A small, quiet End round button is under the board from the first move of
+every run. Ending a round still gets the normal end screen, with Analyze and
+Grow this line, so you can drill just your openings when you want to. It is
+quiet on purpose: playing on past your prep is the game, and it is what makes
+you care which moves you grow.
+
+The end screen opens on where your prep ended, with "End of prep" and
+"Final position" to switch between that and where the run finished.
 
 ## How a run is shown
 

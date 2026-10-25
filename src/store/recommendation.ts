@@ -1,11 +1,11 @@
 import type { Color } from '../chess/core';
 import { favoritesIn, isAnyFavorite, resolveFavorite } from '../model/anyFavorite';
 import { AUTO_DRILL } from '../model/autopilotPrefs';
-import { coldStart, forcedStart, positionStart, testCycle, type ForcedStart, type TestCase } from '../model/autopilot';
+import { chooseStart, coldNeed, forcedStart, insideStart, splitItems, testCycle, type ForcedStart, type TestCase } from '../model/autopilot';
 import { ACCURACY_RUNS } from '../model/recommend';
 import { buildRepairs, type RepairItem } from '../model/repair';
 import { openingTree } from '../model/openingTree';
-import { isSteered, recommend, type Focus, type RecommendInput, type Recommendation, type Start } from '../model/recommend';
+import { isSteered, recommend, type Focus, type RecommendInput, type Recommendation } from '../model/recommend';
 import { referenceIndex } from '../model/referenceIndex';
 import { seenIn, type RoundRecord } from '../model/scoring';
 import { itemsInRegion, lineInRegion, regionOf, repertoiresIn, type Selection } from '../model/selection';
@@ -137,47 +137,50 @@ export interface AutoRound {
   at: string[] | null;
 }
 
-/** What a session remembers of its runs so far, oldest first. Nothing is saved. */
+/**
+ * What a session remembers of its runs so far, oldest first. Nothing is
+ * saved: where runs started is, in the score — see `chooseStart`.
+ */
 export interface AutoHistory {
   /** Their focuses, for the recommendation's brake. */
   focuses: Focus[];
   /** For each, whether it was steered into an opening below the selection. */
   steered: boolean[];
-  /** Where each started, for the Cold Start rule — see `coldStart`. */
-  starts: Start[];
-  /** Whether each started at a position — see `positionStart`. */
-  positions: boolean[];
 }
 
-export const NO_HISTORY: AutoHistory = { focuses: [], steered: [], starts: [], positions: [] };
+export const NO_HISTORY: AutoHistory = { focuses: [], steered: [] };
 
 /**
  * Autopilot's next run, or null with nothing prepared inside the selection.
  *
- * The recommendation engine picks what the run is about; every 4th starts
- * from move one, and the rest may start at a position your cards say is due
- * — see `autopilot.ts`. `force` is Mode Testing's: where this run starts,
- * whatever is owed, or null where it cannot.
+ * The recommendation engine picks what the run is about, and `chooseStart`
+ * where it starts: at the opening's own position, at a position deeper in
+ * that needs it, or from move one — see `autopilot.ts`. `force` is Mode
+ * Testing's: where this run starts, whatever is owed, or null where it cannot.
  */
 export function nextRound(state: State, history: AutoHistory, force?: ForcedStart): AutoRound | null {
   const recommended = recommendNow(state, history.focuses, history.steered);
   if (!recommended) return null;
   if (force === 'inside' && recommended.start !== 'inside') return null;
   if (force === 'inside' || force === 'first') return { pick: { ...recommended, start: force }, at: null };
-  const pick = force ? { ...recommended, start: 'inside' as const } : coldStart(recommended, history.starts);
-  if (pick.start === 'first') return { pick, at: null };
+  // An opening at move one, or a first move, has no way in to skip.
+  if (recommended.start === 'first') return force ? null : { pick: recommended, at: null };
 
   const tree = openingTree(referenceIndex());
-  const rep = repertoireList(state).find((r) => r.color === pick.color);
-  const items = rep ? itemsInRegion(tree, pick.opening, itemsFor(rep)) : [];
-  const owed = positionStart(items, state.cards, {
-    accuracy: prepAccuracy(state.score.rounds, [pick.color]),
-    lastWasPosition: !force && history.positions[history.positions.length - 1] === true,
-  });
-  // Mode Testing takes any position the opening has, when none is owed.
-  const at = owed ?? (force ? (items.find((item) => item.pathSans.length > 0) ?? null) : null);
-  if (force && !at) return null;
-  return { pick, at: at ? at.pathSans : null };
+  const rep = repertoireList(state).find((r) => r.color === recommended.color);
+  const items = rep ? itemsInRegion(tree, recommended.opening, itemsFor(rep)) : [];
+  const { wayIn, inside } = splitItems(items, recommended.opening.sans.length);
+  const round = state.score.lineRounds;
+  const deeper = insideStart(inside, state.cards, { accuracy: prepAccuracy(state.score.rounds, [recommended.color]), round });
+  if (force) {
+    // Mode Testing takes any position deeper in, when none is owed.
+    const at = deeper?.item ?? inside[0] ?? null;
+    return at ? { pick: recommended, at: at.pathSans } : null;
+  }
+  const kind = chooseStart({ recent: state.score.starts, cold: coldNeed(wayIn, state.cards, round), inside: deeper?.need ?? null });
+  if (kind === 'cold') return { pick: { ...recommended, start: 'first' }, at: null };
+  if (kind === 'inside' && deeper) return { pick: recommended, at: deeper.item.pathSans };
+  return { pick: recommended, at: null };
 }
 
 /* ── Mode Testing ───────────────────────────────────────────────────────── */
@@ -253,7 +256,5 @@ export function afterRound(history: AutoHistory, round: AutoRound, selection: Se
   return {
     focuses: [...history.focuses, round.pick.focus],
     steered: [...history.steered, isSteered(round.pick, selection)],
-    starts: [...history.starts, round.pick.start],
-    positions: [...history.positions, round.at !== null],
   };
 }

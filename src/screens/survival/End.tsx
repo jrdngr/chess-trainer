@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Board } from '../../components/Board';
-import { AppBar, copyText, haptic, Icons, Section, Strip, toast, type StripItem } from '../../components/ui';
+import { AppBar, copyText, haptic, Icons, Section, Segmented, Strip, toast, type StripItem } from '../../components/ui';
 import { applySan, lastMoveOf, sansToMoveText, walkSan, type Square } from '../../chess/core';
 import { selectionText } from '../../components/Selection';
 import { formatScore, winFraction } from '../../engine/types';
@@ -63,9 +63,12 @@ export function endingTitle(ending: Ending, plies: number): string {
  * engine's in green. Above everything else, the number: moves survived, with
  * the best and recent form of every opening the game went through. The misses
  * — prepared positions answered with something else — are listed, and each
- * one jumps the board there. One way on: Next run. A run that finished your
- * prep clean offers Growth: the card above the buttons when every line in the
- * opening is held, the quiet button at the bottom otherwise.
+ * one jumps the board there. One way on: Next run.
+ *
+ * The board opens on where your prep ended, since the game can go on for
+ * twenty moves past it and that is the position a run is about: "End of prep"
+ * and "Final position" switch between the two. A run with room to grow where
+ * its prep ran out offers it in one button, the same wherever it shows.
  */
 export function End({
   name,
@@ -74,7 +77,7 @@ export function End({
   before,
   moved,
   grow,
-  growLine,
+  prepPly,
   prep,
   nextLabel,
   prefs,
@@ -90,10 +93,13 @@ export function End({
   before: SurvivalRecord;
   /** The ratings this run moved that the end screen names: favorites and the run's own opening. */
   moved: RatingChange[];
-  /** The offer to grow the opening, on a clean end of prep with every line held. */
-  grow: { text: string | null; onGrow: () => void } | null;
-  /** Grow the line just finished, from where your prep ran out. */
-  growLine: (() => void) | null;
+  /** Grow the line from where your prep ran out — see `growOfferAt`. */
+  grow: (() => void) | null;
+  /**
+   * Where your prep ended: the ply of the position it ran out at, or of your
+   * first miss. Null when the run never reached your prep.
+   */
+  prepPly: number | null;
   /** How the run went on your prep, found and how fast — Autopilot's; null to leave it out. */
   prep?: string | null;
   /** Autopilot's name for the run, the opening, in place of "Survival" and the selection. */
@@ -141,7 +147,8 @@ export function End({
 
   const fens = useMemo(() => walkSan(run.played).fens, [run.played]);
   const last = run.played.length;
-  const [cursor, setCursor] = useState(last);
+  const prepAt = prepPly !== null && prepPly < last ? prepPly : null;
+  const [cursor, setCursor] = useState(prepAt ?? last);
   const seek = (n: number) => setCursor(Math.max(0, Math.min(last, n)));
   const shownFen = fens[cursor] ?? run.fen;
   const missAt = misses.find((miss) => miss.ply === cursor) ?? null;
@@ -270,6 +277,18 @@ export function End({
       />
 
       <div className="screen no-nav">
+        {prepAt !== null && (
+          <div style={{ marginBottom: 10 }}>
+            <Segmented
+              value={cursor === prepAt ? 'prep' : cursor === last ? 'final' : ''}
+              options={[
+                { value: 'prep', label: 'End of prep' },
+                { value: 'final', label: 'Final position' },
+              ]}
+              onChange={(view) => seek(view === 'prep' ? prepAt : last)}
+            />
+          </div>
+        )}
         {settings.engineEnabled && (
           <div className="row gap-8" style={{ marginBottom: 10 }}>
             <div className="evalbar grow">
@@ -304,20 +323,11 @@ export function End({
         {lens.legend}
         <div style={{ display: lens.legend ? 'none' : 'contents' }}>
 
-        {grow && !grow.text && (
-          <button className="btn accent block" onClick={grow.onGrow}>
+        {grow && (
+          <button className="btn accent block mt-12" onClick={grow}>
             <Icons.plus size={18} />
-            Grow this opening
+            Grow this line
           </button>
-        )}
-        {grow?.text && (
-          <div className="card grow-offer">
-            <span className="grow small">{grow.text}</span>
-            <button className="btn accent sm" onClick={grow.onGrow}>
-              <Icons.plus size={16} />
-              Grow it
-            </button>
-          </div>
         )}
 
         <div className="next-row">
@@ -421,12 +431,6 @@ export function End({
               Change options
             </button>
           </>
-        )}
-        {growLine && (
-          <button className="btn plain block mt-8" onClick={growLine}>
-            <Icons.plus size={18} />
-            Grow this line
-          </button>
         )}
         </div>
       </div>

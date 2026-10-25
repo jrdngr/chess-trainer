@@ -307,3 +307,26 @@ export function gradeForLine(seconds: number[], misses: number): Grade {
   if (!seconds.length) return 'good';
   return gradeForTime(seconds.reduce((sum, s) => sum + s, 0) / seconds.length);
 }
+
+/* ── need in runs ───────────────────────────────────────────────────── */
+
+/** Runs a review card's interval stands for, per day of it: see `runGap`. */
+export const RUNS_PER_DAY = 3;
+
+/**
+ * Runs between asks of a position, from its card: two while it is still
+ * being learned, and its interval in runs once it is known.
+ */
+export function runGap(card: Card): number {
+  return card.stage === 'review' ? Math.max(2, Math.round(card.interval * RUNS_PER_DAY)) : 2;
+}
+
+/**
+ * How much a position wants asking, in runs: the runs since one last asked
+ * it over its gap, so 1 and over is due. A card no run has asked yet (one
+ * only Drill has shown you) keeps to its date until a run asks it.
+ */
+export function runNeed(card: Card, round: number, now = Date.now()): number {
+  if (card.testedRound === undefined) return isDue(card, now) ? 1 : 0;
+  return (round - card.testedRound) / runGap(card);
+}

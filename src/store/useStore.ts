@@ -15,6 +15,7 @@ import {
 import { allItems, cardId, type TrainingItem } from '../model/session';
 import { switchMove } from '../model/tidy';
 import { DEFAULT_AUTOPILOT } from '../model/autopilotPrefs';
+import type { StartKind } from '../model/autopilot';
 import { createCard, createLineCard, lineCardId, review } from '../model/srs';
 import type {
   Card,
@@ -41,6 +42,7 @@ import {
   EMPTY_SCORE,
   normalizeScore,
   recordRound,
+  recordStart,
   settleRun,
   type MoveResult,
   type RatingMove,
@@ -265,6 +267,8 @@ interface StoreState extends PersistedState {
   settleRun: (earlier: MoveResult[], line: string[]) => RatingMove[];
   /** Count a finished round against its opening. */
   endRound: (round: Omit<RoundRecord, 'at'>) => void;
+  /** Autopilot started a run this way — see `chooseStart`. */
+  noteStart: (kind: StartKind) => void;
   /** Remember a move the user got wrong somewhere in the app. */
   logMistake: (mistake: Omit<Mistake, 'id' | 'at'>) => void;
   /** Forget one, once it has been answered right. */
@@ -376,6 +380,15 @@ function reviewed(
       },
     ],
   };
+}
+
+/** A review a run made: the card remembers which run asked it, for Autopilot's starts. */
+function testedInRun(
+  state: StoreState,
+  result: Pick<PersistedState, 'cards' | 'log'>,
+  id: string,
+): Pick<PersistedState, 'cards' | 'log'> {
+  return { ...result, cards: { ...result.cards, [id]: { ...result.cards[id], testedRound: state.score.lineRounds } } };
 }
 
 /**
@@ -1007,6 +1020,10 @@ export const useStore = create<StoreState>((set, get) => {
       commit({ score: recordRound(get().score, openingTree(referenceIndex()), { ...round, at: Date.now() }) });
     },
 
+    noteStart(kind) {
+      commit({ score: recordStart(get().score, kind) });
+    },
+
     logMistake(mistake) {
       commit({ mistakes: addMistake(get().mistakes, mistake) });
     },
@@ -1022,11 +1039,15 @@ export const useStore = create<StoreState>((set, get) => {
       const existing = state.cards[id];
       const card = existing ?? createCard(id, repertoireId, key, fen);
       commit({
-        ...reviewed(state, card, existing ? gradeValue : 'good', {
-          correct: true,
-          playedSan: played,
-          expectedSan: played,
-        }),
+        ...testedInRun(
+          state,
+          reviewed(state, card, existing ? gradeValue : 'good', {
+            correct: true,
+            playedSan: played,
+            expectedSan: played,
+          }),
+          id,
+        ),
         mistakes: settled(state.mistakes, repertoireId, key),
       });
     },
@@ -1037,7 +1058,7 @@ export const useStore = create<StoreState>((set, get) => {
       const state = get();
       const card = state.cards[id] ?? createCard(id, repertoireId, key, fen);
       commit({
-        ...reviewed(state, card, 'again', { correct: false, playedSan: played, expectedSan: expected }),
+        ...testedInRun(state, reviewed(state, card, 'again', { correct: false, playedSan: played, expectedSan: expected }), id),
         mistakes: addMistake(state.mistakes, {
           source: 'openingRun',
           repertoireId,

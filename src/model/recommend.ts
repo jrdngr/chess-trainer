@@ -14,7 +14,7 @@ import { leafLines } from './repertoire';
 import { colorsOf, type Selection } from './selection';
 import { allItems, type TrainingItem } from './session';
 import { nodeStats, type ActivityMode, type ScoreState } from './scoring';
-import { isDue } from './srs';
+import { runNeed } from './srs';
 import type { Card, Repertoire } from './types';
 
 /**
@@ -393,14 +393,14 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
 
       const wanting = (item: TrainingItem) => {
         const card = input.cards[item.cardId];
-        return !card || isDue(card, now) || slipped.has(item.key);
+        return !card || runNeed(card, input.score.lineRounds, now) >= 1 || slipped.has(item.key);
       };
       let due = 0;
       let unseen = 0;
       for (const item of within(items, node)) {
         const card = input.cards[item.cardId];
         if (!card) unseen += 1;
-        else if (isDue(card, now) || slipped.has(item.key)) due += 1;
+        else if (runNeed(card, input.score.lineRounds, now) >= 1 || slipped.has(item.key)) due += 1;
       }
       push(
         'review',

@@ -84,6 +84,12 @@ export interface Card {
   due: number;
   lastReviewed: number | null;
   createdAt: number;
+  /**
+   * The run that last asked this position: the count of runs played before
+   * it (`ScoreState.lineRounds`). What Autopilot's starts count need in.
+   * Unset until a run asks it.
+   */
+  testedRound?: number;
 }
 
 /** The schedule part of a card: what `review()` reads and writes. */

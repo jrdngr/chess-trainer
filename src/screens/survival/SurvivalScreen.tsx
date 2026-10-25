@@ -80,11 +80,13 @@ const RATING_LINGER_MS = 1700;
  */
 type PrepStatus = 'on' | 'complete' | 'off';
 
-const PREP_STATUS: Record<PrepStatus | 'book', { text: string; color: string }> = {
+const PREP_STATUS: Record<PrepStatus | 'book' | 'out', { text: string; color: string }> = {
   on: { text: 'On prep', color: 'var(--warn)' },
   complete: { text: 'Prep complete', color: 'var(--good)' },
   off: { text: 'Off prep', color: 'var(--bad)' },
   book: { text: 'In the book', color: 'var(--book)' },
+  // Past a clean prep and the book after it: the engine judges from here.
+  out: { text: 'Out of book', color: 'var(--text-2)' },
 };
 
 /** How long a miss stays over the board before the game goes on. */
@@ -623,6 +625,7 @@ export function SurvivalScreen({
     if (bookRanOut) setBookOver(true);
   }, [bookRanOut]);
   const inBook = prepStatus === 'complete' && bookTo !== null && !bookOver;
+  const outOfBook = prepStatus === 'complete' && bookOver;
 
   // The engine's score for the position in front of you steers the glow.
   const baselineCp = judge.baseline && run && judge.baseline.fen === run.fen ? judge.baseline.cp : null;
@@ -775,8 +778,8 @@ export function SurvivalScreen({
         ending={ending}
         before={before}
         moved={shown}
-        grow={growOffer?.kind === 'opening' ? { text: growOffer.text, onGrow: () => setPhase('growing') } : null}
-        growLine={growOffer?.kind === 'line' ? () => setPhase('growing') : null}
+        grow={growOffer ? () => setPhase('growing') : null}
+        prepPly={prepEnd.current?.length ?? game.state.misses[0]?.ply ?? null}
         prep={
           plan
             ? prepSummary(
@@ -961,9 +964,9 @@ export function SurvivalScreen({
             )}
             {judge.pending ? 'Judging' : thinking || engineTurn || !myTurn ? 'Reply' : 'Your move'}
           </div>
-          {inBook ? (
-            <div className="ctx" style={{ color: PREP_STATUS.book.color, fontWeight: 600 }}>
-              {PREP_STATUS.book.text}
+          {inBook || outOfBook ? (
+            <div className="ctx" style={{ color: PREP_STATUS[inBook ? 'book' : 'out'].color, fontWeight: 600 }}>
+              {PREP_STATUS[inBook ? 'book' : 'out'].text}
             </div>
           ) : (
             (prepSeen || prepStatus === 'off' || (prepStatus === 'on' && prepHere(game.source, game.state).length > 0)) && (
@@ -985,10 +988,23 @@ export function SurvivalScreen({
               Combo ×{comboMultiplier(game.state.extras.combo)}
             </div>
           )}
-          {prepStatus === 'off' && (
-            <button className="btn sm mt-8" onClick={() => finish(game.state, { kind: 'ended' })}>
-              End run
+          {plan ? (
+            // Autopilot's way out, there from the first move: ending a round at
+            // the end of your prep, or after a slip, still gets the end screen.
+            // Quiet, since playing on is the game.
+            <button
+              className="btn sm soft mt-12"
+              style={{ color: 'var(--text-2)' }}
+              onClick={() => finish(game.state, { kind: 'ended' })}
+            >
+              End round
             </button>
+          ) : (
+            prepStatus === 'off' && (
+              <button className="btn sm mt-8" onClick={() => finish(game.state, { kind: 'ended' })}>
+                End run
+              </button>
+            )
           )}
           {game.state.misses.length > 0 && (
             <div className="ctx">

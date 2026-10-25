@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_SELECTION } from '../model/selection';
 import { DEFAULT_SETTINGS, itemsFor, repertoireList, useStore } from './useStore';
-import { afterRound, nextRound, NO_HISTORY } from './recommendation';
+import { startKind } from '../model/autopilot';
+import { nextRound, NO_HISTORY } from './recommendation';
 
 const RUY = 'e4 e5 Nf3 Nc6 Bb5';
 
@@ -23,7 +24,7 @@ beforeEach(() => {
   }
 });
 
-/** Every position of the repertoire answered once, and the one at `path` due now. */
+/** Every position of the repertoire asked last run, and the one at `path` long enough ago to be due. */
 function dueAt(path: string): void {
   const rep = repertoireList(useStore.getState())[0];
   const now = Date.now();
@@ -46,10 +47,11 @@ function dueAt(path: string): void {
         due: item.pathSans.join(' ') === path ? now - 1000 : now + 86_400_000,
         lastReviewed: now - 86_400_000,
         createdAt: now - 10 * 86_400_000,
+        testedRound: item.pathSans.join(' ') === path ? 0 : 19,
       },
     ]),
   );
-  useStore.setState({ cards });
+  useStore.setState({ cards, score: { ...useStore.getState().score, lineRounds: 20, starts: [] } });
 }
 
 describe("Autopilot's runs", () => {
@@ -59,15 +61,34 @@ describe("Autopilot's runs", () => {
     expect(round.at).toEqual('e4 e5 Nf3 Nc6 Bb5 Nf6'.split(' '));
   });
 
-  it('never start at a position twice running', () => {
+  it('never start deeper in twice running, even across sessions', () => {
     dueAt('e4 e5 Nf3 Nc6 Bb5 Nf6');
     const first = nextRound(useStore.getState(), NO_HISTORY)!;
-    const history = afterRound(NO_HISTORY, first, useStore.getState().settings.selection);
-    expect(nextRound(useStore.getState(), history)!.at).toBeNull();
+    useStore.getState().noteStart(startKind(first));
+    expect(nextRound(useStore.getState(), NO_HISTORY)!.at).toBeNull();
   });
 
-  it('start inside with nothing due', () => {
-    dueAt('');
-    expect(nextRound(useStore.getState(), NO_HISTORY)!.at).toBeNull();
+  it('start at the opening position with nothing due', () => {
+    dueAt('-');
+    const round = nextRound(useStore.getState(), NO_HISTORY)!;
+    expect(startKind(round)).toBe('position');
+  });
+
+  it('start from move one when the way in has never been played', () => {
+    dueAt('-');
+    const cards = { ...useStore.getState().cards };
+    for (const id of Object.keys(cards)) if (cards[id].key === itemsFor(repertoireList(useStore.getState())[0])[0].key) delete cards[id].testedRound;
+    useStore.setState({ cards });
+    expect(startKind(nextRound(useStore.getState(), NO_HISTORY)!)).toBe('cold');
+  });
+
+  it('start from move one every third run at the latest', () => {
+    dueAt('-');
+    const kinds = Array.from({ length: 6 }, () => {
+      const kind = startKind(nextRound(useStore.getState(), NO_HISTORY)!);
+      useStore.getState().noteStart(kind);
+      return kind;
+    });
+    expect(kinds).toEqual(['position', 'position', 'cold', 'position', 'position', 'cold']);
   });
 });

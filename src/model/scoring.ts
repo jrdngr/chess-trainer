@@ -1,4 +1,5 @@
 import type { Color } from '../chess/core';
+import type { StartKind } from './autopilot';
 import { markSeen } from './freshness';
 import {
   ancestorsOf,
@@ -237,6 +238,8 @@ export interface ScoreState {
    * old Autopilot rounds. The clock freshness is read against.
    */
   lineRounds: number;
+  /** Where Autopilot's last runs started, oldest first — see `chooseStart`. */
+  starts: StartKind[];
 }
 
 function emptyTally(): ModeTally {
@@ -258,7 +261,7 @@ export function emptyNodeStats(): NodeStats {
   };
 }
 
-export const EMPTY_SCORE: ScoreState = { global: emptyNodeStats(), nodes: {}, rounds: [], seen: {}, lineRounds: 0 };
+export const EMPTY_SCORE: ScoreState = { global: emptyNodeStats(), nodes: {}, rounds: [], seen: {}, lineRounds: 0, starts: [] };
 
 /** A saved tally from before rounds were called rounds, or before ratings. */
 type Legacy<T> = Partial<T> & { games?: number; score?: number };
@@ -315,6 +318,7 @@ export function normalizeScore(
     // Saves from before Survival counted here marked `seen` by Autopilot's
     // round count, so the clock carries on from there.
     lineRounds: saved?.lineRounds ?? global.byMode.run.rounds,
+    starts: saved?.starts ?? [],
   };
 }
 
@@ -537,6 +541,14 @@ export function recordRound(state: ScoreState, tree: OpeningTree, round: RoundRe
     seen,
     lineRounds,
   };
+}
+
+/** How many of Autopilot's starts are remembered: enough for `chooseStart`. */
+const STARTS_KEPT = 6;
+
+/** Autopilot started a run: remembered across sessions, for where the next ones start. */
+export function recordStart(state: ScoreState, kind: StartKind): ScoreState {
+  return { ...state, starts: [...state.starts, kind].slice(-STARTS_KEPT) };
 }
 
 /** What the rounds so far have been about, for the draw and the scorer. */

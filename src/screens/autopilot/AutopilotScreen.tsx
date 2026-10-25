@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AppBar, Icons } from '../../components/ui';
 import { SelectionBar, selectionText } from '../../components/Selection';
 import { autopilotModes } from '../../model/autopilotPrefs';
-import { survivalPlanFor } from '../../model/autopilot';
+import { startKind, survivalPlanFor } from '../../model/autopilot';
 import type { Selection } from '../../model/selection';
 import type { TidyFind } from '../../model/tidy';
 import { useStore } from '../../store/useStore';
@@ -59,6 +59,8 @@ export function AutopilotScreen({
   useEffect(() => {
     if (!scope) playedRound(picked.within);
     if (picked.test) tookTest(picked.test);
+    // Where it started counts toward where the next ones start, across sessions.
+    else if (picked.round) useStore.getState().noteStart(startKind(picked.round));
   }, [scope, picked]);
   /** Autopilot's own options, and the fixed ones every round plays on; never a mode's setup. */
   const autopilotPrefs = useStore((s) => s.settings.autopilot);

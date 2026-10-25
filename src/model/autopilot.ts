@@ -3,7 +3,7 @@ import { prepIndex } from './openingRun';
 import type { Card, Repertoire } from './types';
 import { missingPrep, type Focus, type Recommendation, type Start } from './recommend';
 import { weakestFirst, type TrainingItem } from './session';
-import { isDue } from './srs';
+import { runNeed } from './srs';
 
 /**
  * Autopilot: one Survival run after another, without going back to Home in
@@ -15,58 +15,101 @@ import { isDue } from './srs';
  * recommendation engine (`recommend.ts`) — and where the run starts, which is
  * how the drilling gets done without leaving the game:
  *
- *   inside   — the way into the opening is played for you. The default.
- *   position — the way to a position you're due on, or answer worst while
- *              your prep keeps missing, is played for you — see `positionStart`.
- *   first    — a Cold Start from move one, every `COLD_EVERY`th run, so the
- *              way in is tested too — see `coldStart`.
- */
-/**
- * How often a Survival run starts from move one even where the
- * recommendation would start it inside an opening: once the last
- * `COLD_EVERY - 1` runs all started inside, the next is a Cold Start.
+ *   position — the moves up to the opening's own position are played for
+ *              you. The default. (`start: 'inside'` in the code, with no `at`.)
+ *   inside   — the moves to one position deeper inside the opening are
+ *              played for you: the one that needs it most. (`at`.)
+ *   cold     — nothing is played for you: the run starts from move one and
+ *              the opponent steers toward the opening, so the way in is
+ *              yours to play. (`start: 'first'`.)
  *
- * Starting inside is how a run gets to the opening that needs the work, and
- * a selection that is itself a family starts every run there; but a game
- * never starts there, so now and then the way in is part of the test. A run
- * from move one for any reason counts, so a selection whose runs mostly
- * start there anyway is never pushed further.
+ * What a start drills decides when it comes: see `chooseStart`. Need is
+ * counted in runs, not days, so the more you play the sooner a position
+ * comes back, and a week away changes nothing.
  */
-export const COLD_EVERY = 4;
+export type StartKind = 'position' | 'inside' | 'cold';
+
+export { RUNS_PER_DAY, runGap, runNeed } from './srs';
+
+/** Runs the way into an opening goes unplayed before a cold start wants it. */
+export const COLD_GAP = 6;
+
+/** A cold start every this many runs at the latest, whatever the need. */
+export const COLD_EVERY = 3;
 
 /**
- * The recommendation as this run plays it: the same opening, side and focus,
- * but from move one when the last `COLD_EVERY - 1` runs all started inside.
- * The opponent is still steered toward the opening, from the first move.
+ * Your positions on the way into an opening, its moves from move one up to
+ * its own position, and the ones inside it, past that position. The opening's
+ * own position is the position start's.
  */
-export function coldStart(pick: Recommendation, recentStarts: Start[]): Recommendation {
-  if (pick.start === 'first') return pick;
-  const tail = recentStarts.slice(-(COLD_EVERY - 1));
-  const due = tail.length === COLD_EVERY - 1 && tail.every((start) => start === 'inside');
-  return due ? { ...pick, start: 'first' } : pick;
+export function splitItems(items: TrainingItem[], openingPlies: number): { wayIn: TrainingItem[]; inside: TrainingItem[] } {
+  return {
+    wayIn: items.filter((item) => item.pathSans.length < openingPlies),
+    inside: items.filter((item) => item.pathSans.length > openingPlies),
+  };
 }
 
 /**
- * Where a run starts at a position, when it does: the one you're most
- * overdue on, or, with nothing due while your prep keeps missing in runs
- * (`missingPrep`), the one you answer worst. Never two runs running, so the
- * openings themselves still get played into, and never on a Cold Start.
- * A position at move one is no start at all: that is a Cold Start.
+ * How much the way in wants playing: the runs since you last played its
+ * stalest move yourself, over `COLD_GAP`. A move of the way in no run has
+ * asked you counts as never played.
  */
-export function positionStart(
-  items: TrainingItem[],
+export function coldNeed(wayIn: TrainingItem[], cards: Record<string, Card>, round: number): number {
+  if (!wayIn.length) return 0;
+  const since = wayIn.map((item) => {
+    const tested = cards[item.cardId]?.testedRound;
+    return tested === undefined ? Infinity : round - tested;
+  });
+  return Math.max(...since) / COLD_GAP;
+}
+
+/**
+ * The position an inside start would begin at, and how much it wants it: the
+ * one most overdue, in runs. With nothing due while your prep keeps missing
+ * in runs (`missingPrep`), the one you answer worst, at need 1.
+ */
+export function insideStart(
+  inside: TrainingItem[],
   cards: Record<string, Card>,
-  opts: { accuracy: number | null; lastWasPosition: boolean; now?: number },
-): TrainingItem | null {
-  if (opts.lastWasPosition) return null;
+  opts: { accuracy: number | null; round: number; now?: number },
+): { item: TrainingItem; need: number } | null {
   const now = opts.now ?? Date.now();
-  const reachable = items.filter((item) => item.pathSans.length > 0);
-  const due = reachable
-    .filter((item) => cards[item.cardId] && isDue(cards[item.cardId], now))
-    .sort((a, b) => cards[a.cardId].due - cards[b.cardId].due);
+  const due = inside
+    .filter((item) => cards[item.cardId])
+    .map((item) => ({ item, need: runNeed(cards[item.cardId], opts.round, now) }))
+    .filter((x) => x.need >= 1)
+    .sort((a, b) => b.need - a.need);
   if (due.length) return due[0];
   if (missingPrep(opts.accuracy) === 0) return null;
-  return weakestFirst(reachable.filter((item) => cards[item.cardId]), cards)[0] ?? null;
+  const weakest = weakestFirst(inside.filter((item) => cards[item.cardId]), cards)[0];
+  return weakest ? { item: weakest, need: 1 } : null;
+}
+
+/**
+ * Where the next run starts. A position start unless another start has more
+ * need: an inside start when a position deeper in is due, a cold start when
+ * the way in has gone unplayed long enough, the greater need when both do.
+ * Neither comes twice running, and a cold start comes at least every
+ * `COLD_EVERY` runs, counted across sessions.
+ */
+export function chooseStart(opts: {
+  /** Autopilot's last starts, oldest first. */
+  recent: StartKind[];
+  cold: number;
+  inside: number | null;
+}): StartKind {
+  const last = opts.recent[opts.recent.length - 1];
+  const tail = opts.recent.slice(-(COLD_EVERY - 1));
+  if (tail.length === COLD_EVERY - 1 && !tail.includes('cold')) return 'cold';
+  const cold = last !== 'cold' && opts.cold >= 1 ? opts.cold : 0;
+  const inside = last !== 'inside' && opts.inside !== null && opts.inside >= 1 ? opts.inside : 0;
+  if (!cold && !inside) return 'position';
+  return cold >= inside ? 'cold' : 'inside';
+}
+
+/** The kind of start a round was given. */
+export function startKind(round: { pick: Pick<Recommendation, 'start'>; at: string[] | null }): StartKind {
+  return round.at ? 'inside' : round.pick.start === 'first' ? 'cold' : 'position';
 }
 
 /** What each recommendation focus asks of a Survival run: the lines you would meet, or your weakest. */
