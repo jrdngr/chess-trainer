@@ -68,6 +68,10 @@ describe('where a run starts', () => {
     expect(recent.filter((kind) => kind === 'cold')).toHaveLength(3);
   });
 
+  it('starts the first run of an opening at its position, whatever is owed', () => {
+    expect(chooseStart({ recent: ['position', 'position'], cold: 9, inside: 9, firstTime: true })).toBe('position');
+  });
+
   it('names the start a round was given', () => {
     const tree = openingTree(referenceIndex());
     const pick = { focus: 'review' as const, opening: nodeById(tree, 'd4 d5 c4'), color: 'w' as const, start: 'inside' as const };

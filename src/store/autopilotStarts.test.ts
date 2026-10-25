@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_SELECTION } from '../model/selection';
 import { DEFAULT_SETTINGS, itemsFor, repertoireList, useStore } from './useStore';
 import { startKind } from '../model/autopilot';
+import { EMPTY_SCORE } from '../model/scoring';
 import { nextRound, NO_HISTORY } from './recommendation';
 
 const RUY = 'e4 e5 Nf3 Nc6 Bb5';
@@ -51,7 +52,8 @@ function dueAt(path: string): void {
       },
     ]),
   );
-  useStore.setState({ cards, score: { ...useStore.getState().score, lineRounds: 20, starts: [] } });
+  useStore.setState({ cards, score: { ...EMPTY_SCORE, lineRounds: 20 } });
+  useStore.getState().endRound({ mode: 'survival', openingId: RUY, color: 'w', answered: 1, correct: 1, perfect: false });
 }
 
 describe("Autopilot's runs", () => {
@@ -90,5 +92,13 @@ describe("Autopilot's runs", () => {
       return kind;
     });
     expect(kinds).toEqual(['position', 'position', 'cold', 'position', 'position', 'cold']);
+  });
+
+  it('start the first run of an opening at its position, whatever is owed', () => {
+    dueAt('e4 e5 Nf3 Nc6 Bb5 Nf6');
+    const cards = { ...useStore.getState().cards };
+    for (const id of Object.keys(cards)) delete cards[id].testedRound;
+    useStore.setState({ cards, score: { ...EMPTY_SCORE, lineRounds: 20, starts: ['position', 'position'] } });
+    expect(startKind(nextRound(useStore.getState(), NO_HISTORY)!)).toBe('position');
   });
 });

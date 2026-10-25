@@ -7,7 +7,7 @@ import { buildRepairs, type RepairItem } from '../model/repair';
 import { openingTree } from '../model/openingTree';
 import { isSteered, recommend, type Focus, type RecommendInput, type Recommendation } from '../model/recommend';
 import { referenceIndex } from '../model/referenceIndex';
-import { seenIn, type RoundRecord } from '../model/scoring';
+import { nodeStats, seenIn, type RoundRecord, type ScoreState } from '../model/scoring';
 import { itemsInRegion, lineInRegion, regionOf, repertoiresIn, type Selection } from '../model/selection';
 import { itemsFor, repertoireList, useStore } from './useStore';
 
@@ -177,10 +177,20 @@ export function nextRound(state: State, history: AutoHistory, force?: ForcedStar
     const at = deeper?.item ?? inside[0] ?? null;
     return at ? { pick: recommended, at: at.pathSans } : null;
   }
-  const kind = chooseStart({ recent: state.score.starts, cold: coldNeed(wayIn, state.cards, round), inside: deeper?.need ?? null });
+  const kind = chooseStart({
+    recent: state.score.starts,
+    cold: coldNeed(wayIn, state.cards, round),
+    inside: deeper?.need ?? null,
+    firstTime: roundsIn(state.score, recommended.opening.id) === 0,
+  });
   if (kind === 'cold') return { pick: { ...recommended, start: 'first' }, at: null };
   if (kind === 'inside' && deeper) return { pick: recommended, at: deeper.item.pathSans };
   return { pick: recommended, at: null };
+}
+
+/** Rounds of any mode an opening has had, counting runs that only passed through it. */
+export function roundsIn(score: ScoreState, openingId: string): number {
+  return Object.values(nodeStats(score, openingId).byMode).reduce((n, mode) => n + mode.rounds, 0);
 }
 
 /* ── Mode Testing ───────────────────────────────────────────────────────── */

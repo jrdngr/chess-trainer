@@ -91,13 +91,20 @@ export function insideStart(
  * the way in has gone unplayed long enough, the greater need when both do.
  * Neither comes twice running, and a cold start comes at least every
  * `COLD_EVERY` runs, counted across sessions.
+ *
+ * The first run of an opening is always a position start, whatever is owed:
+ * the way in is played for you, so you see how the opening is reached before
+ * you are ever asked to reach it yourself.
  */
 export function chooseStart(opts: {
   /** Autopilot's last starts, oldest first. */
   recent: StartKind[];
   cold: number;
   inside: number | null;
+  /** No run has played this opening yet. */
+  firstTime?: boolean;
 }): StartKind {
+  if (opts.firstTime) return 'position';
   const last = opts.recent[opts.recent.length - 1];
   const tail = opts.recent.slice(-(COLD_EVERY - 1));
   if (tail.length === COLD_EVERY - 1 && !tail.includes('cold')) return 'cold';
