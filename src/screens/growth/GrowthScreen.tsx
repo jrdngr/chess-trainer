@@ -830,7 +830,7 @@ function Run({
 
         {phase === 'hole' && !intro.held && options.length > 0 && (
           <>
-            {/* Undo and Stop here flank the prompt as icons, where a new player sees them from the first reply. */}
+            {/* Undo and Done flank the prompt, where a new player sees them from the first reply. */}
             <div className="growth-prompt-row">
               <button className="icon-btn growth-side-btn" aria-label="Undo" title="Undo" onClick={() => undo()} disabled={history.length === 0}>
                 <Icons.undo size={18} />
@@ -850,8 +850,8 @@ function Run({
                   </div>
                 )}
               </div>
-              <button className="icon-btn growth-side-btn" aria-label="Stop here" title="Stop here" onClick={() => setPhase('done')}>
-                <Icons.stop size={18} />
+              <button className="btn sm growth-done" onClick={() => setPhase('done')}>
+                Done
               </button>
             </div>
 
