@@ -71,11 +71,15 @@ const seedsOf = (pending: Pending[]): SeedOpening[] => pending.map((row) => ({ s
 export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'home') => void }) {
   const finishOnboarding = useStore((s) => s.finishOnboarding);
   const [step, setStep] = useState<Step>({ kind: 'path' });
-  /** Everything picked so far, held until the ready screen is left. */
+  /** Everything picked so far, held until the ready screen is left. Backing out keeps it. */
   const [pending, setPending] = useState<Pending[]>([]);
+  /** What the ready screen last listed: picking counts what is new since. */
+  const [listed, setListed] = useState<string[]>([]);
 
   const ready = (rows: Pending[]) => {
-    setPending((had) => [...had.filter((row) => !rows.some((r) => r.key === row.key)), ...rows]);
+    const next = [...pending.filter((row) => !rows.some((r) => r.key === row.key)), ...rows];
+    setPending(next);
+    setListed(next.map((row) => row.key));
     setStep({ kind: 'ready' });
   };
 
@@ -105,12 +109,11 @@ export function OnboardingScreen({ onDone }: { onDone: (next: 'autopilot' | 'hom
   if (step.kind === 'pick') {
     return (
       <PickOpenings
-        initial={pending}
-        onBack={() => setStep({ kind: pending.length ? 'ready' : 'path' })}
-        onAdd={(picked) => {
-          setPending(picked);
-          setStep({ kind: 'ready' });
-        }}
+        picked={pending}
+        listed={listed}
+        onChange={setPending}
+        onBack={() => (listed.length && pending.length ? ready([]) : setStep({ kind: 'path' }))}
+        onAdd={() => ready([])}
       />
     );
   }
@@ -270,20 +273,29 @@ function SetDetail({ set, onBack, onUse }: { set: StarterSet; onBack: () => void
 
 /**
  * The openings picked so far, from any path, and more to add. Removing one
- * here drops it before it ever goes in.
+ * here drops it before it ever goes in. The picker's lists read the Playbook
+ * as these would make it, so what is picked is not suggested again.
  */
 function PickOpenings({
-  initial,
+  picked,
+  listed,
+  onChange: setPicked,
   onBack,
   onAdd,
 }: {
-  initial: Pending[];
+  picked: Pending[];
+  listed: string[];
+  onChange: (picked: Pending[]) => void;
   onBack: () => void;
-  onAdd: (picked: Pending[]) => void;
+  onAdd: () => void;
 }) {
-  const [picked, setPicked] = useState<Pending[]>(initial);
   const [picking, setPicking] = useState(false);
-  const added = picked.filter((pick) => !initial.some((row) => row.key === pick.key)).length;
+  const added = picked.filter((pick) => !listed.includes(pick.key)).length;
+  const now = useStore();
+  const playbook = useMemo(
+    () => (picking ? repertoireList(onboarded(now, seedsOf(picked), boardLines(picked))) : undefined),
+    [picking, now, picked],
+  );
 
   const add = (sans: string[], side: Color | null) => {
     const key = sans.join(' ');
@@ -322,14 +334,14 @@ function PickOpenings({
         <button
           className={`btn block xl${picked.length ? ' accent' : ''}`}
           disabled={!picked.length}
-          onClick={() => onAdd(picked)}
+          onClick={onAdd}
         >
           <span className="truncate">
-            {added ? `Add ${added} opening${added === 1 ? '' : 's'}` : initial.length ? 'Done' : 'Add openings'}
+            {added ? `Add ${added} opening${added === 1 ? '' : 's'}` : listed.length ? 'Done' : 'Add openings'}
           </span>
         </button>
       </div>
-      <OpeningPicker open={picking} onClose={() => setPicking(false)} onChoose={add} />
+      <OpeningPicker open={picking} onClose={() => setPicking(false)} onChoose={add} playbook={playbook} picked={picked} />
     </>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { lastMoveOf, walkSan, START_FEN, type Color } from '../chess/core';
+import type { Repertoire } from '../model/types';
 import {
   bookItems,
   isHead,
@@ -57,11 +58,17 @@ export function BrowsePicker({
   onClose,
   onBack,
   onChoose,
+  playbook,
+  picked,
 }: {
   onClose: () => void;
   onBack?: () => void;
   /** Hand the board's line over instead of selecting it: onboarding collects openings this way. */
   onChoose?: (sans: string[], side: Color | null) => void;
+  /** The Playbook the lists read, when it is not the saved one: onboarding's picks before they go in. */
+  playbook?: Repertoire[];
+  /** Openings already picked: Suggestions leaves out them and the lines inside them. */
+  picked?: { sans: string[]; color: Color }[];
 }) {
   const selection = useStore((s) => s.settings.selection);
   const favorites = useStore((s) => s.settings.favoriteOpenings);
@@ -74,7 +81,7 @@ export function BrowsePicker({
   const index = referenceIndex();
   const tree = openingTree(index);
   const catalog = pickerCatalog(tree);
-  const reps = useMemo(() => Object.values(repertoires), [repertoires]);
+  const reps = useMemo(() => playbook ?? Object.values(repertoires), [playbook, repertoires]);
 
   const [moves, setMoves] = useState<string[]>(() =>
     selection.opening === ANY_FAVORITE ? [] : nodeById(tree, selection.opening).sans,
@@ -159,8 +166,13 @@ export function BrowsePicker({
     switch (chip) {
       case 'mine':
         return myLines(reps, index, tree, favorites);
-      case 'suggest':
-        return suggestions(reps, index, tree, catalog);
+      case 'suggest': {
+        const rows = suggestions(reps, index, tree, catalog);
+        // Growing an opening you picked is not picking another one.
+        const inside = (row: BrowseRow) =>
+          !!picked?.some((pick) => pick.color === row.side && pick.sans.every((san, i) => row.sans[i] === san));
+        return rows.filter((row) => !inside(row));
+      }
       case 'recent':
         return recentItems(tree, catalog, score);
       case 'book':
@@ -168,7 +180,7 @@ export function BrowsePicker({
       default:
         return [];
     }
-  }, [chip, reps, index, tree, catalog, favorites, score]);
+  }, [chip, reps, index, tree, catalog, favorites, score, picked]);
 
   const searchResults = useMemo(
     () => (searching ? searchItems(query, reps, index, tree, catalog) : []),

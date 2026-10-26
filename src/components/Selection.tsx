@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { lastMoveOf, walkSan, piecesFromFen, START_FEN, type Color } from '../chess/core';
 import type { ColorChoice } from '../model/openingRun';
+import type { Repertoire } from '../model/types';
 import { nodeById, openingTree, type OpeningNode, type OpeningTree } from '../model/openingTree';
 import {
   entryForNode,
@@ -294,6 +295,8 @@ export function OpeningPicker({
   onClose,
   onBack,
   onChoose,
+  playbook,
+  picked,
 }: {
   open: boolean;
   onClose: () => void;
@@ -301,11 +304,14 @@ export function OpeningPicker({
   onBack?: () => void;
   /** Take the chosen line instead of selecting it (see `BrowsePicker`). */
   onChoose?: (sans: string[], side: Color | null) => void;
+  /** The Playbook the lists read, when it is not the saved one (see `BrowsePicker`). */
+  playbook?: Repertoire[];
+  picked?: { sans: string[]; color: Color }[];
 }) {
   if (!open) return null;
   return (
     <div className="op-screen bp-screen" role="dialog" aria-label="Opening">
-      <BrowsePicker onClose={onClose} onBack={onBack} onChoose={onChoose} />
+      <BrowsePicker onClose={onClose} onBack={onBack} onChoose={onChoose} playbook={playbook} picked={picked} />
     </div>
   );
 }
