@@ -1,10 +1,22 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { fenTurn, walkSan, type Color } from '../chess/core';
 import { BoardScreen, type BoardLine } from './BoardScreen';
 import { openingsIn } from '../model/openings';
 import { pathTo, subtreeIds } from '../model/repertoire';
 import { AppBar, IconButton, Icons } from '../components/ui';
-import { MiniBoard, OpeningPicker, selectionTrail, shortLabel } from '../components/Selection';
+import { MiniBoard, selectionTrail, shortLabel, SideDot } from '../components/Selection';
+import { dropEmptyHeads, WHY_COLOR } from '../components/BrowsePicker';
+import {
+  bookItems,
+  isHead,
+  searchItems,
+  shelfRows,
+  SHELVES,
+  suggestions,
+  type BrowseItem,
+  type BrowseRow,
+} from '../model/browse';
+import { pickerCatalog } from '../model/picker';
 import { PlateBoard, PrepSegments, SideSquare } from '../components/OpeningPlate';
 import { roundSpan } from '../model/autopilot';
 import { openingTree } from '../model/openingTree';
@@ -271,15 +283,27 @@ function SetDetail({ set, onBack, onUse }: { set: StarterSet; onBack: () => void
 
 /* ── picking openings ─────────────────────────────────────────────────── */
 
+type PickChip = 'picked' | 'book' | 'suggest' | 'shelves';
+
+const PICK_CHIPS: { id: PickChip; label: string }[] = [
+  { id: 'book', label: 'Book' },
+  { id: 'suggest', label: 'Suggestions' },
+  { id: 'shelves', label: 'Shelves' },
+];
+
 /**
- * The openings picked so far, from any path, and more to add. Removing one
- * here drops it before it ever goes in. The picker's lists read the Playbook
- * as these would make it, so what is picked is not suggested again.
+ * Picking openings by name: the book's families, suggestions and shelves as
+ * lists, with no board, since playing the moves in is Play on the board.
+ *
+ * Tapping a row picks that opening, its own moves and no more, and tapping it
+ * again drops it; › opens what is under it. Picked lists everything held so
+ * far, from any path, to drop. Suggestions read the Playbook as the picks
+ * would make it, and leave out the picks and the lines inside them.
  */
 function PickOpenings({
   picked,
   listed,
-  onChange: setPicked,
+  onChange,
   onBack,
   onAdd,
 }: {
@@ -289,59 +313,225 @@ function PickOpenings({
   onBack: () => void;
   onAdd: () => void;
 }) {
-  const [picking, setPicking] = useState(false);
-  const added = picked.filter((pick) => !listed.includes(pick.key)).length;
   const now = useStore();
-  const playbook = useMemo(
-    () => (picking ? repertoireList(onboarded(now, seedsOf(picked), boardLines(picked))) : undefined),
-    [picking, now, picked],
+  const index = referenceIndex();
+  const tree = openingTree(index);
+  const catalog = pickerCatalog(tree);
+  const [chip, setChip] = useState<PickChip>('book');
+  const [trail, setTrail] = useState<{ label: string; items: () => BrowseItem[] }[]>([]);
+  const [filter, setFilter] = useState<'both' | Color>('both');
+  const [searching, setSearching] = useState(false);
+  const [query, setQuery] = useState('');
+  const pane = useRef<HTMLDivElement>(null);
+  const added = picked.filter((pick) => !listed.includes(pick.key)).length;
+
+  const reps = useMemo(
+    () => (chip === 'suggest' || searching ? repertoireList(onboarded(now, seedsOf(picked), boardLines(picked))) : []),
+    [chip, searching, now, picked],
+  );
+  const rootItems = useMemo((): BrowseItem[] => {
+    if (chip === 'book') return bookItems(catalog);
+    if (chip !== 'suggest') return [];
+    // Growing an opening you picked is not picking another one.
+    const inside = (row: BrowseRow) =>
+      picked.some((pick) => pick.color === row.side && pick.sans.every((san, i) => row.sans[i] === san));
+    return suggestions(reps, index, tree, catalog).filter((row) => !inside(row));
+  }, [chip, catalog, reps, index, tree, picked]);
+  const searchResults = useMemo(
+    () => (searching && query.trim() ? searchItems(query, reps, index, tree, catalog) : []),
+    [searching, query, reps, index, tree, catalog],
   );
 
-  const add = (sans: string[], side: Color | null) => {
-    const key = sans.join(' ');
-    if (picked.some((pick) => pick.key === key)) return;
-    const node = openingTree(referenceIndex()).byId.get(key);
-    const seed = seedFor(sans, side ?? undefined);
-    setPicked([
+  const toggle = (row: BrowseRow) => {
+    const key = row.sans.join(' ');
+    if (picked.some((pick) => pick.key === key)) {
+      onChange(picked.filter((pick) => pick.key !== key));
+      return;
+    }
+    const node = tree.byId.get(key);
+    const seed = seedFor(row.sans, row.side);
+    onChange([
       ...picked,
-      { key, sans, color: seed.color, name: node ? shortLabel(node.name) : key, moves: countOwnMoves([seed]) },
+      { key, sans: row.sans, color: seed.color, name: node ? shortLabel(node.name) : row.label, moves: countOwnMoves([seed]) },
     ]);
   };
 
+  const openRow = (row: BrowseRow) => {
+    if (!row.open) return;
+    setTrail([...trail, { label: row.label, items: row.open }]);
+    pane.current?.scrollTo({ top: 0 });
+  };
+
+  const pickChip = (next: PickChip) => {
+    setChip(next);
+    setTrail([]);
+    setSearching(false);
+    setQuery('');
+  };
+
+  const rowView = (row: BrowseRow, first: boolean) => {
+    const on = picked.some((pick) => pick.key === row.sans.join(' '));
+    return (
+      <div key={row.key} className={`bp-row pick${first ? ' first' : ''}${on ? ' on' : ''}`}>
+        <button className="pick-main" onClick={() => toggle(row)} aria-pressed={on}>
+          <SideDot side={row.side} />
+          <span className="bp-row-text">
+            <span className="bp-row-name">{row.label}</span>
+            {row.why && (
+              <span
+                className="bp-why"
+                style={{ color: WHY_COLOR[row.why.kind], background: `${WHY_COLOR[row.why.kind]}24` }}
+              >
+                {row.why.text}
+              </span>
+            )}
+          </span>
+          <span className="pick-check">{on && <Icons.check size={16} />}</span>
+        </button>
+        {row.open && (
+          <button className="pick-open" aria-label={`Open ${row.label}`} onClick={() => openRow(row)}>
+            <Icons.chevron size={18} />
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  const listView = (items: BrowseItem[]) => {
+    const shown = filter === 'both' ? items : dropEmptyHeads(items.filter((i) => isHead(i) || i.side === filter));
+    if (!shown.length) return <div className="bp-empty">Nothing here yet</div>;
+    const blocks: { head?: string; rows: BrowseRow[] }[] = [];
+    for (const item of shown) {
+      if (isHead(item)) blocks.push({ head: item.head, rows: [] });
+      else {
+        if (!blocks.length) blocks.push({ rows: [] });
+        blocks[blocks.length - 1].rows.push(item);
+      }
+    }
+    return blocks.map((block, i) => (
+      <div className="bp-list" key={`${block.head ?? ''}${i}`}>
+        {block.head && <div className="bp-head">{block.head}</div>}
+        {block.rows.map((row, j) => rowView(row, j === 0 && !block.head))}
+      </div>
+    ));
+  };
+
+  const pickedView = picked.length ? (
+    <div className="list">
+      {picked.map((pick) => (
+        <div key={pick.key} className="list-row">
+          <SideSquare color={pick.color} />
+          <span className="title grow name-wrap">{pick.name}</span>
+          <IconButton label={`Remove ${pick.name}`} onClick={() => onChange(picked.filter((p) => p.key !== pick.key))}>
+            <Icons.close size={16} />
+          </IconButton>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div className="bp-empty">Nothing picked yet</div>
+  );
+
+  const crumbs = [{ label: PICK_CHIPS.find((c) => c.id === chip)?.label ?? 'Picked' }, ...trail];
+  const items = trail.length ? trail[trail.length - 1].items() : chip === 'shelves' || chip === 'picked' ? null : rootItems;
+
+  const body = (() => {
+    if (searching) return query.trim() ? listView(searchResults) : null;
+    if (chip === 'picked') return pickedView;
+    return (
+      <>
+        <div className="bp-ctl">
+          <div className="bp-crumbs">
+            {crumbs.map((crumb, i) => (
+              <span key={i} className="bp-crumb">
+                {i > 0 && <span className="sep">{'›'}</span>}
+                <button className={i === crumbs.length - 1 ? 'here' : ''} onClick={() => setTrail(trail.slice(0, i))}>
+                  {crumb.label}
+                </button>
+              </span>
+            ))}
+          </div>
+          {items && (
+            <div className="bp-seg" role="group" aria-label="Side">
+              {(['both', 'w', 'b'] as const).map((value) => (
+                <button key={value} className={filter === value ? 'on' : ''} onClick={() => setFilter(value)}>
+                  {value === 'both' ? 'Both' : value === 'w' ? 'W' : 'B'}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {items ? (
+          listView(items)
+        ) : (
+          <div className="bp-shelves">
+            {SHELVES.map((shelf) => {
+              const rows = shelfRows(catalog, shelf);
+              return (
+                <button key={shelf.id} className="bp-shelf" onClick={() => setTrail([{ label: shelf.label, items: () => rows }])}>
+                  <i style={{ background: shelf.color }} />
+                  <b>{shelf.label}</b>
+                  <span>{rows.length}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </>
+    );
+  })();
+
   return (
     <>
-      <AppBar title="Your openings" large onBack={onBack} />
-      <div className="screen no-nav onboard">
-        {picked.length > 0 && (
-          <div className="list onboard-picked">
-            {picked.map((pick, i) => (
-              <div key={pick.key} className="list-row">
-                <SideSquare color={pick.color} />
-                <span className="title grow name-wrap">{pick.name}</span>
-                <IconButton label={`Remove ${pick.name}`} onClick={() => setPicked(picked.filter((_, j) => j !== i))}>
-                  <Icons.close size={16} />
-                </IconButton>
-              </div>
+      <AppBar
+        title="Pick openings"
+        onBack={onBack}
+        actions={
+          <IconButton
+            label="Search"
+            onClick={() => {
+              setSearching(!searching);
+              setQuery('');
+            }}
+          >
+            <Icons.search size={20} />
+          </IconButton>
+        }
+      />
+      <div className="screen no-nav onboard pick-openings">
+        {searching ? (
+          <input
+            className="field bp-search"
+            autoFocus
+            placeholder="Name, ECO or moves"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        ) : (
+          <div className="bp-chips">
+            {picked.length > 0 && (
+              <button className={`bp-chip${chip === 'picked' ? ' on' : ''}`} onClick={() => pickChip('picked')}>
+                Picked ({picked.length})
+              </button>
+            )}
+            {PICK_CHIPS.map((c) => (
+              <button key={c.id} className={`bp-chip${chip === c.id ? ' on' : ''}`} onClick={() => pickChip(c.id)}>
+                {c.label}
+              </button>
             ))}
           </div>
         )}
-        <button className="btn soft block onboard-add" onClick={() => setPicking(true)}>
-          <Icons.plus size={18} />
-          Add an opening
-        </button>
+        <div className="pick-pane" ref={pane}>
+          {body}
+        </div>
       </div>
       <div className="onboard-bar">
-        <button
-          className={`btn block xl${picked.length ? ' accent' : ''}`}
-          disabled={!picked.length}
-          onClick={onAdd}
-        >
+        <button className={`btn block xl${picked.length ? ' accent' : ''}`} disabled={!picked.length} onClick={onAdd}>
           <span className="truncate">
             {added ? `Add ${added} opening${added === 1 ? '' : 's'}` : listed.length ? 'Done' : 'Add openings'}
           </span>
         </button>
       </div>
-      <OpeningPicker open={picking} onClose={() => setPicking(false)} onChoose={add} playbook={playbook} picked={picked} />
     </>
   );
 }

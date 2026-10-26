@@ -1875,3 +1875,12 @@ button.home-card:active { background: var(--surface-2); }
 .name-wrap { min-width: 0; overflow-wrap: anywhere; line-height: 1.25; }
 .bp-sides { margin-left: 4px; }
 .bp-sides button { min-height: 34px; }
+
+/* Onboarding's Pick openings: the picker's lists, tap to pick, › to open. */
+.pick-openings { display: flex; flex-direction: column; gap: 10px; }
+.pick-pane { display: flex; flex-direction: column; gap: 10px; }
+.bp-row.pick { padding: 0; gap: 0; }
+.bp-row.pick.on { background: rgba(138, 140, 255, 0.12); box-shadow: inset 3px 0 0 var(--accent); }
+.pick-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 6px 8px 14px; text-align: left; }
+.pick-check { width: 18px; display: flex; color: var(--accent); flex: none; }
+.pick-open { flex: none; align-self: stretch; width: 44px; display: flex; align-items: center; justify-content: center; color: var(--text-3); border-left: 1px solid var(--line); }

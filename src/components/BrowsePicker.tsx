@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { lastMoveOf, walkSan, START_FEN, type Color } from '../chess/core';
-import type { Repertoire } from '../model/types';
 import {
   bookItems,
   isHead,
@@ -39,7 +38,7 @@ const CHIPS: { id: Chip; label: string }[] = [
 
 type SideFilter = 'both' | Color;
 
-const WHY_COLOR = { hole: '#f97316', like: '#2dd4bf', style: '#a855f7' } as const;
+export const WHY_COLOR = { hole: '#f97316', like: '#2dd4bf', style: '#a855f7' } as const;
 
 /** "1.e4 c5 2.Nf3": the book always starts from the start. */
 function moveText(sans: string[]): string {
@@ -58,17 +57,11 @@ export function BrowsePicker({
   onClose,
   onBack,
   onChoose,
-  playbook,
-  picked,
 }: {
   onClose: () => void;
   onBack?: () => void;
   /** Hand the board's line over instead of selecting it: onboarding collects openings this way. */
   onChoose?: (sans: string[], side: Color | null) => void;
-  /** The Playbook the lists read, when it is not the saved one: onboarding's picks before they go in. */
-  playbook?: Repertoire[];
-  /** Openings already picked: Suggestions leaves out them and the lines inside them. */
-  picked?: { sans: string[]; color: Color }[];
 }) {
   const selection = useStore((s) => s.settings.selection);
   const favorites = useStore((s) => s.settings.favoriteOpenings);
@@ -81,7 +74,7 @@ export function BrowsePicker({
   const index = referenceIndex();
   const tree = openingTree(index);
   const catalog = pickerCatalog(tree);
-  const reps = useMemo(() => playbook ?? Object.values(repertoires), [playbook, repertoires]);
+  const reps = useMemo(() => Object.values(repertoires), [repertoires]);
 
   const [moves, setMoves] = useState<string[]>(() =>
     selection.opening === ANY_FAVORITE ? [] : nodeById(tree, selection.opening).sans,
@@ -166,13 +159,8 @@ export function BrowsePicker({
     switch (chip) {
       case 'mine':
         return myLines(reps, index, tree, favorites);
-      case 'suggest': {
-        const rows = suggestions(reps, index, tree, catalog);
-        // Growing an opening you picked is not picking another one.
-        const inside = (row: BrowseRow) =>
-          !!picked?.some((pick) => pick.color === row.side && pick.sans.every((san, i) => row.sans[i] === san));
-        return rows.filter((row) => !inside(row));
-      }
+      case 'suggest':
+        return suggestions(reps, index, tree, catalog);
       case 'recent':
         return recentItems(tree, catalog, score);
       case 'book':
@@ -180,7 +168,7 @@ export function BrowsePicker({
       default:
         return [];
     }
-  }, [chip, reps, index, tree, catalog, favorites, score, picked]);
+  }, [chip, reps, index, tree, catalog, favorites, score]);
 
   const searchResults = useMemo(
     () => (searching ? searchItems(query, reps, index, tree, catalog) : []),
@@ -420,6 +408,6 @@ export function BrowsePicker({
 }
 
 /** A heading left with nothing under it, once the side filter has had its say. */
-function dropEmptyHeads(items: BrowseItem[]): BrowseItem[] {
+export function dropEmptyHeads(items: BrowseItem[]): BrowseItem[] {
   return items.filter((item, i) => !isHead(item) || (items[i + 1] !== undefined && !isHead(items[i + 1])));
 }
