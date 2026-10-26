@@ -36,6 +36,8 @@ export type Ending =
       /** The engine's move in the same position. */
       best: string | null;
       lost: number;
+      /** The opponent's best answer to it, as a UCI move: the threat that made it a blunder. */
+      reply: string | null;
     }
   | { kind: 'won' | 'lost' | 'draw' }
   /** You ended it yourself, off your prep: counted apart from moves survived. */
@@ -184,7 +186,8 @@ export function End({
     </div>
   );
 
-  const [flashing, setFlashing] = useState(true);
+  // A blunder was already shown on the board, with its threat, before this screen.
+  const [flashing, setFlashing] = useState(!blunder);
   useEffect(() => {
     if (!flashing) return;
     const timer = window.setTimeout(() => setFlashing(false), FLASH_MS);

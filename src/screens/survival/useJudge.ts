@@ -29,6 +29,8 @@ export interface Judgement {
   moment: boolean;
   /** At a moment, your move was that one, or close enough to it. */
   found: boolean;
+  /** The opponent's best answer to your move, as a UCI move, when the search saw one. */
+  reply: string | null;
 }
 
 /** How long the engine thinks about each question, in milliseconds. */
@@ -174,7 +176,7 @@ export function useJudge({
       const nextCp = next ? scoreOf(next) : null;
       const ok =
         moment && !found && nextCp !== null ? judgeByEval(color, colorBest(color, nextCp, yourCp), yourCp).ok : result.ok;
-      return { ok, lost: result.lost, before, after: yourCp, found };
+      return { ok, lost: result.lost, before, after: yourCp, found, reply: yours.pv[1] ?? null };
     };
 
     void engineReady().then((ready) => {
@@ -199,7 +201,7 @@ export function useJudge({
           cancelled = true;
           if (!finished) ready.stop();
           setPending(null);
-          const judgement = verdict ?? { ok: true, lost: 0, before: baseline.cp, after: baseline.cp, found: false };
+          const judgement = verdict ?? { ok: true, lost: 0, before: baseline.cp, after: baseline.cp, found: false, reply: null };
           judged.current({
             san: pending.san,
             best,

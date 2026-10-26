@@ -4,13 +4,14 @@ import { useLens } from '../../components/Lenses';
 import { useCashOutCard, usePlanCard } from '../../components/PlanCards';
 import { CASH_OUT_FROM } from '../../engine/cashOut';
 import { newlyLoose } from '../../model/boardHints';
-import { AppBar, haptic } from '../../components/ui';
+import { AppBar, haptic, Icons } from '../../components/ui';
 import { ClockHud, useMoveClock } from '../../components/Clock';
 import { selectionText, selectionTrail } from '../../components/Selection';
 import { IntroPlate, PrepSegments } from '../../components/OpeningPlate';
 import { prepDepth, type PrepSpan } from '../../model/autopilot';
 import {
   applySan,
+  applyUci,
   fenTurn,
   lastMoveOf,
   positionKey,
@@ -63,7 +64,7 @@ import { evidenceIn, takeRoundSelection } from '../../store/recommendation';
 import { repertoireList, useStore } from '../../store/useStore';
 import type { TidyFind } from '../../model/tidy';
 import { useOpponent } from '../openingRun/useOpponent';
-import { End, type Ending } from './End';
+import { End, endingTitle, type Ending } from './End';
 import { Setup } from './Setup';
 import { useJudge } from './useJudge';
 import { useModePrefs } from '../modePrefs';
@@ -343,7 +344,7 @@ export function SurvivalScreen({
     if (lingerTimer.current) window.clearTimeout(lingerTimer.current);
   }, []);
   /** Under way: past the intro, and not over. Nothing moves and no clock runs until then. */
-  const live = phase === 'playing' && !!run && !intro.held;
+  const live = phase === 'playing' && !!run && !intro.held && !ending;
   const myTurn = !!run && fenTurn(run.fen) === run.color;
 
   const buzz = (pattern: number | number[]) => {
@@ -389,6 +390,8 @@ export function SurvivalScreen({
     // A last answer (or the run's catch-up) that moved the header's rating
     // plays out on the bar before the end screen covers it.
     const moved = nodeStats(useStore.getState().score, headerOpening).rating !== drawnRating.current;
+    // A blunder stays on the board with its threat until you go on (`blunderShown`).
+    if (how.kind === 'blunder') return;
     if (moved && how.kind !== 'ended') {
       lingerTimer.current = window.setTimeout(() => setPhase('over'), RATING_LINGER_MS);
     } else {
@@ -470,7 +473,7 @@ export function SurvivalScreen({
         if (run.repertoireId) missed(run.repertoireId, run.fen, judged.san, expected[0]);
       }
       if (!judged.ok) {
-        finish(game.state, { kind: 'blunder', played: judged.san, best: judged.best, lost: judged.lost });
+        finish(game.state, { kind: 'blunder', played: judged.san, best: judged.best, lost: judged.lost, reply: judged.reply });
         return;
       }
       // Past a clean prep, still in the book: a move strong players play is a
@@ -853,6 +856,15 @@ export function SurvivalScreen({
 
   const glow = prefs.boardGlow && evalCp !== null ? glowFor(run.color, evalCp) : null;
 
+  /**
+   * A blunder stays on the board before the end screen: your move in red, and
+   * the opponent's best answer to it as a red arrow, the threat that made it
+   * one. Continue goes on to the end screen.
+   */
+  const blunderShown = phase === 'playing' && ending?.kind === 'blunder' ? ending : null;
+  const blunderMove = blunderShown ? applySan(run.fen, blunderShown.played) : null;
+  const threat = blunderMove && blunderShown?.reply ? applyUci(blunderMove.after, blunderShown.reply) : null;
+
   return (
     <>
       {intro.cover}
@@ -889,9 +901,21 @@ export function SurvivalScreen({
           interactive={live && myTurn && !thinking && !held}
           movableFor={run.color}
           onMove={onMove}
-          lastMove={intro.fen ? intro.lastMove : lastMoveOf(shownLine)}
+          lastMove={intro.fen ? intro.lastMove : blunderMove ? null : lastMoveOf(shownLine)}
+          highlights={
+            blunderMove
+              ? [
+                  { square: blunderMove.from, kind: 'bad' },
+                  { square: blunderMove.to, kind: 'bad' },
+                ]
+              : undefined
+          }
           arrows={
-            miss
+            blunderShown
+              ? threat
+                ? [{ from: threat.from, to: threat.to, color: 'var(--bad)' }]
+                : []
+              : miss
               ? [{ from: miss.from, to: miss.to, color: 'var(--good)' }]
               : missedBest
                 ? [{ from: missedBest.from, to: missedBest.to, color: 'var(--good)' }]
@@ -950,11 +974,25 @@ export function SurvivalScreen({
             <div className="center small muted mt-8">From {sansToMoveText(run.played.slice(0, run.opened))}</div>
           ))}
 
-        {cashOut.card}
-        {planCard.card}
+        {!blunderShown && cashOut.card}
+        {!blunderShown && planCard.card}
 
         <div className="spacer" />
 
+        {blunderShown ? (
+          <div className="prompt">
+            <div className="verdict no" style={{ padding: 0 }}>
+              <span className="ico">
+                <Icons.cross size={18} />
+              </span>
+              {endingTitle(blunderShown, run.played.length)}
+            </div>
+            <button className="btn primary block mt-12" onClick={() => setPhase('over')}>
+              Continue
+              <Icons.next size={18} />
+            </button>
+          </div>
+        ) : (
         <div className="prompt" style={intro.held ? { visibility: 'hidden' } : undefined}>
           <div className="who">
             {thinking || judge.pending || engineTurn ? (
@@ -1012,6 +1050,7 @@ export function SurvivalScreen({
             </div>
           )}
         </div>
+        )}
         </div>
       </div>
     </>
