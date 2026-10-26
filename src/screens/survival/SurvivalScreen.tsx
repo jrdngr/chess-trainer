@@ -552,15 +552,14 @@ export function SurvivalScreen({
   /** A move held back by the Undefended flash: what it leaves loose, and a moment to take it back. */
   const [flash, setFlash] = useState<{ move: LegalMove; loose: LegalMove['to'][] } | null>(null);
 
-  /** Your move stands on the board while the engine judges it, or while the flash holds it. */
-  const shownFen = !run
-    ? null
-    : flash
-      ? flash.move.after
-      : judge.pending
-        ? (applySan(run.fen, judge.pending.san)?.after ?? run.fen)
-        : run.fen;
-  const shownLine = !run ? [] : flash ? [...run.played, flash.move.san] : judge.pending ? [...run.played, judge.pending.san] : run.played;
+  /**
+   * Your move stands on the board while the engine judges it, or while the
+   * flash holds it. A blunder stays there while the last rating change plays,
+   * rather than vanishing before the end screen.
+   */
+  const held = flash?.move.san ?? judge.pending?.san ?? (phase === 'playing' && ending?.kind === 'blunder' ? ending.played : null);
+  const shownFen = !run ? null : flash ? flash.move.after : held ? (applySan(run.fen, held)?.after ?? run.fen) : run.fen;
+  const shownLine = !run ? [] : held ? [...run.played, held] : run.played;
   const prevFen = useMemo(() => {
     if (!shownLine.length) return null;
     const { fens } = walkSan(shownLine.slice(0, -1));
@@ -887,7 +886,7 @@ export function SurvivalScreen({
         <Board
           fen={intro.fen ?? shownFen ?? run.fen}
           orientation={run.color}
-          interactive={live && myTurn && !thinking && !judge.pending && !flash}
+          interactive={live && myTurn && !thinking && !held}
           movableFor={run.color}
           onMove={onMove}
           lastMove={intro.fen ? intro.lastMove : lastMoveOf(shownLine)}
