@@ -239,7 +239,7 @@ export default function App() {
               label="Analysis"
               active={tab === 'analysis'}
               onClick={() => setTab('analysis')}
-              icon={<Icons.chart filled={tab === 'analysis'} />}
+              icon={<Icons.analysis filled={tab === 'analysis'} />}
             />
           </nav>
 

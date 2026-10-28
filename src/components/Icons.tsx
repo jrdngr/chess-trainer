@@ -49,6 +49,14 @@ export const Icons = {
       <path d="M3 20h18" opacity={p.filled ? 1 : 0.5} />
     </svg>
   ),
+  /** A magnifier over a checker: the Analysis tab. */
+  analysis: (p: IconProps = {}) => (
+    <svg {...s(p)}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M7.5 7.5h3.5v3.5H7.5zM11 11h3.5v3.5H11z" fill="currentColor" stroke="none" opacity={p.filled ? 1 : 0.6} />
+      <path d="m16.5 16.5 4 4" />
+    </svg>
+  ),
   gear: (p: IconProps = {}) => (
     <svg {...s(p)}>
       <circle cx="12" cy="12" r="3" />
