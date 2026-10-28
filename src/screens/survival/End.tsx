@@ -22,10 +22,13 @@ import { offPrepHint, type TidyFind } from '../../model/tidy';
 import { OffPrepHint } from '../../components/OffPrepHint';
 import { ScoreRow } from './Setup';
 import { Ratings, type RatingChange } from '../../components/Ratings';
+import { RatingCard, RatingOverBoard, type RatingMoment } from '../../components/RatingCard';
 import { useModePrefs } from '../modePrefs';
 
 /** How long the verdict stays over the board when a run ends. */
 const FLASH_MS = 2000;
+/** The rating card's fade over the board before it shows below the move list. */
+const LEAVE_MS = 320;
 
 /** How a run ended. */
 export type Ending =
@@ -71,6 +74,11 @@ export function endingTitle(ending: Ending, plies: number): string {
  * moves past your prep, so "End of prep" jumps back to where it ran out, and
  * "Final position" returns. A run with room to grow where
  * its prep ran out offers it in one button, the same wherever it shows.
+ *
+ * The run's own opening, if its rating moved, gets its bar here and nowhere
+ * during the game: the change plays over the board as the screen opens (after
+ * the verdict, when there is one), a tap skips it, and the card then sits
+ * below the move list.
  */
 export function End({
   name,
@@ -78,6 +86,7 @@ export function End({
   ending,
   before,
   moved,
+  rating,
   grow,
   prepPly,
   prep,
@@ -95,6 +104,8 @@ export function End({
   before: SurvivalRecord;
   /** The ratings this run moved that the end screen names: favorites and the run's own opening. */
   moved: RatingChange[];
+  /** The run's own opening's rating change, played on its bar; null when it did not move. */
+  rating: RatingMoment | null;
   /** Grow the line from where your prep ran out — see `growOfferAt`. */
   grow: (() => void) | null;
   /**
@@ -193,6 +204,23 @@ export function End({
     const timer = window.setTimeout(() => setFlashing(false), FLASH_MS);
     return () => window.clearTimeout(timer);
   }, [flashing]);
+
+  /**
+   * Where the rating card is: waiting for the verdict to clear, playing over
+   * the board, fading on its way down, or in its place below the move list.
+   */
+  const [card, setCard] = useState<'wait' | 'play' | 'leave' | 'placed'>(() =>
+    !rating || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'placed' : flashing ? 'wait' : 'play',
+  );
+  useEffect(() => {
+    if (card === 'wait' && !flashing) setCard('play');
+  }, [card, flashing]);
+  useEffect(() => {
+    if (card !== 'leave') return;
+    const timer = window.setTimeout(() => setCard('placed'), LEAVE_MS);
+    return () => window.clearTimeout(timer);
+  }, [card]);
+  const [arrived, setArrived] = useState(card === 'placed');
 
   /** Red for the move played, green for the one that should have been, on the position they were played in. */
   const highlights = useMemo(() => {
@@ -314,11 +342,20 @@ export function End({
           captured
           marks={lens.marks}
           overlay={
-            flashing && (
+            flashing ? (
               <div className="board-flash" onPointerDown={() => setFlashing(false)}>
                 <div className="flash-pill">{verdict}</div>
               </div>
-            )
+            ) : rating && (card === 'play' || card === 'leave') ? (
+              <RatingOverBoard
+                moment={rating}
+                leaving={card === 'leave'}
+                onDone={() => {
+                  setArrived(false);
+                  setCard((now) => (now === 'play' ? 'leave' : now));
+                }}
+              />
+            ) : null
           }
         />
 
@@ -348,6 +385,11 @@ export function End({
 
         <div className="spacer sm" />
         <Strip items={strip} cursor={cursor} max={last} onSeek={seek} />
+        {rating && card === 'placed' && (
+          <div className="mt-12" onAnimationEnd={() => setArrived(true)}>
+            <RatingCard moment={rating} arriving={!arrived} />
+          </div>
+        )}
         <div className="spacer" />
 
         <Ratings moved={moved} />

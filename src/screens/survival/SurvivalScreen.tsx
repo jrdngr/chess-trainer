@@ -26,11 +26,10 @@ import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTre
 import { referenceIndex } from '../../model/referenceIndex';
 import { evidenceFor } from '../../model/growth';
 import { bookLength, lossesIn, playedKinds, type MoveKind } from '../../model/extensions';
-import { nodeStats, ratedNodes, seenIn, type MoveResult } from '../../model/scoring';
+import { seenIn, type MoveResult } from '../../model/scoring';
 import { growOfferAt, offerOpening, type GrowOffer } from '../../model/growOffer';
 import type { Selection } from '../../model/selection';
 import { useRatingTracker } from '../../components/Ratings';
-import { useHeaderRating } from '../../components/ScoreBar';
 import { GrowthScreen } from '../growth/GrowthScreen';
 import { gradeForTime } from '../../model/srs';
 import { mulberry32 } from '../../model/session';
@@ -72,8 +71,6 @@ import { introOpening, useRoundIntro } from '../../components/RoundIntro';
 
 type Phase = 'setup' | 'playing' | 'over' | 'growing';
 
-/** How long a run's last rating change stays on screen before the end screen: a tier drop's flash and shrink. */
-const RATING_LINGER_MS = 1700;
 
 /**
  * Where you stand against your prep: on it, through to the end of the line,
@@ -327,22 +324,8 @@ export function SurvivalScreen({
       : null,
     (game?.state.moves ?? 0) > 0,
   );
-  /** The opening the header names, whose rating rides along its bottom edge. */
+  /** The opening the header names, whose rating the end screen plays. */
   const headerOpening = run ? (run.enteredIn ?? run.openingId) : '';
-  const played = run?.played;
-  const headerReached = useMemo(
-    () => !!played && ratedNodes(tree, played).includes(headerOpening),
-    [tree, played, headerOpening],
-  );
-  const headerRating = useHeaderRating(headerOpening, headerReached);
-  /** The header's rating as last drawn, so a run that ends by moving it can show that first. */
-  const drawnRating = useRef(0);
-  drawnRating.current = useStore((s) => nodeStats(s.score, headerOpening).rating);
-  /** Holds the end screen back while the header plays the run's last rating change. */
-  const lingerTimer = useRef<number | null>(null);
-  useEffect(() => () => {
-    if (lingerTimer.current) window.clearTimeout(lingerTimer.current);
-  }, []);
   /** Under way: past the intro, and not over. Nothing moves and no clock runs until then. */
   const live = phase === 'playing' && !!run && !intro.held && !ending;
   const myTurn = !!run && fenTurn(run.fen) === run.color;
@@ -387,16 +370,9 @@ export function SurvivalScreen({
     setMissedBest(null);
     setEngineTurn(false);
     setThinking(false);
-    // A last answer (or the run's catch-up) that moved the header's rating
-    // plays out on the bar before the end screen covers it.
-    const moved = nodeStats(useStore.getState().score, headerOpening).rating !== drawnRating.current;
     // A blunder stays on the board with its threat until you go on (`blunderShown`).
     if (how.kind === 'blunder') return;
-    if (moved && how.kind !== 'ended') {
-      lingerTimer.current = window.setTimeout(() => setPhase('over'), RATING_LINGER_MS);
-    } else {
-      setPhase('over');
-    }
+    setPhase('over');
   };
 
   /** After any move: a finished game ends the run. */
@@ -702,7 +678,6 @@ export function SurvivalScreen({
       seen: seenIn(useStore.getState().score),
     });
     if (!begun) return;
-    if (lingerTimer.current) window.clearTimeout(lingerTimer.current);
     over.current = false;
     prepEnd.current = null;
     ratings.reset();
@@ -771,8 +746,15 @@ export function SurvivalScreen({
     // favorites and the one the run was played in, not every opening above it.
     const { run: ended } = game.state;
     const playedIn = deepestNodeWithin(tree, nodeById(tree, ended.openingId), ended.played).id;
+    // The header's opening plays on its own card; the list names the rest.
+    const own = ratings.moved.find((change) => change.id === headerOpening && !change.ext);
+    const rating = own && nodeById(tree, headerOpening).depth > 0
+      ? { id: own.id, name: openingName(headerOpening), before: own.after - own.delta, after: own.after }
+      : null;
     const shown = ratings.moved.filter(
-      (change) => change.id === playedIn || settings.favoriteOpenings.includes(change.id),
+      (change) =>
+        (change.id === playedIn || settings.favoriteOpenings.includes(change.id)) &&
+        !(rating && change.id === rating.id && !change.ext),
     );
     return (
       <End
@@ -781,6 +763,7 @@ export function SurvivalScreen({
         ending={ending}
         before={before}
         moved={shown}
+        rating={rating}
         grow={growOffer ? () => setPhase('growing') : null}
         prepPly={prepEnd.current?.length ?? game.state.misses[0]?.ply ?? null}
         prep={
@@ -876,11 +859,9 @@ export function SurvivalScreen({
           ) : (
             <span className="sub-row">
               <span className="truncate">{selectionText(run.color, headerOpening)}</span>
-              {headerRating?.label}
             </span>
           )
         }
-        edge={headerRating?.edge}
         onClose={onExit}
         actions={
           <div className="row gap-6">
