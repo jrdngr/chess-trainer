@@ -21,6 +21,8 @@
   --warn-soft: rgba(251, 191, 36, 0.14);
   /* The book phase: moves strong players play, past your prep. */
   --book: #4fb3ff;
+  /* The engine's next-best answer in Growth: the accent, lighter. */
+  --engine-next: #b3b4ff;
   --ink: #0b0b0e;
 
   --board-light: #e4e8ef;
@@ -1243,8 +1245,18 @@ textarea.field { min-height: 140px; resize: vertical; font-family: var(--mono); 
 .onboard.ready > .grow { min-height: 24px; }
 .onboard-check { width: 44px; height: 44px; margin-left: 4px; border-radius: 999px; background: var(--good-soft); color: var(--good); display: grid; place-items: center; flex: none; }
 
-/* Why an arrow is coloured, under the board where a move is being added. */
-.nudges { text-align: center; font-size: 13px; font-weight: 600; line-height: 1.45; margin: 2px 0 6px; }
+/* Growth's answers, tinted by who recommends them, as their arrows are coloured. */
+.list-row.role-strong { background: rgba(79, 179, 255, 0.13); }
+.list-row.role-strong .tree-san { color: var(--book); }
+.list-row.role-engine { background: rgba(138, 140, 255, 0.16); }
+.list-row.role-engine .tree-san { color: var(--accent); }
+.list-row.role-engine-next { background: rgba(138, 140, 255, 0.08); }
+.list-row.role-engine-next .tree-san { color: var(--engine-next); }
+/* Why an answer's arrow glows: matches or breaks your patterns. */
+.nudge-pill { display: inline-block; margin-top: 4px; padding: 2px 7px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.nudge-pill.toward { color: var(--good); background: var(--good-soft); }
+.nudge-pill.toward-far { color: var(--warn); background: var(--warn-soft); }
+.nudge-pill.away { color: var(--bad); background: var(--bad-soft); }
 
 /* ── opening picker ────────────────────────────────────────────────────── */
 .selection-bar .sel-trail { display: flex; align-items: center; min-width: 0; overflow: hidden; white-space: nowrap; color: var(--text-2); font-weight: 600; }

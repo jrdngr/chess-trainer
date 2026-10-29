@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   coordsToSquare,
   kingSquare,
@@ -24,6 +24,8 @@ export interface Arrow {
   color?: string;
   /** A short tag drawn on the arrow's target square, such as the move's share of games. */
   label?: string;
+  /** A soft halo in this color around the arrow, which also takes it as its edge. */
+  glow?: string;
 }
 
 export interface BoardProps {
@@ -129,6 +131,8 @@ export function Board({
   marks = null,
 }: BoardProps) {
   const [selected, setSelected] = useState<Square | null>(null);
+  /** Each board's own glow filter, so two boards on a page never share one. */
+  const glowId = `arrow-glow${useId().replace(/:/g, '')}`;
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
   const [placed, setPlaced] = useState<Placed[]>(() => placePieces(fen, []));
   const placedRef = useRef(placed);
@@ -366,6 +370,21 @@ export function Board({
                 // A dark edge under each keeps it readable on light and dark squares alike.
                 return (
                   <>
+                    {arrows.some((a) => a.glow) && (
+                      <defs>
+                        <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
+                          <feGaussianBlur stdDeviation={0.07} />
+                        </filter>
+                      </defs>
+                    )}
+                    {arrows.map((a, i) =>
+                      a.glow ? (
+                        <g key={`g${i}`} filter={`url(#${glowId})`} opacity={0.85}>
+                          <line {...drawn[i].shaft} stroke={a.glow} strokeWidth={0.34} strokeLinecap="round" />
+                          <polygon points={drawn[i].head} fill={a.glow} stroke={a.glow} strokeWidth={0.2} strokeLinejoin="round" />
+                        </g>
+                      ) : null,
+                    )}
                     {arrows.map((a, i) =>
                       arrows.some((b) => b.to === a.from) ? null : (
                         // Where a run of arrows starts: a disc under the piece that moves first.
@@ -380,13 +399,26 @@ export function Board({
                       ),
                     )}
                     {drawn.map((d, i) => (
-                      <line key={`e${i}`} {...d.shaft} className="arrow-edge" strokeWidth={0.13 + ARROW_EDGE * 2} strokeLinecap="round" />
+                      <line
+                        key={`e${i}`}
+                        {...d.shaft}
+                        className="arrow-edge"
+                        strokeWidth={0.13 + (arrows[i].glow ? GLOW_EDGE : ARROW_EDGE) * 2}
+                        strokeLinecap="round"
+                        style={arrows[i].glow ? { stroke: arrows[i].glow } : undefined}
+                      />
                     ))}
                     {drawn.map((d, i) => (
                       <line key={`s${i}`} {...d.shaft} stroke={d.color} strokeWidth={0.13} strokeLinecap="round" />
                     ))}
                     {drawn.map((d, i) => (
-                      <polygon key={`h${i}`} points={d.head} fill={d.color} className="arrow-head" />
+                      <polygon
+                        key={`h${i}`}
+                        points={d.head}
+                        fill={d.color}
+                        className="arrow-head"
+                        style={arrows[i].glow ? { stroke: arrows[i].glow, strokeWidth: GLOW_EDGE * 1.6 } : undefined}
+                      />
                     ))}
                     {arrows.map((a, i) => {
                       if (!a.label) return null;
@@ -579,6 +611,8 @@ function LensOver({ marks, styleFor, orientation }: { marks: LensMarks; styleFor
  */
 /** The dark edge drawn around every arrow, in board squares. */
 const ARROW_EDGE = 0.025;
+/** The edge of a glowing arrow, in its glow's color: a little wider, so the color reads. */
+const GLOW_EDGE = 0.04;
 
 export function arrowShape(from: { x: number; y: number }, to: { x: number; y: number }, width: number) {
   const dx = to.x - from.x;

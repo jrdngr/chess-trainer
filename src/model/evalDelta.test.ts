@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { byDelta, deltaFor, deltaTone, formatDelta, whiteCp } from './evalDelta';
+import { byDelta, byShare, deltaFor, deltaTone, formatDelta, whiteCp } from './evalDelta';
 
 describe('what an answer does to the eval bar', () => {
   it('reads the change from the side playing the move', () => {
@@ -46,5 +46,22 @@ describe('the answers in the engine\'s order', () => {
   });
   it('keeps the order it came in until the engine has weighed them', () => {
     expect(byDelta(moves, () => null).map((m) => m.san)).toEqual(['Ng5', 'Ne5', 'Ne3', 'g3', 'h3']);
+  });
+});
+
+describe("the answers in strong players' order", () => {
+  const answers = [
+    { san: 'O-O', share: 16 },
+    { san: 'c3', share: 45 },
+    { san: 'd3', share: 30 },
+  ];
+  const deltas: Record<string, number> = { 'O-O': 0, c3: -20, d3: -10 };
+  it('puts the most played reply on top, whatever the engine makes of it', () => {
+    expect(byShare(answers, (san) => deltas[san]).map((m) => m.san)).toEqual(['c3', 'd3', 'O-O']);
+  });
+  it('lets the engine settle replies played equally often, as past the book', () => {
+    const engine = ['Nc3', 'O-O', 'd3'].map((san) => ({ san, share: 0 }));
+    const cps: Record<string, number | null> = { Nc3: -30, 'O-O': 0, d3: null };
+    expect(byShare(engine, (san) => cps[san]).map((m) => m.san)).toEqual(['O-O', 'Nc3', 'd3']);
   });
 });

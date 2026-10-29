@@ -13,8 +13,6 @@ import {
   firstHole,
   isUsersTurn,
   lineFor,
-  movesToDraw,
-  onePerPiece,
   needsEngine,
   nextHole,
   growthRows,
@@ -37,11 +35,12 @@ import { useSoundness } from '../../engine/soundness';
 import { useEngineReplies } from '../../engine/engineReplies';
 import { useMoveEvals } from '../../engine/moveEvals';
 import { formatScore, winFraction } from '../../engine/types';
-import { byDelta, deltaFor, deltaTone, formatDelta } from '../../model/evalDelta';
+import { byShare, deltaFor, deltaTone, formatDelta } from '../../model/evalDelta';
+import { roleArrows } from '../../model/answerArrows';
 import { nodeAtLine } from '../../model/repertoire';
 import { growthSource } from '../../model/moveSource';
 import { formatGameCount } from '../../model/reference';
-import { NudgeReasons, nudgeColor, nudgedArrows } from '../../components/Nudges';
+import { nudgeColor, roleColor } from '../../components/Nudges';
 import type { RoundRecord } from '../../model/scoring';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { atPracticeCap, offerOpening, practiceOwed, practiceText } from '../../model/growOffer';
@@ -328,23 +327,30 @@ function Run({
             { priority: prefs.nudgePriority, pawns: prefs.nudgePawns },
             find.minShare,
             new Set(offBookKey ? offBookKey.split(' ') : []),
+            true,
           )
         : [],
     [phase, rep, index, run.path, run.fen, find.minShare, prefs.nudgePriority, prefs.nudgePawns, offBookKey, pastBook, options],
   );
   /**
-   * The arrows before the engine has weighed anything: past the book its
-   * order, in the book the most played move of each piece. These also decide
-   * which familiar move is pulled into the list, so the list — and what the
-   * engine is asked to weigh — does not shift once the evals come in.
+   * Every answer on offer, coloured toward the familiar move and away from
+   * the one that works against your lines. A familiar move the book ranks too
+   * low to offer comes in as well, so the list — and what the engine is asked
+   * to weigh — does not shift once the evals come in.
    */
-  const unweighed = useMemo(
-    () => nudge(pastBook ? onePerPiece(run.fen, options.map((option) => option.san)) : movesToDraw(index, run.fen)),
-    [nudge, pastBook, run.fen, options, index],
+  const toned = useMemo(
+    () =>
+      nudge(
+        options.flatMap((option) => {
+          const move = applySan(run.fen, option.san);
+          return move ? [{ san: option.san, from: move.from, to: move.to }] : [];
+        }),
+      ),
+    [nudge, options, run.fen],
   );
   /** The list under the board carries a familiar move pulled in from further down the book. */
   const listed = useMemo(() => {
-    const far = unweighed.find((move) => move.tone === 'toward-far');
+    const far = toned.find((move) => move.tone === 'toward-far');
     if (!far || options.some((option) => option.san === far.san)) return options;
     // A move the book does not have at all is listed with nothing to count.
     const option = popularReplies(index, run.fen, 0).find((o) => o.san === far.san) ?? {
@@ -356,7 +362,7 @@ function Run({
       share: 0,
     };
     return [...options, option];
-  }, [unweighed, options, index, run.fen]);
+  }, [toned, options, index, run.fen]);
 
   /**
    * The eval bar, always, over whatever position the run stands on — and at a
@@ -370,26 +376,31 @@ function Run({
     const after = evals.moves.get(san);
     return after === undefined || evals.position === null ? null : deltaFor(run.color, evals.position, after);
   };
-  /** The answers as the engine ranks them, best on top, once it has weighed them. */
-  const ranked = byDelta(listed, deltaOf);
+  /** The answers as strong players rank them, the engine settling the ties. */
+  const ranked = byShare(listed, deltaOf);
+  /** Who recommends what: strong players' top reply in blue, the engine's best two in purple. */
+  const roles = roleArrows(run.fen, listed, deltaOf);
+  const roleOf = (san: string) => roles.find((arrow) => arrow.san === san)?.role;
+  const nudgeOf = (san: string) => toned.find((move) => move.san === san && move.tone);
   /**
-   * Once the engine has weighed the answers, each piece's arrow goes to its
-   * best one. Only the answers themselves are drawn from: a familiar move
-   * pulled in from further down keeps coming in through the nudge, yellow.
+   * The board: the role arrows, glowing where a move matches or breaks your
+   * patterns, and a familiar move nobody recommends in gray, glowing, so it is
+   * always on the board. A move that only breaks your patterns says so on its
+   * row.
    */
-  const weighedOrder = options.some((option) => deltaOf(option.san) !== null)
-    ? byDelta(options, deltaOf).map((option) => option.san).join(' ')
-    : '';
-  const shown = useMemo(
-    () =>
-      weighedOrder
-        ? nudge(onePerPiece(run.fen, weighedOrder.split(' '), pastBook ? Infinity : 3))
-        : unweighed,
-    [weighedOrder, nudge, run.fen, pastBook, unweighed],
-  );
-  const toneOf = (san: string) => shown.find((move) => move.san === san)?.tone;
-  /** What the board lets you play at a hole: every listed answer, and anything with an arrow. */
-  const playable = [...new Set([...listed.map((option) => option.san), ...shown.map((move) => move.san)])];
+  const arrows = [
+    ...roles.map((arrow) => ({
+      from: arrow.from,
+      to: arrow.to,
+      color: roleColor(arrow.role),
+      glow: nudgeColor(nudgeOf(arrow.san)?.tone),
+    })),
+    ...toned
+      .filter((move) => (move.tone === 'toward' || move.tone === 'toward-far') && !roleOf(move.san))
+      .map((move) => ({ from: move.from, to: move.to, color: 'var(--text-2)', glow: nudgeColor(move.tone) })),
+  ];
+  /** What the board lets you play at a hole: every listed answer. */
+  const playable = listed.map((option) => option.san);
 
   /** What each hole put in front of you, logged once per position when its moves are in. */
   const offeredAt = useRef<string | null>(null);
@@ -722,7 +733,7 @@ function Run({
           interactive={!intro.held && ((phase === 'walking' && isUsersTurn(run)) || phase === 'hole')}
           movableFor={run.color}
           allowed={phase === 'hole' ? playable : undefined}
-          arrows={intro.held ? [] : nudgedArrows(shown)}
+          arrows={intro.held || phase !== 'hole' ? [] : arrows}
           onMove={onMove}
           overlay={
             intro.overlay ??
@@ -855,18 +866,18 @@ function Run({
               </button>
             </div>
 
-            <NudgeReasons moves={shown} />
-
             <Section
               title="Answer it"
               aside={inBatch > 0 ? `${inBatch} of ${allowance} added` : `up to ${allowance}`}
             />
             <div className="list">
               {ranked.map((option) => (
-                <button className="list-row" key={option.san} onClick={() => choose(option.san)}>
-                  <span className="tree-san" style={{ color: nudgeColor(toneOf(option.san)) }}>
-                    {option.san}
-                  </span>
+                <button
+                  className={`list-row${roleOf(option.san) ? ` role-${roleOf(option.san)}` : ''}`}
+                  key={option.san}
+                  onClick={() => choose(option.san)}
+                >
+                  <span className="tree-san">{option.san}</span>
                   <span className="grow">
                     <div className="meta">
                       {option.games > 0
@@ -875,6 +886,11 @@ function Run({
                           ? "Engine's pick · past the book"
                           : 'Not in the book · passed by the engine'}
                     </div>
+                    {nudgeOf(option.san)?.pill && (
+                      <span className={`nudge-pill ${nudgeOf(option.san)!.tone}`} title={nudgeOf(option.san)!.reason}>
+                        {nudgeOf(option.san)!.pill}
+                      </span>
+                    )}
                   </span>
                   <DeltaTag cp={deltaOf(option.san)} />
                   <Icons.plus size={18} />

@@ -46,6 +46,15 @@ function shownCp(cp: number): number {
   return Math.abs(cp) < EVEN_CP ? 0 : Math.sign(cp) * Math.round(Math.min(Math.abs(cp), 990) / 10);
 }
 
+/** Best first for the engine: the shown delta, then the share strong players give it; unweighed moves last. */
+function engineOrder(
+  a: { at: number; cp: number | null; share: number },
+  b: { at: number; cp: number | null; share: number },
+): number {
+  if (a.cp === null || b.cp === null) return a.cp === null ? (b.cp === null ? a.at - b.at : 1) : -1;
+  return shownCp(b.cp) - shownCp(a.cp) || b.share - a.share || a.at - b.at;
+}
+
 /**
  * Moves in the engine's order: the best delta first, then anything it has not
  * weighed yet, in the order it came. Answers that read the same go to the one
@@ -56,14 +65,22 @@ export function byDelta<T extends { san: string; share?: number }>(
   deltaOf: (san: string) => number | null,
 ): T[] {
   return moves
-    .map((move, at) => ({ move, at, cp: deltaOf(move.san) }))
-    .sort((a, b) => {
-      if (a.cp === null || b.cp === null) return a.cp === null ? (b.cp === null ? a.at - b.at : 1) : -1;
-      return (
-        shownCp(b.cp) - shownCp(a.cp) ||
-        (b.move.share ?? 0) - (a.move.share ?? 0) ||
-        a.at - b.at
-      );
-    })
+    .map((move, at) => ({ move, at, cp: deltaOf(move.san), share: move.share ?? 0 }))
+    .sort(engineOrder)
+    .map(({ move }) => move);
+}
+
+/**
+ * Moves in strong players' order: the move they play most first, and the
+ * engine's delta between moves they play equally often. Past the book, where
+ * no move has a share, that leaves the engine's order.
+ */
+export function byShare<T extends { san: string; share?: number }>(
+  moves: readonly T[],
+  deltaOf: (san: string) => number | null,
+): T[] {
+  return moves
+    .map((move, at) => ({ move, at, cp: deltaOf(move.san), share: move.share ?? 0 }))
+    .sort((a, b) => b.share - a.share || engineOrder(a, b))
     .map(({ move }) => move);
 }

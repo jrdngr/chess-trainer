@@ -58,6 +58,18 @@ describe('nudging toward the familiar move', () => {
     expect(tone(arrows, 'e5')).toBe('toward-far');
   });
 
+  it('can add the familiar move alongside the arrows, with a pill for its row', () => {
+    const line = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Be2 O-O Bg5';
+    const path = line.split(' ');
+    const fen = walkSan(path).fens.at(-1)!;
+    const drawn = movesToDraw(index, fen);
+    const prefs = { priority: 'transposition', pawns: false } as const;
+    const arrows = nudgeArrows(kid, index, path, fen, drawn, popularReplies(index, fen, 1), prefs, 1, new Set(), true);
+    expect(arrows).toHaveLength(drawn.length + 1);
+    expect(arrows.slice(0, drawn.length).map((arrow) => arrow.san)).toEqual(drawn.map((move) => move.san));
+    expect(arrows.find((arrow) => arrow.san === 'e5')).toMatchObject({ tone: 'toward-far', pill: 'Your habit' });
+  });
+
   it('greens a move that transposes into a line you have', () => {
     const classical = rep('b', ['d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5']);
     // The same position by another move order: Be2 before Nf3.

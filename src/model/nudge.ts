@@ -31,7 +31,7 @@ import type { ExplorerMove, Repertoire } from './types';
  * for a familiar move the book ranks too low to draw, which is pulled onto the
  * board in place of the third arrow. Red is the reverse signal and stands on
  * its own: the move that closes off lines you have, or that you keep passing
- * on. Each coloured arrow says why, in a line under the board.
+ * on. Each says why, in a sentence and in a pill short enough for its row.
  */
 
 /** Which kind of familiarity wins when both are on offer. */
@@ -54,6 +54,8 @@ export interface DrawnMove {
 export interface NudgedMove extends DrawnMove {
   tone?: NudgeTone;
   reason?: string;
+  /** The reason in a word or two, for a pill on the move's row. */
+  pill?: string;
 }
 
 /** A move you have played this often in the opening is a habit. */
@@ -765,6 +767,8 @@ export function nudgeArrows(
   prefs: NudgePrefs,
   minShare: number,
   offBook: ReadonlySet<string> = new Set(),
+  /** Add a familiar move that is not drawn alongside the rest, rather than in another arrow's place. */
+  append = false,
 ): NudgedMove[] {
   const out: NudgedMove[] = drawn.map((move) => ({ ...move }));
   // Your first move of the game picks the opening: nothing about the rest of
@@ -789,8 +793,9 @@ export function nudgeArrows(
     const reason =
       towardReason(green.signal, green.kind, index, fam) + (offBook.has(green.signal.san) ? NOT_IN_BOOK : '');
     const at = out.findIndex((move) => move.san === green.signal.san);
+    const pill = towardPill(green.signal, green.kind);
     if (at >= 0) {
-      out[at] = { ...out[at], tone: 'toward', reason };
+      out[at] = { ...out[at], tone: 'toward', reason, pill };
     } else {
       const move = applySan(fen, green.signal.san);
       if (move) {
@@ -800,9 +805,11 @@ export function nudgeArrows(
           to: move.to,
           tone: 'toward-far',
           reason,
+          pill,
         };
         const samePiece = out.findIndex((drawnMove) => drawnMove.from === move.from);
-        if (samePiece >= 0) out[samePiece] = nudged;
+        if (append) out.push(nudged);
+        else if (samePiece >= 0) out[samePiece] = nudged;
         else if (out.length < 3) out.push(nudged);
         else out[out.length - 1] = nudged;
       }
@@ -815,7 +822,12 @@ export function nudgeArrows(
   const red = pickAway(onBoard, prefs.priority, share);
   if (red) {
     const at = out.findIndex((move) => move.san === red.signal.san);
-    out[at] = { ...out[at], tone: 'away', reason: awayReason(red.signal, red.kind, fam) };
+    out[at] = {
+      ...out[at],
+      tone: 'away',
+      reason: awayReason(red.signal, red.kind, fam),
+      pill: red.kind === 'closes' ? 'Closes off' : 'Breaks a habit',
+    };
   }
   return out;
 }
@@ -939,6 +951,13 @@ function towardReason(
   }
   if (kind === 'habit') return `You play ${signal.san} in ${signal.habit} ${linesOf(signal.habitFrom, fam)}`;
   return `${signal.san} reaches your usual ${fam ? `${shortFamily(fam)} ` : ''}pawns`;
+}
+
+function towardPill(signal: Signals, kind: TowardKind): string {
+  if (kind === 'transposes') return signal.transposesNow ? 'Transposes' : 'Can transpose';
+  if (kind === 'heads') return 'Heads toward';
+  if (kind === 'habit') return habitVia(signal) === 'setup' ? 'Your setup' : 'Your habit';
+  return 'Your pawns';
 }
 
 function awayReason(signal: Signals, kind: AwayKind, fam: string | null): string {
