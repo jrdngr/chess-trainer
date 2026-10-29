@@ -386,18 +386,19 @@ function Run({
    * The board: the role arrows, glowing where a move matches or breaks your
    * patterns, and a familiar move nobody recommends in gray, glowing, so it is
    * always on the board. A move that only breaks your patterns says so on its
-   * row.
+   * row. Drawn least important first, so where arrows cross the blue one is on
+   * top.
    */
   const arrows = [
-    ...roles.map((arrow) => ({
+    ...toned
+      .filter((move) => (move.tone === 'toward' || move.tone === 'toward-far') && !roleOf(move.san))
+      .map((move) => ({ from: move.from, to: move.to, color: 'var(--text-2)', glow: nudgeColor(move.tone) })),
+    ...[...roles].reverse().map((arrow) => ({
       from: arrow.from,
       to: arrow.to,
       color: roleColor(arrow.role),
       glow: nudgeColor(nudgeOf(arrow.san)?.tone),
     })),
-    ...toned
-      .filter((move) => (move.tone === 'toward' || move.tone === 'toward-far') && !roleOf(move.san))
-      .map((move) => ({ from: move.from, to: move.to, color: 'var(--text-2)', glow: nudgeColor(move.tone) })),
   ];
   /** What the board lets you play at a hole: every listed answer. */
   const playable = listed.map((option) => option.san);
