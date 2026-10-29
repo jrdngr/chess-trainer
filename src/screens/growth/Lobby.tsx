@@ -179,12 +179,6 @@ export function Lobby({
         {whiteEmpty && !unstarted.some((region) => region.side === 'w') && (
           <>
             <Section title="Your first move as White" aside="from the book" />
-            <div className="empty" style={{ paddingTop: 0 }}>
-              <div className="h">
-                Growth answers replies, and your first move is not a reply to anything. Pick it,
-                and Black's answers to it are what there is to grow.
-              </div>
-            </div>
             <div className="list">
               {firstMoves.map((move) => (
                 <button key={move.san} className="list-row" onClick={() => keepFirstMove(move.san)}>
@@ -216,7 +210,7 @@ export function Lobby({
           )
         ) : (
           <>
-            <Section title="Or pick one" aside="most worth doing first" />
+            <Section title="Openings to extend" />
             <div className="list">
               {rows.map((row) => (
                 <button key={row.id} className="list-row" onClick={() => start(row, 'picked from the list')}>
@@ -230,9 +224,7 @@ export function Lobby({
                       )}
                       {row.name}
                     </div>
-                    <div className="meta">
-                      {rowMeta(row)}
-                    </div>
+                    <div className="meta">{repliesLabel(row)}</div>
                   </span>
                   <Icons.chevron size={18} />
                 </button>
@@ -282,9 +274,8 @@ export function Lobby({
         />
         <div className="note">
           {prefs.nudgePriority === 'transposition'
-            ? 'A move that lands in a line you have, or heads there a move later, wins the green arrow; failing that, one you already play around this point in this opening or its kin, or that belongs to a setup you use, like a fianchetto.'
-            : 'A move you already play around this point in this opening or its kin, or that belongs to a setup you use like a fianchetto, wins the green arrow; failing that, one that lands in a line you have.'}{' '}
-          Red marks the move that closes off your lines or that you keep choosing against. A familiar move the book lacks is shown in yellow once the engine passes it. Tidy uses the same rules.
+            ? 'Green arrow: a move into a line you already have.'
+            : 'Green arrow: a move you already play here.'}
         </div>
 
         <Section title="Pawn structure" />
@@ -317,19 +308,6 @@ export function Lobby({
 }
 
 /** What a row holds: replies to answer. */
-function rowMeta(row: GrowthRow): string {
-  const parts: string[] = [];
-  if (row.holes.length) {
-    parts.push(`${row.holes.length === 1 ? '1 reply' : `${row.holes.length} replies`} unanswered`);
-  }
-  // The book's own share, not the floor a kept reply is ranked at.
-  const top = Math.max(0, ...row.holes.map((hole) => hole.share));
-  if (top > 0) parts.push(`up to ${top}% of strong players' games`);
-  return [depthLabel(row.depth), ...parts].join(' · ');
+function repliesLabel(row: GrowthRow): string {
+  return row.holes.length === 1 ? '1 reply' : `${row.holes.length} replies`;
 }
-
-function depthLabel(plies: number): string {
-  if (plies === 0) return 'from move 1';
-  return `after ${Math.ceil(plies / 2)} ${plies <= 2 ? 'move' : 'moves'}`;
-}
-
