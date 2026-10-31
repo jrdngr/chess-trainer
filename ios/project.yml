@@ -1,0 +1,35 @@
+name: ChessPlaybook
+options:
+  bundleIdPrefix: app.chessplaybook
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+packages:
+  ChessPlaybook:
+    path: .
+targets:
+  ChessPlaybookApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+      - path: ../src/model/book/book.json
+        buildPhase: resources
+    dependencies:
+      - package: ChessPlaybook
+        product: Model
+      - package: ChessPlaybook
+        product: Engine
+    settings:
+      base:
+        PRODUCT_NAME: Chess Playbook
+        PRODUCT_BUNDLE_IDENTIFIER: app.chessplaybook.ios
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_CFBundleDisplayName: Playbook
+        SWIFT_VERSION: "6.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic

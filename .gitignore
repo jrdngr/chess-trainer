@@ -9,3 +9,4 @@ test-results/
 playwright-report/
 .build/
 .swiftpm/
+ios/ChessPlaybook.xcodeproj/
