@@ -276,7 +276,9 @@ A sketch, to be designed properly once the spec exists:
 | 3. Autopilot | Run controller, judge, end screen, Grow this line batch, Home, round intro | Scenario cases and screenshot review pass; TestFlight |
 | 4. Rest of the free tier | Playbook tab, Tidy, Extensions, Onboarding, Stats, Milestones, Analysis, Play | Same, per area |
 | 5. Paid modes | Survival setup and extras, Drill positions and lines, full Growth, import | Same |
-| 6. Intended changes | Caissa (calibration bench), level-matched books, paywall | Each lands as a spec **change** with regenerated cases, one at a time |
+| 6. Intended changes | Caissa (calibration bench), level-matched books | Each lands as a spec **change** with regenerated cases, one at a time |
+
+Decided 2026-10-31: the paywall is not built yet. The first TestFlight testing is the prototype as ported plus the phase 6 changes, with every mode open.
 
 Decided 2026-10-31: the whole app is specced and covered by cases
 before any Swift, so the reference is complete up front. Phase 1 still starts
