@@ -9,6 +9,7 @@ import { openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { DAY, forecast, masteryBuckets, retention } from '../../model/srs';
 import { itemsFor, repertoireList, useStore } from '../../store/useStore';
+import { env } from '../../model/env';
 
 const FORMS = (['lines', 'positions'] as const).map((value) => ({ value, label: FORM_LABELS[value] }));
 
@@ -47,7 +48,7 @@ export function Setup({
 
   // The schedule of the position cards in scope: what comes due this week, and
   // where each card stands.
-  const now = Date.now();
+  const now = env.now();
   const cards = items.map((i) => state.cards[i.cardId]).filter(Boolean);
   const week = forecast(cards, 7, now);
   const weekTotal = week.reduce((a, b) => a + b, 0);

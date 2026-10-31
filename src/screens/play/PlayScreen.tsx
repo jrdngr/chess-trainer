@@ -28,6 +28,7 @@ import type { Repertoire } from '../../model/types';
 import { repertoireList, useStore } from '../../store/useStore';
 import { useRoundIntro } from '../../components/RoundIntro';
 import { Setup } from './Setup';
+import { env } from '../../model/env';
 
 export interface PlayScreenProps {
   onExit: () => void;
@@ -90,7 +91,7 @@ function Game({
 
   /** Fixed for the life of the game, so a random draw does not re-roll. */
   const [color] = useState<Color>(() =>
-    selection.color === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : selection.color,
+    selection.color === 'random' ? (env.random() < 0.5 ? 'w' : 'b') : selection.color,
   );
   const [moves, setMoves] = useState<string[]>([]);
   const [fen, setFen] = useState(START_FEN);
@@ -99,9 +100,9 @@ function Game({
   const [over, setOver] = useState<{ result: GameResult; reason: string } | null>(null);
   const [saved, setSaved] = useState(false);
   const [offBook, setOffBook] = useState<string | null>(null);
-  const rand = useRef(Math.random);
+  const rand = useRef(env.random);
   /** One id for the life of the game, so ending it twice records it once. */
-  const [gameId] = useState(() => ({ current: `play_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}` }));
+  const [gameId] = useState(() => ({ current: `play_${env.now().toString(36)}_${env.random().toString(36).slice(2, 8)}` }));
 
   /** The repertoire this game is measured against and saved into. */
   const target = useMemo(() => reps.find((rep) => rep.color === color) ?? null, [reps, color]);
@@ -135,7 +136,7 @@ function Game({
    */
   useEffect(() => {
     if (!over) return;
-    const game = playedGame({ id: gameId.current, color, moves, result: over.result, level, at: Date.now() });
+    const game = playedGame({ id: gameId.current, color, moves, result: over.result, level, at: env.now() });
     if (game) recordPlayGame(game);
   }, [over, color, moves, level, recordPlayGame]);
 

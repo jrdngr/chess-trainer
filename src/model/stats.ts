@@ -1,5 +1,6 @@
 import { ancestorsOf, nodeById, type OpeningNode, type OpeningTree } from './openingTree';
 import { dayKey, nodeStats, RATING, type NodeStats, type ScoreState } from './scoring';
+import { env } from './env';
 
 /**
  * Stats: the numbers behind one opening, or the whole game, shaped for a
@@ -24,7 +25,7 @@ function dayStart(now: number, back: number): number {
 }
 
 /** The last `days` days, oldest first, each with the rounds played that day. */
-export function dailyRounds(stats: NodeStats, days: number, now = Date.now()): DayPoint[] {
+export function dailyRounds(stats: NodeStats, days: number, now = env.now()): DayPoint[] {
   const out: DayPoint[] = [];
   for (let back = days - 1; back >= 0; back -= 1) {
     const at = dayStart(now, back);
@@ -42,7 +43,7 @@ export function dailyRounds(stats: NodeStats, days: number, now = Date.now()): D
  * It starts from wherever the rating stood going into the window, and an
  * opening that has never been rated has no line at all.
  */
-export function ratingOverTime(stats: NodeStats, days: number, now = Date.now()): DayPoint[] {
+export function ratingOverTime(stats: NodeStats, days: number, now = env.now()): DayPoint[] {
   if (stats.rated === 0) return [];
   const first = dayKey(dayStart(now, days - 1));
   let running: number = RATING.start;
@@ -70,7 +71,7 @@ export function ratingOverTime(stats: NodeStats, days: number, now = Date.now())
  * over the seven days ending there that were right. Days with nothing to
  * average over are left out rather than drawn as zero.
  */
-export function rollingAccuracy(stats: NodeStats, days: number, now = Date.now(), window = 7): DayPoint[] {
+export function rollingAccuracy(stats: NodeStats, days: number, now = env.now(), window = 7): DayPoint[] {
   const out: DayPoint[] = [];
   for (let back = days - 1; back >= 0; back -= 1) {
     let answered = 0;
@@ -89,7 +90,7 @@ export function rollingAccuracy(stats: NodeStats, days: number, now = Date.now()
 }
 
 /** Rounds in the last `days` days. */
-export function recentRounds(stats: NodeStats, days: number, now = Date.now()): number {
+export function recentRounds(stats: NodeStats, days: number, now = env.now()): number {
   let total = 0;
   for (let back = days - 1; back >= 0; back -= 1) total += stats.days[dayKey(dayStart(now, back))]?.rounds ?? 0;
   return total;
@@ -114,7 +115,7 @@ export function favouriteness(
   score: ScoreState,
   id: string,
   days = 30,
-  now = Date.now(),
+  now = env.now(),
 ): { rank: number; of: number; siblings: Sibling[]; parent: OpeningNode | null } | null {
   const node = tree.byId.get(id);
   if (!node || node.depth === 0) return null;

@@ -16,6 +16,7 @@ import { allItems, type TrainingItem } from './session';
 import { nodeStats, type ActivityMode, type ScoreState } from './scoring';
 import { runNeed } from './srs';
 import type { Card, Repertoire } from './types';
+import { env } from './env';
 
 /**
  * What Autopilot's next Survival run should be: an opening inside the
@@ -335,7 +336,7 @@ export function candidates(input: RecommendInput): Omit<Candidate, 'score'>[] {
   const region = nodeById(tree, selection.opening);
   const nodes = [region, ...descendantsOf(region)];
   const out: Omit<Candidate, 'score'>[] = [];
-  const now = input.now ?? Date.now();
+  const now = input.now ?? env.now();
 
   /**
    * When this opening last had a round. A round is credited to the deepest

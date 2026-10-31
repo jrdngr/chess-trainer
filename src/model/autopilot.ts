@@ -4,6 +4,7 @@ import type { Card, Repertoire } from './types';
 import { missingPrep, type Focus, type Recommendation } from './recommend';
 import { weakestFirst, type TrainingItem } from './session';
 import { runNeed } from './srs';
+import { env } from './env';
 
 /**
  * Autopilot: one Survival run after another, without going back to Home in
@@ -73,7 +74,7 @@ export function insideStart(
   cards: Record<string, Card>,
   opts: { accuracy: number | null; round: number; now?: number },
 ): { item: TrainingItem; need: number } | null {
-  const now = opts.now ?? Date.now();
+  const now = opts.now ?? env.now();
   const due = inside
     .filter((item) => cards[item.cardId])
     .map((item) => ({ item, need: runNeed(cards[item.cardId], opts.round, now) }))

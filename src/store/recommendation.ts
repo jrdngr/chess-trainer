@@ -10,6 +10,7 @@ import { referenceIndex } from '../model/referenceIndex';
 import { nodeStats, seenIn, type RoundRecord, type ScoreState } from '../model/scoring';
 import { itemsInRegion, lineInRegion, regionOf, repertoiresIn, type Selection } from '../model/selection';
 import { itemsFor, repertoireList, useStore } from './useStore';
+import { env } from '../model/env';
 
 type State = ReturnType<typeof useStore.getState>;
 
@@ -47,7 +48,7 @@ function resolveNow(state: State, selection: Selection): Selection {
     prepared.length ? prepared : state.settings.favoriteOpenings,
     (id) => state.score.nodes[id]?.lastAt ?? 0,
     lastFavorite,
-    Math.random,
+    env.random,
   );
 }
 

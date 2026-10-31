@@ -63,6 +63,7 @@ import { Setup } from './Setup';
 import { useJudge } from './useJudge';
 import { useModePrefs } from '../modePrefs';
 import { introOpening, useRoundIntro } from '../../components/RoundIntro';
+import { env } from '../../model/env';
 
 type Phase = 'setup' | 'playing' | 'over' | 'growing';
 
@@ -184,7 +185,7 @@ export function SurvivalScreen({
   const [note, setNote] = useState<(Note & { key: number }) | null>(null);
   /** The moment's move you missed, drawn green while its note shows. */
   const [missedBest, setMissedBest] = useState<{ from: LegalMove['from']; to: LegalMove['to'] } | null>(null);
-  const [picker] = useState(() => ({ current: mulberry32(Math.floor(Math.random() * 2 ** 31)) }));
+  const [picker] = useState(() => ({ current: mulberry32(Math.floor(env.random() * 2 ** 31)) }));
   const [growOffer, setGrowOffer] = useState<GrowOffer | null>(null);
   const ratings = useRatingTracker();
 
@@ -309,10 +310,10 @@ export function SurvivalScreen({
           buzz(effect.pattern);
           break;
         case 'pop':
-          setPop({ key: Date.now(), ...effect.pop });
+          setPop({ key: env.now(), ...effect.pop });
           break;
         case 'note':
-          setNote(effect.note ? { key: Date.now(), ...effect.note } : null);
+          setNote(effect.note ? { key: env.now(), ...effect.note } : null);
           break;
         case 'miss':
           setMiss(effect.miss);
@@ -369,7 +370,7 @@ export function SurvivalScreen({
     moments: prefs.moments,
     onJudged: (judged) => {
       if (!sessionRef.current) return;
-      apply(judgedMove(sessionRef.current, ctx, judged, judgedSeconds.current, Date.now()));
+      apply(judgedMove(sessionRef.current, ctx, judged, judgedSeconds.current, env.now()));
     },
   });
 
@@ -390,7 +391,7 @@ export function SurvivalScreen({
   const momentHere =
     prefs.moments && live && myTurn && !judge.pending && !!run && judge.momentAt === run.fen && prepNow.length === 0;
   useEffect(() => {
-    if (momentHere) setNote({ key: Date.now(), text: "There's something here", tone: 'accent' });
+    if (momentHere) setNote({ key: env.now(), text: "There's something here", tone: 'accent' });
   }, [momentHere]);
   const momentShowing = momentHere && note?.tone === 'accent';
 
@@ -658,7 +659,7 @@ export function SurvivalScreen({
     if (!live || !myTurn || judge.pending || !now || now.ending) return;
     setMiss(null);
     if (prepMoves(now).includes(move.san)) {
-      apply(playPrepared(now, ctx, move, clock.elapsedNow(), Date.now()));
+      apply(playPrepared(now, ctx, move, clock.elapsedNow(), env.now()));
       return;
     }
     judgedSeconds.current = clock.elapsedNow();

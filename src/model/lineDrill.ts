@@ -6,6 +6,7 @@ import type { ReferenceIndex } from './reference';
 import { childrenOf, leafLines, nodeAtLine, pathTo } from './repertoire';
 import { isDue, lineCardId } from './srs';
 import type { LineCard, RepMove, Repertoire } from './types';
+import { env } from './env';
 
 /**
  * Line drills: Drill's way of asking a whole line.
@@ -60,7 +61,7 @@ export function drillableLines(rep: Repertoire, tree: OpeningTree, region: Openi
  * drilled is worth seeing, but not the emergency a lapse is. Only ever
  * compared against other lines, so the scale does not matter.
  */
-export function lineCardWeakness(card: LineCard | undefined, now = Date.now()): number {
+export function lineCardWeakness(card: LineCard | undefined, now = env.now()): number {
   if (!card) return 1.5;
   let score = 1 + card.lapses * 1.2 + Math.max(0, 2.5 - card.ease) * 2;
   if (card.stage === 'learning') score += 1;
@@ -71,7 +72,7 @@ export function lineCardWeakness(card: LineCard | undefined, now = Date.now()): 
 }
 
 /** Lines whose card is due: drilled before, and the schedule wants them back. */
-export function dueLines(lines: DrillLine[], cards: Record<string, LineCard>, now = Date.now()): DrillLine[] {
+export function dueLines(lines: DrillLine[], cards: Record<string, LineCard>, now = env.now()): DrillLine[] {
   return lines.filter((line) => {
     const card = cards[lineCardId(line.repertoireId, line.tipId)];
     return !!card && isDue(card, now);
@@ -136,7 +137,7 @@ export function drawLines(opts: {
 }): DrillLine[] {
   const { rep } = opts;
   const cards = opts.cards ?? {};
-  const now = opts.now ?? Date.now();
+  const now = opts.now ?? env.now();
   let lines = drillableLines(rep, opts.tree, opts.region);
   if (opts.only?.size) {
     const held = lines.filter((line) => opts.only!.has(line.tipId));

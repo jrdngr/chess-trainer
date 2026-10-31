@@ -1,6 +1,7 @@
 import type { Color } from '../chess/core';
 import { leafLines, pathTo } from './repertoire';
 import type { Repertoire } from './types';
+import { env } from './env';
 
 /**
  * A log of what changed the repertoire, and what Growth put in front of you.
@@ -111,7 +112,7 @@ export function setEventPlace(next: EventPlace): void {
 }
 
 /** The log with one more event on the end, the oldest dropped past the cap. */
-export function appendEvent(events: AppEvent[], event: NewEvent, now = Date.now()): AppEvent[] {
+export function appendEvent(events: AppEvent[], event: NewEvent, now = env.now()): AppEvent[] {
   const full = { ...event, at: now, via: event.via ?? place } as AppEvent;
   return [...events.slice(-(EVENT_CAP - 1)), full];
 }

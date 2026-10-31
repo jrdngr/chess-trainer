@@ -37,6 +37,7 @@ import { useStore } from '../../store/useStore';
 import { ClockHud, useMoveClock } from '../../components/Clock';
 import { introOpening, useRoundIntro } from '../../components/RoundIntro';
 import { selectionText } from '../../components/Selection';
+import { env } from '../../model/env';
 
 export interface DrillSessionProps {
   /** Everything in scope. The session draws from this for as long as you want. */
@@ -94,10 +95,10 @@ export function DrillSession({
 
   const maxNew = options.newPerSession;
   const weakFirst = options.weakFirst;
-  const [shuffler] = useState(() => ({ current: mulberry32(Math.floor(Math.random() * 2 ** 31)) }));
+  const [shuffler] = useState(() => ({ current: mulberry32(Math.floor(env.random() * 2 ** 31)) }));
   const drillOpts: DrillOptions = { mode, maxNew, weakFirst };
   /** The sitting, as the controller has it. The ref is always the latest, for the flash's timer. */
-  const [drill, setDrill] = useState<DrillState>(() => beginDrill(items, cards, drillOpts, Date.now()));
+  const [drill, setDrill] = useState<DrillState>(() => beginDrill(items, cards, drillOpts, env.now()));
   const drillRef = useRef(drill);
   const update = (next: DrillState) => {
     if (next === drillRef.current) return;
@@ -148,14 +149,14 @@ export function DrillSession({
 
   const card = item ? cards[item.cardId] : undefined;
   /** True once the schedule is clear and this is practice, not a review. */
-  const extra = !!card && card.stage === 'review' && card.due > Date.now();
+  const extra = !!card && card.stage === 'review' && card.due > env.now();
 
   /**
    * Keep the queue stocked. Scheduled work first; when the schedule is clear,
    * the stalest positions, so the session only ends when you end it.
    */
   useEffect(() => {
-    update(refill(drillRef.current, items, cards, drillOpts, shuffler.current, Date.now()));
+    update(refill(drillRef.current, items, cards, drillOpts, shuffler.current, env.now()));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, cards, mode, maxNew, weakFirst, index, queue.length]);
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { env } from '../model/env';
 
 /**
  * A budget for one move.
@@ -43,16 +44,16 @@ export function useMoveClock({
   useEffect(() => {
     if (!active) return;
     const from = spent.current;
-    startedAt.current = Date.now();
+    startedAt.current = env.now();
     setElapsed(from);
     const timer = setInterval(() => {
-      const now = from + (Date.now() - (startedAt.current ?? Date.now())) / 1000;
+      const now = from + (env.now() - (startedAt.current ?? env.now())) / 1000;
       setElapsed(now);
       if (seconds !== null && now >= seconds) clearInterval(timer);
     }, 100);
     return () => {
       clearInterval(timer);
-      spent.current = from + (Date.now() - (startedAt.current ?? Date.now())) / 1000;
+      spent.current = from + (env.now() - (startedAt.current ?? env.now())) / 1000;
       startedAt.current = null;
     };
   }, [active, turnKey, seconds]);
@@ -61,7 +62,7 @@ export function useMoveClock({
     () =>
       startedAt.current === null
         ? spent.current
-        : spent.current + (Date.now() - startedAt.current) / 1000,
+        : spent.current + (env.now() - startedAt.current) / 1000,
     [],
   );
 

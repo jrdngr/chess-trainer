@@ -30,6 +30,7 @@ import type { Color } from '../../chess/core';
 import { itemsFor, repertoireList, useStore } from '../../store/useStore';
 import { GRADE_LABELS, WhySheet } from './DrillSession';
 import { introOpening, useRoundIntro } from '../../components/RoundIntro';
+import { env } from '../../model/env';
 
 /** How long a correct move stays on the board before the line goes on. */
 const FLASH_MS = 500;
@@ -89,7 +90,7 @@ export function LineDrill({ color, openingId, count, budget, lean, only, prefs, 
   const endRound = useStore((s) => s.endRound);
   const tree = openingTree(referenceIndex());
   const region = nodeById(tree, openingId);
-  const [rand] = useState(() => ({ current: mulberry32(Math.floor(Math.random() * 2 ** 31)) }));
+  const [rand] = useState(() => ({ current: mulberry32(Math.floor(env.random() * 2 ** 31)) }));
 
   const grouped = options.batchSimilar;
 
@@ -131,7 +132,7 @@ export function LineDrill({ color, openingId, count, budget, lean, only, prefs, 
   const mine = yourMove(lines, color);
 
   /** The sitting is announced, and the opening stays over the board until your first move. */
-  const [sitting] = useState(() => Math.random());
+  const [sitting] = useState(() => env.random());
   const intro = useRoundIntro(
     line
       ? {

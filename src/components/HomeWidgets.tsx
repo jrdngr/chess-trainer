@@ -9,6 +9,7 @@ import { useStore } from '../store/useStore';
 import { TierBar } from './ScoreBar';
 import { favoriteEntries, SideDot } from './Selection';
 import { Icons, Sheet, toast } from './ui';
+import { env } from '../model/env';
 
 /* ── Survival runs ──────────────────────────────────────────────────────── */
 
@@ -76,7 +77,7 @@ export function FavoritesLadder() {
   const setSelection = useStore((s) => s.setSelection);
 
   const rows = useMemo(() => {
-    const now = Date.now();
+    const now = env.now();
     return favoriteEntries(favorites)
       .map((entry) => {
         const stats = score.nodes[entry.node.id];

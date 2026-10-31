@@ -22,6 +22,7 @@ import { childrenOf, fenAt, leafLines, pathTo } from './repertoire';
 import { withFloor } from './prepFloor';
 import { cardId, mulberry32 } from './session';
 import type { Card, RepMove, Repertoire } from './types';
+import { env } from './env';
 
 /**
  * Run: the opening of a game, drilled against your prep.
@@ -437,7 +438,7 @@ let runCounter = 0;
 
 function newRunId(): string {
   runCounter += 1;
-  return `run${runCounter}-${Date.now().toString(36)}`;
+  return `run${runCounter}-${env.now().toString(36)}`;
 }
 
 /** The moves of a line that are yours to find. */
@@ -462,7 +463,7 @@ export function weaknessFromCards(
   cards: Record<string, Card>,
   /** Positions your own games got wrong, which want repeating whatever the schedule says. */
   slips: Pick<RepairItem, 'kind' | 'repertoireId' | 'key' | 'games'>[] = [],
-  now = Date.now(),
+  now = env.now(),
 ): Weakness {
   const slipped = new Map<string, number>();
   for (const item of slips) {
@@ -587,7 +588,7 @@ export interface Begun {
  * Null only when the book is empty, which it never is.
  */
 export function beginRun(opts: BeginOptions): Begun | null {
-  const rand = mulberry32(opts.seed ?? Math.floor(Math.random() * 2 ** 31));
+  const rand = mulberry32(opts.seed ?? Math.floor(env.random() * 2 ** 31));
   const side = resolveColor(opts.color, rand);
   const { tree, node } = opts;
   if (!lookup(tree.index, START_FEN)?.moves.length) return null;

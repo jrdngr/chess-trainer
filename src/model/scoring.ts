@@ -6,6 +6,7 @@ import {
   deepestNodeAlong,
   type OpeningTree,
 } from './openingTree';
+import { env } from './env';
 
 /**
  * The rating: how well you know one opening.
@@ -558,7 +559,7 @@ export function accuracy(stats: Pick<NodeStats, 'answered' | 'correct'>): number
  * Days in a row with at least one round, counting back from today — or from
  * yesterday, so a streak is not broken by not having played *yet* today.
  */
-export function streak(stats: NodeStats, now = Date.now()): number {
+export function streak(stats: NodeStats, now = env.now()): number {
   const played = new Set(Object.entries(stats.days).filter(([, day]) => day.rounds > 0).map(([key]) => key));
   const DAY = 86_400_000;
   let count = 0;
@@ -587,6 +588,6 @@ export function ratingOn(stats: NodeStats, key: string): number {
 }
 
 /** How far a rating has moved over the last `days` days. */
-export function ratingChange(stats: NodeStats, days: number, now = Date.now()): number {
+export function ratingChange(stats: NodeStats, days: number, now = env.now()): number {
   return stats.rating - ratingOn(stats, dayKey(now - days * 86_400_000));
 }

@@ -4,6 +4,7 @@ import { createHeuristicEngine } from '../../engine/heuristic';
 import type { Engine, EngineSnapshot } from '../../engine/types';
 import { engineReady } from '../../engine/useEngine';
 import { chooseMove, levelById, type Level } from '../../model/play';
+import { env } from '../../model/env';
 
 /** The engine plays the opponent at Club, once the book has nothing left. */
 export const OPPONENT_LEVEL: Level = levelById('club');
@@ -33,7 +34,7 @@ export function useOpponent({
 }) {
   const move = useRef(onMove);
   move.current = onMove;
-  const rand = useRef(Math.random);
+  const rand = useRef(env.random);
 
   useEffect(() => {
     if (!enabled || !fen || positionStatus(fen).gameOver) return;

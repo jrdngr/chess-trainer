@@ -71,6 +71,7 @@ import {
   type SurvivalRecord,
 } from '../model/survival';
 import { clearState, debounce, loadState, probeStorage, saveState, type StorageSupport } from './db';
+import { env } from '../model/env';
 
 export const DEFAULT_SETTINGS: Settings = {
   showCoordinates: true,
@@ -300,7 +301,7 @@ interface StoreState extends PersistedState {
 function emptyPersisted(): PersistedState {
   return {
     version: SCHEMA_VERSION,
-    updatedAt: Date.now(),
+    updatedAt: env.now(),
     repertoires: {},
     repertoireOrder: [],
     cards: {},
@@ -353,7 +354,7 @@ function usable(saved: PersistedState | null | undefined): PersistedState | null
 }
 
 function statusAfterWrite(result: WriteResult): CloudStatus {
-  if (result.ok) return { kind: 'synced', lastSyncedAt: Date.now() };
+  if (result.ok) return { kind: 'synced', lastSyncedAt: env.now() };
   if (result.reason === 'unavailable') return { kind: 'unavailable' };
   if (result.reason === 'too-large') return { kind: 'too-large', bytes: result.bytes ?? 0 };
   return { kind: 'error', message: result.message ?? 'Sync failed' };
@@ -366,7 +367,7 @@ function reviewed(
   gradeValue: Grade,
   entry: Pick<ReviewLogEntry, 'correct' | 'playedSan' | 'expectedSan'>,
 ): Pick<PersistedState, 'cards' | 'log'> {
-  const now = Date.now();
+  const now = env.now();
   const { card: next } = review(card, gradeValue, now);
   return {
     cards: { ...state.cards, [card.id]: next },
@@ -497,7 +498,7 @@ export const useStore = create<StoreState>((set, get) => {
   }, 4000);
 
   const commit = (patch: Partial<StoreState>) => {
-    set({ ...patch, updatedAt: Date.now() } as Partial<StoreState>);
+    set({ ...patch, updatedAt: env.now() } as Partial<StoreState>);
     persist(get());
     pushCloud();
   };
@@ -615,7 +616,7 @@ export const useStore = create<StoreState>((set, get) => {
           storage,
           ready: true,
           cloud: usableRemote
-            ? { kind: 'synced', lastSyncedAt: Date.now() }
+            ? { kind: 'synced', lastSyncedAt: env.now() }
             : cloudAvailable()
               ? { kind: 'idle', lastSyncedAt: null }
               : { kind: 'unavailable' },
@@ -660,7 +661,7 @@ export const useStore = create<StoreState>((set, get) => {
           settings: mergeSettings(remote.state.settings),
           updatedAt: remote.updatedAt,
           ready: true,
-          cloud: { kind: 'synced', lastSyncedAt: Date.now() },
+          cloud: { kind: 'synced', lastSyncedAt: env.now() },
         });
         persist(get());
         return;
@@ -750,7 +751,7 @@ export const useStore = create<StoreState>((set, get) => {
       commit({
         repertoires: {
           ...get().repertoires,
-          [repId]: { ...rep, nodes: { ...rep.nodes, [nodeId]: { ...node, keptAt: Date.now() } } },
+          [repId]: { ...rep, nodes: { ...rep.nodes, [nodeId]: { ...node, keptAt: env.now() } } },
         },
         events: logged({ kind: 'tidy-keep', repertoireId: repId, color: rep.color, line: lineAt(rep, nodeId) }),
       });
@@ -1032,7 +1033,7 @@ export const useStore = create<StoreState>((set, get) => {
       const { state: score, moves } = applyResult(
         state.score,
         tree,
-        { ...result, at: result.at ?? Date.now() },
+        { ...result, at: result.at ?? env.now() },
         earlier,
       );
       commit({ score });
@@ -1040,7 +1041,7 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     endRound(round) {
-      commit({ score: recordRound(get().score, openingTree(referenceIndex()), { ...round, at: Date.now() }) });
+      commit({ score: recordRound(get().score, openingTree(referenceIndex()), { ...round, at: env.now() }) });
     },
 
     noteStart(kind) {

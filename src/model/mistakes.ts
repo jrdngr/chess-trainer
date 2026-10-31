@@ -1,3 +1,4 @@
+import { env } from './env';
 /**
  * Mistakes made inside the app.
  *
@@ -40,7 +41,7 @@ export const MISTAKE_LIMIT = 200;
  * than the first time you ever went wrong.
  */
 export function addMistake(log: Mistake[], mistake: Omit<Mistake, 'id' | 'at'>): Mistake[] {
-  const at = Date.now();
+  const at = env.now();
   const entry: Mistake = {
     ...mistake,
     at,

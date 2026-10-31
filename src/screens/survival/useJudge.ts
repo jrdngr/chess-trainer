@@ -5,6 +5,7 @@ import { engineReady } from '../../engine/useEngine';
 import { judgeByEval } from '../../model/openingRun';
 import { isMoment, MOMENT_FOUND } from '../../model/survival';
 import type { Color } from '../../chess/core';
+import { env } from '../../model/env';
 
 /** Your move, held until the engine has scored it. */
 export interface Pending {
@@ -152,7 +153,7 @@ export function useJudge({
     const moment = moments && isMoment(color, baseline.cp, baseline.second?.cp ?? null);
     /** At a moment you missed, the second best is what your move answers to. */
     const second = moment && theirs && baseline.second && baseline.second.uci !== pending.uci ? baseline.second.uci : null;
-    const started = Date.now();
+    const started = env.now();
 
     /**
      * Both moves scored at the same depth of the same search, or null while
@@ -197,7 +198,7 @@ export function useJudge({
           // Your move is the engine's own choice: never a blunder, whatever the score.
           const passed = verdict && (verdict.ok || !theirs);
           // A sound move is settled at the quick check; a blunder waits for the whole search.
-          if (!finished && !(passed && Date.now() - started >= THINK_MS)) return;
+          if (!finished && !(passed && env.now() - started >= THINK_MS)) return;
           cancelled = true;
           if (!finished) ready.stop();
           setPending(null);

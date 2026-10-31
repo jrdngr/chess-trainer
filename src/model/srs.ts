@@ -1,4 +1,5 @@
 import type { Card, CardStage, Grade, LineCard, Schedule } from './types';
+import { env } from './env';
 
 export const MINUTE = 60_000;
 export const DAY = 86_400_000;
@@ -44,7 +45,7 @@ export function createCard(
   repertoireId: string,
   key: string,
   fen: string,
-  now = Date.now(),
+  now = env.now(),
 ): Card {
   return {
     id,
@@ -74,7 +75,7 @@ function clampInterval(days: number, cfg: SrsConfig): number {
 }
 
 /** A fresh card for a whole line — see `LineCard`. */
-export function createLineCard(repertoireId: string, tipId: string, now = Date.now()): LineCard {
+export function createLineCard(repertoireId: string, tipId: string, now = env.now()): LineCard {
   return {
     id: lineCardId(repertoireId, tipId),
     repertoireId,
@@ -110,7 +111,7 @@ export interface ReviewOutcome<C extends Schedule = Card> {
 export function review<C extends Schedule>(
   card: C,
   grade: Grade,
-  now = Date.now(),
+  now = env.now(),
   cfg: SrsConfig = DEFAULT_SRS,
 ): ReviewOutcome<C> {
   const correct = grade !== 'again';
@@ -203,12 +204,12 @@ export function describeDelay(ms: number): string {
   return `${Math.round((days / 365) * 10) / 10}y`;
 }
 
-export function describeDue(due: number, now = Date.now()): string {
+export function describeDue(due: number, now = env.now()): string {
   if (due <= now) return 'due now';
   return `in ${describeDelay(due - now)}`;
 }
 
-export function isDue(card: Schedule, now = Date.now()): boolean {
+export function isDue(card: Schedule, now = env.now()): boolean {
   return card.due <= now;
 }
 
@@ -221,7 +222,7 @@ export interface DueCounts {
   total: number;
 }
 
-export function countDue(cards: Card[], now = Date.now()): DueCounts {
+export function countDue(cards: Card[], now = env.now()): DueCounts {
   const counts: DueCounts = { due: 0, new: 0, learning: 0, review: 0, later: 0, total: cards.length };
   for (const c of cards) {
     const due = isDue(c, now);
@@ -261,7 +262,7 @@ export function masteryBuckets(cards: Card[]): { unseen: number; learning: numbe
 }
 
 /** Forecast of how many cards come due over the next `days` days. */
-export function forecast(cards: Card[], days = 7, now = Date.now()): number[] {
+export function forecast(cards: Card[], days = 7, now = env.now()): number[] {
   const out = new Array(days).fill(0);
   for (const c of cards) {
     if (c.due <= now) {
@@ -314,7 +315,7 @@ export function runGap(card: Card): number {
  * it over its gap, so 1 and over is due. A card no run has asked yet (one
  * only Drill has shown you) keeps to its date until a run asks it.
  */
-export function runNeed(card: Card, round: number, now = Date.now()): number {
+export function runNeed(card: Card, round: number, now = env.now()): number {
   if (card.testedRound === undefined) return isDue(card, now) ? 1 : 0;
   return (round - card.testedRound) / runGap(card);
 }

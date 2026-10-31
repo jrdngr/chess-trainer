@@ -6,11 +6,12 @@ import {
   type Color,
 } from '../chess/core';
 import type { MoveSource, RepMove, Repertoire } from './types';
+import { env } from './env';
 
 let idCounter = 0;
 export function newId(prefix = 'n'): string {
   idCounter += 1;
-  return `${prefix}_${Date.now().toString(36)}_${idCounter.toString(36)}`;
+  return `${prefix}_${env.now().toString(36)}_${idCounter.toString(36)}`;
 }
 
 export function createRepertoire(name: string, color: Color, id = newId('rep')): Repertoire {
@@ -21,7 +22,7 @@ export function createRepertoire(name: string, color: Color, id = newId('rep')):
     rootFen: START_FEN,
     rootChildren: [],
     nodes: {},
-    createdAt: Date.now(),
+    createdAt: env.now(),
   };
 }
 
@@ -105,7 +106,7 @@ export function addMove(
     // First move added from a position becomes the preferred one.
     preferred: childrenOf(rep, parentId).length === 0,
     source,
-    addedAt: Date.now(),
+    addedAt: env.now(),
   };
 
   const nodes = { ...rep.nodes, [node.id]: node };

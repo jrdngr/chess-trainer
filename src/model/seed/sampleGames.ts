@@ -3,6 +3,7 @@ import { lookup } from '../reference';
 import { referenceIndex } from '../referenceIndex';
 import { mulberry32 } from '../session';
 import type { ImportedGame } from '../types';
+import { env } from '../env';
 
 /**
  * A stand-in game archive for the import flow.
@@ -96,7 +97,7 @@ export function generateSampleArchive(opts: SampleArchiveOptions): ImportedGame[
     const drawn = roll >= 0.47 && roll < 0.58;
     const result = drawn ? '1/2-1/2' : userWon === userIsWhite ? '1-0' : '0-1';
     const daysAgo = Math.floor((i / count) * 120) + Math.floor(rand() * 3);
-    const date = new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10);
+    const date = new Date(env.now() - daysAgo * 86_400_000).toISOString().slice(0, 10);
 
     games.push({
       id: `sample_${i}`,

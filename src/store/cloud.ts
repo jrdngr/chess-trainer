@@ -1,3 +1,4 @@
+import { env } from '../model/env';
 /**
  * Optional cloud sync, so the same repertoire and review history follow you
  * between devices.
@@ -172,7 +173,7 @@ export function describeStatus(status: CloudStatus): string {
 }
 
 function relative(at: number): string {
-  const delta = Date.now() - at;
+  const delta = env.now() - at;
   if (delta < 60_000) return 'just now';
   if (delta < 3_600_000) return `${Math.round(delta / 60_000)} min ago`;
   if (delta < 86_400_000) return `${Math.round(delta / 3_600_000)} h ago`;

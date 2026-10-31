@@ -7,6 +7,7 @@ import { childrenOf } from './repertoire';
 import type { ScoreState } from './scoring';
 import { structureOf } from './structures';
 import type { Repertoire, RepMove } from './types';
+import { env } from './env';
 
 /**
  * What the opening picker lists below its board.
@@ -353,7 +354,7 @@ export function recentItems(
   tree: OpeningTree,
   catalog: PickerCatalog,
   score: ScoreState,
-  now = Date.now(),
+  now = env.now(),
   limit = 40,
 ): BrowseItem[] {
   const startOfDay = new Date(now);

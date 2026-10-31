@@ -9,6 +9,7 @@ import { openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { itemsFor, repertoireList, useStore } from '../../store/useStore';
 import { takeRoundSelection } from '../../store/recommendation';
+import { env } from '../../model/env';
 
 export interface DrillScreenProps {
   onExit: () => void;
@@ -42,7 +43,7 @@ export function DrillScreen({ onExit }: DrillScreenProps) {
     const sides = repertoiresIn(reps, color)
       .filter((rep) => drillableLines(rep, tree, region).length > 0)
       .map((rep) => rep.color);
-    return sides[Math.floor(Math.random() * sides.length)] ?? 'w';
+    return sides[Math.floor(env.random() * sides.length)] ?? 'w';
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running]);
 
