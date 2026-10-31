@@ -35,6 +35,7 @@ Ported so far:
 - `chess.json`: all (seeded random games, SAN parsing)
 - `draw.json`, `recommend.json`, `survival.json`, `missions.json`, `lenses.json`: all
 - `autopilot.json`: all
+- `scenarios/survival.json`: all six runs, replayed call by call through `SurvivalController`
 - `naming.json`: all
 - `srs.json`: all
 - `ratings.json`: all
