@@ -33,3 +33,12 @@ the republish together, so the repo and the live artifact never drift apart.
 
 Before changing Autopilot, read [docs/autopilot.md](docs/autopilot.md). It
 says what Autopilot is for, and each change should pass its tests.
+
+## Keeping the port's reference current
+
+The native port is checked against `spec/` (see
+[docs/native-port/plan.md](docs/native-port/plan.md)). When a change touches a
+model constant or any text the app shows, regenerate with
+`npm run spec:constants` and `npm run spec:copy`; `npm test` fails until you
+do. When it changes what a screen does, run `npm run e2e`, and re-record with
+`npm run e2e -- -u` only for an intended change, reviewing the trace diff.
