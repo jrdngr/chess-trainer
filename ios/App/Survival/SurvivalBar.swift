@@ -24,7 +24,7 @@ struct SurvivalBar<Actions: View>: View {
 }
 
 /// A count in the app bar: `.chip.num.wide`.
-struct CountChip: View {
+struct SurvivalCountChip: View {
   var value: Int
   var body: some View {
     Text("\(value)").font(.system(size: 12, weight: .semibold).monospacedDigit()).foregroundStyle(Theme.text2)
@@ -41,8 +41,8 @@ func runSubtitle(_ store: AppStore, _ color: ChessCore.Color, _ opening: String)
 }
 
 /// The move clock: a ring that empties as the budget goes, then greys out
-/// at nothing. Running out ends nothing. `ClockHud` in `Clock.tsx`.
-struct ClockHud: View {
+/// at nothing. Running out ends nothing. `SurvivalClock` in `Clock.tsx`.
+struct SurvivalClock: View {
   let budget: Double
   let since: Date
 
@@ -80,9 +80,9 @@ struct SurvivalRunBar: View {
     let state = model.session.state
     SurvivalBar(subtitle: runSubtitle(store, model.run.color, model.openingId), onClose: onExit) {
       if let budget = clockSeconds(model.prefs.clock), model.live, !model.held, model.myTurn {
-        ClockHud(budget: budget, since: model.turnStarted).id(model.turnStarted)
+        SurvivalClock(budget: budget, since: model.turnStarted).id(model.turnStarted)
       }
-      CountChip(value: model.scoredInPoints ? state.extras.points : state.moves)
+      SurvivalCountChip(value: model.scoredInPoints ? state.extras.points : state.moves)
     }
   }
 }

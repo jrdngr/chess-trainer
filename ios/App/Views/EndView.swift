@@ -68,7 +68,7 @@ struct EndView: View {
     VStack(spacing: 0) {
       if survival {
         SurvivalBar(subtitle: runSubtitle(store, run.color, run.enteredIn ?? run.openingId), onClose: onExit) {
-          CountChip(value: finish.ended.moves)
+          SurvivalCountChip(value: finish.ended.moves)
         }
       }
       scroll.modifier(SurvivalDebugScroll())

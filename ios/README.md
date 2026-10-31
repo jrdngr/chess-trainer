@@ -39,6 +39,7 @@ Ported so far:
 - `growOffer.json`: all; `growth.json`: the `growth.*` functions as well
 - `scenarios/growth.json`: all three sittings, replayed through `GrowthController`
 - `scenarios/survival.json`: all six runs, replayed call by call through `SurvivalController`
+- `scenarios/drill.json`: both sittings, replayed call by call through the drill controllers
 - `naming.json`: all
 - `srs.json`: all
 - `ratings.json`: all

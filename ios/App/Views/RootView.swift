@@ -15,6 +15,9 @@ struct RootView: View {
   @State private var mode: Mode? = Self.debugMode
   /// Play on the board, opened from the Playbook tab.
   @State private var building = false
+  /// A Drill sitting opened from the Playbook: its positions and title.
+  @State private var drilling: (items: [TrainingItem], title: String)?
+  @Environment(Toasts.self) private var toasts
   /// Import games, opened from the Playbook tab.
   @State private var importing = ImportDebug.open
   /// A line the Playbook sent to the Analysis tab, and the side it was sent from.
@@ -47,6 +50,8 @@ struct RootView: View {
       }
     } else if importing {
       ImportView(onBack: { importing = false })
+    } else if let drilling {
+      DrillSessionView(tree: tree, index: index, store: store, items: drilling.items, title: drilling.title) { self.drilling = nil }
     } else if building {
       BoardBuildView(onBack: { building = false }, onDone: { _ in building = false })
     } else if let mode {
@@ -67,6 +72,10 @@ struct RootView: View {
             PlaybookView(tree: tree, index: index, onExplore: { sans, side in
               explore = (sans, side)
               tab = .analysis
+            }, onDrill: { repId, nodeId, title in
+              guard let rep = store.state.repertoires[repId] else { return }
+              let items = Array(branchItems(rep, nodeId).prefix(40))
+              if items.isEmpty { toasts.show("Nothing to drill") } else { drilling = (items, title) }
             }, onImport: { importing = true }, onBuild: { building = true })
           case .stats: StatsView(tree: tree, index: index)
           case .analysis:
@@ -86,6 +95,7 @@ struct RootView: View {
       AutopilotView(tree: tree, index: index, scope: scope) { leave() }
         .id(scope.map { "\($0.color.rawValue):\($0.opening)" } ?? "autopilot")
     case .play: PlayView(tree: tree, index: index) { leave() }
+    case .drill: DrillView(tree: tree, index: index) { leave() }
     case .survival:
       SurvivalView(
         tree: tree, index: index, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) },
