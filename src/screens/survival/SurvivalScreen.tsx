@@ -35,6 +35,7 @@ import {
   beginSession,
   bookRanOut,
   bookTurn,
+  closeBook,
   endRun,
   engineMove,
   judgedMove,
@@ -467,7 +468,7 @@ export function SurvivalScreen({
   // The book phase ends where the book has nothing more to say, whoever left it.
   const bookDone = live && myTurn && !!session && bookRanOut(session, index);
   useEffect(() => {
-    if (bookDone && sessionRef.current) update({ ...sessionRef.current, bookOver: true });
+    if (bookDone && sessionRef.current) update(closeBook(sessionRef.current, index));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookDone]);
   const label = session ? prepLabel(session) : null;

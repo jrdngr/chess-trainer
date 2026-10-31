@@ -110,34 +110,35 @@ tests, plus edge values around every threshold (79/80/81cp, 4.9/5/5.1%,
 already exercise most of this; the generator mostly reuses their inputs and
 records outputs.
 
-**Scenario cases** cover whole runs. A scenario is a starting state, a script
-and the expected trace:
+**Scenario cases** cover whole runs, driven through a mode's pure controller
+(`survivalController` and the rest). A scenario is written in
+`src/spec/scenarios/<area>.scenarios.ts` as a short script: your moves with
+their times and the engine's verdicts, and the engine's replies where the
+book has none. A driver resolves the script into the exact controller calls
+the screen makes, in the screen's order, and the generated JSON in
+`spec/cases/scenarios/<area>.json` keeps those calls, so the native tests
+replay the calls with no driver of their own:
 
 ```json
 {
-  "id": "autopilot/clean-prep-then-book-then-blunder",
-  "state": "fixtures/states/qg-small.json",
-  "seed": 7,
-  "clock": "2026-10-01T09:00:00Z",
-  "round": { "kind": "autopilot" },
-  "engine": "fixtures/engine/qg-small.json",
-  "script": [
-    { "you": "d4", "after_ms": 1200 },
-    { "you": "c4", "after_ms": 2600 },
-    { "you": "Nc3", "after_ms": 9100 },
-    { "you": "Bg5", "after_ms": 3000 },
-    { "continue": true }
-  ],
-  "expect": "expected/autopilot/clean-prep-then-book-then-blunder.json"
+  "name": "clean-prep-into-the-book",
+  "setup": { "reps": [...], "start": { "steer": "lines", "node": "...", "color": "w", "seed": 3 },
+             "picker": 5, "prefs": {...}, "autopilot": true, "kinds": {}, "losses": {} },
+  "steps": [
+    { "call": { "fn": "playPrepared", "san": "d4", "seconds": 1, "now": 1790845201000 },
+      "effects": [{ "kind": "buzz", ... }, { "kind": "answered", ... }, { "kind": "pop", ... }, { "kind": "rate", ... }],
+      "after": { "played": ["d4"], "prepStatus": "on", "bookTo": null, "extras": {...}, ... } },
+    { "call": { "fn": "bookTurn" }, "effects": [], "after": { "played": ["d4", "d5"], ... } }
+  ]
 }
 ```
 
-The expected trace lists every observable event in order: the start kind and
-moves played for you, each opponent move, each pop (tick plus time and tone, or
-Book, Ext, or a score), the prep status and segment changes, the book phase,
-the ratings moved, the cards graded, mistakes logged, the round record, the
-ending and the end screen's contents (tabs, prep summary, the Grow this line
-offer and where it launches). It ends with a diff of the persisted state.
+Each step's `effects` are what the screen carries out, in order (pops, notes,
+ratings, card reviews, mistakes, the finish), and `after` is the session as
+the run decides it. The opponent's book moves come from `mulberry32(picker)`,
+and the engine's verdicts are data in the call, so no engine runs. What the
+screen does with the effects (the end screen, the store) is covered by the
+e2e traces and, later, by the store's own cases.
 
 Scenarios to cover first, the Autopilot path:
 

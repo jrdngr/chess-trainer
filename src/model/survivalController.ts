@@ -397,6 +397,11 @@ export function bookRanOut(session: RunSession, index: ReferenceIndex): boolean 
   return session.prepStatus === 'complete' && session.bookTo !== null && !session.bookOver && !inTheBook(index, session.state.run.fen);
 }
 
+/** Your turn where the book has run out: the book phase is over. */
+export function closeBook(session: RunSession, index: ReferenceIndex): RunSession {
+  return bookRanOut(session, index) ? { ...session, bookOver: true } : session;
+}
+
 /** Where the prep runs out, the first mission is set from the eval in front of you. */
 export function missionFrom(session: RunSession, prefs: SurvivalPrefs, cp: number): RunSession {
   if (prepMoves(session).length) return session;
