@@ -45,6 +45,7 @@ constant in `spec/constants.json` is what counts.
 | File | Prefix | What it covers |
 | --- | --- | --- |
 | [autopilot.md](autopilot.md) | AUTO | What Autopilot recommends, where each run starts, and Any favorite |
+| [data.md](data.md) | DATA | What is kept, sync between devices, Export, the event log |
 | [drill.md](drill.md) | DRILL | Drill positions and Drill lines |
 | [end.md](end.md) | END | What a run logs when it ends, the end screen, and Grow this line |
 | [familiar.md](familiar.md) | FAM | Which move is closest to your lines: Growth's arrows, Tidy, the off-prep hint |
