@@ -95,6 +95,16 @@ its line reached. It counts as perfect when the batch was filled.
 Source: `growthController.growthRound`
 Cases: `growth/answer-a-batch`, `growth/undo-one-and-all`, `growth/to-the-edge-of-the-book`
 
+**GROW-13** · port
+Each answer shows what it does to the eval bar, from your side, in pawns:
+0.0 under 10cp, capped at 9.9, toned good, bad or even. Mates count as
+100000 less the moves to mate. Answers listed in the engine's order go best
+shown delta first, ties to the more played, moves not yet weighed last in the
+order they came; in strong players' order, most played first and ties to the
+engine.
+Source: `evalDelta.deltaFor`, `evalDelta.formatDelta`, `evalDelta.byDelta`, `evalDelta.byShare`
+Cases: `evalDelta.deltaFor`, `evalDelta.whiteCp`, `evalDelta.order`, `const:EVEN_CP`
+
 ## Conflicts for the owner
 
 - **GROW-11** has no case because no row reached it in testing: every row

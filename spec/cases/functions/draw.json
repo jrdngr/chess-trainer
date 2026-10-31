@@ -1,0 +1,207 @@
+{
+  "area": "draw",
+  "functions": [
+    {
+      "fn": "openingRun.lineOdds",
+      "about": "How often each of your lines comes up: where the opponent chooses, by how often strong players choose each move, with every prepared reply given at least the prepared floor; where you choose between your own moves, evenly. Lines a run cannot use are dropped before anything is split.",
+      "cases": [
+      {"args":["w",null],"out":{"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3":0.1979,"e4 e5 Nf3 Nc6 Bb5 Nf6 O-O":0.1562,"e4 c6 d4 d5 e5 Bf5 Nf3":0.15,"e4 c5 Nf3 Nc6 d4 cxd4 Nxd4":0.12,"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O":0.098,"e4 c5 Nf3 e6 d4 cxd4 Nxd4":0.083,"e4 e6 d4 d5 Nc3":0.075,"e4 e6 d4 d5 e5":0.075,"e4 e5 Nf3 d6 d4":0.0449}},
+      {"args":["b",null],"out":{"d4 Nf6 c4 g6 Nc3 Bg7 e4 d6":0.2344,"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6":0.2108,"e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6":0.2108,"d4 Nf6 Nf3 g6":0.1219,"e4 c5 Nc3 Nc6":0.0903,"e4 c5 c3 Nf6":0.0903,"d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O":0.0414}},
+      {"args":["w",["e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3"]],"out":{"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3":0.5727,"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O":0.4273}}
+      ]
+    },
+    {
+      "fn": "survival.startSurvival (draw)",
+      "about": "The line a run is drawn on, seed by seed: the side, the line the opponent steers along, and the moves played for you when the run starts inside. My lines leans popular or weak; My gaps walks to a reply you have no answer to; Ignore my lines draws on the book alone.",
+      "cases": [
+      {"args":["lines","popular","w","",false],"out":["w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [] e4 c6 d4 d5 e5 Bf5 Nf3","w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [] e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","w [] e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O","w [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3","w [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3","w [] e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","w [] e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","w [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3"]},
+      {"args":["lines","popular","b","",false],"out":["b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"]},
+      {"args":["lines","weak","random","",false],"out":["b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","w [] e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O","w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [] e4 c6 d4 d5 e5 Bf5 Nf3","b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","w [] e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O"]},
+      {"args":["lines","popular","w","e4 c5",true],"out":["w [e4 c5] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [e4 c5] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [e4 c5] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [e4 c5] e4 c5 Nf3 e6 d4 cxd4 Nxd4","w [e4 c5] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [e4 c5] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [e4 c5] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3","w [e4 c5] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3","w [e4 c5] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3","w [e4 c5] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [e4 c5] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [e4 c5] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3"]},
+      {"args":["lines","popular","b","d4 Nf6 c4 g6",true],"out":["b [d4 Nf6 c4 g6] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [d4 Nf6 c4 g6] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [d4 Nf6 c4 g6] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [d4 Nf6 c4 g6] d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O","b [d4 Nf6 c4 g6] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [d4 Nf6 c4 g6] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [d4 Nf6 c4 g6] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [d4 Nf6 c4 g6] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [d4 Nf6 c4 g6] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [d4 Nf6 c4 g6] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [d4 Nf6 c4 g6] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [d4 Nf6 c4 g6] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6"]},
+      {"args":["gaps",null,"w","e4",false],"out":["w [] e4 c6 d4 d5 e5 Bf5 Nf3 e6","w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","w [] e4 c6 d4 d5 e5 Bf5 Nf3 e6","w [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","w [] e4 c6 d4 d5 e5 Bf5 Nf3 e6","w [] e4 e5 Nf3 Nc6 Bb5 Nf6 O-O Nxe4","w [] e4 d6","w [] e4 e5 Nf3 Nf6","w [] e4 e6 d4 d5 e5 c5","w [] e4 c6 d4 d5 e5 c5","w [] e4 c6 d4 d5 e5 c5","w [] e4 e6 d4 d5 e5 c5"]},
+      {"args":["gaps",null,"b","e4 c5",false],"out":["b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bg5","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3","b [] e4 c5 Nf3 Nc6 Nc3","b [] e4 c5 c3 Nf6 e5","b [] e4 c5 Nf3 Nc6 Bb5","b [] e4 c5 Nf3 Nc6 Bb5","b [] e4 c5 Nf3 Nc6 c3","b [] e4 c5 Nf3 Nc6 c3","b [] e4 c5 Nf3 Nc6 Bb5"]},
+      {"args":["book",null,"w","e4 e6",false],"out":["w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6"]}
+      ]
+    },
+    {
+      "fn": "survival.startSurvival (shares)",
+      "about": "Over 400 seeds, how often each first reply comes up on My lines, popular: close to the line odds.",
+      "cases": [
+      {"args":["w",2],"out":{"e4 c5":190,"e4 e5":156,"e4 c6":54}},
+      {"args":["b",1],"out":{"e4":246,"d4":154}},
+      {"args":["b",2],"out":{"e4 c5":246,"d4 Nf6":154}}
+      ]
+    },
+    {
+      "fn": "survival.startSurvival (fresh)",
+      "about": "The line last run is not drawn again while another is there, and the one left longest is preferred: draws over 12 seeds with the given lines seen in rounds before round 10.",
+      "cases": [
+      {"args":[[]],"out":["e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O"]},
+      {"args":[[["e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O",10]]],"out":["e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O"]},
+      {"args":[[["e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O",10],["e4 e5 Nf3 Nc6 Bb5 Nf6 O-O",9]]],"out":["e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O"]}
+      ]
+    },
+    {
+      "fn": "openingRun.opponentReply",
+      "about": "Off the drawn line, the opponent replies by weight, among replies that keep the run going where there are any: counts over 300 rolls.",
+      "cases": [
+      {"args":["w","e4",""],"out":{"c5":112,"e5":74,"c6":61,"e6":53}},
+      {"args":["w","e4 e5 Nf3",""],"out":{"Nc6":217,"d6":46,"Nf6":37}},
+      {"args":["b","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6",""],"out":{"Nc3":300}},
+      {"args":["b","d4 Nf6","d4 Nf6 c4 g6"],"out":{"c4":198,"Nf3":102}}
+      ]
+    },
+    {
+      "fn": "openingRun.wayIn",
+      "about": "The way into an opening along a line: its moves up to the first that reaches a position the opening names; empty when the line never gets there.",
+      "cases": [
+      {"args":["","e4 c5 Nf3"],"out":[]},
+      {"args":["e4 c5","e4 c5 Nf3 d6"],"out":["e4","c5"]},
+      {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5"],"out":["e4","c5","Nf3","d6","d4","cxd4","Nxd4","Nf6","Nc3","a6"]},
+      {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","e4 c5 Nf3 a6 d4 cxd4 Nxd4 Nf6 Nc3 d6"],"out":["e4","c5","Nf3","a6","d4","cxd4","Nxd4","Nf6","Nc3","d6"]},
+      {"args":["e4 c5","d4 d5 c4"],"out":[]}
+      ]
+    },
+    {
+      "fn": "openingRun.weaknessFromCards",
+      "about": "How badly a position wants practice: never studied 1.5; a card 1, plus 1.2 a lapse, twice what its ease is under 2.5, 1 while learning, 1 when due, twice its wrong share; plus 2 for each game your games went off prep there (up to 3).",
+      "cases": [
+      {"args":[null,0],"out":1.5},
+      {"args":[null,1],"out":3.5},
+      {"args":[null,5],"out":7.5},
+      {"args":[{},0],"out":1},
+      {"args":[{"stage":"review","ease":2.5,"correct":3},0],"out":1},
+      {"args":[{"stage":"review","ease":1.9,"lapses":2,"correct":2,"incorrect":2},0],"out":5.6},
+      {"args":[{"stage":"learning","due":1793447999999},0],"out":3},
+      {"args":[{"stage":"review","ease":2.5,"correct":3},2],"out":5}
+      ]
+    },
+    {
+      "fn": "openingRun.lineWeakness",
+      "about": "A line's appetite: the mean over its positions; a line with none asks 1.",
+      "cases": [
+      {"args":[[]],"out":1},
+      {"args":[[1.5]],"out":1.5},
+      {"args":[[1,2,6]],"out":3}
+      ]
+    },
+    {
+      "fn": "openingRun.judgeByEval",
+      "about": "Past the prep a move is judged by what it gives away from your side (never less than nothing): over 80cp is a blunder.",
+      "cases": [
+      {"args":["w",30,-50],"out":{"ok":true,"lost":80}},
+      {"args":["w",30,-51],"out":{"ok":false,"lost":81}},
+      {"args":["w",30,120],"out":{"ok":true,"lost":0}},
+      {"args":["b",30,110],"out":{"ok":true,"lost":80}},
+      {"args":["b",30,111],"out":{"ok":false,"lost":81}},
+      {"args":["b",30,-200],"out":{"ok":true,"lost":0}}
+      ]
+    },
+    {
+      "fn": "openingRun.clock",
+      "about": "The per-move clock's settings: Off, 10s and 30s.",
+      "cases": [
+      {"args":["off"],"out":{"seconds":null,"label":"Off"}},
+      {"args":["move10"],"out":{"seconds":10,"label":"10s"}},
+      {"args":["move30"],"out":{"seconds":30,"label":"30s"}}
+      ]
+    },
+    {
+      "fn": "openingRun.resolveColor",
+      "about": "Random is resolved once, up front: White under 0.5.",
+      "cases": [
+      {"args":["w",0],"out":"w"},
+      {"args":["w",0.499],"out":"w"},
+      {"args":["w",0.5],"out":"w"},
+      {"args":["w",0.99],"out":"w"},
+      {"args":["b",0],"out":"b"},
+      {"args":["b",0.499],"out":"b"},
+      {"args":["b",0.5],"out":"b"},
+      {"args":["b",0.99],"out":"b"},
+      {"args":["random",0],"out":"w"},
+      {"args":["random",0.499],"out":"w"},
+      {"args":["random",0.5],"out":"b"},
+      {"args":["random",0.99],"out":"b"}
+      ]
+    },
+    {
+      "fn": "freshness.staleness",
+      "about": "How long ago a position was last seen, 0 this round to 1 at 3 rounds or never.",
+      "cases": [
+      {"args":[null],"out":1},
+      {"args":[10],"out":0},
+      {"args":[9],"out":0.3333},
+      {"args":[8],"out":0.6667},
+      {"args":[7],"out":1},
+      {"args":[2],"out":1}
+      ]
+    },
+    {
+      "fn": "freshness.lineParts",
+      "about": "A line read in two parts: its tail from the last place it parts from another line, which makes it this line, and its head before that, which makes it this opening (as position counts).",
+      "cases": [
+      {"args":["e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O"],"out":{"head":5,"tail":4}},
+      {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3"],"out":{"head":3,"tail":6}},
+      {"args":["e4 e5 Nf3 Nc6 Bb5 Nf6 O-O"],"out":{"head":5,"tail":2}},
+      {"args":["e4 c5 Nf3 Nc6 d4 cxd4 Nxd4"],"out":{"head":3,"tail":4}},
+      {"args":["e4 c5 Nf3 e6 d4 cxd4 Nxd4"],"out":{"head":3,"tail":4}},
+      {"args":["e4 c6 d4 d5 e5 Bf5 Nf3"],"out":{"head":1,"tail":6}},
+      {"args":["e4 e5 Nf3 d6 d4"],"out":{"head":3,"tail":2}},
+      {"args":["e4 e6 d4 d5 Nc3"],"out":{"head":4,"tail":1}},
+      {"args":["e4 e6 d4 d5 e5"],"out":{"head":4,"tail":1}}
+      ]
+    },
+    {
+      "fn": "freshness.lineStaleness",
+      "about": "A line's freshness: its tail's mean staleness, times half plus half its head's. And whether it was just run: every position of its tail seen this round.",
+      "cases": [
+      {"args":["e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O",[]],"out":{"stale":1,"justRun":false}},
+      {"args":["e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O",[["e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O",10]]],"out":{"stale":0,"justRun":true}},
+      {"args":["e4 e5 Nf3 Nc6 Bb5 Nf6 O-O",[["e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O",10]]],"out":{"stale":0.5,"justRun":false}},
+      {"args":["e4 e5 Nf3 Nc6 Bb5 Nf6 O-O",[["e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O",8]]],"out":{"stale":0.8333,"justRun":false}},
+      {"args":["e4 c6 d4 d5 e5 Bf5 Nf3",[["e4 e5 Nf3 d6 d4",9]]],"out":{"stale":0.6667,"justRun":false}}
+      ]
+    },
+    {
+      "fn": "evalDelta.whiteCp",
+      "about": "An engine score as centipawns from White's side, a mate in n folded to 100000 − n.",
+      "cases": [
+      {"args":[35,null],"out":35},
+      {"args":[null,3],"out":9997},
+      {"args":[null,-2],"out":-9998},
+      {"args":[null,null],"out":null}
+      ]
+    },
+    {
+      "fn": "evalDelta.deltaFor",
+      "about": "What a move does to the eval bar, from the mover's side; shown in pawns (0.0 under 10cp, at most 9.9) and toned good, bad or even.",
+      "cases": [
+      {"args":["w",30,32],"out":{"delta":2,"shown":"0.0","tone":"even"}},
+      {"args":["w",30,10],"out":{"delta":-20,"shown":"−0.2","tone":"bad"}},
+      {"args":["w",30,45],"out":{"delta":15,"shown":"+0.1","tone":"good"}},
+      {"args":["b",30,10],"out":{"delta":20,"shown":"+0.2","tone":"good"}},
+      {"args":["b",30,300],"out":{"delta":-270,"shown":"−2.7","tone":"bad"}},
+      {"args":["w",0,5000],"out":{"delta":5000,"shown":"+9.9","tone":"good"}}
+      ]
+    },
+    {
+      "fn": "evalDelta.order",
+      "about": "Growth's answers in the engine's order (best shown delta first, ties to the more played, unweighed last in the order they came) and in strong players' order (most played first, ties to the engine).",
+      "cases": [
+      {"args":[[["Nf3",0.5,-12],["Nc3",0.2,-8],["c3",0.1,-14],["d4",0.1,null],["Bc4",0.1,-40]]],"out":{"engine":["Nc3","Nf3","c3","Bc4","d4"],"share":["Nf3","Nc3","c3","Bc4","d4"]}},
+      {"args":[[["a",0,3],["b",0,-3],["c",0,null],["d",0,25]]],"out":{"engine":["d","a","b","c"],"share":["d","a","b","c"]}}
+      ]
+    },
+    {
+      "fn": "autopilotPrefs.autopilotModes",
+      "about": "How an Autopilot round plays each mode, whatever the mode's own setup says; only the move scores and board glow follow Autopilot's settings.",
+      "cases": [
+      {"args":[true,true],"out":{"survival":{"steer":"lines","clock":"off","moveScores":true,"boardGlow":true,"moments":true,"missions":true,"combo":true,"undefendedFlash":false},"drill":{"form":"positions","draw":"due","newPerSession":8,"followLine":true,"weakFirst":false,"explain":true,"batchSimilar":true,"clock":"off"},"growth":{"minShare":1,"maxPly":18,"nudgePriority":"transposition","nudgePawns":false,"pastBook":false}}},
+      {"args":[true,false],"out":{"survival":{"steer":"lines","clock":"off","moveScores":true,"boardGlow":false,"moments":true,"missions":true,"combo":true,"undefendedFlash":false},"drill":{"form":"positions","draw":"due","newPerSession":8,"followLine":true,"weakFirst":false,"explain":true,"batchSimilar":true,"clock":"off"},"growth":{"minShare":1,"maxPly":18,"nudgePriority":"transposition","nudgePawns":false,"pastBook":false}}},
+      {"args":[false,true],"out":{"survival":{"steer":"lines","clock":"off","moveScores":false,"boardGlow":true,"moments":true,"missions":true,"combo":true,"undefendedFlash":false},"drill":{"form":"positions","draw":"due","newPerSession":8,"followLine":true,"weakFirst":false,"explain":true,"batchSimilar":true,"clock":"off"},"growth":{"minShare":1,"maxPly":18,"nudgePriority":"transposition","nudgePawns":false,"pastBook":false}}},
+      {"args":[false,false],"out":{"survival":{"steer":"lines","clock":"off","moveScores":false,"boardGlow":false,"moments":true,"missions":true,"combo":true,"undefendedFlash":false},"drill":{"form":"positions","draw":"due","newPerSession":8,"followLine":true,"weakFirst":false,"explain":true,"batchSimilar":true,"clock":"off"},"growth":{"minShare":1,"maxPly":18,"nudgePriority":"transposition","nudgePawns":false,"pastBook":false}}}
+      ]
+    }
+  ]
+}

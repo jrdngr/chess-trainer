@@ -138,6 +138,13 @@ everything.
 Source: `anyFavorite.resolveFavorite`, `anyFavorite.pickFavorite`; any-favorite
 Cases: `anyFavorite.resolveFavorite`, `anyFavorite.pickFavorite`, `anyFavorite.favoritesIn`
 
+**AUTO-19** · port
+An Autopilot round never reads a mode's own setup. Its runs are Survival on
+your lines with no clock and moments, missions and combo on, the Undefended
+flash off; its only settings are the move scores and board glow.
+Source: `autopilotPrefs.autopilotModes`, `autopilotPrefs.autoSurvival`; autopilot-own-settings (10-25)
+Cases: `autopilotPrefs.autopilotModes`, `const:DEFAULT_AUTOPILOT`
+
 ## Conflicts for the owner
 
 - **AUTO-12**: docs/autopilot.md says inside starts only go to positions a

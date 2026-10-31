@@ -130,6 +130,58 @@ otherwise from the eval.
 Source: `survivalController.missionFrom`, `survival.firstMission`
 Cases: `survival.firstMission`, `survival.planMission`, `survival.missionFor`, `survival/clean-prep-into-the-book`
 
+## The line drawn
+
+**RUN-22** · port
+A run's line is drawn up front and only steers the opponent; any move inside
+the region is accepted at your turn whichever line was drawn. My lines draws
+one of your own lines through the region, by how often you would meet it
+(Autopilot's popular lean) or tilted toward the positions you answer worst
+(weak, the default from the setup screen). My gaps draws the way to a reply
+you have no answer to. Ignore my lines draws on the book alone and keeps your
+prep only to know where you missed. Failing all of these the line is the
+region's own move order. Random side is settled once, up front. Every draw
+comes from the run's seed through one generator (mulberry32), in a fixed
+order, so a seed replays the same run.
+Source: `openingRun.beginRun`, `survival.startSurvival`, `openingRun.resolveColor`
+Cases: `survival.startSurvival (draw)`, `openingRun.resolveColor`, `survival/clean-prep-into-the-book`
+
+**RUN-23** · port
+How often each of your lines comes up: where the opponent chooses, by how
+often strong players choose each move, every prepared reply getting at least
+the prepared floor (15%) of the position; where you choose between your own
+moves, evenly, so a heavily branched line of yours does not swamp the rest.
+Lines the run cannot use are dropped before the split, so their share goes to
+the lines that remain.
+Source: `openingRun.lineOdds`, `prepFloor.withFloor`
+Cases: `openingRun.lineOdds`, `survival.startSurvival (shares)`, `const:PREPARED_FLOOR`
+
+**RUN-24** · port
+Weak leans by each line's mean appetite over its positions: a position never
+studied 1.5; one with a card 1, plus 1.2 a lapse, twice how far its ease is
+under 2.5, 1 while learning, 1 when due, and twice its wrong share; plus 2 for
+each game your games went off prep there, up to 3 games.
+Source: `openingRun.weaknessFromCards`, `openingRun.lineWeakness`
+Cases: `openingRun.weaknessFromCards`, `openingRun.lineWeakness`
+
+**RUN-25** · port
+Among your lines the one left longest is preferred, and the line the last
+round was drawn on is not drawn at all while there is another. A position
+counts as unseen 3 rounds after it was last seen. A line is read in two
+parts: its tail, from the last place it parts from another of your lines,
+and its head before that; its freshness is the tail's mean staleness times
+half plus half the head's. So the same line twice running is stale, and a
+different variation of the same opening is half fresh.
+Source: `freshness.lineStaleness`, `freshness.justRun`, `freshness.lineParts`, `scoring` (marks each round's line seen)
+Cases: `survival.startSurvival (fresh)`, `freshness.staleness`, `freshness.lineParts`, `freshness.lineStaleness`, `const:HORIZON`, `const:HEAD_WEIGHT`
+
+**RUN-26** · port
+Starting inside an opening plays the drawn line's way in for you: its moves up
+to the first that reaches a position the opening names. A line that never
+gets there starts from move one.
+Source: `openingRun.wayIn`, `openingRun.beginRun` (enter)
+Cases: `openingRun.wayIn`, `survival.startSurvival (draw)`
+
 ## The opponent
 
 **RUN-18** · port
@@ -139,6 +191,14 @@ popularity among moves of at least 5%. Where the book has nothing, the engine
 plays.
 Source: `survivalController.bookTurn`, `survival.bookReply`, `engineMove`
 Cases: `survival/clean-prep-into-the-book`, `survival/saved-mistake-in-prep`
+
+**RUN-27** · port
+Off the drawn line the opponent replies at random by weight, among the
+replies after which the run can still go on where there are any. Past the
+prep, a move of yours that gives away more than 80cp (from your side, never
+less than nothing) is a blunder.
+Source: `openingRun.opponentReply`, `openingRun.judgeByEval`
+Cases: `openingRun.opponentReply`, `openingRun.judgeByEval`, `const:BLUNDER_LIMIT`
 
 ## The end
 
