@@ -115,7 +115,7 @@ describe('the reverse signal', () => {
   });
 
   it('never reds castling for lines that simply end before you castle', () => {
-    // Jordan's Exchange Slav: the Tarrasch line stops at 9.Nxd4 with White
+    // A real Exchange Slav: the Tarrasch line stops at 9.Nxd4 with White
     // still to castle. Castling rights alone made O-O "close it off".
     const white = rep('w', [
       'd4 d5 c4 e6 cxd5 exd5 Nc3 c5 Nf3 Nc6 g3 Nf6 Bg2 cxd4 Nxd4',

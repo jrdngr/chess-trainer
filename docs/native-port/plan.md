@@ -49,7 +49,7 @@ These shape the plan. Each one is a way details could get lost.
    `regionSource`, `BOOK_SHARE`, `judgeByEval`). The recommendation focuses,
    Repair's model, and Growth's past-the-book engine reply plumbing are partly
    or fully unreachable. Porting them would waste time and could bring back
-   behavior Jordan removed.
+   behavior that was deliberately removed.
 4. **Behavior depends on things that aren't deterministic.** These are the
    engine's evaluations, `Math.random` (opponent replies, Any favorite, drill
    order), `Date.now` (cards, ratings by day, streaks) and the book data. A
@@ -77,12 +77,12 @@ The rules:
 
 - The **code is the source of truth for what happens**. The decision notes say
   why, and they flag where the code drifted from what was agreed. Each
-  conflict goes into a list for Jordan, not silently resolved.
+  conflict goes into a list for the owner, not silently resolved.
 - Every rule names its **source** (a decision note or a commit) and the
   **cases** that cover it. A rule with no case is a gap the coverage report
   shows.
 - Every rule is marked **port**, **drop** (dead or superseded) or **change**
-  (an intended difference, for example the book). Only Jordan moves a rule to
+  (an intended difference, for example the book). Only the owner moves a rule to
   drop or change.
 - **Constants** (thresholds, caps, timings) live in one generated file,
   `spec/constants.json`, extracted from the TypeScript. The Swift app has a
@@ -189,7 +189,7 @@ this changes what the player sees.
 2. **Inject the four inputs** (random, time, engine, book) where the model and
    controllers reach for them directly today.
 3. **A dead code audit.** Run an unused-export tool and an end-to-end
-   coverage pass, then list everything unreachable for Jordan to confirm as
+   coverage pass, then list everything unreachable for the owner to confirm as
    drop.
 4. **Generators**: `spec:constants`, `spec:copy`, `spec:cases`, and a coverage
    report of rules without cases.
@@ -197,21 +197,21 @@ this changes what the player sees.
    rule and regenerates the cases, so the reference never drifts from the
    spec.
 
-### 5. Jordan's real data as a corpus
+### 5. Real player data as a corpus
 
 The Playbook tab's Export as JSON gives a real, messy state. Run the
 prototype's derived views over it and store the results: Playbook family rows,
 Tidy finds, Extensions kinds, Growth rows, rating tiers, Home's widgets,
 milestones, and the next 50 Autopilot rounds under a fixed seed. Synthetic
 fixtures miss things real data hits (the Tidy hint and the empty Queen's
-Gambit bugs were both found only on Jordan's lines). The corpus also tests the
+Gambit bugs were both found only on real lines). The corpus also tests the
 importer if the native app reads web saves.
 
 ### 6. Engine calibration, kept separate
 
 Parity cases never touch a real engine. Caissa gets its own acceptance test
 instead: a benchmark of positions with known answers (the 60-popular-book-move
-false-blunder bench from the backup engine work, Jordan's past false-blunder
+false-blunder bench from the backup engine work, past false-blunder
 reports such as 13.Ne4 in the QGD, real blunders such as 4.Nc3 in the
 Chigorin) run through the judge's exact procedure (joint multiPv 2 search,
 0.7s quick verdict, depth 16 within 4s on suspicion). Pass: no more false
@@ -244,7 +244,7 @@ A feature counts as ported when:
 2. all its function and scenario cases pass in Swift on CI (GitHub Actions
    macOS runner),
 3. its screenshot pairs are reviewed, and
-4. Jordan has played it on TestFlight.
+4. the owner has played it on TestFlight.
 
 The coverage report is the progress bar for the port.
 
@@ -267,7 +267,7 @@ A sketch, to be designed properly once the spec exists:
 
 | Phase | What | Exit |
 | --- | --- | --- |
-| 0. Audit | Live code map, dead list, drift list (code vs decisions), Jordan confirms port/drop | Signed-off area list |
+| 0. Audit | Live code map, dead list, drift list (code vs decisions), owner confirms port/drop | Signed-off area list |
 | 1. Spec and harness, whole app | Inject inputs, extract every mode's controllers, browser safety net, spec for every area, generators, cases | Cases pass on the prototype, coverage 100% for every **port** rule |
 | 2. Native foundation | `ChessCore`, `Book`, core `Model` (tree, Playbook, SRS, ratings, selection) | Function cases pass in Swift |
 | 3. Autopilot | Run controller, judge, end screen, Grow this line batch, Home, round intro | Scenario cases and screenshot review pass; TestFlight |
@@ -275,11 +275,11 @@ A sketch, to be designed properly once the spec exists:
 | 5. Paid modes | Survival setup and extras, Drill positions and lines, full Growth, import | Same |
 | 6. Intended changes | Caissa (calibration bench), level-matched books, paywall | Each lands as a spec **change** with regenerated cases, one at a time |
 
-Decided 2026-10-31 (Jordan): the whole app is specced and covered by cases
+Decided 2026-10-31: the whole app is specced and covered by cases
 before any Swift, so the reference is complete up front. Phase 1 still starts
 with Core and Autopilot, since everything else builds on them.
 
-## Open questions for Jordan
+## Open questions
 
 1. ~~How much prototype test work up front.~~ Decided: the whole app before
    any Swift.

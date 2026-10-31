@@ -237,7 +237,7 @@ describe('practice owed', () => {
 });
 
 describe('growing a line that ends on your own move', () => {
-  // The round Jordan finished: 6.g3 is the last move prepared, and nothing
+  // A real round: 6.g3 is the last move prepared, and nothing
   // answers what Black plays next. The book has no data there either.
   const line = 'd4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Nf3 Bb4 g3';
   const white = rep('w', line);

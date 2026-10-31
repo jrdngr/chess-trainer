@@ -3,7 +3,7 @@
 Check every change to Autopilot against this note. Autopilot was reshaped
 seven times between September 13 and October 22, 2026, because it kept
 chasing two goals at once: drilling your prep and being the fun game. This
-note settles which goal wins. It was agreed with Jordan on 2026-10-22.
+note settles which goal wins. It was agreed on 2026-10-22.
 
 ## Intent
 
