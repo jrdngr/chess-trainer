@@ -15,13 +15,16 @@ struct AutopilotView: View {
   @State private var history = AutoHistory()
   @State private var model: RunModel?
   @State private var nothing = false
+  @State private var growth: GrowthModel?
   private static let engine = BasicEngine()
 
   var body: some View {
     Group {
-      if let model {
+      if let growth {
+        GrowthView(model: growth, onNext: next)
+      } else if let model {
         if model.phase == .over, let finish = model.finish {
-          EndView(model: model, finish: finish, onNext: next, onExit: exit)
+          EndView(model: model, finish: finish, onNext: next, onGrow: grow, onExit: exit)
         } else {
           RunView(model: model, onExit: exit)
         }
@@ -52,7 +55,12 @@ struct AutopilotView: View {
     run.start()
   }
 
+  private func grow(_ offer: GrowOffer) {
+    growth = GrowthModel(offer: offer, store: store, tree: tree, index: index)
+  }
+
   private func next() {
+    growth = nil
     if let model { history = afterRound(history, model.round, model.selection) }
     model?.stop()
     model = nil

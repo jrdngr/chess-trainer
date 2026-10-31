@@ -8,6 +8,7 @@ struct EndView: View {
   let model: RunModel
   let finish: Finish
   let onNext: () -> Void
+  let onGrow: (GrowOffer) -> Void
   let onExit: () -> Void
   @State private var atPrepEnd = false
 
@@ -38,10 +39,20 @@ struct EndView: View {
           Text(summary).font(.subheadline).foregroundStyle(Theme.text2)
         }
         ratingCard
+        if let offer = model.offer, offer.kind == "opening" {
+          VStack(spacing: 8) {
+            if let text = offer.text { Text(text).font(.subheadline).foregroundStyle(Theme.text) }
+            Button("Grow this opening") { onGrow(offer) }.buttonStyle(.bordered).tint(Theme.good)
+          }
+          .padding().frame(maxWidth: .infinity).background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface)).padding(.horizontal)
+        }
         Button(action: onNext) {
           Label("Next round", systemImage: "chevron.right").frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent).tint(Theme.accent).controlSize(.large).padding(.horizontal)
+        if let offer = model.offer, offer.kind == "line" {
+          Button("Grow this line") { onGrow(offer) }.foregroundStyle(Theme.good)
+        }
         Button("Done", action: onExit).foregroundStyle(Theme.text2)
       }
       .padding(.vertical)

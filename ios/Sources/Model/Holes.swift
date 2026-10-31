@@ -64,6 +64,19 @@ public struct Hole: Equatable, Sendable {
   public var engine = false
   /// The share of games that get to this position, 0...1.
   public var reach: Double
+
+  public init(path: [String], fen: String, san: String, share: Double, games: Double, after: String, nodeId: String?, kept: Bool = false, engine: Bool = false, reach: Double) {
+    self.path = path
+    self.fen = fen
+    self.san = san
+    self.share = share
+    self.games = games
+    self.after = after
+    self.nodeId = nodeId
+    self.kept = kept
+    self.engine = engine
+    self.reach = reach
+  }
 }
 
 /// A reply the opponent might play, with how often the book sees it.
@@ -75,6 +88,19 @@ public struct Reply: Equatable, Sendable {
   public var black: Double
   public var share: Double
   public var engine = false
+  /// Where the move leads, when the book links it.
+  public var next: String?
+
+  public init(san: String, games: Double, white: Double, draw: Double, black: Double, share: Double, engine: Bool = false, next: String? = nil) {
+    self.next = next
+    self.san = san
+    self.games = games
+    self.white = white
+    self.draw = draw
+    self.black = black
+    self.share = share
+    self.engine = engine
+  }
 }
 
 struct Choice {
@@ -184,7 +210,7 @@ public func popularReplies(_ index: ReferenceIndex, _ fen: String, _ minShare: D
   let total = totalGamesAt(entry)
   if total == 0 { return [] }
   return entry.moves
-    .map { Reply(san: $0.san, games: $0.games, white: $0.white, draw: $0.draw, black: $0.black, share: JS.round($0.games / total * 1000) / 10) }
+    .map { Reply(san: $0.san, games: $0.games, white: $0.white, draw: $0.draw, black: $0.black, share: JS.round($0.games / total * 1000) / 10, next: $0.next) }
     .filter { $0.share >= minShare }
     .jsSorted { cmp($1.games, $0.games) }
 }

@@ -35,6 +35,8 @@ Ported so far:
 - `chess.json`: all (seeded random games, SAN parsing)
 - `draw.json`, `recommend.json`, `survival.json`, `missions.json`, `lenses.json`: all
 - `autopilot.json`: all
+- `growOffer.json`: all; `growth.json`: the `growth.*` functions as well
+- `scenarios/growth.json`: all three sittings, replayed through `GrowthController`
 - `scenarios/survival.json`: all six runs, replayed call by call through `SurvivalController`
 - `naming.json`: all
 - `srs.json`: all

@@ -37,6 +37,8 @@ final class RunModel {
   /// Each opening's rating this run: where it stood before, and where it is now.
   private(set) var ratings = OrderedRatings()
   private(set) var finish: Finish?
+  /// The way into Growth a clean end of prep earns.
+  private(set) var offer: GrowOffer?
 
   private var picker: () -> Double
   private var turnStarted = Date()
@@ -243,6 +245,7 @@ final class RunModel {
       ratings.track(state.settleRun(tree, f.answers, line))
       state.endRound(tree, runRound(f, tree, at: Env.now()))
     }
+    offer = offerFor(store.state, tree, index, f, region: f.ended.run.openingId)
     pop = nil
     note = nil
     miss = nil
