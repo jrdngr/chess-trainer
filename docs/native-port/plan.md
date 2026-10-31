@@ -279,19 +279,24 @@ Decided 2026-10-31: the whole app is specced and covered by cases
 before any Swift, so the reference is complete up front. Phase 1 still starts
 with Core and Autopilot, since everything else builds on them.
 
-## Open questions
+## Decisions
 
-1. ~~How much prototype test work up front.~~ Decided: the whole app before
-   any Swift.
-2. **The dead list.** Confirm what not to port once phase 0 lists it (likely
-   old Run code, Repair's model, recommendation focuses, past-book engine
-   replies).
-3. **Web saves.** Should the native app import a web export, or start fresh?
-4. **Book order.** Recommended: port on the current book, then switch to
-   level-matched books as a separate change. That way the 5% book line and
-   the 15% prepared floor can be re-tuned with data.
-5. **Mode Testing and Settings sheet extras.** Port, or leave as web-only dev
-   tools?
+Settled 2026-10-31:
+
+1. **Test work up front:** the whole app is specced and covered by cases
+   before any Swift.
+2. **Dead code:** everything unreachable from the app's entry point (about
+   1,200 lines: the old Run model in `openingRun.ts`, the sample repertoires
+   and their seeder, `gaps.ts`, Repair leftovers, the picker's sorts, unused
+   helpers) is left out of the spec and the port, and deleted from the
+   prototype in phase 1. Logic that is reachable but can't be turned on is
+   raised one item at a time while the spec is written.
+3. **Web saves:** the native app starts fresh. No import.
+4. **Books:** port on today's 2200+ book. Level-matched books come after, as
+   their own spec change, with the 5% book line and the 15% prepared floor
+   re-tuned on the new data.
+5. **Mode Testing:** not ported, and removed from the prototype in phase 1
+   along with the dead code.
 
 ## Appendix: areas and the details to capture
 
