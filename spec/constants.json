@@ -1,0 +1,2656 @@
+{
+  "src/model/answerArrows.ts": {
+    "ROLE_ARROWS": 3
+  },
+  "src/model/anyFavorite.ts": {
+    "ANY_FAVORITE": "*favorites"
+  },
+  "src/model/autopilot.ts": {
+    "COLD_EVERY": 3,
+    "COLD_GAP": 6,
+    "LEAN_FOR": {
+      "test": "popular",
+      "review": "weak"
+    },
+    "RUNS_PER_DAY": 3
+  },
+  "src/model/autopilotPrefs.ts": {
+    "AUTO_DRILL": {
+      "form": "positions",
+      "draw": "due",
+      "newPerSession": 8,
+      "followLine": true,
+      "weakFirst": false,
+      "explain": true,
+      "batchSimilar": true,
+      "clock": "off"
+    },
+    "AUTO_GROWTH": {
+      "minShare": 1,
+      "maxPly": 18,
+      "nudgePriority": "transposition",
+      "nudgePawns": false,
+      "pastBook": false
+    },
+    "DEFAULT_AUTOPILOT": {
+      "moveScores": true,
+      "boardGlow": true
+    }
+  },
+  "src/model/boardBuilder.ts": {
+    "STYLES": [
+      {
+        "id": "popular",
+        "label": "Popular"
+      },
+      {
+        "id": "solid",
+        "label": "Solid"
+      },
+      {
+        "id": "attack",
+        "label": "Attack"
+      },
+      {
+        "id": "gambit",
+        "label": "Gambit"
+      },
+      {
+        "id": "fianchetto",
+        "label": "Fianchetto"
+      }
+    ]
+  },
+  "src/model/boardHints.ts": {
+    "KING_GRADE_TEXT": {
+      "safe": "Safe",
+      "exposed": "Exposed",
+      "attacked": "Under attack"
+    },
+    "LENSES": [
+      {
+        "kind": "pawns",
+        "label": "Pawns"
+      },
+      {
+        "kind": "pieces",
+        "label": "Pieces"
+      },
+      {
+        "kind": "space",
+        "label": "Space"
+      },
+      {
+        "kind": "kings",
+        "label": "Kings"
+      },
+      {
+        "kind": "threats",
+        "label": "Threats"
+      }
+    ]
+  },
+  "src/model/book.ts": {
+    "BOOK_SOURCE": "Lichess Elite 2025-11 · 280,246 games"
+  },
+  "src/model/browse.ts": {
+    "SHELVES": [
+      {
+        "id": "gambits",
+        "label": "Gambits",
+        "color": "#f97316",
+        "keys": [
+          "King's Gambit",
+          "Danish Gambit",
+          "Italian Game: Evans Gambit",
+          "Italian Game: Scotch Gambit",
+          "Sicilian Defence: Smith-Morra Gambit",
+          "Sicilian Defence: Wing Gambit",
+          "Blackmar-Diemer Gambit",
+          "Benko Gambit",
+          "Indian Defence: Budapest Gambit",
+          "Queen's Gambit Declined: Albin Countergambit",
+          "Ruy Lopez: Marshall Attack",
+          "Elephant Gambit",
+          "Latvian Gambit",
+          "Englund Gambit",
+          "Petrov's Defence: Stafford Gambit"
+        ]
+      },
+      {
+        "id": "systems",
+        "label": "Systems",
+        "color": "#3b82f6",
+        "keys": [
+          "London System",
+          "Queen's Pawn Game: Colle System",
+          "King's Indian Attack",
+          "Torre Attack",
+          "Trompowsky Attack",
+          "Rapport-Jobava System",
+          "Yusupov-Rubinstein System",
+          "Catalan Opening",
+          "Hippopotamus Defence",
+          "Modern Defence",
+          "Pirc Defence"
+        ]
+      },
+      {
+        "id": "solid",
+        "label": "Solid",
+        "color": "#2dd4bf",
+        "keys": [
+          "Caro-Kann Defence",
+          "Slav Defence",
+          "Queen's Gambit Declined",
+          "Petrov's Defence",
+          "Ruy Lopez: Berlin Defence",
+          "Queen's Indian Defence",
+          "Philidor Defence",
+          "Italian Game: Giuoco Pianissimo",
+          "Bogo-Indian Defence",
+          "London System"
+        ]
+      },
+      {
+        "id": "sharp",
+        "label": "Sharp",
+        "color": "#ef4444",
+        "keys": [
+          "Sicilian Defence: Najdorf Variation",
+          "Sicilian Defence: Dragon Variation",
+          "Sicilian Defence: Lasker-Pelikan Variation",
+          "Sicilian Defence: Sozin Attack",
+          "King's Indian Defence",
+          "Grünfeld Defence",
+          "Benoni Defence: Modern Variation",
+          "Semi-Slav Defence",
+          "French Defence: Winawer Variation",
+          "Dutch Defence",
+          "Ruy Lopez: Schliemann Defence",
+          "King's Gambit"
+        ]
+      },
+      {
+        "id": "classical",
+        "label": "Classical",
+        "color": "#facc15",
+        "keys": [
+          "Ruy Lopez",
+          "Italian Game: Giuoco Piano",
+          "Queen's Gambit",
+          "Queen's Gambit Declined",
+          "Four Knights Game",
+          "Scotch Game",
+          "Vienna Game",
+          "Nimzo-Indian Defence: Classical Variation",
+          "French Defence: Classical Variation",
+          "Caro-Kann Defence: Classical Variation",
+          "Pirc Defence: Classical Variation"
+        ]
+      },
+      {
+        "id": "hypermodern",
+        "label": "Hypermodern",
+        "color": "#a855f7",
+        "keys": [
+          "Réti Opening",
+          "English Opening",
+          "King's Indian Defence",
+          "Grünfeld Defence",
+          "Nimzo-Indian Defence",
+          "Queen's Indian Defence",
+          "Bogo-Indian Defence",
+          "Alekhine Defence",
+          "Pirc Defence",
+          "Modern Defence",
+          "Catalan Opening",
+          "Nimzo-Larsen Attack"
+        ]
+      },
+      {
+        "id": "offbeat",
+        "label": "Offbeat",
+        "color": "#4ade80",
+        "keys": [
+          "Bird Opening",
+          "Polish Opening",
+          "Grob Opening",
+          "Hungarian Opening",
+          "Van Geet Opening",
+          "Nimzowitsch Defence",
+          "Owen Defence",
+          "St. George Defence",
+          "English Defence",
+          "Scandinavian Defence",
+          "Center Game",
+          "Ponziani Opening",
+          "Bishop's Opening",
+          "Richter-Veresov Attack"
+        ]
+      },
+      {
+        "id": "trappy",
+        "label": "Trappy",
+        "color": "#ec4899",
+        "keys": [
+          "Petrov's Defence: Stafford Gambit",
+          "Englund Gambit",
+          "Elephant Gambit",
+          "Latvian Gambit",
+          "Italian Game: Two Knights Defence",
+          "Indian Defence: Budapest Gambit",
+          "Queen's Gambit Declined: Albin Countergambit",
+          "Blackmar-Diemer Gambit",
+          "Danish Gambit",
+          "Center Game",
+          "Vienna Game",
+          "Sicilian Defence: Smith-Morra Gambit",
+          "Italian Game: Evans Gambit",
+          "Ruy Lopez: Schliemann Defence"
+        ]
+      }
+    ]
+  },
+  "src/model/drillController.ts": {
+    "BATCH": 20,
+    "REFILL_AT": 6,
+    "REQUEUE_AFTER": 4
+  },
+  "src/model/engineReplies.ts": {
+    "ENGINE_REPLIES": 4,
+    "ENGINE_THEIR_REPLIES": 2,
+    "NEAR_BEST": 20
+  },
+  "src/model/evalDelta.ts": {
+    "EVEN_CP": 10
+  },
+  "src/model/events.ts": {
+    "EVENT_CAP": 1000,
+    "REMOVED_CAP": 20
+  },
+  "src/model/extensionGraph.ts": {
+    "MAX_PLIES": 16
+  },
+  "src/model/freshness.ts": {
+    "HEAD_WEIGHT": 0.5,
+    "HORIZON": 3,
+    "NOTHING_SEEN": {
+      "at": {},
+      "round": 0
+    }
+  },
+  "src/model/growOffer.ts": {
+    "CLEAN_FINISHES": 3
+  },
+  "src/model/growth.ts": {
+    "DEFAULT_MAX_PLY": 18,
+    "DEFAULT_MIN_SHARE": 1,
+    "MAX_ADDS": 8,
+    "STAR_BOOST": 1.6
+  },
+  "src/model/kin.ts": {
+    "KIN_SETS": [
+      {
+        "name": "Queen's Gambit",
+        "families": [
+          "Queen's Gambit",
+          "Queen's Gambit Declined",
+          "Queen's Gambit Accepted",
+          "Slav Defence",
+          "Semi-Slav Defence",
+          "Semi-Slav Defence Accepted",
+          "Tarrasch Defence",
+          "Catalan Opening",
+          "Indian Defence",
+          "Queen's Pawn Game"
+        ]
+      },
+      {
+        "name": "...e6 Indians",
+        "families": [
+          "Nimzo-Indian Defence",
+          "Queen's Indian Defence",
+          "Queen's Indian Accelerated",
+          "Pseudo Queen's Indian Defence",
+          "Bogo-Indian Defence",
+          "Queen's Gambit Declined",
+          "Catalan Opening",
+          "Indian Defence"
+        ]
+      },
+      {
+        "name": "...c6 and ...d5",
+        "families": [
+          "Slav Defence",
+          "Semi-Slav Defence",
+          "Semi-Slav Defence Accepted",
+          "Slav Indian",
+          "Caro-Kann Defence"
+        ]
+      },
+      {
+        "name": "Kingside fianchetto for White",
+        "families": [
+          "Catalan Opening",
+          "English Opening",
+          "Réti Opening",
+          "King's Indian Attack",
+          "King's Indian Attack, with e6",
+          "King's Indian Attack, with Bf5",
+          "Zukertort Opening",
+          "Hungarian Opening",
+          "Neo-Grünfeld Defence",
+          "Indian Defence"
+        ]
+      },
+      {
+        "name": "Kingside fianchetto for Black",
+        "families": [
+          "King's Indian Defence",
+          "Grünfeld Defence",
+          "Neo-Grünfeld Defence",
+          "Modern Defence",
+          "Pirc Defence",
+          "Pterodactyl Defence",
+          "East Indian Defence",
+          "Old Indian Defence",
+          "Benoni Defence",
+          "Benko Gambit",
+          "Benko Gambit Accepted",
+          "Benko Gambit Declined",
+          "English Opening",
+          "Indian Defence"
+        ]
+      },
+      {
+        "name": "...c5",
+        "families": [
+          "Sicilian Defence",
+          "English Opening",
+          "Benoni Defence",
+          "Benko Gambit",
+          "Benko Gambit Accepted"
+        ]
+      },
+      {
+        "name": "Queenside fianchetto",
+        "families": [
+          "Nimzo-Larsen Attack",
+          "Zukertort Opening",
+          "English Opening",
+          "Queen's Indian Defence",
+          "Owen Defence",
+          "English Defence",
+          "Polish Opening",
+          "Polish Defence"
+        ]
+      },
+      {
+        "name": "Stonewall and Dutch",
+        "families": [
+          "Dutch Defence",
+          "Bird Opening",
+          "Zukertort Opening"
+        ]
+      },
+      {
+        "name": "d4 systems",
+        "families": [
+          "London System",
+          "Queen's Pawn Game",
+          "Indian Defence",
+          "Torre Attack",
+          "Trompowsky Attack",
+          "Richter-Veresov Attack",
+          "Rapport-Jobava System",
+          "Rapport-Jobava System, with e6",
+          "Zukertort Opening"
+        ]
+      },
+      {
+        "name": "1.e4 e5",
+        "families": [
+          "Italian Game",
+          "Ruy Lopez",
+          "Scotch Game",
+          "Four Knights Game",
+          "Three Knights Opening",
+          "Petrov's Defence",
+          "Philidor Defence",
+          "Vienna Game",
+          "Bishop's Opening",
+          "King's Knight Opening",
+          "King's Pawn Game",
+          "Ponziani Opening",
+          "Center Game",
+          "King's Gambit",
+          "King's Gambit Accepted",
+          "King's Gambit Declined",
+          "Danish Gambit",
+          "Elephant Gambit",
+          "Latvian Gambit",
+          "Latvian Gambit Accepted"
+        ]
+      },
+      {
+        "name": "French and Caro-Kann",
+        "families": [
+          "French Defence",
+          "Caro-Kann Defence"
+        ]
+      },
+      {
+        "name": "Pirc and Modern",
+        "families": [
+          "Pirc Defence",
+          "Modern Defence",
+          "Rat Defence",
+          "Lion Defence",
+          "Philidor Defence"
+        ]
+      }
+    ]
+  },
+  "src/model/lineDrill.ts": {
+    "LINE_BUDGET": 15,
+    "MAX_LINES": 3
+  },
+  "src/model/mistakes.ts": {
+    "MISTAKE_LIMIT": 200
+  },
+  "src/model/modes.ts": {
+    "DEFAULT_DRILL": {
+      "form": "positions",
+      "draw": "due",
+      "newPerSession": 8,
+      "followLine": true,
+      "weakFirst": false,
+      "explain": true,
+      "batchSimilar": true,
+      "clock": "off"
+    },
+    "DEFAULT_GROWTH": {
+      "minShare": 1,
+      "maxPly": 18,
+      "nudgePriority": "transposition",
+      "nudgePawns": false,
+      "pastBook": false
+    },
+    "DEFAULT_PLAY": {
+      "level": "club",
+      "save": true,
+      "warnOffBook": true,
+      "showEval": false,
+      "takeBacks": true
+    },
+    "DRAW_LABELS": {
+      "due": "Scheduled",
+      "new": "New only",
+      "cram": "Everything"
+    },
+    "FORM_LABELS": {
+      "positions": "Positions",
+      "lines": "Lines"
+    },
+    "GROWTH_DEPTHS": [
+      8,
+      12,
+      18
+    ],
+    "LEVELS": [
+      {
+        "id": "casual",
+        "name": "Casual",
+        "depth": 1,
+        "multiPv": 5,
+        "slip": 0.65
+      },
+      {
+        "id": "club",
+        "name": "Club",
+        "depth": 5,
+        "multiPv": 4,
+        "slip": 0.3
+      },
+      {
+        "id": "strong",
+        "name": "Strong",
+        "depth": 11,
+        "multiPv": 3,
+        "slip": 0.08
+      },
+      {
+        "id": "full",
+        "name": "Full",
+        "depth": 16,
+        "multiPv": 1,
+        "slip": 0
+      }
+    ],
+    "OPENING_PLIES": 16,
+    "SHARE_STEPS": [
+      3,
+      1,
+      0.2
+    ]
+  },
+  "src/model/moveSource.ts": {
+    "SOURCE_LABELS": {
+      "picker": "Opening picker",
+      "book": "Book",
+      "growth": "Growth",
+      "engine": "Engine",
+      "manual": "Entered by hand",
+      "analysis": "Analysis",
+      "import": "Imported games",
+      "play": "Play game",
+      "tidy": "Tidy switch",
+      "board": "Play on the board",
+      "seed": "Sample"
+    }
+  },
+  "src/model/nudge.ts": {
+    "HABIT_MIN": 2,
+    "HABIT_PLIES": 4,
+    "NOT_IN_BOOK": " · not in the book",
+    "VIA_REPLY_MIN": 0.25
+  },
+  "src/model/onboarding.ts": {
+    "NAMED_LATE": {
+      "d4 Nf6 c4 g6 Nc3": "b",
+      "e4 e5 Nf3 Nc6 d4 exd4": "w"
+    }
+  },
+  "src/model/openingRun.ts": {
+    "BLUNDER_LIMIT": 80,
+    "BOOK_SHARE": 0.05,
+    "CLOCK_MODES": [
+      "off",
+      "move10",
+      "move30"
+    ],
+    "DEFAULT_OPTIONS": {
+      "steer": "popular",
+      "newMoves": 0,
+      "clock": "off",
+      "hints": 0
+    },
+    "DRAW_WINDOW": 8
+  },
+  "src/model/openingTree.ts": {
+    "ANY_OPENING": ""
+  },
+  "src/model/pickerData.ts": {
+    "BRANCH_SIDES": {
+      "Sicilian Defence: Taimanov Variation": "b"
+    },
+    "FAMILY_GROUPS": {
+      "Sicilian Defence": {
+        "groups": [
+          {
+            "label": "Open Sicilian",
+            "from": [
+              "e4 c5 Nf3 d6 d4 cxd4 Nxd4",
+              "e4 c5 Nf3 Nc6 d4 cxd4 Nxd4",
+              "e4 c5 Nf3 e6 d4 cxd4 Nxd4",
+              "e4 c5 Nf3 g6 d4 cxd4 Nxd4",
+              "e4 c5 Nf3 a6 d4 cxd4 Nxd4",
+              "e4 c5 Nf3 Nc6 d4 cxd4"
+            ],
+            "sharpness": 5
+          },
+          {
+            "label": "2.Nf3 sidelines",
+            "from": [
+              "e4 c5 Nf3"
+            ],
+            "sharpness": 3
+          },
+          {
+            "label": "Alapin",
+            "from": [
+              "e4 c5 c3"
+            ],
+            "sharpness": 2
+          },
+          {
+            "label": "Closed and Grand Prix",
+            "from": [
+              "e4 c5 Nc3"
+            ],
+            "sharpness": 3
+          },
+          {
+            "label": "Smith-Morra Gambit",
+            "from": [
+              "e4 c5 d4"
+            ],
+            "sharpness": 5
+          }
+        ],
+        "rest": "Other second moves",
+        "restSharpness": 3
+      },
+      "French Defence": {
+        "groups": [
+          {
+            "label": "3.Nc3",
+            "from": [
+              "e4 e6 d4 d5 Nc3"
+            ],
+            "sharpness": 4
+          },
+          {
+            "label": "Advance",
+            "from": [
+              "e4 e6 d4 d5 e5"
+            ],
+            "sharpness": 3
+          },
+          {
+            "label": "Other third moves",
+            "from": [
+              "e4 e6 d4 d5"
+            ],
+            "sharpness": 2
+          }
+        ],
+        "rest": "Other lines"
+      },
+      "Caro-Kann Defence": {
+        "groups": [
+          {
+            "label": "Main lines (3.Nc3 and 3.Nd2)",
+            "from": [
+              "e4 c6 d4 d5 Nc3",
+              "e4 c6 d4 d5 Nd2"
+            ],
+            "sharpness": 2
+          },
+          {
+            "label": "Advance",
+            "from": [
+              "e4 c6 d4 d5 e5"
+            ],
+            "sharpness": 3
+          },
+          {
+            "label": "Exchange and Panov",
+            "from": [
+              "e4 c6 d4 d5 exd5"
+            ],
+            "sharpness": 3
+          },
+          {
+            "label": "Two Knights and 2.Nf3",
+            "from": [
+              "e4 c6 Nc3 d5 Nf3",
+              "e4 c6 Nf3 d5"
+            ],
+            "sharpness": 2
+          }
+        ],
+        "rest": "Other lines"
+      },
+      "Ruy Lopez": {
+        "groups": [
+          {
+            "label": "Morphy Defence (3...a6)",
+            "from": [
+              "e4 e5 Nf3 Nc6 Bb5 a6"
+            ],
+            "sharpness": 3
+          },
+          {
+            "label": "Berlin Defence (3...Nf6)",
+            "from": [
+              "e4 e5 Nf3 Nc6 Bb5 Nf6"
+            ],
+            "sharpness": 1
+          }
+        ],
+        "rest": "Other third moves"
+      },
+      "English Opening": {
+        "groups": [
+          {
+            "label": "1...e5 King's English",
+            "from": [
+              "c4 e5"
+            ],
+            "sharpness": 3
+          },
+          {
+            "label": "1...Nf6 Anglo-Indian",
+            "from": [
+              "c4 Nf6"
+            ],
+            "sharpness": 2
+          },
+          {
+            "label": "1...c5 Symmetrical",
+            "from": [
+              "c4 c5"
+            ],
+            "sharpness": 2
+          },
+          {
+            "label": "1...e6 Agincourt",
+            "from": [
+              "c4 e6"
+            ],
+            "sharpness": 2
+          }
+        ],
+        "rest": "Other replies"
+      },
+      "Queen's Gambit Declined": {
+        "groups": [
+          {
+            "label": "3.Nc3",
+            "from": [
+              "d4 d5 c4 e6 Nc3"
+            ],
+            "sharpness": 2
+          },
+          {
+            "label": "3.Nf3",
+            "from": [
+              "d4 d5 c4 e6 Nf3"
+            ],
+            "sharpness": 2
+          }
+        ],
+        "rest": "Second-move alternatives"
+      },
+      "King's Indian Defence": {
+        "groups": [
+          {
+            "label": "Classical (5.Nf3)",
+            "from": [
+              "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3"
+            ],
+            "sharpness": 4
+          },
+          {
+            "label": "Sämisch and Four Pawns",
+            "from": [
+              "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3",
+              "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f4"
+            ],
+            "sharpness": 5
+          },
+          {
+            "label": "Averbakh and Be2 systems",
+            "from": [
+              "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Be2"
+            ],
+            "sharpness": 3
+          }
+        ],
+        "rest": "Other lines"
+      },
+      "Indian Defence": {
+        "groups": [
+          {
+            "label": "2.c4",
+            "from": [
+              "d4 Nf6 c4"
+            ],
+            "sharpness": 3
+          },
+          {
+            "label": "2.Nf3",
+            "from": [
+              "d4 Nf6 Nf3"
+            ],
+            "sharpness": 2
+          }
+        ],
+        "rest": "Other second moves"
+      },
+      "Queen's Pawn Game": {
+        "groups": [
+          {
+            "label": "1...d5",
+            "from": [
+              "d4 d5"
+            ],
+            "sharpness": 2
+          },
+          {
+            "label": "1...Nf6",
+            "from": [
+              "d4 Nf6"
+            ],
+            "sharpness": 2
+          }
+        ],
+        "rest": "Other replies"
+      },
+      "Zukertort Opening": {
+        "groups": [
+          {
+            "label": "1...Nf6",
+            "from": [
+              "Nf3 Nf6"
+            ],
+            "sharpness": 2
+          },
+          {
+            "label": "1...d5",
+            "from": [
+              "Nf3 d5"
+            ],
+            "sharpness": 2
+          }
+        ],
+        "rest": "Other replies"
+      },
+      "Benoni Defence": {
+        "groups": [
+          {
+            "label": "Modern Benoni",
+            "from": [
+              "d4 Nf6 c4 c5 d5 e6"
+            ],
+            "sharpness": 5
+          },
+          {
+            "label": "Old Benoni (1...c5)",
+            "from": [
+              "d4 c5"
+            ],
+            "sharpness": 3
+          }
+        ],
+        "rest": "Other lines"
+      },
+      "Scandinavian Defence": {
+        "groups": [
+          {
+            "label": "2...Qxd5",
+            "from": [
+              "e4 d5 exd5 Qxd5"
+            ],
+            "sharpness": 3
+          },
+          {
+            "label": "2...Nf6",
+            "from": [
+              "e4 d5 exd5 Nf6"
+            ],
+            "sharpness": 3
+          }
+        ],
+        "rest": "Other lines"
+      },
+      "Dutch Defence": {
+        "groups": [
+          {
+            "label": "2.c4 main lines",
+            "from": [
+              "d4 f5 c4"
+            ],
+            "sharpness": 3
+          }
+        ],
+        "rest": "Anti-Dutch lines"
+      }
+    },
+    "FAMILY_SHARPNESS": {
+      "Sicilian Defence": 4,
+      "French Defence": 3,
+      "Ruy Lopez": 2,
+      "English Opening": 2,
+      "Caro-Kann Defence": 2,
+      "Queen's Gambit Declined": 2,
+      "King's Indian Defence": 4,
+      "Italian Game": 3,
+      "Indian Defence": 3,
+      "Queen's Pawn Game": 2,
+      "Nimzo-Indian Defence": 3,
+      "Petrov's Defence": 1,
+      "Scandinavian Defence": 3,
+      "Zukertort Opening": 2,
+      "Benoni Defence": 4,
+      "Slav Defence": 2,
+      "Alekhine Defence": 3,
+      "Queen's Indian Defence": 2,
+      "Queen's Gambit Accepted": 2,
+      "Semi-Slav Defence": 4,
+      "Grünfeld Defence": 4,
+      "Dutch Defence": 4,
+      "Four Knights Game": 2,
+      "Scotch Game": 3,
+      "Vienna Game": 3,
+      "Modern Defence": 3,
+      "Nimzowitsch Defence": 3,
+      "Pirc Defence": 4,
+      "King's Indian Attack": 2,
+      "Réti Opening": 2,
+      "Hungarian Opening": 2,
+      "King's Pawn Game": 3,
+      "Bishop's Opening": 3,
+      "King's Gambit Accepted": 5,
+      "Bogo-Indian Defence": 2,
+      "Tarrasch Defence": 3,
+      "Philidor Defence": 2,
+      "Benko Gambit Accepted": 4,
+      "Trompowsky Attack": 3,
+      "Nimzo-Larsen Attack": 2,
+      "King's Gambit Declined": 4,
+      "Center Game": 4,
+      "Rat Defence": 3,
+      "Catalan Opening": 2,
+      "Old Indian Defence": 2,
+      "Bird Opening": 3,
+      "Lion Defence": 3,
+      "Neo-Grünfeld Defence": 3,
+      "Torre Attack": 2,
+      "Pterodactyl Defence": 4,
+      "King's Knight Opening": 3,
+      "Van Geet Opening": 3,
+      "Richter-Veresov Attack": 3,
+      "Blackmar-Diemer Gambit": 5,
+      "Englund Gambit": 5,
+      "Grob Opening": 4,
+      "Three Knights Opening": 2,
+      "Ponziani Opening": 3,
+      "Elephant Gambit": 5,
+      "Latvian Gambit": 5,
+      "Latvian Gambit Accepted": 5,
+      "Benko Gambit": 4,
+      "Benko Gambit Declined": 3,
+      "Mieses Opening": 2,
+      "Barnes Opening": 2,
+      "Vienna Gambit, with Max Lange Defence": 5,
+      "King's Gambit": 5,
+      "Center Game Accepted": 4,
+      "Danish Gambit": 5,
+      "Czech Defence": 3,
+      "Owen Defence": 3,
+      "St. George Defence": 3,
+      "Barnes Defence": 2,
+      "Fried Fox Defence": 2,
+      "Duras Gambit": 4,
+      "Goldsmith Defence": 2,
+      "Carr Defence": 2,
+      "Ware Defence": 2,
+      "Hippopotamus Defence": 2,
+      "Blumenfeld Countergambit": 4,
+      "Blumenfeld Countergambit Accepted": 4,
+      "Slav Indian": 2,
+      "Queen's Indian Accelerated": 2,
+      "Mexican Defence": 3,
+      "East Indian Defence": 3,
+      "London System": 1,
+      "Pseudo Queen's Indian Defence": 2,
+      "Yusupov-Rubinstein System": 1,
+      "Paleface Attack": 3,
+      "Queen's Gambit": 2,
+      "Semi-Slav Defence Accepted": 4,
+      "Rapport-Jobava System": 3,
+      "Blackmar-Diemer Gambit Accepted": 5,
+      "Rapport-Jobava System, with e6": 3,
+      "Horwitz Defence": 2,
+      "Kangaroo Defence": 3,
+      "Englund Gambit Declined": 3,
+      "Mikenas Defence": 3,
+      "English Defence": 3,
+      "Polish Defence": 3,
+      "Wade Defence": 2,
+      "King's Indian Attack, with e6": 2,
+      "King's Indian Attack, with Bf5": 2,
+      "English Orangutan": 3,
+      "Lasker Simul Special": 3,
+      "Van't Kruijs Opening": 2,
+      "Anderssen's Opening": 2,
+      "Saragossa Opening": 2,
+      "Kádas Opening": 3,
+      "Polish Opening": 3,
+      "Polish Opening, with d5": 3,
+      "Clemenz Opening": 2,
+      "Ware Opening": 2
+    },
+    "SHARPNESS_OVERRIDES": {
+      "Sicilian Defence: Najdorf Variation": 5,
+      "Sicilian Defence: Dragon Variation": 5,
+      "Sicilian Defence: Lasker-Pelikan Variation": 5,
+      "Sicilian Defence: Richter-Rauzer Variation": 4,
+      "Sicilian Defence: Scheveningen Variation": 4,
+      "Sicilian Defence: Scheveningen Variation, Keres Attack": 5,
+      "Sicilian Defence: Taimanov Variation": 4,
+      "Sicilian Defence: Kan Variation": 3,
+      "Sicilian Defence: Accelerated Dragon": 3,
+      "Sicilian Defence: Accelerated Dragon, Maróczy Bind": 2,
+      "Sicilian Defence: Kalashnikov Variation": 4,
+      "Sicilian Defence: Four Knights Variation": 4,
+      "Sicilian Defence: Classical Variation": 4,
+      "Sicilian Defence: Alapin Variation": 2,
+      "Sicilian Defence: Nyezhmetdinov-Rossolimo Attack": 2,
+      "Sicilian Defence: Moscow Variation": 2,
+      "Sicilian Defence: Smith-Morra Gambit": 5,
+      "Sicilian Defence: Wing Gambit": 5,
+      "Sicilian Defence: Grand Prix Attack": 4,
+      "Sicilian Defence: Closed": 3,
+      "French Defence: Winawer Variation": 5,
+      "French Defence: Classical Variation": 4,
+      "French Defence: Steinitz Variation": 4,
+      "French Defence: McCutcheon Variation": 5,
+      "French Defence: Alekhine-Chatard Attack": 5,
+      "French Defence: Rubinstein Variation": 2,
+      "French Defence: Exchange Variation": 1,
+      "French Defence: Advance Variation, Milner-Barry Gambit": 5,
+      "Caro-Kann Defence: Advance Variation, Bayonet Attack": 5,
+      "Caro-Kann Defence: Panov Attack": 3,
+      "Caro-Kann Defence: Tartakower Variation": 3,
+      "Caro-Kann Defence: Bronstein-Larsen Variation": 4,
+      "Caro-Kann Defence: Maróczy Variation": 4,
+      "Caro-Kann Defence: Endgame Variation": 1,
+      "Caro-Kann Defence: Apocalypse Attack": 4,
+      "Ruy Lopez: Morphy Defence": 3,
+      "Ruy Lopez: Berlin Defence": 1,
+      "Ruy Lopez: Marshall Attack": 5,
+      "Ruy Lopez: Schliemann Defence": 5,
+      "Ruy Lopez: Open": 4,
+      "Ruy Lopez: Exchange Variation": 2,
+      "Ruy Lopez: Closed": 2,
+      "Italian Game: Two Knights Defence": 4,
+      "Italian Game: Two Knights Defence, Knight Attack": 5,
+      "Italian Game: Evans Gambit": 5,
+      "Italian Game: Giuoco Pianissimo": 2,
+      "Italian Game: Scotch Gambit": 4,
+      "Queen's Gambit Declined: Albin Countergambit": 5,
+      "Queen's Gambit Declined: Chigorin Defence": 4,
+      "Queen's Gambit Declined: Exchange Variation": 2,
+      "Queen's Gambit Declined: Ragozin Defence": 3,
+      "Queen's Gambit Declined: Semi-Tarrasch Defence": 3,
+      "Queen's Gambit Declined: Tarrasch Defence": 3,
+      "King's Indian Defence: Four Pawns Attack": 5,
+      "King's Indian Defence: Fianchetto Variation": 3,
+      "King's Indian Defence: Averbakh Variation": 3,
+      "King's Indian Defence: Petrosian Variation": 3,
+      "King's Indian Defence: Exchange Variation": 2,
+      "King's Indian Defence: Makogonov Variation": 3,
+      "Indian Defence: Budapest Gambit": 4,
+      "Indian Defence: London System": 1,
+      "Indian Defence: Accelerated London System": 1,
+      "Queen's Pawn Game: London System": 1,
+      "Queen's Pawn Game: Accelerated London System": 1,
+      "Queen's Pawn Game: Colle System": 1,
+      "Nimzo-Indian Defence: Sämisch Variation": 4,
+      "Nimzo-Indian Defence: Rubinstein System": 2,
+      "Petrov's Defence: Stafford Gambit": 5,
+      "Petrov's Defence: Cochrane Gambit": 5,
+      "Scandinavian Defence: Portuguese Gambit": 4,
+      "Scandinavian Defence: Icelandic-Palme Gambit": 5,
+      "Benoni Defence: Modern Variation": 5,
+      "Benoni Defence: Czech Benoni Defence": 2,
+      "Semi-Slav Defence: Botvinnik Variation": 5,
+      "Semi-Slav Defence: Meran Variation": 4,
+      "Semi-Slav Defence: Anti-Moscow Gambit": 5,
+      "Semi-Slav Defence: Marshall Gambit": 5,
+      "Slav Defence: Geller Gambit": 5,
+      "Alekhine Defence: Four Pawns Attack": 5,
+      "Dutch Defence: Staunton Gambit": 5,
+      "Dutch Defence: Leningrad Variation": 4,
+      "Scotch Game: Göring Gambit": 5,
+      "Vienna Game: Vienna Gambit": 5,
+      "Vienna Game: Frankenstein-Dracula Variation": 5,
+      "Pirc Defence: Austrian Attack": 5,
+      "English Opening: King's English Variation": 3,
+      "English Opening: Anglo-Dutch Defence": 4,
+      "English Opening: Mikenas-Carls Variation": 4
+    }
+  },
+  "src/model/play.ts": {
+    "DEFAULT_LEVEL": "club",
+    "LEVELS": [
+      {
+        "id": "casual",
+        "name": "Casual",
+        "depth": 1,
+        "multiPv": 5,
+        "slip": 0.65
+      },
+      {
+        "id": "club",
+        "name": "Club",
+        "depth": 5,
+        "multiPv": 4,
+        "slip": 0.3
+      },
+      {
+        "id": "strong",
+        "name": "Strong",
+        "depth": 11,
+        "multiPv": 3,
+        "slip": 0.08
+      },
+      {
+        "id": "full",
+        "name": "Full",
+        "depth": 16,
+        "multiPv": 1,
+        "slip": 0
+      }
+    ],
+    "OPENING_PLIES": 16,
+    "PLAY_GAMES_CAP": 200,
+    "PLAY_GAME_PLIES": 40
+  },
+  "src/model/prepFloor.ts": {
+    "MAX_LIFTED": 0.5,
+    "PREPARED_FLOOR": 0.15
+  },
+  "src/model/recommend.ts": {
+    "ACCURACY_RUNS": 5,
+    "BRAKE": 0.5,
+    "BRAKE_WINDOW": 5,
+    "DEPTH": 0.6,
+    "FOCUSES": [
+      "test",
+      "review"
+    ],
+    "MODE_NAMES": {
+      "run": "Autopilot (old)",
+      "survival": "Survival",
+      "drill": "Drill",
+      "growth": "Growth",
+      "repair": "Repair"
+    },
+    "STALENESS": 2,
+    "STEER_GAP": 3,
+    "TEST_FLOOR": 0.25
+  },
+  "src/model/repair.ts": {
+    "DEFAULT_MIN_GAMES": 2
+  },
+  "src/model/scoring.ts": {
+    "ACTIVITY_MODES": [
+      "run",
+      "survival",
+      "drill",
+      "growth",
+      "repair"
+    ],
+    "EMPTY_SCORE": {
+      "global": {
+        "rating": 0,
+        "rated": 0,
+        "extRating": 0,
+        "extRated": 0,
+        "answered": 0,
+        "correct": 0,
+        "byMode": {
+          "run": {
+            "rounds": 0,
+            "answered": 0,
+            "correct": 0,
+            "lastAt": null
+          },
+          "survival": {
+            "rounds": 0,
+            "answered": 0,
+            "correct": 0,
+            "lastAt": null
+          },
+          "drill": {
+            "rounds": 0,
+            "answered": 0,
+            "correct": 0,
+            "lastAt": null
+          },
+          "growth": {
+            "rounds": 0,
+            "answered": 0,
+            "correct": 0,
+            "lastAt": null
+          },
+          "repair": {
+            "rounds": 0,
+            "answered": 0,
+            "correct": 0,
+            "lastAt": null
+          }
+        },
+        "bestRun": 0,
+        "lastAt": null,
+        "days": {}
+      },
+      "nodes": {},
+      "rounds": [],
+      "seen": {},
+      "lineRounds": 0,
+      "starts": []
+    },
+    "NEW_LABEL": "New",
+    "RATING": {
+      "start": 0,
+      "floor": 0,
+      "step": 20,
+      "scale": 450
+    },
+    "TIERS": [
+      {
+        "name": "Learning",
+        "color": "#94a3b8",
+        "at": 100
+      },
+      {
+        "name": "Familiar",
+        "color": "#4ade80",
+        "at": 250
+      },
+      {
+        "name": "Solid",
+        "color": "#2dd4bf",
+        "at": 400
+      },
+      {
+        "name": "Strong",
+        "color": "#3b82f6",
+        "at": 550
+      },
+      {
+        "name": "Fluent",
+        "color": "#a855f7",
+        "at": 700
+      },
+      {
+        "name": "Mastered",
+        "color": "#facc15",
+        "at": 850
+      }
+    ],
+    "UNRATED": {
+      "name": "Shaky",
+      "color": "#4b4b55",
+      "at": 0
+    }
+  },
+  "src/model/selection.ts": {
+    "DEFAULT_SELECTION": {
+      "color": "random",
+      "opening": ""
+    }
+  },
+  "src/model/setups.ts": {
+    "SETUPS": [
+      {
+        "id": "w-kingside-fianchetto",
+        "color": "w",
+        "doing": "fianchetto",
+        "moves": [
+          "g3",
+          "Bg2"
+        ],
+        "core": [
+          "g3"
+        ],
+        "sign": [
+          "g3"
+        ]
+      },
+      {
+        "id": "w-queenside-fianchetto",
+        "color": "w",
+        "doing": "fianchetto queenside",
+        "moves": [
+          "b3",
+          "Bb2"
+        ],
+        "core": [
+          "b3"
+        ],
+        "sign": [
+          "b3"
+        ]
+      },
+      {
+        "id": "w-london",
+        "color": "w",
+        "doing": "play the London setup",
+        "moves": [
+          "Bf4",
+          "e3",
+          "c3"
+        ],
+        "core": [
+          "Bf4",
+          "e3"
+        ],
+        "sign": [
+          "Bf4"
+        ]
+      },
+      {
+        "id": "w-colle",
+        "color": "w",
+        "doing": "play the Colle setup",
+        "moves": [
+          "e3",
+          "Bd3",
+          "c3"
+        ],
+        "core": [
+          "e3",
+          "Bd3",
+          "c3"
+        ],
+        "sign": [
+          "c3"
+        ]
+      },
+      {
+        "id": "w-stonewall",
+        "color": "w",
+        "doing": "play the Stonewall",
+        "moves": [
+          "f4",
+          "e3",
+          "c3"
+        ],
+        "core": [
+          "f4",
+          "e3"
+        ],
+        "sign": [
+          "f4"
+        ]
+      },
+      {
+        "id": "w-kia",
+        "color": "w",
+        "doing": "play the King's Indian Attack",
+        "moves": [
+          "g3",
+          "Bg2",
+          "d3"
+        ],
+        "core": [
+          "g3",
+          "d3"
+        ],
+        "sign": [
+          "g3",
+          "d3"
+        ]
+      },
+      {
+        "id": "b-kingside-fianchetto",
+        "color": "b",
+        "doing": "fianchetto",
+        "moves": [
+          "g6",
+          "Bg7"
+        ],
+        "core": [
+          "g6"
+        ],
+        "sign": [
+          "g6"
+        ]
+      },
+      {
+        "id": "b-queenside-fianchetto",
+        "color": "b",
+        "doing": "fianchetto queenside",
+        "moves": [
+          "b6",
+          "Bb7"
+        ],
+        "core": [
+          "b6"
+        ],
+        "sign": [
+          "b6"
+        ]
+      },
+      {
+        "id": "b-kid",
+        "color": "b",
+        "doing": "play the King's Indian setup",
+        "moves": [
+          "g6",
+          "Bg7",
+          "d6"
+        ],
+        "core": [
+          "g6",
+          "d6"
+        ],
+        "sign": [
+          "g6",
+          "d6"
+        ]
+      },
+      {
+        "id": "b-stonewall",
+        "color": "b",
+        "doing": "play the Stonewall",
+        "moves": [
+          "f5",
+          "e6",
+          "d5",
+          "c6"
+        ],
+        "core": [
+          "f5",
+          "e6",
+          "d5"
+        ],
+        "sign": [
+          "f5"
+        ]
+      },
+      {
+        "id": "b-slav",
+        "color": "b",
+        "doing": "play the Slav setup",
+        "moves": [
+          "c6",
+          "d5",
+          "Bf5"
+        ],
+        "core": [
+          "c6",
+          "d5",
+          "Bf5"
+        ],
+        "sign": [
+          "c6",
+          "d5"
+        ]
+      },
+      {
+        "id": "b-hedgehog",
+        "color": "b",
+        "doing": "play the Hedgehog",
+        "moves": [
+          "b6",
+          "Bb7",
+          "e6",
+          "d6",
+          "a6"
+        ],
+        "core": [
+          "b6",
+          "e6",
+          "d6"
+        ],
+        "sign": [
+          "b6",
+          "d6"
+        ]
+      }
+    ]
+  },
+  "src/model/srs.ts": {
+    "DAY": 86400000,
+    "DEFAULT_SRS": {
+      "learningSteps": [
+        1,
+        10
+      ],
+      "relearningSteps": [
+        10
+      ],
+      "graduatingInterval": 1,
+      "easyInterval": 4,
+      "startingEase": 2.5,
+      "minEase": 1.3,
+      "easeDelta": {
+        "again": -0.2,
+        "hard": -0.15,
+        "good": 0,
+        "easy": 0.15
+      },
+      "hardMultiplier": 1.2,
+      "easyBonus": 1.3,
+      "lapseMultiplier": 0.5,
+      "maxInterval": 365
+    },
+    "MINUTE": 60000,
+    "RUNS_PER_DAY": 3
+  },
+  "src/model/starterSets.ts": {
+    "SLOT_COLOR": {
+      "w": "w",
+      "e4": "b",
+      "d4": "b"
+    },
+    "SLOT_LABELS": {
+      "w": "As White",
+      "e4": "Against 1.e4",
+      "d4": "Against 1.d4"
+    },
+    "STARTER_SETS": [
+      {
+        "id": "classical",
+        "name": "Classical",
+        "description": "Grab the center, develop, castle. Where most coaches start.",
+        "slots": {
+          "w": [
+            {
+              "id": "e4 e5 Nf3 Nc6 Bc4"
+            }
+          ],
+          "e4": [
+            {
+              "id": "e4 e5",
+              "label": "1...e5"
+            }
+          ],
+          "d4": [
+            {
+              "id": "d4 d5 c4 e6"
+            }
+          ]
+        }
+      },
+      {
+        "id": "system",
+        "name": "System",
+        "description": "The same setup nearly every game, so there's little to memorize.",
+        "slots": {
+          "w": [
+            {
+              "id": "d4 d5 Bf4",
+              "label": "London System"
+            },
+            {
+              "id": "d4 Nf6 Bf4",
+              "label": "London System"
+            }
+          ],
+          "e4": [
+            {
+              "id": "e4 c6"
+            }
+          ],
+          "d4": [
+            {
+              "id": "d4 d5 c4 c6"
+            }
+          ]
+        }
+      },
+      {
+        "id": "solid",
+        "name": "Solid",
+        "description": "Hard to crack. Fewer early fights, more long games.",
+        "slots": {
+          "w": [
+            {
+              "id": "d4 d5 c4"
+            }
+          ],
+          "e4": [
+            {
+              "id": "e4 e5",
+              "label": "1...e5"
+            },
+            {
+              "id": "e4 e5 Nf3 Nc6 Bb5 Nf6",
+              "label": "Berlin"
+            }
+          ],
+          "d4": [
+            {
+              "id": "d4 Nf6 c4 e6 Nc3 Bb4"
+            }
+          ]
+        }
+      },
+      {
+        "id": "aggressive",
+        "name": "Aggressive",
+        "description": "Unbalanced positions where you go after the king.",
+        "slots": {
+          "w": [
+            {
+              "id": "e4 e5 Nf3 Nc6 d4 exd4"
+            }
+          ],
+          "e4": [
+            {
+              "id": "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6",
+              "label": "Sicilian Dragon"
+            }
+          ],
+          "d4": [
+            {
+              "id": "d4 Nf6 c4 g6 Nc3 d5"
+            }
+          ]
+        }
+      },
+      {
+        "id": "fianchetto",
+        "name": "Fianchetto",
+        "description": "Bishops on the long diagonals, same setup whatever they play.",
+        "slots": {
+          "w": [
+            {
+              "id": "Nf3 d5 g3"
+            },
+            {
+              "id": "Nf3 Nf6 g3 g6",
+              "label": "King's Indian Attack"
+            }
+          ],
+          "e4": [
+            {
+              "id": "e4 d6"
+            }
+          ],
+          "d4": [
+            {
+              "id": "d4 Nf6 c4 g6 Nc3"
+            }
+          ]
+        }
+      },
+      {
+        "id": "mirror",
+        "name": "Mirror",
+        "description": "The c-pawn first with both colors, so White and Black share ideas.",
+        "slots": {
+          "w": [
+            {
+              "id": "c4"
+            }
+          ],
+          "e4": [
+            {
+              "id": "e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 g6",
+              "label": "Accelerated Dragon"
+            }
+          ],
+          "d4": [
+            {
+              "id": "d4 Nf6 c4 c5 d5 e6"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "src/model/structures.ts": {
+    "STRUCTURE_TEMPLATES": [
+      {
+        "id": "stonewall",
+        "sided": true,
+        "name": "Stonewall",
+        "a": [
+          {
+            "text": "Plant a knight on e5, the square the wall was built for",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "e5"
+              }
+            ]
+          },
+          {
+            "text": "Attack the king: rook lift to the third rank, or {g4–g5}",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "g4"
+              }
+            ]
+          },
+          {
+            "text": "Keep the light-squared bishop pointed at the king"
+          }
+        ],
+        "b": [
+          {
+            "text": "Use the hole on e4: a knight lands there for good",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "e4"
+              }
+            ]
+          },
+          {
+            "text": "Trade the dark-squared bishops: the wall leaves those squares weak"
+          },
+          {
+            "text": "Break with {c5} to open the queenside",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "c5"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "carlsbad",
+        "name": "Carlsbad",
+        "a": [
+          {
+            "text": "Minority attack: {b4–b5} to hit c6 and leave a weak pawn",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "b5"
+              }
+            ]
+          },
+          {
+            "text": "Or play in the center with {f3} and {e4}"
+          },
+          {
+            "text": "A knight on e5 supports either plan",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "e5"
+              }
+            ]
+          }
+        ],
+        "b": [
+          {
+            "text": "Play on the kingside: {Ne4} and {f5}",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "e4"
+              }
+            ]
+          },
+          {
+            "text": "Meet <b5> by taking or by {c5} at the right moment"
+          },
+          {
+            "text": "Trade the light-squared bishop that has no good square"
+          }
+        ]
+      },
+      {
+        "id": "french-chain",
+        "name": "French chain",
+        "a": [
+          {
+            "text": "Hold d4: it is the base of the chain",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "f3"
+              }
+            ]
+          },
+          {
+            "text": "Use the kingside space: {f4–f5} to attack",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "f5"
+              }
+            ]
+          },
+          {
+            "text": "Keep the dark-squared bishop; it guards the holes"
+          }
+        ],
+        "b": [
+          {
+            "text": "Hit the base with {c5}",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "c5"
+              }
+            ]
+          },
+          {
+            "text": "Then hit the head with {f6}",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "f6"
+              }
+            ]
+          },
+          {
+            "text": "Trade off or free the light-squared bishop, the bad one"
+          }
+        ]
+      },
+      {
+        "id": "caro-advance",
+        "name": "Caro-Kann Advance",
+        "a": [
+          {
+            "text": "Use the kingside space; chase the bishop with {g4} or {h4}"
+          },
+          {
+            "text": "Keep d4 solid against <c5>"
+          },
+          {
+            "text": "Knight to f4 or e5 when it fits",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "f4"
+              },
+              {
+                "piece": "n",
+                "to": "e5"
+              }
+            ]
+          }
+        ],
+        "b": [
+          {
+            "text": "Get the light-squared bishop out before {e6}"
+          },
+          {
+            "text": "Hit d4 with {c5}",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "c5"
+              }
+            ]
+          },
+          {
+            "text": "Then {e6} and pressure on d4 with the knights"
+          }
+        ]
+      },
+      {
+        "id": "czech-benoni",
+        "name": "Czech Benoni",
+        "a": [
+          {
+            "text": "Queenside: {a3} and {b4} to open lines",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "b4"
+              }
+            ]
+          },
+          {
+            "text": "Kingside space with {g3} and {f4}"
+          },
+          {
+            "text": "Knight to b5 or d3",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "b5"
+              },
+              {
+                "piece": "n",
+                "to": "d3"
+              }
+            ]
+          }
+        ],
+        "b": [
+          {
+            "text": "Break with {f5}",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "f5"
+              }
+            ]
+          },
+          {
+            "text": "Knight to f4 if it can stay",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "f4"
+              }
+            ]
+          },
+          {
+            "text": "Keep the queenside shut with {a6} and {b6}"
+          }
+        ]
+      },
+      {
+        "id": "kid-chain",
+        "name": "King's Indian chain",
+        "a": [
+          {
+            "text": "Attack on the queenside: {c4–c5} to break",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "c5"
+              }
+            ]
+          },
+          {
+            "text": "Knights toward c5 via d3 or b3",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "c5"
+              },
+              {
+                "piece": "n",
+                "to": "d3"
+              },
+              {
+                "piece": "n",
+                "to": "b3"
+              }
+            ]
+          },
+          {
+            "text": "Answer <f5> calmly; keep the king safe first"
+          }
+        ],
+        "b": [
+          {
+            "text": "Storm the kingside: {f5}, {f4}, then {g5}",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "f5"
+              }
+            ]
+          },
+          {
+            "text": "Bring the knight round via {Ne8} or {Nh5}",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "e8"
+              },
+              {
+                "piece": "n",
+                "to": "h5"
+              }
+            ]
+          },
+          {
+            "text": "Race: your attack must land before theirs on the queenside"
+          }
+        ]
+      },
+      {
+        "id": "benoni",
+        "name": "Benoni",
+        "a": [
+          {
+            "text": "Push {e4–e5} when it can be supported",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "e5"
+              }
+            ]
+          },
+          {
+            "text": "Knight to c4, hitting d6",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "c4"
+              }
+            ]
+          },
+          {
+            "text": "Stop <b5> with {a4}"
+          }
+        ],
+        "b": [
+          {
+            "text": "Queenside majority: {b5}",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "b5"
+              }
+            ]
+          },
+          {
+            "text": "Knight to e5, the outpost",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "e5"
+              }
+            ]
+          },
+          {
+            "text": "The long-diagonal bishop is your best piece; keep it"
+          }
+        ]
+      },
+      {
+        "id": "hedgehog",
+        "name": "Hedgehog",
+        "a": [
+          {
+            "text": "Keep the space; stop <b5> and <d5> before anything else"
+          },
+          {
+            "text": "Knight to d5 only when it cannot be taken",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "d5"
+              }
+            ]
+          },
+          {
+            "text": "Kingside expansion with {g4–g5} can work"
+          }
+        ],
+        "b": [
+          {
+            "text": "Wait behind the pawns, pieces ready"
+          },
+          {
+            "text": "Break with {b5} or {d5} at the right moment",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "b5"
+              },
+              {
+                "piece": "p",
+                "to": "d5"
+              }
+            ]
+          },
+          {
+            "text": "A knight on e5 or c5 hits the pawns",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "e5"
+              },
+              {
+                "piece": "n",
+                "to": "c5"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "botvinnik",
+        "name": "Botvinnik setup",
+        "a": [
+          {
+            "text": "Knight to d5, held by c4 and e4",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "d5"
+              }
+            ]
+          },
+          {
+            "text": "Kingside: {f4–f5} when ready",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "f5"
+              }
+            ]
+          },
+          {
+            "text": "Keep the long-diagonal bishop"
+          }
+        ],
+        "b": [
+          {
+            "text": "Hit the hole on d4",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "d4"
+              }
+            ]
+          },
+          {
+            "text": "Break with {b5} or {f5}",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "b5"
+              },
+              {
+                "piece": "p",
+                "to": "f5"
+              }
+            ]
+          },
+          {
+            "text": "Trade the knight that wants d5"
+          }
+        ]
+      },
+      {
+        "id": "maroczy",
+        "name": "Maróczy bind",
+        "a": [
+          {
+            "text": "Squeeze: keep c4 and e4, knight on d5",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "d5"
+              }
+            ]
+          },
+          {
+            "text": "Expand on the queenside with {b4} and {c5}"
+          },
+          {
+            "text": "Avoid trades: the side with less space wants them"
+          }
+        ],
+        "b": [
+          {
+            "text": "Trade pieces to ease the cramp"
+          },
+          {
+            "text": "Break with {b5} or {f5}",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "b5"
+              },
+              {
+                "piece": "p",
+                "to": "f5"
+              }
+            ]
+          },
+          {
+            "text": "Dark squares are yours: c5 and e5",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "c5"
+              },
+              {
+                "piece": "n",
+                "to": "e5"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dragon",
+        "name": "Dragon",
+        "a": [
+          {
+            "text": "Open the h-file: {h4–h5} and trade the dark-squared bishop",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "h5"
+              }
+            ]
+          },
+          {
+            "text": "Castle long and race"
+          },
+          {
+            "text": "Knight to d5 trades a key defender",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "d5"
+              }
+            ]
+          }
+        ],
+        "b": [
+          {
+            "text": "Rook to c8 and the c-file; {Rxc3} is a common sacrifice"
+          },
+          {
+            "text": "Knight to c4 or e5",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "c4"
+              },
+              {
+                "piece": "n",
+                "to": "e5"
+              }
+            ]
+          },
+          {
+            "text": "Push {b5} to open lines on their king"
+          }
+        ]
+      },
+      {
+        "id": "scheveningen",
+        "name": "Scheveningen",
+        "a": [
+          {
+            "text": "Kingside pawn storm: {g4–g5} against the knight",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "g4"
+              }
+            ]
+          },
+          {
+            "text": "Keep pressure on d6"
+          },
+          {
+            "text": "Watch for <d5> and <e5> breaks"
+          }
+        ],
+        "b": [
+          {
+            "text": "Break in the center with {d5} or {e5}",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "d5"
+              },
+              {
+                "piece": "p",
+                "to": "e5"
+              }
+            ]
+          },
+          {
+            "text": "Queenside counterplay: {b5} and the c-file",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "b5"
+              }
+            ]
+          },
+          {
+            "text": "Keep d6 defended"
+          }
+        ]
+      },
+      {
+        "id": "sicilian-e5",
+        "name": "Sicilian ...e5 (d5 hole)",
+        "a": [
+          {
+            "text": "Knight to d5, the hole",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "d5"
+              }
+            ]
+          },
+          {
+            "text": "Trade the knight that guards d5"
+          },
+          {
+            "text": "Queenside space with {a4} or {c4}"
+          }
+        ],
+        "b": [
+          {
+            "text": "Free your game with {d5}",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "d5"
+              }
+            ]
+          },
+          {
+            "text": "Guard d5 with pieces until you can"
+          },
+          {
+            "text": "Kingside space with {f5} sometimes",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "f5"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "hanging-pawns",
+        "sided": true,
+        "name": "Hanging pawns",
+        "a": [
+          {
+            "text": "Push {c5} or {d5} at the right moment to free your pieces",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "c5"
+              },
+              {
+                "piece": "p",
+                "to": "d5"
+              }
+            ]
+          },
+          {
+            "text": "Keep the pawns side by side; use the half-open files"
+          },
+          {
+            "text": "Rooks behind the pawns"
+          }
+        ],
+        "b": [
+          {
+            "text": "Pressure c4 and d4 with your pieces"
+          },
+          {
+            "text": "Make one advance, then blockade the square in front"
+          },
+          {
+            "text": "Trades help you: the pawns grow weaker as pieces come off"
+          }
+        ]
+      },
+      {
+        "id": "iqp",
+        "sided": true,
+        "name": "Isolated queen pawn",
+        "a": [
+          {
+            "text": "Attack: pieces at the king, knight to e5",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "e5"
+              }
+            ]
+          },
+          {
+            "text": "Push {d4–d5} to open lines when it works",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "d5"
+              }
+            ]
+          },
+          {
+            "text": "Avoid trades: the endgame favors the other side"
+          }
+        ],
+        "b": [
+          {
+            "text": "Blockade d5 with a knight",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "d5"
+              }
+            ]
+          },
+          {
+            "text": "Trade pieces: the pawn gets weaker as they come off"
+          },
+          {
+            "text": "Pressure d4 with rooks on the d-file"
+          }
+        ]
+      },
+      {
+        "id": "big-center",
+        "name": "Big center",
+        "a": [
+          {
+            "text": "Support the center; push {d5} or {e5} when it gains space",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "d5"
+              },
+              {
+                "piece": "p",
+                "to": "e5"
+              }
+            ]
+          },
+          {
+            "text": "Develop behind the pawns"
+          },
+          {
+            "text": "Do not let the center be undermined by <c5>"
+          }
+        ],
+        "b": [
+          {
+            "text": "Hit the center: {c5}, and the long-diagonal bishop",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "c5"
+              }
+            ]
+          },
+          {
+            "text": "Pressure d4 with knights"
+          },
+          {
+            "text": "Provoke an advance, then blockade"
+          }
+        ]
+      },
+      {
+        "id": "central-tension",
+        "name": "Central tension",
+        "a": [
+          {
+            "text": "Keep the tension; {d4–d5} closes the center for good",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "d5"
+              }
+            ]
+          },
+          {
+            "text": "Knight route to f5 via d2 and f1",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "f5"
+              }
+            ]
+          },
+          {
+            "text": "Queenside space with {a4} or {c4}"
+          }
+        ],
+        "b": [
+          {
+            "text": "Hold e5; {exd4} gives up the center for activity"
+          },
+          {
+            "text": "Kingside: {f5} if the center closes",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "f5"
+              }
+            ]
+          },
+          {
+            "text": "Knight to f4 if you get there",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "f4"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "symmetrical",
+        "name": "Symmetrical center",
+        "a": [
+          {
+            "text": "Outposts on e5 and e4 are the fight",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "e5"
+              },
+              {
+                "piece": "n",
+                "to": "e4"
+              }
+            ]
+          },
+          {
+            "text": "The open e-file: rooks there first"
+          },
+          {
+            "text": "A minority attack or {c4} break makes the imbalance",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "c4"
+              }
+            ]
+          }
+        ],
+        "b": [
+          {
+            "text": "Same fight from the other side: e4 for your knight",
+            "goals": [
+              {
+                "piece": "n",
+                "to": "e4"
+              }
+            ]
+          },
+          {
+            "text": "Rooks to the e-file"
+          },
+          {
+            "text": "{c5} breaks the symmetry",
+            "goals": [
+              {
+                "piece": "p",
+                "to": "c5"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "open-center",
+        "name": "Open center",
+        "a": [
+          {
+            "text": "Develop fast and get rooks to the open files"
+          },
+          {
+            "text": "Pieces beat pawns here: activity first"
+          },
+          {
+            "text": "Trade into an ending if your pawns are better"
+          }
+        ],
+        "b": [
+          {
+            "text": "Develop fast and get rooks to the open files"
+          },
+          {
+            "text": "Pieces beat pawns here: activity first"
+          },
+          {
+            "text": "Trade into an ending if your pawns are better"
+          }
+        ]
+      }
+    ]
+  },
+  "src/model/survival.ts": {
+    "BOOK_SHARE": 0.05,
+    "COMBO_CLEAN": 20,
+    "COMBO_HOLD": 40,
+    "CONVERT_FROM": 200,
+    "CONVERT_WINDOW": 6,
+    "DEFAULT_SURVIVAL": {
+      "steer": "lines",
+      "clock": "off",
+      "moveScores": true,
+      "boardGlow": true,
+      "moments": true,
+      "missions": true,
+      "combo": true,
+      "undefendedFlash": false
+    },
+    "EDGE_MOVES": 10,
+    "EMPTY_SURVIVAL_SCORE": {
+      "best": 0,
+      "recent": [],
+      "history": [],
+      "runs": 0,
+      "ended": 0,
+      "bestPoints": 0
+    },
+    "GLOW_MINOR": 300,
+    "GLOW_PAWN": 100,
+    "GLOW_SPAN": 400,
+    "HISTORY_RUNS": 16,
+    "MISSION_BONUS": 15,
+    "MISSION_BREAK": 3,
+    "MISSION_DUG": -50,
+    "MISSION_LEAD": 100,
+    "MISSION_WINDOW": 15,
+    "MOMENT_BONUS": 10,
+    "MOMENT_FLOOR": 100,
+    "MOMENT_FOUND": 50,
+    "MOMENT_GAP": 150,
+    "MOMENT_STREAK_BONUS": 5,
+    "NO_EXTRAS": {
+      "points": 0,
+      "combo": 0,
+      "bestCombo": 0,
+      "moments": {
+        "found": 0,
+        "missed": 0,
+        "streak": 0
+      },
+      "mission": null,
+      "missionBreak": 0,
+      "missions": {
+        "done": 0,
+        "failed": 0
+      }
+    },
+    "PLAN_SLACK": 100,
+    "PLAN_WINDOW": 8,
+    "RECENT_RUNS": 5,
+    "SCORE_SLIGHT": 40,
+    "SURVIVAL_STEERS": [
+      "lines",
+      "gaps",
+      "book"
+    ]
+  }
+}

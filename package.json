@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "artifact": "node scripts/build-artifact.mjs",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "spec:constants": "vite-node scripts/spec-constants.mjs"
   },
   "dependencies": {
     "chess.js": "^1.4.0",
