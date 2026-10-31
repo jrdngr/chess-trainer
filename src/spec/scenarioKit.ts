@@ -11,6 +11,8 @@
  * model, and run `npm run spec:cases`.
  */
 
+import { env, setEnv } from '../model/env';
+
 export interface ScenarioStep {
   /** The controller call, `function` plus its data arguments. */
   call: { fn: string } & Record<string, unknown>;
@@ -51,4 +53,15 @@ export function scenarioText(file: ScenarioFile): string {
     ].join('\n');
   });
   return `{\n  "area": ${JSON.stringify(file.area)},\n  "scenarios": [\n${scenarios.join(',\n')}\n  ]\n}\n`;
+}
+
+/** Run `fn` with the app's clock pinned to `now()`, so anything stamped inside it is the scenario's time. */
+export function pinnedClock<T>(now: () => number, fn: () => T): T {
+  const was = env.now;
+  setEnv({ now });
+  try {
+    return fn();
+  } finally {
+    setEnv({ now: was });
+  }
 }
