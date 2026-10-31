@@ -1,0 +1,19 @@
+name: iOS
+
+# The native port's parity tests: the Swift package against the prototype's
+# golden cases in spec/. Runs only when either side changes.
+on:
+  push:
+    branches: [main]
+    paths: ["ios/**", "spec/**", "src/model/book/book.json", ".github/workflows/ios.yml"]
+  pull_request:
+    paths: ["ios/**", "spec/**", "src/model/book/book.json", ".github/workflows/ios.yml"]
+
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift --version
+      - run: swift test
+        working-directory: ios

@@ -21,6 +21,15 @@ labelled after itself, "1.e4" for White and "1...c5" for Black.
 Source: `core.sansToMoveText`, `openingTree.moveLabel`
 Cases: `core.sansToMoveText`, `openingTree.moveLabel`
 
+**NAME-10** · port
+The chess rules are chess.js's: legal moves listed in its order (squares a8
+to h1, castling last), written as its SAN, and positions written as its FEN,
+whose en passant square appears only when a legal capture uses it. A move is
+read as chess.js reads it: SAN with or without check marks, castling with
+zeros, from and to squares, or an unneeded disambiguation.
+Source: `src/chess/core.ts`
+Cases: `core.randomGame`, `core.applySan`
+
 ## What the book calls a line
 
 **NAME-3** · port

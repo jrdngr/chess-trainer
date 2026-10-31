@@ -7,3 +7,5 @@ dist-artifact
 *.tsbuildinfo
 test-results/
 playwright-report/
+.build/
+.swiftpm/
