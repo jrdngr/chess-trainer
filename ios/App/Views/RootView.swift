@@ -28,6 +28,7 @@ struct RootView: View {
       }
     }
     .overlay { ToastHost() }
+    .modifier(MilestoneToasts())
     .environment(\.boardLook, BoardLook(theme: store.state.settings.boardTheme, coordinates: store.state.settings.showCoordinates))
     .task(id: store.tree != nil) { debugSeed() }
   }

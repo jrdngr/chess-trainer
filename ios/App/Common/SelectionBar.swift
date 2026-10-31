@@ -9,6 +9,7 @@ struct SelectionBar<Trailing: View>: View {
   @Environment(AppStore.self) private var store
   @ViewBuilder var trailing: Trailing
   @State private var picking: Picking?
+  @State private var browsing = false
 
   enum Picking: String, Identifiable {
     case color, quick
@@ -35,11 +36,15 @@ struct SelectionBar<Trailing: View>: View {
       Group {
         switch which {
         case .color: ColorPickerSheet { picking = nil }
-        case .quick: QuickPicker { picking = nil }
+        case .quick: QuickPicker(onClose: { picking = nil }, onBrowse: { picking = nil; browsing = true })
         }
       }
       .presentationDetents(which == .color ? [.height(300)] : [.large])
       .presentationBackground(Theme.background)
+    }
+    .fullScreenCover(isPresented: $browsing) {
+      BrowsePicker(onClose: { browsing = false }, onBack: { browsing = false; picking = .quick })
+        .background(Theme.background)
     }
   }
 
@@ -116,6 +121,7 @@ struct ChoiceRow<Leading: View>: View {
 struct QuickPicker: View {
   @Environment(AppStore.self) private var store
   let onClose: () -> Void
+  var onBrowse: () -> Void = {}
   @State private var showAll = false
 
   static let firstMoves = ["e4", "d4", "c4", "Nf3"]
@@ -167,6 +173,15 @@ struct QuickPicker: View {
             .buttonStyle(.plain)
           }
         }
+        Button(action: onBrowse) {
+          HStack {
+            Text("Browse all openings").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+            Spacer()
+            Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3)
+          }
+          .padding(.horizontal, 14).frame(height: 48).background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface2))
+        }
+        .buttonStyle(.plain)
       }
       .padding(20)
     }
