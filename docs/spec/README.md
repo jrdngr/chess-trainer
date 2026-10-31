@@ -51,6 +51,7 @@ constant in `spec/constants.json` is what counts.
 | [growth.md](growth.md) | GROW | Growth's rows and a sitting: holes, batches, Undo, the edge of the book |
 | [home.md](home.md) | HOME | The Home tab: the Autopilot button, the Survival chart, Favorites, Milestones |
 | [learning.md](learning.md) | LEARN | Cards and their schedule, and ratings per opening |
+| [lenses.md](lenses.md) | LENS | The lens bar, the Undefended flash, structure plans, Cash out |
 | [naming.md](naming.md) | NAME | Position keys, book names and families, the opening catalogue, regions |
 | [onboarding.md](onboarding.md) | ONB | The first screens: starter sets, picked openings, lines from the board, what goes in |
 | [play.md](play.md) | PLAY | A game against the engine: strengths, the opening walk-in, games kept, Save this opening |
