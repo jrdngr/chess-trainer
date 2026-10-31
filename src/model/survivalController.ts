@@ -8,7 +8,8 @@
 import { applySan, fenTurn, positionKey, positionStatus, type Color, type LegalMove } from '../chess/core';
 import type { MoveKind } from './extensions';
 import type { ReferenceIndex } from './reference';
-import type { MoveResult } from './scoring';
+import { deepestNodeWithin, nodeById, type OpeningTree } from './openingTree';
+import type { MoveResult, RoundRecord } from './scoring';
 import { gradeForTime } from './srs';
 import type { Grade } from './types';
 import {
@@ -408,6 +409,28 @@ export function missionFrom(session: RunSession, prefs: SurvivalPrefs, cp: numbe
   const { run } = session.state;
   const extras = firstMission(session.state.extras, prefs, run.color, cp, run.fen);
   return extras === session.state.extras ? session : { ...session, state: { ...session.state, extras } };
+}
+
+/**
+ * The run as one round for the score, against the deepest opening its line
+ * reached in the region it was drawn from. A blunder counts as an answer
+ * that was not right. A clean finish is your prep played to its end without
+ * a miss, whatever the game did after it, and not a stub; its line is the
+ * one finished, otherwise the line the opponent was steering toward.
+ */
+export function runRound(finish: Finish, tree: OpeningTree): Omit<RoundRecord, 'at'> {
+  const { how, ended, clean, stub, answers } = finish;
+  const line = ended.run.played;
+  return {
+    mode: 'survival',
+    openingId: deepestNodeWithin(tree, nodeById(tree, ended.run.openingId), line).id,
+    color: ended.run.color,
+    answered: ended.moves + (how.kind === 'blunder' ? 1 : 0),
+    correct: ended.moves,
+    perfect: !!clean && !stub,
+    line: clean ?? ended.run.target,
+    prep: { asked: answers.length, found: answers.filter((answer) => answer.correct).length },
+  };
 }
 
 /** You ended the run yourself. */

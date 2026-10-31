@@ -45,6 +45,7 @@ import {
   prepLabel,
   prepMoves,
   prepRanOut,
+  runRound,
   sawEval,
   type Finish,
   type MissFlash,
@@ -266,19 +267,7 @@ export function SurvivalScreen({
     if (how.kind === 'ended') endSurvivalEarly(line);
     else endSurvival(line, ended.moves, scoredInPoints ? ended.extras.points : ended.moves);
     ratings.track(settleRun(answers, line));
-    const region = nodeById(tree, ended.run.openingId);
-    endRound({
-      mode: 'survival',
-      openingId: deepestNodeWithin(tree, region, line).id,
-      color: ended.run.color,
-      answered: ended.moves + (how.kind === 'blunder' ? 1 : 0),
-      correct: ended.moves,
-      // A clean finish is your prep played to its end without a miss,
-      // whatever the game did after it.
-      perfect: !!clean && !stub,
-      line: clean ?? ended.run.target,
-      prep: { asked: answers.length, found: answers.filter((answer) => answer.correct).length },
-    });
+    endRound(runRound({ how, ended, clean, stub, answers }, tree));
     setGrowOffer(clean ? offerFor(ended.run.color, ended.run.enteredIn, ended.run.openingId, clean, stub) : null);
     buzz(how.kind === 'blunder' || how.kind === 'lost' ? [22, 60, 22] : 14);
     setMiss(null);

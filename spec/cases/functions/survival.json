@@ -1585,6 +1585,48 @@
       ]
     },
     {
+      "fn": "survival.openingsAlong",
+      "about": "Every opening a line went through, and every opening above those.",
+      "cases": [
+      {"args":["e4"],"out":["e4"]},
+      {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"],"out":["e4","e4 c5","e4 c5 Nf3 d6","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"]},
+      {"args":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5"],"out":["d4","d4 Nf6","d4 Nf6 c4","d4 Nf6 c4 g6","d4 Nf6 c4 g6 Nc3","d4 Nf6 c4 g6 Nc3 Bg7 e4","d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3","d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2"]},
+      {"args":["e4 d6 d4 Nf6 Nc3 g6"],"out":["e4","e4 d6"]},
+      {"args":["a3 a6 b3"],"out":["a3"]}
+      ]
+    },
+    {
+      "fn": "survival.recordSurvival (runs)",
+      "about": "Survival's record over runs: best and best points only go up, recent form is the median of the last 5, the chart keeps 16, and a run you end yourself is only counted.",
+      "cases": [
+      {"args":[[{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":12},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":5},{"line":"e4 e5","moves":30,"points":55},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","ended":true},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":8}],"e4 c5"],"out":[{"global":{"best":12,"recent":[12],"history":[12],"runs":1,"ended":0,"bestPoints":12},"opening":{"best":12,"recent":[12],"history":[12],"runs":1,"ended":0,"bestPoints":12},"form":12},{"global":{"best":12,"recent":[12,5],"history":[12,5],"runs":2,"ended":0,"bestPoints":12},"opening":{"best":12,"recent":[12,5],"history":[12,5],"runs":2,"ended":0,"bestPoints":12},"form":9},{"global":{"best":30,"recent":[12,5,30],"history":[12,5,30],"runs":3,"ended":0,"bestPoints":55},"opening":{"best":12,"recent":[12,5],"history":[12,5],"runs":2,"ended":0,"bestPoints":12},"form":12},{"global":{"best":30,"recent":[12,5,30],"history":[12,5,30],"runs":3,"ended":1,"bestPoints":55},"opening":{"best":12,"recent":[12,5],"history":[12,5],"runs":2,"ended":1,"bestPoints":12},"form":12},{"global":{"best":30,"recent":[12,5,30,8],"history":[12,5,30,8],"runs":4,"ended":1,"bestPoints":55},"opening":{"best":12,"recent":[12,5,8],"history":[12,5,8],"runs":3,"ended":1,"bestPoints":12},"form":10}]},
+      {"args":[[{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":0},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":7},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":14},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":21},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":5},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":12},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":19},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":3},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":10},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":17},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":1},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":8},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":15},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":22},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":6},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":13},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":20},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":4}],"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"],"out":[{"global":{"best":0,"recent":[0],"history":[0],"runs":1,"ended":0,"bestPoints":0},"opening":{"best":0,"recent":[0],"history":[0],"runs":1,"ended":0,"bestPoints":0},"form":0},{"global":{"best":7,"recent":[0,7],"history":[0,7],"runs":2,"ended":0,"bestPoints":7},"opening":{"best":7,"recent":[0,7],"history":[0,7],"runs":2,"ended":0,"bestPoints":7},"form":4},{"global":{"best":14,"recent":[0,7,14],"history":[0,7,14],"runs":3,"ended":0,"bestPoints":14},"opening":{"best":14,"recent":[0,7,14],"history":[0,7,14],"runs":3,"ended":0,"bestPoints":14},"form":7},{"global":{"best":21,"recent":[0,7,14,21],"history":[0,7,14,21],"runs":4,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[0,7,14,21],"history":[0,7,14,21],"runs":4,"ended":0,"bestPoints":21},"form":11},{"global":{"best":21,"recent":[0,7,14,21,5],"history":[0,7,14,21,5],"runs":5,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[0,7,14,21,5],"history":[0,7,14,21,5],"runs":5,"ended":0,"bestPoints":21},"form":7},{"global":{"best":21,"recent":[7,14,21,5,12],"history":[0,7,14,21,5,12],"runs":6,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[7,14,21,5,12],"history":[0,7,14,21,5,12],"runs":6,"ended":0,"bestPoints":21},"form":12},{"global":{"best":21,"recent":[14,21,5,12,19],"history":[0,7,14,21,5,12,19],"runs":7,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[14,21,5,12,19],"history":[0,7,14,21,5,12,19],"runs":7,"ended":0,"bestPoints":21},"form":14},{"global":{"best":21,"recent":[21,5,12,19,3],"history":[0,7,14,21,5,12,19,3],"runs":8,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[21,5,12,19,3],"history":[0,7,14,21,5,12,19,3],"runs":8,"ended":0,"bestPoints":21},"form":12},{"global":{"best":21,"recent":[5,12,19,3,10],"history":[0,7,14,21,5,12,19,3,10],"runs":9,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[5,12,19,3,10],"history":[0,7,14,21,5,12,19,3,10],"runs":9,"ended":0,"bestPoints":21},"form":10},{"global":{"best":21,"recent":[12,19,3,10,17],"history":[0,7,14,21,5,12,19,3,10,17],"runs":10,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[12,19,3,10,17],"history":[0,7,14,21,5,12,19,3,10,17],"runs":10,"ended":0,"bestPoints":21},"form":12},{"global":{"best":21,"recent":[19,3,10,17,1],"history":[0,7,14,21,5,12,19,3,10,17,1],"runs":11,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[19,3,10,17,1],"history":[0,7,14,21,5,12,19,3,10,17,1],"runs":11,"ended":0,"bestPoints":21},"form":10},{"global":{"best":21,"recent":[3,10,17,1,8],"history":[0,7,14,21,5,12,19,3,10,17,1,8],"runs":12,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[3,10,17,1,8],"history":[0,7,14,21,5,12,19,3,10,17,1,8],"runs":12,"ended":0,"bestPoints":21},"form":8},{"global":{"best":21,"recent":[10,17,1,8,15],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15],"runs":13,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[10,17,1,8,15],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15],"runs":13,"ended":0,"bestPoints":21},"form":10},{"global":{"best":22,"recent":[17,1,8,15,22],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15,22],"runs":14,"ended":0,"bestPoints":22},"opening":{"best":22,"recent":[17,1,8,15,22],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15,22],"runs":14,"ended":0,"bestPoints":22},"form":15},{"global":{"best":22,"recent":[1,8,15,22,6],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15,22,6],"runs":15,"ended":0,"bestPoints":22},"opening":{"best":22,"recent":[1,8,15,22,6],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15,22,6],"runs":15,"ended":0,"bestPoints":22},"form":8},{"global":{"best":22,"recent":[8,15,22,6,13],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15,22,6,13],"runs":16,"ended":0,"bestPoints":22},"opening":{"best":22,"recent":[8,15,22,6,13],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15,22,6,13],"runs":16,"ended":0,"bestPoints":22},"form":13},{"global":{"best":22,"recent":[15,22,6,13,20],"history":[7,14,21,5,12,19,3,10,17,1,8,15,22,6,13,20],"runs":17,"ended":0,"bestPoints":22},"opening":{"best":22,"recent":[15,22,6,13,20],"history":[7,14,21,5,12,19,3,10,17,1,8,15,22,6,13,20],"runs":17,"ended":0,"bestPoints":22},"form":15},{"global":{"best":22,"recent":[22,6,13,20,4],"history":[14,21,5,12,19,3,10,17,1,8,15,22,6,13,20,4],"runs":18,"ended":0,"bestPoints":22},"opening":{"best":22,"recent":[22,6,13,20,4],"history":[14,21,5,12,19,3,10,17,1,8,15,22,6,13,20,4],"runs":18,"ended":0,"bestPoints":22},"form":13}]},
+      {"args":[[{"line":"d4 d5","ended":true},{"line":"d4 d5","ended":true}],"d4 d5"],"out":[{"global":{"best":0,"recent":[],"history":[],"runs":0,"ended":1,"bestPoints":0},"opening":{"best":0,"recent":[],"history":[],"runs":0,"ended":1,"bestPoints":0},"form":null},{"global":{"best":0,"recent":[],"history":[],"runs":0,"ended":2,"bestPoints":0},"opening":{"best":0,"recent":[],"history":[],"runs":0,"ended":2,"bestPoints":0},"form":null}]}
+      ]
+    },
+    {
+      "fn": "survival.recentForm",
+      "about": "Recent form: the median of the last few runs, rounded, or null before any.",
+      "cases": [
+      {"args":[[]],"out":null},
+      {"args":[[4]],"out":4},
+      {"args":[[4,9]],"out":7},
+      {"args":[[4,9,1]],"out":4},
+      {"args":[[1,2,3,10]],"out":3},
+      {"args":[[5,5,6,30,2]],"out":5}
+      ]
+    },
+    {
+      "fn": "survival.normalizeSurvival",
+      "about": "A saved record missing a field is still a record.",
+      "cases": [
+      {"args":[null],"out":{"global":{"best":0,"recent":[],"history":[],"runs":0,"ended":0,"bestPoints":0},"openings":{}}},
+      {"args":[{}],"out":{"global":{"best":0,"recent":[],"history":[],"runs":0,"ended":0,"bestPoints":0},"openings":{}}},
+      {"args":[{"global":{"best":4,"recent":[1,2,3,4,5,6,7]}}],"out":{"global":{"best":4,"recent":[3,4,5,6,7],"history":[1,2,3,4,5,6,7],"runs":0,"ended":0,"bestPoints":0},"openings":{}}},
+      {"args":[{"global":{"best":4,"recent":[3],"history":[1,2,3]},"openings":{"e4":{}}}],"out":{"global":{"best":4,"recent":[3],"history":[1,2,3],"runs":0,"ended":0,"bestPoints":0},"openings":{"e4":{"best":0,"recent":[],"history":[],"runs":0,"ended":0,"bestPoints":0}}}}
+      ]
+    },
+    {
       "fn": "survival.DEFAULT_SURVIVAL",
       "about": "Survival's options as a new player has them.",
       "cases": [

@@ -24,6 +24,7 @@ import {
   prepLabel,
   prepMoves,
   prepRanOut,
+  runRound,
   sawEval,
   type Effect,
   type Judgement,
@@ -84,6 +85,8 @@ function effectData(effect: Effect): unknown {
     return {
       kind: 'finish',
       finish: { ...rest, ended: { played: ended.run.played, moves: ended.moves, misses: ended.misses.length }, answers: answers.length },
+      /** What the screen logs for it: the run as one round. */
+      round: runRound(effect.finish, tree),
     };
   }
   return effect;
