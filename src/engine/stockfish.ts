@@ -1,4 +1,5 @@
 import type { Engine, EngineLimits, EngineLine, EngineSnapshot } from './types';
+import { createTestEngine, testEngineDepth } from './testEngine';
 
 /**
  * Real Stockfish, running in a Web Worker.
@@ -38,6 +39,8 @@ export interface StockfishEngine extends Engine {
 }
 
 export function createStockfishEngine(): StockfishEngine {
+  const fixed = testEngineDepth();
+  if (fixed !== null) return createTestEngine(fixed);
   let worker: Worker | null = null;
   let readyPromise: Promise<boolean> | null = null;
   let markLoaded: (ok: boolean) => void = () => {};

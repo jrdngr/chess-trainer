@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Board } from '../../components/Board';
 import { AppBar, haptic, Icons, Strip, type StripItem } from '../../components/ui';
 import { ClockHud, useMoveClock } from '../../components/Clock';
@@ -83,7 +83,7 @@ export function LineDrill({ color, openingId, count, budget, lean, only, prefs, 
   const endRound = useStore((s) => s.endRound);
   const tree = openingTree(referenceIndex());
   const region = nodeById(tree, openingId);
-  const rand = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
+  const [rand] = useState(() => ({ current: mulberry32(Math.floor(Math.random() * 2 ** 31)) }));
 
   const grouped = options.batchSimilar;
 

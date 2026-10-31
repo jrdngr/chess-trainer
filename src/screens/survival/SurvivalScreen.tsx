@@ -262,7 +262,7 @@ export function SurvivalScreen({
   const [evalCp, setEvalCp] = useState<number | null>(null);
   /** The engine's score after your last scored move, White's side: where the next popup counts from. */
   const lastScored = useRef<number | null>(null);
-  const picker = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
+  const [picker] = useState(() => ({ current: mulberry32(Math.floor(Math.random() * 2 ** 31)) }));
   /** True once the run has ended, so a late verdict or engine move lands nowhere. */
   const over = useRef(false);
   /**

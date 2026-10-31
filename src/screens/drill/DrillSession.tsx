@@ -106,7 +106,7 @@ export function DrillSession({
 
   const maxNew = options.newPerSession;
   const weakFirst = options.weakFirst;
-  const shuffler = useRef(mulberry32(Math.floor(Math.random() * 2 ** 31)));
+  const [shuffler] = useState(() => ({ current: mulberry32(Math.floor(Math.random() * 2 ** 31)) }));
   const [queue, setQueue] = useState<TrainingItem[]>(() =>
     leadWithAWayIn(
       order(

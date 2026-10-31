@@ -79,6 +79,9 @@ interface Placed {
   color: Color;
 }
 
+/** Mints piece keys. A counter, not `Math.random`, so drawing the board never uses up random numbers the game needs. */
+let pieceKeys = 0;
+
 /** Stable ids per piece so React can animate a piece between squares. */
 function placePieces(fen: string, previous: Placed[]): Placed[] {
   const pieces = piecesFromFen(fen);
@@ -106,7 +109,7 @@ function placePieces(fen: string, previous: Placed[]): Placed[] {
       used.add(moved.key);
       p.key = moved.key;
     } else {
-      p.key = `${p.color}${p.type}${p.square}${Math.random().toString(36).slice(2, 7)}`;
+      p.key = `${p.color}${p.type}${p.square}${(pieceKeys += 1).toString(36)}`;
     }
   }
   return out;
@@ -288,6 +291,8 @@ export function Board({
         ))}
       <div
         className={`board-wrap${dimmed ? ' dimmed' : ''}${glow ? ` glow glow-${glow.tone}` : ''}`}
+        data-fen={fen}
+        data-orientation={orientation}
         style={glow ? ({ '--glow-k': 0.2 + 0.8 * glow.strength } as CSSProperties) : undefined}
       >
         <div

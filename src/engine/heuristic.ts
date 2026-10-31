@@ -1,6 +1,7 @@
 import BasicWorker from './basic/basic.worker?worker&inline';
 import { search, type DepthResult, type SearchOptions } from './basic/search';
 import type { Engine, EngineLimits, EngineSnapshot } from './types';
+import { createTestEngine, testEngineDepth } from './testEngine';
 
 /**
  * The backup engine, for when Stockfish has not started (yet).
@@ -18,7 +19,7 @@ const MAX_MS = 2000;
 /** Without a worker the search blocks the page, so it gets much less time. */
 const MAIN_THREAD_MS = 300;
 
-function snapshotOf(fen: string, result: DepthResult | null, thinking: boolean): EngineSnapshot {
+export function snapshotOf(fen: string, result: DepthResult | null, thinking: boolean): EngineSnapshot {
   // The search scores for the side to move; the app wants White's view.
   const sign = fen.split(' ')[1] === 'b' ? -1 : 1;
   return {
@@ -53,6 +54,8 @@ interface Running {
 }
 
 export function createHeuristicEngine(): Engine {
+  const fixed = testEngineDepth();
+  if (fixed !== null) return createTestEngine(fixed);
   /** Undefined until first asked for; null where workers cannot start. */
   let worker: Worker | null | undefined;
   let running: Running | null = null;

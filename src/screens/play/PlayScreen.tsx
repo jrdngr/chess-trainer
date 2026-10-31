@@ -101,7 +101,7 @@ function Game({
   const [offBook, setOffBook] = useState<string | null>(null);
   const rand = useRef(Math.random);
   /** One id for the life of the game, so ending it twice records it once. */
-  const gameId = useRef(`play_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`);
+  const [gameId] = useState(() => ({ current: `play_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}` }));
 
   /** The repertoire this game is measured against and saved into. */
   const target = useMemo(() => reps.find((rep) => rep.color === color) ?? null, [reps, color]);
