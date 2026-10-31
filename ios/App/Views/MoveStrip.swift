@@ -19,6 +19,8 @@ struct MoveStrip: View {
   var cursor: Int
   var max: Int
   var onSeek: (Int) -> Void
+  /// Shown when there are no moves yet.
+  var hint: String? = nil
 
   var body: some View {
     HStack(spacing: 6) {
@@ -27,6 +29,7 @@ struct MoveStrip: View {
       ScrollViewReader { proxy in
         ScrollView(.horizontal, showsIndicators: false) {
           HStack(spacing: 4) {
+            if items.isEmpty, let hint { Text(hint).font(.system(size: 13)).foregroundStyle(Theme.text3).padding(.leading, 4) }
             ForEach(Array(items.enumerated()), id: \.offset) { i, item in chip(item).id(i) }
           }
           .padding(.vertical, 2)

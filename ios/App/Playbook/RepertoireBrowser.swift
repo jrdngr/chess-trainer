@@ -65,7 +65,7 @@ struct RepertoireBrowser: View {
                         current: node.id == at, seek: i + 1)
             },
             cursor: path.count, max: line.count,
-            onSeek: { n in nodeId = n == 0 ? nil : line[n - 1].id }
+            onSeek: { n in nodeId = n == 0 ? nil : line[n - 1].id }, hint: "Play a move"
           )
           .overlay(alignment: .trailing) {
             if let next { IconButton(icon: "trash", size: 18) { cutting = next.id }.padding(.trailing, 44) }

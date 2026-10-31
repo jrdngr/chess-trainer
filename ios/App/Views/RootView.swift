@@ -12,6 +12,8 @@ struct RootView: View {
   @Environment(AppStore.self) private var store
   @State private var tab: Tab = Self.debugTab ?? .home
   @State private var mode: Mode?
+  /// Play on the board, opened from the Playbook tab.
+  @State private var building = false
 
   var body: some View {
     ZStack {
@@ -30,6 +32,8 @@ struct RootView: View {
   @ViewBuilder private func content(_ tree: OpeningTree, _ index: ReferenceIndex) -> some View {
     if !store.state.settings.onboarded {
       StarterView(tree: tree)
+    } else if building {
+      BoardBuildView(onBack: { building = false }, onDone: { _ in building = false })
     } else if let mode {
       switch mode {
       case .autopilot: AutopilotView(tree: tree, index: index) { leave() }
@@ -40,7 +44,7 @@ struct RootView: View {
         Group {
           switch tab {
           case .home: HomeView(tree: tree) { mode = $0 }
-          case .playbook: PlaybookView(tree: tree, index: index)
+          case .playbook: PlaybookView(tree: tree, index: index, onBuild: { building = true })
           case .stats: StatsView(tree: tree, index: index)
           case .analysis: AnalysisTab(tree: tree, index: index)
           }
