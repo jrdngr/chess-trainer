@@ -420,6 +420,15 @@
       {"args":["random",[],3],"out":{"color":"random","opening":""}},
       {"args":["random",[],4],"out":{"color":"random","opening":""}}
       ]
+    },
+    {
+      "fn": "growthController.beginGrowth",
+      "about": "Where a sitting starts: at its first hole; with none, at the line end most often reached (a Grow this line row), on the reply; with neither, walking your prep from move one.",
+      "cases": [
+      {"args":["hole"],"out":{"phase":"hole","path":["d4","Nf6"],"hole":{"path":["d4"],"san":"Nf6"},"ends":[]}},
+      {"args":["end"],"out":{"phase":"answered","path":["e4","e5","Nf3","Nc6","Bb5"],"hole":null,"ends":["e4 e5 Nf3 Nc6 Bb5"]}},
+      {"args":["neither"],"out":{"phase":"walking","path":[],"hole":null,"ends":[]}}
+      ]
     }
   ]
 }

@@ -6,7 +6,7 @@ behind it is [docs/native-port/plan.md](../native-port/plan.md).
 The prototype's code is the source of truth for what happens. A rule says it
 in words, names where it comes from, and names the golden cases that pin it
 down. Where the code and a decision note disagree, the rule follows the code
-and the conflict is listed for the owner at the end of the area's file.
+and the conflict is listed at the end of the area's file. The owner ruled on 10-31 that the code is the truth, so a conflict is settled in the code's favor and a disagreeing doc is fixed.
 
 ## A rule
 

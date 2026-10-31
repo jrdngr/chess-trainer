@@ -86,16 +86,9 @@ else; a saved log of any other shape reads as empty.
 Source: `events.appendEvent`, `events.normalizeEvents`
 Cases: `events.appendEvent`, `events.normalizeEvents`, `const:EVENT_CAP`
 
-## Conflicts for the owner
+## Settled
 
-**Reset progress keeps the ratings.** It clears the review schedule but
-leaves Survival and Autopilot's ratings, the mistakes log (which Autopilot
-reads as due positions, AUTO-18) and the per-day tallies Stats and Home draw.
-The row has no caption saying so. The port should decide whether progress
-means the schedule alone or the ratings too.
+- **Reset progress** ported as the code does it: it clears the schedule and keeps ratings, mistakes, tallies and the event log.
+- **Startup sync** ported as the code does it: the newer copy wins whole at startup, and only Sync now merges Play games.
 
-**Startup does not merge Play games.** Sync now merges both devices' Play
-games, but when startup picks the account copy it takes that copy's games
-whole, so a Play game saved only locally since the last push is lost, and
-so are this device's imported games, which the account copy never holds. The
-port should merge at startup too.
+The owner ruled on 10-31 that the code is the truth: these stay until the owner asks for a change.

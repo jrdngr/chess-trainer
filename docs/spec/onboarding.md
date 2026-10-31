@@ -72,12 +72,6 @@ run, and Go to Home. Backing out keeps what was picked.
 Source: `OnboardingScreen.Ready`, `OnboardingScreen.ready`; onboarding-redesign (10-25)
 Cases: `e2e:autopilot-first-runs`
 
-## Conflicts for the owner
+## Settled
 
-**The Classical set's 1...e5 is listed as King's Pawn Game on the Playbook.**
-The ready screen calls it "1...e5" and a test in `src/model/openings.test.ts`
-says the Playbook should too, but that test holds deeper lines. Since sets go
-in as their own moves only (10-25), the Black Playbook holds just 1.e4 e5,
-and the Playbook tab lists it as King's Pawn Game (see BOOK-9, and
-`onboarding.onboarded (a starter set)`, classical). The port records today's
-behavior until the owner decides.
+- The Classical set's 1...e5 is listed as King's Pawn Game, as the code does it. The owner ruled on 10-31 that the code is the truth: the test in `openings.test.ts` covers deeper lines only.

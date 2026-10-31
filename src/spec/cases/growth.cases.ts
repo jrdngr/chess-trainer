@@ -15,6 +15,8 @@ import {
   pastTheBook,
   rowUrgency,
 } from "../../model/growth";
+import { beginGrowth } from "../../model/growthController";
+import { growLaunch } from "../../model/growOffer";
 import { nodeById, openingTree } from "../../model/openingTree";
 import { referenceIndex } from "../../model/referenceIndex";
 import { addLine, createRepertoire } from "../../model/repertoire";
@@ -212,6 +214,40 @@ const file: CaseFile = {
         );
       },
       grid(["w", "b", "random"] as const, [FAVORITES, []], [1, 2, 3, 4]),
+    ),
+    cases(
+      "growthController.beginGrowth",
+      "Where a sitting starts: at its first hole; with none, at the line end most often reached (a Grow this line row), on the reply; with neither, walking your prep from move one.",
+      (kind: "hole" | "end" | "neither") => {
+        const r = rep("w", [
+          "e4 e5 Nf3 Nc6 Bb5",
+          "e4 c5 Nf3 d6 d4",
+          "d4 d5 c4",
+        ]);
+        const launch = growLaunch(
+          r,
+          index,
+          tree,
+          nodeById(tree, "e4 e5 Nf3 Nc6 Bb5"),
+          "e4 e5 Nf3 Nc6 Bb5".split(" "),
+          {},
+        )!;
+        const byHole = growthRows([r], index, {})[0];
+        const row =
+          kind === "hole"
+            ? byHole
+            : kind === "end"
+              ? launch.row
+              : { ...byHole, holes: [], ends: [] };
+        const s = beginGrowth(r, index, row);
+        return {
+          phase: s.phase,
+          path: s.run.path,
+          hole: s.run.hole && { path: s.run.hole.path, san: s.run.hole.san },
+          ends: row.ends.map((e) => e.path.join(" ")),
+        };
+      },
+      [["hole"], ["end"], ["neither"]],
     ),
   ],
 };

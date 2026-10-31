@@ -105,15 +105,9 @@ the family's first moves too when it is the family's only line.
 Source: `openings.linesOf`
 Cases: `openings.linesOf`
 
-## Conflicts for the owner
+## Settled
 
-**The King's Indian can be listed twice.** A Black tree with a King's Indian
-by 3.Nc3 and a Fianchetto by 3.Nf3 lists two rows both called King's Indian
-Defence (`openings.familiesIn`, first case). The Fianchetto's region sits
-under the West Indian, another family, so it starts its own row. The opening
-catalogue files it under the King's Indian (NAME-6), so the two disagree.
+- The King's Indian by 3.Nf3 g3 is its own King's Indian row, as the code does it.
+- A tree holding only 1.e4 e5 is listed as King's Pawn Game, as the code does it.
 
-**1...e5 alone is listed as King's Pawn Game.** BOOK-9's renaming needs the
-row to start at Black's move, and a tree holding only 1.e4 e5 starts its row
-at 1.e4 (`openings.familiesIn`, the 1.e4 e5 case). This is what the Classical
-starter set produces (see onboarding.md).
+The owner ruled on 10-31 that the code is the truth: both are ported as they are.

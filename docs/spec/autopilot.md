@@ -145,8 +145,6 @@ flash off; its only settings are the move scores and board glow.
 Source: `autopilotPrefs.autopilotModes`, `autopilotPrefs.autoSurvival`; autopilot-own-settings (10-25)
 Cases: `autopilotPrefs.autopilotModes`, `const:DEFAULT_AUTOPILOT`
 
-## Conflicts for the owner
+## Settled
 
-- **AUTO-12**: docs/autopilot.md says inside starts only go to positions a
-  run has already asked. The code takes any position with a card, so one only
-  Drill has shown can be an inside start once it is due by date.
+- **AUTO-12** ported as the code does it: any position with a card can be an inside start, including one only Drill has shown. The owner ruled on 10-31 that the code is the truth: docs/autopilot.md now says so.

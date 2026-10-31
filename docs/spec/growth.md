@@ -86,8 +86,8 @@ Cases: `growth/to-the-edge-of-the-book`, `growth.pastTheBook`
 A row with no holes starts at its line end most often reached; with neither,
 the run walks your prep from move one, the opponent steering toward the
 row's holes. While walking, a move your prep doesn't have loses the run.
-Source: `growthController.beginGrowth`, `growthController.walk`, `growthController.opponentWalks`
-Cases:
+Source: `growthController.beginGrowth`, `growthController.walk`, `growthController.opponentWalks`, `growOffer.growLaunch`
+Cases: `growthController.beginGrowth`
 
 **GROW-12** · port
 A sitting is one round, whatever it takes, logged against the deepest opening
@@ -105,10 +105,6 @@ engine.
 Source: `evalDelta.deltaFor`, `evalDelta.formatDelta`, `evalDelta.byDelta`, `evalDelta.byShare`
 Cases: `evalDelta.deltaFor`, `evalDelta.whiteCp`, `evalDelta.order`, `const:EVEN_CP`
 
-## Conflicts for the owner
+## Settled
 
-- **GROW-11** has no case because no row reached it in testing: every row
-  `growthRows` returned had a hole, and no fixture produced a row with only
-  line ends, or with neither. The walking start and the line-end start may be
-  unreachable now that sittings start at a hole; if so they are candidates for
-  drop.
+- **GROW-11** ported as the code does it. The owner ruled on 10-31 that the code is the truth: a line-end start comes from Grow this line (`growOffer.growLaunch`), and the walking start, which no row reaches today, stays as written.

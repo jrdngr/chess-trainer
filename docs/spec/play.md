@@ -67,9 +67,6 @@ own move, to the Save sheet for your side; a game too short to save says
 Source: `play.openingLine`, `PlayScreen.save`
 Cases: `play.openingLine`, `const:OPENING_PLIES`, `e2e:play-game`
 
-## Conflicts for the owner
+## Settled
 
-**Save the opening does nothing.** The setup toggle says "Write the first 8
-moves into your Playbook when the game ends", but the game never reads it:
-the Save this opening button shows whether it is on or off, and nothing is
-written on its own. The port should either drop the toggle or make it work.
+- **Save the opening** ported as the code does it: the toggle is shown and stored, and nothing reads it. The owner ruled on 10-31 that the code is the truth: nothing is saved unless you tap Save this opening.

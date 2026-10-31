@@ -53,7 +53,7 @@ Every change should pass these tests:
 
 The first run of any opening is always a position start, whatever is owed,
 so you see how the opening is reached before you are asked to reach it
-yourself. Inside starts only go to positions a run has already asked you.
+yourself. Inside starts go to any position you have a card for, so one only Drill has shown counts once it is due.
 
 Need is counted in runs, not days. Someone who plays thirty runs a day and
 someone who plays one a week both get repetition that fits how much they
