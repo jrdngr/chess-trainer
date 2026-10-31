@@ -1,9 +1,11 @@
 import ChessCore
+import Engine
 import Model
 import SwiftUI
 
-/// The end of a run: how it ended, the board where it did, your prep's
-/// summary and the rating it moved, and Next round. `End.tsx`.
+/// The end of a run: `End.tsx`. Final position and End of prep to switch
+/// between, the board, Grow this line, Analyze and Next round, then what
+/// the run came to and the rating it moved.
 struct EndView: View {
   let model: RunModel
   let finish: Finish
@@ -11,21 +13,64 @@ struct EndView: View {
   let onGrow: (GrowOffer) -> Void
   let onAnalyze: () -> Void
   let onExit: () -> Void
-  @State private var atPrepEnd = false
+  /// How many of the run's moves are on the board.
+  @State private var cursor: Int
   /// The rating change has played over the board and gone down to its place.
   @State private var played = false
+  @State private var lens: LensKind?
+  @State private var evalLine: EngineLine?
+
+  init(model: RunModel, finish: Finish, onNext: @escaping () -> Void, onGrow: @escaping (GrowOffer) -> Void,
+       onAnalyze: @escaping () -> Void, onExit: @escaping () -> Void) {
+    self.model = model
+    self.finish = finish
+    self.onNext = onNext
+    self.onGrow = onGrow
+    self.onAnalyze = onAnalyze
+    self.onExit = onExit
+    _cursor = State(initialValue: finish.ended.run.played.count)
+  }
+
+  private var run: Run { finish.ended.run }
+  private var last: Int { run.played.count }
+  private var fens: [String] { walkSan(run.played).fens }
+  private var shownFen: String { fens[min(cursor, last)] }
+  private var blunder: (played: String, best: String?)? {
+    if case .blunder(let played, let best, _, _) = finish.how { return (played, best) }
+    return nil
+  }
+  private var onBlunder: Bool { blunder != nil && cursor == last }
+  /// Where your prep ended, when the run went past it.
+  private var prepAt: Int? {
+    let ply = model.session.prepEnd?.count ?? finish.ended.misses.first?.ply
+    return ply.flatMap { $0 < last ? $0 : nil }
+  }
+  /// On the blunder, the position it left, so the bar shows what it cost.
+  private var weighed: String { onBlunder ? (applySan(run.fen, blunder!.played)?.after ?? shownFen) : shownFen }
+
+  private func seek(_ n: Int) { cursor = max(0, min(last, n)) }
 
   var body: some View {
-    let state = finish.ended
-    let prepPly = model.session.prepEnd?.count ?? state.misses.first?.ply
-    let line = atPrepEnd && prepPly != nil ? Array(state.run.played.prefix(prepPly!)) : state.run.played
+    let missAt = finish.ended.misses.first { $0.ply == cursor }
     ScrollView {
-      VStack(spacing: 14) {
-        Text(openingName(model.tree, model.openingId)).font(.title3.bold()).foregroundStyle(Theme.text)
-        Text(endingTitle(finish.how, state.run.played.count)).font(.headline)
-          .foregroundStyle(isBad ? Theme.bad : Theme.text2)
-        BoardView(fen: walkSan(line).fens.last!, orientation: state.run.color, interactive: false, lastMove: lastMoveOf(line), onMove: { _ in })
-          .padding(.horizontal)
+      VStack(spacing: 0) {
+        header.padding(.bottom, 14)
+        if let prepAt {
+          Picker("", selection: Binding(get: { cursor == prepAt ? 0 : cursor == last ? 1 : -1 }, set: { seek($0 == 0 ? prepAt : last) })) {
+            Text("End of prep").tag(0)
+            Text("Final position").tag(1)
+          }
+          .pickerStyle(.segmented).padding(.bottom, 10)
+        }
+        evalBar.padding(.bottom, 10)
+        if let caption = marks?.caption {
+          Text(caption).font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.text).frame(minHeight: 22).padding(.bottom, 6)
+        } else {
+          CapturedRow(fen: shownFen, orientation: run.color).padding(.bottom, 6)
+        }
+        BoardView(
+          fen: shownFen, orientation: run.color, interactive: false,
+          lastMove: onBlunder || missAt != nil ? nil : lastMoveOf(Array(run.played.prefix(cursor))), marks: marks, onMove: { _ in })
           .overlay {
             if let moment, !played {
               ZStack {
@@ -35,43 +80,131 @@ struct EndView: View {
               .transition(.opacity)
             }
           }
-        if prepPly != nil {
-          Picker("", selection: $atPrepEnd) {
-            Text("Final position").tag(false)
-            Text("End of prep").tag(true)
-          }
-          .pickerStyle(.segmented).padding(.horizontal)
-        }
-        HStack(spacing: 28) {
-          stat("\(state.moves)", "moves")
-          stat("\(state.extras.points)", "points")
-          stat("\(state.misses.count)", state.misses.count == 1 ? "miss" : "misses")
-        }
-        if let summary = prepSummary(model.session.answers.filter(\.correct).count, model.session.answers.count, model.session.prepTimes, model.session.bookMoves) {
-          Text(summary).font(.subheadline).foregroundStyle(Theme.text2)
-        }
-        ratingCard
-        if let offer = model.offer, offer.kind == "opening" {
-          VStack(spacing: 8) {
-            if let text = offer.text { Text(text).font(.subheadline).foregroundStyle(Theme.text) }
-            Button("Grow this opening") { onGrow(offer) }.buttonStyle(.bordered).tint(Theme.good)
-          }
-          .padding().frame(maxWidth: .infinity).background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface)).padding(.horizontal)
-        }
-        Button(action: onNext) {
-          Label("Next round", systemImage: "chevron.right").frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.borderedProminent).tint(Theme.accent).controlSize(.large).padding(.horizontal)
-        if let offer = model.offer, offer.kind == "line" {
-          Button("Grow this line") { onGrow(offer) }.foregroundStyle(Theme.good)
-        }
-        HStack(spacing: 24) {
-          Button("Analyze", action: onAnalyze).foregroundStyle(Theme.text2)
-          Button("Done", action: onExit).foregroundStyle(Theme.text2)
+        LensBar(held: $lens)
+        if let lens {
+          LensLegend(kind: lens)
+        } else {
+          below
         }
       }
-      .padding(.vertical)
+      .padding()
     }
+    .task(id: weighed) {
+      evalLine = nil
+      let fen = weighed
+      let snap = await HintEngine.shared.analyse(fen, EngineLimits(depth: 16, multiPv: 1))
+      if !Task.isCancelled && fen == weighed { evalLine = snap.lines.first }
+    }
+  }
+
+  /// Grow, Analyze and Next round, the moves, and what the run came to.
+  private var below: some View {
+    VStack(spacing: 14) {
+      if let offer = model.offer {
+        if offer.kind == "opening", let text = offer.text {
+          Text(text).font(.subheadline).foregroundStyle(Theme.text).frame(maxWidth: .infinity, alignment: .leading)
+        }
+        Button { onGrow(offer) } label: {
+          Label(offer.kind == "opening" ? "Grow this opening" : "Grow this line", systemImage: "plus")
+            .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 14)
+        }
+        .background(RoundedRectangle(cornerRadius: 18).fill(Theme.accent)).foregroundStyle(Theme.accentInk)
+      }
+      HStack(spacing: 12) {
+        if blunder != nil || isEnded {
+          Button(action: onAnalyze) {
+            Label("Analyze", systemImage: "magnifyingglass").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 14)
+          }
+          .background(RoundedRectangle(cornerRadius: 18).fill(Theme.surface)).foregroundStyle(Theme.text)
+        }
+        Button(action: onNext) {
+          HStack { Text("Next round"); Image(systemName: "chevron.right") }.font(.headline).frame(maxWidth: .infinity).padding(.vertical, 14)
+        }
+        .background(RoundedRectangle(cornerRadius: 18).fill(Color(hex: 0xf5f5f7))).foregroundStyle(Theme.background)
+      }
+      MoveStrip(items: strip, cursor: cursor, max: last, onSeek: seek)
+      ratingCard
+      summary
+    }
+    .padding(.top, 12)
+  }
+
+  private var evalBar: some View {
+    HStack(spacing: 8) {
+      GeometryReader { geo in
+        Capsule().fill(Theme.surface3)
+          .overlay(alignment: .leading) {
+            Rectangle().fill(Color(hex: 0xf5f5f7)).frame(width: geo.size.width * winFraction(evalLine))
+              .animation(.easeOut(duration: 0.35), value: winFraction(evalLine))
+          }
+          .clipShape(Capsule())
+      }
+      .frame(height: 6)
+      Text(evalLine.map(formatScore) ?? "\u{2014}").font(.footnote.monospacedDigit()).foregroundStyle(Theme.text2)
+        .frame(minWidth: 48, alignment: .trailing)
+    }
+  }
+
+  /// What a held lens draws over the shown position.
+  private var marks: LensMarks? {
+    guard let lens else { return nil }
+    return lensMarks(lens, shownFen, run.color, cursor > 0 ? fens[cursor - 1] : nil)
+  }
+
+  /// The run's moves, a miss on the position it was asked in, then the blunder beside the engine's move.
+  private var strip: [StripItem] {
+    let label = { (ply: Int) in ply % 2 == 0 ? "\(ply / 2 + 1)." : nil }
+    let mine = { (ply: Int) in (ply % 2 == 0) == (run.color == .w) }
+    let missed = Set(finish.ended.misses.map(\.ply))
+    var items = run.played.enumerated().map { ply, san in
+      StripItem(
+        san: san, label: label(ply),
+        tone: ply < run.opened ? .ghost : missed.contains(ply) ? .bad : mine(ply) ? .mine : .theirs,
+        current: missed.contains(ply) ? cursor == ply : cursor == ply + 1 && !missed.contains(cursor) && !onBlunder,
+        seek: missed.contains(ply) ? ply : ply + 1)
+    }
+    if let blunder {
+      items.append(StripItem(san: blunder.played, label: label(last), tone: .bad, current: onBlunder, seek: last))
+      if let best = blunder.best { items.append(StripItem(san: best, label: label(last), tone: .good, seek: last)) }
+    }
+    return items
+  }
+
+  private var isEnded: Bool {
+    if case .ended = finish.how { return true }
+    return false
+  }
+
+  private var header: some View {
+    HStack {
+      Button(action: onExit) {
+        Image(systemName: "xmark").font(.headline).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
+      }
+      .foregroundStyle(Theme.text)
+      Spacer()
+      Text(openingName(model.tree, model.openingId)).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
+      Spacer()
+      Text("\(finish.ended.extras.points)").font(.subheadline.bold().monospacedDigit()).foregroundStyle(Theme.text2)
+        .padding(.horizontal, 12).padding(.vertical, 5).background(Capsule().fill(Theme.surface2))
+    }
+  }
+
+  /// How it ended, what it scored, and how the prep went.
+  private var summary: some View {
+    let state = finish.ended
+    return VStack(spacing: 6) {
+      Text(endingTitle(finish.how, state.run.played.count)).font(.subheadline).foregroundStyle(isBad ? Theme.bad : Theme.text2)
+      Text("\(state.extras.points) point\(state.extras.points == 1 ? "" : "s")").font(.largeTitle.bold()).foregroundStyle(Theme.text)
+      Text("Survived \(state.moves) move\(state.moves == 1 ? "" : "s")").font(.subheadline).foregroundStyle(Theme.text)
+      if let prep = prepSummary(model.session.answers.filter(\.correct).count, model.session.answers.count, model.session.prepTimes, model.session.bookMoves) {
+        Text(prep).font(.footnote).foregroundStyle(Theme.text2)
+      }
+      if !state.misses.isEmpty {
+        Text("\(state.misses.count) miss\(state.misses.count == 1 ? "" : "es")").font(.footnote).foregroundStyle(Theme.bad)
+      }
+    }
+    .frame(maxWidth: .infinity).padding(.vertical, 18)
+    .background(RoundedRectangle(cornerRadius: 18).fill(Theme.surface))
   }
 
   private var isBad: Bool {
@@ -89,15 +222,7 @@ struct EndView: View {
   @ViewBuilder private var ratingCard: some View {
     if let moment, played {
       RatingCardView(moment: moment, rating: moment.after, shown: moment.after, width: rankOf(moment.after).progress)
-        .padding(.horizontal)
         .transition(.move(edge: .top).combined(with: .opacity))
-    }
-  }
-
-  private func stat(_ value: String, _ label: String) -> some View {
-    VStack {
-      Text(value).font(.title2.bold().monospacedDigit()).foregroundStyle(Theme.text)
-      Text(label).font(.caption).foregroundStyle(Theme.text2)
     }
   }
 }

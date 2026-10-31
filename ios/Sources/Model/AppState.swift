@@ -10,7 +10,7 @@ public struct Settings: Equatable, Sendable, Codable {
   public var favoriteOpenings: [String] = []
   public var autopilot = DEFAULT_AUTOPILOT
   public var hapticFeedback = true
-  public var showCoordinates = false
+  public var showCoordinates = true
   /// Whether the opening question has been put to this player.
   public var onboarded = false
   /// Rounds that start inside an opening play the moves into it for you first.

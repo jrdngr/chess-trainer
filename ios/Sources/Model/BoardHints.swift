@@ -25,7 +25,10 @@ public struct Star: Equatable, Sendable, Codable { public var square: String; pu
 public struct Pip: Equatable, Sendable, Codable { public var square: String; public var attackers: Int; public var defenders: Int }
 public struct Shield: Equatable, Sendable, Codable { public var square: String; public var grade: KingGrade }
 public struct Segment: Equatable, Sendable, Codable { public var from: String; public var to: String }
-public struct LensArrow: Equatable, Sendable, Codable { public var from: String; public var to: String; public var tone: String }
+public struct LensArrow: Equatable, Sendable, Codable {
+  public var from: String; public var to: String; public var tone: String
+  public init(from: String, to: String, tone: String) { self.from = from; self.to = to; self.tone = tone }
+}
 
 /// What a lens draws. A lens fills in what it shows.
 public struct LensMarks: Equatable, Sendable, Codable {

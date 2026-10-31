@@ -1,4 +1,5 @@
 import ChessCore
+import Engine
 import Model
 import SwiftUI
 
@@ -6,6 +7,8 @@ import SwiftUI
 struct RunView: View {
   @Bindable var model: RunModel
   let onExit: () -> Void
+  @State private var lens: LensKind? = Self.pinnedLens
+  @State private var breaks: (fen: String, found: PawnBreaks.Breaks)?
 
   var body: some View {
     ZStack {
@@ -29,38 +32,79 @@ struct RunView: View {
         fen: model.shownFen, orientation: model.run.color,
         interactive: model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil,
         lastMove: model.held ? lastMoveOf(Array(model.introPath.prefix(model.introPly))) : lastMove, highlights: highlights, arrows: arrows, glow: model.glow, pop: model.pop,
+        marks: marks,
         onMove: model.play
       )
       .overlay(alignment: .top) { flash }
+      .padding(.horizontal).padding(.top, 24)
       .onTapGesture { model.intro == .replay ? model.skipIntro() : model.clearMiss() }
-      if model.intro == .replay {
+      if !model.held { LensBar(held: $lens, enabled: lensEnabled).padding(.horizontal) }
+      if let lens {
+        LensLegend(kind: lens).padding(.horizontal)
+      } else if model.intro == .replay {
         Text(sansToMoveText(Array(model.introPath.prefix(model.introPly)))).font(.footnote).foregroundStyle(Theme.text2).padding(.top, 8)
       } else if model.run.opened > 0 {
         Text("From \(sansToMoveText(Array(model.run.played.prefix(model.run.opened))))")
           .font(.footnote).foregroundStyle(Theme.text2).padding(.top, 8)
       }
+      if lens == nil { prompt.padding() }
       Spacer()
-      prompt.padding()
+    }
+    .task(id: lens == .pawns ? model.shownFen : nil) {
+      guard lens == .pawns else { return }
+      let fen = model.shownFen
+      let found = await PawnBreaks.find(HintEngine.shared, fen)
+      if !Task.isCancelled { breaks = (fen, found) }
     }
   }
 
+  /// Debug builds can pin a lens with `PIN_LENS=space`, for screenshots.
+  private static var pinnedLens: LensKind? {
+    #if DEBUG
+      ProcessInfo.processInfo.environment["PIN_LENS"].flatMap(LensKind.init(rawValue:))
+    #else
+      nil
+    #endif
+  }
+
+  private var lensEnabled: Bool { model.live && model.intro == .done }
+
+  /// What the held lens draws: `useLens`.
+  private var marks: LensMarks? {
+    guard let lens, lensEnabled else { return nil }
+    let me = model.run.color
+    let fens = walkSan(Array(model.run.played.dropLast())).fens
+    var marks = lensMarks(lens, model.shownFen, me, model.run.played.isEmpty ? nil : fens.last)
+    if lens == .pawns, let breaks, breaks.fen == model.shownFen {
+      let sides: [ChessCore.Color] = [.w, .b]
+      marks.arrows = sides.compactMap { (side: ChessCore.Color) -> LensArrow? in
+        guard let move = breaks.found[side] else { return nil }
+        return LensArrow(from: move.from, to: move.to, tone: side == me ? "mine" : "theirs")
+      }
+    }
+    return marks
+  }
+
   private var header: some View {
-    HStack {
-      Button(action: onExit) { Image(systemName: "xmark") }.foregroundStyle(Theme.text2)
-      VStack(alignment: .leading, spacing: 4) {
-        HStack(spacing: 8) {
-          SideSquare(color: model.run.color, size: 12)
-          Text(openingName(model.tree, model.openingId)).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
-        }
+    ZStack {
+      VStack(spacing: 6) {
+        Text(openingName(model.tree, model.openingId)).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
         PrepSegmentsView(span: model.span, height: 4).frame(maxWidth: 150)
       }
-      Spacer()
-      let n = Int(JSRound(model.ratingGained))
-      Text(n < 0 ? "\u{2212}\(-n)" : "+\(n)")
-        .font(.subheadline.monospacedDigit().bold())
-        .foregroundStyle(n > 0 ? Theme.good : n < 0 ? Theme.bad : Theme.text2)
-        .padding(.horizontal, 10).padding(.vertical, 4)
-        .background(Capsule().fill(Theme.surface2))
+      .padding(.horizontal, 60)
+      HStack {
+        Button(action: onExit) {
+          Image(systemName: "xmark").font(.headline).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
+        }
+        .foregroundStyle(Theme.text)
+        Spacer()
+        let n = Int(JSRound(model.ratingGained))
+        Text(n < 0 ? "\u{2212}\(-n)" : "+\(n)")
+          .font(.subheadline.monospacedDigit().bold())
+          .foregroundStyle(n > 0 ? Theme.good : n < 0 ? Theme.bad : Theme.text2)
+          .padding(.horizontal, 10).padding(.vertical, 4)
+          .background(Capsule().fill(Theme.surface2))
+      }
     }
     .padding(.horizontal).padding(.vertical, 10)
   }
@@ -100,7 +144,9 @@ struct RunView: View {
           Text("Combo \u{00d7}\(multiplier)").font(.subheadline.bold()).foregroundStyle(Theme.good)
         }
         Button("End round") { model.endRound() }
-          .font(.footnote).foregroundStyle(Theme.text2).padding(.top, 8)
+          .font(.subheadline.bold()).foregroundStyle(Theme.text2)
+          .padding(.horizontal, 16).padding(.vertical, 9)
+          .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface)).padding(.top, 8)
         let misses = model.session.state.misses.count
         if misses > 0 {
           Text("\(misses) miss\(misses == 1 ? "" : "es") so far").font(.footnote).foregroundStyle(Theme.text2)
@@ -110,7 +156,12 @@ struct RunView: View {
   }
 
   @ViewBuilder private var flash: some View {
-    if model.intro == .replay {
+    if let caption = marks?.caption {
+      Text(caption).font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.text).multilineTextAlignment(.center)
+        .padding(.horizontal, 14).padding(.vertical, 6)
+        .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.45), radius: 10, y: 6)
+        .padding(.top, 8)
+    } else if model.intro == .replay {
       HStack(spacing: 6) {
         Text("Autoplay").font(.caption.bold()).padding(.horizontal, 6).padding(.vertical, 2)
           .background(Capsule().fill(Theme.accent.opacity(0.25))).foregroundStyle(Theme.accent)

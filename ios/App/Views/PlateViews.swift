@@ -63,7 +63,7 @@ struct IntroPlate: View {
   var body: some View {
     VStack(spacing: 0) {
       ZStack {
-        BoardView(fen: walkSan(sans).fens.last!, orientation: color, interactive: false, lastMove: lastMoveOf(sans), onMove: { _ in })
+        BoardView(fen: walkSan(sans).fens.last!, orientation: color, interactive: false, lastMove: lastMoveOf(sans), coordinates: false, onMove: { _ in })
           .frame(width: 300, height: 300)
           .opacity(0.3)
           .mask(RadialGradient(colors: [.black, .clear], center: .center, startRadius: 60, endRadius: 150))
@@ -76,7 +76,9 @@ struct IntroPlate: View {
       .frame(maxWidth: 380)
       .frame(height: 210)
       .clipped()
-      PrepSegmentsView(span: span).frame(maxWidth: 344)
+      .background(Theme.surface)
+      .overlay(alignment: .bottom) { PrepSegmentsView(span: span).padding(.horizontal, 18) }
+      .clipShape(RoundedRectangle(cornerRadius: 22))
     }
   }
 }

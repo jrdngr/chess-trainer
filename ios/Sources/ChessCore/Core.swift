@@ -18,6 +18,11 @@ public struct BoardPiece: Equatable, Sendable {
   public var square: String
   public var type: PieceType
   public var color: Color
+  public init(square: String, type: PieceType, color: Color) {
+    self.square = square
+    self.type = type
+    self.color = color
+  }
 }
 
 /// A position key ignores the move counters, so transpositions meet.

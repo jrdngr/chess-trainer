@@ -19,12 +19,17 @@ struct BoardView: View {
   var arrows: [BoardArrow] = []
   var glow: Glow?
   var pop: Pop?
+  var coordinates = true
+  /// What a held lens draws over the position.
+  var marks: LensMarks?
   var onMove: (LegalMove) -> Void
 
   @State private var selected: String?
 
   private static let light = SwiftUI.Color(hex: 0xe4e8ef)
   private static let dark = SwiftUI.Color(hex: 0x8290a6)
+  private static let lastTint = SwiftUI.Color(red: 1, green: 214 / 255, blue: 90 / 255).opacity(0.42)
+  private static let selectedTint = SwiftUI.Color(red: 1, green: 214 / 255, blue: 90 / 255).opacity(0.55)
 
   var body: some View {
     GeometryReader { geo in
@@ -42,19 +47,31 @@ struct BoardView: View {
             if let tint = highlights[square] {
               Rectangle().fill(tint.opacity(0.45))
             } else if square == selected {
-              Rectangle().fill(SwiftUI.Color.yellow.opacity(0.4))
+              Rectangle().fill(Self.selectedTint)
             } else if let last = lastMove, last.from == square || last.to == square {
-              Rectangle().fill(SwiftUI.Color.yellow.opacity(0.22))
+              Rectangle().fill(Self.lastTint)
             }
             if targets.contains(square) {
               Circle().fill(SwiftUI.Color.black.opacity(0.22)).frame(width: cell * 0.3, height: cell * 0.3)
             }
-            if let piece = pieces[square] { PieceView(piece: piece, size: cell) }
+            if coordinates { coordinateLabels(square, col: col, row: row, light: isLight, cell: cell) }
           }
           .frame(width: cell, height: cell)
           .offset(x: CGFloat(col) * cell, y: CGFloat(row) * cell)
           .onTapGesture { tap(square, pieces) }
         }
+        if let marks { LensUnderView(marks: marks, cell: cell, position: position) }
+        ForEach(Array(pieces.keys), id: \.self) { square in
+          let (col, row) = position(square)
+          let piece = pieces[square]!
+          // Sized to match the web board's pieces.
+          PieceView(piece: piece, size: cell * 0.78)
+            .opacity(marks?.ghost == true && piece.type != .p ? 0.18 : 1)
+            .frame(width: cell, height: cell)
+            .offset(x: CGFloat(col) * cell, y: CGFloat(row) * cell)
+            .allowsHitTesting(false)
+        }
+        if let marks { LensOverView(marks: marks, cell: cell, position: position) }
         ArrowsView(arrows: arrows, cell: cell, position: position)
           .allowsHitTesting(false)
         if let pop {
@@ -64,6 +81,7 @@ struct BoardView: View {
         }
       }
       .frame(width: size, height: size)
+      .clipShape(RoundedRectangle(cornerRadius: size * 0.03))
       .overlay(glowBorder)
     }
     .aspectRatio(1, contentMode: .fit)
@@ -78,6 +96,22 @@ struct BoardView: View {
         .blur(radius: 2)
         .allowsHitTesting(false)
     }
+  }
+
+  /// Rank numbers down the left edge and file letters along the bottom, in the other square's color.
+  @ViewBuilder private func coordinateLabels(_ square: String, col: Int, row: Int, light: Bool, cell: CGFloat) -> some View {
+    let ink = light ? Self.dark : Self.light
+    ZStack {
+      if col == 0 {
+        Text(String(square.last!)).font(.system(size: cell * 0.2, weight: .semibold)).foregroundStyle(ink)
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).padding(cell * 0.05)
+      }
+      if row == 7 {
+        Text(String(square.first!)).font(.system(size: cell * 0.2, weight: .semibold)).foregroundStyle(ink)
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing).padding(cell * 0.05)
+      }
+    }
+    .allowsHitTesting(false)
   }
 
   private func squareAt(_ i: Int) -> String {
@@ -111,21 +145,37 @@ struct BoardView: View {
   }
 }
 
-/// A piece, drawn with the chess glyphs.
+/// A piece, drawn with the prototype's own shapes: `Pieces.tsx`.
 struct PieceView: View {
   var piece: BoardPiece
   var size: CGFloat
 
-  private static let glyphs: [PieceType: String] = [.k: "\u{265A}", .q: "\u{265B}", .r: "\u{265C}", .b: "\u{265D}", .n: "\u{265E}", .p: "\u{265F}\u{FE0E}"]
+  private static let shapes: [PieceType: String] = [
+    .p: PieceShapes.p, .n: PieceShapes.n, .b: PieceShapes.b, .r: PieceShapes.r, .q: PieceShapes.q, .k: PieceShapes.k,
+  ]
 
   var body: some View {
-    let glyph = Self.glyphs[piece.type]!
+    let white = piece.color == .w
+    let fill = SwiftUI.Color(hex: white ? 0xf6f8fb : 0x20262f)
+    let stroke = SwiftUI.Color(hex: white ? 0x2b3441 : 0x05080c)
+    let line = StrokeStyle(lineWidth: 1.5 * size / 45, lineCap: .round, lineJoin: .round)
     ZStack {
-      // An outline in the other color keeps each piece readable on both squares.
-      Text(glyph).foregroundStyle(piece.color == .w ? SwiftUI.Color.black : SwiftUI.Color.white).blur(radius: 0.6)
-      Text(glyph).foregroundStyle(piece.color == .w ? SwiftUI.Color.white : SwiftUI.Color.black)
+      SVGPath(d: Self.shapes[piece.type]!).fill(fill)
+      SVGPath(d: Self.shapes[piece.type]!).stroke(stroke, style: line)
+      if piece.type == .k {
+        SVGPath(d: PieceShapes.kingCross).stroke(stroke, style: StrokeStyle(lineWidth: 2.2 * size / 45, lineCap: .round))
+      }
+      if piece.type == .b {
+        SVGPath(d: PieceShapes.bishopMark).stroke(stroke, style: StrokeStyle(lineWidth: 1.4 * size / 45, lineCap: .round))
+      }
+      if piece.type == .n {
+        Circle().fill(white ? stroke : SwiftUI.Color(hex: 0x8d97a5))
+          .frame(width: 2.2 * size / 45, height: 2.2 * size / 45)
+          .position(x: 14.3 * size / 45, y: 20.2 * size / 45)
+      }
     }
-    .font(.system(size: size * 0.8))
+    .frame(width: size, height: size)
+    .shadow(color: .black.opacity(0.42), radius: 1.5 * size / 45, y: size / 45)
   }
 }
 
