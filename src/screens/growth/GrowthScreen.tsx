@@ -3,16 +3,8 @@ import { Board } from '../../components/Board';
 import { AppBar, haptic, Icons, Section, Strip, toast, type StripItem } from '../../components/ui';
 import { applySan, lastMoveOf, sansToMoveText, type LegalMove, type Square } from '../../chess/core';
 import {
-  addsToFit,
-  advance,
-  answerHole,
-  atHole,
   choicesAt,
-  enterHole,
-  firstEnd,
-  firstHole,
   isUsersTurn,
-  lineFor,
   needsEngine,
   nextHole,
   growthRows,
@@ -22,14 +14,28 @@ import {
   preparedHere,
   recommended,
   resumeAdding,
-  startGrowth,
-  startGrowthAt,
-  startGrowthAtEnd,
-  steer,
   type GrowthRow,
-  type GrowthRun,
   type Hole,
 } from '../../model/growth';
+import {
+  allowanceOf,
+  anotherBatch,
+  beginGrowth,
+  choose,
+  growthRound,
+  inBatch as batchCount,
+  measureBatch,
+  nothingPrepared,
+  opponentToMove,
+  opponentWalks,
+  reachedEdge,
+  stop,
+  theyReply,
+  undo as undoAnswer,
+  walk,
+  type GrowthSession,
+  type GrowthStep,
+} from '../../model/growthController';
 import { familiarOffBook, nudgeArrows } from '../../model/nudge';
 import { useSoundness } from '../../engine/soundness';
 import { useEngineReplies } from '../../engine/engineReplies';
@@ -37,12 +43,11 @@ import { useMoveEvals } from '../../engine/moveEvals';
 import { formatScore, winFraction } from '../../engine/types';
 import { byShare, deltaFor, deltaTone, formatDelta } from '../../model/evalDelta';
 import { roleArrows } from '../../model/answerArrows';
-import { nodeAtLine } from '../../model/repertoire';
 import { growthSource } from '../../model/moveSource';
 import { formatGameCount } from '../../model/reference';
 import { nudgeColor, roleColor } from '../../components/Nudges';
 import type { RoundRecord } from '../../model/scoring';
-import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
+import { nodeById, openingTree } from '../../model/openingTree';
 import { atPracticeCap, offerOpening, practiceOwed, practiceText } from '../../model/growOffer';
 import { regionOf, type Selection } from '../../model/selection';
 import { referenceIndex } from '../../model/referenceIndex';
@@ -127,8 +132,6 @@ export function GrowthScreen({ onExit, launch, onPractice, onAnalyze }: GrowthSc
   );
 }
 
-type Phase = 'walking' | 'hole' | 'answered' | 'done' | 'lost';
-
 function Run({
   row,
   hole,
@@ -180,48 +183,48 @@ function Run({
 
   /** The tree as it was when the run began, so adding a move cannot re-steer it. */
   const [tree] = useState(() => rep);
-  /** Where the run starts: the hole it was handed, or the one the row most wants answered. */
-  const [start] = useState(() => hole ?? firstHole(index, row));
-  /** A launch at the end of your line starts at its tip, for the book to reply. */
-  const [end] = useState(() => (start ? null : firstEnd(row)));
-  const [run, setRun] = useState<GrowthRun>(() =>
-    start ? startGrowthAt(tree, row, start) : end ? startGrowthAtEnd(tree, row, end) : startGrowth(tree, row),
-  );
-  const [phase, setPhase] = useState<Phase>(() => (start ? 'hole' : end ? 'answered' : 'walking'));
-  const [wrong, setWrong] = useState<string | null>(null);
-  /** Which plies of the line you added, so the strip can mark them. */
-  const [added, setAdded] = useState<number[]>([]);
-  /**
-   * The batch being added: where it began in `added`, and how many it may add.
-   *
-   * Set when the run arrives at the hole the batch starts from, so the
-   * allowance is measured from that depth, and cleared when the reveal is
-   * asked for another batch — which is how a second batch gets the smaller
-   * allowance its deeper hole has earned.
-   */
-  const [batch, setBatch] = useState<{ base: number; allowance: number } | null>(null);
-  /** The answer just chosen, until they reply to it — the board shows it green. */
-  const [answer, setAnswer] = useState<LegalMove | null>(null);
+  /** The run, as the controller has it. The ref is always the latest, for timers that land late. */
+  const [session, setSession] = useState<GrowthSession>(() => beginGrowth(tree, index, row, hole));
+  const sessionRef = useRef(session);
+  const { run, phase, wrong, added, batch, answer, history, edge } = session;
+  /** Keep the controller's next state. */
+  const update = (next: GrowthSession) => {
+    if (next === sessionRef.current) return;
+    sessionRef.current = next;
+    setSession(next);
+  };
+  /** Keep the controller's step, then do what it asks, in order. */
+  const apply = ({ session: next, effects }: GrowthStep) => {
+    update(next);
+    for (const effect of effects) {
+      switch (effect.kind) {
+        case 'addLine':
+          addLine(row.repertoireId, effect.line, growthSource(index), 'growth');
+          break;
+        case 'removeLine':
+          removeNode(row.repertoireId, effect.nodeId, 'growth');
+          break;
+        case 'log':
+          logEvent(effect.event);
+          break;
+        case 'buzz':
+          if (settings.hapticFeedback) haptic(effect.pattern);
+          break;
+        case 'toast':
+          toast(effect.text);
+          break;
+        case 'edgeFlash':
+          setFlash(true);
+          break;
+      }
+    }
+  };
   const [thinking, setThinking] = useState(false);
-  /**
-   * Every answer added this sitting, oldest first, with the run and batch as
-   * they stood at the reply it answered: what Undo steps back to. Only this
-   * sitting's moves are here, so Undo can never reach older prep.
-   */
-  const [history, setHistory] = useState<
-    { run: GrowthRun; batch: { base: number; allowance: number } | null; san: string }[]
-  >([]);
   /** The position a carry-on game starts from, once one is asked for. */
   const [playFrom, setPlayFrom] = useState<string | null>(null);
 
   const prefs = useModePrefs().growth;
 
-  /**
-   * Growth stops where the book does: your lines end with the book, and past
-   * it a run is real chess rather than more to memorize. Past the book, when
-   * it is on, carries on with the engine's moves instead.
-   */
-  const [edge, setEdge] = useState(false);
   /** "End of the book", flashed over the board when the run stops there. */
   const [flash, setFlash] = useState(false);
 
@@ -245,32 +248,20 @@ function Run({
 
   /** The opponent answers on its own, after a beat. */
   useEffect(() => {
-    if (phase !== 'walking' || isUsersTurn(run) || intro.held) return;
-    if (atHole(tree, run)) return;
+    if (intro.held || !opponentToMove(session, tree)) return;
     setThinking(true);
     const timer = setTimeout(() => {
       setThinking(false);
-      const reply = steer(tree, index, run, find);
-      if (!reply) {
-        setPhase('hole');
-        return;
-      }
-      if (reply.hole) {
-        setRun(enterHole(run, reply.hole));
-        setPhase('hole');
-        return;
-      }
-      const next = advance(tree, run, reply.san);
-      if (next) setRun(next);
-      else setPhase('hole');
+      update(opponentWalks(sessionRef.current, tree, index, find));
     }, 420);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, run, tree, index, find.minShare, find.maxPly, intro.held]);
 
   /** A line that ends on the opponent's move leaves you to move with nothing. */
   useEffect(() => {
-    if (phase !== 'walking') return;
-    if (isUsersTurn(run) && expected.length === 0) setPhase('hole');
+    update(nothingPrepared(sessionRef.current, expected.length));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, run, expected.length]);
 
   /**
@@ -426,8 +417,8 @@ function Run({
    * Read straight from the position until the batch is recorded, so the
    * count under the board is right on the frame the hole appears.
    */
-  const allowance = batch?.allowance ?? addsToFit(run.path.length, prefs.maxPly);
-  const inBatch = added.length - (batch?.base ?? added.length);
+  const allowance = allowanceOf(session, prefs.maxPly);
+  const inBatch = batchCount(session);
 
   /**
    * What another batch would answer, once the run has come to rest — null when
@@ -447,33 +438,23 @@ function Run({
    * reason to ask. The reveal says so and offers a new run.
    */
   useEffect(() => {
-    if (phase === 'hole' && choices !== undefined && choices.length === 0) setPhase('done');
+    if (phase === 'hole' && choices !== undefined && choices.length === 0) update(stop(sessionRef.current));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, choices]);
 
   /** A batch is measured from the first hole it is offered at. */
   useEffect(() => {
-    if (phase !== 'hole' || batch) return;
-    setBatch({ base: added.length, allowance: addsToFit(run.path.length, prefs.maxPly) });
+    update(measureBatch(sessionRef.current, prefs.maxPly));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, batch, added.length, run.path.length, prefs.maxPly]);
 
   const onMove = (move: LegalMove) => {
     if (phase === 'hole') {
       // The board only offers the listed answers, and taking one is the choice.
-      if (playable.includes(move.san)) choose(move.san);
+      if (playable.includes(move.san)) pick(move.san);
       return;
     }
-    if (phase !== 'walking' || !isUsersTurn(run)) return;
-    const next = advance(tree, run, move.san);
-    if (!next) {
-      // Your own prep is the only thing that counts here, so anything else
-      // ends the run rather than quietly becoming a new line.
-      setWrong(move.san);
-      setPhase('lost');
-      if (settings.hapticFeedback) haptic([18, 50, 18]);
-      return;
-    }
-    setRun(next);
-    if (settings.hapticFeedback) haptic(10);
+    apply(walk(sessionRef.current, tree, move.san));
   };
 
   /**
@@ -481,27 +462,8 @@ function Run({
    * unless this was the last one allowed, their commonest reply to it becomes
    * the next thing to answer.
    */
-  const choose = (san: string) => {
-    const move = applySan(run.fen, san);
-    const next = move ? answerHole(run, san) : null;
-    if (!next) return;
-    addLine(row.repertoireId, lineFor(run, san), growthSource(index), 'growth');
-    logEvent({
-      kind: 'growth-pick',
-      via: 'growth',
-      color: run.color,
-      line: run.path.join(' '),
-      picked: san,
-      offered: ranked.map((option) => option.san),
-    });
-    setHistory((steps) => [...steps, { run, batch, san }]);
-    setAdded((plies) => [...plies, run.path.length]);
-    setAnswer(move);
-    setRun(next);
-    setPhase(inBatch + 1 >= allowance ? 'done' : 'answered');
-    if (settings.hapticFeedback) haptic(10);
-    toast(`${san} added`);
-  };
+  const pick = (san: string) =>
+    apply(choose(sessionRef.current, san, allowance, ranked.map((option) => option.san)));
 
   /**
    * Take back answers added this sitting: the last one, or all of them. The
@@ -512,27 +474,9 @@ function Run({
    */
   const undo = (all = false) => {
     if (!history.length) return;
-    const to = all ? 0 : history.length - 1;
-    const step = history[to];
-    const live = useStore.getState().repertoires[row.repertoireId];
-    // Standing in a hole, the reply being answered had no node either: adding
-    // the answer wrote it too, so it goes with it. A line that simply ended on
-    // their move had its reply already, and only the answer goes.
-    // A reply you had kept stays: only the answer to it was added.
-    const line = step.run.hole && !step.run.hole.kept ? step.run.path : lineFor(step.run, step.san);
-    const node = live ? nodeAtLine(live, line) : null;
-    if (node) removeNode(row.repertoireId, node.id, 'growth');
-    logEvent({ kind: 'growth-undo', via: 'growth', color: run.color, line: lineFor(step.run, step.san).join(' '), all });
-    setHistory(history.slice(0, to));
-    setAdded((plies) => plies.slice(0, to));
     // Nothing left from this sitting means nothing to log on the way out.
-    if (to === 0) pending.current = null;
-    setAnswer(null);
-    setBatch(step.batch);
-    setRun(step.run);
-    setPhase('hole');
-    if (settings.hapticFeedback) haptic(10);
-    toast(all ? 'Line undone' : `${step.san} undone`);
+    if (all || history.length === 1) pending.current = null;
+    apply(undoAnswer(sessionRef.current, useStore.getState().repertoires[row.repertoireId], all));
   };
 
   /**
@@ -566,12 +510,7 @@ function Run({
    */
   const addMore = () => {
     if (!more) return;
-    setAnswer(null);
-    setBatch(null);
-    setRun(more);
-    // Standing where they are to reply, past the book: the engine replies first.
-    setPhase(atHole(tree, more) ? 'hole' : 'answered');
-    if (settings.hapticFeedback) haptic(10);
+    apply(anotherBatch(sessionRef.current, tree, more));
   };
 
   /** Their reply to the move you just added, after a beat. */
@@ -582,13 +521,7 @@ function Run({
     if (hole === undefined) return;
     const timer = setTimeout(() => {
       // No move to make at all: the game is over, and so is the batch.
-      if (!hole) {
-        setPhase('done');
-        return;
-      }
-      setAnswer(null);
-      setRun(enterHole(run, hole));
-      setPhase('hole');
+      update(theyReply(sessionRef.current, hole));
     }, 520);
     return () => clearTimeout(timer);
   }, [phase, run, index, thinkingFor]);
@@ -598,10 +531,7 @@ function Run({
     if (intro.held) return;
     if (phase !== 'hole' && phase !== 'answered') return;
     if (prefs.pastBook || !pastTheBook(index, run.fen)) return;
-    setAnswer(null);
-    setEdge(true);
-    setFlash(true);
-    setPhase('done');
+    apply(reachedEdge(sessionRef.current));
   }, [intro.held, phase, run.fen, index, prefs.pastBook]);
 
   useEffect(() => {
@@ -647,17 +577,9 @@ function Run({
    * the round would be, and asking for another batch redraws it.
    */
   useEffect(() => {
-    if (phase !== 'done' && phase !== 'lost') return;
     const catalogue = openingTree(index);
-    const within = nodeById(catalogue, region ?? settings.selection.opening);
-    pending.current = {
-      mode: 'growth',
-      openingId: deepestNodeWithin(catalogue, within, run.path).id,
-      color: run.color,
-      answered: 0,
-      correct: 0,
-      perfect: inBatch >= allowance,
-    };
+    const round = growthRound(session, catalogue, nodeById(catalogue, region ?? settings.selection.opening), allowance);
+    if (round) pending.current = round;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, added.length]);
 
@@ -862,7 +784,7 @@ function Run({
                   </div>
                 )}
               </div>
-              <button className="btn sm growth-done" onClick={() => setPhase('done')}>
+              <button className="btn sm growth-done" onClick={() => update(stop(sessionRef.current))}>
                 Done
               </button>
             </div>
@@ -876,7 +798,7 @@ function Run({
                 <button
                   className={`list-row${roleOf(option.san) ? ` role-${roleOf(option.san)}` : ''}`}
                   key={option.san}
-                  onClick={() => choose(option.san)}
+                  onClick={() => pick(option.san)}
                 >
                   <span className="tree-san">{option.san}</span>
                   <span className="grow">

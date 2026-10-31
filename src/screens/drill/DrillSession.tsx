@@ -15,20 +15,24 @@ import {
 import type { BoardTheme } from '../../components/Board';
 import { formatScore } from '../../engine/types';
 import { useEngine } from '../../engine/useEngine';
+import { checkAnswer, mulberry32, type SessionMode, type TrainingItem } from '../../model/session';
 import {
-  buildSession,
-  checkAnswer,
-  extraPractice,
-  leadWithAWayIn,
-  mulberry32,
-  weakestFirst,
-  type SessionMode,
-  type TrainingItem,
-} from '../../model/session';
+  advance,
+  answer as answerWith,
+  beginDrill,
+  continueAfterWrong,
+  drillRound,
+  expectedSan,
+  followUpFor,
+  refill,
+  regradeLast,
+  type DrillOptions,
+  type DrillState,
+  type DrillStep,
+} from '../../model/drillController';
 import { DEFAULT_DRILL, type DrillPrefs } from '../../model/modes';
-import { createCard, gradeForTime } from '../../model/srs';
 import { clockSeconds } from '../../model/openingRun';
-import type { Card, Grade } from '../../model/types';
+import type { Grade } from '../../model/types';
 import { useStore } from '../../store/useStore';
 import { ClockHud, useMoveClock } from '../../components/Clock';
 import { introOpening, useRoundIntro } from '../../components/RoundIntro';
@@ -49,24 +53,8 @@ export interface DrillSessionProps {
   onNext?: () => void;
 }
 
-/** `flash`: a correct move, shown for a beat before the next position. */
-type Phase = 'ask' | 'flash' | 'wrong';
-
-/** The queue, in the order the mode asks for. */
-function order(
-  batch: TrainingItem[],
-  cards: Record<string, Card>,
-  weakFirst: boolean,
-): TrainingItem[] {
-  return weakFirst ? weakestFirst(batch, cards) : batch;
-}
-
 /** How long a correct move stays on the board before the next position. */
 const FLASH_MS = 650;
-
-/** How many positions to line up at a time, and when to line up more. */
-const BATCH = 20;
-const REFILL_AT = 6;
 
 /**
  * What each button says.
@@ -107,35 +95,20 @@ export function DrillSession({
   const maxNew = options.newPerSession;
   const weakFirst = options.weakFirst;
   const [shuffler] = useState(() => ({ current: mulberry32(Math.floor(Math.random() * 2 ** 31)) }));
-  const [queue, setQueue] = useState<TrainingItem[]>(() =>
-    leadWithAWayIn(
-      order(
-        buildSession(items, cards, {
-          mode,
-          now: Date.now(),
-          maxItems: BATCH,
-          maxNew,
-          seed: Math.floor(Date.now() / 60000),
-        }),
-        cards,
-        weakFirst,
-      ),
-    ),
-  );
-  const [index, setIndex] = useState(0);
-  const [phase, setPhase] = useState<Phase>('ask');
-  const [played, setPlayed] = useState<LegalMove | null>(null);
+  const drillOpts: DrillOptions = { mode, maxNew, weakFirst };
+  /** The sitting, as the controller has it. The ref is always the latest, for the flash's timer. */
+  const [drill, setDrill] = useState<DrillState>(() => beginDrill(items, cards, drillOpts, Date.now()));
+  const drillRef = useRef(drill);
+  const update = (next: DrillState) => {
+    if (next === drillRef.current) return;
+    drillRef.current = next;
+    setDrill(next);
+  };
+  const { queue, index, phase, played, stats, last } = drill;
   const [revealLine, setRevealLine] = useState(false);
   const [showMoves, setShowMoves] = useState(false);
   const [explore, setExplore] = useState(false);
   const [why, setWhy] = useState(false);
-  const [stats, setStats] = useState({ answered: 0, correct: 0 });
-  /**
-   * The last correct answer, graded off the clock and already on the schedule.
-   * The grade buttons stay on screen for the next position and re-grade it,
-   * so the flow is move, move, move — with a way to say "I guessed that".
-   */
-  const [last, setLast] = useState<{ item: TrainingItem; before: Card; grade: Grade; played: string } | null>(null);
   /** Logged once, however the session ends. */
   const logged = useRef(false);
 
@@ -166,16 +139,11 @@ export function DrillSession({
 
   /** Count the session as one round, against the opening it was played in. */
   const log = () => {
-    if (logged.current || stats.answered === 0) return;
+    if (logged.current) return;
+    const round = drillRound(drillRef.current, openingId ?? settings.selection.opening);
+    if (!round) return;
     logged.current = true;
-    endRound({
-      mode: 'drill',
-      openingId: openingId ?? settings.selection.opening,
-      color: item?.orientation === 'black' ? ('b' as const) : ('w' as const),
-      answered: stats.answered,
-      correct: stats.correct,
-      perfect: stats.correct === stats.answered && stats.answered >= 5,
-    });
+    endRound(round);
   };
 
   const card = item ? cards[item.cardId] : undefined;
@@ -187,32 +155,8 @@ export function DrillSession({
    * the stalest positions, so the session only ends when you end it.
    */
   useEffect(() => {
-    if (!items.length) return;
-    if (queue.length - index > REFILL_AT) return;
-    setQueue((current) => {
-      const ahead = new Set(current.slice(index).map((i) => i.cardId));
-      const now = Date.now();
-      const scheduled = buildSession(items, cards, {
-        mode,
-        now,
-        maxItems: BATCH,
-        maxNew,
-        seed: now,
-      }).filter((i) => !ahead.has(i.cardId));
-      const taken = new Set(scheduled.map((i) => i.cardId));
-      const filler =
-        scheduled.length >= BATCH
-          ? []
-          : extraPractice(
-              items,
-              cards,
-              BATCH - scheduled.length,
-              shuffler.current,
-              (id) => ahead.has(id) || taken.has(id),
-            );
-      const batch = order([...scheduled, ...filler], cards, weakFirst);
-      return batch.length ? [...current, ...batch] : current;
-    });
+    update(refill(drillRef.current, items, cards, drillOpts, shuffler.current, Date.now()));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, cards, mode, maxNew, weakFirst, index, queue.length]);
 
   useEffect(() => {
@@ -228,103 +172,55 @@ export function DrillSession({
 
   const expectedMove = useMemo(() => {
     if (!item) return null;
-    const san = item.expected.find((e) => e.preferred)?.san ?? item.expected[0]?.san;
+    const san = expectedSan(item);
     return san ? applySan(item.fen, san) : null;
   }, [item]);
 
+  /** The next decision point down this line, when following the line through. */
+  const followUp = useMemo(
+    () => (item && options.followLine ? followUpFor(item, items, repertoires[item.repertoireId]) : null),
+    [item, items, repertoires, options.followLine],
+  );
+
+  /** Do what the controller asks, in order. */
+  const run = ({ state: next, effects }: DrillStep) => {
+    update(next);
+    for (const effect of effects) {
+      switch (effect.kind) {
+        case 'record':
+          recordMove({ mode: 'drill', line: effect.line, color: effect.color, correct: effect.correct, rated: false });
+          break;
+        case 'buzz':
+          if (settings.hapticFeedback) haptic(effect.pattern);
+          break;
+        case 'grade':
+          grade(effect.item, effect.grade, effect.played, effect.correct);
+          break;
+        case 'regrade':
+          regrade(effect.item, effect.before, effect.grade, effect.played);
+          break;
+        case 'mistake':
+          logMistake(effect.mistake);
+          break;
+        case 'flash':
+          // A beat on the move you just made, so it registers before the board
+          // changes under you.
+          window.setTimeout(() => next_(effect.next ?? undefined), FLASH_MS);
+          break;
+      }
+    }
+  };
+
   const onBoardMove = (move: LegalMove) => {
     if (!item || phase !== 'ask') return;
-    const result = checkAnswer(item, move.san);
-    setPlayed(move);
-    if (!result.correct) setPhase('wrong');
-    const took = clock.elapsedNow();
-    // Drill is recorded, never rated: the schedule already grades this answer,
-    // and a rating is what the test modes are for.
-    recordMove({
-      mode: 'drill',
-      // Right, and the line is where the answer took you; wrong, and it is the
-      // position you were asked about, since the move played leads elsewhere.
-      line: result.correct ? [...item.pathSans, move.san] : item.pathSans,
-      color: item.orientation === 'black' ? 'b' : 'w',
-      correct: result.correct,
-      rated: false,
-    });
-    setStats((s) => ({
-      answered: s.answered + 1,
-      correct: s.correct + (result.correct ? 1 : 0),
-    }));
-    if (settings.hapticFeedback) haptic(result.correct ? 12 : [18, 50, 18]);
-    if (result.correct) {
-      // Graded by the clock and straight on to the next position. The card is
-      // kept as it was, so the grade can still be changed from the next screen.
-      const auto = gradeForTime(took);
-      const before = card ?? createCard(item.cardId, item.repertoireId, item.key, item.fen);
-      grade(item, auto, move.san, true);
-      setLast({ item, before, grade: auto, played: move.san });
-      // A beat on the move you just made, so it registers before the board
-      // changes under you.
-      setPhase('flash');
-      const next = followUp ?? undefined;
-      window.setTimeout(() => advance(next), FLASH_MS);
-      return;
-    }
-    if (!result.correct) {
-      // A wrong answer is always a lapse; grade it immediately so the user can
-      // spend their attention on understanding rather than on a button.
-      grade(item, 'again', move.san, false);
-      // And it is a real mistake at a real position, so practice should steer
-      // back to it until it is answered right.
-      logMistake({
-        source: 'drill',
-        repertoireId: item.repertoireId,
-        key: item.key,
-        fen: item.fen,
-        path: item.pathSans,
-        played: move.san,
-        expected: item.expected.find((e) => e.preferred)?.san ?? item.expected[0]?.san ?? '',
-      });
-    }
+    run(answerWith(drillRef.current, move, clock.elapsedNow(), card, followUp));
   };
 
-  const advance = (extra?: TrainingItem) => {
-    setPhase('ask');
-    setPlayed(null);
+  /** On to the next position, with the board's extras put away. */
+  const next_ = (extra?: TrainingItem) => {
     setRevealLine(false);
     setShowMoves(false);
-    if (extra) {
-      setQueue((q) => {
-        const without = q.filter((i, idx) => idx <= index || i.cardId !== extra.cardId);
-        const next = [...without];
-        next.splice(index + 1, 0, extra);
-        return next;
-      });
-    }
-    setIndex((i) => i + 1);
-  };
-
-  /** The next decision point down this line, when following the line through. */
-  const followUp = useMemo(() => {
-    if (!item || !options.followLine) return null;
-    const rep = repertoires[item.repertoireId];
-    if (!rep) return null;
-    const [mine, reply] = item.continuation;
-    if (!mine || !reply) return null;
-    const afterMine = applySan(item.fen, mine);
-    if (!afterMine) return null;
-    const afterReply = applySan(afterMine.after, reply);
-    if (!afterReply) return null;
-    return items.find(
-      (candidate) => candidate.fen === afterReply.after && candidate.cardId !== item.cardId,
-    );
-  }, [item, items, repertoires, options.followLine]);
-
-  const requeue = () => {
-    if (!item) return;
-    setQueue((q) => {
-      const next = [...q];
-      next.splice(Math.min(q.length, index + 4), 0, item);
-      return next;
-    });
+    update(advance(drillRef.current, extra));
   };
 
   /** End the session: log what was answered, if anything, and leave. */
@@ -334,18 +230,7 @@ export function DrillSession({
   };
 
   /** Change the grade of the last correct answer. Guessed also brings it back soon. */
-  const onRegrade = (value: Grade) => {
-    if (!last || value === last.grade) return;
-    regrade(last.item, last.before, value, last.played);
-    if (value === 'again') {
-      setQueue((q) => {
-        const next = [...q];
-        next.splice(Math.min(q.length, index + 4), 0, last.item);
-        return next;
-      });
-    }
-    setLast({ ...last, grade: value });
-  };
+  const onRegrade = (value: Grade) => run(regradeLast(drillRef.current, value));
 
   const highlights = useMemo(() => {
     const out: { square: Square; kind: 'good' | 'bad' | 'hint' }[] = [];
@@ -487,8 +372,9 @@ export function DrillSession({
               <button
                 className="btn primary sm"
                 onClick={() => {
-                  requeue();
-                  advance();
+                  setRevealLine(false);
+                  setShowMoves(false);
+                  update(continueAfterWrong(drillRef.current));
                 }}
               >
                 Continue
