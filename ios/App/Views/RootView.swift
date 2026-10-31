@@ -22,6 +22,7 @@ struct RootView: View {
         ProgressView().tint(Theme.text2)
       }
     }
+    .overlay { ToastHost() }
     .environment(\.boardLook, BoardLook(theme: store.state.settings.boardTheme, coordinates: store.state.settings.showCoordinates))
     .task { debugSeed() }
   }

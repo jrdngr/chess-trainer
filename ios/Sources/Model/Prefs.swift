@@ -100,6 +100,9 @@ public let AUTO_DRILL = DrillPrefs(
   batchSimilar: true, clock: .off)
 
 /// Growth rounds, and what counts as ready to grow. Autopilot never grows past the book.
+/// Growth's own defaults: `modes.ts`.
+public let DEFAULT_GROWTH = GrowthPrefs(minShare: 1, maxPly: 18, nudgePriority: .transposition, nudgePawns: false, pastBook: false)
+
 public let AUTO_GROWTH = GrowthPrefs(minShare: 1, maxPly: 18, nudgePriority: .transposition, nudgePawns: false, pastBook: false)
 
 /// Survival rounds: Autopilot steers, there is no clock, the feedback is yours.

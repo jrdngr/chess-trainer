@@ -14,6 +14,8 @@ struct BoardView: View {
   var fen: String
   var orientation: ChessCore.Color
   var interactive: Bool
+  /// Either side may move, not just the side at the bottom.
+  var bothSides = false
   var lastMove: (from: String, to: String)?
   var highlights: [String: SwiftUI.Color] = [:]
   var arrows: [BoardArrow] = []
@@ -139,7 +141,7 @@ struct BoardView: View {
         return
       }
     }
-    if let piece = pieces[square], piece.color == turn, piece.color == orientation {
+    if let piece = pieces[square], piece.color == turn, bothSides || piece.color == orientation {
       selected = square == selected ? nil : square
     } else {
       selected = nil

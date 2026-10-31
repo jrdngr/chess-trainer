@@ -20,11 +20,12 @@ public struct Settings: Equatable, Sendable, Codable {
   public var cloudSync = true
   public var lichessUsername = ""
   public var chesscomUsername = ""
+  public var growth = DEFAULT_GROWTH
   public init() {}
 
   enum CodingKeys: String, CodingKey {
     case selection, favoriteOpenings, autopilot, hapticFeedback, showCoordinates, onboarded, autoplay
-    case engineEnabled, boardTheme, cloudSync, lichessUsername, chesscomUsername
+    case engineEnabled, boardTheme, cloudSync, lichessUsername, chesscomUsername, growth
   }
 
   /// A save missing a setting takes its default.
@@ -43,6 +44,7 @@ public struct Settings: Equatable, Sendable, Codable {
     cloudSync = try c.decodeIfPresent(Bool.self, forKey: .cloudSync) ?? cloudSync
     lichessUsername = try c.decodeIfPresent(String.self, forKey: .lichessUsername) ?? lichessUsername
     chesscomUsername = try c.decodeIfPresent(String.self, forKey: .chesscomUsername) ?? chesscomUsername
+    growth = try c.decodeIfPresent(GrowthPrefs.self, forKey: .growth) ?? growth
   }
 }
 
