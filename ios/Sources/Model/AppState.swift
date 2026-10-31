@@ -15,10 +15,16 @@ public struct Settings: Equatable, Sendable, Codable {
   public var onboarded = false
   /// Rounds that start inside an opening play the moves into it for you first.
   public var autoplay = true
+  public var engineEnabled = true
+  public var boardTheme = BoardTheme.slate
+  public var cloudSync = true
+  public var lichessUsername = ""
+  public var chesscomUsername = ""
   public init() {}
 
   enum CodingKeys: String, CodingKey {
     case selection, favoriteOpenings, autopilot, hapticFeedback, showCoordinates, onboarded, autoplay
+    case engineEnabled, boardTheme, cloudSync, lichessUsername, chesscomUsername
   }
 
   /// A save missing a setting takes its default.
@@ -32,8 +38,16 @@ public struct Settings: Equatable, Sendable, Codable {
     showCoordinates = try c.decodeIfPresent(Bool.self, forKey: .showCoordinates) ?? showCoordinates
     onboarded = try c.decodeIfPresent(Bool.self, forKey: .onboarded) ?? onboarded
     autoplay = try c.decodeIfPresent(Bool.self, forKey: .autoplay) ?? autoplay
+    engineEnabled = try c.decodeIfPresent(Bool.self, forKey: .engineEnabled) ?? engineEnabled
+    boardTheme = try c.decodeIfPresent(BoardTheme.self, forKey: .boardTheme) ?? boardTheme
+    cloudSync = try c.decodeIfPresent(Bool.self, forKey: .cloudSync) ?? cloudSync
+    lichessUsername = try c.decodeIfPresent(String.self, forKey: .lichessUsername) ?? lichessUsername
+    chesscomUsername = try c.decodeIfPresent(String.self, forKey: .chesscomUsername) ?? chesscomUsername
   }
 }
+
+/// The board's colours.
+public enum BoardTheme: String, Sendable, Codable, CaseIterable { case slate, walnut, ocean }
 
 public struct AppState: Equatable, Sendable, Codable {
   public var repertoires: [String: Repertoire] = [:]

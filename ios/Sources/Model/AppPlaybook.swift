@@ -148,6 +148,9 @@ extension AppState {
     log = []
   }
 
+  /// Reset everything: a fresh install.
+  public mutating func resetAll() { self = AppState() }
+
   /// Star or unstar an opening. "Any favorite" with none left is Any opening.
   public mutating func toggleStar(_ openingId: String) {
     if settings.favoriteOpenings.contains(openingId) {

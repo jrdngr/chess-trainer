@@ -283,3 +283,30 @@ public struct ReviewLogEntry: Equatable, Sendable, Codable {
     self.intervalAfter = intervalAfter
   }
 }
+
+/// How many cards are due, and in which stage, and how many wait for later.
+public struct DueCounts: Equatable, Sendable {
+  public var due = 0
+  public var new = 0
+  public var learning = 0
+  public var review = 0
+  public var later = 0
+  public var total = 0
+}
+
+public func countDue(_ cards: [Card], _ now: Double = Env.now()) -> DueCounts {
+  var counts = DueCounts(total: cards.count)
+  for c in cards {
+    if isDue(c, now) {
+      counts.due += 1
+      switch c.stage {
+      case .new: counts.new += 1
+      case .learning: counts.learning += 1
+      default: counts.review += 1
+      }
+    } else {
+      counts.later += 1
+    }
+  }
+  return counts
+}

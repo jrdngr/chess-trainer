@@ -46,14 +46,13 @@ struct AutopilotView: View {
 
   /// The next round, picked when it starts: what the last one changed is in the store by then.
   private func begin() {
-    let selection = roundSelection(store.state, tree, last: store.lastFavorite, Env.random)
+    let selection = store.takeRoundSelection()
     guard let round = nextRound(store.state, tree, selection, history),
       let run = RunModel(round: round, selection: selection, store: store, tree: tree, index: index, engine: Self.engine)
     else {
       nothing = true
       return
     }
-    if isAnyFavorite(store.state.settings.selection) { store.lastFavorite = selection.opening }
     model = run
     run.start()
   }

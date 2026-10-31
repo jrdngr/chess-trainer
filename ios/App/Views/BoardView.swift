@@ -19,15 +19,17 @@ struct BoardView: View {
   var arrows: [BoardArrow] = []
   var glow: Glow?
   var pop: Pop?
-  var coordinates = true
+  /// Nil follows the setting.
+  var coordinates: Bool?
+  @Environment(\.boardLook) private var look
   /// What a held lens draws over the position.
   var marks: LensMarks?
   var onMove: (LegalMove) -> Void
 
   @State private var selected: String?
 
-  private static let light = SwiftUI.Color(hex: 0xe4e8ef)
-  private static let dark = SwiftUI.Color(hex: 0x8290a6)
+  private var light: SwiftUI.Color { look.theme.light }
+  private var dark: SwiftUI.Color { look.theme.dark }
   private static let lastTint = SwiftUI.Color(red: 1, green: 214 / 255, blue: 90 / 255).opacity(0.42)
   private static let selectedTint = SwiftUI.Color(red: 1, green: 214 / 255, blue: 90 / 255).opacity(0.55)
 
@@ -43,7 +45,7 @@ struct BoardView: View {
           let (col, row) = position(square)
           let isLight = (col + row) % 2 == 0
           ZStack {
-            Rectangle().fill(isLight ? Self.light : Self.dark)
+            Rectangle().fill(isLight ? light : dark)
             if let tint = highlights[square] {
               Rectangle().fill(tint.opacity(0.45))
             } else if square == selected {
@@ -54,7 +56,7 @@ struct BoardView: View {
             if targets.contains(square) {
               Circle().fill(SwiftUI.Color.black.opacity(0.22)).frame(width: cell * 0.3, height: cell * 0.3)
             }
-            if coordinates { coordinateLabels(square, col: col, row: row, light: isLight, cell: cell) }
+            if coordinates ?? look.coordinates { coordinateLabels(square, col: col, row: row, onLight: isLight, cell: cell) }
           }
           .frame(width: cell, height: cell)
           .offset(x: CGFloat(col) * cell, y: CGFloat(row) * cell)
@@ -99,8 +101,8 @@ struct BoardView: View {
   }
 
   /// Rank numbers down the left edge and file letters along the bottom, in the other square's color.
-  @ViewBuilder private func coordinateLabels(_ square: String, col: Int, row: Int, light: Bool, cell: CGFloat) -> some View {
-    let ink = light ? Self.dark : Self.light
+  @ViewBuilder private func coordinateLabels(_ square: String, col: Int, row: Int, onLight: Bool, cell: CGFloat) -> some View {
+    let ink = onLight ? dark : light
     ZStack {
       if col == 0 {
         Text(String(square.last!)).font(.system(size: cell * 0.2, weight: .semibold)).foregroundStyle(ink)
@@ -229,5 +231,32 @@ struct PopView: View {
     .background(Capsule().fill(Theme.background.opacity(0.85)))
     .overlay(Capsule().stroke(pop.ext ? Theme.ext : .clear, lineWidth: 1))
     .transition(.opacity.combined(with: .move(edge: .bottom)))
+  }
+}
+
+/// How boards look, from the settings: the theme and whether coordinates show.
+struct BoardLook {
+  var theme = BoardTheme.slate
+  var coordinates = true
+}
+
+extension EnvironmentValues {
+  @Entry var boardLook = BoardLook()
+}
+
+extension BoardTheme {
+  var light: SwiftUI.Color {
+    switch self {
+    case .slate: SwiftUI.Color(hex: 0xe4e8ef)
+    case .walnut: SwiftUI.Color(hex: 0xf0d9b5)
+    case .ocean: SwiftUI.Color(hex: 0xd6e4f0)
+    }
+  }
+  var dark: SwiftUI.Color {
+    switch self {
+    case .slate: SwiftUI.Color(hex: 0x8290a6)
+    case .walnut: SwiftUI.Color(hex: 0xb58863)
+    case .ocean: SwiftUI.Color(hex: 0x6d94b8)
+    }
   }
 }
