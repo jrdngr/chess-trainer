@@ -282,6 +282,11 @@ public func choicesAt(_ index: ReferenceIndex, _ fen: String, _ limit: Int = 4) 
     .prefix(limit))
 }
 
+/// The book's arrows at a position: each piece's most played move, up to `count` pieces.
+public func movesToDraw(_ index: ReferenceIndex, _ fen: String, _ count: Int = 3) -> [DrawnMove] {
+  onePerPiece(fen, popularReplies(index, fen, 0).map(\.san), count).map { DrawnMove(san: $0.san, from: $0.from, to: $0.to) }
+}
+
 /// The best of each piece's moves among `sans`, for arrows.
 public func onePerPiece(_ fen: String, _ sans: [String], _ count: Int = .max) -> [(san: String, from: String, to: String)] {
   var out: [(san: String, from: String, to: String)] = []

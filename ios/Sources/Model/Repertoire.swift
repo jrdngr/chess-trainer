@@ -295,6 +295,17 @@ public func leafLines(_ rep: Repertoire) -> [(tipId: String, sans: [String])] {
   return out.jsSorted { cmp($1.sans.count, $0.sans.count) }
 }
 
+/// Every node in the order it was added, as the prototype's `Object.values(rep.nodes)`
+/// reads them: by when, then by the counter `newId` ends an id with.
+public func nodesInOrder(_ rep: Repertoire) -> [RepMove] {
+  func counter(_ id: String) -> Int { id.split(separator: "_").last.flatMap { Int($0, radix: 36) } ?? 0 }
+  return rep.nodes.values.sorted { a, b in
+    if a.addedAt != b.addedAt { return a.addedAt < b.addedAt }
+    let (ca, cb) = (counter(a.id), counter(b.id))
+    return ca != cb ? ca < cb : a.id < b.id
+  }
+}
+
 /// Every node in the subtree at `nodeId`, itself included.
 public func subtreeIds(_ rep: Repertoire, _ nodeId: String) -> [String] {
   var out: [String] = []
@@ -305,18 +316,6 @@ public func subtreeIds(_ rep: Repertoire, _ nodeId: String) -> [String] {
     stack.append(contentsOf: n.children)
   }
   return out
-}
-
-/// The tree's nodes in the order they were added: the prototype's
-/// `Object.values(rep.nodes)`, which keeps insertion order. Read off when each
-/// was added, then the counter in its id.
-public func nodesInOrder(_ rep: Repertoire) -> [RepMove] {
-  func counter(_ id: String) -> Int { id.split(separator: "_").last.flatMap { Int($0, radix: 36) } ?? 0 }
-  return rep.nodes.values.sorted { a, b in
-    if a.addedAt != b.addedAt { return a.addedAt < b.addedAt }
-    let (ca, cb) = (counter(a.id), counter(b.id))
-    return ca != cb ? ca < cb : a.id < b.id
-  }
 }
 
 /// What a stored tree is called.
