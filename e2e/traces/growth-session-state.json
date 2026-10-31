@@ -1,0 +1,1429 @@
+{
+ "repertoires": {
+  "rep_mupazvxo_r": {
+   "id": "rep_mupazvxo_r",
+   "name": "White Playbook",
+   "color": "w",
+   "rootFen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "rootChildren": [
+    "n_mupazvxo_s"
+   ],
+   "nodes": {
+    "n_mupazvxo_s": {
+     "id": "n_mupazvxo_s",
+     "parentId": null,
+     "repertoireId": "rep_mupazvxo_r",
+     "fenBefore": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "key": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -",
+     "san": "e4",
+     "uci": "e2e4",
+     "fenAfter": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+     "children": [
+      "n_mupazvxo_t"
+     ],
+     "preferred": true,
+     "source": "picker",
+     "addedAt": 1790845205100
+    },
+    "n_mupazvxo_t": {
+     "id": "n_mupazvxo_t",
+     "parentId": "n_mupazvxo_s",
+     "repertoireId": "rep_mupazvxo_r",
+     "fenBefore": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+     "key": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq -",
+     "san": "e5",
+     "uci": "e7e5",
+     "fenAfter": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+     "children": [
+      "n_mupazvxo_u"
+     ],
+     "preferred": true,
+     "source": "picker",
+     "addedAt": 1790845205100
+    },
+    "n_mupazvxo_u": {
+     "id": "n_mupazvxo_u",
+     "parentId": "n_mupazvxo_t",
+     "repertoireId": "rep_mupazvxo_r",
+     "fenBefore": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+     "key": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq -",
+     "san": "Nf3",
+     "uci": "g1f3",
+     "fenAfter": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+     "children": [
+      "n_mupazvxo_v"
+     ],
+     "preferred": true,
+     "source": "picker",
+     "addedAt": 1790845205100
+    },
+    "n_mupazvxo_v": {
+     "id": "n_mupazvxo_v",
+     "parentId": "n_mupazvxo_u",
+     "repertoireId": "rep_mupazvxo_r",
+     "fenBefore": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+     "key": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq -",
+     "san": "Nc6",
+     "uci": "b8c6",
+     "fenAfter": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+     "children": [
+      "n_mupazvxo_w"
+     ],
+     "preferred": true,
+     "source": "picker",
+     "addedAt": 1790845205100
+    },
+    "n_mupazvxo_w": {
+     "id": "n_mupazvxo_w",
+     "parentId": "n_mupazvxo_v",
+     "repertoireId": "rep_mupazvxo_r",
+     "fenBefore": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+     "key": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq -",
+     "san": "Bc4",
+     "uci": "f1c4",
+     "fenAfter": "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
+     "children": [],
+     "preferred": true,
+     "source": "picker",
+     "addedAt": 1790845205100
+    }
+   },
+   "createdAt": 1790845205100
+  },
+  "rep_mupazvxo_x": {
+   "id": "rep_mupazvxo_x",
+   "name": "Black Playbook",
+   "color": "b",
+   "rootFen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+   "rootChildren": [
+    "n_mupazvxo_y",
+    "n_mupazvxo_10",
+    "n_mupb0jjo_1c"
+   ],
+   "nodes": {
+    "n_mupazvxo_y": {
+     "id": "n_mupazvxo_y",
+     "parentId": null,
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "key": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -",
+     "san": "e4",
+     "uci": "e2e4",
+     "fenAfter": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+     "children": [
+      "n_mupazvxo_z"
+     ],
+     "preferred": true,
+     "source": "picker",
+     "addedAt": 1790845205100
+    },
+    "n_mupazvxo_z": {
+     "id": "n_mupazvxo_z",
+     "parentId": "n_mupazvxo_y",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+     "key": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq -",
+     "san": "e5",
+     "uci": "e7e5",
+     "fenAfter": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+     "children": [
+      "n_mupb0w1o_1i"
+     ],
+     "preferred": true,
+     "source": "picker",
+     "addedAt": 1790845205100
+    },
+    "n_mupazvxo_10": {
+     "id": "n_mupazvxo_10",
+     "parentId": null,
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "key": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -",
+     "san": "d4",
+     "uci": "d2d4",
+     "fenAfter": "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1",
+     "children": [
+      "n_mupazvxo_11"
+     ],
+     "preferred": false,
+     "source": "picker",
+     "addedAt": 1790845205100
+    },
+    "n_mupazvxo_11": {
+     "id": "n_mupazvxo_11",
+     "parentId": "n_mupazvxo_10",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1",
+     "key": "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq -",
+     "san": "d5",
+     "uci": "d7d5",
+     "fenAfter": "rnbqkbnr/ppp1pppp/8/3p4/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 2",
+     "children": [
+      "n_mupazvxo_12"
+     ],
+     "preferred": true,
+     "source": "picker",
+     "addedAt": 1790845205100
+    },
+    "n_mupazvxo_12": {
+     "id": "n_mupazvxo_12",
+     "parentId": "n_mupazvxo_11",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkbnr/ppp1pppp/8/3p4/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 2",
+     "key": "rnbqkbnr/ppp1pppp/8/3p4/3P4/8/PPP1PPPP/RNBQKBNR w KQkq -",
+     "san": "c4",
+     "uci": "c2c4",
+     "fenAfter": "rnbqkbnr/ppp1pppp/8/3p4/2PP4/8/PP2PPPP/RNBQKBNR b KQkq - 0 2",
+     "children": [
+      "n_mupazvxo_13"
+     ],
+     "preferred": true,
+     "source": "picker",
+     "addedAt": 1790845205100
+    },
+    "n_mupazvxo_13": {
+     "id": "n_mupazvxo_13",
+     "parentId": "n_mupazvxo_12",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkbnr/ppp1pppp/8/3p4/2PP4/8/PP2PPPP/RNBQKBNR b KQkq - 0 2",
+     "key": "rnbqkbnr/ppp1pppp/8/3p4/2PP4/8/PP2PPPP/RNBQKBNR b KQkq -",
+     "san": "e6",
+     "uci": "e7e6",
+     "fenAfter": "rnbqkbnr/ppp2ppp/4p3/3p4/2PP4/8/PP2PPPP/RNBQKBNR w KQkq - 0 3",
+     "children": [
+      "n_mupb036s_14"
+     ],
+     "preferred": true,
+     "source": "picker",
+     "addedAt": 1790845205100
+    },
+    "n_mupb036s_14": {
+     "id": "n_mupb036s_14",
+     "parentId": "n_mupazvxo_13",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkbnr/ppp2ppp/4p3/3p4/2PP4/8/PP2PPPP/RNBQKBNR w KQkq - 0 3",
+     "key": "rnbqkbnr/ppp2ppp/4p3/3p4/2PP4/8/PP2PPPP/RNBQKBNR w KQkq -",
+     "san": "Nc3",
+     "uci": "b1c3",
+     "fenAfter": "rnbqkbnr/ppp2ppp/4p3/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR b KQkq - 1 3",
+     "children": [
+      "n_mupb036s_15"
+     ],
+     "preferred": true,
+     "source": "growth",
+     "addedAt": 1790845214500
+    },
+    "n_mupb036s_15": {
+     "id": "n_mupb036s_15",
+     "parentId": "n_mupb036s_14",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkbnr/ppp2ppp/4p3/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR b KQkq - 1 3",
+     "key": "rnbqkbnr/ppp2ppp/4p3/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR b KQkq -",
+     "san": "Nf6",
+     "uci": "g8f6",
+     "fenAfter": "rnbqkb1r/ppp2ppp/4pn2/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 2 4",
+     "children": [
+      "n_mupb069w_16"
+     ],
+     "preferred": true,
+     "source": "growth",
+     "addedAt": 1790845214500
+    },
+    "n_mupb069w_16": {
+     "id": "n_mupb069w_16",
+     "parentId": "n_mupb036s_15",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkb1r/ppp2ppp/4pn2/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 2 4",
+     "key": "rnbqkb1r/ppp2ppp/4pn2/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR w KQkq -",
+     "san": "cxd5",
+     "uci": "c4d5",
+     "fenAfter": "rnbqkb1r/ppp2ppp/4pn2/3P4/3P4/2N5/PP2PPPP/R1BQKBNR b KQkq - 0 4",
+     "children": [
+      "n_mupb069w_17"
+     ],
+     "preferred": true,
+     "source": "growth",
+     "addedAt": 1790845218500
+    },
+    "n_mupb069w_17": {
+     "id": "n_mupb069w_17",
+     "parentId": "n_mupb069w_16",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkb1r/ppp2ppp/4pn2/3P4/3P4/2N5/PP2PPPP/R1BQKBNR b KQkq - 0 4",
+     "key": "rnbqkb1r/ppp2ppp/4pn2/3P4/3P4/2N5/PP2PPPP/R1BQKBNR b KQkq -",
+     "san": "Nxd5",
+     "uci": "f6d5",
+     "fenAfter": "rnbqkb1r/ppp2ppp/4p3/3n4/3P4/2N5/PP2PPPP/R1BQKBNR w KQkq - 0 5",
+     "children": [
+      "n_mupb0dls_1a"
+     ],
+     "preferred": true,
+     "source": "growth",
+     "addedAt": 1790845218500
+    },
+    "n_mupb0dls_1a": {
+     "id": "n_mupb0dls_1a",
+     "parentId": "n_mupb069w_17",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkb1r/ppp2ppp/4p3/3n4/3P4/2N5/PP2PPPP/R1BQKBNR w KQkq - 0 5",
+     "key": "rnbqkb1r/ppp2ppp/4p3/3n4/3P4/2N5/PP2PPPP/R1BQKBNR w KQkq -",
+     "san": "e4",
+     "uci": "e2e4",
+     "fenAfter": "rnbqkb1r/ppp2ppp/4p3/3n4/3PP3/2N5/PP3PPP/R1BQKBNR b KQkq - 0 5",
+     "children": [
+      "n_mupb0dls_1b"
+     ],
+     "preferred": true,
+     "source": "growth",
+     "addedAt": 1790845228000
+    },
+    "n_mupb0dls_1b": {
+     "id": "n_mupb0dls_1b",
+     "parentId": "n_mupb0dls_1a",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkb1r/ppp2ppp/4p3/3n4/3PP3/2N5/PP3PPP/R1BQKBNR b KQkq - 0 5",
+     "key": "rnbqkb1r/ppp2ppp/4p3/3n4/3PP3/2N5/PP3PPP/R1BQKBNR b KQkq -",
+     "san": "Nf6",
+     "uci": "d5f6",
+     "fenAfter": "rnbqkb1r/ppp2ppp/4pn2/8/3PP3/2N5/PP3PPP/R1BQKBNR w KQkq - 1 6",
+     "children": [],
+     "preferred": true,
+     "source": "growth",
+     "addedAt": 1790845228000
+    },
+    "n_mupb0jjo_1c": {
+     "id": "n_mupb0jjo_1c",
+     "parentId": null,
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+     "key": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -",
+     "san": "Nf3",
+     "uci": "g1f3",
+     "fenAfter": "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+     "children": [
+      "n_mupb0jjo_1d"
+     ],
+     "preferred": false,
+     "source": "growth",
+     "addedAt": 1790845235700
+    },
+    "n_mupb0jjo_1d": {
+     "id": "n_mupb0jjo_1d",
+     "parentId": "n_mupb0jjo_1c",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+     "key": "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq -",
+     "san": "Nf6",
+     "uci": "g8f6",
+     "fenAfter": "rnbqkb1r/pppppppp/5n2/8/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 2 2",
+     "children": [
+      "n_mupb0mms_1e"
+     ],
+     "preferred": true,
+     "source": "growth",
+     "addedAt": 1790845235700
+    },
+    "n_mupb0mms_1e": {
+     "id": "n_mupb0mms_1e",
+     "parentId": "n_mupb0jjo_1d",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkb1r/pppppppp/5n2/8/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 2 2",
+     "key": "rnbqkb1r/pppppppp/5n2/8/8/5N2/PPPPPPPP/RNBQKB1R w KQkq -",
+     "san": "g3",
+     "uci": "g2g3",
+     "fenAfter": "rnbqkb1r/pppppppp/5n2/8/8/5NP1/PPPPPP1P/RNBQKB1R b KQkq - 0 2",
+     "children": [
+      "n_mupb0mms_1f"
+     ],
+     "preferred": true,
+     "source": "growth",
+     "addedAt": 1790845239700
+    },
+    "n_mupb0mms_1f": {
+     "id": "n_mupb0mms_1f",
+     "parentId": "n_mupb0mms_1e",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkb1r/pppppppp/5n2/8/8/5NP1/PPPPPP1P/RNBQKB1R b KQkq - 0 2",
+     "key": "rnbqkb1r/pppppppp/5n2/8/8/5NP1/PPPPPP1P/RNBQKB1R b KQkq -",
+     "san": "g6",
+     "uci": "g7g6",
+     "fenAfter": "rnbqkb1r/pppppp1p/5np1/8/8/5NP1/PPPPPP1P/RNBQKB1R w KQkq - 0 3",
+     "children": [
+      "n_mupb0ppw_1g"
+     ],
+     "preferred": true,
+     "source": "growth",
+     "addedAt": 1790845239700
+    },
+    "n_mupb0ppw_1g": {
+     "id": "n_mupb0ppw_1g",
+     "parentId": "n_mupb0mms_1f",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkb1r/pppppp1p/5np1/8/8/5NP1/PPPPPP1P/RNBQKB1R w KQkq - 0 3",
+     "key": "rnbqkb1r/pppppp1p/5np1/8/8/5NP1/PPPPPP1P/RNBQKB1R w KQkq -",
+     "san": "Bg2",
+     "uci": "f1g2",
+     "fenAfter": "rnbqkb1r/pppppp1p/5np1/8/8/5NP1/PPPPPPBP/RNBQK2R b KQkq - 1 3",
+     "children": [
+      "n_mupb0ppw_1h"
+     ],
+     "preferred": true,
+     "source": "growth",
+     "addedAt": 1790845243700
+    },
+    "n_mupb0ppw_1h": {
+     "id": "n_mupb0ppw_1h",
+     "parentId": "n_mupb0ppw_1g",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkb1r/pppppp1p/5np1/8/8/5NP1/PPPPPPBP/RNBQK2R b KQkq - 1 3",
+     "key": "rnbqkb1r/pppppp1p/5np1/8/8/5NP1/PPPPPPBP/RNBQK2R b KQkq -",
+     "san": "c5",
+     "uci": "c7c5",
+     "fenAfter": "rnbqkb1r/pp1ppp1p/5np1/2p5/8/5NP1/PPPPPPBP/RNBQK2R w KQkq - 0 4",
+     "children": [],
+     "preferred": true,
+     "source": "growth",
+     "addedAt": 1790845243700
+    },
+    "n_mupb0w1o_1i": {
+     "id": "n_mupb0w1o_1i",
+     "parentId": "n_mupazvxo_z",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+     "key": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq -",
+     "san": "Nf3",
+     "uci": "g1f3",
+     "fenAfter": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+     "children": [
+      "n_mupb0w1o_1j"
+     ],
+     "preferred": true,
+     "source": "growth",
+     "addedAt": 1790845251900
+    },
+    "n_mupb0w1o_1j": {
+     "id": "n_mupb0w1o_1j",
+     "parentId": "n_mupb0w1o_1i",
+     "repertoireId": "rep_mupazvxo_x",
+     "fenBefore": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+     "key": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq -",
+     "san": "Nc6",
+     "uci": "b8c6",
+     "fenAfter": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+     "children": [],
+     "preferred": true,
+     "source": "growth",
+     "addedAt": 1790845251900
+    }
+   },
+   "createdAt": 1790845205100
+  }
+ },
+ "cards": {},
+ "lineCards": {},
+ "score": {
+  "global": {
+   "rating": 0,
+   "rated": 0,
+   "extRating": 0,
+   "extRated": 0,
+   "answered": 0,
+   "correct": 0,
+   "byMode": {
+    "run": {
+     "rounds": 0,
+     "answered": 0,
+     "correct": 0,
+     "lastAt": null
+    },
+    "survival": {
+     "rounds": 0,
+     "answered": 0,
+     "correct": 0,
+     "lastAt": null
+    },
+    "drill": {
+     "rounds": 0,
+     "answered": 0,
+     "correct": 0,
+     "lastAt": null
+    },
+    "growth": {
+     "rounds": 2,
+     "answered": 0,
+     "correct": 0,
+     "lastAt": 1790845246200
+    },
+    "repair": {
+     "rounds": 0,
+     "answered": 0,
+     "correct": 0,
+     "lastAt": null
+    }
+   },
+   "bestRun": 0,
+   "lastAt": 1790845246200,
+   "days": {
+    "2026-10-01": {
+     "answered": 0,
+     "correct": 0,
+     "rounds": 2,
+     "rating": null
+    }
+   }
+  },
+  "nodes": {
+   "d4": {
+    "rating": 0,
+    "rated": 0,
+    "extRating": 0,
+    "extRated": 0,
+    "answered": 0,
+    "correct": 0,
+    "byMode": {
+     "run": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "survival": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "drill": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "growth": {
+      "rounds": 1,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": 1790845230500
+     },
+     "repair": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     }
+    },
+    "bestRun": 0,
+    "lastAt": 1790845230500,
+    "days": {
+     "2026-10-01": {
+      "answered": 0,
+      "correct": 0,
+      "rounds": 1,
+      "rating": null
+     }
+    }
+   },
+   "d4 d5": {
+    "rating": 0,
+    "rated": 0,
+    "extRating": 0,
+    "extRated": 0,
+    "answered": 0,
+    "correct": 0,
+    "byMode": {
+     "run": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "survival": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "drill": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "growth": {
+      "rounds": 1,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": 1790845230500
+     },
+     "repair": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     }
+    },
+    "bestRun": 0,
+    "lastAt": 1790845230500,
+    "days": {
+     "2026-10-01": {
+      "answered": 0,
+      "correct": 0,
+      "rounds": 1,
+      "rating": null
+     }
+    }
+   },
+   "d4 d5 c4": {
+    "rating": 0,
+    "rated": 0,
+    "extRating": 0,
+    "extRated": 0,
+    "answered": 0,
+    "correct": 0,
+    "byMode": {
+     "run": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "survival": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "drill": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "growth": {
+      "rounds": 1,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": 1790845230500
+     },
+     "repair": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     }
+    },
+    "bestRun": 0,
+    "lastAt": 1790845230500,
+    "days": {
+     "2026-10-01": {
+      "answered": 0,
+      "correct": 0,
+      "rounds": 1,
+      "rating": null
+     }
+    }
+   },
+   "d4 d5 c4 e6": {
+    "rating": 0,
+    "rated": 0,
+    "extRating": 0,
+    "extRated": 0,
+    "answered": 0,
+    "correct": 0,
+    "byMode": {
+     "run": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "survival": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "drill": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "growth": {
+      "rounds": 1,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": 1790845230500
+     },
+     "repair": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     }
+    },
+    "bestRun": 0,
+    "lastAt": 1790845230500,
+    "days": {
+     "2026-10-01": {
+      "answered": 0,
+      "correct": 0,
+      "rounds": 1,
+      "rating": null
+     }
+    }
+   },
+   "d4 d5 c4 e6 Nc3": {
+    "rating": 0,
+    "rated": 0,
+    "extRating": 0,
+    "extRated": 0,
+    "answered": 0,
+    "correct": 0,
+    "byMode": {
+     "run": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "survival": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "drill": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "growth": {
+      "rounds": 1,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": 1790845230500
+     },
+     "repair": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     }
+    },
+    "bestRun": 0,
+    "lastAt": 1790845230500,
+    "days": {
+     "2026-10-01": {
+      "answered": 0,
+      "correct": 0,
+      "rounds": 1,
+      "rating": null
+     }
+    }
+   },
+   "d4 d5 c4 e6 Nc3 Nf6": {
+    "rating": 0,
+    "rated": 0,
+    "extRating": 0,
+    "extRated": 0,
+    "answered": 0,
+    "correct": 0,
+    "byMode": {
+     "run": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "survival": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "drill": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "growth": {
+      "rounds": 1,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": 1790845230500
+     },
+     "repair": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     }
+    },
+    "bestRun": 0,
+    "lastAt": 1790845230500,
+    "days": {
+     "2026-10-01": {
+      "answered": 0,
+      "correct": 0,
+      "rounds": 1,
+      "rating": null
+     }
+    }
+   },
+   "Nf3": {
+    "rating": 0,
+    "rated": 0,
+    "extRating": 0,
+    "extRated": 0,
+    "answered": 0,
+    "correct": 0,
+    "byMode": {
+     "run": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "survival": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "drill": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "growth": {
+      "rounds": 1,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": 1790845246200
+     },
+     "repair": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     }
+    },
+    "bestRun": 0,
+    "lastAt": 1790845246200,
+    "days": {
+     "2026-10-01": {
+      "answered": 0,
+      "correct": 0,
+      "rounds": 1,
+      "rating": null
+     }
+    }
+   },
+   "Nf3 d5 g3": {
+    "rating": 0,
+    "rated": 0,
+    "extRating": 0,
+    "extRated": 0,
+    "answered": 0,
+    "correct": 0,
+    "byMode": {
+     "run": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "survival": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "drill": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "growth": {
+      "rounds": 1,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": 1790845246200
+     },
+     "repair": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     }
+    },
+    "bestRun": 0,
+    "lastAt": 1790845246200,
+    "days": {
+     "2026-10-01": {
+      "answered": 0,
+      "correct": 0,
+      "rounds": 1,
+      "rating": null
+     }
+    }
+   },
+   "Nf3 Nf6 g3 g6": {
+    "rating": 0,
+    "rated": 0,
+    "extRating": 0,
+    "extRated": 0,
+    "answered": 0,
+    "correct": 0,
+    "byMode": {
+     "run": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "survival": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "drill": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     },
+     "growth": {
+      "rounds": 1,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": 1790845246200
+     },
+     "repair": {
+      "rounds": 0,
+      "answered": 0,
+      "correct": 0,
+      "lastAt": null
+     }
+    },
+    "bestRun": 0,
+    "lastAt": 1790845246200,
+    "days": {
+     "2026-10-01": {
+      "answered": 0,
+      "correct": 0,
+      "rounds": 1,
+      "rating": null
+     }
+    }
+   }
+  },
+  "rounds": [
+   {
+    "mode": "growth",
+    "openingId": "d4 d5 c4 e6 Nc3 Nf6",
+    "color": "b",
+    "answered": 0,
+    "correct": 0,
+    "perfect": false,
+    "at": 1790845230500
+   },
+   {
+    "mode": "growth",
+    "openingId": "Nf3 Nf6 g3 g6",
+    "color": "b",
+    "answered": 0,
+    "correct": 0,
+    "perfect": false,
+    "at": 1790845246200
+   }
+  ],
+  "seen": {},
+  "lineRounds": 0,
+  "starts": []
+ },
+ "survival": {
+  "global": {
+   "best": 0,
+   "recent": [],
+   "history": [],
+   "runs": 0,
+   "ended": 0,
+   "bestPoints": 0
+  },
+  "openings": {}
+ },
+ "mistakes": [],
+ "events": [
+  {
+   "kind": "add",
+   "repertoireId": "rep_mupazvxo_r",
+   "color": "w",
+   "line": "e4 e5 Nf3 Nc6 Bc4",
+   "added": 5,
+   "source": "picker",
+   "via": "onboarding",
+   "at": 1790845205100
+  },
+  {
+   "kind": "add",
+   "repertoireId": "rep_mupazvxo_x",
+   "color": "b",
+   "line": "e4 e5",
+   "added": 2,
+   "source": "picker",
+   "via": "onboarding",
+   "at": 1790845205100
+  },
+  {
+   "kind": "add",
+   "repertoireId": "rep_mupazvxo_x",
+   "color": "b",
+   "line": "d4 d5 c4 e6",
+   "added": 4,
+   "source": "picker",
+   "via": "onboarding",
+   "at": 1790845205100
+  },
+  {
+   "kind": "growth-start",
+   "via": "growth",
+   "rows": [
+    "Queen's Gambit Declined (4 replies)",
+    "Italian Game (4 replies)",
+    "King's Pawn Game (2 replies)",
+    "Queen's Pawn Game (2 replies)"
+   ],
+   "picked": "Queen's Gambit Declined",
+   "start": "Start button",
+   "at": 1790845207800
+  },
+  {
+   "kind": "growth-offer",
+   "via": "growth",
+   "color": "b",
+   "line": "d4 d5 c4 e6 Nc3",
+   "offered": [
+    "Nf6",
+    "c6",
+    "c5",
+    "Be7"
+   ],
+   "from": "book",
+   "at": 1790845207800
+  },
+  {
+   "kind": "add",
+   "repertoireId": "rep_mupazvxo_x",
+   "color": "b",
+   "line": "d4 d5 c4 e6 Nc3 Nf6",
+   "added": 2,
+   "source": "growth",
+   "via": "growth",
+   "at": 1790845214500
+  },
+  {
+   "kind": "growth-pick",
+   "via": "growth",
+   "color": "b",
+   "line": "d4 d5 c4 e6 Nc3",
+   "picked": "Nf6",
+   "offered": [
+    "Nf6",
+    "c6",
+    "c5",
+    "Be7"
+   ],
+   "at": 1790845214500
+  },
+  {
+   "kind": "growth-offer",
+   "via": "growth",
+   "color": "b",
+   "line": "d4 d5 c4 e6 Nc3 Nf6 cxd5",
+   "offered": [
+    "exd5",
+    "Nxd5",
+    "Bb4"
+   ],
+   "from": "book",
+   "at": 1790845215020
+  },
+  {
+   "kind": "add",
+   "repertoireId": "rep_mupazvxo_x",
+   "color": "b",
+   "line": "d4 d5 c4 e6 Nc3 Nf6 cxd5 Nxd5",
+   "added": 2,
+   "source": "growth",
+   "via": "growth",
+   "at": 1790845218500
+  },
+  {
+   "kind": "growth-pick",
+   "via": "growth",
+   "color": "b",
+   "line": "d4 d5 c4 e6 Nc3 Nf6 cxd5",
+   "picked": "Nxd5",
+   "offered": [
+    "exd5",
+    "Nxd5",
+    "Bb4"
+   ],
+   "at": 1790845218500
+  },
+  {
+   "kind": "growth-offer",
+   "via": "growth",
+   "color": "b",
+   "line": "d4 d5 c4 e6 Nc3 Nf6 cxd5 Nxd5 e4",
+   "offered": [
+    "Nxc3",
+    "Nf6"
+   ],
+   "from": "book",
+   "at": 1790845219020
+  },
+  {
+   "kind": "add",
+   "repertoireId": "rep_mupazvxo_x",
+   "color": "b",
+   "line": "d4 d5 c4 e6 Nc3 Nf6 cxd5 Nxd5 e4 Nxc3",
+   "added": 2,
+   "source": "growth",
+   "via": "growth",
+   "at": 1790845222500
+  },
+  {
+   "kind": "growth-pick",
+   "via": "growth",
+   "color": "b",
+   "line": "d4 d5 c4 e6 Nc3 Nf6 cxd5 Nxd5 e4",
+   "picked": "Nxc3",
+   "offered": [
+    "Nxc3",
+    "Nf6"
+   ],
+   "at": 1790845222500
+  },
+  {
+   "kind": "growth-offer",
+   "via": "growth",
+   "color": "b",
+   "line": "d4 d5 c4 e6 Nc3 Nf6 cxd5 Nxd5 e4 Nxc3 bxc3",
+   "offered": [
+    "c5",
+    "Be7",
+    "g6",
+    "b6"
+   ],
+   "from": "book",
+   "at": 1790845223020
+  },
+  {
+   "kind": "remove",
+   "repertoireId": "rep_mupazvxo_x",
+   "color": "b",
+   "line": "d4 d5 c4 e6 Nc3 Nf6 cxd5 Nxd5 e4",
+   "removed": [
+    "d4 d5 c4 e6 Nc3 Nf6 cxd5 Nxd5 e4 Nxc3"
+   ],
+   "count": 2,
+   "via": "growth",
+   "at": 1790845225000
+  },
+  {
+   "kind": "growth-undo",
+   "via": "growth",
+   "color": "b",
+   "line": "d4 d5 c4 e6 Nc3 Nf6 cxd5 Nxd5 e4 Nxc3",
+   "all": false,
+   "at": 1790845225000
+  },
+  {
+   "kind": "growth-offer",
+   "via": "growth",
+   "color": "b",
+   "line": "d4 d5 c4 e6 Nc3 Nf6 cxd5 Nxd5 e4",
+   "offered": [
+    "Nxc3",
+    "Nf6"
+   ],
+   "from": "book",
+   "at": 1790845225000
+  },
+  {
+   "kind": "add",
+   "repertoireId": "rep_mupazvxo_x",
+   "color": "b",
+   "line": "d4 d5 c4 e6 Nc3 Nf6 cxd5 Nxd5 e4 Nf6",
+   "added": 2,
+   "source": "growth",
+   "via": "growth",
+   "at": 1790845228000
+  },
+  {
+   "kind": "growth-pick",
+   "via": "growth",
+   "color": "b",
+   "line": "d4 d5 c4 e6 Nc3 Nf6 cxd5 Nxd5 e4",
+   "picked": "Nf6",
+   "offered": [
+    "Nxc3",
+    "Nf6"
+   ],
+   "at": 1790845228000
+  },
+  {
+   "kind": "growth-start",
+   "via": "growth",
+   "rows": [
+    "Zukertort Opening"
+   ],
+   "picked": "Zukertort Opening",
+   "start": "new run",
+   "at": 1790845230500
+  },
+  {
+   "kind": "growth-offer",
+   "via": "growth",
+   "color": "b",
+   "line": "Nf3",
+   "offered": [
+    "Nf6",
+    "d5",
+    "c5",
+    "g6"
+   ],
+   "from": "book",
+   "at": 1790845230500
+  },
+  {
+   "kind": "add",
+   "repertoireId": "rep_mupazvxo_x",
+   "color": "b",
+   "line": "Nf3 Nf6",
+   "added": 2,
+   "source": "growth",
+   "via": "growth",
+   "at": 1790845235700
+  },
+  {
+   "kind": "growth-pick",
+   "via": "growth",
+   "color": "b",
+   "line": "Nf3",
+   "picked": "Nf6",
+   "offered": [
+    "Nf6",
+    "d5",
+    "c5",
+    "g6"
+   ],
+   "at": 1790845235700
+  },
+  {
+   "kind": "growth-offer",
+   "via": "growth",
+   "color": "b",
+   "line": "Nf3 Nf6 g3",
+   "offered": [
+    "g6",
+    "d5",
+    "b6",
+    "e6"
+   ],
+   "from": "book",
+   "at": 1790845236220
+  },
+  {
+   "kind": "add",
+   "repertoireId": "rep_mupazvxo_x",
+   "color": "b",
+   "line": "Nf3 Nf6 g3 g6",
+   "added": 2,
+   "source": "growth",
+   "via": "growth",
+   "at": 1790845239700
+  },
+  {
+   "kind": "growth-pick",
+   "via": "growth",
+   "color": "b",
+   "line": "Nf3 Nf6 g3",
+   "picked": "g6",
+   "offered": [
+    "g6",
+    "d5",
+    "b6",
+    "e6"
+   ],
+   "at": 1790845239700
+  },
+  {
+   "kind": "growth-offer",
+   "via": "growth",
+   "color": "b",
+   "line": "Nf3 Nf6 g3 g6 Bg2",
+   "offered": [
+    "Bg7",
+    "c5",
+    "d6",
+    "d5"
+   ],
+   "from": "book",
+   "at": 1790845240220
+  },
+  {
+   "kind": "add",
+   "repertoireId": "rep_mupazvxo_x",
+   "color": "b",
+   "line": "Nf3 Nf6 g3 g6 Bg2 c5",
+   "added": 2,
+   "source": "growth",
+   "via": "growth",
+   "at": 1790845243700
+  },
+  {
+   "kind": "growth-pick",
+   "via": "growth",
+   "color": "b",
+   "line": "Nf3 Nf6 g3 g6 Bg2",
+   "picked": "c5",
+   "offered": [
+    "Bg7",
+    "c5",
+    "d6",
+    "d5"
+   ],
+   "at": 1790845243700
+  },
+  {
+   "kind": "growth-start",
+   "via": "growth",
+   "rows": [
+    "King's Pawn Game"
+   ],
+   "picked": "King's Pawn Game",
+   "start": "new run",
+   "at": 1790845246200
+  },
+  {
+   "kind": "growth-offer",
+   "via": "growth",
+   "color": "b",
+   "line": "e4 e5 Nf3",
+   "offered": [
+    "Nc6",
+    "Nf6",
+    "d6",
+    "d5"
+   ],
+   "from": "book",
+   "at": 1790845246200
+  },
+  {
+   "kind": "add",
+   "repertoireId": "rep_mupazvxo_x",
+   "color": "b",
+   "line": "e4 e5 Nf3 Nc6",
+   "added": 2,
+   "source": "growth",
+   "via": "growth",
+   "at": 1790845251900
+  },
+  {
+   "kind": "growth-pick",
+   "via": "growth",
+   "color": "b",
+   "line": "e4 e5 Nf3",
+   "picked": "Nc6",
+   "offered": [
+    "Nc6",
+    "Nf6",
+    "d6",
+    "d5"
+   ],
+   "at": 1790845251900
+  },
+  {
+   "kind": "growth-offer",
+   "via": "growth",
+   "color": "b",
+   "line": "e4 e5 Nf3 Nc6 Bb5",
+   "offered": [
+    "Nf6",
+    "a6",
+    "Nge7",
+    "g6"
+   ],
+   "from": "book",
+   "at": 1790845252420
+  }
+ ],
+ "settings": {
+  "showCoordinates": true,
+  "engineEnabled": true,
+  "boardTheme": "slate",
+  "hapticFeedback": true,
+  "autoplay": true,
+  "lichessUsername": "",
+  "chesscomUsername": "",
+  "cloudSync": true,
+  "selection": {
+   "color": "random",
+   "opening": "*favorites"
+  },
+  "favoriteOpenings": [
+   "e4 e5 Nf3 Nc6 Bc4",
+   "e4 e5",
+   "d4 d5 c4 e6"
+  ],
+  "pickerSort": "popular",
+  "onboarded": true,
+  "survival": {
+   "steer": "lines",
+   "clock": "off",
+   "moveScores": true,
+   "boardGlow": true,
+   "moments": true,
+   "missions": true,
+   "combo": true,
+   "undefendedFlash": false
+  },
+  "drill": {
+   "form": "positions",
+   "draw": "due",
+   "newPerSession": 8,
+   "followLine": true,
+   "weakFirst": false,
+   "explain": true,
+   "batchSimilar": true,
+   "clock": "off"
+  },
+  "play": {
+   "level": "club",
+   "save": true,
+   "warnOffBook": true,
+   "showEval": false,
+   "takeBacks": true
+  },
+  "growth": {
+   "minShare": 1,
+   "maxPly": 18,
+   "nudgePriority": "transposition",
+   "nudgePawns": false,
+   "pastBook": false
+  },
+  "autopilot": {
+   "moveScores": true,
+   "boardGlow": true
+  }
+ }
+}

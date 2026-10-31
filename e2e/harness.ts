@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { Chess } from 'chess.js';
+import { search } from '../src/engine/basic/search';
 
 /** Where every recorded session starts its clock. */
 const EPOCH = new Date('2026-10-01T09:00:00Z');
@@ -50,7 +51,7 @@ export class Session {
   }
 
   async tap(text: string, exact = false) {
-    await this.page.getByText(text, { exact }).first().click({ force: true, timeout: 10_000 });
+    await this.page.getByText(text, { exact }).filter({ visible: true }).first().click({ force: true, timeout: 10_000 });
     await this.wait(1200);
   }
 
@@ -58,9 +59,24 @@ export class Session {
     return (await this.page.getByText(text, { exact: true }).count()) > 0;
   }
 
+  /** The prompt under the board, or nothing when the screen has none. Never waits. */
+  async prompt(): Promise<string> {
+    const prompt = this.page.locator('.prompt').first();
+    if (!(await this.page.locator('.prompt').count())) return '';
+    return (await prompt.innerText({ timeout: 2000 }).catch(() => '')).replace(/\s+/g, ' ').trim();
+  }
+
+  /** The labels of the buttons on screen now. */
+  async buttons(): Promise<string[]> {
+    return this.page.locator('button:visible').evaluateAll((els) =>
+      els.map((e) => (e.textContent ?? '').replace(/\s+/g, ' ').trim()).filter((t) => t && t.length < 40),
+    );
+  }
+
   /** The position on the main board, and which way up it is. */
   async board(): Promise<{ fen: string; orientation: 'w' | 'b' }> {
     const wrap = this.page.locator('.board-wrap').first();
+    if (!(await this.page.locator('.board-wrap').count())) return { fen: '', orientation: 'w' };
     const fen = (await wrap.getAttribute('data-fen')) ?? '';
     const orientation = ((await wrap.getAttribute('data-orientation')) ?? 'w') as 'w' | 'b';
     return { fen, orientation };
@@ -87,7 +103,7 @@ export class Session {
   /** What the screen says now, one line in the trace. */
   async note(label: string) {
     const text = (await this.page.locator('body').innerText()).replace(/\s+/g, ' ').trim();
-    const fen = (await this.page.locator('.board-wrap').count()) ? (await this.board()).fen : '';
+    const { fen } = await this.board();
     this.trace.push(`${label} | ${fen} | ${text}`);
   }
 
@@ -148,3 +164,102 @@ export function legal(fen: string): string[] {
 }
 
 export const positionKey = (fen: string) => fen.split(' ').slice(0, 4).join(' ');
+
+/** The test's own choice past prep: best or worst at a shallow depth, so it never varies. */
+export function pick(fen: string, worst = false): string {
+  const result = search(fen, { maxDepth: 2, timeMs: Number.MAX_SAFE_INTEGER, now: () => 0, multiPv: 40 });
+  const lines = result?.lines ?? [];
+  if (!lines.length) return legal(fen)[0];
+  return (worst ? lines[lines.length - 1] : lines[0]).pv[0];
+}
+
+/** A move that is legal here and not one of the prepared ones, for a miss. */
+export function offPrep(fen: string, prep: string[]): string {
+  const prepUci = prep.map((san) => uciOf(fen, san));
+  const best = pick(fen);
+  return legal(fen).find((m) => !prepUci.includes(m) && m === best) ?? legal(fen).find((m) => !prepUci.includes(m))!;
+}
+
+/** How a run is played: which prepared move to miss, how far past prep to go, and whether to blunder. */
+export interface Plan {
+  missAt?: number;
+  pastPrep: number;
+  blunder?: boolean;
+  /** Think this long before the nth move of the run (1-based), instead of the usual rhythm. */
+  slowAt?: { move: number; ms: number };
+}
+
+/** The labels of a run screen: the button that ends a run early, and the one that starts the next. */
+export interface RunLabels {
+  end: string;
+  done: string;
+}
+
+const THINK = [1200, 4000, 9000];
+
+/** Play one Survival-style run (Autopilot or Survival) to its end screen, noting every move. */
+export async function playRun(s: Session, plan: Plan, run: number, labels: RunLabels) {
+  let mine = 0;
+  let past = 0;
+  let prepSeen = 0;
+  for (let guard = 0; guard < 400; guard += 1) {
+    if (await s.has(labels.done)) {
+      await s.note(`run ${run} end`);
+      return;
+    }
+    if (await s.has('Continue')) {
+      await s.note(`run ${run} blunder shown`);
+      await s.tap('Continue', true);
+      await s.wait(2500);
+      continue;
+    }
+    const prompt = await s.prompt();
+    const { fen, orientation } = await s.board();
+    const ours = fen.split(' ')[1] === orientation;
+    if (!prompt.includes('Your move') || !ours) {
+      await s.wait(300);
+      continue;
+    }
+    const state = (await s.saved()) as Parameters<typeof prepared>[0];
+    const prep = prepared(state, orientation).get(positionKey(fen)) ?? [];
+    let uci: string;
+    if (prep.length) {
+      prepSeen += 1;
+      uci = plan.missAt === prepSeen ? offPrep(fen, prep) : uciOf(fen, prep[0]);
+    } else {
+      if (past >= plan.pastPrep) {
+        await s.note(`run ${run} ending it`);
+        await s.tap(labels.end, true);
+        await s.wait(3000);
+        continue;
+      }
+      past += 1;
+      uci = pick(fen, plan.blunder && past === plan.pastPrep);
+    }
+    const think = plan.slowAt?.move === mine + 1 ? plan.slowAt.ms : THINK[mine % THINK.length];
+    await s.wait(think);
+    mine += 1;
+    await s.move(uci);
+    await s.wait(400);
+    await s.note(`run ${run} move ${mine} ${uci}, just played`);
+    await s.wait(2100);
+    await s.note(`run ${run} move ${mine} ${uci}`);
+  }
+  throw new Error(`run ${run} never ended`);
+}
+
+/** A new player takes the suggested Classical set and goes to Home. */
+export async function classicalAtHome(s: Session) {
+  await s.tap('Suggest a set');
+  await s.tap('Classical', true);
+  await s.tap('Use Classical');
+  await s.tap('Go to Home');
+  await s.note('home');
+}
+
+/** Open a mode from Home's grid. */
+export async function openMode(s: Session, name: string) {
+  await s.page.locator('.mode-tile', { hasText: name }).first().click({ force: true });
+  await s.wait(1500);
+  await s.note(`${name} setup`);
+}
