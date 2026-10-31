@@ -221,6 +221,42 @@
       ]
     },
     {
+      "fn": "scoring.recordStart",
+      "about": "Where runs started, kept with the score: the last few.",
+      "cases": [
+      {"args":[[],"position"],"out":["position"]},
+      {"args":[[],"inside"],"out":["inside"]},
+      {"args":[[],"cold"],"out":["cold"]},
+      {"args":[["position"],"position"],"out":["position","position"]},
+      {"args":[["position"],"inside"],"out":["position","inside"]},
+      {"args":[["position"],"cold"],"out":["position","cold"]},
+      {"args":[["cold"],"position"],"out":["cold","position"]},
+      {"args":[["cold"],"inside"],"out":["cold","inside"]},
+      {"args":[["cold"],"cold"],"out":["cold","cold"]},
+      {"args":[["inside"],"position"],"out":["inside","position"]},
+      {"args":[["inside"],"inside"],"out":["inside","inside"]},
+      {"args":[["inside"],"cold"],"out":["inside","cold"]},
+      {"args":[["position","position"],"position"],"out":["position","position","position"]},
+      {"args":[["position","position"],"inside"],"out":["position","position","inside"]},
+      {"args":[["position","position"],"cold"],"out":["position","position","cold"]},
+      {"args":[["cold","position"],"position"],"out":["cold","position","position"]},
+      {"args":[["cold","position"],"inside"],"out":["cold","position","inside"]},
+      {"args":[["cold","position"],"cold"],"out":["cold","position","cold"]},
+      {"args":[["position","inside"],"position"],"out":["position","inside","position"]},
+      {"args":[["position","inside"],"inside"],"out":["position","inside","inside"]},
+      {"args":[["position","inside"],"cold"],"out":["position","inside","cold"]},
+      {"args":[["inside","position"],"position"],"out":["inside","position","position"]},
+      {"args":[["inside","position"],"inside"],"out":["inside","position","inside"]},
+      {"args":[["inside","position"],"cold"],"out":["inside","position","cold"]},
+      {"args":[["position","position","cold"],"position"],"out":["position","position","cold","position"]},
+      {"args":[["position","position","cold"],"inside"],"out":["position","position","cold","inside"]},
+      {"args":[["position","position","cold"],"cold"],"out":["position","position","cold","cold"]},
+      {"args":[["cold","inside","position"],"position"],"out":["cold","inside","position","position"]},
+      {"args":[["cold","inside","position"],"inside"],"out":["cold","inside","position","inside"]},
+      {"args":[["cold","inside","position"],"cold"],"out":["cold","inside","position","cold"]}
+      ]
+    },
+    {
       "fn": "srs.runNeed",
       "about": "How much a position wants asking, in runs: 1 and over is due.",
       "cases": [

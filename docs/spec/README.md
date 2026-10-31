@@ -44,4 +44,5 @@ constant in `spec/constants.json` is what counts.
 
 | File | Prefix | What it covers |
 | --- | --- | --- |
+| [autopilot.md](autopilot.md) | AUTO | What Autopilot recommends, where each run starts, and Any favorite |
 | [run.md](run.md) | RUN | A Survival run, which is also every Autopilot round: prep, the book phase, misses, pops, blunders and the end |
