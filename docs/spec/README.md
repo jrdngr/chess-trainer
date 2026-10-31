@@ -47,6 +47,7 @@ constant in `spec/constants.json` is what counts.
 | [autopilot.md](autopilot.md) | AUTO | What Autopilot recommends, where each run starts, and Any favorite |
 | [drill.md](drill.md) | DRILL | Drill positions and Drill lines |
 | [end.md](end.md) | END | What a run logs when it ends, the end screen, and Grow this line |
+| [familiar.md](familiar.md) | FAM | Which move is closest to your lines: Growth's arrows, Tidy, the off-prep hint |
 | [growth.md](growth.md) | GROW | Growth's rows and a sitting: holes, batches, Undo, the edge of the book |
 | [home.md](home.md) | HOME | The Home tab: the Autopilot button, the Survival chart, Favorites, Milestones |
 | [learning.md](learning.md) | LEARN | Cards and their schedule, and ratings per opening |

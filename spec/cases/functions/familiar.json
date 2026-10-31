@@ -1,0 +1,234 @@
+{
+  "area": "familiar",
+  "functions": [
+    {
+      "fn": "nudge.sameMove",
+      "about": "A habit ignores check, capture and annotation marks: Nxe5 is Ne5.",
+      "cases": [
+      {"args":["Nxe5"],"out":"Ne5"},
+      {"args":["Bb4+"],"out":"Bb4"},
+      {"args":["Qxf7#"],"out":"Qf7"},
+      {"args":["e4!?"],"out":"e4"},
+      {"args":["O-O"],"out":"O-O"},
+      {"args":["exd5"],"out":"ed5"}
+      ]
+    },
+    {
+      "fn": "nudge.reachable",
+      "about": "Whether a game standing at one position could still arrive at another: pawns only forward (sideways only by capturing), captured pieces stay gone, lost castling stays lost.",
+      "cases": [
+      {"args":["","e4 e5 Nf3 Nc6"],"out":true},
+      {"args":["e4","d4 d5"],"out":false},
+      {"args":["d4 d5 c4 e6 cxd5","d4 d5 c4 e6 Nc3"],"out":false},
+      {"args":["e4 e5 Ke2","e4 e5 Nf3 Nc6"],"out":false},
+      {"args":["e4 e5 Nf3 Nc6","e4 e5"],"out":true},
+      {"args":["d4 d5 c4 c6","d4 d5 c4 e6"],"out":false},
+      {"args":["d4 d5 c4 e6","d4 d5 c4 e6 Nc3 c6"],"out":true},
+      {"args":["e4 d5 exd5","e4 e5"],"out":false}
+      ]
+    },
+    {
+      "fn": "kin.kinOf",
+      "about": "The families whose habits count together with a family's own: the family and every kin set it is in.",
+      "cases": [
+      {"args":["English Opening"],"out":["Benko Gambit","Benko Gambit Accepted","Benko Gambit Declined","Benoni Defence","Catalan Opening","East Indian Defence","English Defence","English Opening","Grünfeld Defence","Hungarian Opening","Indian Defence","King's Indian Attack","King's Indian Attack, with Bf5","King's Indian Attack, with e6","King's Indian Defence","Modern Defence","Neo-Grünfeld Defence","Nimzo-Larsen Attack","Old Indian Defence","Owen Defence","Pirc Defence","Polish Defence","Polish Opening","Pterodactyl Defence","Queen's Indian Defence","Réti Opening","Sicilian Defence","Zukertort Opening"]},
+      {"args":["Catalan Opening"],"out":["Bogo-Indian Defence","Catalan Opening","English Opening","Hungarian Opening","Indian Defence","King's Indian Attack","King's Indian Attack, with Bf5","King's Indian Attack, with e6","Neo-Grünfeld Defence","Nimzo-Indian Defence","Pseudo Queen's Indian Defence","Queen's Gambit","Queen's Gambit Accepted","Queen's Gambit Declined","Queen's Indian Accelerated","Queen's Indian Defence","Queen's Pawn Game","Réti Opening","Semi-Slav Defence","Semi-Slav Defence Accepted","Slav Defence","Tarrasch Defence","Zukertort Opening"]},
+      {"args":["Queen's Gambit Declined"],"out":["Bogo-Indian Defence","Catalan Opening","Indian Defence","Nimzo-Indian Defence","Pseudo Queen's Indian Defence","Queen's Gambit","Queen's Gambit Accepted","Queen's Gambit Declined","Queen's Indian Accelerated","Queen's Indian Defence","Queen's Pawn Game","Semi-Slav Defence","Semi-Slav Defence Accepted","Slav Defence","Tarrasch Defence"]},
+      {"args":["Sicilian Defence"],"out":["Benko Gambit","Benko Gambit Accepted","Benoni Defence","English Opening","Sicilian Defence"]},
+      {"args":["Not a family"],"out":["Not a family"]}
+      ]
+    },
+    {
+      "fn": "kin.KIN_SETS",
+      "about": "Every kin set: openings whose habits carry across.",
+      "cases": [
+      {"args":[0],"out":{"name":"Queen's Gambit","families":["Queen's Gambit","Queen's Gambit Declined","Queen's Gambit Accepted","Slav Defence","Semi-Slav Defence","Semi-Slav Defence Accepted","Tarrasch Defence","Catalan Opening","Indian Defence","Queen's Pawn Game"],"short":["Queen's Gambit","Queen's Gambit Declined","Queen's Gambit Accepted","Slav","Semi-Slav","Semi-Slav Defence Accepted","Tarrasch","Catalan","Indian","Queen's Pawn"]}},
+      {"args":[1],"out":{"name":"...e6 Indians","families":["Nimzo-Indian Defence","Queen's Indian Defence","Queen's Indian Accelerated","Pseudo Queen's Indian Defence","Bogo-Indian Defence","Queen's Gambit Declined","Catalan Opening","Indian Defence"],"short":["Nimzo-Indian","Queen's Indian","Queen's Indian Accelerated","Pseudo Queen's Indian","Bogo-Indian","Queen's Gambit Declined","Catalan","Indian"]}},
+      {"args":[2],"out":{"name":"...c6 and ...d5","families":["Slav Defence","Semi-Slav Defence","Semi-Slav Defence Accepted","Slav Indian","Caro-Kann Defence"],"short":["Slav","Semi-Slav","Semi-Slav Defence Accepted","Slav Indian","Caro-Kann"]}},
+      {"args":[3],"out":{"name":"Kingside fianchetto for White","families":["Catalan Opening","English Opening","Réti Opening","King's Indian Attack","King's Indian Attack, with e6","King's Indian Attack, with Bf5","Zukertort Opening","Hungarian Opening","Neo-Grünfeld Defence","Indian Defence"],"short":["Catalan","English","Réti","King's Indian Attack","King's Indian Attack, with e6","King's Indian Attack, with Bf5","Zukertort","Hungarian","Neo-Grünfeld","Indian"]}},
+      {"args":[4],"out":{"name":"Kingside fianchetto for Black","families":["King's Indian Defence","Grünfeld Defence","Neo-Grünfeld Defence","Modern Defence","Pirc Defence","Pterodactyl Defence","East Indian Defence","Old Indian Defence","Benoni Defence","Benko Gambit","Benko Gambit Accepted","Benko Gambit Declined","English Opening","Indian Defence"],"short":["King's Indian","Grünfeld","Neo-Grünfeld","Modern","Pirc","Pterodactyl","East Indian","Old Indian","Benoni","Benko Gambit","Benko Gambit Accepted","Benko Gambit Declined","English","Indian"]}},
+      {"args":[5],"out":{"name":"...c5","families":["Sicilian Defence","English Opening","Benoni Defence","Benko Gambit","Benko Gambit Accepted"],"short":["Sicilian","English","Benoni","Benko Gambit","Benko Gambit Accepted"]}},
+      {"args":[6],"out":{"name":"Queenside fianchetto","families":["Nimzo-Larsen Attack","Zukertort Opening","English Opening","Queen's Indian Defence","Owen Defence","English Defence","Polish Opening","Polish Defence"],"short":["Nimzo-Larsen Attack","Zukertort","English","Queen's Indian","Owen","English","Polish","Polish"]}},
+      {"args":[7],"out":{"name":"Stonewall and Dutch","families":["Dutch Defence","Bird Opening","Zukertort Opening"],"short":["Dutch","Bird","Zukertort"]}},
+      {"args":[8],"out":{"name":"d4 systems","families":["London System","Queen's Pawn Game","Indian Defence","Torre Attack","Trompowsky Attack","Richter-Veresov Attack","Rapport-Jobava System","Rapport-Jobava System, with e6","Zukertort Opening"],"short":["London System","Queen's Pawn","Indian","Torre Attack","Trompowsky Attack","Richter-Veresov Attack","Rapport-Jobava System","Rapport-Jobava System, with e6","Zukertort"]}},
+      {"args":[9],"out":{"name":"1.e4 e5","families":["Italian Game","Ruy Lopez","Scotch Game","Four Knights Game","Three Knights Opening","Petrov's Defence","Philidor Defence","Vienna Game","Bishop's Opening","King's Knight Opening","King's Pawn Game","Ponziani Opening","Center Game","King's Gambit","King's Gambit Accepted","King's Gambit Declined","Danish Gambit","Elephant Gambit","Latvian Gambit","Latvian Gambit Accepted"],"short":["Italian","Ruy Lopez","Scotch","Four Knights","Three Knights","Petrov's","Philidor","Vienna","Bishop's","King's Knight","King's Pawn","Ponziani","Center","King's Gambit","King's Gambit Accepted","King's Gambit Declined","Danish Gambit","Elephant Gambit","Latvian Gambit","Latvian Gambit Accepted"]}},
+      {"args":[10],"out":{"name":"French and Caro-Kann","families":["French Defence","Caro-Kann Defence"],"short":["French","Caro-Kann"]}},
+      {"args":[11],"out":{"name":"Pirc and Modern","families":["Pirc Defence","Modern Defence","Rat Defence","Lion Defence","Philidor Defence"],"short":["Pirc","Modern","Rat","Lion","Philidor"]}}
+      ]
+    },
+    {
+      "fn": "nudge.nudgeArrows",
+      "about": "Growth's familiarity colors at a position: green for the most familiar move (transposes, heads toward, a habit or setup, your usual pawns, in the priority's order), put on the board in its own arrow, the same piece's, or the third; red for a drawn move that closes off your lines or that you keep passing on. Each with its reason and pill. Your first move is left plain.",
+      "cases": [
+      {"args":["white","e4","transposition"],"out":["c5","e5","d6"]},
+      {"args":["white","e4","habit"],"out":["c5","e5","d6"]},
+      {"args":["white","e4","pawns"],"out":["c5","e5","d6"]},
+      {"args":["white","d4 Nf6 c4 g6","transposition"],"out":["Nc3","Nf3 away [Breaks a habit] You've chosen another move over Nf3 7 times in your Queen's Gambit Declined and English lines","g3 toward [Your habit] You play g3 in 3 English and Catalan lines"]},
+      {"args":["white","d4 Nf6 c4 g6","habit"],"out":["Nc3","Nf3 away [Breaks a habit] You've chosen another move over Nf3 7 times in your Queen's Gambit Declined and English lines","g3 toward [Your habit] You play g3 in 3 English and Catalan lines"]},
+      {"args":["white","d4 Nf6 c4 g6","pawns"],"out":["Nc3","Nf3 away [Breaks a habit] You've chosen another move over Nf3 7 times in your Queen's Gambit Declined and English lines","g3 toward [Your habit] You play g3 in 3 English and Catalan lines"]},
+      {"args":["white","d4 Nf6 c4 c5","transposition"],"out":["d5","Nf3","e3 away [Breaks a habit] You've chosen another move over e3 3 times in your English lines"]},
+      {"args":["white","d4 Nf6 c4 c5","habit"],"out":["d5","Nf3","e3 away [Breaks a habit] You've chosen another move over e3 3 times in your English lines"]},
+      {"args":["white","d4 Nf6 c4 c5","pawns"],"out":["d5","Nf3","e3 away [Breaks a habit] You've chosen another move over e3 3 times in your English lines"]},
+      {"args":["white","d4 Nf6 c4 e6 g3 c5","transposition"],"out":["d5","Nf3 away [Breaks a habit] You've chosen another move over Nf3 7 times in your Queen's Gambit Declined and English lines","Bg2 toward [Your habit] You play Bg2 in 4 Catalan and English lines"]},
+      {"args":["white","d4 Nf6 c4 e6 g3 c5","habit"],"out":["d5","Nf3 away [Breaks a habit] You've chosen another move over Nf3 7 times in your Queen's Gambit Declined and English lines","Bg2 toward [Your habit] You play Bg2 in 4 Catalan and English lines"]},
+      {"args":["white","d4 Nf6 c4 e6 g3 c5","pawns"],"out":["d5","Nf3 away [Breaks a habit] You've chosen another move over Nf3 7 times in your Queen's Gambit Declined and English lines","Bg2 toward [Your habit] You play Bg2 in 4 Catalan and English lines"]},
+      {"args":["white","d4 d5 c4 dxc4","transposition"],"out":["Nf3","e4 away [Closes off] e4 closes off 2 of your Queen's Gambit Declined and Slav lines","Nc3"]},
+      {"args":["white","d4 d5 c4 dxc4","habit"],"out":["Nf3 away [Breaks a habit] You've chosen another move over Nf3 5 times in your Queen's Gambit Declined and Indian lines","e4","Nc3"]},
+      {"args":["white","d4 d5 c4 dxc4","pawns"],"out":["Nf3","e4 away [Closes off] e4 closes off 2 of your Queen's Gambit Declined and Slav lines","Nc3"]},
+      {"args":["white","c4 e6","transposition"],"out":["Nc3 away [Breaks a habit] You've chosen another move over Nc3 5 times in your Catalan and English lines","g3","d4 toward-far [Can transpose] d4 can transpose into your Queen's Gambit Declined line"]},
+      {"args":["white","c4 e6","habit"],"out":["Nc3 away [Breaks a habit] You've chosen another move over Nc3 5 times in your Catalan and English lines","g3 toward [Your habit] You play g3 in 3 English and Catalan lines","Nf3"]},
+      {"args":["white","c4 e6","pawns"],"out":["Nc3 away [Breaks a habit] You've chosen another move over Nc3 5 times in your Catalan and English lines","g3","d4 toward-far [Can transpose] d4 can transpose into your Queen's Gambit Declined line"]},
+      {"args":["white","c4 Nf6","transposition"],"out":["Nc3 away [Breaks a habit] You've chosen another move over Nc3 5 times in your Catalan and English lines","g3","d4 toward-far [Transposes] d4 transposes into your Normal Variation line"]},
+      {"args":["white","c4 Nf6","habit"],"out":["Nc3 away [Breaks a habit] You've chosen another move over Nc3 5 times in your Catalan and English lines","g3 toward [Your habit] You play g3 in 3 English and Catalan lines","Nf3"]},
+      {"args":["white","c4 Nf6","pawns"],"out":["Nc3 away [Breaks a habit] You've chosen another move over Nc3 5 times in your Catalan and English lines","g3","d4 toward-far [Transposes] d4 transposes into your Normal Variation line"]},
+      {"args":["white","Nf3 Nf6","transposition"],"out":["g3 toward [Your habit] You play g3 in 3 English and Catalan lines","c4","d4 away [Closes off] d4 closes off 2 of your English lines"]},
+      {"args":["white","Nf3 Nf6","habit"],"out":["g3 toward [Your habit] You play g3 in 3 English and Catalan lines","c4","d4 away [Breaks a habit] You've chosen another move over d4 2 times in your English lines"]},
+      {"args":["white","Nf3 Nf6","pawns"],"out":["g3 toward [Your habit] You play g3 in 3 English and Catalan lines","c4","d4 away [Closes off] d4 closes off 2 of your English lines"]},
+      {"args":["white","c4 g6","transposition"],"out":["Nc3","g3 toward [Your habit] You play g3 in 3 English and Catalan lines","d4 away [Closes off] d4 closes off one of your English lines"]},
+      {"args":["white","c4 g6","habit"],"out":["Nc3 away [Breaks a habit] You've chosen another move over Nc3 5 times in your Catalan and English lines","g3 toward [Your habit] You play g3 in 3 English and Catalan lines","d4"]},
+      {"args":["white","c4 g6","pawns"],"out":["Nc3","g3 toward [Your habit] You play g3 in 3 English and Catalan lines","d4 away [Closes off] d4 closes off one of your English lines"]},
+      {"args":["black","d4","transposition"],"out":["Nf6","d5","e6"]},
+      {"args":["black","d4","habit"],"out":["Nf6","d5","e6"]},
+      {"args":["black","d4","pawns"],"out":["Nf6","d5","e6"]},
+      {"args":["black","d4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Bg5","transposition"],"out":["c6 away [Breaks a habit] You've chosen another move over c6 4 times in your Queen's Gambit Declined lines","Be7 toward [Your habit] You play Be7 in 2 Queen's Gambit Declined lines","Nbd7"]},
+      {"args":["black","d4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Bg5","habit"],"out":["c6 away [Breaks a habit] You've chosen another move over c6 4 times in your Queen's Gambit Declined lines","Be7 toward [Your habit] You play Be7 in 2 Queen's Gambit Declined lines","Nbd7"]},
+      {"args":["black","d4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Bg5","pawns"],"out":["c6 away [Breaks a habit] You've chosen another move over c6 4 times in your Queen's Gambit Declined lines","Be7 toward [Your habit] You play Be7 in 2 Queen's Gambit Declined lines","Nbd7"]},
+      {"args":["black","d4 d5 Nf3","transposition"],"out":["Nf6","e6 toward [Can transpose] e6 can transpose into your Queen's Gambit Declined line","c6 away [Closes off] c6 closes off 2 of your Queen's Gambit Declined lines"]},
+      {"args":["black","d4 d5 Nf3","habit"],"out":["Nf6 toward [Your habit] You play Nf6 in 3 Queen's Gambit Declined lines","e6","c6 away [Breaks a habit] You've chosen another move over c6 5 times in your Queen's Gambit Declined lines"]},
+      {"args":["black","d4 d5 Nf3","pawns"],"out":["Nf6","e6 toward [Can transpose] e6 can transpose into your Queen's Gambit Declined line","c6 away [Closes off] c6 closes off 2 of your Queen's Gambit Declined lines"]},
+      {"args":["black","d4 d5 c4 e6 Nc3 Nf6 cxd5","transposition"],"out":["exd5 toward [Transposes] exd5 transposes into your Queen's Gambit Declined line","Nxd5","Bb4"]},
+      {"args":["black","d4 d5 c4 e6 Nc3 Nf6 cxd5","habit"],"out":["exd5 toward [Transposes] exd5 transposes into your Queen's Gambit Declined line","Nxd5","Bb4"]},
+      {"args":["black","d4 d5 c4 e6 Nc3 Nf6 cxd5","pawns"],"out":["exd5 toward [Transposes] exd5 transposes into your Queen's Gambit Declined line","Nxd5","Bb4"]},
+      {"args":["black","d4 Nf6 c4 e6 Nc3","transposition"],"out":["Bb4","d5 toward [Transposes] d5 transposes into your Normal Defence line","c5 away [Closes off] c5 closes off 2 of your Queen's Gambit Declined lines"]},
+      {"args":["black","d4 Nf6 c4 e6 Nc3","habit"],"out":["Bb4","d5 toward [Transposes] d5 transposes into your Normal Defence line","c5 away [Breaks a habit] You've chosen another move over c5 7 times in your Queen's Gambit Declined lines"]},
+      {"args":["black","d4 Nf6 c4 e6 Nc3","pawns"],"out":["Bb4","d5 toward [Transposes] d5 transposes into your Normal Defence line","c5 away [Closes off] c5 closes off 2 of your Queen's Gambit Declined lines"]},
+      {"args":["black","e4 e6 d3","transposition"],"out":["d5","c5 away [Closes off] c5 closes off one of your French lines","b6"]},
+      {"args":["black","e4 e6 d3","habit"],"out":["d5","c5 away [Closes off] c5 closes off one of your French lines","b6"]},
+      {"args":["black","e4 e6 d3","pawns"],"out":["d5 toward [Your pawns] d5 reaches your usual French pawns","c5 away [Closes off] c5 closes off one of your French lines","b6"]},
+      {"args":["black","e4 e6 d4 d5 exd5","transposition"],"out":["exd5","Qxd5","Nf6"]},
+      {"args":["black","e4 e6 d4 d5 exd5","habit"],"out":["exd5","Qxd5","Nf6"]},
+      {"args":["black","e4 e6 d4 d5 exd5","pawns"],"out":["exd5","Qxd5","Nf6"]},
+      {"args":["black","d4 d5 c4 e6 Nf3 Nf6 Bg5","transposition"],"out":["dxc4","Be7 toward [Your habit] You play Be7 in 2 Queen's Gambit Declined lines","h6 away [Closes off] h6 closes off 3 of your Queen's Gambit Declined lines"]},
+      {"args":["black","d4 d5 c4 e6 Nf3 Nf6 Bg5","habit"],"out":["dxc4","Be7 toward [Your habit] You play Be7 in 2 Queen's Gambit Declined lines","h6 away [Breaks a habit] You've chosen another move over h6 3 times in your Queen's Gambit Declined lines"]},
+      {"args":["black","d4 d5 c4 e6 Nf3 Nf6 Bg5","pawns"],"out":["dxc4","Be7 toward [Your habit] You play Be7 in 2 Queen's Gambit Declined lines","h6 away [Closes off] h6 closes off 3 of your Queen's Gambit Declined lines"]}
+      ]
+    },
+    {
+      "fn": "nudge.nudgeArrows (append)",
+      "about": "As Growth calls it: a familiar move not already drawn is added alongside the others, and a familiar move the book lacks is marked not in the book.",
+      "cases": [
+      {"args":["white","e4"],"out":["c5","e5","d6"]},
+      {"args":["white","d4 Nf6 c4 g6"],"out":["Nc3","Nf3 away [Breaks a habit] You've chosen another move over Nf3 7 times in your Queen's Gambit Declined and English lines","g3 toward [Your habit] You play g3 in 3 English and Catalan lines"]},
+      {"args":["white","d4 Nf6 c4 c5"],"out":["d5","Nf3","e3 away [Breaks a habit] You've chosen another move over e3 3 times in your English lines","g3 toward-far [Your habit] You play g3 in 2 English lines · not in the book"]},
+      {"args":["white","d4 Nf6 c4 e6 g3 c5"],"out":["d5","Nf3 away [Breaks a habit] You've chosen another move over Nf3 7 times in your Queen's Gambit Declined and English lines","Bg2 toward [Your habit] You play Bg2 in 4 Catalan and English lines"]},
+      {"args":["white","d4 d5 c4 dxc4"],"out":["Nf3","e4 away [Closes off] e4 closes off 2 of your Queen's Gambit Declined and Slav lines","Nc3"]},
+      {"args":["white","c4 e6"],"out":["Nc3 away [Breaks a habit] You've chosen another move over Nc3 5 times in your Catalan and English lines","g3","Nf3","d4 toward-far [Can transpose] d4 can transpose into your Queen's Gambit Declined line"]},
+      {"args":["white","c4 Nf6"],"out":["Nc3 away [Breaks a habit] You've chosen another move over Nc3 5 times in your Catalan and English lines","g3","Nf3","d4 toward-far [Transposes] d4 transposes into your Normal Variation line"]},
+      {"args":["white","Nf3 Nf6"],"out":["g3 toward [Your habit] You play g3 in 3 English and Catalan lines","c4","d4 away [Closes off] d4 closes off 2 of your English lines"]},
+      {"args":["white","c4 g6"],"out":["Nc3","g3 toward [Your habit] You play g3 in 3 English and Catalan lines","d4 away [Closes off] d4 closes off one of your English lines"]},
+      {"args":["black","d4"],"out":["Nf6","d5","e6"]},
+      {"args":["black","d4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Bg5"],"out":["c6 away [Breaks a habit] You've chosen another move over c6 4 times in your Queen's Gambit Declined lines","Be7 toward [Your habit] You play Be7 in 2 Queen's Gambit Declined lines","Nbd7"]},
+      {"args":["black","d4 d5 Nf3"],"out":["Nf6","e6 toward [Can transpose] e6 can transpose into your Queen's Gambit Declined line","c6 away [Closes off] c6 closes off 2 of your Queen's Gambit Declined lines"]},
+      {"args":["black","d4 d5 c4 e6 Nc3 Nf6 cxd5"],"out":["exd5 toward [Transposes] exd5 transposes into your Queen's Gambit Declined line","Nxd5","Bb4"]},
+      {"args":["black","d4 Nf6 c4 e6 Nc3"],"out":["Bb4","d5 toward [Transposes] d5 transposes into your Normal Defence line","c5 away [Closes off] c5 closes off 2 of your Queen's Gambit Declined lines"]},
+      {"args":["black","e4 e6 d3"],"out":["d5","c5 away [Closes off] c5 closes off one of your French lines","b6"]},
+      {"args":["black","e4 e6 d4 d5 exd5"],"out":["exd5","Qxd5","Nf6"]},
+      {"args":["black","d4 d5 c4 e6 Nf3 Nf6 Bg5"],"out":["dxc4","Be7 toward [Your habit] You play Be7 in 2 Queen's Gambit Declined lines","h6 away [Closes off] h6 closes off 3 of your Queen's Gambit Declined lines"]}
+      ]
+    },
+    {
+      "fn": "nudge.familiarOffBook",
+      "about": "Legal moves the book leaves out or ranks under the minimum share that are familiar anyway; habitsOnly looks at habits and setups only.",
+      "cases": [
+      {"args":["white","e4",false],"out":[]},
+      {"args":["white","e4",true],"out":[]},
+      {"args":["white","d4 Nf6 c4 g6",false],"out":[]},
+      {"args":["white","d4 Nf6 c4 g6",true],"out":[]},
+      {"args":["white","d4 Nf6 c4 c5",false],"out":["g3"]},
+      {"args":["white","d4 Nf6 c4 c5",true],"out":["g3"]},
+      {"args":["white","d4 Nf6 c4 e6 g3 c5",false],"out":[]},
+      {"args":["white","d4 Nf6 c4 e6 g3 c5",true],"out":[]},
+      {"args":["white","d4 d5 c4 dxc4",false],"out":[]},
+      {"args":["white","d4 d5 c4 dxc4",true],"out":[]},
+      {"args":["white","c4 e6",false],"out":[]},
+      {"args":["white","c4 e6",true],"out":[]},
+      {"args":["white","c4 Nf6",false],"out":[]},
+      {"args":["white","c4 Nf6",true],"out":[]},
+      {"args":["white","Nf3 Nf6",false],"out":[]},
+      {"args":["white","Nf3 Nf6",true],"out":[]},
+      {"args":["white","c4 g6",false],"out":[]},
+      {"args":["white","c4 g6",true],"out":[]},
+      {"args":["black","d4",false],"out":[]},
+      {"args":["black","d4",true],"out":[]},
+      {"args":["black","d4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Bg5",false],"out":[]},
+      {"args":["black","d4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Bg5",true],"out":[]},
+      {"args":["black","d4 d5 Nf3",false],"out":[]},
+      {"args":["black","d4 d5 Nf3",true],"out":[]},
+      {"args":["black","d4 d5 c4 e6 Nc3 Nf6 cxd5",false],"out":["Be7"]},
+      {"args":["black","d4 d5 c4 e6 Nc3 Nf6 cxd5",true],"out":["Be7"]},
+      {"args":["black","d4 Nf6 c4 e6 Nc3",false],"out":["Be7"]},
+      {"args":["black","d4 Nf6 c4 e6 Nc3",true],"out":["Be7"]},
+      {"args":["black","e4 e6 d3",false],"out":[]},
+      {"args":["black","e4 e6 d3",true],"out":[]},
+      {"args":["black","e4 e6 d4 d5 exd5",false],"out":[]},
+      {"args":["black","e4 e6 d4 d5 exd5",true],"out":[]},
+      {"args":["black","d4 d5 c4 e6 Nf3 Nf6 Bg5",false],"out":[]},
+      {"args":["black","d4 d5 c4 e6 Nf3 Nf6 Bg5",true],"out":[]}
+      ]
+    },
+    {
+      "fn": "answerArrows.roleArrows",
+      "about": "Growth's answer arrows: blue for the move strong players choose most, then the engine's best two by eval, purple and lighter purple; when they agree the engine's next takes its place. Before the engine weighs anything only blue is drawn; past the book all three are the engine's, in the order given until weighed.",
+      "cases": [
+      {"args":["e4 c5",null,false],"out":["Nf3 strong"]},
+      {"args":["e4 c5",{"Nf3":-10,"Nc3":-30,"c3":-5,"d4":-60},false],"out":["Nf3 strong","c3 engine","Nc3 engine-next"]},
+      {"args":["e4 c5",{"Nf3":-40,"Nc3":-30,"c3":-5},false],"out":["Nf3 strong","c3 engine","Nc3 engine-next"]},
+      {"args":["d4 d5 c4 e6",{"Nc3":0,"Nf3":-3,"cxd5":-20,"g3":-8},false],"out":["Nc3 strong","Nf3 engine","g3 engine-next"]},
+      {"args":["e4 e5",null,true],"out":["Nf3 engine","Nc3 engine-next","Bc4 engine-next"]},
+      {"args":["e4 e5",{"Nf3":-10,"Bc4":-15,"Nc3":-12},true],"out":["Nf3 engine","Nc3 engine-next","Bc4 engine-next"]}
+      ]
+    },
+    {
+      "fn": "tidy.scan",
+      "about": "A Tidy scan of a whole Playbook: every position you chose at (a transposition once), each compared with the book's moves and your habits; finds with the most to remove first, then the earliest. Each find: your move, the switch, why it is familiar, why yours works against your lines, and what switching removes.",
+      "cases": [
+      {"args":["white"],"out":{"positions":22,"finds":[{"path":"c4 e5","mine":"Nc3","suggestion":"g3","kind":"habit","tone":"toward","offBook":false,"reason":"You play g3 in 2 Catalan and English lines, Nc3 in none","against":null,"removes":7},{"path":"c4 c5","mine":"Nf3","suggestion":"g3","kind":"habit","tone":"toward","offBook":false,"reason":"You play g3 in 2 Catalan and English lines, Nf3 in none","against":null,"removes":5},{"path":"d4 d5 c4 e6","mine":"Nc3","suggestion":"g3","kind":"transposes","tone":"toward-far","offBook":false,"reason":"g3 can transpose into your Catalan Opening line","against":null,"removes":5},{"path":"d4 Nf6 c4 e6 g3 Bb4+","mine":"Bd2","suggestion":"Nc3","kind":"habit","tone":"toward-far","offBook":false,"reason":"You play Nc3 in 3 Queen's Gambit Declined and Slav lines, Bd2 in none","against":null,"removes":3},{"path":"d4 d5 c4 e6 Nc3 Nf6 cxd5 exd5","mine":"Bg5","suggestion":"Nf3","kind":"habit","tone":"toward","offBook":false,"reason":"You play Nf3 in 2 Catalan and Slav lines, Bg5 in none","against":null,"removes":1}]}},
+      {"args":["black"],"out":{"positions":13,"finds":[{"path":"d4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Nf3","mine":"c6","suggestion":"Be7","kind":"habit","tone":"toward-far","offBook":false,"reason":"You play Be7 in 2 Queen's Gambit Declined lines, c6 in none","against":null,"removes":1}]}}
+      ]
+    },
+    {
+      "fn": "tidy.offPrepHint",
+      "about": "The end screen's hint on a miss: the move played over the board, if it is closer to the rest of your lines than your prepared move. A habit here needs no test against the times you passed it up.",
+      "cases": [
+      {"args":["black","d4 d5 c4 e6 Nc3 Nf6 Bg5","c6","Be7"],"out":null},
+      {"args":["black","d4 d5 c4 e6 Nc3","Be7","Nf6"],"out":null},
+      {"args":["black","d4 d5 c4 e6 Nf3 Nf6 g3","c6","Be7"],"out":null},
+      {"args":["black","e4 e6 d4 d5 Nc3","Bb4","Nf6"],"out":null},
+      {"args":["white","d4 d5 c4 e6","Nf3","Nc3"],"out":null},
+      {"args":["white","c4 c5 Nf3 Nc6","d4","g3"],"out":null},
+      {"args":["white","c4 e5","g3","Nc3"],"out":{"path":"c4 e5","mine":"Nc3","suggestion":"g3","kind":"habit","tone":"toward","offBook":false,"reason":"You play g3 in 2 Catalan and English lines, Nc3 in none","against":null,"removes":7}},
+      {"args":["white","e4","e4","d4"],"out":null}
+      ]
+    },
+    {
+      "fn": "tidy.switchMove",
+      "about": "Switching your move at a position: the new move becomes yours and preferred there, and the old move goes with everything under it. Null when the move is not legal.",
+      "cases": [
+      {"args":["white","d4 d5 c4 e6 Nc3","Nf3"],"out":["d4 Nf6 c4 e6 g3 d5 Bg2 Be7 Nf3","d4 Nf6 c4 e6 g3 Bb4+ Bd2 Be7 Bg2","d4 d5 c4 c6 Nf3 Nf6 Nc3 dxc4 a4","c4 e5 Nc3 Nf6 g3 d5 cxd5 Nxd5 Bg2","c4 c5 Nf3 Nc6 g3 g6 Bg2","d4 d5 c4 e6 Nf3"]},
+      {"args":["white","c4 e5 Nc3","g3"],"out":["d4 Nf6 c4 e6 g3 d5 Bg2 Be7 Nf3","d4 Nf6 c4 e6 g3 Bb4+ Bd2 Be7 Bg2","d4 d5 c4 e6 Nc3 Nf6 cxd5 exd5 Bg5","d4 d5 c4 c6 Nf3 Nf6 Nc3 dxc4 a4","c4 c5 Nf3 Nc6 g3 g6 Bg2","c4 e5 g3"]},
+      {"args":["black","d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7","c6"],"out":["d4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Nf3 c6","d4 d5 c4 e6 Nc3 Nf6 Bg5 c6","d4 d5 c4 e6 Nf3 Nf6 g3 Be7","e4 e6 d4 d5 Nc3 Nf6","e4 e6 d4 d5 e5 c5"]},
+      {"args":["black","e4 e6","Ke7"],"out":null}
+      ]
+    },
+    {
+      "fn": "tidy.moveLabel",
+      "about": "A move with its number, from the plies before it: \"6.g3\", \"6...Nf6\".",
+      "cases": [
+      {"args":[0,"g3"],"out":"1.g3"},
+      {"args":[1,"g3"],"out":"1...g3"},
+      {"args":[10,"g3"],"out":"6.g3"},
+      {"args":[11,"g3"],"out":"6...g3"}
+      ]
+    }
+  ]
+}
