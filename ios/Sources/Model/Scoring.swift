@@ -155,6 +155,22 @@ public struct RoundRecord: Equatable, Sendable, Codable {
   public struct Prep: Equatable, Sendable, Codable {
     public var asked: Int
     public var found: Int
+    public init(asked: Int, found: Int) {
+      self.asked = asked
+      self.found = found
+    }
+  }
+
+  public init(mode: ActivityMode, openingId: String, color: Color, answered: Int, correct: Int, perfect: Bool, at: Double, prep: Prep? = nil, line: [String]? = nil) {
+    self.mode = mode
+    self.openingId = openingId
+    self.color = color
+    self.answered = answered
+    self.correct = correct
+    self.perfect = perfect
+    self.at = at
+    self.prep = prep
+    self.line = line
   }
 }
 

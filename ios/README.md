@@ -13,10 +13,10 @@ One Swift package, `ChessPlaybook`:
 | `Shared` | The few JavaScript behaviors ported code depends on: `Math.round`, `toFixed`, `localeCompare`, a stable sort, an insertion-ordered map | — |
 | `ChessCore` | Board, legal moves, SAN, FEN: chess.js's rules and order, ported from it | `src/chess/core.ts`, chess.js |
 | `Book` | The 2200+ book, decoded from `book.json`, and reading it: names, families | `book.ts`, `reference.ts` |
-| `Model` | The opening tree and regions, the Playbook tree and its openings, extensions, the prepared floor, SRS cards, ratings, the selection, Any favorite and the picker catalogue | `src/model/*` |
+| `Model` | The opening tree and regions, the Playbook tree and its openings, extensions, the prepared floor, SRS cards, ratings, the selection, Any favorite and the picker catalogue; and for Autopilot: freshness, the line draw, recommend, where a run starts, Survival, missions, lenses and structures | `src/model/*` |
 
-Phase 2 (native foundation) is these three layers. The app target, the run
-controller and the screens come in phase 3.
+Phase 2 (native foundation) is these three layers. Phase 3 adds Autopilot:
+the model above, then the run controller and the app.
 
 ## Parity tests
 
@@ -33,6 +33,8 @@ does not answer the same way, or does not port, is a failure.
 Ported so far:
 
 - `chess.json`: all (seeded random games, SAN parsing)
+- `draw.json`, `recommend.json`, `survival.json`, `missions.json`, `lenses.json`: all
+- `autopilot.json`: all
 - `naming.json`: all
 - `srs.json`: all
 - `ratings.json`: all
@@ -40,8 +42,11 @@ Ported so far:
 - `picker.json`: `picker.*`
 - `growth.json`: `selection.*`, `anyFavorite.*`
 - `home.json`: `scoring.*`
-- `autopilot.json`: `scoring.recordStart`, `srs.runNeed`
 - `spec/constants.json`: every constant of the ported modules
+
+`PickerData.swift` and `StructureTemplates.swift` are written out from
+`spec/constants.json` (and, for the structures' tests, `structures.ts`) by a
+one-off script; the constants tests keep them equal to the prototype.
 
 `ChessCoreTests` adds perft counts on the standard positions.
 

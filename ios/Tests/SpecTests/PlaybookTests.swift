@@ -70,12 +70,9 @@ private func listed(_ o: DerivedOpening) -> JSON {
     "mistakes.addMistake": { a in
       var log: [Mistake] = []
       var at = 1_790_845_200_000.0
-      let saved = Env.now
-      defer { Env.now = saved }
       let all = a[0].array.map { entry -> [String] in
         at += 1000
-        Env.now = { at }
-        log = addMistake(log, mistake(entry[0].string, entry[1].string))
+        log = Env.at(at) { addMistake(log, mistake(entry[0].string, entry[1].string)) }
         return log.map { "\($0.key):\($0.played)" }
       }
       return a.count > 1 ? all.last!.count.json : all.json
