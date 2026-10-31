@@ -15,6 +15,7 @@ import {
   beginDrill,
   continueAfterWrong,
   current,
+  drillRound,
   expectedSan,
   followUpFor,
   refill,
@@ -93,6 +94,8 @@ function positions(script: PositionScript): Scenario {
     stats: s.stats,
     last: s.last && { item: s.last.item.cardId, grade: s.last.grade, played: s.last.played, before: s.last.before },
     cards: Object.keys(cards).length,
+    /** The sitting as one round, were it ended here. */
+    round: drillRound(s, ''),
   });
   const effectData = (effect: DrillEffect) => {
     if (effect.kind === 'grade' || effect.kind === 'regrade') return { ...effect, item: effect.item.cardId };

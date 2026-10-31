@@ -45,6 +45,7 @@ constant in `spec/constants.json` is what counts.
 | File | Prefix | What it covers |
 | --- | --- | --- |
 | [autopilot.md](autopilot.md) | AUTO | What Autopilot recommends, where each run starts, and Any favorite |
+| [drill.md](drill.md) | DRILL | Drill positions and Drill lines |
 | [growth.md](growth.md) | GROW | Growth's rows and a sitting: holes, batches, Undo, the edge of the book |
 | [learning.md](learning.md) | LEARN | Cards and their schedule, and ratings per opening |
 | [run.md](run.md) | RUN | A Survival run, which is also every Autopilot round: prep, the book phase, misses, pops, blunders and the end |
