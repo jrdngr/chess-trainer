@@ -5,9 +5,9 @@ import Foundation
 import Model
 import Observation
 
-/// One Autopilot run on screen: `SurvivalScreen.tsx`'s job. It feeds the
-/// controller what happens (your moves, the judge's verdicts, the
-/// opponent's replies), carries out the effects in order, and keeps what
+/// One Survival run on screen, Autopilot's or one you set up: `SurvivalScreen.tsx`'s
+/// job. It feeds the controller what happens (your moves, the judge's verdicts,
+/// the opponent's replies), carries out the effects in order, and keeps what
 /// the view draws.
 @MainActor @Observable
 final class RunModel {
@@ -20,8 +20,11 @@ final class RunModel {
 
   /// How long a miss, a score popup and a note stay over the board; the opponent's beat.
   static let missMs = 2.0, scoreMs = 1.4, noteMs = 1.6, replyMs = 0.42
+  /// How long the Undefended flash holds your move before it lands.
+  static let flashMs = 1.3
 
-  let round: AutoRound
+  /// Autopilot's round; nil for a run set up on Survival's own screen.
+  let round: AutoRound?
   let selection: Selection
   let tree: OpeningTree
   let index: ReferenceIndex
@@ -50,38 +53,65 @@ final class RunModel {
   /// How many of the way in's moves the replay has played.
   private(set) var introPly = 0
   private var spanHeld: PrepSpan?
+  /// A move held back by the Undefended flash: what it leaves loose.
+  private(set) var flash: (move: LegalMove, loose: [String])?
+  /// The Survival record as it stood before this run ended, to tell a new best.
+  private(set) var before: SurvivalRecord?
 
   private var picker: () -> Double
-  private var turnStarted = Date()
+  /// When your turn began: the clock counts from here.
+  private(set) var turnStarted = Date()
   private var tasks: [Task<Void, Never>] = []
+  /// What a clean end of prep grows with.
+  private let growth: GrowthPrefs
 
-  init?(round: AutoRound, selection: Selection, store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
+  /// Autopilot's round, on Autopilot's own options.
+  convenience init?(round: AutoRound, selection: Selection, store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
     let seed = (Env.random() * 2_147_483_648).rounded(.down)
     guard let begun = startSurvival(survivalOptions(round, store.state, tree, selection, seed: seed)) else { return nil }
+    self.init(
+      begun: begun, round: round, prefs: autoSurvival(store.state.settings.autopilot), growth: AUTO_GROWTH,
+      selection: selection, store: store, tree: tree, index: index, engine: engine)
+    store.update { $0.noteStart(startKind(start: round.pick.start, at: round.at)) }
+  }
+
+  /// A run set up on Survival's screen, on those options: `start` with no plan.
+  convenience init?(survival options: StartOptions, prefs: SurvivalPrefs, growth: GrowthPrefs, selection: Selection,
+                    store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
+    guard let begun = startSurvival(options) else { return nil }
+    self.init(begun: begun, round: nil, prefs: prefs, growth: growth, selection: selection, store: store, tree: tree, index: index, engine: engine)
+  }
+
+  private init(begun: SurvivalStart, round: AutoRound?, prefs: SurvivalPrefs, growth: GrowthPrefs, selection: Selection,
+               store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
     self.round = round
     self.selection = selection
     self.store = store
     self.tree = tree
     self.index = index
     self.engine = engine
+    self.growth = growth
     picker = mulberry32(seed: (Env.random() * 2_147_483_648).rounded(.down))
     session = beginSession(begun)
-    let prefs = autoSurvival(store.state.settings.autopilot)
     let losses = lossesIn(store.state.repertoireList)
     ctx = RunContext(
-      index: index, prefs: prefs, autopilot: true,
+      index: index, prefs: prefs, autopilot: round != nil,
       kindOf: { line, san in playedKinds(index, line + [san], line.count % 2 == 0 ? .w : .b, losses).last ?? .book },
       lossOf: { losses[$0] })
-    store.update { $0.noteStart(startKind(start: round.pick.start, at: round.at)) }
   }
 
   var prefs: SurvivalPrefs { ctx.prefs }
+  /// With moments, missions or the combo on, a run is scored in points as well as moves.
+  var scoredInPoints: Bool { prefs.moments || prefs.missions || prefs.combo }
   /// Announcing or replaying: the board is locked, and the opponent waits.
   var held: Bool { intro != .done }
   /// The moves the intro plays out: the way in, with Autoplay on.
   var introPath: [String] { store.state.settings.autoplay ? Array(run.played.prefix(run.opened)) : [] }
-  /// The opening the round is announced as.
-  var introOpening: String { run.enteredIn ?? round.pick.opening.id }
+  /// The opening the round is announced as. A run from move one is named by the opening it is steered toward.
+  var introOpening: String {
+    run.enteredIn ?? round?.pick.opening.id
+      ?? deepestNodeWithin(tree, nodeById(tree, run.openingId), Array(run.played.prefix(run.opened))).id
+  }
 
   /// How far into your prep the run stands, out of how far it goes along this line. Held once off prep.
   var span: PrepSpan? {
@@ -99,7 +129,7 @@ final class RunModel {
   var prepNow: [String] { prepMoves(session) }
   var label: PrepLabel? { prepLabel(session) }
   /// The opening the run is named for.
-  var openingId: String { run.enteredIn ?? round.pick.opening.id }
+  var openingId: String { run.enteredIn ?? round?.pick.opening.id ?? run.openingId }
   var momentHere: Bool {
     prefs.moments && live && myTurn && pending == nil && prepNow.isEmpty && baseline?.fen == run.fen && baseline?.isMomentFor(run.color) == true
   }
@@ -108,6 +138,7 @@ final class RunModel {
   /// The board as shown: your move stands while it is judged, a blunder stays until Continue.
   var shownFen: String {
     if held { return walkSan(introPath).fens[min(introPly, introPath.count)] }
+    if let flash { return flash.move.after }
     if let pending { return pending.after }
     if case .blunder(let played, _, _, _) = session.ending, phase == .blunder { return applySan(run.fen, played)?.after ?? run.fen }
     return run.fen
@@ -224,8 +255,30 @@ final class RunModel {
     }
   }
 
-  /// You played a move on the board.
+  /// You played a move on the board. With the Undefended flash on, a move
+  /// that leaves a piece loose is held a moment first, to take back.
   func play(_ move: LegalMove) {
+    guard live, !held, myTurn, pending == nil, flash == nil else { return }
+    if prefs.undefendedFlash {
+      let loose = newlyLoose(run.fen, move.after, run.color, from: move.from, to: move.to)
+      if !loose.isEmpty {
+        Haptics.buzz(12, on: store.state.settings.hapticFeedback)
+        flash = (move, loose)
+        later(Self.flashMs) { model in
+          guard let held = model.flash, held.move.uci == move.uci else { return }
+          model.flash = nil
+          model.commit(move)
+        }
+        return
+      }
+    }
+    commit(move)
+  }
+
+  /// The flash's Take back: the held move never lands.
+  func takeBack() { flash = nil }
+
+  private func commit(_ move: LegalMove) {
     guard live, !held, myTurn, pending == nil else { return }
     miss = nil
     let seconds = Date().timeIntervalSince(turnStarted)
@@ -255,6 +308,7 @@ final class RunModel {
   func endRound() {
     stop()
     pending = nil
+    flash = nil
     apply(endRun(session))
   }
 
@@ -301,20 +355,23 @@ final class RunModel {
   private func finished(_ f: Finish) {
     stop()
     finish = f
+    before = store.state.survival
     let line = f.ended.run.played
+    let points = scoredInPoints ? f.ended.extras.points : f.ended.moves
     store.update { state in
       if case .ended = f.how {
         state.endSurvivalEarly(tree, line)
       } else {
-        state.endSurvival(tree, line, f.ended.moves, f.ended.extras.points)
+        state.endSurvival(tree, line, f.ended.moves, points)
       }
       ratings.track(state.settleRun(tree, f.answers, line))
       state.endRound(tree, runRound(f, tree, at: Env.now()))
     }
-    offer = offerFor(store.state, tree, index, f, region: f.ended.run.openingId)
+    offer = offerFor(store.state, tree, index, f, region: f.ended.run.openingId, growth: growth)
     pop = nil
     note = nil
     miss = nil
+    flash = nil
     thinking = false
     if case .blunder = f.how {
       Haptics.buzz(22, on: store.state.settings.hapticFeedback)

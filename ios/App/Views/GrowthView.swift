@@ -6,6 +6,8 @@ import SwiftUI
 /// to choose from, and Next round once the batch is done.
 struct GrowthView: View {
   @Bindable var model: GrowthModel
+  /// Autopilot's "Next round", or Survival's "Practice these lines".
+  var nextLabel = "Next round"
   let onNext: () -> Void
 
   var body: some View {
@@ -55,7 +57,7 @@ struct GrowthView: View {
         }
         Spacer()
         if model.done {
-          Button(action: onNext) { Label("Next round", systemImage: "chevron.right") }
+          Button(action: onNext) { Label(nextLabel, systemImage: "chevron.right") }
             .buttonStyle(.borderedProminent).tint(Theme.accent)
         } else {
           Button("Done") { model.finish() }.foregroundStyle(Theme.text2)

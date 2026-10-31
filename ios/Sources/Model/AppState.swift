@@ -22,11 +22,14 @@ public struct Settings: Equatable, Sendable, Codable {
   public var chesscomUsername = ""
   public var growth = DEFAULT_GROWTH
   public var play = DEFAULT_PLAY
+  /// Survival's own setup, as its setup screen leaves it.
+  public var survival = DEFAULT_SURVIVAL
   public init() {}
 
   enum CodingKeys: String, CodingKey {
     case selection, favoriteOpenings, autopilot, hapticFeedback, showCoordinates, onboarded, autoplay
     case engineEnabled, boardTheme, cloudSync, lichessUsername, chesscomUsername, growth, play
+    case survival
   }
 
   /// A save missing a setting takes its default.
@@ -47,6 +50,7 @@ public struct Settings: Equatable, Sendable, Codable {
     chesscomUsername = try c.decodeIfPresent(String.self, forKey: .chesscomUsername) ?? chesscomUsername
     growth = try c.decodeIfPresent(GrowthPrefs.self, forKey: .growth) ?? growth
     play = try c.decodeIfPresent(PlayPrefs.self, forKey: .play) ?? play
+    survival = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .survival) ?? survival
   }
 }
 

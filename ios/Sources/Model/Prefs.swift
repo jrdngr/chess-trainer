@@ -58,6 +58,23 @@ public let DEFAULT_SURVIVAL = SurvivalPrefs(
   steer: .lines, clock: .off, moveScores: true, boardGlow: true, moments: true, missions: true, combo: true,
   undefendedFlash: false)
 
+extension SurvivalPrefs {
+  /// A saved setup missing an option takes its default: `{ ...DEFAULT_SURVIVAL, ...known.survival }`.
+  public init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    let d = DEFAULT_SURVIVAL
+    self.init(
+      steer: try c.decodeIfPresent(SurvivalSteer.self, forKey: .steer) ?? d.steer,
+      clock: try c.decodeIfPresent(ClockMode.self, forKey: .clock) ?? d.clock,
+      moveScores: try c.decodeIfPresent(Bool.self, forKey: .moveScores) ?? d.moveScores,
+      boardGlow: try c.decodeIfPresent(Bool.self, forKey: .boardGlow) ?? d.boardGlow,
+      moments: try c.decodeIfPresent(Bool.self, forKey: .moments) ?? d.moments,
+      missions: try c.decodeIfPresent(Bool.self, forKey: .missions) ?? d.missions,
+      combo: try c.decodeIfPresent(Bool.self, forKey: .combo) ?? d.combo,
+      undefendedFlash: try c.decodeIfPresent(Bool.self, forKey: .undefendedFlash) ?? d.undefendedFlash)
+  }
+}
+
 public enum DrillForm: String, Sendable, Codable { case positions, lines }
 public enum DrillDraw: String, Sendable, Codable { case due, new, cram }
 

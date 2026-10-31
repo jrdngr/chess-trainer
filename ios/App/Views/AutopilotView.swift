@@ -9,6 +9,9 @@ import SwiftUI
 struct AutopilotView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
+  /// One opening to hold the session to, in place of the saved selection: what
+  /// Growth sends you to practice. Nothing is saved.
+  var scope: Selection? = nil
   let onExit: () -> Void
 
   @Environment(AppStore.self) private var store
@@ -46,7 +49,7 @@ struct AutopilotView: View {
 
   /// The next round, picked when it starts: what the last one changed is in the store by then.
   private func begin() {
-    let selection = store.takeRoundSelection()
+    let selection = scope ?? store.takeRoundSelection()
     guard let round = nextRound(store.state, tree, selection, history),
       let run = RunModel(round: round, selection: selection, store: store, tree: tree, index: index, engine: Self.engine)
     else {
@@ -63,7 +66,7 @@ struct AutopilotView: View {
 
   private func next() {
     growth = nil
-    if let model { history = afterRound(history, model.round, model.selection) }
+    if let model, let round = model.round { history = afterRound(history, round, model.selection) }
     model?.stop()
     model = nil
     begin()

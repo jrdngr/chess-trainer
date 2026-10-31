@@ -4,21 +4,32 @@ import Model
 import SwiftUI
 
 /// A run in play: the board, what floats over it, and the prompt under it.
+/// A Survival run you set up (no Autopilot round) adds its own pieces: the
+/// app bar with the clock, the plan and Cash out cards, and the Undefended flash.
 struct RunView: View {
   @Bindable var model: RunModel
   let onExit: () -> Void
+  @Environment(AppStore.self) var store
   @State private var lens: LensKind? = Self.pinnedLens
   @State private var breaks: (fen: String, found: PawnBreaks.Breaks)?
+  @State var cashOut = CashOut()
+
+  /// Survival opened from Home, not Autopilot's round.
+  var survival: Bool { model.round == nil }
 
   var body: some View {
     ZStack {
       board
       if model.intro == .announce {
-        Theme.background.ignoresSafeArea()
-        IntroPlate(
-          name: openingName(model.tree, model.introOpening), sans: nodeById(model.tree, model.introOpening).sans,
-          color: model.run.color, span: model.span)
-        .padding()
+        if survival {
+          PlayIntroCover(trail: introTrail, mode: "Survival")
+        } else {
+          Theme.background.ignoresSafeArea()
+          IntroPlate(
+            name: openingName(model.tree, model.introOpening), sans: nodeById(model.tree, model.introOpening).sans,
+            color: model.run.color, span: model.span)
+          .padding()
+        }
       }
     }
     .contentShape(Rectangle())
@@ -27,15 +38,20 @@ struct RunView: View {
 
   private var board: some View {
     VStack(spacing: 0) {
-      header
+      if survival { SurvivalRunBar(model: model, onExit: onExit) } else { header }
       BoardView(
         fen: model.shownFen, orientation: model.run.color,
-        interactive: model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil,
+        interactive: model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil && model.flash == nil,
         lastMove: model.held ? lastMoveOf(Array(model.introPath.prefix(model.introPly))) : lastMove, highlights: highlights, arrows: arrows, glow: model.glow, pop: model.pop,
         marks: marks,
         onMove: model.play
       )
       .overlay(alignment: .top) { flash }
+      .overlay {
+        if let held = model.flash {
+          FlashRings(loose: held.loose, orientation: model.run.color, onTakeBack: model.takeBack)
+        }
+      }
       .padding(.horizontal).padding(.top, 24)
       .onTapGesture { model.intro == .replay ? model.skipIntro() : model.clearMiss() }
       if !model.held { LensBar(held: $lens, enabled: lensEnabled).padding(.horizontal) }
@@ -47,8 +63,12 @@ struct RunView: View {
         Text("From \(sansToMoveText(Array(model.run.played.prefix(model.run.opened))))")
           .font(.footnote).foregroundStyle(Theme.text2).padding(.top, 8)
       }
+      if lens == nil && survival && !model.held && model.blunder == nil { cards.padding(.horizontal) }
       if lens == nil { prompt.padding() }
       Spacer()
+    }
+    .task(id: cashOutOn ? model.run.fen : nil) {
+      if cashOutOn { await cashOut.look(model.run.fen, model.run.color) }
     }
     .task(id: lens == .pawns ? model.shownFen : nil) {
       guard lens == .pawns else { return }
@@ -143,7 +163,7 @@ struct RunView: View {
         if model.prefs.combo && multiplier > 1 {
           Text("Combo \u{00d7}\(multiplier)").font(.subheadline.bold()).foregroundStyle(Theme.good)
         }
-        Button("End round") { model.endRound() }
+        Button(survival ? "End run" : "End round") { model.endRound() }
           .font(.subheadline.bold()).foregroundStyle(Theme.text2)
           .padding(.horizontal, 16).padding(.vertical, 9)
           .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface)).padding(.top, 8)
@@ -185,6 +205,7 @@ struct RunView: View {
 
   private var lastMove: (from: String, to: String)? {
     if model.blunder != nil { return nil }
+    if let held = model.flash { return (held.move.from, held.move.to) }
     if let pending = model.pending { return (pending.from, pending.to) }
     return lastMoveOf(model.run.played)
   }
@@ -200,7 +221,7 @@ struct RunView: View {
     }
     if let miss = model.miss { return [BoardArrow(from: miss.from, to: miss.to, color: Theme.good)] }
     if let best = model.missedBest { return [BoardArrow(from: best.from, to: best.to, color: Theme.good)] }
-    return []
+    return cashOutOn ? cashOut.arrows(cashOut.trade(at: model.run.fen)) : []
   }
 }
 

@@ -12,13 +12,17 @@ enum Mode: Equatable {
 struct RootView: View {
   @Environment(AppStore.self) private var store
   @State private var tab: Tab = Self.debugTab ?? .home
-  @State private var mode: Mode?
+  @State private var mode: Mode? = Self.debugMode
   /// Play on the board, opened from the Playbook tab.
   @State private var building = false
   /// Import games, opened from the Playbook tab.
   @State private var importing = ImportDebug.open
   /// A line the Playbook sent to the Analysis tab, and the side it was sent from.
   @State private var explore: (sans: [String], side: ChessCore.Color)?
+  /// A line a mode sent to Analysis, opened over it: the mode stays underneath, and Back returns to it.
+  @State private var analyzing: (sans: [String], side: ChessCore.Color)?
+  /// The one opening Growth's way back holds Autopilot to, in place of the saved selection.
+  @State private var scope: Selection?
 
   var body: some View {
     ZStack {
@@ -46,10 +50,13 @@ struct RootView: View {
     } else if building {
       BoardBuildView(onBack: { building = false }, onDone: { _ in building = false })
     } else if let mode {
-      switch mode {
-      case .autopilot: AutopilotView(tree: tree, index: index) { leave() }
-      case .play: PlayView(tree: tree, index: index) { leave() }
-      default: ComingSoon(mode: mode) { leave() }
+      ZStack {
+        modeView(mode, tree, index)
+          .opacity(analyzing == nil ? 1 : 0).allowsHitTesting(analyzing == nil)
+        if let analyzing {
+          AnalysisTab(tree: tree, index: index, line: analyzing.sans, orientation: analyzing.side) { self.analyzing = nil }
+            .id(analyzing.sans.joined(separator: " "))
+        }
       }
     } else {
       VStack(spacing: 0) {
@@ -73,9 +80,28 @@ struct RootView: View {
     }
   }
 
+  @ViewBuilder private func modeView(_ mode: Mode, _ tree: OpeningTree, _ index: ReferenceIndex) -> some View {
+    switch mode {
+    case .autopilot:
+      AutopilotView(tree: tree, index: index, scope: scope) { leave() }
+        .id(scope.map { "\($0.color.rawValue):\($0.opening)" } ?? "autopilot")
+    case .play: PlayView(tree: tree, index: index) { leave() }
+    case .survival:
+      SurvivalView(
+        tree: tree, index: index, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) },
+        onPractice: { selection in
+          scope = selection
+          self.mode = .autopilot
+        })
+    default: ComingSoon(mode: mode) { leave() }
+    }
+  }
+
   /// Leaving a mode, from anywhere inside it, lands on Home.
   private func leave() {
     mode = nil
+    scope = nil
+    analyzing = nil
     tab = .home
   }
 

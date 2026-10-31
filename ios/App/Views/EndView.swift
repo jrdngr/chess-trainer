@@ -6,7 +6,8 @@ import SwiftUI
 
 /// The end of a run: `End.tsx`. Final position and End of prep to switch
 /// between, the board, Grow this line, Analyze and Next round, then what
-/// the run came to and the rating it moved.
+/// the run came to and the rating it moved. A Survival run you set up
+/// (no Autopilot round) adds its own parts: `SurvivalEndParts`.
 struct EndView: View {
   let model: RunModel
   let finish: Finish
@@ -14,23 +15,35 @@ struct EndView: View {
   let onGrow: (GrowOffer) -> Void
   let onAnalyze: () -> Void
   let onExit: () -> Void
+  /// Back to Survival's setup; nil when Autopilot set the run up.
+  let onChangeOptions: (() -> Void)?
+  @Environment(AppStore.self) private var store
   /// How many of the run's moves are on the board.
   @State private var cursor: Int
   /// The rating change has played over the board and gone down to its place.
   @State private var played = false
   @State private var lens: LensKind?
   @State private var evalLine: EngineLine?
+  /// The verdict over the board as the screen opens; a blunder was shown on the board already.
+  @State private var flashing: Bool
 
   init(model: RunModel, finish: Finish, onNext: @escaping () -> Void, onGrow: @escaping (GrowOffer) -> Void,
-       onAnalyze: @escaping () -> Void, onExit: @escaping () -> Void) {
+       onAnalyze: @escaping () -> Void, onExit: @escaping () -> Void, onChangeOptions: (() -> Void)? = nil) {
     self.model = model
     self.finish = finish
     self.onNext = onNext
     self.onGrow = onGrow
     self.onAnalyze = onAnalyze
     self.onExit = onExit
+    self.onChangeOptions = onChangeOptions
     _cursor = State(initialValue: finish.ended.run.played.count)
+    var blunder = false
+    if case .blunder = finish.how { blunder = true }
+    _flashing = State(initialValue: model.round == nil && !blunder)
   }
+
+  /// Survival opened from Home, not Autopilot's round.
+  private var survival: Bool { model.round == nil }
 
   private var run: Run { finish.ended.run }
   private var last: Int { run.played.count }
@@ -52,10 +65,32 @@ struct EndView: View {
   private func seek(_ n: Int) { cursor = max(0, min(last, n)) }
 
   var body: some View {
+    VStack(spacing: 0) {
+      if survival {
+        SurvivalBar(subtitle: runSubtitle(store, run.color, run.enteredIn ?? run.openingId), onClose: onExit) {
+          CountChip(value: finish.ended.moves)
+        }
+      }
+      scroll.modifier(SurvivalDebugScroll())
+    }
+    .task {
+      guard flashing else { return }
+      try? await Task.sleep(for: .seconds(2))
+      withAnimation { flashing = false }
+    }
+    .task(id: weighed) {
+      evalLine = nil
+      let fen = weighed
+      let snap = await HintEngine.shared.analyse(fen, EngineLimits(depth: 16, multiPv: 1))
+      if !Task.isCancelled && fen == weighed { evalLine = snap.lines.first }
+    }
+  }
+
+  private var scroll: some View {
     let missAt = finish.ended.misses.first { $0.ply == cursor }
-    ScrollView {
+    return ScrollView {
       VStack(spacing: 0) {
-        header.padding(.bottom, 14)
+        if !survival { header.padding(.bottom, 14) }
         if let prepAt {
           SegmentedControl(
             value: Binding(get: { cursor == prepAt ? 0 : cursor == last ? 1 : -1 }, set: { seek($0 == 0 ? prepAt : last) }),
@@ -71,9 +106,12 @@ struct EndView: View {
         }
         BoardView(
           fen: shownFen, orientation: run.color, interactive: false,
-          lastMove: onBlunder || missAt != nil ? nil : lastMoveOf(Array(run.played.prefix(cursor))), marks: marks, onMove: { _ in })
+          lastMove: onBlunder || missAt != nil ? nil : lastMoveOf(Array(run.played.prefix(cursor))),
+          highlights: survival ? highlights(missAt) : [:], marks: marks, onMove: { _ in })
           .overlay {
-            if let moment, !played {
+            if flashing {
+              EndVerdict(how: finish.how, plies: last).onTapGesture { flashing = false }.transition(.opacity)
+            } else if let moment, !played {
               ZStack {
                 Theme.background.opacity(0.6)
                 RatingPlayback(moment: moment) { withAnimation { played = true } }
@@ -89,12 +127,6 @@ struct EndView: View {
         }
       }
       .padding()
-    }
-    .task(id: weighed) {
-      evalLine = nil
-      let fen = weighed
-      let snap = await HintEngine.shared.analyse(fen, EngineLimits(depth: 16, multiPv: 1))
-      if !Task.isCancelled && fen == weighed { evalLine = snap.lines.first }
     }
   }
 
@@ -119,15 +151,27 @@ struct EndView: View {
           .background(RoundedRectangle(cornerRadius: 18).fill(Theme.surface)).foregroundStyle(Theme.text)
         }
         Button(action: onNext) {
-          HStack { Text("Next round"); Image(systemName: "chevron.right") }.font(.headline).frame(maxWidth: .infinity).padding(.vertical, 14)
+          HStack { Text(survival ? "Next run" : "Next round"); Image(systemName: "chevron.right") }.font(.headline).frame(maxWidth: .infinity).padding(.vertical, 14)
         }
         .background(RoundedRectangle(cornerRadius: 18).fill(Color(hex: 0xf5f5f7))).foregroundStyle(Theme.background)
       }
       MoveStrip(items: strip, cursor: cursor, max: last, onSeek: seek)
       ratingCard
       RatingsList(items: moved).padding(.top, 10)
-      summary
+      if survival {
+        SurvivalSummary(finish: finish, prefs: model.prefs, scoredInPoints: model.scoredInPoints, before: model.before ?? SurvivalRecord())
+      } else {
+        summary
+      }
       if let blunder { compare(blunder) }
+      if survival {
+        VStack(spacing: 0) {
+          MissedPrepList(misses: finish.ended.misses, onSeek: seek)
+          MovesSurvivedList(tree: model.tree, line: run.played, record: store.state.survival, moves: finish.ended.moves)
+          SurvivalEndActions(played: sansToMoveText(run.played + (blunder.map { [$0.played] } ?? [])), onChangeOptions: onChangeOptions)
+        }
+        .padding(.top, -14)
+      }
     }
     .padding(.top, 12)
   }
@@ -202,6 +246,13 @@ struct EndView: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.horizontal, 14).padding(.vertical, 12)
     .background(RoundedRectangle(cornerRadius: 18).fill(Theme.surface))
+  }
+
+  /// Survival's: the blunder beside the engine's move, or a miss beside your prep, where they were played.
+  private func highlights(_ missAt: Miss?) -> [String: SwiftUI.Color] {
+    if onBlunder, let blunder { return endHighlights(run.fen, played: blunder.played, right: blunder.best) }
+    if let missAt { return endHighlights(missAt.fen, played: missAt.played, right: missAt.expected) }
+    return [:]
   }
 
   private var isEnded: Bool {

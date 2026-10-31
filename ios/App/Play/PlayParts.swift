@@ -64,14 +64,16 @@ struct PlaySection: View {
   }
 }
 
-/// The game announced full screen: the mode, then the opening. `round-intro`.
+/// The game or run announced full screen: the mode, then the opening. `round-intro`.
 struct PlayIntroCover: View {
   var trail: [String]
+  /// The mode as the round is called: Play, or Survival.
+  var mode = "Play"
   @State private var shown = false
 
   var body: some View {
     VStack(spacing: 18) {
-      Text("Play").font(.system(size: 56, weight: .heavy)).tracking(-1.5).foregroundStyle(Theme.text)
+      Text(mode).font(.system(size: 56, weight: .heavy)).tracking(-1.5).foregroundStyle(Theme.text)
         .scaleEffect(shown ? 1 : 0.8).opacity(shown ? 1 : 0)
       Text(trail.joined(separator: " \u{203a} ")).font(.system(size: 24, weight: .bold)).foregroundStyle(Theme.accent)
         .multilineTextAlignment(.center)
