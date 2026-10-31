@@ -22,7 +22,7 @@ struct AutopilotView: View {
   var body: some View {
     Group {
       if analyzing, let model {
-        AnalysisView(line: model.run.played, orientation: model.run.color, index: index, engine: Self.engine) { analyzing = false }
+        AnalysisTab(tree: tree, index: index, line: model.run.played, orientation: model.run.color) { analyzing = false }
       } else if let growth {
         GrowthView(model: growth, onNext: next)
       } else if let model {

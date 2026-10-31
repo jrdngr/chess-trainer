@@ -102,8 +102,8 @@ struct BoardBuildView: View {
             .buttonStyle(.plain)
           }
           .padding(.bottom, 10)
-          BoardView(fen: fen, orientation: flipped ? color.other : color, interactive: true, bothSides: true,
-                    lastMove: lastMoveOf(visible), arrows: arrows) { move in play(move, visible, index) }
+          BoardView(fen: fen, orientation: flipped ? color.other : color, interactive: true,
+                    lastMove: lastMoveOf(visible), arrows: arrows, bothSides: true) { move in play(move, visible, index) }
           MoveStrip(
             items: moves.enumerated().map { i, san in
               StripItem(san: san, label: i % 2 == 0 ? "\(i / 2 + 1)." : nil, tone: i >= cursor ? .ghost : nil, current: i == cursor - 1, seek: i + 1)

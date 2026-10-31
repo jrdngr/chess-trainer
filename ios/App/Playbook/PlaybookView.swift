@@ -9,7 +9,7 @@ struct PlaybookView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
   var tidyFocus: TidyFind? = nil
-  var onExplore: ([String]) -> Void = { _ in }
+  var onExplore: ([String], ChessCore.Color) -> Void = { _, _ in }
   var onDrill: (String, String, String) -> Void = { _, _, _ in }
   var onImport: () -> Void = {}
   var onBuild: () -> Void = {}

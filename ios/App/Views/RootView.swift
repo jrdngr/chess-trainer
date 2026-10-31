@@ -1,4 +1,5 @@
 import Book
+import ChessCore
 import Model
 import SwiftUI
 
@@ -14,6 +15,8 @@ struct RootView: View {
   @State private var mode: Mode?
   /// Play on the board, opened from the Playbook tab.
   @State private var building = false
+  /// A line the Playbook sent to the Analysis tab, and the side it was sent from.
+  @State private var explore: (sans: [String], side: ChessCore.Color)?
 
   var body: some View {
     ZStack {
@@ -26,7 +29,7 @@ struct RootView: View {
     }
     .overlay { ToastHost() }
     .environment(\.boardLook, BoardLook(theme: store.state.settings.boardTheme, coordinates: store.state.settings.showCoordinates))
-    .task(id: store.tree == nil) { debugSeed() }
+    .task(id: store.tree != nil) { debugSeed() }
   }
 
   @ViewBuilder private func content(_ tree: OpeningTree, _ index: ReferenceIndex) -> some View {
@@ -48,9 +51,15 @@ struct RootView: View {
         Group {
           switch tab {
           case .home: HomeView(tree: tree) { mode = $0 }
-          case .playbook: PlaybookView(tree: tree, index: index, onBuild: { building = true })
+          case .playbook:
+            PlaybookView(tree: tree, index: index, onExplore: { sans, side in
+              explore = (sans, side)
+              tab = .analysis
+            }, onBuild: { building = true })
           case .stats: StatsView(tree: tree, index: index)
-          case .analysis: AnalysisTab(tree: tree, index: index)
+          case .analysis:
+            AnalysisTab(tree: tree, index: index, line: explore?.sans ?? [], orientation: explore?.side ?? .w)
+              .id(explore?.sans.joined(separator: " ") ?? "")
           }
         }
         .frame(maxHeight: .infinity, alignment: .top)

@@ -10,7 +10,7 @@ struct RepertoireBrowser: View {
   let startNodeId: String?
   let title: String
   let onBack: () -> Void
-  let onExplore: ([String]) -> Void
+  let onExplore: ([String], ChessCore.Color) -> Void
   let onDrill: (String, String, String) -> Void
 
   @Environment(AppStore.self) private var store
@@ -56,7 +56,7 @@ struct RepertoireBrowser: View {
       }
       ScrollView {
         VStack(spacing: 0) {
-          BoardView(fen: fen, orientation: rep.color, interactive: true, bothSides: true, lastMove: lastMoveOf(pathSans)) { move in
+          BoardView(fen: fen, orientation: rep.color, interactive: true, lastMove: lastMoveOf(pathSans), bothSides: true) { move in
             onBoardMove(rep, index, kids, pathSans, move)
           }
           MoveStrip(
@@ -99,7 +99,7 @@ struct RepertoireBrowser: View {
             BookMoves(entry: book, inRepertoire: Set(kids.map(\.san))) { san in addFromBook(rep, index, pathSans, san, at) }
           }
           HStack(spacing: 8) {
-            SheetButton("Explore", style: .soft) { onExplore(pathSans) }
+            SheetButton("Explore", style: .soft) { onExplore(pathSans, rep.color) }
             SheetButton("Drill", icon: "home", style: .primary) {
               onDrill(rep.id, at ?? childrenOf(rep, nil).first?.id ?? "", opening?.name ?? title)
             }

@@ -47,7 +47,7 @@ struct BrowsePicker: View {
       BrowseTopBar(side: Binding(get: { side }, set: { sideSet = $0 }), canUndo: !line.isEmpty, onBack: onBack, onClose: onClose,
                    onUndo: { undo(line) }, onSearch: toggleSearch)
       BoardView(fen: walkSan(line).fens.last ?? START_FEN, orientation: side, interactive: true, lastMove: lastMoveOf(line),
-                anySide: true) { play(line, $0.san) }
+                bothSides: true) { play(line, $0.san) }
         // The board gives way on short screens so the lists keep some room: `min(100%, 46dvh)`.
         .frame(maxWidth: min(UIScreen.main.bounds.height * 0.46, 600))
         .layoutPriority(1)
