@@ -3,6 +3,14 @@ import Foundation
 extension Board {
   /// chess.js `_moveToSan`: `moves` is the legal list the move was drawn from.
   func san(_ move: RawMove, among moves: [RawMove]) -> String {
+    var out = sanCore(move, among: moves)
+    let after = made(move)
+    if after.inCheck { out += after.moves().isEmpty ? "#" : "+" }
+    return out
+  }
+
+  /// The SAN without its check or mate mark: what `strippedSan` compares against.
+  func sanCore(_ move: RawMove, among moves: [RawMove]) -> String {
     var out: String
     if move.flags & Flag.kside != 0 {
       out = "O-O"
@@ -18,8 +26,6 @@ extension Board {
       out += algebraic(move.to)
       if let promotion = move.promotion { out += "=" + promotion.rawValue.uppercased() }
     }
-    let after = made(move)
-    if after.inCheck { out += after.moves().isEmpty ? "#" : "+" }
     return out
   }
 
@@ -42,7 +48,7 @@ extension Board {
     var clean = strippedSan(text)
     if clean == "0-0" { clean = "O-O" } else if clean == "0-0-0" { clean = "O-O-O" }
     var candidates = legal(for: inferPieceType(clean))
-    for move in candidates where clean == strippedSan(san(move, among: candidates)) { return move }
+    for move in candidates where clean == strippedSan(sanCore(move, among: candidates)) { return move }
 
     let strictSquares = #/([pnbrqkPNBRQK])?([a-h][1-8])x?-?([a-h][1-8])([qrbnQRBN])?/#
     let loose = #/([pnbrqkPNBRQK])?([a-h]?[1-8]?)x?-?([a-h][1-8])([qrbnQRBN])?/#
@@ -60,7 +66,7 @@ extension Board {
     let promoOK = { (m: RawMove) in promotion == nil || promotion!.lowercased() == m.promotion?.rawValue }
     for m in candidates {
       if from == nil {
-        if clean == replacingFirstX(strippedSan(san(m, among: candidates))) { return m }
+        if clean == replacingFirstX(strippedSan(sanCore(m, among: candidates))) { return m }
       } else if pieceOK(m), ox88(from!) == m.from, ox88(to) == m.to, promoOK(m) {
         return m
       } else if overly {
@@ -89,17 +95,40 @@ private func replacingFirstX(_ text: String) -> String {
   return text.replacingCharacters(in: at, with: "")
 }
 
+/// chess.js `strippedSan`: the first "=" out, and a check mark with any "?!" after it off the end.
+/// Written out by hand: a Swift Regex here made reading a move a hundred times slower.
 func strippedSan(_ move: String) -> String {
-  var s = move
-  if let eq = s.firstIndex(of: "=") { s.remove(at: eq) }
-  return s.replacing(#/[+#]?[?!]*$/#, with: "", maxReplacements: 1)
+  var chars = Array(move.unicodeScalars)
+  if let eq = chars.firstIndex(of: "=") { chars.remove(at: eq) }
+  while let last = chars.last, last == "?" || last == "!" { chars.removeLast() }
+  if let last = chars.last, last == "+" || last == "#" { chars.removeLast() }
+  var out = String.UnicodeScalarView()
+  out.append(contentsOf: chars)
+  return String(out)
+}
+
+/// Whether two squares appear in order: chess.js's `/[a-h]\d.*[a-h]\d/`.
+private func twoSquares(_ san: String) -> Bool {
+  let u = Array(san.utf8)
+  var found = 0
+  var i = 0
+  while i + 1 < u.count {
+    if (97...104).contains(u[i]) && (48...57).contains(u[i + 1]) {
+      found += 1
+      if found == 2 { return true }
+      i += 2
+    } else {
+      i += 1
+    }
+  }
+  return false
 }
 
 /// chess.js `inferPieceType`.
 func inferPieceType(_ san: String) -> String? {
   guard let first = san.first else { return "" }
   if ("a"..."h").contains(first) {
-    if san.firstMatch(of: #/[a-h]\d.*[a-h]\d/#) != nil { return nil }
+    if twoSquares(san) { return nil }
     return "p"
   }
   let lower = first.lowercased()

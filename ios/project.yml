@@ -1,6 +1,6 @@
 name: ChessPlaybook
 options:
-  bundleIdPrefix: app.chessplaybook
+  bundleIdPrefix: com.jordangrace
   deploymentTarget:
     iOS: "18.0"
   createIntermediateGroups: true
@@ -23,7 +23,8 @@ targets:
     settings:
       base:
         PRODUCT_NAME: Chess Playbook
-        PRODUCT_BUNDLE_IDENTIFIER: app.chessplaybook.ios
+        PRODUCT_BUNDLE_IDENTIFIER: com.jordangrace.chessplaybook
+        DEVELOPMENT_TEAM: 94BFKA4Q2U
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: YES

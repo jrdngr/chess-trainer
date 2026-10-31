@@ -54,11 +54,21 @@ func ox88(_ square: String) -> Int? {
 struct Board {
   var squares = [Piece?](repeating: nil, count: 128)
   var turn: Color = .w
-  var castling: [Color: Int] = [.w: 0, .b: 0]
+  var castling = Pair(w: 0, b: 0)
   var ep: Int? = nil
   var halfMoves = 0
   var moveNumber = 1
-  var kings: [Color: Int] = [:]
+  var kings = Pair(w: -1, b: -1)
+
+  /// One value per side, without a dictionary's cost on every trial move.
+  struct Pair {
+    var w: Int
+    var b: Int
+    subscript(_ color: Color) -> Int {
+      get { color == .w ? w : b }
+      set { if color == .w { w = newValue } else { b = newValue } }
+    }
+  }
 
   static let rooks: [Color: [(square: Int, flag: Int)]] = [
     .w: [(112, Flag.qside), (119, Flag.kside)],
@@ -87,7 +97,7 @@ struct Board {
           let color: Color = ch.isUppercase ? .w : .b
           let sq = r * 16 + f
           if type == .k {
-            guard kings[color] == nil else { return nil }
+            guard kings[color] < 0 else { return nil }
             kings[color] = sq
           }
           squares[sq] = Piece(type: type, color: color)
@@ -97,14 +107,14 @@ struct Board {
       }
       guard f == 8 else { return nil }
     }
-    guard kings[.w] != nil, kings[.b] != nil else { return nil }
+    guard kings[.w] >= 0, kings[.b] >= 0 else { return nil }
     turn = tokens[1] == "b" ? .b : .w
     let rights = tokens[2]
     guard rights == "-" || rights.allSatisfy({ "KQkq".contains($0) }) else { return nil }
-    if rights.contains("K") { castling[.w]! |= Flag.kside }
-    if rights.contains("Q") { castling[.w]! |= Flag.qside }
-    if rights.contains("k") { castling[.b]! |= Flag.kside }
-    if rights.contains("q") { castling[.b]! |= Flag.qside }
+    if rights.contains("K") { castling[.w] |= Flag.kside }
+    if rights.contains("Q") { castling[.w] |= Flag.qside }
+    if rights.contains("k") { castling[.b] |= Flag.kside }
+    if rights.contains("q") { castling[.b] |= Flag.qside }
     if tokens[3] != "-" {
       guard let sq = ox88(tokens[3]), rank(sq) == (turn == .w ? 2 : 5) else { return nil }
       ep = sq
@@ -134,10 +144,10 @@ struct Board {
       i += 1
     }
     var rights = ""
-    if castling[.w]! & Flag.kside != 0 { rights += "K" }
-    if castling[.w]! & Flag.qside != 0 { rights += "Q" }
-    if castling[.b]! & Flag.kside != 0 { rights += "k" }
-    if castling[.b]! & Flag.qside != 0 { rights += "q" }
+    if castling[.w] & Flag.kside != 0 { rights += "K" }
+    if castling[.w] & Flag.qside != 0 { rights += "Q" }
+    if castling[.b] & Flag.kside != 0 { rights += "k" }
+    if castling[.b] & Flag.qside != 0 { rights += "q" }
     if rights.isEmpty { rights = "-" }
     return [out, turn.rawValue, rights, epText, String(halfMoves), String(moveNumber)].joined(separator: " ")
   }
@@ -159,15 +169,15 @@ struct Board {
     for sq in pawnFrom where sq & 0x88 == 0 {
       if squares[sq] == Piece(type: .p, color: color) { return true }
     }
-    for offset in pieceOffsets[.n]! {
+    for offset in knightOffsets {
       let sq = square + offset
       if sq & 0x88 == 0, squares[sq] == Piece(type: .n, color: color) { return true }
     }
-    for offset in pieceOffsets[.k]! {
+    for offset in queenOffsets {
       let sq = square + offset
       if sq & 0x88 == 0, squares[sq] == Piece(type: .k, color: color) { return true }
     }
-    for offset in pieceOffsets[.q]! {
+    for offset in queenOffsets {
       let diagonal = abs(offset) == 15 || abs(offset) == 17
       var sq = square + offset
       while sq & 0x88 == 0 {
@@ -182,8 +192,8 @@ struct Board {
   }
 
   func kingAttacked(_ color: Color) -> Bool {
-    guard let king = kings[color] else { return false }
-    return attacked(by: color.other, king)
+    let king = kings[color]
+    return king >= 0 && attacked(by: color.other, king)
   }
 
   /// The position after a move, as chess.js `_makeMove` leaves it.
@@ -209,15 +219,15 @@ struct Board {
       }
       next.castling[us] = 0
     }
-    if next.castling[us]! != 0 {
-      for rook in Board.rooks[us]! where move.from == rook.square && next.castling[us]! & rook.flag != 0 {
-        next.castling[us]! ^= rook.flag
+    if next.castling[us] != 0 {
+      for rook in Board.rooks[us]! where move.from == rook.square && next.castling[us] & rook.flag != 0 {
+        next.castling[us] ^= rook.flag
         break
       }
     }
-    if next.castling[them]! != 0 {
-      for rook in Board.rooks[them]! where move.to == rook.square && next.castling[them]! & rook.flag != 0 {
-        next.castling[them]! ^= rook.flag
+    if next.castling[them] != 0 {
+      for rook in Board.rooks[them]! where move.to == rook.square && next.castling[them] & rook.flag != 0 {
+        next.castling[them] ^= rook.flag
         break
       }
     }
@@ -240,10 +250,18 @@ struct Board {
   }
 }
 
-let pieceOffsets: [PieceType: [Int]] = [
-  .n: [-18, -33, -31, -14, 18, 33, 31, 14],
-  .b: [-17, -15, 17, 15],
-  .r: [-16, 1, 16, -1],
-  .q: [-17, -16, -15, 1, 17, 16, 15, -1],
-  .k: [-17, -16, -15, 1, 17, 16, 15, -1],
-]
+let knightOffsets = [-18, -33, -31, -14, 18, 33, 31, 14]
+let bishopOffsets = [-17, -15, 17, 15]
+let rookOffsets = [-16, 1, 16, -1]
+let queenOffsets = [-17, -16, -15, 1, 17, 16, 15, -1]
+
+/// Each piece's steps, as chess.js lists them.
+func pieceOffsets(_ type: PieceType) -> [Int] {
+  switch type {
+  case .n: return knightOffsets
+  case .b: return bishopOffsets
+  case .r: return rookOffsets
+  case .q, .k: return queenOffsets
+  case .p: return []
+  }
+}

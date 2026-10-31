@@ -43,7 +43,7 @@ extension Board {
           }
         }
       } else {
-        for offset in pieceOffsets[piece.type]! {
+        for offset in pieceOffsets(piece.type) {
           var to = from
           while true {
             to += offset
@@ -59,14 +59,15 @@ extension Board {
       }
     }
 
-    if only == nil || only == .k, let king = kings[us] {
-      if castling[us]! & Flag.kside != 0,
+    if only == nil || only == .k, kings[us] >= 0 {
+      let king = kings[us]
+      if castling[us] & Flag.kside != 0,
         squares[king + 1] == nil, squares[king + 2] == nil,
         !attacked(by: them, king), !attacked(by: them, king + 1), !attacked(by: them, king + 2)
       {
         add(king, king + 2, .k, nil, Flag.kside)
       }
-      if castling[us]! & Flag.qside != 0,
+      if castling[us] & Flag.qside != 0,
         squares[king - 1] == nil, squares[king - 2] == nil, squares[king - 3] == nil,
         !attacked(by: them, king), !attacked(by: them, king - 1), !attacked(by: them, king - 2)
       {
