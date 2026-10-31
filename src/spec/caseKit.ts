@@ -34,9 +34,17 @@ export function cases<A extends unknown[], R>(
   return { fn, about, cases: inputs.map((args) => ({ args, out: json(call(...args)) })) };
 }
 
-/** Undefined becomes null, and -0 becomes 0, so the file reads the same in any language. */
-function json(value: unknown): unknown {
-  return JSON.parse(JSON.stringify(value === undefined ? null : value, (_key, v) => (Object.is(v, -0) ? 0 : v)));
+/**
+ * Undefined becomes null, -0 becomes 0, and the numbers JSON has no word for
+ * become the strings "Infinity", "-Infinity" and "NaN", so the file reads the
+ * same in any language.
+ */
+export function json(value: unknown): unknown {
+  return JSON.parse(JSON.stringify(value === undefined ? null : value, (_key, v) => {
+    if (typeof v !== 'number') return v;
+    if (Object.is(v, -0)) return 0;
+    return Number.isFinite(v) ? v : String(v);
+  }));
 }
 
 /** Numbers from `from` to `to` by `step`, rounded to the step's decimals. */

@@ -34,10 +34,7 @@ export interface ScenarioFile {
   scenarios: Scenario[];
 }
 
-/** Undefined becomes null, and -0 becomes 0, so the file reads the same in any language. */
-export function json(value: unknown): unknown {
-  return JSON.parse(JSON.stringify(value === undefined ? null : value, (_key, v) => (Object.is(v, -0) ? 0 : v)));
-}
+export { json } from './caseKit';
 
 /** One step to a line, so a change reads as a short diff. */
 export function scenarioText(file: ScenarioFile): string {
