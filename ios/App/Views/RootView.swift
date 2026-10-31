@@ -37,6 +37,7 @@ struct RootView: View {
     } else if let mode {
       switch mode {
       case .autopilot: AutopilotView(tree: tree, index: index) { leave() }
+      case .play: PlayView(tree: tree, index: index) { leave() }
       default: ComingSoon(mode: mode) { leave() }
       }
     } else {
