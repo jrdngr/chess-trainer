@@ -1,0 +1,169 @@
+{
+  "area": "play",
+  "functions": [
+    {
+      "fn": "play.levelById",
+      "about": "A strength by id; an unknown id is Club.",
+      "cases": [
+      {"args":["casual"],"out":"Casual"},
+      {"args":["club"],"out":"Club"},
+      {"args":["strong"],"out":"Strong"},
+      {"args":["full"],"out":"Full"},
+      {"args":["nope"],"out":"Club"}
+      ]
+    },
+    {
+      "fn": "play.chooseMove",
+      "about": "Which candidate the engine plays at a strength, for a draw of the dice: the best with 1 - slip, each worse one half as likely as the one before; Full always plays the best.",
+      "cases": [
+      {"args":["casual",1,0],"out":"m1"},
+      {"args":["casual",1,0.2],"out":"m1"},
+      {"args":["casual",1,0.4],"out":"m1"},
+      {"args":["casual",1,0.6],"out":"m1"},
+      {"args":["casual",1,0.75],"out":"m1"},
+      {"args":["casual",1,0.9],"out":"m1"},
+      {"args":["casual",1,0.999],"out":"m1"},
+      {"args":["casual",3,0],"out":"m1"},
+      {"args":["casual",3,0.2],"out":"m1"},
+      {"args":["casual",3,0.4],"out":"m1"},
+      {"args":["casual",3,0.6],"out":"m2"},
+      {"args":["casual",3,0.75],"out":"m2"},
+      {"args":["casual",3,0.9],"out":"m3"},
+      {"args":["casual",3,0.999],"out":"m3"},
+      {"args":["casual",5,0],"out":"m1"},
+      {"args":["casual",5,0.2],"out":"m1"},
+      {"args":["casual",5,0.4],"out":"m2"},
+      {"args":["casual",5,0.6],"out":"m2"},
+      {"args":["casual",5,0.75],"out":"m3"},
+      {"args":["casual",5,0.9],"out":"m4"},
+      {"args":["casual",5,0.999],"out":"m5"},
+      {"args":["club",1,0],"out":"m1"},
+      {"args":["club",1,0.2],"out":"m1"},
+      {"args":["club",1,0.4],"out":"m1"},
+      {"args":["club",1,0.6],"out":"m1"},
+      {"args":["club",1,0.75],"out":"m1"},
+      {"args":["club",1,0.9],"out":"m1"},
+      {"args":["club",1,0.999],"out":"m1"},
+      {"args":["club",3,0],"out":"m1"},
+      {"args":["club",3,0.2],"out":"m1"},
+      {"args":["club",3,0.4],"out":"m1"},
+      {"args":["club",3,0.6],"out":"m1"},
+      {"args":["club",3,0.75],"out":"m1"},
+      {"args":["club",3,0.9],"out":"m2"},
+      {"args":["club",3,0.999],"out":"m3"},
+      {"args":["club",5,0],"out":"m1"},
+      {"args":["club",5,0.2],"out":"m1"},
+      {"args":["club",5,0.4],"out":"m1"},
+      {"args":["club",5,0.6],"out":"m1"},
+      {"args":["club",5,0.75],"out":"m2"},
+      {"args":["club",5,0.9],"out":"m3"},
+      {"args":["club",5,0.999],"out":"m5"},
+      {"args":["strong",1,0],"out":"m1"},
+      {"args":["strong",1,0.2],"out":"m1"},
+      {"args":["strong",1,0.4],"out":"m1"},
+      {"args":["strong",1,0.6],"out":"m1"},
+      {"args":["strong",1,0.75],"out":"m1"},
+      {"args":["strong",1,0.9],"out":"m1"},
+      {"args":["strong",1,0.999],"out":"m1"},
+      {"args":["strong",3,0],"out":"m1"},
+      {"args":["strong",3,0.2],"out":"m1"},
+      {"args":["strong",3,0.4],"out":"m1"},
+      {"args":["strong",3,0.6],"out":"m1"},
+      {"args":["strong",3,0.75],"out":"m1"},
+      {"args":["strong",3,0.9],"out":"m1"},
+      {"args":["strong",3,0.999],"out":"m3"},
+      {"args":["strong",5,0],"out":"m1"},
+      {"args":["strong",5,0.2],"out":"m1"},
+      {"args":["strong",5,0.4],"out":"m1"},
+      {"args":["strong",5,0.6],"out":"m1"},
+      {"args":["strong",5,0.75],"out":"m1"},
+      {"args":["strong",5,0.9],"out":"m1"},
+      {"args":["strong",5,0.999],"out":"m5"},
+      {"args":["full",1,0],"out":"m1"},
+      {"args":["full",1,0.2],"out":"m1"},
+      {"args":["full",1,0.4],"out":"m1"},
+      {"args":["full",1,0.6],"out":"m1"},
+      {"args":["full",1,0.75],"out":"m1"},
+      {"args":["full",1,0.9],"out":"m1"},
+      {"args":["full",1,0.999],"out":"m1"},
+      {"args":["full",3,0],"out":"m1"},
+      {"args":["full",3,0.2],"out":"m1"},
+      {"args":["full",3,0.4],"out":"m1"},
+      {"args":["full",3,0.6],"out":"m1"},
+      {"args":["full",3,0.75],"out":"m1"},
+      {"args":["full",3,0.9],"out":"m1"},
+      {"args":["full",3,0.999],"out":"m1"},
+      {"args":["full",5,0],"out":"m1"},
+      {"args":["full",5,0.2],"out":"m1"},
+      {"args":["full",5,0.4],"out":"m1"},
+      {"args":["full",5,0.6],"out":"m1"},
+      {"args":["full",5,0.75],"out":"m1"},
+      {"args":["full",5,0.9],"out":"m1"},
+      {"args":["full",5,0.999],"out":"m1"},
+      {"args":["club",0,0.5],"out":null}
+      ]
+    },
+    {
+      "fn": "play.openingLine",
+      "about": "What Save this opening writes: the first 16 plies of the game, trimmed to end on your own move.",
+      "cases": [
+      {"args":[0,"w"],"out":""},
+      {"args":[0,"b"],"out":""},
+      {"args":[1,"w"],"out":"e4"},
+      {"args":[1,"b"],"out":""},
+      {"args":[2,"w"],"out":"e4"},
+      {"args":[2,"b"],"out":"e4 e5"},
+      {"args":[5,"w"],"out":"e4 e5 Nf3 Nc6 Bb5"},
+      {"args":[5,"b"],"out":"e4 e5 Nf3 Nc6"},
+      {"args":[15,"w"],"out":"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3"},
+      {"args":[15,"b"],"out":"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6"},
+      {"args":[16,"w"],"out":"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3"},
+      {"args":[16,"b"],"out":"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O"},
+      {"args":[17,"w"],"out":"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3"},
+      {"args":[17,"b"],"out":"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O"},
+      {"args":[30,"w"],"out":"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3"},
+      {"args":[30,"b"],"out":"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O"}
+      ]
+    },
+    {
+      "fn": "play.playedGame",
+      "about": "A finished Play game, kept as a game like an import: You against Engine (level), the result from White's side, the date, and its first 40 plies. An unfinished game, or one under 2 plies, is not kept.",
+      "cases": [
+      {"args":["win","w",41],"out":{"id":"play_1","source":"play","white":"You","black":"Engine (Strong)","result":"1-0","userColor":"w","date":"2026-10-01","moves":["e4","e5","Nf3","Nc6","Bb5","a6","Ba4","Nf6","O-O","Be7","Re1","b5","Bb3","d6","c3","O-O","h3","Nb8","d4","Nbd7","c4","c6","cxb5","axb5","Nc3","Bb7","Bg5","b4","Nb1","h6","Bh4","c5","dxe5","Nxe5","Nxe5","dxe5","Qxd8","Rfxd8","Nd2","Bd6"]}},
+      {"args":["win","b",41],"out":{"id":"play_1","source":"play","white":"Engine (Strong)","black":"You","result":"0-1","userColor":"b","date":"2026-10-01","moves":["e4","e5","Nf3","Nc6","Bb5","a6","Ba4","Nf6","O-O","Be7","Re1","b5","Bb3","d6","c3","O-O","h3","Nb8","d4","Nbd7","c4","c6","cxb5","axb5","Nc3","Bb7","Bg5","b4","Nb1","h6","Bh4","c5","dxe5","Nxe5","Nxe5","dxe5","Qxd8","Rfxd8","Nd2","Bd6"]}},
+      {"args":["loss","w",41],"out":{"id":"play_1","source":"play","white":"You","black":"Engine (Strong)","result":"0-1","userColor":"w","date":"2026-10-01","moves":["e4","e5","Nf3","Nc6","Bb5","a6","Ba4","Nf6","O-O","Be7","Re1","b5","Bb3","d6","c3","O-O","h3","Nb8","d4","Nbd7","c4","c6","cxb5","axb5","Nc3","Bb7","Bg5","b4","Nb1","h6","Bh4","c5","dxe5","Nxe5","Nxe5","dxe5","Qxd8","Rfxd8","Nd2","Bd6"]}},
+      {"args":["loss","b",41],"out":{"id":"play_1","source":"play","white":"Engine (Strong)","black":"You","result":"1-0","userColor":"b","date":"2026-10-01","moves":["e4","e5","Nf3","Nc6","Bb5","a6","Ba4","Nf6","O-O","Be7","Re1","b5","Bb3","d6","c3","O-O","h3","Nb8","d4","Nbd7","c4","c6","cxb5","axb5","Nc3","Bb7","Bg5","b4","Nb1","h6","Bh4","c5","dxe5","Nxe5","Nxe5","dxe5","Qxd8","Rfxd8","Nd2","Bd6"]}},
+      {"args":["draw","w",41],"out":{"id":"play_1","source":"play","white":"You","black":"Engine (Strong)","result":"1/2-1/2","userColor":"w","date":"2026-10-01","moves":["e4","e5","Nf3","Nc6","Bb5","a6","Ba4","Nf6","O-O","Be7","Re1","b5","Bb3","d6","c3","O-O","h3","Nb8","d4","Nbd7","c4","c6","cxb5","axb5","Nc3","Bb7","Bg5","b4","Nb1","h6","Bh4","c5","dxe5","Nxe5","Nxe5","dxe5","Qxd8","Rfxd8","Nd2","Bd6"]}},
+      {"args":["draw","b",41],"out":{"id":"play_1","source":"play","white":"Engine (Strong)","black":"You","result":"1/2-1/2","userColor":"b","date":"2026-10-01","moves":["e4","e5","Nf3","Nc6","Bb5","a6","Ba4","Nf6","O-O","Be7","Re1","b5","Bb3","d6","c3","O-O","h3","Nb8","d4","Nbd7","c4","c6","cxb5","axb5","Nc3","Bb7","Bg5","b4","Nb1","h6","Bh4","c5","dxe5","Nxe5","Nxe5","dxe5","Qxd8","Rfxd8","Nd2","Bd6"]}},
+      {"args":["unfinished","w",20],"out":null},
+      {"args":["win","w",1],"out":null}
+      ]
+    },
+    {
+      "fn": "play.withPlayGame",
+      "about": "Keeping a Play game: newest first ahead of the imports, the same game recorded again replaces itself, at most 200 kept.",
+      "cases": [
+      {"args":[[],"p1"],"out":["p1:play"]},
+      {"args":[[["p1","play"],["l1","lichess"]],"p2"],"out":["p2:play","p1:play","l1:lichess"]},
+      {"args":[[["p2","play"],["p1","play"],["l1","lichess"]],"p1"],"out":["p1:play","p2:play","l1:lichess"]}
+      ]
+    },
+    {
+      "fn": "play.withPlayGame (cap)",
+      "about": "Only the newest 200 Play games are kept.",
+      "cases": [
+      {"args":[199],"out":{"kept":200,"first":"p199","last":["p1:play","l1:lichess"]}},
+      {"args":[200],"out":{"kept":201,"first":"p200","last":["p1:play","l1:lichess"]}},
+      {"args":[205],"out":{"kept":201,"first":"p205","last":["p6:play","l1:lichess"]}}
+      ]
+    },
+    {
+      "fn": "play.mergeGames",
+      "about": "Games from two devices: this device's imports, and both devices' Play games merged by id, newest date first.",
+      "cases": [
+      {"args":[[["p1","play","2026-10-01"],["l1","lichess","2026-09-01"]],[["p2","play","2026-10-03"],["p1","play","2026-10-01"],["c1","chesscom","2026-10-05"]]],"out":["p2:play","p1:play","l1:lichess"]},
+      {"args":[[],[]],"out":[]}
+      ]
+    }
+  ]
+}

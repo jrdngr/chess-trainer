@@ -52,5 +52,6 @@ constant in `spec/constants.json` is what counts.
 | [learning.md](learning.md) | LEARN | Cards and their schedule, and ratings per opening |
 | [naming.md](naming.md) | NAME | Position keys, book names and families, the opening catalogue, regions |
 | [onboarding.md](onboarding.md) | ONB | The first screens: starter sets, picked openings, lines from the board, what goes in |
+| [play.md](play.md) | PLAY | A game against the engine: strengths, the opening walk-in, games kept, Save this opening |
 | [playbook.md](playbook.md) | BOOK | The Playbook tree, move sources, extension kinds, the prepared floor, mistakes |
 | [run.md](run.md) | RUN | A Survival run, which is also every Autopilot round: prep, the book phase, misses, pops, blunders and the end |
