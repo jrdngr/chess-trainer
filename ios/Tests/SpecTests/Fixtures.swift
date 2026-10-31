@@ -3,7 +3,7 @@ import Foundation
 
 /// The prototype's book, pinned for every parity case.
 let bookIndex: ReferenceIndex = {
-  let url = Cases.root.appendingPathComponent("src/model/book/book.json")
+  let url = Cases.root.appendingPathComponent("prototype/src/model/book/book.json")
   return try! decodeBook(Data(contentsOf: url))
 }()
 

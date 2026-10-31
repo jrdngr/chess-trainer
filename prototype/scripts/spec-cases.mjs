@@ -26,7 +26,7 @@ async function write(defs, suffix, out, text, count) {
 const cases = await write(
   join(ROOT, 'src/spec/cases'),
   '.cases.ts',
-  join(ROOT, 'spec/cases/functions'),
+  join(ROOT, '../spec/cases/functions'),
   caseText,
   (file) => file.functions.reduce((n, fn) => n + fn.cases.length, 0),
 );
@@ -34,7 +34,7 @@ console.log(`${cases} function cases`);
 const steps = await write(
   join(ROOT, 'src/spec/scenarios'),
   '.scenarios.ts',
-  join(ROOT, 'spec/cases/scenarios'),
+  join(ROOT, '../spec/cases/scenarios'),
   scenarioText,
   (file) => file.scenarios.reduce((n, s) => n + s.steps.length, 0),
 );

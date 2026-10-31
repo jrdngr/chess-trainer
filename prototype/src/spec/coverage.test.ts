@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { exists, knownFrom, rulesIn } from "./coverage";
-import constants from "../../spec/constants.json?raw";
+import constants from "../../../spec/constants.json?raw";
 
-const specs = import.meta.glob<string>("../../docs/spec/*.md", {
+const specs = import.meta.glob<string>("../../../docs/spec/*.md", {
   eager: true,
   query: "?raw",
   import: "default",
 });
 const functions = import.meta.glob<string>(
-  "../../spec/cases/functions/*.json",
+  "../../../spec/cases/functions/*.json",
   { eager: true, query: "?raw", import: "default" },
 );
 const scenarios = import.meta.glob<string>(
-  "../../spec/cases/scenarios/*.json",
+  "../../../spec/cases/scenarios/*.json",
   { eager: true, query: "?raw", import: "default" },
 );
 const traces = Object.keys(

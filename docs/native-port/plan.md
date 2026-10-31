@@ -1,5 +1,7 @@
 # Native iOS port: plan
 
+The prototype now lives in `prototype/`; paths below like `src/...` are under it.
+
 Drafted 2026-10-31 from main at `b0861bb`. Planning only; nothing here is built
 yet. Read [docs/autopilot.md](../autopilot.md) first: it is the one place the
 prototype's intent is already written down.

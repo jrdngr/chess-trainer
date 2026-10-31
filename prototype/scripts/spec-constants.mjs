@@ -22,7 +22,7 @@ for (const path of modules(join(ROOT, 'src/model'))) {
   if (path.endsWith('.test.ts')) continue;
   mods[relative(ROOT, path).replace(/\\/g, '/')] = await import(path);
 }
-writeFileSync(join(ROOT, 'spec/constants.json'), constantsText(mods));
+writeFileSync(join(ROOT, '../spec/constants.json'), constantsText(mods));
 const out = collectConstants(mods);
 const count = Object.values(out).reduce((n, m) => n + Object.keys(m).length, 0);
 console.log(`wrote ${count} constants from ${Object.keys(out).length} modules to spec/constants.json`);

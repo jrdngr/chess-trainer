@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import file from '../../spec/constants.json?raw';
+import file from '../../../spec/constants.json?raw';
 import { constantsText } from './constants';
 
 describe('spec/constants.json', () => {

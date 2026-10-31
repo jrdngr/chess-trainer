@@ -1,5 +1,8 @@
 # Claude notes for this repo
 
+The web prototype lives in `prototype/`, and every npm command runs from
+there. `ios/` is the native app; `spec/` and `docs/` are shared by both.
+
 ## Republish the artifact before handing the turn back
 
 This project is published as a Claude Artifact, and the live page is the thing
@@ -11,15 +14,15 @@ finish a reply having changed app code, styles, or assets without republishing
 first.
 
 ```bash
-npm run build && npm run artifact
+cd prototype && npm run build && npm run artifact
 ```
 
-then publish `dist-artifact/index.html` with the Artifact tool, updating the
+then publish `prototype/dist-artifact/index.html` with the Artifact tool, updating the
 existing artifact rather than creating a new one:
 
 - URL: https://claude.ai/code/artifact/8909c26a-7c93-47bc-9547-a426307eecd2
 - Pass that `url` so the link stays the same, and pass the supporting files from
-  `dist-artifact/files.json` (`root: "dist"`, `engine/stockfish.js` — the
+  `prototype/dist-artifact/files.json` (`root: "prototype/dist"`, `engine/stockfish.js` — the
   Stockfish worker needs a real URL and cannot be inlined).
 - The favicon (♟️) and title stay as they are; do not pass a new one.
 - Capabilities are `{db: {}, downloads: true}` (cloud sync and the JSON export).

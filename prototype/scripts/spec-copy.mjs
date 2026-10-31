@@ -14,7 +14,7 @@ import ts from 'typescript';
 
 const ROOT = join(import.meta.dirname, '..');
 const DIRS = ['src/screens', 'src/components', 'src/model'];
-const OUT = join(ROOT, 'spec/copy.json');
+const OUT = join(ROOT, '../spec/copy.json');
 
 function files(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

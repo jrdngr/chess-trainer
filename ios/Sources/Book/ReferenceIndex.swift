@@ -37,7 +37,7 @@ public struct CatalogueEntry: Equatable, Sendable {
 
 /// The reference book: every position it knows by key, and the names on them.
 ///
-/// `src/model/book.ts` and `reference.ts`. The famous games the web app pins
+/// `prototype/src/model/book.ts` and `reference.ts`. The famous games the web app pins
 /// to positions (`topGames`) are left for the explorer screen that shows them.
 public final class ReferenceIndex: @unchecked Sendable {
   public let entries: OrderedMap<String, ExplorerEntry>

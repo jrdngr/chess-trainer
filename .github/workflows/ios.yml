@@ -5,9 +5,9 @@ name: iOS
 on:
   push:
     branches: [main]
-    paths: ["ios/**", "spec/**", "src/model/book/book.json", ".github/workflows/ios.yml"]
+    paths: ["ios/**", "spec/**", "prototype/src/model/book/book.json", ".github/workflows/ios.yml"]
   pull_request:
-    paths: ["ios/**", "spec/**", "src/model/book/book.json", ".github/workflows/ios.yml"]
+    paths: ["ios/**", "spec/**", "prototype/src/model/book/book.json", ".github/workflows/ios.yml"]
 
 jobs:
   test:

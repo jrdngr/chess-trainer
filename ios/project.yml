@@ -13,7 +13,7 @@ targets:
     platform: iOS
     sources:
       - path: App
-      - path: ../src/model/book/book.json
+      - path: ../prototype/src/model/book/book.json
         buildPhase: resources
     dependencies:
       - package: ChessPlaybook

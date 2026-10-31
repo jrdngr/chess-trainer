@@ -13,7 +13,7 @@ One Swift package, `ChessPlaybook`:
 | `Shared` | The few JavaScript behaviors ported code depends on: `Math.round`, `toFixed`, `localeCompare`, a stable sort, an insertion-ordered map | — |
 | `ChessCore` | Board, legal moves, SAN, FEN: chess.js's rules and order, ported from it | `src/chess/core.ts`, chess.js |
 | `Book` | The 2200+ book, decoded from `book.json`, and reading it: names, families | `book.ts`, `reference.ts` |
-| `Model` | The opening tree and regions, the Playbook tree and its openings, extensions, the prepared floor, SRS cards, ratings, the selection, Any favorite and the picker catalogue; and for Autopilot: freshness, the line draw, recommend, where a run starts, Survival, missions, lenses and structures | `src/model/*` |
+| `Model` | The opening tree and regions, the Playbook tree and its openings, extensions, the prepared floor, SRS cards, ratings, the selection, Any favorite and the picker catalogue; and for Autopilot: freshness, the line draw, recommend, where a run starts, Survival, missions, lenses and structures | `prototype/src/model/*` |
 
 Phase 2 (native foundation) is these three layers. Phase 3 adds Autopilot:
 the model above, then the run controller and the app.
