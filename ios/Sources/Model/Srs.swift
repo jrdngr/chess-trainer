@@ -269,4 +269,17 @@ public struct ReviewLogEntry: Equatable, Sendable, Codable {
   public var expectedSan: String
   public var intervalBefore: Double
   public var intervalAfter: Double
+  public init(
+    cardId: String, at: Double, grade: Grade, correct: Bool, playedSan: String?, expectedSan: String,
+    intervalBefore: Double, intervalAfter: Double
+  ) {
+    self.cardId = cardId
+    self.at = at
+    self.grade = grade
+    self.correct = correct
+    self.playedSan = playedSan
+    self.expectedSan = expectedSan
+    self.intervalBefore = intervalBefore
+    self.intervalAfter = intervalAfter
+  }
 }

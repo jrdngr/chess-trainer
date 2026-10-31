@@ -23,18 +23,6 @@ private let HOLE_SHARE = 0.08
 /// Nor is one you would meet in under this share of your games.
 private let HOLE_REACH = 0.02
 
-/// A repertoire's moves in the order they were added: each line's new moves
-/// after the lines before it, which is the tree read depth first.
-private func nodesInOrder(_ rep: Repertoire) -> [RepMove] {
-  var out: [RepMove] = []
-  func visit(_ node: RepMove) {
-    out.append(node)
-    for kid in childrenOf(rep, node.id) { visit(kid) }
-  }
-  for root in childrenOf(rep, nil) { visit(root) }
-  return out
-}
-
 /// How played a node is, 0 to 1, flattened so a line deep in the tree still counts.
 private func popularity(_ index: ReferenceIndex, _ node: OpeningNode) -> Double {
   let total = index.totalGames != 0 ? index.totalGames : 1
