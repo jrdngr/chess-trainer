@@ -83,7 +83,7 @@ public func playedGame(id: String, color: Color, moves: [String], result: GameRe
 }
 
 /// `new Date(at).toISOString().slice(0, 10)`: the UTC calendar day.
-private func utcDay(_ at: Double) -> String {
+func utcDay(_ at: Double) -> String {
   var calendar = Calendar(identifier: .gregorian)
   calendar.timeZone = TimeZone(identifier: "UTC")!
   let d = calendar.dateComponents([.year, .month, .day], from: Date(timeIntervalSince1970: at / 1000))

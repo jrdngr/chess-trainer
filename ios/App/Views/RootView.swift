@@ -15,6 +15,8 @@ struct RootView: View {
   @State private var mode: Mode?
   /// Play on the board, opened from the Playbook tab.
   @State private var building = false
+  /// Import games, opened from the Playbook tab.
+  @State private var importing = ImportDebug.open
   /// A line the Playbook sent to the Analysis tab, and the side it was sent from.
   @State private var explore: (sans: [String], side: ChessCore.Color)?
 
@@ -39,6 +41,8 @@ struct RootView: View {
         tab = .home
         mode = next == .autopilot ? .autopilot : nil
       }
+    } else if importing {
+      ImportView(onBack: { importing = false })
     } else if building {
       BoardBuildView(onBack: { building = false }, onDone: { _ in building = false })
     } else if let mode {
@@ -56,7 +60,7 @@ struct RootView: View {
             PlaybookView(tree: tree, index: index, onExplore: { sans, side in
               explore = (sans, side)
               tab = .analysis
-            }, onBuild: { building = true })
+            }, onImport: { importing = true }, onBuild: { building = true })
           case .stats: StatsView(tree: tree, index: index)
           case .analysis:
             AnalysisTab(tree: tree, index: index, line: explore?.sans ?? [], orientation: explore?.side ?? .w)

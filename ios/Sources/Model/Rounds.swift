@@ -1,8 +1,8 @@
 import ChessCore
 
 /// Autopilot's rounds: what the next run is, and where it starts.
-/// `src/store/recommendation.ts`. What your games say (Repair's evidence)
-/// comes with import, in a later phase: here a session weighs your cards.
+/// `src/store/recommendation.ts`. What your games say (`evidenceIn`) steers
+/// both the pick and the run.
 
 /// What Autopilot's next run is: the recommendation, and for a run started at a position, the moves to it.
 public struct AutoRound: Sendable {
@@ -35,7 +35,7 @@ public func roundSelection(_ state: AppState, _ tree: OpeningTree, last: String?
 public func recommendInput(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _ history: AutoHistory) -> RecommendInput {
   var input = RecommendInput(
     tree: tree, selection: selection, reps: repertoiresIn(state.repertoireList, selection.color), cards: state.cards,
-    score: state.score, starred: state.settings.favoriteOpenings, newPerSession: AUTO_DRILL.newPerSession,
+    repairs: repairRefs(evidenceIn(state, tree, selection)), score: state.score, starred: state.settings.favoriteOpenings, newPerSession: AUTO_DRILL.newPerSession,
     recentFocuses: history.focuses)
   input.recentSteered = history.steered
   input.seen = Seen(at: state.score.seen, round: state.score.lineRounds)
@@ -91,7 +91,10 @@ public func survivalOptions(_ round: AutoRound, _ state: AppState, _ tree: Openi
   opts.toward = round.pick.opening
   opts.enter = round.pick.start == .inside
   opts.at = round.at
-  opts.weakness = weaknessFromCards(state.cards)
+  // As the web's run screen reads it: the saved selection's evidence.
+  let evidence = evidenceIn(state, tree, state.settings.selection)
+  opts.weakness = weaknessFromCards(state.cards, slips(evidence))
+  opts.holeWeight = evidenceFor(evidence)
   opts.growth = GrowthOptions(minShare: AUTO_GROWTH.minShare, maxPly: AUTO_GROWTH.maxPly)
   opts.seen = Seen(at: state.score.seen, round: state.score.lineRounds)
   opts.seed = seed

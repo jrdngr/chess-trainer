@@ -52,6 +52,9 @@ Ported so far:
 - `onboarding.json`: all
 - `data.json`: `events.*`, `cloud.*`, `store.*`
 - `spec/constants.json`: every constant of the ported modules
+- Import (no golden cases): `ImportTests` follows `pgn.test.ts` and the
+  sample-archive tests, and checks the Lichess and Chess.com clients against
+  saved responses
 
 `PickerData.swift` and `StructureTemplates.swift` are written out from
 `spec/constants.json` (and, for the structures' tests, `structures.ts`) by a
