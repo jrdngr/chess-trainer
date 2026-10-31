@@ -11,6 +11,8 @@ struct EndView: View {
   let onGrow: (GrowOffer) -> Void
   let onExit: () -> Void
   @State private var atPrepEnd = false
+  /// The rating change has played over the board and gone down to its place.
+  @State private var played = false
 
   var body: some View {
     let state = finish.ended
@@ -23,6 +25,15 @@ struct EndView: View {
           .foregroundStyle(isBad ? Theme.bad : Theme.text2)
         BoardView(fen: walkSan(line).fens.last!, orientation: state.run.color, interactive: false, lastMove: lastMoveOf(line), onMove: { _ in })
           .padding(.horizontal)
+          .overlay {
+            if let moment, !played {
+              ZStack {
+                Theme.background.opacity(0.6)
+                RatingPlayback(moment: moment) { withAnimation { played = true } }
+              }
+              .transition(.opacity)
+            }
+          }
         if prepPly != nil {
           Picker("", selection: $atPrepEnd) {
             Text("Final position").tag(false)
@@ -65,24 +76,17 @@ struct EndView: View {
     return false
   }
 
+  /// The opening's own rating, as this run moved it.
+  private var moment: RatingMoment? {
+    guard let r = model.ratings.byKey[model.openingId], nodeById(model.tree, model.openingId).depth > 0 else { return nil }
+    return RatingMoment(name: openingName(model.tree, model.openingId), before: r.before, after: r.after)
+  }
+
   @ViewBuilder private var ratingCard: some View {
-    if let r = model.ratings.byKey[model.openingId] {
-      let before = rankOf(r.before), after = rankOf(r.after)
-      VStack(spacing: 6) {
-        Text("Rating").font(.caption).foregroundStyle(Theme.text2)
-        HStack {
-          Text(after.heldLabel).font(.headline).foregroundStyle(Theme.text)
-          Spacer()
-          Text("\(Int(JSRound(r.before))) \u{2192} \(Int(JSRound(r.after)))").font(.headline.monospacedDigit())
-            .foregroundStyle(r.after >= r.before ? Theme.good : Theme.bad)
-        }
-        ProgressView(value: after.progress).tint(Theme.accent)
-        if after.reached != before.reached {
-          Text(after.reached > before.reached ? "Up to \(after.heldLabel)" : "Down to \(after.heldLabel)")
-            .font(.subheadline.bold()).foregroundStyle(after.reached > before.reached ? Theme.good : Theme.bad)
-        }
-      }
-      .padding().background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface)).padding(.horizontal)
+    if let moment, played {
+      RatingCardView(moment: moment, rating: moment.after, shown: moment.after, width: rankOf(moment.after).progress)
+        .padding(.horizontal)
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
   }
 
