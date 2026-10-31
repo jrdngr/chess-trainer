@@ -21,11 +21,12 @@ public struct Settings: Equatable, Sendable, Codable {
   public var lichessUsername = ""
   public var chesscomUsername = ""
   public var growth = DEFAULT_GROWTH
+  public var play = DEFAULT_PLAY
   public init() {}
 
   enum CodingKeys: String, CodingKey {
     case selection, favoriteOpenings, autopilot, hapticFeedback, showCoordinates, onboarded, autoplay
-    case engineEnabled, boardTheme, cloudSync, lichessUsername, chesscomUsername, growth
+    case engineEnabled, boardTheme, cloudSync, lichessUsername, chesscomUsername, growth, play
   }
 
   /// A save missing a setting takes its default.
@@ -45,6 +46,7 @@ public struct Settings: Equatable, Sendable, Codable {
     lichessUsername = try c.decodeIfPresent(String.self, forKey: .lichessUsername) ?? lichessUsername
     chesscomUsername = try c.decodeIfPresent(String.self, forKey: .chesscomUsername) ?? chesscomUsername
     growth = try c.decodeIfPresent(GrowthPrefs.self, forKey: .growth) ?? growth
+    play = try c.decodeIfPresent(PlayPrefs.self, forKey: .play) ?? play
   }
 }
 
@@ -63,10 +65,12 @@ public struct AppState: Equatable, Sendable, Codable {
   public var log: [ReviewLogEntry] = []
   public var events: [AppEvent] = []
   public var settings = Settings()
+  /// Games imported, and the games played in Play (newest first, ahead of the imports).
+  public var importedGames: [ImportedGame] = []
   public init() {}
 
   enum CodingKeys: String, CodingKey {
-    case repertoires, repertoireOrder, cards, score, survival, mistakes, lineCards, log, events, settings
+    case repertoires, repertoireOrder, cards, score, survival, mistakes, lineCards, log, events, settings, importedGames
   }
 
   /// A save from before a field existed takes its default.
@@ -83,6 +87,7 @@ public struct AppState: Equatable, Sendable, Codable {
     log = try c.decodeIfPresent([ReviewLogEntry].self, forKey: .log) ?? log
     events = normalizeEvents(try c.decodeIfPresent([AppEvent].self, forKey: .events))
     settings = try c.decodeIfPresent(Settings.self, forKey: .settings) ?? settings
+    importedGames = try c.decodeIfPresent([ImportedGame].self, forKey: .importedGames) ?? importedGames
   }
 
   public var repertoireList: [Repertoire] { repertoireOrder.compactMap { repertoires[$0] } }

@@ -18,14 +18,18 @@ struct MoveStrip: View {
   var items: [StripItem]
   var cursor: Int
   var max: Int
+  /// The seek arrows either side; off for a strip that only shows the moves.
+  var arrows = true
   var onSeek: (Int) -> Void
   /// Shown when there are no moves yet.
   var hint: String? = nil
 
   var body: some View {
     HStack(spacing: 6) {
-      arrow("backward.end", disabled: cursor == 0) { onSeek(0) }
-      arrow("chevron.left", disabled: cursor == 0) { onSeek(cursor - 1) }
+      if arrows {
+        arrow("backward.end", disabled: cursor == 0) { onSeek(0) }
+        arrow("chevron.left", disabled: cursor == 0) { onSeek(cursor - 1) }
+      }
       ScrollViewReader { proxy in
         ScrollView(.horizontal, showsIndicators: false) {
           HStack(spacing: 4) {
@@ -38,7 +42,7 @@ struct MoveStrip: View {
         .onChange(of: cursor) { scroll(proxy, animated: true) }
       }
       .frame(minHeight: 38)
-      arrow("chevron.right", disabled: cursor >= max) { onSeek(cursor + 1) }
+      if arrows { arrow("chevron.right", disabled: cursor >= max) { onSeek(cursor + 1) } }
     }
   }
 
