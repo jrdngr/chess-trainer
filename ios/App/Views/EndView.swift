@@ -9,6 +9,7 @@ struct EndView: View {
   let finish: Finish
   let onNext: () -> Void
   let onGrow: (GrowOffer) -> Void
+  let onAnalyze: () -> Void
   let onExit: () -> Void
   @State private var atPrepEnd = false
   /// The rating change has played over the board and gone down to its place.
@@ -64,7 +65,10 @@ struct EndView: View {
         if let offer = model.offer, offer.kind == "line" {
           Button("Grow this line") { onGrow(offer) }.foregroundStyle(Theme.good)
         }
-        Button("Done", action: onExit).foregroundStyle(Theme.text2)
+        HStack(spacing: 24) {
+          Button("Analyze", action: onAnalyze).foregroundStyle(Theme.text2)
+          Button("Done", action: onExit).foregroundStyle(Theme.text2)
+        }
       }
       .padding(.vertical)
     }

@@ -101,3 +101,20 @@ public func chooseMove(_ lines: [EngineLine], _ level: Level, _ rand: () -> Doub
   return usable.last!.pv[0]
 }
 
+
+/// A score as Analysis writes it, in White's frame: "+0.35", "-M3". `formatScore`.
+public func formatScore(_ line: EngineLine) -> String {
+  if let mate = line.mate { return "\(mate > 0 ? "" : "-")M\(Int(abs(mate)))" }
+  guard let cp = line.cp else { return "\u{2014}" }
+  // A zero reads "+0.00" whatever its sign, as JavaScript prints it.
+  let pawns = cp == 0 ? 0 : cp / 100
+  return (pawns < 0 ? "" : "+") + String(format: "%.2f", pawns)
+}
+
+/// 0...1 of the eval bar that is White's. `winFraction`.
+public func winFraction(_ line: EngineLine?) -> Double {
+  guard let line else { return 0.5 }
+  if let mate = line.mate { return mate > 0 ? 1 : 0 }
+  guard let cp = line.cp else { return 0.5 }
+  return 1 / (1 + exp(-cp / 320))
+}

@@ -16,15 +16,18 @@ struct AutopilotView: View {
   @State private var model: RunModel?
   @State private var nothing = false
   @State private var growth: GrowthModel?
+  @State private var analyzing = false
   private static let engine = BasicEngine()
 
   var body: some View {
     Group {
-      if let growth {
+      if analyzing, let model {
+        AnalysisView(line: model.run.played, orientation: model.run.color, index: index, engine: Self.engine) { analyzing = false }
+      } else if let growth {
         GrowthView(model: growth, onNext: next)
       } else if let model {
         if model.phase == .over, let finish = model.finish {
-          EndView(model: model, finish: finish, onNext: next, onGrow: grow, onExit: exit)
+          EndView(model: model, finish: finish, onNext: next, onGrow: grow, onAnalyze: { analyzing = true }, onExit: exit)
         } else {
           RunView(model: model, onExit: exit)
         }
