@@ -54,6 +54,7 @@ constant in `spec/constants.json` is what counts.
 | [lenses.md](lenses.md) | LENS | The lens bar, the Undefended flash, structure plans, Cash out |
 | [naming.md](naming.md) | NAME | Position keys, book names and families, the opening catalogue, regions |
 | [onboarding.md](onboarding.md) | ONB | The first screens: starter sets, picked openings, lines from the board, what goes in |
+| [picker.md](picker.md) | PICK | The selection, the quick sheet, the opening catalogue, Browse |
 | [play.md](play.md) | PLAY | A game against the engine: strengths, the opening walk-in, games kept, Save this opening |
 | [playbook.md](playbook.md) | BOOK | The Playbook tree, move sources, extension kinds, the prepared floor, mistakes |
 | [run.md](run.md) | RUN | A Survival run, which is also every Autopilot round: prep, the book phase, misses, pops, blunders and the end |
