@@ -26,7 +26,7 @@ struct RootView: View {
     }
     .overlay { ToastHost() }
     .environment(\.boardLook, BoardLook(theme: store.state.settings.boardTheme, coordinates: store.state.settings.showCoordinates))
-    .task { debugSeed() }
+    .task(id: store.tree == nil) { debugSeed() }
   }
 
   @ViewBuilder private func content(_ tree: OpeningTree, _ index: ReferenceIndex) -> some View {
