@@ -268,21 +268,21 @@ A sketch, to be designed properly once the spec exists:
 | Phase | What | Exit |
 | --- | --- | --- |
 | 0. Audit | Live code map, dead list, drift list (code vs decisions), Jordan confirms port/drop | Signed-off area list |
-| 1. Spec and harness, Autopilot path | Inject inputs, extract Survival/End controllers, browser safety net, spec for Core + Autopilot, generators, cases | Cases pass on the prototype, coverage 100% for those areas |
+| 1. Spec and harness, whole app | Inject inputs, extract every mode's controllers, browser safety net, spec for every area, generators, cases | Cases pass on the prototype, coverage 100% for every **port** rule |
 | 2. Native foundation | `ChessCore`, `Book`, core `Model` (tree, Playbook, SRS, ratings, selection) | Function cases pass in Swift |
 | 3. Autopilot | Run controller, judge, end screen, Grow this line batch, Home, round intro | Scenario cases and screenshot review pass; TestFlight |
-| 4. Rest of the free tier | Playbook tab, Tidy, Extensions, Onboarding, Stats, Milestones, Analysis, Play | Same, per area (spec written just ahead of each) |
+| 4. Rest of the free tier | Playbook tab, Tidy, Extensions, Onboarding, Stats, Milestones, Analysis, Play | Same, per area |
 | 5. Paid modes | Survival setup and extras, Drill positions and lines, full Growth, import | Same |
 | 6. Intended changes | Caissa (calibration bench), level-matched books, paywall | Each lands as a spec **change** with regenerated cases, one at a time |
 
-Phases 1 and 2 can overlap: native foundation work only needs the core
-function cases.
+Decided 2026-10-31 (Jordan): the whole app is specced and covered by cases
+before any Swift, so the reference is complete up front. Phase 1 still starts
+with Core and Autopilot, since everything else builds on them.
 
 ## Open questions for Jordan
 
-1. **How much prototype test work up front.** Recommended: spec and cases for
-   the Autopilot path first (phase 1), and each later area's spec just before
-   it's ported. The alternative is the whole app before any Swift.
+1. ~~How much prototype test work up front.~~ Decided: the whole app before
+   any Swift.
 2. **The dead list.** Confirm what not to port once phase 0 lists it (likely
    old Run code, Repair's model, recommendation focuses, past-book engine
    replies).
