@@ -3,13 +3,10 @@ import {
   applyMove,
   applySan,
   applyUci,
-  isLightSquare,
-  isPromotion,
   kingSquare,
   legalMoves,
   material,
   piecesFromFen,
-  plyOf,
   positionKey,
   positionStatus,
   sansToMoveText,
@@ -55,13 +52,6 @@ describe('legal moves', () => {
     expect(piecesFromFen(castle!.after).find((p) => p.square === 'f1')?.type).toBe('r');
   });
 
-  it('detects promotion squares', () => {
-    const fen = '8/P7/8/8/8/8/8/K6k w - - 0 1';
-    expect(isPromotion(fen, 'a7', 'a8')).toBe(true);
-    const promoted = applyMove(fen, 'a7', 'a8', 'q');
-    expect(promoted?.san).toBe('a8=Q+');
-  });
-
   it('parses UCI moves', () => {
     expect(applyUci(START_FEN, 'e2e4')?.san).toBe('e4');
     expect(applyUci(START_FEN, 'e2e5')).toBeNull();
@@ -87,21 +77,9 @@ describe('position identity', () => {
     expect(a).not.toBe(b);
     expect(positionKey(a)).toBe(positionKey(b));
   });
-
-  it('computes ply from the FEN counters', () => {
-    expect(plyOf(START_FEN)).toBe(0);
-    const fens = walkSan(['e4', 'c5', 'Nf3']).fens;
-    expect(plyOf(fens[1])).toBe(1);
-    expect(plyOf(fens[3])).toBe(3);
-  });
 });
 
 describe('board helpers', () => {
-  it('knows square colours', () => {
-    expect(isLightSquare('a1')).toBe(false);
-    expect(isLightSquare('h1')).toBe(true);
-    expect(isLightSquare('e4')).toBe(true);
-  });
 
   it('renders numbered move text', () => {
     expect(sansToMoveText(['e4', 'c5', 'Nf3', 'd6'])).toBe('1. e4 c5 2. Nf3 d6');

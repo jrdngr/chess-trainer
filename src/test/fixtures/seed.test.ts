@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { fenTurn } from '../chess/core';
-import { decisionPoints } from '../model/repertoire';
-import { allItems, buildSession, checkAnswer } from '../model/session';
-import { createCard, review } from '../model/srs';
-import { SEED_REPERTOIRES } from '../model/seed/repertoires';
+import { fenTurn } from '../../chess/core';
+import { decisionPoints } from '../../model/repertoire';
+import { allItems, buildSession, checkAnswer } from '../../model/session';
+import { createCard, review } from '../../model/srs';
+import { SEED_REPERTOIRES } from './repertoires';
 import { buildSeedRepertoires } from './seed';
-import { useStore } from './useStore';
+import { useStore } from '../../store/useStore';
 
 describe('seeded repertoires', () => {
   const reps = buildSeedRepertoires();

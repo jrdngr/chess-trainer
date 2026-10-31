@@ -1,24 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { positionKey, walkSan } from '../chess/core';
-import {
-  hasLine,
-  addLine,
-  addMove,
-  childrenOf,
-  countNodes,
-  createRepertoire,
-  decisionPoints,
-  fenAt,
-  leafLines,
-  lineText,
-  moveSibling,
-  nodeAtLine,
-  pathTo,
-  removeSubtree,
-  setNote,
-  setPreferred,
-  subtreeIds,
-} from './repertoire';
+import { addLine, addMove, childrenOf, createRepertoire, decisionPoints, fenAt, leafLines, moveSibling, nodeAtLine, pathTo, removeSubtree, setNote, setPreferred, subtreeIds } from './repertoire';
+import { hasLine, countNodes, lineText } from '../test/helpers';
 
 const najdorf = ['e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'Nf6', 'Nc3', 'a6'];
 

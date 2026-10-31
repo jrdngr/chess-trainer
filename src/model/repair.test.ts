@@ -2,14 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   buildRepairs,
   costOf,
-  fixCandidates,
-  isRepaired,
-  lineFor,
-  MISMATCH_MIN_GAMES,
-  openingMismatch,
 } from './repair';
 import { generateSampleArchive } from './seed/sampleGames';
-import { buildSeedRepertoires } from '../store/seed';
+import { buildSeedRepertoires } from '../test/fixtures/seed';
 import { applySan, positionKey } from '../chess/core';
 import type { ImportedGame, Repertoire } from './types';
 
@@ -119,29 +114,6 @@ describe('cost', () => {
   });
 });
 
-describe('fixing', () => {
-  const items = buildRepairs(games, reps);
-
-  it('accepts the prepared move and nothing else', () => {
-    const item = items.find((i) => i.kind === 'offprep')!;
-    expect(isRepaired(item, item.expected[0])).toBe(true);
-    expect(isRepaired(item, item.played[0].san)).toBe(false);
-  });
-
-  it('offers what you played before what the book plays, without repeats', () => {
-    const item = items.find((i) => i.kind === 'unprepared') ?? items[0];
-    const mine = item.played.map((p) => p.san);
-    const candidates = fixCandidates(item, [mine[0], 'Qh5', 'Na3']);
-    expect(candidates.slice(0, mine.length)).toEqual(mine);
-    expect(new Set(candidates).size).toBe(candidates.length);
-  });
-
-  it('writes a line that reaches the position and then plays the move', () => {
-    const item = items[0];
-    expect(lineFor(item, 'Qh5')).toEqual([...item.path, 'Qh5']);
-  });
-});
-
 /** Position keys this player's games reached, on their own turn. */
 function keysPlayed(archive: ImportedGame[], rep: Repertoire): Set<string> {
   const out = new Set<string>();
@@ -158,31 +130,3 @@ function keysPlayed(archive: ImportedGame[], rep: Repertoire): Set<string> {
   }
   return out;
 }
-
-describe('the opening mismatch', () => {
-  it('is reported instead of being queued as a repair', () => {
-    // The sample player is a 1.e4 player, so the d4 repertoire disagrees from
-    // move one. That must not appear as something to fix.
-    for (const item of buildRepairs(games, reps)) {
-      const firstDecision = item.color === 'w' ? 0 : 1;
-      expect(item.path.length).toBeGreaterThan(firstDecision);
-    }
-    const white = reps.find((r) => r.color === 'w')!;
-    const mismatch = openingMismatch(games, white);
-    expect(mismatch).not.toBeNull();
-    expect(mismatch!.games).toBeGreaterThanOrEqual(MISMATCH_MIN_GAMES);
-  });
-
-  it('says nothing when there are no games', () => {
-    expect(openingMismatch([], reps[0])).toBeNull();
-  });
-
-  it('says nothing about a repertoire the player actually plays', () => {
-    // An archive from a player who opens 1.d4 should not be told they do not.
-    const d4Player = generateSampleArchive({ username: 'tester', count: 40, seed: 11 })
-      .filter((g) => g.userColor !== 'w' || g.moves[0] === 'd4');
-    const white = reps.find((r) => r.color === 'w')!;
-    const mismatch = openingMismatch(d4Player, white);
-    expect(mismatch).toBeNull();
-  });
-});

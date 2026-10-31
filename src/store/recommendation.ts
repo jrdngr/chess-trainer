@@ -1,7 +1,7 @@
 import type { Color } from '../chess/core';
 import { favoritesIn, isAnyFavorite, resolveFavorite } from '../model/anyFavorite';
 import { AUTO_DRILL } from '../model/autopilotPrefs';
-import { chooseStart, coldNeed, forcedStart, insideStart, splitItems, testCycle, type ForcedStart, type TestCase } from '../model/autopilot';
+import { chooseStart, coldNeed, insideStart, splitItems } from '../model/autopilot';
 import { ACCURACY_RUNS } from '../model/recommend';
 import { buildRepairs, type RepairItem } from '../model/repair';
 import { openingTree } from '../model/openingTree';
@@ -155,16 +155,13 @@ export const NO_HISTORY: AutoHistory = { focuses: [], steered: [] };
  *
  * The recommendation engine picks what the run is about, and `chooseStart`
  * where it starts: at the opening's own position, at a position deeper in
- * that needs it, or from move one — see `autopilot.ts`. `force` is Mode
- * Testing's: where this run starts, whatever is owed, or null where it cannot.
+ * that needs it, or from move one — see `autopilot.ts`.
  */
-export function nextRound(state: State, history: AutoHistory, force?: ForcedStart): AutoRound | null {
+export function nextRound(state: State, history: AutoHistory): AutoRound | null {
   const recommended = recommendNow(state, history.focuses, history.steered);
   if (!recommended) return null;
-  if (force === 'inside' && recommended.start !== 'inside') return null;
-  if (force === 'inside' || force === 'first') return { pick: { ...recommended, start: force }, at: null };
   // An opening at move one, or a first move, has no way in to skip.
-  if (recommended.start === 'first') return force ? null : { pick: recommended, at: null };
+  if (recommended.start === 'first') return { pick: recommended, at: null };
 
   const tree = openingTree(referenceIndex());
   const rep = repertoireList(state).find((r) => r.color === recommended.color);
@@ -172,11 +169,6 @@ export function nextRound(state: State, history: AutoHistory, force?: ForcedStar
   const { wayIn, inside } = splitItems(items, recommended.opening.sans.length);
   const round = state.score.lineRounds;
   const deeper = insideStart(inside, state.cards, { accuracy: prepAccuracy(state.score.rounds, [recommended.color]), round });
-  if (force) {
-    // Mode Testing takes any position deeper in, when none is owed.
-    const at = deeper?.item ?? inside[0] ?? null;
-    return at ? { pick: recommended, at: at.pathSans } : null;
-  }
   const kind = chooseStart({
     recent: state.score.starts,
     cold: coldNeed(wayIn, state.cards, round),
@@ -193,61 +185,16 @@ export function roundsIn(score: ScoreState, openingId: string): number {
   return Object.values(nodeStats(score, openingId).byMode).reduce((n, mode) => n + mode.rounds, 0);
 }
 
-/* ── Mode Testing ───────────────────────────────────────────────────────── */
-
-/** The cases left in this cycle, and what the cycle was built for. */
-let testQueue: TestCase[] = [];
-let testKey = '';
-
-/** The sides a selection covers that you have a repertoire for. */
-function testColors(state: State, selection: Selection): Color[] {
-  const sides: Color[] = selection.color === 'random' ? ['w', 'b'] : [selection.color];
-  const held = sides.filter((side) => repertoireList(state).some((rep) => rep.color === side));
-  return held.length ? held : sides;
-}
-
-/** A round Autopilot is about to play, with the selection it plays in and, under Mode Testing, its case. */
+/** A round Autopilot is about to play, with the selection it plays in. */
 export interface PickedRound {
   round: AutoRound | null;
   within: Selection;
-  test?: TestCase;
 }
 
-/**
- * Autopilot's next round. Normally `nextRound` on the next selection; with
- * Mode Testing on, the first case left in the cycle that can run, a fresh
- * cycle once every case has been played — see `testCycle`. Nothing is taken
- * from the cycle here: `tookTest` does that once the round is under way, so
- * Home's button can say what is next.
- */
+/** Autopilot's next round: `nextRound` on the next selection. */
 export function pickRound(state: State, history: AutoHistory, scope?: Selection): PickedRound {
-  const saved = scope ?? state.settings.selection;
-  if (state.settings.autopilot.modeTesting) {
-    const colors = testColors(state, saved);
-    const key = `${saved.color}|${saved.opening}|${colors.join('')}`;
-    if (key !== testKey || !testQueue.length) {
-      testKey = key;
-      testQueue = testCycle(colors, Math.random);
-    }
-    for (const attempt of [0, 1]) {
-      for (const test of testQueue) {
-        const sided: Selection = { ...saved, color: test.color };
-        const within = scope ? sided : peekRoundSelection(state, sided);
-        const round = nextRound(withSelection(state, within), history, forcedStart(test.variant));
-        if (round) return { round, within, test };
-      }
-      // Nothing left in this cycle can run: start the next one.
-      if (attempt === 0) testQueue = testCycle(colors, Math.random);
-    }
-  }
   const within = scope ?? peekRoundSelection(state);
   return { round: nextRound(withSelection(state, within), history), within };
-}
-
-/** A Mode Testing case has been played: the cycle moves on. */
-export function tookTest(test: TestCase): void {
-  const at = testQueue.findIndex((t) => t.variant === test.variant && t.color === test.color);
-  if (at >= 0) testQueue = [...testQueue.slice(0, at), ...testQueue.slice(at + 1)];
 }
 
 /**

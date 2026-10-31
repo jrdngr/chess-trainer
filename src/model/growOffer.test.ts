@@ -6,8 +6,6 @@ import {
   endAtEnd,
   growLaunch,
   holeAtEnd,
-  isStubFinish,
-  yourLastMove,
   lineFinishes,
   offerOpening,
   readyToGrow,
@@ -17,12 +15,10 @@ import {
   practiceText,
   growOfferAt,
 } from './growOffer';
-import { atEdge, beginRun, finishPrep, isUsersTurn, opponentReply, play, movesHere } from './openingRun';
 import { nodeById, openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
 import { addLine, createRepertoire, leafLines } from './repertoire';
 import type { RoundRecord } from './scoring';
-import { mulberry32 } from './session';
 import type { Repertoire } from './types';
 
 const index = referenceIndex();
@@ -45,34 +41,6 @@ describe('a stub opening', () => {
   // What onboarding saves for a Queen's Gambit pick: its move order, no further.
   const stub = rep('w', 'd4 d5 c4');
 
-  it('ends a round started inside it without asking a move, and that is a stub finish', () => {
-    const begun = beginRun({ tree, reps: [stub], node: tree.root, color: 'w', seed: 1, toward: gambit, enter: true });
-    expect(begun).not.toBeNull();
-    const { source, run } = begun!;
-    expect(run.played).toEqual(['d4', 'd5', 'c4']);
-    const replied = opponentReply(source, run, mulberry32(1));
-    expect(isUsersTurn(replied)).toBe(true);
-    expect(atEdge(source, replied)).toBe(true);
-    const done = finishPrep(replied);
-    expect(isStubFinish(done)).toBe(true);
-  });
-
-  it('is not a stub finish once a move of yours was found', () => {
-    const full = rep('w', 'd4 d5 c4 e6 Nc3');
-    const begun = beginRun({ tree, reps: [full], node: tree.root, color: 'w', seed: 1, toward: gambit, enter: true })!;
-    let run = begun.run;
-    const pick = mulberry32(2);
-    while (!isUsersTurn(run) || movesHere(begun.source, run).length === 0) {
-      run = opponentReply(begun.source, run, pick);
-      if (run.played.length > 6) break;
-    }
-    // Whatever Black played, a prepared answer counts, and anything else is the edge.
-    const prepared = begun.source.prepAt(run.fen);
-    if (prepared.length) run = play(begun.source, run, prepared[0]).run;
-    const done = finishPrep(run);
-    expect(isStubFinish(done)).toBe(prepared.length === 0);
-  });
-
   it('offers to grow from the reply the round ended on', () => {
     const played = ['d4', 'd5', 'c4', 'e6'];
     const opening = offerOpening(tree, tree.root, gambit, played);
@@ -87,12 +55,6 @@ describe('a stub opening', () => {
     expect(run.path).toEqual(played);
     expect(atHole(stub, run)).toBe(true);
     expect(answerHole(run, 'Nc3')?.path).toEqual([...played, 'Nc3']);
-  });
-
-  it('names your last move for the card', () => {
-    expect(yourLastMove(['d4', 'd5', 'c4', 'e6'], 'w')).toBe('2.c4');
-    expect(yourLastMove(['d4', 'Nf6', 'c4', 'g6', 'Nc3'], 'b')).toBe('2...g6');
-    expect(yourLastMove(['e4'], 'b')).toBeNull();
   });
 });
 

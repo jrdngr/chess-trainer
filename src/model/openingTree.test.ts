@@ -1,20 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { positionKey, walkSan } from '../chess/core';
-import {
-  ancestorsOf,
-  approachKeys,
-  deepestNodeAlong,
-  deepestNodeWithin,
-  descendantsOf,
-  insideRegion,
-  lineStatus,
-  moveLabel,
-  nodeById,
-  openingTree,
-  orderedChildren,
-  starredWithin,
-} from './openingTree';
+import { ancestorsOf, approachKeys, deepestNodeAlong, deepestNodeWithin, descendantsOf, lineStatus, moveLabel, nodeById, openingTree, orderedChildren, starredWithin } from './openingTree';
 import { referenceIndex } from './referenceIndex';
+import { insideRegion } from '../test/helpers';
 
 const tree = openingTree(referenceIndex());
 const keyAfter = (sans: string[]) => {

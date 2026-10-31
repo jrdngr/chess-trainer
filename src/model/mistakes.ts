@@ -32,17 +32,6 @@ export interface Mistake {
  */
 export const MISTAKE_LIMIT = 200;
 
-export function sourceLabel(source: MistakeSource): string {
-  switch (source) {
-    case 'play':
-      return 'a game you played';
-    case 'openingRun':
-      return 'an opening run';
-    default:
-      return 'a drill';
-  }
-}
-
 /**
  * Add one, newest last, replacing any earlier miss at the same position.
  *

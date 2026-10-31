@@ -110,10 +110,6 @@ export function setEventPlace(next: EventPlace): void {
   place = next;
 }
 
-export function eventPlace(): EventPlace {
-  return place;
-}
-
 /** The log with one more event on the end, the oldest dropped past the cap. */
 export function appendEvent(events: AppEvent[], event: NewEvent, now = Date.now()): AppEvent[] {
   const full = { ...event, at: now, via: event.via ?? place } as AppEvent;

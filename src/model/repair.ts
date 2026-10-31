@@ -1,4 +1,4 @@
-import { fenTurn, positionKey, sansToMoveText, type Color } from '../chess/core';
+import { fenTurn, sansToMoveText, type Color } from '../chess/core';
 import { analyseAgainstRepertoire, buildPlayerTree, type Finding } from './gameAnalysis';
 import { recentMistakes, type Mistake, type MistakeSource } from './mistakes';
 import type { ImportedGame, Repertoire } from './types';
@@ -159,27 +159,6 @@ export function buildRepairs(
   return opts.limit ? sorted.slice(0, opts.limit) : sorted;
 }
 
-/** Did they find the prepared move? Only `offprep` items have one. */
-export function isRepaired(item: RepairItem, san: string): boolean {
-  return item.expected.includes(san);
-}
-
-/** The line that adding `san` here would write into the repertoire. */
-export function lineFor(item: RepairItem, san: string): string[] {
-  return [...item.path, san];
-}
-
-/** The moves offered as a fix for an unprepared position: yours, then the book's. */
-export function fixCandidates(item: RepairItem, book: string[]): string[] {
-  const mine = item.played.map((p) => p.san);
-  return [...mine, ...book.filter((san) => !mine.includes(san))];
-}
-
-/** A position key matches an item when the same position is reached any way. */
-export function matchesPosition(item: RepairItem, fen: string): boolean {
-  return item.key === positionKey(fen);
-}
-
 /**
  * The opening the player actually reaches for, when it is not the one this
  * repertoire prepares.
@@ -194,32 +173,6 @@ export interface OpeningMismatch {
   played: { san: string; count: number }[];
   expected: string[];
   games: number;
-}
-
-/** Below this, a disagreement is too thin to call someone's opening wrong. */
-export const MISMATCH_MIN_GAMES = 4;
-
-export function openingMismatch(
-  games: ImportedGame[],
-  rep: Repertoire,
-): OpeningMismatch | null {
-  const tree = buildPlayerTree(games, rep.color);
-  if (!tree.games) return null;
-  const ply = firstDecisionPly(rep.color);
-  for (const finding of analyseAgainstRepertoire(tree, rep, { minGames: 1, maxFindings: 200 })) {
-    if (finding.kind !== 'deviation' || finding.path.length !== ply) continue;
-    const off = finding.played.reduce((sum, p) => sum + p.count, 0);
-    // Only a mismatch if they mostly do not play their own first move, and only
-    // on enough games that it is a habit rather than two stray tries.
-    if (off < MISMATCH_MIN_GAMES || off < finding.games * 0.5) return null;
-    return {
-      repertoireId: rep.id,
-      played: finding.played,
-      expected: finding.expected,
-      games: off,
-    };
-  }
-  return null;
 }
 
 /**

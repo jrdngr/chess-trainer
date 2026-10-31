@@ -107,19 +107,6 @@ export function openingLine(moves: string[], color: 'w' | 'b', plies = OPENING_P
 
 export type GameResult = 'win' | 'loss' | 'draw' | 'unfinished';
 
-export function resultLabel(result: GameResult, reason: string): string {
-  switch (result) {
-    case 'win':
-      return `You won by ${reason}`;
-    case 'loss':
-      return `You lost by ${reason}`;
-    case 'draw':
-      return `Drawn by ${reason}`;
-    default:
-      return 'Game abandoned';
-  }
-}
-
 /* ── games played here ──────────────────────────────────────────────────── */
 
 /** How many Play games are kept. Older ones fall off the end. */

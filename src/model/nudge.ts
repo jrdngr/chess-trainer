@@ -1,7 +1,6 @@
 import {
   applySan,
   fenTurn,
-  START_FEN,
   legalMoves,
   legalSans,
   positionKey,
@@ -136,16 +135,6 @@ export function profileOf(rep: Repertoire, index: ReferenceIndex): Profile {
   const profile = { color: rep.color, rootFen: rep.rootFen, nodes, positions };
   byIndex.set(index, profile);
   return profile;
-}
-
-/**
- * The opening a line is in, for scoping habits: the family of the deepest name
- * the book gives it. Growth's rows are filed by the first name instead, which
- * for 1.d4 Nf6 is "Indian Defence" — true, and wide enough to count a
- * Nimzo-Indian move as a King's Indian habit.
- */
-export function openingOf(index: ReferenceIndex, line: string[]): string | null {
-  return familyAlong(index, pathKeys(line, START_FEN));
 }
 
 /** `openingOf`, for a line already given as its positions. */

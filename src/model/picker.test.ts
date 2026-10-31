@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applySan, START_FEN } from '../chess/core';
 import { buildBookIndex } from './book';
 import { openingTree } from './openingTree';
-import { nameLevels, pickerCatalog, sideForPick, sortEntries } from './picker';
+import { nameLevels, pickerCatalog, sideForPick } from './picker';
 import { BRANCH_SIDES, FAMILY_GROUPS, FAMILY_SHARPNESS, SHARPNESS_OVERRIDES } from './pickerData';
 
 const tree = openingTree(buildBookIndex());
@@ -124,22 +124,5 @@ describe('sides', () => {
 
   it('leaves the side alone for any opening', () => {
     expect(sideForPick(catalog, tree.root)).toBeNull();
-  });
-});
-
-describe('sortEntries', () => {
-  const branches = entry('Sicilian Defence').children;
-
-  it('puts starred first whatever the sort', () => {
-    const najdorf = entry('Sicilian Defence: Najdorf Variation');
-    const sorted = sortEntries(branches, 'calmest', [najdorf.node.id]);
-    expect(sorted[0]).toBe(najdorf);
-  });
-
-  it('orders by sharpness and difficulty', () => {
-    const sharp = sortEntries(branches, 'sharpest', []);
-    expect(sharp[0].sharpness).toBe(5);
-    const easy = sortEntries(branches, 'easiest', []);
-    expect(easy[0].difficulty).toBeLessThanOrEqual(easy[easy.length - 1].difficulty);
   });
 });

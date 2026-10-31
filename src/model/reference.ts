@@ -1,4 +1,4 @@
-import { applySan, positionKey, START_FEN, type Color } from '../chess/core';
+import { applySan, positionKey, START_FEN } from '../chess/core';
 import type { ExplorerEntry, ExplorerMove } from './types';
 
 export interface OpeningName {
@@ -36,11 +36,6 @@ export interface ReferenceIndex {
   linked?: boolean;
 }
 
-/** Look one opening up by its id — the space-joined move order. */
-export function openingById(index: ReferenceIndex, id: string): CatalogueEntry | null {
-  return index.catalogue.find((entry) => entry.id === id) ?? null;
-}
-
 /** A name, plus how deep into the line it was recognised. */
 export interface NamedLine extends OpeningName {
   /** Plies matched. 1 is "Queen's Pawn Opening"; 8 is a real variation. */
@@ -71,42 +66,6 @@ export function deepestName(
     if (named) best = { ...named, ply };
   }
   return best;
-}
-
-/**
- * The deepest name on this line that describes the given side's opening.
- *
- * Openings are named from one side or the other: "Sicilian Defence" names what
- * Black did, "Queen's Pawn Opening" what White did. A name attaches at the ply
- * of the move that earned it, so preferring names landing just after this
- * colour moved is what keeps a Black repertoire from being called after White's
- * first move. Where the line has no such name, the deepest one of either side
- * is still better than nothing.
- */
-export function deepestNameForColor(
-  index: ReferenceIndex,
-  sans: string[],
-  color: Color,
-  startFen = START_FEN,
-): NamedLine | null {
-  let fen = startFen;
-  let any: NamedLine | null = null;
-  let mine: NamedLine | null = null;
-  const root = index.names.get(positionKey(fen));
-  if (root) any = { ...root, ply: 0 };
-  let ply = 0;
-  for (const san of sans) {
-    const move = applySan(fen, san);
-    if (!move) break;
-    fen = move.after;
-    ply += 1;
-    const named = index.names.get(positionKey(fen));
-    if (!named) continue;
-    any = { ...named, ply };
-    // White's moves are the odd plies, Black's the even ones.
-    if ((ply % 2 === 1) === (color === 'w')) mine = { ...named, ply };
-  }
-  return mine ?? any;
 }
 
 const familyCache = new WeakMap<ReferenceIndex, Map<string, string>>();
@@ -176,28 +135,6 @@ export function namesAlong(
     if (named) out.push({ ...named, ply });
   }
   return out;
-}
-
-/**
- * The same, but nothing at all when the only name restates the first move.
- *
- * For labelling a line as the player's own opening. "Queen's Pawn Opening" on a
- * Black line whose point is what happened at move four is true and says less
- * than "your Black prep" does — that is the complaint this answers, and the
- * depth is what fixes it rather than which side the name belongs to. Whose move
- * earned the name cannot decide it: the book attaches "King's Indian Defence"
- * at 1.d4 Nf6 2.c4 g6 3.Nc3 Bg7 4.e4, White's seventh ply, and it is still the
- * name of Black's opening.
- */
-export function specificNameForColor(
-  index: ReferenceIndex,
-  sans: string[],
-  color: Color,
-  startFen = START_FEN,
-  minPly = 2,
-): NamedLine | null {
-  const found = deepestNameForColor(index, sans, color, startFen);
-  return found && found.ply >= minPly ? found : null;
 }
 
 /** Deepest opening name on the path to a position — "Sicilian Defence: Najdorf". */

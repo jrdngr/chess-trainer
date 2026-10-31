@@ -26,14 +26,6 @@ export function sourceLabel(source: MoveSource | undefined): string {
   return SOURCE_LABELS[source ?? 'manual'] ?? SOURCE_LABELS.manual;
 }
 
-/** Sources that came from strong players' games or the engine, rather than from you. */
-const FROM_BOOK: ReadonlySet<MoveSource> = new Set(['picker', 'book', 'growth', 'engine', 'seed']);
-
-/** You chose to put this move in, rather than taking it from the book or the engine. */
-export function addedByYou(source: MoveSource | undefined): boolean {
-  return !FROM_BOOK.has(source ?? 'manual');
-}
-
 /** The book has this move here. */
 export function inBook(index: ReferenceIndex, fen: string, san: string): boolean {
   return (lookup(index, fen)?.moves ?? []).some((move) => move.san === san);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { applySan, fenTurn, positionKey, START_FEN, walkSan } from '../chess/core';
-import { deepestName, familyName, lookup } from './reference';
+import { applySan, positionKey, START_FEN, walkSan } from '../chess/core';
+import { deepestName, familyName } from './reference';
 import {
   addsToFit,
   advance,
@@ -8,7 +8,6 @@ import {
   atHole,
   enterHole,
   evidenceFor,
-  findCoverage,
   findHoles,
   growthRows,
   isUsersTurn,
@@ -24,7 +23,6 @@ import {
   rowUrgency,
   startGrowth,
   steer,
-  thinness,
   type GrowthRun,
   firstHole,
   startGrowthAt,
@@ -42,8 +40,9 @@ import { PREPARED_FLOOR } from './prepFloor';
 import { clearEngineReplies, rememberEngineReplies } from './engineReplies';
 import { nodeById, openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
-import { addLine, createRepertoire, hasLine } from './repertoire';
+import { addLine, createRepertoire } from './repertoire';
 import type { Repertoire } from './types';
+import { hasLine } from '../test/helpers';
 
 const index = referenceIndex();
 
@@ -143,77 +142,6 @@ describe('finding holes', () => {
 
   it('finds nothing in an empty White repertoire, whose first move answers nothing', () => {
     expect(findHoles(createRepertoire('Empty', 'w', 'e'), index)).toEqual([]);
-  });
-});
-
-describe('how bare a repertoire is', () => {
-  /** A King's Indian and nothing else: one reply met at every junction. */
-  const kid = black;
-  /**
-   * Broad where the narrow one is deep: every reply the book gives at each of
-   * the first few junctions, answered.
-   *
-   * Built from the book rather than listed by hand. A fixed list of lines is
-   * only "broad" relative to the book it is measured against, and this book
-   * offers about five replies in every position — a hand-written 25 lines
-   * stopped being wide the moment the book got real.
-   */
-  const broad = (() => {
-    let rep = createRepertoire('Broad', 'b', 'r_broad');
-    const walk = (path: string[], fen: string) => {
-      if (path.length >= 4) {
-        rep = addLine(rep, path, 'book').rep;
-        return;
-      }
-      const entry = lookup(index, fen);
-      if (!entry?.moves.length) {
-        if (path.length) rep = addLine(rep, path, 'book').rep;
-        return;
-      }
-      // Their choices are all met; ours is the one move the book likes best.
-      const ours = fenTurn(fen) === 'b';
-      for (const move of ours ? entry.moves.slice(0, 1) : entry.moves.slice(0, 4)) {
-        const played = applySan(fen, move.san);
-        if (played) walk([...path, played.san], played.after);
-      }
-    };
-    walk([], START_FEN);
-    return rep;
-  })();
-
-  it('reads a repertoire with nothing in it as as bare as it gets', () => {
-    expect(thinness(findCoverage(createRepertoire('Empty', 'b', 'r_e'), index))).toBe(1);
-    expect(thinness([])).toBe(1);
-  });
-
-  it('reads one deep line as barer than many shallow ones', () => {
-    const narrow = thinness(findCoverage(kid, index));
-    const wide = thinness(findCoverage(broad, index));
-    // Eight plies of prep, and an answer to one White reply at each junction.
-    expect(narrow).toBeGreaterThan(0.35);
-    expect(wide).toBeLessThan(narrow);
-    expect(wide).toBeLessThan(0.3);
-  });
-
-  it('weighs an early choice above a late one', () => {
-    const at = (depth: number, covered: number) => ({ path: Array(depth).fill('x'), covered, choice: 1 });
-    expect(thinness([at(0, 0), at(10, 1)])).toBeGreaterThan(thinness([at(0, 1), at(10, 0)]));
-  });
-
-  it('discounts a position the opponent has no real choice in', () => {
-    const forced = { path: ['x'], covered: 1, choice: 0 };
-    const open = { path: ['x'], covered: 0, choice: 1 };
-    // The recapture being answered barely counts against the open reply not.
-    expect(thinness([forced, open])).toBeGreaterThan(0.9);
-    expect(thinness([{ ...forced, choice: 1 }, open])).toBeCloseTo(0.5, 5);
-  });
-
-  it('ignores the tip of a line, which is depth missing rather than breadth', () => {
-    // One move of prep: after 1.d4 Black answers, and then nothing. The only
-    // junction is the root, so the tip cannot make the repertoire read wider.
-    const oneMove = addLine(createRepertoire('One', 'b', 'r_one'), ['d4', 'Nf6'], 'book').rep;
-    const paths = findCoverage(oneMove, index).map((at) => at.path.join(' '));
-    expect(paths).toEqual(['']);
   });
 });
 

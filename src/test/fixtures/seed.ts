@@ -1,10 +1,10 @@
-import { applySan, fenTurn, positionKey, walkSan, START_FEN } from '../chess/core';
-import { findGaps } from '../model/gaps';
-import { lookup, totalGamesAt, type ReferenceIndex } from '../model/reference';
-import { referenceIndex } from '../model/referenceIndex';
-import { addLine, childrenOf, createRepertoire, setNote } from '../model/repertoire';
-import { SEED_REPERTOIRES } from '../model/seed/repertoires';
-import type { Repertoire } from '../model/types';
+import { applySan, fenTurn, positionKey, walkSan, START_FEN } from '../../chess/core';
+import { findGaps } from './gaps';
+import { lookup, totalGamesAt, type ReferenceIndex } from '../../model/reference';
+import { referenceIndex } from '../../model/referenceIndex';
+import { addLine, childrenOf, createRepertoire, setNote } from '../../model/repertoire';
+import { SEED_REPERTOIRES } from './repertoires';
+import type { Repertoire } from '../../model/types';
 
 /**
  * What the fixtures promise: an answer to anything played this often.

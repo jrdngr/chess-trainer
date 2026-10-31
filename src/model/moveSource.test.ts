@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addedByYou, growthSource, normalizeSources, sourceLabel, SOURCE_LABELS } from './moveSource';
+import { growthSource, normalizeSources, sourceLabel, SOURCE_LABELS } from './moveSource';
 import { MAX_LIFTED, PREPARED_FLOOR, withFloor } from './prepFloor';
 import { referenceIndex } from './referenceIndex';
 import { addLine, createRepertoire, nodeAtLine } from './repertoire';
@@ -14,15 +14,6 @@ describe('source labels', () => {
     expect(sourceLabel('manual')).toBe('Entered by hand');
     expect(sourceLabel('import')).toBe('Imported games');
     expect(sourceLabel('board')).toBe('Play on the board');
-  });
-
-  it('tells your additions from the book and the engine', () => {
-    for (const source of ['manual', 'analysis', 'import', 'play', 'tidy'] as MoveSource[]) {
-      expect(addedByYou(source)).toBe(true);
-    }
-    for (const source of ['picker', 'book', 'growth', 'engine', 'seed'] as MoveSource[]) {
-      expect(addedByYou(source)).toBe(false);
-    }
   });
 
   it("labels Growth's moves by whether the book has them", () => {

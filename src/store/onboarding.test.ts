@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ANY_FAVORITE } from '../model/anyFavorite';
 import { DEFAULT_SELECTION } from '../model/selection';
-import { countNodes } from '../model/repertoire';
-import { seedFor, setSeed, starterSet } from '../model/starterSets';
+import { seedFor } from '../model/starterSets';
 import type { Repertoire } from '../model/types';
 import { DEFAULT_SETTINGS, needsOnboarding, onboarded, repertoireList, useStore } from './useStore';
+import { countNodes, setSeed, starterSet } from '../test/helpers';
 
 const NAJDORF = 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6';
 const SICILIAN = 'e4 c5';

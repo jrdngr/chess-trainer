@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { familiesIn, linesOf, openingsAcross, openingsIn, tipsOf } from './openings';
+import { familiesIn, linesOf, openingsIn, tipsOf } from './openings';
 import { referenceIndex } from './referenceIndex';
 import { nameAt } from './reference';
 import { addLine, createRepertoire, pruneCount, pruneLine, repertoireName } from './repertoire';
@@ -131,12 +131,6 @@ describe('deriving openings', () => {
     for (let i = 1; i < openings.length; i += 1) {
       expect(openings[i - 1].removes).toBeGreaterThanOrEqual(openings[i].removes);
     }
-  });
-
-  it('keeps each opening pointing at the tree it came from', () => {
-    const openings = openingsAcross([build('w', ['e4 e6 d4 d5']), build('b', [KID])], index);
-    expect(openings.map((o) => o.color).sort()).toEqual(['b', 'w']);
-    for (const opening of openings) expect(opening.repertoireId).toBe(`r_${opening.color}`);
   });
 });
 

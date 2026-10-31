@@ -248,9 +248,3 @@ export function measureCoverage(games: ImportedGame[], rep: Repertoire): Reperto
     games: counted,
   };
 }
-
-/** Turn a finding into the line the user would add to their repertoire. */
-export function findingToLine(finding: Finding): string[] {
-  const best = finding.played[0]?.san;
-  return best ? [...finding.path, best] : finding.path;
-}

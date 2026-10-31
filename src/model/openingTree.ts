@@ -460,11 +460,6 @@ export function lineStatus(tree: OpeningTree, node: OpeningNode, sans: string[])
   return 'onWay';
 }
 
-/** Can a line still be part of this region? */
-export function insideRegion(tree: OpeningTree, node: OpeningNode, sans: string[]): boolean {
-  return lineStatus(tree, node, sans) !== 'outside';
-}
-
 /**
  * The deepest opening a line goes through — what it is called, and where its
  * score goes. Null when the book names nothing along it.

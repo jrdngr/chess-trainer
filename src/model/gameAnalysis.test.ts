@@ -3,7 +3,6 @@ import { positionKey, walkSan } from '../chess/core';
 import {
   analyseAgainstRepertoire,
   buildPlayerTree,
-  findingToLine,
   measureCoverage,
 } from './gameAnalysis';
 import { addLine, createRepertoire } from './repertoire';
@@ -109,13 +108,6 @@ describe('analysis against a repertoire', () => {
     ];
     const findings = analyseAgainstRepertoire(buildPlayerTree(games, 'w'), whiteRep);
     expect(findings[0].lineText).toBe('Starting position');
-  });
-
-  it('turns a finding into an importable line', () => {
-    const games = [game('e4 c5 c3 d5', 'w', '0-1', 'a'), game('e4 c5 c3 Nf6', 'w', '0-1', 'b')];
-    const findings = analyseAgainstRepertoire(buildPlayerTree(games, 'w'), whiteRep);
-    const deviation = findings.find((f) => f.kind === 'deviation')!;
-    expect(findingToLine(deviation)).toEqual(['e4', 'c5', 'c3']);
   });
 });
 

@@ -3,8 +3,9 @@ import { ANY_FAVORITE } from './anyFavorite';
 import { openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
 import { familyName } from './reference';
-import { NAMED_LATE_IDS, picksFrom, playerOf, selectionFor } from './onboarding';
+import { playerOf, selectionFor } from './onboarding';
 import { DEFAULT_SELECTION } from './selection';
+import { NAMED_LATE_IDS, picksFrom } from '../test/helpers';
 
 const NAJDORF = 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6';
 const SICILIAN = 'e4 c5';

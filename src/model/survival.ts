@@ -747,8 +747,6 @@ export interface SurvivalRecord {
 
 export const EMPTY_SURVIVAL_SCORE: SurvivalScore = { best: 0, recent: [], history: [], runs: 0, ended: 0, bestPoints: 0 };
 
-export const EMPTY_SURVIVAL_RECORD: SurvivalRecord = { global: { ...EMPTY_SURVIVAL_SCORE }, openings: {} };
-
 /** A saved record missing a field is still a record. */
 export function normalizeSurvival(saved: Partial<SurvivalRecord> | undefined): SurvivalRecord {
   const fix = (score: Partial<SurvivalScore> | undefined): SurvivalScore => ({

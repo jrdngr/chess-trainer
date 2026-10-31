@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addMistake, MISTAKE_LIMIT, recentMistakes, sourceLabel, type Mistake } from './mistakes';
+import { addMistake, MISTAKE_LIMIT, recentMistakes, type Mistake } from './mistakes';
 
 function slip(key: string, played = 'Nf3', source: Mistake['source'] = 'drill') {
   return { source, repertoireId: 'rep_w', key, fen: `${key} w - - 0 1`, played, expected: 'd4' };
@@ -61,13 +61,5 @@ describe('reading the log back', () => {
     ];
     recentMistakes(log);
     expect(log.map((m) => m.id)).toEqual(['a', 'b']);
-  });
-});
-
-describe('naming the source', () => {
-  it('names each mode in words that fit "from …"', () => {
-    expect(sourceLabel('play')).toBe('a game you played');
-    expect(sourceLabel('openingRun')).toBe('an opening run');
-    expect(sourceLabel('drill')).toBe('a drill');
   });
 });

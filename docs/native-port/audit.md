@@ -21,12 +21,29 @@ Found by tracing every top-level declaration reachable from `src/main.tsx`
 | `model/reference.ts` | `openingById`, `deepestNameForColor`, `specificNameForColor`. |
 | Others | `tidyFinds`, `gradePreview`, `ratingSwing`, `tierColor`, `hasLine`, `lineText`, `countNodes`, `insideRegion`, `openingsAcross`, `picksFrom`, `starterSet`, `setSeed`, `resultLabel`, `clearEngineReplies`, `eventPlace`, `findingToLine`, `allLines` (PGN), `plyOf`, `isPromotion`, `isLightSquare`, `PIECE_NAMES`, mistakes' `sourceLabel`, `addedByYou`, `openingOf`. |
 
+**Done 2026-10-31.** Two kinds of dead code were kept, but moved out of the
+app, because tests lean on them:
+
+- The sample repertoires, their seeder and the gap finder it uses are now
+  test fixtures in `src/test/fixtures/`. Several tests of live code (the prep
+  index, the opponent, Repair's evidence) play against those repertoires.
+- Thin wrappers that tests use to check live code (`hasLine`, `lineText`,
+  `countNodes`, `insideRegion`, `picksFrom`, `tidyFinds`, `ratingSwing`,
+  `allLines`, `starterSet`, `setSeed`) are in `src/test/helpers.ts`. Tests of
+  the old Run mode's own behavior were deleted, and the ones that tested live
+  code through it now drive that code with local scaffolding. 83 tests of
+  dead features were removed, leaving 815.
+
+The old `Run` type still carries fields only the Run mode read (`leftPrep`,
+`extended`, `handOver`, `past`, `hints`, `newMoves`, `added`, `prepDone`,
+`sourceLabel`, `bookRun`). They go when the run logic is extracted.
+
 The trace also flagged the backup engine's piece-square tables. That's a false
 positive: they are used by a loop at module level. They stay.
 
 Also not ported, by decision:
 
-- **Mode Testing**: the toggle, `TestVariant`, `testCycle`, `forcedStart`,
+- **Mode Testing** (removed 2026-10-31): the toggle, `TestVariant`, `testCycle`, `forcedStart`,
   `pickRound`'s test path, `tookTest`, `AutopilotPrefs.modeTesting`.
 - **Old-save handling**, since the native app starts fresh:
   `normalizeSources` (the old `reference` source migration), the legacy

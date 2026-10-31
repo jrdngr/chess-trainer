@@ -41,11 +41,6 @@ export function fullmoveNumber(fen: string): number {
   return Number.isFinite(n) ? n : 1;
 }
 
-/** Ply index (0-based) of the position, derived from the FEN counters. */
-export function plyOf(fen: string): number {
-  return (fullmoveNumber(fen) - 1) * 2 + (fenTurn(fen) === 'b' ? 1 : 0);
-}
-
 export function piecesFromFen(fen: string): Piece[] {
   const chess = new Chess(fen);
   const out: Piece[] = [];
@@ -174,10 +169,6 @@ export function walkSan(sans: string[], startFen = START_FEN): { fens: string[];
   return { fens, moves };
 }
 
-export function isPromotion(fen: string, from: Square, to: Square): boolean {
-  return legalMoves(fen).some((m) => m.from === from && m.to === to && !!m.promotion);
-}
-
 /** The squares of the last move in a line, for highlighting on a board. */
 export function lastMoveOf(
   sans: string[],
@@ -221,11 +212,6 @@ export function squareToCoords(square: Square): { file: number; rank: number } {
 
 export function coordsToSquare(file: number, rank: number): Square {
   return (FILES[file] + RANKS[rank]) as Square;
-}
-
-export function isLightSquare(square: Square): boolean {
-  const { file, rank } = squareToCoords(square);
-  return (file + rank) % 2 === 1;
 }
 
 /** Render a SAN sequence as a numbered move string starting from `startFen`. */

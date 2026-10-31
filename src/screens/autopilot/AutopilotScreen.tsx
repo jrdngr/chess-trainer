@@ -6,7 +6,7 @@ import { startKind, survivalPlanFor } from '../../model/autopilot';
 import type { Selection } from '../../model/selection';
 import type { TidyFind } from '../../model/tidy';
 import { useStore } from '../../store/useStore';
-import { afterRound, NO_HISTORY, pickRound, playedRound, tookTest, type AutoHistory, type PickedRound } from '../../store/recommendation';
+import { afterRound, NO_HISTORY, pickRound, playedRound, type AutoHistory, type PickedRound } from '../../store/recommendation';
 import { SurvivalScreen } from '../survival/SurvivalScreen';
 import { ModePrefsProvider } from '../modePrefs';
 
@@ -47,20 +47,18 @@ export function AutopilotScreen({
   const [history, setHistory] = useState<AutoHistory>(NO_HISTORY);
   /**
    * The round, and the selection it plays in: the scope, or the saved one
-   * with "Any favorite" resolved per round. Under Mode Testing, also the case
-   * it plays — see `pickRound`.
+   * with "Any favorite" resolved per round — see `pickRound`.
    */
   const [picked, setPicked] = useState<PickedRound>(() => pickRound(useStore.getState(), NO_HISTORY, scope));
   const { round, within } = picked;
   /**
-   * Once a round is under way the next lands on another favorite, and Mode
-   * Testing's cycle moves on, even if this session stops here.
+   * Once a round is under way the next lands on another favorite, even if
+   * this session stops here.
    */
   useEffect(() => {
     if (!scope) playedRound(picked.within);
-    if (picked.test) tookTest(picked.test);
     // Where it started counts toward where the next ones start, across sessions.
-    else if (picked.round) useStore.getState().noteStart(startKind(picked.round));
+    if (picked.round) useStore.getState().noteStart(startKind(picked.round));
   }, [scope, picked]);
   /** Autopilot's own options, and the fixed ones every round plays on; never a mode's setup. */
   const autopilotPrefs = useStore((s) => s.settings.autopilot);

@@ -3,7 +3,8 @@ import { ancestorsOf, openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
 import { earned, longestStreak, milestones, nextUp, peakRating } from './milestones';
 import { EMPTY_SCORE, emptyNodeStats, ratingChange, type NodeStats, type ScoreState } from './scoring';
-import { EMPTY_SURVIVAL_RECORD, type SurvivalRecord } from './survival';
+import { type SurvivalRecord } from './survival';
+import { EMPTY_SURVIVAL_RECORD } from '../test/helpers';
 
 const tree = openingTree(referenceIndex());
 const NAJDORF = 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6';

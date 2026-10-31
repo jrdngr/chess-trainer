@@ -2,7 +2,6 @@ import {
   applySan,
   fenTurn,
   positionKey,
-  sansToMoveText,
   START_FEN,
   type Color,
 } from '../chess/core';
@@ -31,23 +30,6 @@ export function childrenOf(rep: Repertoire, nodeId: string | null): RepMove[] {
   return ids.map((id) => rep.nodes[id]).filter(Boolean);
 }
 
-/**
- * Is this whole line already in the repertoire?
- *
- * Read-only, so a screen can tell you there is nothing to add before you tap
- * rather than after.
- */
-export function hasLine(rep: Repertoire, sans: string[]): boolean {
-  if (!sans.length) return false;
-  let nodeId: string | null = null;
-  for (const san of sans) {
-    const kid: RepMove | undefined = childrenOf(rep, nodeId).find((child) => child.san === san);
-    if (!kid) return false;
-    nodeId = kid.id;
-  }
-  return true;
-}
-
 export function fenAt(rep: Repertoire, nodeId: string | null): string {
   if (nodeId === null) return rep.rootFen;
   return rep.nodes[nodeId]?.fenAfter ?? rep.rootFen;
@@ -64,10 +46,6 @@ export function pathTo(rep: Repertoire, nodeId: string | null): RepMove[] {
     cur = node.parentId;
   }
   return out;
-}
-
-export function lineText(rep: Repertoire, nodeId: string | null): string {
-  return sansToMoveText(pathTo(rep, nodeId).map((m) => m.san), rep.rootFen);
 }
 
 /** Find an existing child of `parentId` that plays `san`. */
@@ -351,10 +329,6 @@ export function decisionPoints(rep: Repertoire): DecisionPoint[] {
 
   visit(null, []);
   return [...byKey.values()].sort((a, b) => a.depth - b.depth);
-}
-
-export function countNodes(rep: Repertoire): number {
-  return Object.keys(rep.nodes).length;
 }
 
 /** Leaf lines, longest first — useful for listing "your lines". */

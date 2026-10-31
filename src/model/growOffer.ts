@@ -17,7 +17,6 @@ import {
   type OpeningNode,
   type OpeningTree,
 } from './openingTree';
-import type { Run } from './openingRun';
 import { familyName, type ReferenceIndex } from './reference';
 import { childrenOf, leafLines, pathTo } from './repertoire';
 import type { RoundRecord } from './scoring';
@@ -45,14 +44,6 @@ import { movedBy } from './extensions';
 
 /** Clean finishes every line needs, since it last changed, before the opening is ready to grow. */
 export const CLEAN_FINISHES = 3;
-
-/**
- * A round that finished clean at the end of your prep without asking you a
- * single move: every move of yours was played for you on the way in.
- */
-export function isStubFinish(run: Run): boolean {
-  return run.prepDone !== null && !run.leftPrep && !run.bookRun && !run.extended && run.survived === 0;
-}
 
 /**
  * The opening an offer is about: the one the round was started inside, or the
@@ -336,20 +327,6 @@ export function growLaunch(
   for (const widened of steps) {
     const row = recommended(growthRows([rep], index, { ...opts, ...widened, region }));
     if (row) return { opening, row, hole: null, widened };
-  }
-  return null;
-}
-
-/** A ply as it is written: 2.c4, or 2...e6 for Black. */
-export function plyLabel(ply: number, san: string): string {
-  const number = Math.floor(ply / 2) + 1;
-  return ply % 2 === 0 ? `${number}.${san}` : `${number}...${san}`;
-}
-
-/** Your last move in a line, as it is written, or null when you had none. */
-export function yourLastMove(played: string[], color: 'w' | 'b'): string | null {
-  for (let ply = played.length - 1; ply >= 0; ply -= 1) {
-    if ((ply % 2 === 0) === (color === 'w')) return plyLabel(ply, played[ply]);
   }
   return null;
 }

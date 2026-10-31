@@ -1,53 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { applySan, fenTurn, positionKey, START_FEN, walkSan } from '../chess/core';
 import {
-  atEdge,
   beginRun,
   BLUNDER_LIMIT,
   DRAW_WINDOW,
-  bookHas,
-  chooseAtEdge,
-  classify,
   clockLabel,
   clockSeconds,
   CLOCK_MODES,
-  continuation,
   DEFAULT_OPTIONS,
-  edgeOptions,
-  EMPTY_RECORD,
   evalLoss,
-  finishPrep,
-  fullLine,
-  gradeLabel,
-  gradeOf,
-  GRADES,
-  isComplete,
-  isUsersTurn,
   movesToFit,
   judgeByEval,
-  keepPlaying,
-  leavePrep,
-  lineName,
   lineOdds,
-  lineToKeep,
   lineWeakness,
-  movesHere,
-  NEW_MOVE_BUDGETS,
-  normalizeRecord,
   opponentReply,
-  outcomeOf,
-  play,
-  playedIsLegal,
-  playPast,
-  playReply,
-  recordRun,
   regionSource,
   resolveColor,
-  revealText,
-  staysInside,
-  steerLabel,
-  STEERS,
-  takeHint,
   wayIn,
   weaknessFromCards,
   type LineSource,
@@ -57,13 +25,14 @@ import {
 import { findHoles } from './growth';
 import { markSeen } from './freshness';
 import { lineStatus, nodeById, openingTree } from './openingTree';
-import { addLine, createRepertoire, hasLine, leafLines, pathTo } from './repertoire';
+import { addLine, createRepertoire, leafLines, pathTo } from './repertoire';
 import { lookup } from './reference';
 import { referenceIndex } from './referenceIndex';
 import { cardId, mulberry32 } from './session';
-import { buildSeedRepertoires } from '../store/seed';
+import { buildSeedRepertoires } from '../test/fixtures/seed';
 import { MAX_LIFTED, PREPARED_FLOOR, withFloor } from './prepFloor';
 import type { Card, Repertoire } from './types';
+import { hasLine } from '../test/helpers';
 
 const index = referenceIndex();
 const tree = openingTree(index);
@@ -73,6 +42,19 @@ const byName = (name: string) => {
   if (!found) throw new Error(`no node named ${name}`);
   return found;
 };
+
+// The old Run mode's drivers, kept here as test scaffolding: the source,
+// the opponent and the way in are live, and these walk a run through them.
+const isUsersTurn = (run: Run) => fenTurn(run.fen) === run.color;
+const movesHere = (source: LineSource, run: Run) => source.movesAt(run.fen, run.played);
+const staysInside = (run: Run, san: string) =>
+  lineStatus(tree, nodeById(tree, run.openingId), [...run.played, san]) !== 'outside';
+function play(source: LineSource, run: Run, san: string): { ok: boolean; run: Run } {
+  const move = movesHere(source, run).includes(san) ? applySan(run.fen, san) : null;
+  if (!move) return { ok: false, run: { ...run, over: true } };
+  const target = run.target[run.played.length] === san ? run.target : [];
+  return { ok: true, run: { ...run, fen: move.after, played: [...run.played, san], survived: run.survived + 1, target } };
+}
 
 function whiteRep(): Repertoire {
   let rep = createRepertoire('White', 'w', 'rep_w');
@@ -86,24 +68,6 @@ function start(reps: Repertoire[], color: 'w' | 'b' | 'random', seed = 1, node =
   const begun = beginRun({ tree, reps, node, color, seed, ...extra });
   if (!begun) throw new Error('no run');
   return begun;
-}
-
-/** Play a run out correctly, always taking the source's first move. */
-function finish(source: LineSource, run: Run, seed = 1) {
-  const pick = mulberry32(seed);
-  let current = run;
-  let guard = 0;
-  while (!current.over && !isComplete(source, current) && guard < 90) {
-    guard += 1;
-    if (isUsersTurn(current)) {
-      const options = movesHere(source, current);
-      expect(options.length).toBeGreaterThan(0);
-      current = play(source, current, options[0]).run;
-    } else {
-      current = opponentReply(source, current, pick);
-    }
-  }
-  return current;
 }
 
 /** The position after these moves, as a run sitting on it. */
@@ -173,28 +137,6 @@ describe('beginning a run', () => {
 describe('prepared or theory, inside the region', () => {
   const rep = whiteRep();
 
-  it('accepts a prepared move, a theory move, and nothing else', () => {
-    const { source, run } = start([rep], 'w');
-    // The repertoire plays 1.d4; 1.e4 is theory; 1.a4 is nobody's move.
-    expect(classify(source, run, 'd4')).toBe('prep');
-    expect(classify(source, run, 'e4')).toBe('theory');
-    // 1.Nh3 is one of the two first moves the book does not hold at all.
-    expect(classify(source, run, 'Nh3')).toBe('miss');
-    expect(play(source, run, 'e4').ok).toBe(true);
-    expect(play(source, run, 'Nh3').ok).toBe(false);
-    expect(movesHere(source, run)[0]).toBe('d4');
-  });
-
-  it('counts a theory move as plain where prep says nothing', () => {
-    const { source, run } = start([rep], 'w');
-    // Leaving the prep changes nothing about what a move is: off your prep, it goes to the engine.
-    expect(classify(source, { ...run, leftPrep: true }, 'e4')).toBe('theory');
-    // Past the end of the prepared lines the book is the only referee.
-    const deep = at(run, ['d4', 'd5', 'c4', 'e6', 'Nc3', 'Nf6', 'cxd5', 'exd5', 'Bg5', 'Be7', 'e3', 'O-O']);
-    expect(source.prepAt(deep.fen)).toEqual([]);
-    expect(classify(source, deep, 'Bd3')).toBe('prep');
-  });
-
   it('keeps the run inside the region on the way in', () => {
     const najdorf = byName('Sicilian Defence: Najdorf Variation');
     const { source, run } = start([rep], 'w', 1, najdorf);
@@ -202,13 +144,13 @@ describe('prepared or theory, inside the region', () => {
     // 1.d4 c5 2.e4 and 1.Nf3 c5 2.e4 both transpose. Most cannot.
     const offered = movesHere(source, run);
     expect(offered).toContain('e4');
-    for (const san of offered) expect(staysInside(tree, run, san)).toBe(true);
+    for (const san of offered) expect(staysInside(run, san)).toBe(true);
     // Most cannot, and are not offered: the region is a filter, not a list of
     // everything the book holds at move one.
     const firsts = lookup(referenceIndex(), START_FEN)!.moves.length;
     expect(offered.length).toBeLessThan(firsts / 2);
     // 1.d4 stays alive, because 1.d4 c5 2.e4 is a Sicilian.
-    expect(staysInside(tree, run, 'd4')).toBe(true);
+    expect(staysInside(run, 'd4')).toBe(true);
     // Once there, anything in the book keeps you alive.
     const inside = at(run, [...najdorf.sans, 'Be3']);
     expect(movesHere(source, inside).length).toBeGreaterThan(1);
@@ -236,21 +178,6 @@ describe('prepared or theory, inside the region', () => {
     expect(branches.has('e6') || branches.has('c6')).toBe(true);
   });
 
-  it('plays a run to the end of the line and keeps the losing move out of the reveal', () => {
-    const { source, run } = start([rep], 'w');
-    const done = finish(source, run);
-    expect(isComplete(source, done)).toBe(true);
-    expect(playedIsLegal(done)).toBe(true);
-    expect(done.survived).toBeGreaterThanOrEqual(4);
-
-    const lost = play(source, at(run, ['d4', 'd5']), 'a4');
-    expect(lost.ok).toBe(false);
-    expect(lost.run.over).toBe(true);
-    expect(lost.run.played).toEqual(['d4', 'd5']);
-    expect(revealText(source, lost.run)).toContain('2. c4');
-    expect(fullLine(source, lost.run).length).toBeGreaterThan(2);
-  });
-
   it('on the way in, counts only prep that can still reach the opening', () => {
     let rep = whiteRep();
     rep = addLine(rep, ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'], 'seed').rep;
@@ -270,14 +197,6 @@ describe('prepared or theory, inside the region', () => {
     for (const san of options) expect(play(source, run, san).ok).toBe(true);
   });
 
-  it('plays out to the edge of the book without illegal moves', () => {
-    const { source, run } = start([], 'w', 3);
-    const done = finish(source, run, 3);
-    expect(playedIsLegal(done)).toBe(true);
-    expect(done.survived).toBeGreaterThan(3);
-    expect(continuation(source, done)).toEqual([]);
-  });
-
   it('lets the opponent favour popular replies', () => {
     const { source, run } = start([], 'w', 1);
     const afterE4 = play(source, run, 'e4').run;
@@ -289,107 +208,6 @@ describe('prepared or theory, inside the region', () => {
     const c5 = counts.get('c5') ?? 0;
     expect(c5).toBeGreaterThan(50);
     expect(counts.size).toBeGreaterThan(2);
-  });
-
-  it('tells a real move apart from one nobody plays', () => {
-    expect(bookHas(index, walkSan(['d4', 'd5']).fens[2], 'Nf3')).toBe(true);
-    expect(bookHas(index, walkSan(['d4', 'd5']).fens[2], 'Na3')).toBe(false);
-  });
-});
-
-describe('naming the line at the end of a run', () => {
-  const reps = buildSeedRepertoires();
-
-  it('names the variation, never something so generic it says nothing', () => {
-    for (let seed = 0; seed < 8; seed += 1) {
-      const { source, run } = start(reps, 'b', seed);
-      const named = lineName(index, source, finish(source, run, seed));
-      expect(named.name).not.toMatch(/Pawn Opening$/);
-      expect(named.name.length).toBeGreaterThan(3);
-    }
-  });
-
-  it('falls back to the region when the database only knows the opening vaguely', () => {
-    const { source, run } = start([whiteRep()], 'w');
-    const named = lineName(index, source, at(run, ['d4']), 99);
-    expect(named.specific).toBe(false);
-    expect(named.name).toBe('Any opening');
-  });
-});
-
-describe('the record', () => {
-  const rep = whiteRep();
-
-  it('tracks runs, best depth, survivals and grades', () => {
-    const { run } = start([rep], 'w');
-    let record = recordRun(EMPTY_RECORD, outcomeOf({ ...run, survived: 4 }, 'blunder'), 1000);
-    expect(record).toMatchObject({ runs: 1, best: 4, lastDepth: 4, survivals: 0, lastAt: 1000 });
-    expect(record.grades).toEqual({ green: 0, yellow: 0, red: 1, purple: 0 });
-    const other = start([rep], 'w', 2).run;
-    record = recordRun(record, outcomeOf(finishPrep({ ...other, survived: 9 }), null), 2000);
-    expect(record).toMatchObject({ runs: 2, best: 9, survivals: 1 });
-    expect(record.grades.green).toBe(1);
-  });
-
-  it('files a run under its region and colour', () => {
-    const najdorf = byName('Sicilian Defence: Najdorf Variation');
-    const { run } = start([rep], 'w', 1, najdorf);
-    expect(outcomeOf(run, 'blunder')).toMatchObject({ openingId: najdorf.id, color: 'w', label: 'Sicilian Defence: Najdorf Variation' });
-  });
-
-  it('counts a run completed once it reached the end of its prep, however it ended after', () => {
-    const { run } = start([rep], 'w');
-    expect(outcomeOf(run, null).completed).toBe(false);
-    const done = finishPrep({ ...run, survived: 4 });
-    expect(outcomeOf(done, null)).toMatchObject({ completed: true, grade: 'green', depth: 4 });
-    // Kept playing and blundered: still completed, graded by the blunder.
-    expect(outcomeOf(keepPlaying(done), 'blunder')).toMatchObject({ completed: true, grade: 'red' });
-    // Left the prep and stopped at the checkpoint: never reached the end.
-    const strayed = leavePrep(at(run, ['d4', 'd5']), 'Nf3');
-    expect(outcomeOf(strayed, 'offprep')).toMatchObject({ completed: false, grade: 'purple' });
-  });
-
-  it('amends the record instead of counting the same run twice', () => {
-    const { run } = start([rep], 'w');
-    const done = finishPrep({ ...run, survived: 4 });
-    let record = recordRun(EMPTY_RECORD, outcomeOf(done, null), 1000);
-    expect(record).toMatchObject({ runs: 1, best: 4, survivals: 1 });
-    record = recordRun(record, outcomeOf(keepPlaying(done), 'blunder'), 2000);
-    expect(record).toMatchObject({ runs: 1, best: 4, survivals: 1, lastDepth: 4 });
-    expect(record.grades).toEqual({ green: 0, yellow: 0, red: 1, purple: 0 });
-    const other = start([rep], 'w', 2).run;
-    expect(other.id).not.toBe(run.id);
-    record = recordRun(record, outcomeOf({ ...other, survived: 3 }, 'blunder'), 3000);
-    expect(record).toMatchObject({ runs: 2, best: 4, survivals: 1 });
-  });
-
-  it('moves the grade count when a run is amended', () => {
-    const { run } = start([rep], 'w');
-    let record = recordRun(EMPTY_RECORD, outcomeOf({ ...run, survived: 4 }, 'blunder'), 1000);
-    const strayed = { ...leavePrep(at(run, ['d4', 'd5']), 'Nf3'), survived: 4 };
-    record = recordRun(record, outcomeOf(strayed, 'offprep'), 2000);
-    expect(record.runs).toBe(1);
-    expect(record.grades).toEqual({ green: 0, yellow: 0, red: 0, purple: 1 });
-  });
-
-  it('counts a round stopped off prep once when it is played on to a blunder', () => {
-    // The end-of-round screen logs the stop, then Keep playing carries on the same run.
-    const { run } = start([rep], 'w');
-    const asked = { ...at(run, ['d4', 'd5']), survived: 1 };
-    let record = recordRun(EMPTY_RECORD, outcomeOf({ ...asked, leftPrep: true }, 'offprep'), 1000);
-    expect(record.grades).toEqual({ green: 0, yellow: 0, red: 0, purple: 1 });
-    record = recordRun(record, outcomeOf(leavePrep(asked, 'Nf3'), 'blunder'), 2000);
-    expect(record).toMatchObject({ runs: 1, survivals: 0 });
-    expect(record.grades).toEqual({ green: 0, yellow: 0, red: 1, purple: 0 });
-  });
-
-  it('reads a record missing fields', () => {
-    const fixed = normalizeRecord({ runs: 2, best: 5 });
-    expect(fixed.last).toBeUndefined();
-    expect(fixed.grades).toEqual({ green: 0, yellow: 0, red: 0, purple: 0 });
-    expect(
-      recordRun(fixed, { id: 'x', grade: 'red', label: 'L', openingId: '', color: 'w', depth: 2, completed: false }).runs,
-    ).toBe(3);
   });
 });
 
@@ -469,28 +287,9 @@ describe('the clock', () => {
 describe('hints', () => {
   const rep = whiteRep();
 
-  it('spends one from the budget and names the square the prepared move starts on', () => {
-    const { source, run } = start([rep], 'w', 1, any, { hints: 1 });
-    const hint = takeHint(source, run)!;
-    expect(hint.san).toBe('d4');
-    expect(hint.from).toBe('d2');
-    expect(hint.run.hints).toBe(0);
-    expect(hint.run.hintsUsed).toBe(1);
-    expect(hint.run.survived).toBe(run.survived);
-    expect(takeHint(source, hint.run)).toBeNull();
-  });
-
   it('defaults to none', () => {
     expect(DEFAULT_OPTIONS.hints).toBe(0);
     expect(start([rep], 'w').run.hints).toBe(0);
-  });
-});
-
-describe('defaults', () => {
-  it('turns every extra off: a popular line, nothing added', () => {
-    expect(DEFAULT_OPTIONS).toEqual({ steer: 'popular', newMoves: 0, clock: 'off', hints: 0 });
-    expect(NEW_MOVE_BUDGETS).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
-    for (const steer of STEERS) expect(steerLabel(steer)).toBeTruthy();
   });
 });
 
@@ -586,15 +385,6 @@ describe('not the same round twice', () => {
     for (const line of lines) out = addLine(out, line.split(' '), 'seed').rep;
     return out;
   }
-
-  it('remembers the line it was drawn on, whole', () => {
-    const { run } = start([kid(CLASSICAL)], 'b', 1, any);
-    expect(run.drawn).toEqual(run.target);
-    // The edge spends the target; the record stays.
-    const edge = chooseAtEdge({ ...run, newMoves: 1, fen: run.fen }, run.target[0]);
-    expect(edge.target).toEqual([]);
-    expect(edge.drawn).toEqual(run.target);
-  });
 
   it('never draws the line the last round was drawn on while there is another', () => {
     const rep = kid(CLASSICAL, SAMISCH);
@@ -714,14 +504,6 @@ describe('starting inside an opening', () => {
     expect(wayIn(tree, qgd, ['e4', 'e5'])).toEqual([]);
   });
 
-  it('keeps the way in with the line it survived', () => {
-    const { run, source } = start([whiteRep()], 'w', 1, any, { toward: qgd, enter: true });
-    const ended = finish(source, run);
-    expect(isComplete(source, ended)).toBe(true);
-    expect(lineToKeep(index, ended).slice(0, 4)).toEqual(['d4', 'd5', 'c4', 'e6']);
-    expect(ended.survived).toBe(lineToKeep(index, ended).filter((_, i) => i % 2 === 0).length - 2);
-  });
-
   it('builds an empty opening from its own position, and charges only the opening', () => {
     const kid = addLine(createRepertoire('Black', 'b', 'rep_b'), 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5'.split(' '), 'seed').rep;
     const najdorf = nodeById(tree, 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6');
@@ -812,87 +594,6 @@ describe('the edge of the prep', () => {
   function thin(): Repertoire {
     return addLine(createRepertoire('White', 'w', 'rep_thin'), ['e4', 'e5'], 'seed').rep;
   }
-
-  it('is your move, with nothing prepared and the book still going', () => {
-    const { source, run } = start([thin()], 'w', 1, any, { newMoves: 3 });
-    expect(atEdge(source, run)).toBe(false);
-    const played = play(source, run, 'e4').run;
-    // The opponent's turn is never the edge.
-    expect(atEdge(source, played)).toBe(false);
-    const edge = at(played, ['e4', 'e5']);
-    expect(atEdge(source, edge)).toBe(true);
-    expect(isComplete(source, edge)).toBe(false);
-    expect(atEdge(source, leavePrep(at(played, ['e4', 'e5']), 'Nc3'))).toBe(false);
-    expect(atEdge(source, keepPlaying(edge))).toBe(false);
-    expect(atEdge(source, { ...edge, over: true })).toBe(false);
-    expect(atEdge(source, { ...edge, bookRun: true })).toBe(false);
-  });
-
-  it('offers the book there, most played first', () => {
-    const { run } = start([thin()], 'w', 1, any);
-    const edge = at(run, ['e4', 'e5']);
-    const options = edgeOptions(index, edge.fen);
-    expect(options.length).toBeGreaterThan(1);
-    expect(options[0].san).toBe('Nf3');
-    expect(options[0].games).toBeGreaterThanOrEqual(options[1].games);
-  });
-
-  it('spends a new move on the choice and scores nothing for it', () => {
-    const { run } = start([thin()], 'w', 1, any, { newMoves: 2 });
-    const edge = at({ ...run, survived: 1 }, ['e4', 'e5']);
-    const chosen = chooseAtEdge(edge, 'Nf3');
-    expect(chosen.over).toBe(false);
-    expect(chosen.played).toEqual(['e4', 'e5', 'Nf3']);
-    expect(chosen.survived).toBe(1);
-    expect(chosen.newMoves).toBe(1);
-    expect(chosen.added).toBe(1);
-    expect(chosen.target).toEqual([]);
-    expect(playedIsLegal(chosen)).toBe(true);
-    expect(chooseAtEdge({ ...edge, newMoves: 0 }, 'Nf3').over).toBe(true);
-    expect(chooseAtEdge(edge, 'Ke2').over).toBe(false);
-    expect(chooseAtEdge(edge, 'Qh7').over).toBe(true);
-  });
-
-  it('is a checkpoint where the prep ends, and nothing carries on by itself', () => {
-    // A Ruy López stub: onboarding's five plies and nothing more.
-    const stub = addLine(createRepertoire('White', 'w', 'rep_ruy'), ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'], 'seed').rep;
-    const { source, run } = start([stub], 'w', 1, any);
-    const edge = at({ ...run, survived: 3 }, ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6']);
-    expect(atEdge(source, edge)).toBe(true);
-    // Reaching it completes the run; stopping there is a clean finish.
-    const done = finishPrep(edge);
-    expect(done.prepDone).toBe(6);
-    expect(finishPrep(done)).toBe(done);
-    expect(outcomeOf(done, null)).toMatchObject({ completed: true, grade: 'green', depth: 3 });
-    expect(lineToKeep(index, done)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5']);
-    // Keeping on: the engine judges, the run is still a clean one, and nothing more is scored.
-    const on = keepPlaying(edge);
-    expect(on).toMatchObject({ extended: true, prepDone: 6, handOver: 6, leftPrep: false, target: [] });
-    expect(atEdge(source, on)).toBe(false);
-    expect(isComplete(source, on)).toBe(false);
-    expect(keepPlaying(on)).toBe(on);
-    const moved = playPast(on, 'Ba4');
-    expect(moved.survived).toBe(3);
-    expect(moved.past).toBe(1);
-    expect(gradeOf(moved, null)).toBe('green');
-    expect(gradeOf(moved, 'blunder')).toBe('red');
-    // A book move past the hand-over is still worth keeping; the reveal offers it.
-    expect(lineToKeep(index, moved)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6', 'Ba4']);
-  });
-
-  it('walks the book when nothing of yours passes through the region', () => {
-    const najdorf = byName('Sicilian Defence: Najdorf Variation');
-    const { source, run } = start([whiteRep()], 'w', 1, najdorf);
-    expect(run.bookRun).toBe(true);
-    expect(start([whiteRep()], 'w').run.bookRun).toBe(false);
-    expect(start([], 'w').run.bookRun).toBe(true);
-    // The book is the referee: its moves are simply the moves, and there is no edge to be at.
-    const inBook = at(run, run.played);
-    expect(isUsersTurn(inBook)).toBe(true);
-    expect(movesHere(source, inBook).length).toBeGreaterThan(0);
-    expect(classify(source, inBook, movesHere(source, inBook)[0])).toBe('prep');
-    expect(atEdge(source, inBook)).toBe(false);
-  });
 
   it('starts with the budget it was given, and none by default', () => {
     expect(start([thin()], 'w').run.newMoves).toBe(0);
@@ -1002,24 +703,6 @@ describe('past the hand-over', () => {
     expect(DEFAULT_OPTIONS).not.toHaveProperty('extended');
   });
 
-  it('never completes once the engine is the referee', () => {
-    const { source, run, redraw } = start([rep], 'w');
-    const done = finish(source, run);
-    expect(isComplete(source, done)).toBe(true);
-    const on = keepPlaying(done);
-    expect(isComplete(source, on)).toBe(false);
-    expect(on.prepDone).toBe(done.played.length);
-    expect(on.handOver).toBe(done.played.length);
-    // Nothing steers the opponent from here either.
-    expect(redraw(on)).toBe(on);
-  });
-
-  it('remembers where the prep ended, once', () => {
-    const run = finishPrep({ ...start([rep], 'w').run, played: ['d4', 'd5'] });
-    expect(run.prepDone).toBe(2);
-    expect(finishPrep({ ...run, played: ['d4', 'd5', 'c4', 'e6'] }).prepDone).toBe(2);
-  });
-
   it('measures a loss from your own side of the board', () => {
     expect(evalLoss('w', 100, 0)).toBe(100);
     expect(evalLoss('b', 100, 0)).toBe(-100);
@@ -1035,93 +718,14 @@ describe('past the hand-over', () => {
     expect(judgeByEval('b', -20, 300).ok).toBe(false);
     expect(judgeByEval('w', 10, 400)).toEqual({ ok: true, lost: 0 });
   });
-
-  it('takes a move the engine passed, scoring nothing for it', () => {
-    const begun = keepPlaying(start([rep], 'w').run);
-    const next = playPast(begun, 'd4');
-    expect(next.played).toEqual(['d4']);
-    expect(next.survived).toBe(begun.survived);
-    expect(next.past).toBe(1);
-    expect(playedIsLegal(next)).toBe(true);
-    expect(playPast(begun, 'e5').over).toBe(true);
-  });
-
-  it("takes the opponent's move on its own", () => {
-    const { source, run } = start([rep], 'w');
-    const begun = keepPlaying(play(source, run, 'd4').run);
-    expect(isUsersTurn(begun)).toBe(false);
-    const next = playReply(begun, 'd5');
-    expect(next.played).toEqual(['d4', 'd5']);
-    expect(next.survived).toBe(begun.survived);
-    expect(next.past).toBe(0);
-    expect(playReply(begun, 'd4').over).toBe(true);
-  });
 });
 
 describe('stepping outside your prep', () => {
   const rep = whiteRep();
 
-  it('carries the run on, hands over to the engine and stops steering', () => {
-    const run = at(start([rep], 'w').run, ['d4', 'd5']);
-    const carried = leavePrep(run, 'Nf3');
-    expect(carried).toMatchObject({ leftPrep: true, extended: true, handOver: 2, over: false, past: 1, target: [] });
-    // A move off your prep earns nothing, however sound.
-    expect(carried.survived).toBe(run.survived);
-    expect(carried.played).toEqual(['d4', 'd5', 'Nf3']);
-    expect(playedIsLegal(carried)).toBe(true);
-    expect(applySan(run.fen, 'e5')).toBeNull();
-    expect(leavePrep(run, 'e5').over).toBe(true);
-  });
-
-  it('grades the endings apart', () => {
-    const clean = at(start([rep], 'w').run, ['d4', 'd5']);
-    const strayed = { ...clean, leftPrep: true };
-    expect(gradeOf(clean, null)).toBe('green');
-    expect(gradeOf(strayed, null)).toBe('yellow');
-    expect(gradeOf(clean, 'blunder')).toBe('red');
-    expect(gradeOf(strayed, 'blunder')).toBe('red');
-    expect(gradeOf(strayed, 'offprep')).toBe('purple');
-    for (const grade of GRADES) expect(gradeLabel(grade)).toBeTruthy();
-    expect(outcomeOf(leavePrep(clean, 'Nf3'), null).grade).toBe('yellow');
-  });
-
   it('starts every run inside its prep', () => {
     expect(start([rep], 'w').run.leftPrep).toBe(false);
     expect(start([], 'w').run.leftPrep).toBe(false);
-  });
-});
-
-describe('keeping a line at the reveal', () => {
-  function runOf(over: Partial<Run>): Run {
-    return {
-      id: 'r', sourceLabel: 'Any opening', openingId: '', leftPrep: false, bookRun: false, extended: false,
-      handOver: null, past: 0, color: 'w', fen: START_FEN, played: [], survived: 0, over: true, target: [],
-      drawn: [], hints: 0, hintsUsed: 0, newMoves: 0, added: 0, prepDone: null, opened: 0, enteredIn: null,
-      ...over,
-    };
-  }
-
-  it('ends a line on your own move', () => {
-    expect(lineToKeep(index, runOf({ color: 'w', played: ['e4', 'c5', 'Nf3', 'd6'] }))).toEqual(['e4', 'c5', 'Nf3']);
-    expect(lineToKeep(index, runOf({ color: 'b', played: ['e4', 'c5', 'Nf3'] }))).toEqual(['e4', 'c5']);
-  });
-
-  it('keeps theory past the hand-over and stops at the first move the book has never seen', () => {
-    const theory = runOf({ color: 'w', played: ['e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4'], extended: true, handOver: 3 });
-    expect(lineToKeep(index, theory)).toEqual(['e4', 'c5', 'Nf3', 'd6', 'd4']);
-    const novelty = runOf({ color: 'w', played: ['e4', 'c5', 'Nf3', 'd6', 'Ke2', 'Nf6'], extended: true, handOver: 3 });
-    expect(bookHas(index, walkSan(['e4', 'c5', 'Nf3', 'd6']).fens[4], 'Ke2')).toBe(false);
-    expect(lineToKeep(index, novelty)).toEqual(['e4', 'c5', 'Nf3']);
-  });
-
-  it('offers a sound move off your prep when it is theory', () => {
-    const run = at(start([whiteRep()], 'w').run, ['d4', 'd5']);
-    expect(lineToKeep(index, leavePrep(run, 'Nf3'))).toEqual(['d4', 'd5', 'Nf3']);
-  });
-
-  it('keeps nothing from a run that died on its first move', () => {
-    expect(lineToKeep(index, runOf({ color: 'w', played: [] }))).toEqual([]);
-    expect(lineToKeep(index, runOf({ color: 'b', played: ['e4'] }))).toEqual([]);
   });
 });
 

@@ -56,12 +56,3 @@ export function Piece({ type, color, size = '100%' }: PieceProps) {
     </svg>
   );
 }
-
-export const PIECE_NAMES: Record<PieceType, string> = {
-  p: 'Pawn',
-  n: 'Knight',
-  b: 'Bishop',
-  r: 'Rook',
-  q: 'Queen',
-  k: 'King',
-};

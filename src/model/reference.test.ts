@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { applySan, positionKey, walkSan, START_FEN } from '../chess/core';
 import {
-  deepestName,
-  deepestNameForColor,
   familyName,
   formatGameCount,
   lookup,
   openingNameForPath,
-  specificNameForColor,
   totalGamesAt,
 } from './reference';
 import { referenceIndex } from './referenceIndex';
@@ -127,84 +124,6 @@ describe('transposed positions', () => {
     const sans = lookup(index, fen)?.moves.map((m) => m.san) ?? [];
     expect(sans.length).toBeGreaterThanOrEqual(4);
     expect(sans).toEqual(expect.arrayContaining(['Nf3', 'f3', 'Be2']));
-  });
-});
-
-describe('naming a line from one side', () => {
-  const index = referenceIndex();
-
-  it('prefers a name earned by the side that is asking', () => {
-    // 1.e4 c5 has a name at both plies: "King's Pawn Game" after e4 is
-    // White's, "Sicilian Defence" after c5 is Black's.
-    expect(deepestNameForColor(index, ['e4', 'c5'], 'b')?.name).toBe('Sicilian Defence');
-    expect(deepestNameForColor(index, ['e4', 'c5'], 'w')?.name).not.toBe('Sicilian Defence');
-  });
-
-  it('falls back to the other side rather than giving no name', () => {
-    // Nothing names 1.d4 Nf6 from Black's side, so White's name is better than
-    // nothing — but it must still be the deepest one available.
-    const black = deepestNameForColor(index, ['d4', 'Nf6'], 'b');
-    expect(black).not.toBeNull();
-    expect(black?.name).toBe(deepestName(index, ['d4', 'Nf6'])?.name);
-  });
-
-  it('goes as deep as the line allows', () => {
-    const line = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6'.split(' ');
-    expect(deepestNameForColor(index, line, 'b')?.name).toContain("King's Indian");
-  });
-
-  it('stops naming where the line leaves the book', () => {
-    // The book names every first move it holds, so a line that leaves it keeps
-    // the last name it earned rather than picking one up from the moves after.
-    const named = deepestNameForColor(index, ['a3', 'h6', 'a4'], 'w');
-    expect(named?.name).toBe("Anderssen's Opening");
-    expect(named?.ply).toBe(1);
-  });
-
-  it('stops at an illegal move rather than throwing', () => {
-    expect(() => deepestNameForColor(index, ['e4', 'e4', 'e4'], 'w')).not.toThrow();
-  });
-});
-
-describe('naming a line as the player\u2019s own opening', () => {
-  const index = referenceIndex();
-
-  it('gives nothing when the only name restates the first move', () => {
-    // The bug this exists for: a Black line the book only recognises at 1.d4
-    // came back as "Queen's Pawn Game" \u2014 true, and the name of what White
-    // did. "Your Black prep" says more.
-    expect(deepestNameForColor(index, ['d4', 'h6'], 'b')?.name).toBe("Queen's Pawn Game");
-    expect(specificNameForColor(index, ['d4', 'h6'], 'b')).toBeNull();
-    expect(specificNameForColor(index, ['d4', 'h6', 'c4'], 'w')).toBeNull();
-  });
-
-  it('keeps a Black reply at move one, which does name a choice', () => {
-    expect(specificNameForColor(index, ['e4', 'c5'], 'b')?.name).toBe('Sicilian Defence');
-  });
-
-  it('keeps a name earned on the other side\u2019s move', () => {
-    // The book attaches "King's Indian Defence" at White's fifth ply, and it is
-    // still the name of Black's opening \u2014 so whose move earned it cannot be
-    // what decides this. Here the deepest name for Black lands on Black's own
-    // move, and the family it belongs to did not.
-    const line = 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6'.split(' ');
-    const found = specificNameForColor(index, line, 'b');
-    expect(found?.name).toContain("King's Indian");
-    expect(familyName(index, found!.name)).toBe("King's Indian Defence");
-    // The family name itself is earned by White's fifth ply, and it names what
-    // Black is doing all the same.
-    const family = deepestName(index, line.slice(0, 5));
-    expect(family?.name).toBe("King's Indian Defence");
-    expect(family!.ply % 2).toBe(1);
-  });
-
-  it('takes the cutoff as an argument, for callers that want more', () => {
-    const line = 'e4 c5'.split(' ');
-    expect(specificNameForColor(index, line, 'b', START_FEN, 3)).toBeNull();
-  });
-
-  it('stops at an illegal move rather than throwing', () => {
-    expect(() => specificNameForColor(index, ['e4', 'e4', 'e4'], 'w')).not.toThrow();
   });
 });
 

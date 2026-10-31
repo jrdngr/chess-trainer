@@ -136,22 +136,6 @@ export function tidyPositions(
   return out;
 }
 
-/** Every find inside a region, biggest savings first. */
-export function tidyFinds(
-  reps: Repertoire[],
-  index: ReferenceIndex,
-  tree: OpeningTree,
-  region: OpeningNode,
-  opts: TidyOptions,
-): TidyFind[] {
-  const out: TidyFind[] = [];
-  for (const { rep, node } of tidyPositions(reps, tree, region)) {
-    const find = findAt(rep, index, node, opts);
-    if (find) out.push(find);
-  }
-  return sortFinds(out);
-}
-
 export function sortFinds(finds: TidyFind[]): TidyFind[] {
   return [...finds].sort((a, b) => b.removes - a.removes || a.path.length - b.path.length);
 }

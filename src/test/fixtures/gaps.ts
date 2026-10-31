@@ -1,8 +1,8 @@
-import { applySan, fenTurn, positionKey, type Color } from '../chess/core';
-import { lookup, totalGamesAt, type ReferenceIndex } from './reference';
-import type { ExplorerMove } from './types';
-import { childrenOf, fenAt } from './repertoire';
-import type { Repertoire } from './types';
+import { applySan, fenTurn, positionKey, type Color } from '../../chess/core';
+import { lookup, totalGamesAt, type ReferenceIndex } from '../../model/reference';
+import type { ExplorerMove } from '../../model/types';
+import { childrenOf, fenAt } from '../../model/repertoire';
+import type { Repertoire } from '../../model/types';
 
 /**
  * Gaps: replies the world plays that your repertoire has no answer to.

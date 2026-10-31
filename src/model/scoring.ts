@@ -70,14 +70,6 @@ export function ratingAfter(rating: number, correct: boolean): number {
   return Math.round(Math.max(RATING.floor, moved) * 100) / 100;
 }
 
-/** What one result would move a rating by, right and wrong. */
-export function ratingSwing(rating: number): { up: number; down: number } {
-  return {
-    up: ratingAfter(rating, true) - rating,
-    down: ratingAfter(rating, false) - rating,
-  };
-}
-
 /* ── tiers ──────────────────────────────────────────────────────────────── */
 
 export interface Tier {
@@ -149,11 +141,6 @@ export function rankOf(rating: number, rated = 1): Rank {
     ceiling,
     progress: next ? Math.max(0, Math.min(1, (rating - floor) / (ceiling - floor))) : 1,
   };
-}
-
-/** The colour a rating draws in, the unrated grey included. */
-export function tierColor(rating: number): string {
-  return rankOf(rating).held?.color ?? UNRATED.color;
 }
 
 /* ── the record ─────────────────────────────────────────────────────────── */

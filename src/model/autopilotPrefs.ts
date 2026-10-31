@@ -17,11 +17,9 @@ export interface AutopilotPrefs {
   moveScores: boolean;
   /** Survival's board-edge glow. */
   boardGlow: boolean;
-  /** Rounds cycle through every way a round begins, none repeated until all have played — see `testCycle`. */
-  modeTesting: boolean;
 }
 
-export const DEFAULT_AUTOPILOT: AutopilotPrefs = { moveScores: true, boardGlow: true, modeTesting: false };
+export const DEFAULT_AUTOPILOT: AutopilotPrefs = { moveScores: true, boardGlow: true };
 
 /** Drill rounds: no clock, Why? always offered. Weakest first is set per round. */
 export const AUTO_DRILL: DrillPrefs = {

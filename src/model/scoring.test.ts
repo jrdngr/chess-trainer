@@ -1,28 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
-import {
-  accuracy,
-  applyResult,
-  creditedNodes,
-  dayKey,
-  EMPTY_SCORE,
-  expectedAccuracy,
-  nodeStats,
-  normalizeScore,
-  RATING,
-  rankOf,
-  ratedNodes,
-  ratingAfter,
-  ratingSwing,
-  recordRound,
-  seenIn,
-  settleRun,
-  streak,
-  TIERS,
-  type MoveResult,
-  type ScoreState,
-} from './scoring';
+import { accuracy, applyResult, creditedNodes, dayKey, EMPTY_SCORE, expectedAccuracy, nodeStats, normalizeScore, RATING, rankOf, ratedNodes, ratingAfter, recordRound, seenIn, settleRun, streak, TIERS, type MoveResult, type ScoreState } from './scoring';
+import { ratingSwing } from '../test/helpers';
 
 const tree = openingTree(referenceIndex());
 const NAJDORF = 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6';

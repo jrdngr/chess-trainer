@@ -344,14 +344,6 @@ function leadsInto(tree: OpeningTree, from: ResolvedGroup, to: ResolvedGroup | n
   });
 }
 
-/** The group a branch sits in, if its family is grouped. */
-export function groupOf(family: PickerFamily, entry: PickerEntry): PickerGroup | null {
-  if (!family.groups) return null;
-  let branch: PickerEntry | null = entry;
-  while (branch && branch.level > 1) branch = branch.parent;
-  return family.groups.find((group) => branch && group.entries.includes(branch)) ?? null;
-}
-
 /* ── sharpness ──────────────────────────────────────────────────────────── */
 
 const GAMBIT = /Gambit|Countergambit/;
@@ -460,40 +452,6 @@ function scoreDifficulty(tree: OpeningTree, entries: PickerEntry[]) {
 /* ── ordering ───────────────────────────────────────────────────────────── */
 
 export type PickerSort = 'popular' | 'sharpest' | 'calmest' | 'easiest' | 'hardest';
-
-export const PICKER_SORTS: { value: PickerSort; label: string }[] = [
-  { value: 'popular', label: 'Popular' },
-  { value: 'sharpest', label: 'Sharpest' },
-  { value: 'calmest', label: 'Calmest' },
-  { value: 'easiest', label: 'Easiest' },
-  { value: 'hardest', label: 'Hardest' },
-];
-
-/** Starred first, whatever the sort; then the sort; then most played. */
-export function sortEntries(entries: PickerEntry[], sort: PickerSort, starred: Iterable<string>): PickerEntry[] {
-  const stars = new Set(starred);
-  const metric = (entry: PickerEntry): number => {
-    switch (sort) {
-      case 'sharpest':
-        return -entry.sharpness;
-      case 'calmest':
-        return entry.sharpness;
-      case 'easiest':
-        return entry.difficulty;
-      case 'hardest':
-        return -entry.difficulty;
-      default:
-        return 0;
-    }
-  };
-  return [...entries].sort(
-    (a, b) =>
-      Number(stars.has(b.node.id) && b.exact) - Number(stars.has(a.node.id) && a.exact) ||
-      metric(a) - metric(b) ||
-      b.games - a.games ||
-      a.label.localeCompare(b.label),
-  );
-}
 
 /** The entry a tree node is shown as: its own, or the deepest named one around it. */
 export function entryForNode(catalog: PickerCatalog, node: OpeningNode): PickerEntry | null {

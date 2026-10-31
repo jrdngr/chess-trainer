@@ -3,8 +3,9 @@ import { walkSan } from '../chess/core';
 import { nodeById, openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
 import { addLine, childrenOf, createRepertoire, nodeAtLine } from './repertoire';
-import { findAt, offPrepHint, switchMove, tidyFinds, type TidyOptions } from './tidy';
+import { findAt, offPrepHint, switchMove, type TidyOptions } from './tidy';
 import type { Repertoire } from './types';
+import { tidyFinds } from '../test/helpers';
 
 const index = referenceIndex();
 const tree = openingTree(index);

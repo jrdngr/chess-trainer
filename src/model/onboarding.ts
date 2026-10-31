@@ -1,5 +1,4 @@
 import type { Color } from '../chess/core';
-import type { OpeningTree } from './openingTree';
 import { ANY_FAVORITE } from './anyFavorite';
 import { DEFAULT_SELECTION, type Selection } from './selection';
 
@@ -40,15 +39,12 @@ export interface OpeningPick {
  * branches off the same 1.d4 Nf6 2.c4 g6 3.Nc3 and is named on Black's move,
  * as it should be. So they are written down rather than derived.
  */
-const NAMED_LATE: Record<string, Color> = {
+export const NAMED_LATE: Record<string, Color> = {
   // King's Indian Defence.
   'd4 Nf6 c4 g6 Nc3': 'b',
   // Scotch Game.
   'e4 e5 Nf3 Nc6 d4 exd4': 'w',
 };
-
-/** The ids of the openings above, for a test to check the book still has them. */
-export const NAMED_LATE_IDS = Object.keys(NAMED_LATE);
 
 /**
  * Whose opening a line is: whoever played its last move.
@@ -62,25 +58,6 @@ export const NAMED_LATE_IDS = Object.keys(NAMED_LATE);
  */
 export function playerOf(sans: string[]): Color {
   return NAMED_LATE[sans.join(' ')] ?? (sans.length % 2 === 1 ? 'w' : 'b');
-}
-
-/**
- * The picks behind a set of starred node ids, in the order given.
- *
- * Ids the tree does not know are dropped rather than guessed at, and so is the
- * root: "any opening" is not an opening anyone plays.
- */
-export function picksFrom(tree: OpeningTree, ids: Iterable<string>): OpeningPick[] {
-  const out: OpeningPick[] = [];
-  const seen = new Set<string>();
-  for (const id of ids) {
-    if (seen.has(id)) continue;
-    seen.add(id);
-    const node = tree.byId.get(id);
-    if (!node || node.sans.length === 0) continue;
-    out.push({ id: node.id, name: node.name, color: playerOf(node.sans), sans: node.sans });
-  }
-  return out;
 }
 
 /**

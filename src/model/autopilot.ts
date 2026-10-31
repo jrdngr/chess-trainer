@@ -1,7 +1,7 @@
 import { applySan, fenTurn, positionKey, START_FEN, walkSan, type Color } from '../chess/core';
 import { prepIndex } from './openingRun';
 import type { Card, Repertoire } from './types';
-import { missingPrep, type Focus, type Recommendation, type Start } from './recommend';
+import { missingPrep, type Focus, type Recommendation } from './recommend';
 import { weakestFirst, type TrainingItem } from './session';
 import { runNeed } from './srs';
 
@@ -194,47 +194,4 @@ export function roundSpan(rep: Repertoire | null, pick: Recommendation, at: stri
   }
   const total = prepDepth(line, pick.color, prepAt, way.length);
   return { played: Math.min(way.length, total), total };
-}
-
-/**
- * Mode Testing: Autopilot's runs in a cycle that plays every way a run can
- * begin before any repeats, for trying out how runs start.
- *
- * The cases are what the round intro treats differently — a run walked into
- * its opening, one walked to a position, a Cold Start from move one — each on
- * every side the selection covers, since a side whose opponent moves first
- * starts differently. A position start takes any position when none is owed;
- * a case that cannot run at all is skipped.
- */
-export type TestVariant = 'survival' | 'position' | 'coldStart';
-
-export const TEST_VARIANTS: TestVariant[] = ['survival', 'position', 'coldStart'];
-
-export interface TestCase {
-  variant: TestVariant;
-  color: Color;
-}
-
-/** Where a test case starts its run. */
-export type ForcedStart = Start | 'position';
-
-export function forcedStart(variant: TestVariant): ForcedStart {
-  switch (variant) {
-    case 'survival':
-      return 'inside';
-    case 'coldStart':
-      return 'first';
-    default:
-      return 'position';
-  }
-}
-
-/** One cycle: every variant on every side, shuffled. */
-export function testCycle(colors: Color[], rand: () => number): TestCase[] {
-  const cases = TEST_VARIANTS.flatMap((variant) => colors.map((color) => ({ variant, color })));
-  for (let i = cases.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(rand() * (i + 1));
-    [cases[i], cases[j]] = [cases[j], cases[i]];
-  }
-  return cases;
 }

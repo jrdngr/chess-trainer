@@ -4,52 +4,9 @@ import { nodeById, openingTree } from './openingTree';
 import { addLine, createRepertoire } from './repertoire';
 import { referenceIndex } from './referenceIndex';
 import { mulberry32 } from './session';
-import {
-  bookMoves,
-  inTheBook,
-  isBookMove,
-  SCORE_SLIGHT,
-  bookReply,
-  prepSummary,
-  secondsText,
-  speedTone,
-  DEFAULT_SURVIVAL,
-  comboAfter,
-  comboMultiplier,
-  firstMission,
-  isMoment,
-  judgedExtras,
-  missionFor,
-  missionText,
-  planMission,
-  momentBonus,
-  MISSION_BONUS,
-  MISSION_BREAK,
-  NO_EXTRAS,
-  stepMission,
-  type Extras,
-  glowFor,
-  moveScore,
-  evalSwing,
-  EMPTY_SURVIVAL_RECORD,
-  moveNumber,
-  normalizeSurvival,
-  openingsAlong,
-  playTheirs,
-  playYours,
-  prepHere,
-  recentForm,
-  RECENT_RUNS,
-  HISTORY_RUNS,
-  recordEndedSurvival,
-  recordSurvival,
-  startSurvival,
-  SURVIVAL_STEERS,
-  survivalFor,
-  survivalSteerLabel,
-  type SurvivalRun,
-} from './survival';
+import { bookMoves, inTheBook, isBookMove, SCORE_SLIGHT, bookReply, prepSummary, secondsText, speedTone, DEFAULT_SURVIVAL, comboAfter, comboMultiplier, firstMission, isMoment, judgedExtras, missionFor, missionText, planMission, momentBonus, MISSION_BONUS, MISSION_BREAK, NO_EXTRAS, stepMission, type Extras, glowFor, moveScore, evalSwing, moveNumber, normalizeSurvival, openingsAlong, playTheirs, playYours, prepHere, recentForm, RECENT_RUNS, HISTORY_RUNS, recordEndedSurvival, recordSurvival, startSurvival, SURVIVAL_STEERS, survivalFor, survivalSteerLabel, type SurvivalRun } from './survival';
 import type { Repertoire } from './types';
+import { EMPTY_SURVIVAL_RECORD } from '../test/helpers';
 
 const index = referenceIndex();
 const tree = openingTree(index);

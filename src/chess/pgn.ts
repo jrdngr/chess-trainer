@@ -177,35 +177,6 @@ export function mainline(game: PgnGame, startFen = START_FEN): string[] {
   return out;
 }
 
-export interface PgnLine {
-  sans: string[];
-  comment?: string;
-  /** Depth at which this line diverged from the mainline. */
-  branchPly: number;
-}
-
-/** Flatten a parsed game into every distinct line (mainline + variations). */
-export function allLines(game: PgnGame, startFen = START_FEN, maxLines = 200): PgnLine[] {
-  const out: PgnLine[] = [];
-  const rootFen = game.headers.FEN ?? startFen;
-
-  const walk = (nodes: PgnNode[], fen: string, sans: string[], branchPly: number) => {
-    if (out.length >= maxLines) return;
-    if (!nodes.length) {
-      if (sans.length) out.push({ sans, branchPly });
-      return;
-    }
-    nodes.forEach((node, idx) => {
-      const move = applySan(fen, node.san);
-      if (!move) return;
-      walk(node.children, move.after, [...sans, move.san], idx === 0 ? branchPly : sans.length);
-    });
-  };
-
-  walk(game.moves, rootFen, [], 0);
-  return out;
-}
-
 export interface PgnExportNode {
   san: string;
   comment?: string;

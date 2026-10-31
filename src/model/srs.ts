@@ -191,18 +191,6 @@ export function review<C extends Schedule>(
   };
 }
 
-/** What each button will do. Kept for tests and for anyone adding a preview back. */
-export function gradePreview(
-  card: Card,
-  now = Date.now(),
-  cfg: SrsConfig = DEFAULT_SRS,
-): Record<Grade, string> {
-  const grades: Grade[] = ['again', 'hard', 'good', 'easy'];
-  const out = {} as Record<Grade, string>;
-  for (const g of grades) out[g] = describeDelay(review(card, g, now, cfg).delay);
-  return out;
-}
-
 export function describeDelay(ms: number): string {
   const mins = ms / MINUTE;
   if (mins < 60) return `${Math.max(1, Math.round(mins))}m`;

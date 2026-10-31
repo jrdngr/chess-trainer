@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { walkSan } from '../chess/core';
 import { movesToDraw, popularReplies } from './growth';
 import { KIN_SETS, kinOf, shortFamily } from './kin';
-import { familiarOffBook, nudgeArrows, openingOf, reachable, sameMove, type NudgePrefs } from './nudge';
+import { familiarOffBook, nudgeArrows, reachable, sameMove, type NudgePrefs } from './nudge';
 import { familyName } from './reference';
 import { referenceIndex } from './referenceIndex';
 import { addLine, createRepertoire } from './repertoire';
@@ -176,10 +176,6 @@ describe('the pieces', () => {
   it('treats captures and checks as the same move', () => {
     expect(sameMove('Nxe5+')).toBe('Ne5');
     expect(sameMove('O-O')).toBe('O-O');
-  });
-
-  it('files a line under the family of its deepest name', () => {
-    expect(openingOf(index, 'd4 Nf6 c4 g6 Nc3 Bg7 e4 d6'.split(' '))).toMatch(/King's Indian/);
   });
 
   it('knows which positions a pawn push shuts off', () => {

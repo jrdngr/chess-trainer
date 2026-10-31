@@ -242,11 +242,6 @@ function nameForBlack(openings: { name: string; path: string[] }[], index: Refer
   for (const { region, label } of renamed) if (counts.get(label) === 1) region.name = label;
 }
 
-/** Every opening across both sides, each still knowing which tree it came from. */
-export function openingsAcross(reps: Repertoire[], index: ReferenceIndex): DerivedOpening[] {
-  return sorted(reps.flatMap((rep) => openingsIn(rep, index)));
-}
-
 /** The opening a node sits in, if the list is already to hand. */
 export function openingAt(openings: DerivedOpening[], nodeId: string): DerivedOpening | null {
   for (const opening of openings) {

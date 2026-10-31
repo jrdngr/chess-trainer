@@ -102,10 +102,6 @@ export const STARTER_SETS: StarterSet[] = [
   },
 ];
 
-export function starterSet(id: string): StarterSet | null {
-  return STARTER_SETS.find((set) => set.id === id) ?? null;
-}
-
 /** Every opening a set holds, with the side that plays it. */
 export function setOpenings(set: StarterSet): { id: string; color: Color; slot: SetSlot; label?: string }[] {
   return (Object.keys(set.slots) as SetSlot[]).flatMap((slot) =>
@@ -120,11 +116,6 @@ export interface SeedOpening {
 
 /** A line to add to a side's Playbook, from the start of the game. */
 export type SeedLine = SeedOpening;
-
-/** The openings of a set, as `finishOnboarding` takes them. */
-export function setSeed(set: StarterSet): SeedOpening[] {
-  return setOpenings(set).map(({ id, color }) => ({ sans: id.split(' '), color }));
-}
 
 /** Whose an opening is, read from its move order — for openings picked one by one. */
 export function seedFor(sans: string[], color?: Color): SeedOpening {

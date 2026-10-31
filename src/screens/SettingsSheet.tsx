@@ -62,11 +62,6 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
           on={autopilot.boardGlow}
           onToggle={() => setModePrefs('autopilot', { boardGlow: !autopilot.boardGlow })}
         />
-        <Toggle
-          label="Mode Testing"
-          on={autopilot.modeTesting}
-          onToggle={() => setModePrefs('autopilot', { modeTesting: !autopilot.modeTesting })}
-        />
       </div>
 
       <Section title="Engine" />

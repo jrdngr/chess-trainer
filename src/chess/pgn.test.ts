@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { allLines, mainline, parsePgn, renderMovetext, toPgn } from './pgn';
+import { mainline, parsePgn, renderMovetext, toPgn } from './pgn';
+import { allLines } from '../test/helpers';
 
 describe('parsePgn', () => {
   it('parses headers and a simple mainline', () => {

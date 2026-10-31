@@ -6,7 +6,6 @@ import {
   describeDelay,
   forecast,
   gradeForTime,
-  gradePreview,
   isDue,
   masteryBuckets,
   MINUTE,
@@ -98,19 +97,6 @@ describe('review scheduling', () => {
     expect(c.correct).toBe(2);
     expect(c.incorrect).toBe(1);
     expect(c.lastReviewed).toBe(T0);
-  });
-});
-
-describe('grade previews', () => {
-  it('labels all four buttons for a new card', () => {
-    const preview = gradePreview(card(), T0);
-    expect(preview).toEqual({ again: '1m', hard: '1m', good: '10m', easy: '4d' });
-  });
-
-  it('labels a mature card in days', () => {
-    const preview = gradePreview(card({ stage: 'review', interval: 20, ease: 2.5 }), T0);
-    expect(preview.good).toBe('1.6mo');
-    expect(preview.again).toBe('10m');
   });
 });
 

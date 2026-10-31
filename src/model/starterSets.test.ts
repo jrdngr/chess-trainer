@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { openingTree } from './openingTree';
 import { referenceIndex } from './referenceIndex';
-import { countOwnMoves, setOpenings, setSeed, STARTER_SETS } from './starterSets';
+import { countOwnMoves, setOpenings, STARTER_SETS } from './starterSets';
+import { setSeed } from '../test/helpers';
 
 const tree = openingTree(referenceIndex());
 

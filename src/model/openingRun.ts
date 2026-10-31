@@ -2,20 +2,16 @@ import {
   applySan,
   fenTurn,
   positionKey,
-  sansToMoveText,
   START_FEN,
   walkSan,
   type Color,
-  type Square,
 } from '../chess/core';
-import { findHoles, holeShare, movesToFit, optionsAt, type Hole } from './growth';
-import { deepestName, lookup, totalGamesAt, type ReferenceIndex } from './reference';
+import { findHoles, holeShare, movesToFit, type Hole } from './growth';
+import { lookup, totalGamesAt, type ReferenceIndex } from './reference';
 import {
   approachKeys,
   deepestNodeWithin,
-  insideRegion,
   lineStatus,
-  nodeById,
   regionOf,
   type OpeningNode,
   type OpeningTree,
@@ -72,12 +68,7 @@ export interface LineSource {
   prepAt(fen: string): string[];
 }
 
-export function other(color: Color): Color {
-  return color === 'w' ? 'b' : 'w';
-}
-
 /* ── the region source ──────────────────────────────────────────────────── */
-
 
 /**
  * One repertoire, indexed by position so transpositions behave the way they do
@@ -293,8 +284,6 @@ export function clockLabel(mode: ClockMode): string {
   }
 }
 
-export const HINT_BUDGETS = [0, 1, 3];
-
 /**
  * What the opponent steers you toward: the line drawn up front.
  *
@@ -305,22 +294,6 @@ export const HINT_BUDGETS = [0, 1, 3];
  *             the prep and offers the book.
  */
 export type Steer = 'popular' | 'weak' | 'gaps';
-
-export const STEERS: Steer[] = ['popular', 'weak', 'gaps'];
-
-export function steerLabel(steer: Steer): string {
-  switch (steer) {
-    case 'weak':
-      return 'Weak spots';
-    case 'gaps':
-      return 'Gaps';
-    default:
-      return 'Popular';
-  }
-}
-
-/** How many moves a run may add at the edge of the prep. */
-export const NEW_MOVE_BUDGETS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
 /**
  * How many moves are worth adding at a hole this far into a line.
@@ -373,8 +346,6 @@ export const DEFAULT_OPTIONS: OpeningRunOptions = {
 };
 
 export type OpeningRunPrefs = OpeningRunOptions;
-
-export const DEFAULT_PREFS: OpeningRunPrefs = { ...DEFAULT_OPTIONS };
 
 /* ── runs ───────────────────────────────────────────────────────────────── */
 
@@ -883,14 +854,6 @@ export function resolveColor(color: ColorChoice, rand: () => number): Color {
   return color === 'random' ? (rand() < 0.5 ? 'w' : 'b') : color;
 }
 
-export function isUsersTurn(run: Run): boolean {
-  return fenTurn(run.fen) === run.color;
-}
-
-export function movesHere(source: LineSource, run: Run): string[] {
-  return source.movesAt(run.fen, run.played);
-}
-
 /**
  * What a move is, before it is played: your own prep, real theory your prep
  * does not have, or a move the referee does not know at all.
@@ -902,64 +865,9 @@ export function movesHere(source: LineSource, run: Run): string[] {
  */
 export type MoveKind = 'prep' | 'theory' | 'miss';
 
-export function classify(source: LineSource, run: Run, san: string): MoveKind {
-  if (!movesHere(source, run).includes(san)) return 'miss';
-  const prep = source.prepAt(run.fen);
-  if (!prep.length || prep.includes(san)) return 'prep';
-  return 'theory';
-}
-
 export type Judgement =
   | { ok: true; run: Run; san: string }
   | { ok: false; run: Run; played: string; expected: string[] };
-
-/** Judge one move by the user. A move outside the source ends the run. */
-export function play(source: LineSource, run: Run, san: string): Judgement {
-  const options = movesHere(source, run);
-  if (!options.includes(san)) {
-    // The losing move is reported separately and deliberately kept out of
-    // `played`, so the reveal shows the line rather than the mistake.
-    return { ok: false, run: { ...run, over: true }, played: san, expected: options };
-  }
-  const move = applySan(run.fen, san);
-  if (!move) return { ok: false, run: { ...run, over: true }, played: san, expected: options };
-
-  // Stepping off the drawn line is fine; it just stops steering the opponent.
-  const target = run.target[run.played.length] === san ? run.target : [];
-  return {
-    ok: true,
-    san,
-    run: {
-      ...run,
-      fen: move.after,
-      played: [...run.played, san],
-      survived: run.survived + 1,
-      target,
-    },
-  };
-}
-
-/**
- * Spend a hint: the square the move starts from, never where it lands.
- *
- * Knowing the piece narrows a position without answering it — you still have to
- * know where it belongs, which is the part worth remembering.
- */
-export function takeHint(
-  source: LineSource,
-  run: Run,
-): { run: Run; from: Square; san: string } | null {
-  if (run.hints <= 0) return null;
-  const best = source.prepAt(run.fen)[0] ?? movesHere(source, run)[0];
-  if (!best) return null;
-  const move = applySan(run.fen, best);
-  if (!move) return null;
-  return {
-    run: { ...run, hints: run.hints - 1, hintsUsed: run.hintsUsed + 1 },
-    from: move.from,
-    san: best,
-  };
-}
 
 /** The opponent's reply: the drawn line where it still applies, else weighted. */
 export function opponentReply(source: LineSource, run: Run, rand: () => number): Run {
@@ -1010,77 +918,6 @@ export function opponentReply(source: LineSource, run: Run, rand: () => number):
  */
 export type RunGrade = 'green' | 'yellow' | 'red' | 'purple';
 
-export function gradeOf(run: Run, cause: DeathCause | null): RunGrade {
-  if (cause === null) return run.leftPrep ? 'yellow' : 'green';
-  return cause === 'offprep' ? 'purple' : 'red';
-}
-
-export const GRADES: RunGrade[] = ['green', 'yellow', 'red', 'purple'];
-
-export function gradeLabel(grade: RunGrade): string {
-  switch (grade) {
-    case 'green':
-      return 'Clean finish';
-    case 'yellow':
-      return 'Finished out of prep';
-    case 'purple':
-      return 'Stopped out of prep';
-    default:
-      return 'Blundered';
-  }
-}
-
-/** Whether a move is real theory here, whatever your own prep says. */
-export function bookHas(index: ReferenceIndex, fen: string, san: string): boolean {
-  return (lookup(index, fen)?.moves ?? []).some((move) => move.san === san);
-}
-
-/** Is this line still inside the run's region? */
-export function staysInside(tree: OpeningTree, run: Run, san: string): boolean {
-  const node = nodeById(tree, run.openingId);
-  return insideRegion(tree, node, [...run.played, san]);
-}
-
-/**
- * Step outside the prep and carry on, from a checkpoint.
- *
- * The move — sound, by the engine — is played. It rates nothing: the rating
- * is moves found in your prep, and this was not one. The drawn line stops
- * steering, and from here the engine is the referee.
- */
-export function leavePrep(run: Run, san: string): Run {
-  const move = applySan(run.fen, san);
-  if (!move) return { ...run, over: true };
-  return {
-    ...run,
-    fen: move.after,
-    played: [...run.played, san],
-    leftPrep: true,
-    extended: true,
-    handOver: run.handOver ?? run.played.length,
-    past: run.past + 1,
-    target: [],
-  };
-}
-
-/**
- * The referee has nothing more to say: your prep has been played out, or the
- * book has on a run through it. That completes the run, whatever comes after.
- */
-export function finishPrep(run: Run): Run {
-  return run.prepDone === null ? { ...run, prepDone: run.played.length } : run;
-}
-
-/**
- * Keep playing past the end of the prep, from its checkpoint. Not leaving
- * the prep — there was nothing here to leave — so a finish stays green; but
- * the engine judges from here, and its verdicts earn nothing.
- */
-export function keepPlaying(run: Run): Run {
-  if (run.extended) return run;
-  return { ...finishPrep(run), extended: true, handOver: run.played.length, target: [] };
-}
-
 /* ── past the hand-over ─────────────────────────────────────────────────── */
 
 /**
@@ -1120,73 +957,6 @@ export function judgeByEval(
   return { ok: lost <= limit, lost };
 }
 
-/**
- * One of your moves the engine passed, past the hand-over. It rates nothing
- * and does not count as survived: the rating is what you found in your prep.
- */
-export function playPast(run: Run, san: string): Run {
-  const applied = applySan(run.fen, san);
-  if (!applied) return { ...run, over: true };
-  return { ...run, fen: applied.after, played: [...run.played, san], past: run.past + 1 };
-}
-
-/** The opponent's move, once something has chosen it — the book or the engine. */
-export function playReply(run: Run, san: string): Run {
-  const applied = applySan(run.fen, san);
-  if (!applied) return { ...run, over: true };
-  return { ...run, fen: applied.after, played: [...run.played, san] };
-}
-
-/**
- * True when the referee has run out entirely: nothing prepared and nothing
- * in the book, at either side's turn.
- *
- * Never past the hand-over: the engine always has another move, and only a
- * blunder or the game itself ends play from there.
- */
-export function isComplete(source: LineSource, run: Run): boolean {
-  return !run.over && !run.extended && movesHere(source, run).length === 0;
-}
-
-/**
- * True at the edge of the prep: your move, nothing prepared, the book still
- * going. This is where a run offers the book, with moves left to add, and
- * otherwise where the end of the prep is a checkpoint.
- *
- * Never on a run through the book — there is no prep to be at the edge of,
- * and the book running out is its checkpoint — and never past the hand-over.
- */
-export function atEdge(source: LineSource, run: Run): boolean {
-  if (run.over || run.bookRun || run.extended || !isUsersTurn(run)) return false;
-  return source.prepAt(run.fen).length === 0 && movesHere(source, run).length > 0;
-}
-
-/** What to offer at the edge: the book's replies, most played first. */
-export function edgeOptions(index: ReferenceIndex, fen: string, limit = 4) {
-  return optionsAt(index, fen, limit);
-}
-
-/**
- * Take a move from the book at the edge of the prep.
- *
- * It is played and it spends one of the run's new moves, but it is not a move
- * you found, so it counts for nothing: what a run reports is moves survived. The drawn
- * line stops steering — it led here and no further — and the opponent answers
- * from the book.
- */
-export function chooseAtEdge(run: Run, san: string): Run {
-  const move = applySan(run.fen, san);
-  if (!move || run.newMoves <= 0) return { ...run, over: true };
-  return {
-    ...run,
-    fen: move.after,
-    played: [...run.played, san],
-    newMoves: run.newMoves - 1,
-    added: run.added + 1,
-    target: [],
-  };
-}
-
 /** How the line would have gone on from here. */
 export function continuation(source: LineSource, run: Run, plies = 48): string[] {
   const out: string[] = [];
@@ -1211,48 +981,11 @@ export function fullLine(source: LineSource, run: Run, plies = 48): string[] {
   return [...run.played, ...continuation(source, run, plies)];
 }
 
-export function revealText(source: LineSource, run: Run): string {
-  return sansToMoveText(fullLine(source, run));
-}
-
-export function playedIsLegal(run: Run): boolean {
-  let fen = START_FEN;
-  for (const san of run.played) {
-    const move = applySan(fen, san);
-    if (!move) return false;
-    fen = move.after;
-  }
-  return true;
-}
-
 export interface LineName {
   name: string;
   eco?: string;
   /** False when the database only knew the opening in general terms. */
   specific: boolean;
-}
-
-/**
- * What to call the line once the run is over.
- *
- * The database names a position by the deepest entry on its path, so a line
- * that transposes into the King's Indian through an unusual move order can come
- * back as "Queen's Pawn Opening" — technically right and no use to anyone. When
- * the match is that shallow, fall back to the source's own name.
- *
- * Three plies is the cutoff because that is where a name starts saying more
- * than the first move: "Sicilian: Alapin" earns its place, "Sicilian Defence"
- * does not — and the fallback, the repertoire's own name, already beats it.
- */
-export function lineName(
-  index: ReferenceIndex,
-  source: LineSource,
-  run: Run,
-  minPly = 3,
-): LineName {
-  const found = deepestName(index, fullLine(source, run));
-  if (found && found.ply >= minPly) return { name: found.name, eco: found.eco, specific: true };
-  return { name: run.sourceLabel, eco: found?.eco, specific: false };
 }
 
 /* ── record ─────────────────────────────────────────────────────────────── */
@@ -1274,25 +1007,6 @@ export interface OpeningRunRecord {
   grades: Record<RunGrade, number>;
 }
 
-export const EMPTY_RECORD: OpeningRunRecord = {
-  runs: 0,
-  best: 0,
-  lastDepth: 0,
-  lastAt: null,
-  survivals: 0,
-  grades: { green: 0, yellow: 0, red: 0, purple: 0 },
-};
-
-/** A saved record missing a field is still a record. */
-export function normalizeRecord(record: Partial<OpeningRunRecord> | undefined): OpeningRunRecord {
-  if (!record) return { ...EMPTY_RECORD, grades: { ...EMPTY_RECORD.grades } };
-  return {
-    ...EMPTY_RECORD,
-    ...record,
-    grades: { ...EMPTY_RECORD.grades, ...(record.grades ?? {}) },
-  };
-}
-
 export interface RunOutcome {
   /** The run this came from, so carrying a run on amends it. */
   id: string;
@@ -1302,97 +1016,4 @@ export interface RunOutcome {
   color: Color;
   depth: number;
   completed: boolean;
-}
-
-/**
- * What a run adds up to, once it is over.
- *
- * Completing a run is reaching the end of its prep — a fact, once it has
- * happened, whatever you chose to do next. The grade is how the run actually
- * ended: a blunder past the checkpoint is still a blunder.
- */
-export function outcomeOf(run: Run, cause: DeathCause | null): RunOutcome {
-  return {
-    id: run.id,
-    grade: gradeOf(run, cause),
-    label: run.sourceLabel,
-    openingId: run.openingId,
-    color: run.color,
-    depth: run.survived,
-    completed: run.prepDone !== null,
-  };
-}
-
-/**
- * Log a finished run.
- *
- * Logging the same run twice amends it rather than counting it again: the
- * count stays at one run and the deeper score replaces the shallower one —
- * `best` only ever grows, so taking the maximum is right either way. A
- * completed line stays counted.
- */
-export function recordRun(
-  record: OpeningRunRecord,
-  outcome: RunOutcome,
-  at = Date.now(),
-): OpeningRunRecord {
-  const base = normalizeRecord(record);
-  const amend = base.last?.id === outcome.id;
-  const alreadyCounted = amend && !!base.last?.completed;
-  const addSurvival = outcome.completed && !alreadyCounted ? 1 : 0;
-  return {
-    runs: base.runs + (amend ? 0 : 1),
-    best: Math.max(base.best, outcome.depth),
-    lastDepth: outcome.depth,
-    lastAt: at,
-    survivals: base.survivals + addSurvival,
-    grades: amendGrades(base.grades, amend ? base.last?.grade : undefined, outcome.grade),
-    last: {
-      id: outcome.id,
-      completed: outcome.completed || alreadyCounted,
-      grade: outcome.grade,
-    },
-  };
-}
-
-/** Move a run's grade tally, taking back the grade it was last logged under. */
-function amendGrades(
-  grades: Record<RunGrade, number>,
-  previous: RunGrade | undefined,
-  next: RunGrade,
-): Record<RunGrade, number> {
-  const out = { ...grades };
-  if (previous) out[previous] = Math.max(0, out[previous] - 1);
-  out[next] += 1;
-  return out;
-}
-
-/* ── keeping the line ───────────────────────────────────────────────────── */
-
-/**
- * The part of a run worth offering to the repertoire, at the reveal.
- *
- * Nothing is written by playing; this is what the one tap would write. Every
- * move the referee passed — a run's `played` never contains the move that
- * ended it — and then, past the hand-over, only as far as the moves are still
- * theory: a move the engine passed that the book has never seen is sound but
- * not prep. The line is trimmed to end on your own move, because one ending
- * on the opponent's prepares nothing.
- */
-export function lineToKeep(index: ReferenceIndex, run: Run): string[] {
-  const judged = run.handOver ?? run.played.length;
-  let fen = START_FEN;
-  const cut: string[] = [];
-  for (let ply = 0; ply < run.played.length; ply += 1) {
-    const san = run.played[ply];
-    if (ply >= judged && !bookHas(index, fen, san)) break;
-    const move = applySan(fen, san);
-    if (!move) break;
-    cut.push(san);
-    fen = move.after;
-  }
-  // White's moves sit at even indices, so a White line has odd length.
-  const wantsOdd = run.color === 'w';
-  if (!cut.length) return [];
-  return cut.length % 2 === 1 === wantsOdd ? cut : cut.slice(0, -1);
 }
