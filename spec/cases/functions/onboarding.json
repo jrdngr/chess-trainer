@@ -1,0 +1,85 @@
+{
+  "area": "onboarding",
+  "functions": [
+    {
+      "fn": "onboarding.playerOf",
+      "about": "Whose opening a line is: whoever played its last move, except the two the book names a move late.",
+      "cases": [
+      {"args":["e4"],"out":"w"},
+      {"args":["e4 c5"],"out":"b"},
+      {"args":["e4 e5 Nf3 Nc6 Bb5"],"out":"w"},
+      {"args":["d4 Nf6 c4 g6 Nc3"],"out":"b"},
+      {"args":["d4 Nf6 c4 g6 Nc3 d5"],"out":"b"},
+      {"args":["e4 e5 Nf3 Nc6 d4 exd4"],"out":"w"},
+      {"args":["e4 e5 Nf3 Nc6 d4"],"out":"w"}
+      ]
+    },
+    {
+      "fn": "onboarding.selectionFor",
+      "about": "The selection the picks imply: one side if all picks are one side, else random; one pick is that opening, several are Any favorite; none is the default.",
+      "cases": [
+      {"args":[[]],"out":{"color":"random","opening":""}},
+      {"args":[["e4 c5"]],"out":{"color":"b","opening":"e4 c5"}},
+      {"args":[["e4 c5","d4 Nf6 c4 g6 Nc3"]],"out":{"color":"b","opening":"*favorites"}},
+      {"args":[["e4 c5","e4 e5 Nf3 Nc6 Bb5"]],"out":{"color":"random","opening":"*favorites"}},
+      {"args":[["e4 e5 Nf3 Nc6 Bb5"]],"out":{"color":"w","opening":"e4 e5 Nf3 Nc6 Bb5"}}
+      ]
+    },
+    {
+      "fn": "starterSets.set",
+      "about": "Each starter set: its name and description, and each slot's openings with the name shown, the side that plays it and how many of your own moves it holds.",
+      "cases": [
+      {"args":["classical"],"out":{"name":"Classical","description":"Grab the center, develop, castle. Where most coaches start.","openings":[{"slot":"w","id":"e4 e5 Nf3 Nc6 Bc4","name":"Italian Game","color":"w","moves":3},{"slot":"e4","id":"e4 e5","name":"1...e5","color":"b","moves":1},{"slot":"d4","id":"d4 d5 c4 e6","name":"Queen's Gambit Declined","color":"b","moves":2}],"moves":6}},
+      {"args":["system"],"out":{"name":"System","description":"The same setup nearly every game, so there's little to memorize.","openings":[{"slot":"w","id":"d4 d5 Bf4","name":"London System","color":"w","moves":2},{"slot":"w","id":"d4 Nf6 Bf4","name":"London System","color":"w","moves":2},{"slot":"e4","id":"e4 c6","name":"Caro-Kann Defence","color":"b","moves":1},{"slot":"d4","id":"d4 d5 c4 c6","name":"Slav Defence","color":"b","moves":2}],"moves":6}},
+      {"args":["solid"],"out":{"name":"Solid","description":"Hard to crack. Fewer early fights, more long games.","openings":[{"slot":"w","id":"d4 d5 c4","name":"Queen's Gambit","color":"w","moves":2},{"slot":"e4","id":"e4 e5","name":"1...e5","color":"b","moves":1},{"slot":"e4","id":"e4 e5 Nf3 Nc6 Bb5 Nf6","name":"Berlin","color":"b","moves":3},{"slot":"d4","id":"d4 Nf6 c4 e6 Nc3 Bb4","name":"Nimzo-Indian Defence","color":"b","moves":3}],"moves":8}},
+      {"args":["aggressive"],"out":{"name":"Aggressive","description":"Unbalanced positions where you go after the king.","openings":[{"slot":"w","id":"e4 e5 Nf3 Nc6 d4 exd4","name":"Scotch Game","color":"w","moves":3},{"slot":"e4","id":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6","name":"Sicilian Dragon","color":"b","moves":5},{"slot":"d4","id":"d4 Nf6 c4 g6 Nc3 d5","name":"Grünfeld Defence","color":"b","moves":3}],"moves":11}},
+      {"args":["fianchetto"],"out":{"name":"Fianchetto","description":"Bishops on the long diagonals, same setup whatever they play.","openings":[{"slot":"w","id":"Nf3 d5 g3","name":"King's Indian Attack","color":"w","moves":2},{"slot":"w","id":"Nf3 Nf6 g3 g6","name":"King's Indian Attack","color":"w","moves":2},{"slot":"e4","id":"e4 d6","name":"Pirc Defence","color":"b","moves":1},{"slot":"d4","id":"d4 Nf6 c4 g6 Nc3","name":"King's Indian Defence","color":"b","moves":2}],"moves":6}},
+      {"args":["mirror"],"out":{"name":"Mirror","description":"The c-pawn first with both colors, so White and Black share ideas.","openings":[{"slot":"w","id":"c4","name":"English Opening","color":"w","moves":1},{"slot":"e4","id":"e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 g6","name":"Accelerated Dragon","color":"b","moves":4},{"slot":"d4","id":"d4 Nf6 c4 c5 d5 e6","name":"Benoni Defence: Modern Variation","color":"b","moves":3}],"moves":8}}
+      ]
+    },
+    {
+      "fn": "starterSets.countOwnMoves",
+      "about": "How many of your own moves lines hold: one per position a side answers, so shared moves and transpositions count once.",
+      "cases": [
+      {"args":[[["e4 c5","b"]]],"out":1},
+      {"args":[[["e4 c5","w"]]],"out":1},
+      {"args":[[["e4 e5 Nf3 Nc6 Bb5","w"],["e4 e5 Nf3 Nc6 Bc4","w"]]],"out":3},
+      {"args":[[["d4 Nf6 c4 e6 Nc3","w"],["c4 e6 d4 Nf6 Nc3","w"]]],"out":4},
+      {"args":[[]],"out":0}
+      ]
+    },
+    {
+      "fn": "starterSets.seedFor",
+      "about": "An opening picked on its own goes to the side that plays it, unless a side is given.",
+      "cases": [
+      {"args":["e4 c5",null],"out":{"sans":["e4","c5"],"color":"b"}},
+      {"args":["d4 Nf6 c4 g6 Nc3",null],"out":{"sans":["d4","Nf6","c4","g6","Nc3"],"color":"b"}},
+      {"args":["e4 c5","w"],"out":{"sans":["e4","c5"],"color":"w"}}
+      ]
+    },
+    {
+      "fn": "onboarding.onboarded (a starter set)",
+      "about": "Finishing onboarding with a starter set: each opening goes in as exactly its own moves, named and starred where the book names it, with the selection it implies.",
+      "cases": [
+      {"args":["classical"],"out":{"playbook":[{"color":"w","name":"White Playbook","lines":["e4(picker) e5(picker) Nf3(picker) Nc6(picker) Bc4(picker)"],"openings":["Italian Game"]},{"color":"b","name":"Black Playbook","lines":["d4(picker) d5(picker) c4(picker) e6(picker)","e4(picker) e5(picker)"],"openings":["Queen's Gambit Declined","King's Pawn Game"]}],"favorites":["e4 e5 Nf3 Nc6 Bc4","e4 e5","d4 d5 c4 e6"],"selection":{"color":"random","opening":"*favorites"},"onboarded":true,"events":[{"kind":"add","color":"w","line":"e4 e5 Nf3 Nc6 Bc4","added":5,"source":"picker","via":"onboarding"},{"kind":"add","color":"b","line":"e4 e5","added":2,"source":"picker","via":"onboarding"},{"kind":"add","color":"b","line":"d4 d5 c4 e6","added":4,"source":"picker","via":"onboarding"}]}},
+      {"args":["system"],"out":{"playbook":[{"color":"w","name":"White Playbook","lines":["d4(picker) d5(picker) Bf4(picker)","d4(picker) Nf6(picker) Bf4(picker)"],"openings":["Indian Defence: Accelerated London System","Queen's Pawn Game: Accelerated London System"]},{"color":"b","name":"Black Playbook","lines":["d4(picker) d5(picker) c4(picker) c6(picker)","e4(picker) c6(picker)"],"openings":["Slav Defence","Caro-Kann Defence"]}],"favorites":["d4 d5 Bf4","d4 Nf6 Bf4","e4 c6","d4 d5 c4 c6"],"selection":{"color":"random","opening":"*favorites"},"onboarded":true,"events":[{"kind":"add","color":"w","line":"d4 d5 Bf4","added":3,"source":"picker","via":"onboarding"},{"kind":"add","color":"w","line":"d4 Nf6 Bf4","added":2,"source":"picker","via":"onboarding"},{"kind":"add","color":"b","line":"e4 c6","added":2,"source":"picker","via":"onboarding"},{"kind":"add","color":"b","line":"d4 d5 c4 c6","added":4,"source":"picker","via":"onboarding"}]}},
+      {"args":["solid"],"out":{"playbook":[{"color":"w","name":"White Playbook","lines":["d4(picker) d5(picker) c4(picker)"],"openings":["Queen's Gambit"]},{"color":"b","name":"Black Playbook","lines":["e4(picker) e5(picker) Nf3(picker) Nc6(picker) Bb5(picker) Nf6(picker)","d4(picker) Nf6(picker) c4(picker) e6(picker) Nc3(picker) Bb4(picker)"],"openings":["Nimzo-Indian Defence","Ruy Lopez: Berlin Defence"]}],"favorites":["d4 d5 c4","e4 e5","e4 e5 Nf3 Nc6 Bb5 Nf6","d4 Nf6 c4 e6 Nc3 Bb4"],"selection":{"color":"random","opening":"*favorites"},"onboarded":true,"events":[{"kind":"add","color":"w","line":"d4 d5 c4","added":3,"source":"picker","via":"onboarding"},{"kind":"add","color":"b","line":"e4 e5","added":2,"source":"picker","via":"onboarding"},{"kind":"add","color":"b","line":"e4 e5 Nf3 Nc6 Bb5 Nf6","added":4,"source":"picker","via":"onboarding"},{"kind":"add","color":"b","line":"d4 Nf6 c4 e6 Nc3 Bb4","added":6,"source":"picker","via":"onboarding"}]}},
+      {"args":["aggressive"],"out":{"playbook":[{"color":"w","name":"White Playbook","lines":["e4(picker) e5(picker) Nf3(picker) Nc6(picker) d4(picker) exd4(picker)"],"openings":["Scotch Game"]},{"color":"b","name":"Black Playbook","lines":["e4(picker) c5(picker) Nf3(picker) d6(picker) d4(picker) cxd4(picker) Nxd4(picker) Nf6(picker) Nc3(picker) g6(picker)","d4(picker) Nf6(picker) c4(picker) g6(picker) Nc3(picker) d5(picker)"],"openings":["Sicilian Defence: Dragon Variation","Grünfeld Defence"]}],"favorites":["e4 e5 Nf3 Nc6 d4 exd4","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6","d4 Nf6 c4 g6 Nc3 d5"],"selection":{"color":"random","opening":"*favorites"},"onboarded":true,"events":[{"kind":"add","color":"w","line":"e4 e5 Nf3 Nc6 d4 exd4","added":6,"source":"picker","via":"onboarding"},{"kind":"add","color":"b","line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6","added":10,"source":"picker","via":"onboarding"},{"kind":"add","color":"b","line":"d4 Nf6 c4 g6 Nc3 d5","added":6,"source":"picker","via":"onboarding"}]}},
+      {"args":["fianchetto"],"out":{"playbook":[{"color":"w","name":"White Playbook","lines":["Nf3(picker) Nf6(picker) g3(picker) g6(picker)","Nf3(picker) d5(picker) g3(picker)"],"openings":["King's Indian Attack: Symmetrical Defence","King's Indian Attack"]},{"color":"b","name":"Black Playbook","lines":["d4(picker) Nf6(picker) c4(picker) g6(picker) Nc3(picker)","e4(picker) d6(picker)"],"openings":["King's Indian Defence","Pirc Defence"]}],"favorites":["Nf3 d5 g3","Nf3 Nf6 g3 g6","e4 d6","d4 Nf6 c4 g6 Nc3"],"selection":{"color":"random","opening":"*favorites"},"onboarded":true,"events":[{"kind":"add","color":"w","line":"Nf3 d5 g3","added":3,"source":"picker","via":"onboarding"},{"kind":"add","color":"w","line":"Nf3 Nf6 g3 g6","added":3,"source":"picker","via":"onboarding"},{"kind":"add","color":"b","line":"e4 d6","added":2,"source":"picker","via":"onboarding"},{"kind":"add","color":"b","line":"d4 Nf6 c4 g6 Nc3","added":5,"source":"picker","via":"onboarding"}]}},
+      {"args":["mirror"],"out":{"playbook":[{"color":"w","name":"White Playbook","lines":["c4(picker)"],"openings":["English Opening"]},{"color":"b","name":"Black Playbook","lines":["e4(picker) c5(picker) Nf3(picker) Nc6(picker) d4(picker) cxd4(picker) Nxd4(picker) g6(picker)","d4(picker) Nf6(picker) c4(picker) c5(picker) d5(picker) e6(picker)"],"openings":["Sicilian Defence: Accelerated Dragon","Benoni Defence: Modern Variation"]}],"favorites":["c4","e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 g6","d4 Nf6 c4 c5 d5 e6"],"selection":{"color":"random","opening":"*favorites"},"onboarded":true,"events":[{"kind":"add","color":"w","line":"c4","added":1,"source":"picker","via":"onboarding"},{"kind":"add","color":"b","line":"e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 g6","added":8,"source":"picker","via":"onboarding"},{"kind":"add","color":"b","line":"d4 Nf6 c4 c5 d5 e6","added":6,"source":"picker","via":"onboarding"}]}}
+      ]
+    },
+    {
+      "fn": "onboarding.onboarded",
+      "about": "Finishing onboarding: picked openings go in as their own moves and are starred; lines played on the board go in whole, marked as played on the board, and starred only through a picked opening; illegal move orders are left out; skipping puts nothing in but is still an answer.",
+      "cases": [
+      {"args":[[],[]],"out":{"playbook":[],"favorites":[],"selection":{"color":"random","opening":""},"onboarded":true,"events":[]}},
+      {"args":[["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"],[]],"out":{"playbook":[{"color":"b","name":"Black Playbook","lines":["e4(picker) c5(picker) Nf3(picker) d6(picker) d4(picker) cxd4(picker) Nxd4(picker) Nf6(picker) Nc3(picker) a6(picker)"],"openings":["Sicilian Defence: Najdorf Variation"]}],"favorites":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"],"selection":{"color":"b","opening":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"},"onboarded":true,"events":[{"kind":"add","color":"b","line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","added":10,"source":"picker","via":"onboarding"}]}},
+      {"args":[["e4 c5","e4 e5 Nf3 Nc6 Bb5","d4 Nf6 c4 g6 Nc3"],[]],"out":{"playbook":[{"color":"b","name":"Black Playbook","lines":["d4(picker) Nf6(picker) c4(picker) g6(picker) Nc3(picker)","e4(picker) c5(picker)"],"openings":["King's Indian Defence","Sicilian Defence"]},{"color":"w","name":"White Playbook","lines":["e4(picker) e5(picker) Nf3(picker) Nc6(picker) Bb5(picker)"],"openings":["Ruy Lopez"]}],"favorites":["e4 c5","e4 e5 Nf3 Nc6 Bb5","d4 Nf6 c4 g6 Nc3"],"selection":{"color":"random","opening":"*favorites"},"onboarded":true,"events":[{"kind":"add","color":"b","line":"e4 c5","added":2,"source":"picker","via":"onboarding"},{"kind":"add","color":"w","line":"e4 e5 Nf3 Nc6 Bb5","added":5,"source":"picker","via":"onboarding"},{"kind":"add","color":"b","line":"d4 Nf6 c4 g6 Nc3","added":5,"source":"picker","via":"onboarding"}]}},
+      {"args":[["e4 e4 e4"],[]],"out":{"playbook":[],"favorites":[],"selection":{"color":"random","opening":""},"onboarded":true,"events":[]}},
+      {"args":[[],[["e4 e5 Nf3 Nc6 Bc4 Bc5 c3","w"]]],"out":{"playbook":[{"color":"w","name":"White Playbook","lines":["e4(board) e5(board) Nf3(board) Nc6(board) Bc4(board) Bc5(board) c3(board)"],"openings":["Italian Game: Classical Variation"]}],"favorites":[],"selection":{"color":"random","opening":""},"onboarded":true,"events":[{"kind":"add","color":"w","line":"e4 e5 Nf3 Nc6 Bc4 Bc5 c3","added":7,"source":"board","via":"onboarding"}]}},
+      {"args":[["e4 e5"],[["e4 e5 Nf3 Nc6 Bb5 a6","b"],["d4 d5 c4 e6 Nc3 Nf6","b"]]],"out":{"playbook":[{"color":"b","name":"Black Playbook","lines":["e4(board) e5(board) Nf3(board) Nc6(board) Bb5(board) a6(board)","d4(board) d5(board) c4(board) e6(board) Nc3(board) Nf6(board)"],"openings":["Queen's Gambit Declined: Normal Defence","Ruy Lopez: Morphy Defence"]}],"favorites":["e4 e5"],"selection":{"color":"b","opening":"e4 e5"},"onboarded":true,"events":[{"kind":"add","color":"b","line":"e4 e5 Nf3 Nc6 Bb5 a6","added":6,"source":"board","via":"onboarding"},{"kind":"add","color":"b","line":"d4 d5 c4 e6 Nc3 Nf6","added":6,"source":"board","via":"onboarding"}]}}
+      ]
+    }
+  ]
+}
