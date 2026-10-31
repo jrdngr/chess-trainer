@@ -29,7 +29,8 @@ struct PlayAppBar<Trailing: View>: View {
 
 /// The web app's `.btn`: a filled, rounded button.
 struct PlayButtonStyle: ButtonStyle {
-  enum Kind { case primary, soft, plain }
+  /// `.primary`, `.soft`, the plain `.btn`, `.accent`, and `.bare` for `.btn.plain`.
+  enum Kind { case primary, soft, plain, accent, bare }
   var kind = Kind.plain
   var height: CGFloat = 50
   var radius: CGFloat = 14
@@ -39,11 +40,30 @@ struct PlayButtonStyle: ButtonStyle {
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.system(size: font, weight: .semibold))
-      .foregroundStyle(kind == .primary ? SwiftUI.Color(hex: 0x0b0b0e) : Theme.text)
+      .foregroundStyle(ink)
       .padding(.horizontal, 20).frame(minHeight: height)
-      .background(RoundedRectangle(cornerRadius: radius).fill(kind == .primary ? Theme.text : kind == .soft ? Theme.surface : Theme.surface2))
+      .background(RoundedRectangle(cornerRadius: radius).fill(fill))
       .opacity(enabled ? 1 : 0.35)
       .scaleEffect(configuration.isPressed ? 0.97 : 1)
+  }
+
+  private var ink: SwiftUI.Color {
+    switch kind {
+    case .primary: SwiftUI.Color(hex: 0x0b0b0e)
+    case .accent: Theme.accentInk
+    case .bare: Theme.text2
+    default: Theme.text
+    }
+  }
+
+  private var fill: SwiftUI.Color {
+    switch kind {
+    case .primary: Theme.text
+    case .soft: Theme.surface
+    case .plain: Theme.surface2
+    case .accent: Theme.accent
+    case .bare: .clear
+    }
   }
 }
 
@@ -67,7 +87,7 @@ struct PlaySection: View {
 /// The game or run announced full screen: the mode, then the opening. `round-intro`.
 struct PlayIntroCover: View {
   var trail: [String]
-  /// The mode as the round is called: Play, or Survival.
+  /// The mode as the round is called: Play, Survival or Growth.
   var mode = "Play"
   @State private var shown = false
 

@@ -62,6 +62,8 @@ import Testing
   expect("autopilotPrefs", "AUTO_GROWTH", encoded(AUTO_GROWTH))
   expect("autopilotPrefs", "DEFAULT_AUTOPILOT", encoded(DEFAULT_AUTOPILOT))
   expect("modes", "DEFAULT_PLAY", encoded(DEFAULT_PLAY))
+  expect("modes", "GROWTH_DEPTHS", GROWTH_DEPTHS)
+  expect("modes", "SHARE_STEPS", SHARE_STEPS)
   expect("openingRun", "CLOCK_MODES", CLOCK_MODES.map(\.rawValue))
   expect("openingRun", "DRAW_WINDOW", DRAW_WINDOW)
   expect("growth", "DEFAULT_MAX_PLY", DEFAULT_MAX_PLY)

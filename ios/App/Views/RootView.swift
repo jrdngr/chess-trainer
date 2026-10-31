@@ -96,6 +96,14 @@ struct RootView: View {
         .id(scope.map { "\($0.color.rawValue):\($0.opening)" } ?? "autopilot")
     case .play: PlayView(tree: tree, index: index) { leave() }
     case .drill: DrillView(tree: tree, index: index) { leave() }
+    case .growth:
+      GrowthModeView(
+        tree: tree, index: index, onExit: { leave() },
+        onPractice: { selection in
+          scope = selection
+          self.mode = .autopilot
+        },
+        onAnalyze: { analyzing = ($0, $1) })
     case .survival:
       SurvivalView(
         tree: tree, index: index, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) },
@@ -103,15 +111,14 @@ struct RootView: View {
           scope = selection
           self.mode = .autopilot
         })
-    default: ComingSoon(mode: mode) { leave() }
     }
   }
 
   /// Leaving a mode, from anywhere inside it, lands on Home.
   private func leave() {
+    analyzing = nil
     mode = nil
     scope = nil
-    analyzing = nil
     tab = .home
   }
 

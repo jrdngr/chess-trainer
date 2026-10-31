@@ -26,7 +26,7 @@ struct SurvivalView: View {
     Group {
       if let growth, let model {
         GrowthView(model: growth, nextLabel: "Practice these lines") {
-          onPractice(Selection(color: model.run.color == .w ? .w : .b, opening: growth.offer.launch.opening.id))
+          onPractice(Selection(color: model.run.color == .w ? .w : .b, opening: growth.launch.opening.id))
         }
       } else if let model {
         if model.phase == .over, let finish = model.finish {

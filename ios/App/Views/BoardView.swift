@@ -7,6 +7,8 @@ struct BoardArrow: Equatable {
   var from: String
   var to: String
   var color: SwiftUI.Color
+  /// A soft halo under the arrow: Growth's nudge toward or away from your patterns.
+  var glow: SwiftUI.Color? = nil
 }
 
 /// The board: tap a piece, then a square. Moves are only offered to `movable`'s side.
@@ -26,6 +28,8 @@ struct BoardView: View {
   var marks: LensMarks?
   /// Either side may move, not only `orientation`'s: the browsers, the board builder and Analysis.
   var bothSides = false
+  /// Only these moves, by SAN, may be played: Growth's answers at a hole.
+  var allowed: [String]? = nil
   var onMove: (LegalMove) -> Void
 
   @State private var selected: String?
@@ -40,7 +44,7 @@ struct BoardView: View {
       let size = min(geo.size.width, geo.size.height)
       let cell = size / 8
       let pieces = Dictionary(piecesFromFen(fen).map { ($0.square, $0) }, uniquingKeysWith: { a, _ in a })
-      let targets = selected.map { from in legalMoves(fen).filter { $0.from == from }.map(\.to) } ?? []
+      let targets = selected.map { from in playable.filter { $0.from == from }.map(\.to) } ?? []
       ZStack(alignment: .topLeading) {
         ForEach(0..<64, id: \.self) { i in
           let square = squareAt(i)
@@ -118,6 +122,13 @@ struct BoardView: View {
     .allowsHitTesting(false)
   }
 
+  /// The legal moves, held to `allowed` when it is set.
+  private var playable: [LegalMove] {
+    let moves = legalMoves(fen)
+    guard let allowed else { return moves }
+    return moves.filter { allowed.contains($0.san) }
+  }
+
   private func squareAt(_ i: Int) -> String {
     let file = i % 8, rank = i / 8
     return String(UnicodeScalar(UInt8(97 + file))) + String(rank + 1)
@@ -134,7 +145,7 @@ struct BoardView: View {
     let turn = fenTurn(fen)
     if let from = selected {
       // Promotions go to a queen.
-      let moves = legalMoves(fen).filter { $0.from == from && $0.to == square }
+      let moves = playable.filter { $0.from == from && $0.to == square }
       if let move = moves.first(where: { $0.promotion == nil || $0.promotion == .q }) {
         selected = nil
         onMove(move)
@@ -190,6 +201,16 @@ struct ArrowsView: View {
 
   var body: some View {
     Canvas { context, _ in
+      for arrow in arrows {
+        guard let glow = arrow.glow else { continue }
+        var halo = context
+        halo.addFilter(.blur(radius: cell * 0.07))
+        halo.opacity = 0.85
+        var line = Path()
+        line.move(to: center(arrow.from))
+        line.addLine(to: center(arrow.to))
+        halo.stroke(line, with: .color(glow), style: StrokeStyle(lineWidth: cell * 0.34, lineCap: .round))
+      }
       for arrow in arrows {
         let a = center(arrow.from), b = center(arrow.to)
         let angle = atan2(b.y - a.y, b.x - a.x)

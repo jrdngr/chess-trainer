@@ -85,12 +85,15 @@ struct SurvivalDebugScroll: ViewModifier {
 }
 
 extension RootView {
-  /// Debug builds open a mode over the tabs with `OPEN_MODE=survival` (or `autopilot`), for screenshots.
+  /// Debug builds open a mode over the tabs with `OPEN_MODE=survival` (or `autopilot`, `growth`, `drill`, `play`), for screenshots.
   static var debugMode: Mode? {
     #if DEBUG
       switch ProcessInfo.processInfo.environment["OPEN_MODE"] {
       case "survival": .survival
       case "autopilot": .autopilot
+      case "growth": .growth
+      case "drill": .drill
+      case "play": .play
       default: nil
       }
     #else
