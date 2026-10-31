@@ -1,0 +1,141 @@
+{
+  "area": "playbook",
+  "functions": [
+    {
+      "fn": "repertoire.shape",
+      "about": "A Playbook tree as lines and the positions you answer, preferred move marked *; a transposition is one position with its options merged.",
+      "cases": [
+      {"args":[{"color":"b","lines":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O","e4 c5 Nf3 d6"]}],"out":{"lines":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O","e4 c5 Nf3 d6"],"positions":[{"path":"d4","options":["Nf6*"]},{"path":"e4","options":["c5*"]},{"path":"d4 Nf6 c4","options":["g6*"]},{"path":"e4 c5 Nf3","options":["d6*"]},{"path":"d4 Nf6 c4 g6 Nc3","options":["Bg7*"]},{"path":"d4 Nf6 c4 g6 Nf3","options":["Bg7*"]},{"path":"d4 Nf6 c4 g6 Nc3 Bg7 e4","options":["d6*"]},{"path":"d4 Nf6 c4 g6 Nf3 Bg7 g3","options":["O-O*"]}],"items":8}},
+      {"args":[{"color":"w","lines":["e4 e5 Nf3 Nc6 Bc4","e4 e5 Nf3 Nf6 Nxe5","e4 c5 Nf3 d6 d4","e4 c5 c3"]}],"out":{"lines":["e4 e5 Nf3 Nc6 Bc4","e4 e5 Nf3 Nf6 Nxe5","e4 c5 Nf3 d6 d4","e4 c5 c3"],"positions":[{"path":"","options":["e4*"]},{"path":"e4 e5","options":["Nf3*"]},{"path":"e4 c5","options":["Nf3*","c3"]},{"path":"e4 e5 Nf3 Nc6","options":["Bc4*"]},{"path":"e4 e5 Nf3 Nf6","options":["Nxe5*"]},{"path":"e4 c5 Nf3 d6","options":["d4*"]}],"items":6}},
+      {"args":[{"color":"w","lines":["d4 Nf6 c4 e6 Nc3","c4 e6 d4 Nf6 Nc3"]}],"out":{"lines":["d4 Nf6 c4 e6 Nc3","c4 e6 d4 Nf6 Nc3"],"positions":[{"path":"","options":["d4*","c4"]},{"path":"d4 Nf6","options":["c4*"]},{"path":"c4 e6","options":["d4*"]},{"path":"d4 Nf6 c4 e6","options":["Nc3*"]}],"items":4}}
+      ]
+    },
+    {
+      "fn": "repertoire.pruneLine",
+      "about": "Removing a line takes the moves that only led to it, up to the first real branch: the lines left, and how many moves went.",
+      "cases": [
+      {"args":[{"color":"b","lines":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O","e4 c5 Nf3 d6"]},"d4 Nf6 c4 g6 Nc3 Bg7 e4 d6"],"out":{"removed":4,"left":["d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O","e4 c5 Nf3 d6"]}},
+      {"args":[{"color":"b","lines":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O","e4 c5 Nf3 d6"]},"d4 Nf6 c4 g6 Nc3"],"out":{"removed":4,"left":["d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O","e4 c5 Nf3 d6"]}},
+      {"args":[{"color":"b","lines":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O","e4 c5 Nf3 d6"]},"e4 c5 Nf3 d6"],"out":{"removed":4,"left":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O"]}},
+      {"args":[{"color":"w","lines":["e4 e5 Nf3 Nc6 Bc4","e4 e5 Nf3 Nf6 Nxe5","e4 c5 Nf3 d6 d4","e4 c5 c3"]},"e4 c5 c3"],"out":{"removed":1,"left":["e4 e5 Nf3 Nc6 Bc4","e4 e5 Nf3 Nf6 Nxe5","e4 c5 Nf3 d6 d4"]}},
+      {"args":[{"color":"w","lines":["e4 e5 Nf3 Nc6 Bc4","e4 e5 Nf3 Nf6 Nxe5","e4 c5 Nf3 d6 d4","e4 c5 c3"]},"e4"],"out":{"removed":12,"left":[]}}
+      ]
+    },
+    {
+      "fn": "extensions.moveKind",
+      "about": "What one of your moves is: book (at least 5% of strong games and not a mistake), rare, a mistake (gives away over 80cp), or past the book.",
+      "cases": [
+      {"args":["","e4",null],"out":"book"},
+      {"args":["","a3",null],"out":"rare"},
+      {"args":["","e4",120],"out":"mistake"},
+      {"args":["","e4",80],"out":"book"},
+      {"args":["e4 e5","Qh5",null],"out":"rare"},
+      {"args":["e4 e5","Nf3",null],"out":"book"},
+      {"args":["e4 e5","Nf3",81],"out":"mistake"},
+      {"args":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5 O-O Nc6 d5 Ne7 Ne1 Nd7 Nd3 f5 Bd2 Nf6 f3 f4 g4 g5","Kh1",null],"out":"past"}
+      ]
+    },
+    {
+      "fn": "extensions.lineKinds",
+      "about": "Each move of a line by kind for one side: the opponent's always book, and once yours leaves the book every later one of yours is an extension.",
+      "cases": [
+      {"args":["e4 e5 Nf3 Nc6 Bc4","w"],"out":["book","book","book","book","book"]},
+      {"args":["e4 e5 Nf3 Nc6 Bc4 Bc5 b4","w"],"out":["book","book","book","book","book","book","book"]},
+      {"args":["e4 e5 Qh5 Nc6 Bc4","w"],"out":["book","book","rare","book","rare"]},
+      {"args":["e4 e5 a3","w"],"out":["book","book","rare"]},
+      {"args":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5 O-O Nc6 d5 Ne7","b"],"out":["book","book","book","book","book","book","book","book","book","book","book","book","book","book","book","book"]},
+      {"args":["e4 c5 Nf3 a6 c3 b5","b"],"out":["book","book","book","rare","book","rare"]},
+      {"args":["e4 g5 d4 h6","b"],"out":["book","rare","book","past"]}
+      ]
+    },
+    {
+      "fn": "extensions.bookLength",
+      "about": "Where a line becomes an extension.",
+      "cases": [
+      {"args":["e4 e5 Nf3 Nc6 Bc4","w"],"out":5},
+      {"args":["e4 e5 Nf3 Nc6 Bc4 Bc5 b4","w"],"out":7},
+      {"args":["e4 e5 Qh5 Nc6 Bc4","w"],"out":2},
+      {"args":["e4 e5 a3","w"],"out":2},
+      {"args":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5 O-O Nc6 d5 Ne7","b"],"out":16},
+      {"args":["e4 c5 Nf3 a6 c3 b5","b"],"out":3},
+      {"args":["e4 g5 d4 h6","b"],"out":1}
+      ]
+    },
+    {
+      "fn": "extensions.movedBy",
+      "about": "Whether a ply is played by a side.",
+      "cases": [
+      {"args":[0,"w"],"out":true},
+      {"args":[0,"b"],"out":false},
+      {"args":[1,"w"],"out":false},
+      {"args":[1,"b"],"out":true},
+      {"args":[2,"w"],"out":true},
+      {"args":[2,"b"],"out":false},
+      {"args":[3,"w"],"out":false},
+      {"args":[3,"b"],"out":true},
+      {"args":[4,"w"],"out":true},
+      {"args":[4,"b"],"out":false},
+      {"args":[5,"w"],"out":false},
+      {"args":[5,"b"],"out":true}
+      ]
+    },
+    {
+      "fn": "prepFloor.withFloor",
+      "about": "The opponent's shares at a position: each reply you prepared lifted to at least 15%, lifted ones sharing at most half, the rest scaled to make room.",
+      "cases": [
+      {"args":[[90,8,2],[false,false,true]],"out":[0.7806122448979592,0.06938775510204082,0.15]},
+      {"args":[[90,8,2],[false,true,true]],"out":[0.7,0.15,0.15]},
+      {"args":[[50,30,10,5,3,2],[false,true,true,true,true,true]],"out":[0.3125,0.18749999999999997,0.125,0.125,0.125,0.125]},
+      {"args":[[40,40,20],[true,true,true]],"out":[0.4,0.4,0.2]},
+      {"args":[[0,0],[false,true]],"out":[0.5,0.5]},
+      {"args":[[],[]],"out":[]},
+      {"args":[[100],[true]],"out":[1]}
+      ]
+    },
+    {
+      "fn": "moveSource.sourceLabel",
+      "about": "Where a move came from, in a word or two; a move with none was entered by hand.",
+      "cases": [
+      {"args":["picker"],"out":"Opening picker"},
+      {"args":["book"],"out":"Book"},
+      {"args":["growth"],"out":"Growth"},
+      {"args":["engine"],"out":"Engine"},
+      {"args":["manual"],"out":"Entered by hand"},
+      {"args":["analysis"],"out":"Analysis"},
+      {"args":["import"],"out":"Imported games"},
+      {"args":["play"],"out":"Play game"},
+      {"args":["tidy"],"out":"Tidy switch"},
+      {"args":["board"],"out":"Play on the board"},
+      {"args":["seed"],"out":"Sample"},
+      {"args":[null],"out":"Entered by hand"}
+      ]
+    },
+    {
+      "fn": "moveSource.growthSource",
+      "about": "Growth's label for a move: Growth when the book has it, Engine past it.",
+      "cases": [
+      {"args":["","e4"],"out":"growth"},
+      {"args":["","a3"],"out":"growth"},
+      {"args":["e4 e5","Ke2"],"out":"engine"},
+      {"args":["e4 e5 Nf3 Nc6 Bb5 Nf6 O-O Nxe4 Re1 Nd6 Nxe5 Be7 Bf1 Nxe5 Rxe5 O-O d4 Bf6 Re2 b6","Nc3"],"out":"engine"}
+      ]
+    },
+    {
+      "fn": "mistakes.addMistake",
+      "about": "The mistakes log: newest last, one entry per position (the latest miss there), at most 200.",
+      "cases": [
+      {"args":[[["a","h3"],["b","a3"],["a","g3"],["c","f3"]]],"out":[["a:h3"],["a:h3","b:a3"],["b:a3","a:g3"],["b:a3","a:g3","c:f3"]]},
+      {"args":[[["k1","a3"],["k2","a3"],["k3","a3"],["k4","a3"],["k5","a3"],["k6","a3"],["k7","a3"],["k8","a3"],["k9","a3"],["k10","a3"],["k11","a3"],["k12","a3"],["k13","a3"],["k14","a3"],["k15","a3"],["k16","a3"],["k17","a3"],["k18","a3"],["k19","a3"],["k20","a3"],["k21","a3"],["k22","a3"],["k23","a3"],["k24","a3"],["k25","a3"],["k26","a3"],["k27","a3"],["k28","a3"],["k29","a3"],["k30","a3"],["k31","a3"],["k32","a3"],["k33","a3"],["k34","a3"],["k35","a3"],["k36","a3"],["k37","a3"],["k38","a3"],["k39","a3"],["k40","a3"],["k41","a3"],["k42","a3"],["k43","a3"],["k44","a3"],["k45","a3"],["k46","a3"],["k47","a3"],["k48","a3"],["k49","a3"],["k50","a3"],["k51","a3"],["k52","a3"],["k53","a3"],["k54","a3"],["k55","a3"],["k56","a3"],["k57","a3"],["k58","a3"],["k59","a3"],["k60","a3"],["k61","a3"],["k62","a3"],["k63","a3"],["k64","a3"],["k65","a3"],["k66","a3"],["k67","a3"],["k68","a3"],["k69","a3"],["k70","a3"],["k71","a3"],["k72","a3"],["k73","a3"],["k74","a3"],["k75","a3"],["k76","a3"],["k77","a3"],["k78","a3"],["k79","a3"],["k80","a3"],["k81","a3"],["k82","a3"],["k83","a3"],["k84","a3"],["k85","a3"],["k86","a3"],["k87","a3"],["k88","a3"],["k89","a3"],["k90","a3"],["k91","a3"],["k92","a3"],["k93","a3"],["k94","a3"],["k95","a3"],["k96","a3"],["k97","a3"],["k98","a3"],["k99","a3"],["k100","a3"],["k101","a3"],["k102","a3"],["k103","a3"],["k104","a3"],["k105","a3"],["k106","a3"],["k107","a3"],["k108","a3"],["k109","a3"],["k110","a3"],["k111","a3"],["k112","a3"],["k113","a3"],["k114","a3"],["k115","a3"],["k116","a3"],["k117","a3"],["k118","a3"],["k119","a3"],["k120","a3"],["k121","a3"],["k122","a3"],["k123","a3"],["k124","a3"],["k125","a3"],["k126","a3"],["k127","a3"],["k128","a3"],["k129","a3"],["k130","a3"],["k131","a3"],["k132","a3"],["k133","a3"],["k134","a3"],["k135","a3"],["k136","a3"],["k137","a3"],["k138","a3"],["k139","a3"],["k140","a3"],["k141","a3"],["k142","a3"],["k143","a3"],["k144","a3"],["k145","a3"],["k146","a3"],["k147","a3"],["k148","a3"],["k149","a3"],["k150","a3"],["k151","a3"],["k152","a3"],["k153","a3"],["k154","a3"],["k155","a3"],["k156","a3"],["k157","a3"],["k158","a3"],["k159","a3"],["k160","a3"],["k161","a3"],["k162","a3"],["k163","a3"],["k164","a3"],["k165","a3"],["k166","a3"],["k167","a3"],["k168","a3"],["k169","a3"],["k170","a3"],["k171","a3"],["k172","a3"],["k173","a3"],["k174","a3"],["k175","a3"],["k176","a3"],["k177","a3"],["k178","a3"],["k179","a3"],["k180","a3"],["k181","a3"],["k182","a3"],["k183","a3"],["k184","a3"],["k185","a3"],["k186","a3"],["k187","a3"],["k188","a3"],["k189","a3"],["k190","a3"],["k191","a3"],["k192","a3"],["k193","a3"],["k194","a3"],["k195","a3"],["k196","a3"],["k197","a3"],["k198","a3"],["k199","a3"],["k200","a3"],["k201","a3"],["k202","a3"],["k203","a3"],["k204","a3"],["k205","a3"]],200],"out":200}
+      ]
+    },
+    {
+      "fn": "mistakes.recentMistakes",
+      "about": "A repertoire's mistakes, newest first.",
+      "cases": [
+      {"args":[null],"out":["rep_w#c","rep_w#a","rep_b#b"]},
+      {"args":["rep_w"],"out":["rep_w#c","rep_w#a"]},
+      {"args":["rep_b"],"out":["rep_b#b"]}
+      ]
+    }
+  ]
+}
