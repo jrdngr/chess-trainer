@@ -43,6 +43,7 @@ Ported so far:
 - `srs.json`: all
 - `ratings.json`: all
 - `playbook.json`: all
+- `play.json`: all
 - `picker.json`: `picker.*`
 - `growth.json`: `selection.*`, `anyFavorite.*`
 - `home.json`: `scoring.*`

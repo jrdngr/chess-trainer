@@ -75,32 +75,9 @@ func snapshotOf(_ fen: String, _ result: DepthResult?, thinking: Bool) -> Engine
 
 /* ── the opponent ── */
 
-/// A Play strength: `src/model/play.ts`.
-public struct Level: Sendable {
-  public var id: String
-  public var depth: Int
-  public var multiPv: Int
-  /// How often it declines the best line, 0...1.
-  public var slip: Double
-}
-
 /// The engine plays the opponent at Club once the book has nothing left.
-public let OPPONENT_LEVEL = Level(id: "club", depth: 5, multiPv: 4, slip: 0.3)
-
-/// Which candidate line to play: weights fall off geometrically from the best.
-public func chooseMove(_ lines: [EngineLine], _ level: Level, _ rand: () -> Double) -> String? {
-  let usable = lines.filter { !$0.pv.isEmpty }.sorted { $0.multipv < $1.multipv }
-  guard let first = usable.first else { return nil }
-  if usable.count == 1 || level.slip <= 0 { return first.pv[0] }
-  let weights = usable.indices.map { $0 == 0 ? 1 - level.slip : level.slip / pow(2, Double($0)) }
-  var ticket = rand() * weights.reduce(0, +)
-  for (i, line) in usable.enumerated() {
-    ticket -= weights[i]
-    if ticket <= 0 { return line.pv[0] }
-  }
-  return usable.last!.pv[0]
-}
-
+/// `Level` and `chooseMove` live in Model's `Play.swift`.
+public let OPPONENT_LEVEL = levelById(DEFAULT_LEVEL)
 
 /// A score as Analysis writes it, in White's frame: "+0.35", "-M3". `formatScore`.
 public func formatScore(_ line: EngineLine) -> String {
