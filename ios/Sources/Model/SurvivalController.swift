@@ -45,6 +45,10 @@ public struct Note: Equatable, Sendable {
   public var text: String
   /// "good", "bad" or "accent".
   public var tone: String
+  public init(text: String, tone: String) {
+    self.text = text
+    self.tone = tone
+  }
 }
 
 /// The engine's verdict on a move your prep did not have.

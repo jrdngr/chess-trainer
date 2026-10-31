@@ -101,8 +101,3 @@ public func chooseMove(_ lines: [EngineLine], _ level: Level, _ rand: () -> Doub
   return usable.last!.pv[0]
 }
 
-/// The opponent's move where the book is silent, as SAN.
-public func opponentMove(_ engine: ChessEngine, _ fen: String, _ rand: () -> Double) async -> String? {
-  let snap = await engine.analyse(fen, EngineLimits(depth: OPPONENT_LEVEL.depth, multiPv: OPPONENT_LEVEL.multiPv))
-  return chooseMove(snap.lines, OPPONENT_LEVEL, rand).flatMap { applyUci(fen, $0)?.san }
-}
