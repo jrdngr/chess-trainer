@@ -45,6 +45,7 @@ Ported so far:
 - `playbook.json`: all
 - `play.json`: all
 - `picker.json`: all (`picker.*`, and the opening browser's `browse.*`)
+- `tools.json`: all (game analysis, Repair, Stats, the Extensions graph, Play on the board)
 - `growth.json`: `selection.*`, `anyFavorite.*`
 - `home.json`: all (`scoring.*`, `milestones.*`)
 - `onboarding.json`: all

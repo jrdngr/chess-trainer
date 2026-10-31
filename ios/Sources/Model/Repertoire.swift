@@ -307,6 +307,18 @@ public func subtreeIds(_ rep: Repertoire, _ nodeId: String) -> [String] {
   return out
 }
 
+/// The tree's nodes in the order they were added: the prototype's
+/// `Object.values(rep.nodes)`, which keeps insertion order. Read off when each
+/// was added, then the counter in its id.
+public func nodesInOrder(_ rep: Repertoire) -> [RepMove] {
+  func counter(_ id: String) -> Int { id.split(separator: "_").last.flatMap { Int($0, radix: 36) } ?? 0 }
+  return rep.nodes.values.sorted { a, b in
+    if a.addedAt != b.addedAt { return a.addedAt < b.addedAt }
+    let (ca, cb) = (counter(a.id), counter(b.id))
+    return ca != cb ? ca < cb : a.id < b.id
+  }
+}
+
 /// What a stored tree is called.
 public func repertoireName(_ color: Color) -> String {
   color == .w ? "White Playbook" : "Black Playbook"
