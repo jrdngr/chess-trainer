@@ -11,6 +11,7 @@ import {
   sourceLabel,
   SOURCE_LABELS,
 } from "../../model/moveSource";
+import { familiesIn, linesOf, openingsIn, type DerivedOpening } from "../../model/openings";
 import { withFloor } from "../../model/prepFloor";
 import { referenceIndex } from "../../model/referenceIndex";
 import {
@@ -79,6 +80,55 @@ const TREES: { color: "w" | "b"; lines: string[] }[] = [
   { color: "w", lines: ["d4 Nf6 c4 e6 Nc3", "c4 e6 d4 Nf6 Nc3"] },
 ];
 
+/** Playbooks as the Playbook tab and the openings list read them. */
+const LISTED: { color: "w" | "b"; lines: string[] }[] = [
+  ...TREES,
+  { color: "b", lines: ["e4 e5"] },
+  { color: "b", lines: ["e4 e5 Nf3 Nc6 Bc4 Bc5", "e4 e5 Nf3 Nc6 Bb5 a6"] },
+  {
+    color: "b",
+    lines: ["e4 e5 Nf3 Nc6 Bc4 Bc5", "e4 e5 Nf3 Nc6 Bb5 a6", "e4 e5 Qh5 Nc6"],
+  },
+  {
+    color: "w",
+    lines: ["e4 c5 Nf3 d6", "e4 e5 Nf3 Nc6 Bb5 a6", "e4 e6 d4 d5 Nc3"],
+  },
+  {
+    color: "b",
+    lines: [
+      "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5",
+      "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3 O-O Be3 e5",
+      "d4 Nf6 c4 g6 Nc3 d5 cxd5 Nxd5",
+      "d4 Nf6 Nf3 g6 Bf4 Bg7",
+      "d4 Nf6 Bg5 Ne4",
+    ],
+  },
+  {
+    color: "w",
+    lines: [
+      "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3",
+      "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bg5",
+      "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3",
+      "e4 c5 Nf3 Nc6 d4 cxd4 Nxd4",
+    ],
+  },
+];
+
+/** An opening as listed, without node ids. */
+function listed(r: Repertoire, o: DerivedOpening): unknown {
+  return {
+    name: o.name,
+    eco: o.eco ?? null,
+    path: o.path.join(" "),
+    moves: o.moves,
+    removes: o.removes,
+    lines: o.lines,
+    depth: o.depth,
+    variations: o.variations.map((v) => listed(r, v)),
+    nested: (o.nested ?? []).length,
+  };
+}
+
 const LINES = [
   ["e4 e5 Nf3 Nc6 Bc4", "w"],
   ["e4 e5 Nf3 Nc6 Bc4 Bc5 b4", "w"],
@@ -141,6 +191,39 @@ const file: CaseFile = {
         [TREES[1], "e4 c5 c3"],
         [TREES[1], "e4"],
       ],
+    ),
+    cases(
+      "openings.familiesIn",
+      "The Playbook tab's list: one row per family the tree holds lines in, a family of its own nested inside another listed on its own, rows with no lines of their own left out; a Black row the book names after White's moves is called by Black's first move when that is unambiguous.",
+      (t: (typeof LISTED)[number]) => {
+        const r = rep(t.color, t.lines);
+        return familiesIn(r, index).map((o) => listed(r, o));
+      },
+      LISTED.map((t) => [t] as [(typeof LISTED)[number]]),
+    ),
+    cases(
+      "openings.openingsIn",
+      "Every opening in a tree, biggest first, with its variations: named regions, waypoints that only lead somewhere dropped.",
+      (t: (typeof LISTED)[number]) => {
+        const r = rep(t.color, t.lines);
+        return openingsIn(r, index).map((o) => listed(r, o));
+      },
+      LISTED.map((t) => [t] as [(typeof LISTED)[number]]),
+    ),
+    cases(
+      "openings.linesOf",
+      "Each line of a listed family, named for where it goes, with the move it splits off at when two share a name, and what deleting it removes.",
+      (t: (typeof LISTED)[number]) => {
+        const r = rep(t.color, t.lines);
+        return familiesIn(r, index).map((o) => ({
+          family: o.name,
+          lines: linesOf(r, o, index).map(({ tipId: _tip, ...line }) => ({
+            ...line,
+            path: line.path.join(" "),
+          })),
+        }));
+      },
+      LISTED.map((t) => [t] as [(typeof LISTED)[number]]),
     ),
     cases(
       "extensions.moveKind",

@@ -73,6 +73,47 @@ at the position clears it.
 Source: `mistakes.addMistake`, `mistakes.recentMistakes`, `lineDrillController.answer`, `useStore.grade`
 Cases: `mistakes.addMistake`, `mistakes.recentMistakes`, `drill/lines-a-group`, `const:MISTAKE_LIMIT`
 
+## The Playbook tab
+
+**BOOK-9** · port
+The Playbook tab lists each side's tree by family: a region of the tree
+joins the row of its family, and a region of another family starts its own
+row even inside one (the King's Indian under the Indian Defence's 1...Nf6).
+A row with no lines of its own is only a way in and is not listed. Each row
+has its ECO (the family's own position where the tree passes it), its moves,
+lines, depth, and what deleting it removes. A Black row the book names after
+White's moves (King's Pawn Game, King's Knight Opening, Queen's Pawn Game,
+Zukertort Opening) is called by Black's first move, "1...e5", unless two rows
+would share that label.
+Source: `openings.familiesIn`, `openings.nameForBlack`, `RepertoireScreen`; onboarding-redesign (10-24)
+Cases: `openings.familiesIn`
+
+**BOOK-10** · port
+Elsewhere (Browse, Extensions, the onboarding board) a tree's openings are
+its named regions, biggest first, each with its variations. A name that only
+leads somewhere is dropped: the first move's name when anything is named
+under it, and a region with no lines of its own and exactly one region under
+it.
+Source: `openings.openingsIn`, `openings.collapse`
+Cases: `openings.openingsIn`
+
+**BOOK-11** · port
+Inside a family each line is named for the deepest name it reaches, with the
+family's name taken off its front ("Najdorf Variation" under the Sicilian); two lines that reach the same name are told apart by the
+move they split off at. Deleting a line removes the moves only it owns, and
+the family's first moves too when it is the family's only line.
+Source: `openings.linesOf`
+Cases: `openings.linesOf`
+
 ## Conflicts for the owner
 
-None found so far in this area.
+**The King's Indian can be listed twice.** A Black tree with a King's Indian
+by 3.Nc3 and a Fianchetto by 3.Nf3 lists two rows both called King's Indian
+Defence (`openings.familiesIn`, first case). The Fianchetto's region sits
+under the West Indian, another family, so it starts its own row. The opening
+catalogue files it under the King's Indian (NAME-6), so the two disagree.
+
+**1...e5 alone is listed as King's Pawn Game.** BOOK-9's renaming needs the
+row to start at Black's move, and a tree holding only 1.e4 e5 starts its row
+at 1.e4 (`openings.familiesIn`, the 1.e4 e5 case). This is what the Classical
+starter set produces (see onboarding.md).

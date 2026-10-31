@@ -48,6 +48,7 @@ constant in `spec/constants.json` is what counts.
 | [drill.md](drill.md) | DRILL | Drill positions and Drill lines |
 | [end.md](end.md) | END | What a run logs when it ends, the end screen, and Grow this line |
 | [growth.md](growth.md) | GROW | Growth's rows and a sitting: holes, batches, Undo, the edge of the book |
+| [home.md](home.md) | HOME | The Home tab: the Autopilot button, the Survival chart, Favorites, Milestones |
 | [learning.md](learning.md) | LEARN | Cards and their schedule, and ratings per opening |
 | [naming.md](naming.md) | NAME | Position keys, book names and families, the opening catalogue, regions |
 | [onboarding.md](onboarding.md) | ONB | The first screens: starter sets, picked openings, lines from the board, what goes in |

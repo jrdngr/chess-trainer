@@ -1,5 +1,5 @@
 import { playerOf, selectionFor } from "../../model/onboarding";
-import { openingsIn } from "../../model/openings";
+import { familiesIn } from "../../model/openings";
 import { nodeById, openingTree } from "../../model/openingTree";
 import { referenceIndex } from "../../model/referenceIndex";
 import { leafLines, pathTo } from "../../model/repertoire";
@@ -48,7 +48,7 @@ function written(rep: Repertoire) {
         .map((move) => (move.source ? `${move.san}(${move.source})` : move.san))
         .join(" "),
     ),
-    openings: openingsIn(rep, index).map((o) => o.name),
+    openings: familiesIn(rep, index).map((o) => o.name),
   };
 }
 

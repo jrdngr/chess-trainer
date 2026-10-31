@@ -75,9 +75,9 @@ Cases: `e2e:autopilot-first-runs`
 ## Conflicts for the owner
 
 **The Classical set's 1...e5 is listed as King's Pawn Game on the Playbook.**
-Onboarding's ready screen calls it "1...e5", and a test in
-`src/model/openings.test.ts` says the Playbook should too. That test holds a
-deeper line (1...e5 2.Nf3 Nc6 …). Since the set went in as its own moves only
-(10-25), the Black Playbook holds just 1.e4 e5, and the Playbook lists that
-as "King's Pawn Game" (see `onboarding.onboarded (a starter set)`, classical).
-The port records today's behavior until the owner decides.
+The ready screen calls it "1...e5" and a test in `src/model/openings.test.ts`
+says the Playbook should too, but that test holds deeper lines. Since sets go
+in as their own moves only (10-25), the Black Playbook holds just 1.e4 e5,
+and the Playbook tab lists it as King's Pawn Game (see BOOK-9, and
+`onboarding.onboarded (a starter set)`, classical). The port records today's
+behavior until the owner decides.
