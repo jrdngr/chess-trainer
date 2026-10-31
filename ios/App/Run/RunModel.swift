@@ -12,6 +12,11 @@ import Observation
 @MainActor @Observable
 final class RunModel {
   enum Phase { case playing, blunder, over }
+  /// The round's intro: announced full screen, then the way in played out on a locked board.
+  enum Intro { case announce, replay, done }
+
+  /// How long the announcement holds, and the beat between replayed moves: `RoundIntro.tsx`.
+  static let announceMs = 2.5, replayMs = 0.4
 
   /// How long a miss, a score popup and a note stay over the board; the opponent's beat.
   static let missMs = 2.0, scoreMs = 1.4, noteMs = 1.6, replyMs = 0.42
@@ -39,6 +44,10 @@ final class RunModel {
   private(set) var finish: Finish?
   /// The way into Growth a clean end of prep earns.
   private(set) var offer: GrowOffer?
+  private(set) var intro = Intro.announce
+  /// How many of the way in's moves the replay has played.
+  private(set) var introPly = 0
+  private var spanHeld: PrepSpan?
 
   private var picker: () -> Double
   private var turnStarted = Date()
@@ -65,6 +74,23 @@ final class RunModel {
   }
 
   var prefs: SurvivalPrefs { ctx.prefs }
+  /// Announcing or replaying: the board is locked, and the opponent waits.
+  var held: Bool { intro != .done }
+  /// The moves the intro plays out: the way in, with Autoplay on.
+  var introPath: [String] { store.state.settings.autoplay ? Array(run.played.prefix(run.opened)) : [] }
+  /// The opening the round is announced as.
+  var introOpening: String { run.enteredIn ?? round.pick.opening.id }
+
+  /// How far into your prep the run stands, out of how far it goes along this line. Held once off prep.
+  var span: PrepSpan? {
+    if session.prepStatus == .off { return spanHeld }
+    let line = run.played + continuation(session.source, run)
+    let total = prepDepth(line, run.color, session.source.prepAt, run.opened)
+    let book = session.prepStatus == .complete && session.bookTo != nil ? max(0, session.bookTo! - total) : 0
+    let losses = lossesIn(store.state.repertoireList)
+    let ext = bookLength(playedKinds(index, Array(line.prefix(total)), run.color, losses))
+    return PrepSpan(played: min(run.played.count, total), total: total, book: book > 0 ? book : nil, ext: ext < total ? ext : nil)
+  }
   var run: Run { session.state.run }
   var myTurn: Bool { playersTurn(session) }
   var live: Bool { phase == .playing && session.ending == nil }
@@ -79,6 +105,7 @@ final class RunModel {
 
   /// The board as shown: your move stands while it is judged, a blunder stays until Continue.
   var shownFen: String {
+    if held { return walkSan(introPath).fens[min(introPly, introPath.count)] }
     if let pending { return pending.after }
     if case .blunder(let played, _, _, _) = session.ending, phase == .blunder { return applySan(run.fen, played)?.after ?? run.fen }
     return run.fen
@@ -96,7 +123,42 @@ final class RunModel {
     return r.after - r.before
   }
 
-  func start() { advance() }
+  func start() {
+    later(Self.announceMs) { $0.toBoard() }
+  }
+
+  /// The announcement gives way to the board: the way in plays out, or the round begins.
+  func toBoard() {
+    guard intro == .announce else { return }
+    intro = introPath.isEmpty ? .done : .replay
+    intro == .done ? begin() : replayStep()
+  }
+
+  private func replayStep() {
+    later(Self.replayMs) { model in
+      guard model.intro == .replay else { return }
+      if model.introPly < model.introPath.count {
+        model.introPly += 1
+        model.replayStep()
+      } else {
+        model.intro = .done
+        model.begin()
+      }
+    }
+  }
+
+  /// A tap skips the rest of the replay.
+  func skipIntro() {
+    guard intro == .replay else { return }
+    introPly = introPath.count
+    intro = .done
+    begin()
+  }
+
+  private func begin() {
+    spanHeld = span
+    advance()
+  }
 
   func stop() {
     for task in tasks { task.cancel() }
@@ -107,7 +169,7 @@ final class RunModel {
 
   /// Whatever comes next: the opponent's reply, or your turn settled.
   private func advance() {
-    guard live else { return }
+    guard live, !held else { return }
     if myTurn {
       beginTurn()
     } else if miss == nil {
@@ -162,7 +224,7 @@ final class RunModel {
 
   /// You played a move on the board.
   func play(_ move: LegalMove) {
-    guard live, myTurn, pending == nil else { return }
+    guard live, !held, myTurn, pending == nil else { return }
     miss = nil
     let seconds = Date().timeIntervalSince(turnStarted)
     let now = Env.now()
@@ -201,9 +263,11 @@ final class RunModel {
 
   private func update(_ next: RunSession) {
     session = next
+    if session.prepStatus != .off { spanHeld = span }
   }
 
   private func apply(_ step: Step) {
+    if step.session.prepStatus == .off && session.prepStatus != .off { spanHeld = span }
     session = step.session
     for effect in step.effects {
       switch effect {

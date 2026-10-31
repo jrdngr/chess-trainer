@@ -13,7 +13,26 @@ public struct Settings: Equatable, Sendable, Codable {
   public var showCoordinates = false
   /// Whether the opening question has been put to this player.
   public var onboarded = false
+  /// Rounds that start inside an opening play the moves into it for you first.
+  public var autoplay = true
   public init() {}
+
+  enum CodingKeys: String, CodingKey {
+    case selection, favoriteOpenings, autopilot, hapticFeedback, showCoordinates, onboarded, autoplay
+  }
+
+  /// A save missing a setting takes its default.
+  public init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    self.init()
+    selection = try c.decodeIfPresent(Selection.self, forKey: .selection) ?? selection
+    favoriteOpenings = try c.decodeIfPresent([String].self, forKey: .favoriteOpenings) ?? favoriteOpenings
+    autopilot = try c.decodeIfPresent(AutopilotPrefs.self, forKey: .autopilot) ?? autopilot
+    hapticFeedback = try c.decodeIfPresent(Bool.self, forKey: .hapticFeedback) ?? hapticFeedback
+    showCoordinates = try c.decodeIfPresent(Bool.self, forKey: .showCoordinates) ?? showCoordinates
+    onboarded = try c.decodeIfPresent(Bool.self, forKey: .onboarded) ?? onboarded
+    autoplay = try c.decodeIfPresent(Bool.self, forKey: .autoplay) ?? autoplay
+  }
 }
 
 public struct AppState: Equatable, Sendable, Codable {

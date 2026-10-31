@@ -8,17 +8,34 @@ struct RunView: View {
   let onExit: () -> Void
 
   var body: some View {
+    ZStack {
+      board
+      if model.intro == .announce {
+        Theme.background.ignoresSafeArea()
+        IntroPlate(
+          name: openingName(model.tree, model.introOpening), sans: nodeById(model.tree, model.introOpening).sans,
+          color: model.run.color, span: model.span)
+        .padding()
+      }
+    }
+    .contentShape(Rectangle())
+    .onTapGesture { if model.intro == .announce { model.toBoard() } }
+  }
+
+  private var board: some View {
     VStack(spacing: 0) {
       header
       BoardView(
         fen: model.shownFen, orientation: model.run.color,
-        interactive: model.live && model.myTurn && !model.thinking && model.pending == nil,
-        lastMove: lastMove, highlights: highlights, arrows: arrows, glow: model.glow, pop: model.pop,
+        interactive: model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil,
+        lastMove: model.held ? lastMoveOf(Array(model.introPath.prefix(model.introPly))) : lastMove, highlights: highlights, arrows: arrows, glow: model.glow, pop: model.pop,
         onMove: model.play
       )
       .overlay(alignment: .top) { flash }
-      .onTapGesture { model.clearMiss() }
-      if model.run.opened > 0 {
+      .onTapGesture { model.intro == .replay ? model.skipIntro() : model.clearMiss() }
+      if model.intro == .replay {
+        Text(sansToMoveText(Array(model.introPath.prefix(model.introPly)))).font(.footnote).foregroundStyle(Theme.text2).padding(.top, 8)
+      } else if model.run.opened > 0 {
         Text("From \(sansToMoveText(Array(model.run.played.prefix(model.run.opened))))")
           .font(.footnote).foregroundStyle(Theme.text2).padding(.top, 8)
       }
@@ -30,9 +47,12 @@ struct RunView: View {
   private var header: some View {
     HStack {
       Button(action: onExit) { Image(systemName: "xmark") }.foregroundStyle(Theme.text2)
-      VStack(alignment: .leading, spacing: 2) {
-        Text(openingName(model.tree, model.openingId)).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
-        Text(model.run.color == .w ? "White" : "Black").font(.caption).foregroundStyle(Theme.text2)
+      VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: 8) {
+          SideSquare(color: model.run.color, size: 12)
+          Text(openingName(model.tree, model.openingId)).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
+        }
+        PrepSegmentsView(span: model.span, height: 4).frame(maxWidth: 150)
       }
       Spacer()
       let n = Int(JSRound(model.ratingGained))
@@ -90,7 +110,15 @@ struct RunView: View {
   }
 
   @ViewBuilder private var flash: some View {
-    if let miss = model.miss {
+    if model.intro == .replay {
+      HStack(spacing: 6) {
+        Text("Autoplay").font(.caption.bold()).padding(.horizontal, 6).padding(.vertical, 2)
+          .background(Capsule().fill(Theme.accent.opacity(0.25))).foregroundStyle(Theme.accent)
+        Text(openingName(model.tree, model.introOpening)).font(.subheadline.bold()).foregroundStyle(Theme.text)
+      }
+      .padding(.horizontal, 12).padding(.vertical, 6)
+      .background(Capsule().fill(Theme.background.opacity(0.9))).padding(.top, 10)
+    } else if let miss = model.miss {
       pill("Off your prep \u{00b7} \(miss.expected) was yours", Theme.accent)
     } else if let note = model.note {
       pill(note.text, note.tone == "good" ? Theme.good : note.tone == "bad" ? Theme.bad : Theme.accent)
