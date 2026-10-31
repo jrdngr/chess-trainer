@@ -9,74 +9,62 @@ import { ClockHud, useMoveClock } from '../../components/Clock';
 import { selectionText, selectionTrail } from '../../components/Selection';
 import { IntroPlate, PrepSegments } from '../../components/OpeningPlate';
 import { prepDepth, type PrepSpan } from '../../model/autopilot';
-import {
-  applySan,
-  applyUci,
-  fenTurn,
-  lastMoveOf,
-  positionKey,
-  positionStatus,
-  sansToMoveText,
-  walkSan,
-  type LegalMove,
-} from '../../chess/core';
-import { clockSeconds, fullLine, weaknessFromCards, type LineSource } from '../../model/openingRun';
+import { applySan, applyUci, lastMoveOf, sansToMoveText, walkSan, type LegalMove } from '../../chess/core';
+import { clockSeconds, fullLine, weaknessFromCards } from '../../model/openingRun';
 import type { Color } from '../../chess/core';
 import { deepestNodeWithin, nodeById, openingTree } from '../../model/openingTree';
 import { referenceIndex } from '../../model/referenceIndex';
 import { evidenceFor } from '../../model/growth';
-import { bookLength, lossesIn, playedKinds, type MoveKind } from '../../model/extensions';
-import { seenIn, type MoveResult } from '../../model/scoring';
+import { bookLength, lossesIn, playedKinds } from '../../model/extensions';
+import { seenIn } from '../../model/scoring';
 import { growOfferAt, offerOpening, type GrowOffer } from '../../model/growOffer';
 import type { Selection } from '../../model/selection';
 import { useRatingTracker } from '../../components/Ratings';
 import { GrowthScreen } from '../growth/GrowthScreen';
-import { gradeForTime } from '../../model/srs';
 import { mulberry32 } from '../../model/session';
 import {
-  bookReply,
   comboMultiplier,
-  firstMission,
   glowFor,
-  inTheBook,
-  isBookMove,
-  judgedExtras,
   missionText,
-  missionTitle,
-  type Earned,
-  evalSwing,
-  moveScore,
-  playTheirs,
-  playYours,
-  prepHere,
   prepSummary,
-  secondsText,
-  speedTone,
   startSurvival,
   type SurvivalPrefs,
   type SurvivalRecord,
-  type SurvivalRun,
-  type SurvivalStart,
-  type ScoreTone,
 } from '../../model/survival';
+import {
+  beginSession,
+  bookRanOut,
+  bookTurn,
+  endRun,
+  engineMove,
+  judgedMove,
+  missionFrom,
+  playPrepared,
+  playersTurn,
+  prepLabel,
+  prepMoves,
+  prepRanOut,
+  sawEval,
+  type Finish,
+  type MissFlash,
+  type Note,
+  type Pop,
+  type PrepStatus,
+  type RunContext,
+  type RunSession,
+  type Step,
+} from '../../model/survivalController';
 import { evidenceIn, takeRoundSelection } from '../../store/recommendation';
 import { repertoireList, useStore } from '../../store/useStore';
 import type { TidyFind } from '../../model/tidy';
 import { useOpponent } from '../openingRun/useOpponent';
-import { End, endingTitle, type Ending } from './End';
+import { End, endingTitle } from './End';
 import { Setup } from './Setup';
 import { useJudge } from './useJudge';
 import { useModePrefs } from '../modePrefs';
 import { introOpening, useRoundIntro } from '../../components/RoundIntro';
 
 type Phase = 'setup' | 'playing' | 'over' | 'growing';
-
-
-/**
- * Where you stand against your prep: on it, through to the end of the line,
- * or off it. Latched: once complete or off, it stays that way for the run.
- */
-type PrepStatus = 'on' | 'complete' | 'off';
 
 const PREP_STATUS: Record<PrepStatus | 'book' | 'out', { text: string; color: string }> = {
   on: { text: 'On prep', color: 'var(--warn)' },
@@ -99,44 +87,8 @@ const NOTE_MS = 1600;
 /** How long the Undefended flash holds your move before it lands. */
 const FLASH_MS = 1300;
 
-/** What a judged move earned, said over the board: a moment settled, a mission ended, the combo. */
-function noteFor(earned: Earned, best: string | null): { text: string; tone: 'good' | 'bad' } | null {
-  const parts: { text: string; good: boolean }[] = [];
-  if (earned.moment) {
-    parts.push(
-      earned.moment.found
-        ? { text: `Found it · +${earned.moment.bonus}`, good: true }
-        : { text: best ? `Missed it · ${best} was there` : 'Missed it', good: false },
-    );
-  }
-  if (earned.mission) {
-    parts.push(
-      earned.mission.result === 'done'
-        ? { text: `${missionTitle(earned.mission.kind)} complete · +${earned.mission.bonus}`, good: true }
-        : { text: `${missionTitle(earned.mission.kind)} failed`, good: false },
-    );
-  }
-  if (!earned.moment && earned.combo === 'broke') parts.push({ text: 'Combo broken', good: false });
-  if (!parts.length) return null;
-  return { text: parts.map((part) => part.text).join(' · '), tone: parts.every((part) => part.good) ? 'good' : 'bad' };
-}
-
-/**
- * What one of your moves cost, floating up from the square it landed on — or,
- * in Autopilot, a prepared move found, ticked, with how long it took.
- */
-interface ScorePop {
-  key: number;
-  square: LegalMove['to'];
-  text: string;
-  tone: ScoreTone;
-  /** A prepared move found: the tick goes in front of its time. */
-  found?: boolean;
-  /** A book move past your prep: the tick and "Book" in the book's color. */
-  book?: boolean;
-  /** A prepared move that is an extension: the tick and "Ext", outlined in the extension color. */
-  ext?: boolean;
-}
+/** A move's score over its square, keyed so each one animates afresh. */
+type ScorePop = Pop & { key: number };
 
 /**
  * What Autopilot decided a run should be: the side, the opening to walk
@@ -149,19 +101,6 @@ export interface SurvivalPlan {
   lean: 'popular' | 'weak';
   /** The moves to a position to start at, played for you: one your cards say is due. */
   at?: string[] | null;
-}
-
-interface Game {
-  source: LineSource;
-  state: SurvivalRun;
-  redraw: SurvivalStart['redraw'];
-}
-
-/** A miss being shown: the prepared move, drawn as a green arrow on the board. */
-interface MissFlash {
-  expected: string;
-  from: LegalMove['from'];
-  to: LegalMove['to'];
 }
 
 /**
@@ -181,6 +120,9 @@ interface MissFlash {
  * is what Growth's readiness reads, and its end screen offers to grow from
  * where the prep ran out. It adds nothing to the repertoire itself, and keeps
  * its own record of moves survived.
+ *
+ * The rules of a run live in `model/survivalController`; this screen feeds it
+ * what happens, carries out what it asks, and draws the result.
  *
  * Opened by Autopilot it skips setup: the plan says what to run, your saved
  * options say how, and the end screen's Next run is Autopilot's next round.
@@ -221,9 +163,6 @@ export function SurvivalScreen({
   const tree = openingTree(index);
   /** What the engine said of your saved moves, for telling an extension's mistakes apart. */
   const losses = useMemo(() => lossesIn(repertoireList(state)), [state.repertoires]);
-  /** What your move `san` is where `line` stands: book, or one of the extension kinds. */
-  const kindOf = (line: string[], san: string): MoveKind =>
-    playedKinds(index, [...line, san], line.length % 2 === 0 ? 'w' : 'b', losses).at(-1) ?? 'book';
   /** What your games say, read once a visit, for the steers. */
   const [evidence] = useState(() => evidenceIn(state));
 
@@ -232,8 +171,9 @@ export function SurvivalScreen({
   const [prefs, setPrefs] = useState<SurvivalPrefs>(modes.survival);
   /** With moments, missions or the combo on, a run is scored in points as well as moves. */
   const scoredInPoints = prefs.moments || prefs.missions || prefs.combo;
-  const [game, setGame] = useState<Game | null>(null);
-  const [ending, setEnding] = useState<Ending | null>(null);
+  /** The run, as the controller has it. The ref is always the latest, for callbacks that land late. */
+  const [session, setSession] = useState<RunSession | null>(null);
+  const sessionRef = useRef<RunSession | null>(null);
   const [before, setBefore] = useState<SurvivalRecord>(state.survival);
   const [thinking, setThinking] = useState(false);
   /** The book has nothing for the opponent here, so the engine plays. */
@@ -241,44 +181,25 @@ export function SurvivalScreen({
   const [miss, setMiss] = useState<MissFlash | null>(null);
   const [pop, setPop] = useState<ScorePop | null>(null);
   /** What your last judged move earned, or "There's something here", over the board. */
-  const [note, setNote] = useState<{ key: number; text: string; tone: 'good' | 'bad' | 'accent' } | null>(null);
+  const [note, setNote] = useState<(Note & { key: number }) | null>(null);
   /** The moment's move you missed, drawn green while its note shows. */
   const [missedBest, setMissedBest] = useState<{ from: LegalMove['from']; to: LegalMove['to'] } | null>(null);
-  const [prepStatus, setPrepStatus] = useState<PrepStatus>('on');
-  /** Whether your prep has answered anything yet this run: with nothing prepared, there is no status to show. */
-  const [prepSeen, setPrepSeen] = useState(false);
-  /**
-   * The book phase, once a clean prep runs out: the ply count it has reached
-   * (null before it begins), and whether it is over — at your first move that
-   * is not a book move, or where the book has nothing. See `BOOK_SHARE`.
-   */
-  const [bookTo, setBookTo] = useState<number | null>(null);
-  const [bookOver, setBookOver] = useState(false);
-  /** Book moves played this run, for the end screen. */
-  const bookMovesPlayed = useRef(0);
-  /** How long your move took, kept from the moment you played it while the engine judges it. */
-  const judgedSeconds = useRef(0);
-  /** The engine's last word on the game, White's side, for the glow. */
-  const [evalCp, setEvalCp] = useState<number | null>(null);
-  /** The engine's score after your last scored move, White's side: where the next popup counts from. */
-  const lastScored = useRef<number | null>(null);
   const [picker] = useState(() => ({ current: mulberry32(Math.floor(Math.random() * 2 ** 31)) }));
-  /** True once the run has ended, so a late verdict or engine move lands nowhere. */
-  const over = useRef(false);
-  /**
-   * The line as it stood when your prep ran out without a miss: a clean
-   * finish, and where growing it would start. Null until then, and for good
-   * once you miss.
-   */
-  const prepEnd = useRef<string[] | null>(null);
   const [growOffer, setGrowOffer] = useState<GrowOffer | null>(null);
   const ratings = useRatingTracker();
-  /** This run's rated answers, which an opening the line reaches later takes too. */
-  const answers = useRef<MoveResult[]>([]);
-  /** How long each prepared move you found took, in seconds: Autopilot's speed. */
-  const prepTimes = useRef<number[]>([]);
 
-  const run = game?.state.run ?? null;
+  const ctx: RunContext = {
+    index,
+    prefs,
+    autopilot: !!plan,
+    kindOf: (line, san) => playedKinds(index, [...line, san], line.length % 2 === 0 ? 'w' : 'b', losses).at(-1) ?? 'book',
+    lossOf: (key) => losses.get(key),
+  };
+
+  const run = session?.state.run ?? null;
+  const ending = session?.ending ?? null;
+  const prepStatus = session?.prepStatus ?? 'on';
+  const bookTo = session?.bookTo ?? null;
   /**
    * Autopilot's measure of the run: how far into your prep it stands, out of
    * how far your prep goes along the line it is on. Held where it was once
@@ -286,13 +207,13 @@ export function SurvivalScreen({
    */
   const spanHeld = useRef<PrepSpan | null>(null);
   const span = useMemo(() => {
-    if (!plan || !game) return null;
-    const now = game.state.run;
+    if (!plan || !session) return null;
+    const now = session.state.run;
     if (prepStatus !== 'off') {
-      const total = prepDepth(fullLine(game.source, now), now.color, (fen) => game.source.prepAt(fen), now.opened);
+      const total = prepDepth(fullLine(session.source, now), now.color, (fen) => session.source.prepAt(fen), now.opened);
       const book = prepStatus === 'complete' && bookTo !== null ? Math.max(0, bookTo - total) : 0;
       // Where the prep leaves the book, its segments from there on are drawn as an extension.
-      const ext = bookLength(playedKinds(index, fullLine(game.source, now).slice(0, total), now.color, losses));
+      const ext = bookLength(playedKinds(index, fullLine(session.source, now).slice(0, total), now.color, losses));
       spanHeld.current = {
         played: Math.min(now.played.length, total),
         total,
@@ -302,7 +223,7 @@ export function SurvivalScreen({
     }
     return spanHeld.current;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plan, game, prepStatus, bookTo, losses]);
+  }, [plan, session?.state, session?.source, prepStatus, bookTo, losses]);
   /**
    * Each run is announced, and one started inside an opening has its way in
    * played out first. A run from move one is named by the opening it is
@@ -322,33 +243,28 @@ export function SurvivalScreen({
           path: run.played.slice(0, run.opened),
         }
       : null,
-    (game?.state.moves ?? 0) > 0,
+    (session?.state.moves ?? 0) > 0,
   );
   /** The opening the header names, whose rating the end screen plays. */
   const headerOpening = run ? (run.enteredIn ?? run.openingId) : '';
   /** Under way: past the intro, and not over. Nothing moves and no clock runs until then. */
   const live = phase === 'playing' && !!run && !intro.held && !ending;
-  const myTurn = !!run && fenTurn(run.fen) === run.color;
+  const myTurn = !!session && playersTurn(session);
+  const prepNow = session ? prepMoves(session) : [];
 
   const buzz = (pattern: number | number[]) => {
     if (settings.hapticFeedback) haptic(pattern);
   };
 
   /** The run is over: log it once and show the end screen. */
-  const finish = (ended: SurvivalRun, how: Ending) => {
-    if (over.current) return;
-    over.current = true;
+  const finish = ({ how, ended, clean, stub, answers }: Finish) => {
     setBefore(useStore.getState().survival);
     const line = ended.run.played;
     // A run you end yourself is counted, but says nothing about how long you survive.
     if (how.kind === 'ended') endSurvivalEarly(line);
     else endSurvival(line, ended.moves, scoredInPoints ? ended.extras.points : ended.moves);
-    ratings.track(settleRun(answers.current, line));
+    ratings.track(settleRun(answers, line));
     const region = nodeById(tree, ended.run.openingId);
-    const clean = ended.misses.length === 0 ? prepEnd.current : null;
-    // Prep that asked you nothing is an opening saved as its own moves: an
-    // offer to grow it, but not a clean finish of anything.
-    const stub = !!clean && answers.current.length === 0;
     endRound({
       mode: 'survival',
       openingId: deepestNodeWithin(tree, region, line).id,
@@ -359,11 +275,10 @@ export function SurvivalScreen({
       // whatever the game did after it.
       perfect: !!clean && !stub,
       line: clean ?? ended.run.target,
-      prep: { asked: answers.current.length, found: answers.current.filter((answer) => answer.correct).length },
+      prep: { asked: answers.length, found: answers.filter((answer) => answer.correct).length },
     });
     setGrowOffer(clean ? offerFor(ended.run.color, ended.run.enteredIn, ended.run.openingId, clean, stub) : null);
     buzz(how.kind === 'blunder' || how.kind === 'lost' ? [22, 60, 22] : 14);
-    setEnding(how);
     setMiss(null);
     setPop(null);
     setNote(null);
@@ -375,35 +290,47 @@ export function SurvivalScreen({
     setPhase('over');
   };
 
-  /** After any move: a finished game ends the run. */
-  const afterMove = (next: Game) => {
-    setGame(next);
-    const { run: now } = next.state;
-    const status = positionStatus(now.fen);
-    if (!status.gameOver) return;
-    if (status.checkmate) finish(next.state, { kind: fenTurn(now.fen) === now.color ? 'lost' : 'won' });
-    else finish(next.state, { kind: 'draw' });
+  /** Take the controller's step: keep its run, then do what it asks, in order. */
+  const apply = ({ session: next, effects }: Step) => {
+    sessionRef.current = next;
+    setSession(next);
+    for (const effect of effects) {
+      switch (effect.kind) {
+        case 'rate':
+          ratings.track(recordMove(effect.result, effect.earlier));
+          break;
+        case 'answered':
+          answered(effect.repertoireId, effect.fen, effect.san, effect.grade);
+          break;
+        case 'missed':
+          missed(effect.repertoireId, effect.fen, effect.played, effect.expected);
+          break;
+        case 'buzz':
+          buzz(effect.pattern);
+          break;
+        case 'pop':
+          setPop({ key: Date.now(), ...effect.pop });
+          break;
+        case 'note':
+          setNote(effect.note ? { key: Date.now(), ...effect.note } : null);
+          break;
+        case 'miss':
+          setMiss(effect.miss);
+          break;
+        case 'missedBest':
+          setMissedBest(effect.move);
+          break;
+        case 'finish':
+          finish(effect.finish);
+          break;
+      }
+    }
   };
 
-  /**
-   * One prepared position answered: a rated result for every opening the run
-   * has reached, credited to the position asked rather than wherever the move
-   * went. Past where the line left the book it rates the Extensions rating;
-   * a saved mistake is not rated at all, though its card still is reviewed.
-   */
-  const tally = (line: string[], correct: boolean, kind: MoveKind) => {
-    if (!run) return;
-    const result: MoveResult = {
-      mode: 'survival',
-      line,
-      color: run.color,
-      correct,
-      rated: kind !== 'mistake',
-      ...(kind !== 'book' ? { ext: true } : {}),
-      at: Date.now(),
-    };
-    ratings.track(recordMove(result, answers.current));
-    answers.current = [...answers.current, result];
+  /** A change to the run that asks nothing of the screen. */
+  const update = (next: RunSession) => {
+    if (next === sessionRef.current) return;
+    apply({ session: next, effects: [] });
   };
 
   /** The way into Growth a clean end of prep earns — see `growOfferAt`. */
@@ -431,66 +358,18 @@ export function SurvivalScreen({
     });
   };
 
+  /** How long your move took, kept from the moment you played it while the engine judges it. */
+  const judgedSeconds = useRef(0);
+
   const judge = useJudge({
     fen: live && myTurn ? run.fen : null,
     color: run?.color ?? 'w',
     // Kept warm where the engine is sure to be asked: past your prep.
-    active: live && myTurn && !!game && prepHere(game.source, game.state).length === 0,
+    active: live && myTurn && prepNow.length === 0,
     moments: prefs.moments,
     onJudged: (judged) => {
-      if (!game || !run || over.current) return;
-      const expected = prepHere(game.source, game.state);
-      if (expected.length) {
-        // A move your prep does not have, where it had one: a miss, logged
-        // now whatever the engine says, because the drill lives in review.
-        tally(run.played, false, kindOf(run.played, expected[0]));
-        setPrepStatus('off');
-        prepEnd.current = null;
-        if (run.repertoireId) missed(run.repertoireId, run.fen, judged.san, expected[0]);
-      }
-      if (!judged.ok) {
-        finish(game.state, { kind: 'blunder', played: judged.san, best: judged.best, lost: judged.lost, reply: judged.reply });
-        return;
-      }
-      // Past a clean prep, still in the book: a move strong players play is a
-      // good opening move, prepared or not. Anything else ends the phase.
-      const bookPhase = !expected.length && prepStatus === 'complete' && !bookOver;
-      const book = bookPhase && isBookMove(index, run.fen, judged.san, judged.lost);
-      if (bookPhase && !book) setBookOver(true);
-      if (book) {
-        setBookTo(run.played.length + 1);
-        bookMovesPlayed.current += 1;
-      }
-      buzz(expected.length ? 14 : 10);
-      setEvalCp(judged.after);
-      const swing = evalSwing(run.color, lastScored.current ?? judged.before, judged.after);
-      lastScored.current = judged.after;
-      const score = prefs.moveScores && swing !== null ? moveScore(swing) : null;
-      const landed = applySan(run.fen, judged.san);
-      if (book && plan && landed) {
-        const seconds = judgedSeconds.current;
-        setPop({ key: Date.now(), square: landed.to, text: secondsText(seconds), tone: speedTone(seconds), found: true, book: true });
-      } else if (score && landed) {
-        setPop({ key: Date.now(), square: landed.to, text: score.cp > 0 ? `+${score.cp}` : `−${-score.cp}`, tone: score.tone });
-      }
-      if (expected.length) {
-        const right = applySan(run.fen, expected[0]);
-        if (right) setMiss({ expected: expected[0], from: right.from, to: right.to });
-      }
-      // Moments are a thing past your prep; a prepared position is the prep's to judge.
-      // A book move keeps the combo going whatever the engine's own preference.
-      const scored = judgedExtras(game.state.extras, prefs, run.color, {
-        lost: book ? 0 : judged.lost,
-        after: judged.after,
-        moment: judged.moment && !expected.length,
-        found: judged.found,
-        fen: applySan(run.fen, judged.san)?.after,
-      });
-      const told = noteFor(scored.earned, judged.best);
-      setNote(told ? { key: Date.now(), ...told } : null);
-      const shown = scored.earned.moment && !scored.earned.moment.found && judged.best ? applySan(run.fen, judged.best) : null;
-      setMissedBest(shown ? { from: shown.from, to: shown.to } : null);
-      afterMove({ ...game, state: playYours(game.state, judged.san, expected[0], scored.extras) });
+      if (!sessionRef.current) return;
+      apply(judgedMove(sessionRef.current, ctx, judged, judgedSeconds.current, Date.now()));
     },
   });
 
@@ -498,9 +377,9 @@ export function SurvivalScreen({
     fen: run?.fen ?? null,
     enabled: live && engineTurn && !myTurn && !miss,
     onMove: (san) => {
-      if (!game || over.current) return;
+      if (!sessionRef.current) return;
       setEngineTurn(false);
-      afterMove({ ...game, state: playTheirs(game.state, san) });
+      apply(engineMove(sessionRef.current, san));
     },
   });
 
@@ -509,14 +388,7 @@ export function SurvivalScreen({
    * when your turn comes, with the clock held while it shows.
    */
   const momentHere =
-    prefs.moments &&
-    live &&
-    myTurn &&
-    !judge.pending &&
-    !!run &&
-    !!game &&
-    judge.momentAt === run.fen &&
-    prepHere(game.source, game.state).length === 0;
+    prefs.moments && live && myTurn && !judge.pending && !!run && judge.momentAt === run.fen && prepNow.length === 0;
   useEffect(() => {
     if (momentHere) setNote({ key: Date.now(), text: "There's something here", tone: 'accent' });
   }, [momentHere]);
@@ -564,52 +436,46 @@ export function SurvivalScreen({
     enabled: phase === 'playing' && !!run && !intro.fen,
   });
 
-  // The opponent answers after a beat, and not while a miss is on the board.
-  // From the book while it has a move — steered along the drawn line, redrawn
-  // by the same steer when you have stepped off it — then the engine.
+  // The opponent answers after a beat, and not while a miss is on the board:
+  // from the book while it has a move, then the engine.
   useEffect(() => {
-    if (!game || !run || !live || myTurn || miss || engineTurn || over.current) return;
+    if (!session || !live || myTurn || miss || engineTurn || ending) return;
     setThinking(true);
     const timer = setTimeout(() => {
       setThinking(false);
-      if (over.current) return;
-      const offLine = run.target.length <= run.played.length;
-      const steered = offLine ? { ...game.state, run: game.redraw(run) } : game.state;
-      const san = bookReply(game.source, index, steered, picker.current);
-      if (!san) {
+      const now = sessionRef.current;
+      if (!now || now.ending) return;
+      const step = bookTurn(now, index, picker.current);
+      if (!step) {
         setEngineTurn(true);
         return;
       }
-      afterMove({ ...game, state: playTheirs(steered, san) });
+      apply(step);
     }, 420);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game, live, myTurn, miss, engineTurn]);
+  }, [session?.state, live, myTurn, miss, engineTurn]);
 
   // Your turn with nothing prepared, having followed your prep so far: the line is done.
-  const prepRanOut = live && myTurn && !judge.pending && !!game && prepHere(game.source, game.state).length === 0;
+  const ranOut = live && myTurn && !judge.pending && prepNow.length === 0;
   useEffect(() => {
-    if (!prepRanOut || prepStatus !== 'on') return;
-    setPrepStatus('complete');
-    if (run && inTheBook(index, run.fen)) setBookTo(run.played.length);
-    else setBookOver(true);
-    // Where growing would start, even when the prep asked you nothing.
-    if (run && !game?.state.misses.length) prepEnd.current = run.played;
+    if (ranOut && sessionRef.current) update(prepRanOut(sessionRef.current, index));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prepRanOut]);
+  }, [ranOut]);
 
   // The book phase ends where the book has nothing more to say, whoever left it.
-  const bookRanOut = live && myTurn && prepStatus === 'complete' && bookTo !== null && !bookOver && !inTheBook(index, run.fen);
+  const bookDone = live && myTurn && !!session && bookRanOut(session, index);
   useEffect(() => {
-    if (bookRanOut) setBookOver(true);
-  }, [bookRanOut]);
-  const inBook = prepStatus === 'complete' && bookTo !== null && !bookOver;
-  const outOfBook = prepStatus === 'complete' && bookOver;
+    if (bookDone && sessionRef.current) update({ ...sessionRef.current, bookOver: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookDone]);
+  const label = session ? prepLabel(session) : null;
 
   // The engine's score for the position in front of you steers the glow.
   const baselineCp = judge.baseline && run && judge.baseline.fen === run.fen ? judge.baseline.cp : null;
   useEffect(() => {
-    if (baselineCp !== null) setEvalCp(baselineCp);
+    if (baselineCp !== null && sessionRef.current) update(sawEval(sessionRef.current, baselineCp));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baselineCp]);
 
   // Past the end of prep: the plan for the structure on the board, and Cash out when well ahead.
@@ -630,10 +496,8 @@ export function SurvivalScreen({
 
   // Where the prep runs out, the first mission is set from the eval in front of you.
   useEffect(() => {
-    if (!game || !run || !live || !myTurn || baselineCp === null) return;
-    if (prepHere(game.source, game.state).length) return;
-    const extras = firstMission(game.state.extras, prefs, run.color, baselineCp, run.fen);
-    if (extras !== game.state.extras) setGame({ ...game, state: { ...game.state, extras } });
+    if (!sessionRef.current || !live || !myTurn || baselineCp === null) return;
+    update(missionFrom(sessionRef.current, prefs, baselineCp));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baselineCp, live, myTurn]);
 
@@ -678,29 +542,17 @@ export function SurvivalScreen({
       seen: seenIn(useStore.getState().score),
     });
     if (!begun) return;
-    over.current = false;
-    prepEnd.current = null;
     ratings.reset();
-    answers.current = [];
-    prepTimes.current = [];
-    bookMovesPlayed.current = 0;
-    setBookTo(null);
-    setBookOver(false);
     setGrowOffer(null);
     judge.reset();
     setPrefs(chosen);
-    setEnding(null);
     setMiss(null);
     setPop(null);
     setNote(null);
     setMissedBest(null);
-    setPrepStatus('on');
-    setPrepSeen(false);
-    setEvalCp(null);
-    lastScored.current = null;
     setEngineTurn(false);
     setThinking(false);
-    setGame({ source: begun.source, state: begun.state, redraw: begun.redraw });
+    apply({ session: beginSession(begun), effects: [] });
     setPhase('playing');
   };
 
@@ -710,11 +562,12 @@ export function SurvivalScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (phase === 'setup' || !game || !run) {
+  if (phase === 'setup' || !session || !run) {
     // Autopilot's run starts itself; there is nothing to set up.
     if (plan) return <div className="screen no-nav" style={{ display: 'grid', placeItems: 'center' }}><div className="spinner" /></div>;
     return <Setup onStart={start} onExit={onExit} />;
   }
+  const game = session;
 
   const next = onNext ?? (() => start(prefs));
 
@@ -765,14 +618,14 @@ export function SurvivalScreen({
         moved={shown}
         rating={rating}
         grow={growOffer ? () => setPhase('growing') : null}
-        prepPly={prepEnd.current?.length ?? game.state.misses[0]?.ply ?? null}
+        prepPly={game.prepEnd?.length ?? game.state.misses[0]?.ply ?? null}
         prep={
           plan
             ? prepSummary(
-                answers.current.filter((answer) => answer.correct).length,
-                answers.current.length,
-                prepTimes.current,
-                bookMovesPlayed.current,
+                game.answers.filter((answer) => answer.correct).length,
+                game.answers.length,
+                game.prepTimes,
+                game.bookMoves,
               )
             : null
         }
@@ -788,7 +641,7 @@ export function SurvivalScreen({
   }
 
   const onMove = (move: LegalMove) => {
-    if (!live || !myTurn || judge.pending || over.current || flash) return;
+    if (!live || !myTurn || judge.pending || ending || flash) return;
     if (prefs.undefendedFlash) {
       const loose = newlyLoose(run.fen, move.after, run.color, move);
       if (loose.length) {
@@ -801,35 +654,11 @@ export function SurvivalScreen({
   };
 
   const commit = (move: LegalMove) => {
-    if (!live || !myTurn || judge.pending || over.current) return;
+    const now = sessionRef.current;
+    if (!live || !myTurn || judge.pending || !now || now.ending) return;
     setMiss(null);
-    const prep = prepHere(game.source, game.state);
-    if (prep.includes(move.san)) {
-      buzz(10);
-      // A position your prep answers is a card on the schedule, and finding
-      // the answer reviews it, graded by how long it took.
-      const seconds = clock.elapsedNow();
-      if (run.repertoireId) answered(run.repertoireId, run.fen, move.san, gradeForTime(seconds));
-      prepTimes.current = [...prepTimes.current, seconds];
-      const kind = kindOf(run.played, move.san);
-      const lost = losses.get(`${positionKey(run.fen)} ${move.san}`);
-      const cost = kind === 'mistake' && lost !== undefined ? moveScore(-lost) : null;
-      // A saved mistake is still yours to play, and the board says what it gives away.
-      if (cost) setPop({ key: Date.now(), square: move.to, text: `−${-cost.cp}`, tone: cost.tone });
-      // Autopilot says so on the board: the tick, and the time in the grade's color.
-      else if (plan) {
-        setPop({
-          key: Date.now(),
-          square: move.to,
-          text: secondsText(seconds),
-          tone: speedTone(seconds),
-          found: true,
-          ...(kind !== 'book' ? { ext: true } : {}),
-        });
-      }
-      tally(run.played, true, kind);
-      setPrepSeen(true);
-      afterMove({ ...game, state: playYours(game.state, move.san) });
+    if (prepMoves(now).includes(move.san)) {
+      apply(playPrepared(now, ctx, move, clock.elapsedNow(), Date.now()));
       return;
     }
     judgedSeconds.current = clock.elapsedNow();
@@ -837,7 +666,7 @@ export function SurvivalScreen({
   };
   commitRef.current = commit;
 
-  const glow = prefs.boardGlow && evalCp !== null ? glowFor(run.color, evalCp) : null;
+  const glow = prefs.boardGlow && game.evalCp !== null ? glowFor(run.color, game.evalCp) : null;
 
   /**
    * A blunder stays on the board before the end screen: your move in red, and
@@ -983,16 +812,10 @@ export function SurvivalScreen({
             )}
             {judge.pending ? 'Judging' : thinking || engineTurn || !myTurn ? 'Reply' : 'Your move'}
           </div>
-          {inBook || outOfBook ? (
-            <div className="ctx" style={{ color: PREP_STATUS[inBook ? 'book' : 'out'].color, fontWeight: 600 }}>
-              {PREP_STATUS[inBook ? 'book' : 'out'].text}
+          {label && (
+            <div className="ctx" style={{ color: PREP_STATUS[label].color, fontWeight: 600 }}>
+              {PREP_STATUS[label].text}
             </div>
-          ) : (
-            (prepSeen || prepStatus === 'off' || (prepStatus === 'on' && prepHere(game.source, game.state).length > 0)) && (
-              <div className="ctx" style={{ color: PREP_STATUS[prepStatus].color, fontWeight: 600 }}>
-                {PREP_STATUS[prepStatus].text}
-              </div>
-            )
           )}
           {momentHere && (
             <div className="ctx" style={{ color: 'var(--accent)', fontWeight: 600 }}>
@@ -1013,7 +836,7 @@ export function SurvivalScreen({
           <button
             className="btn sm soft mt-12"
             style={{ color: 'var(--text-2)' }}
-            onClick={() => finish(game.state, { kind: 'ended' })}
+            onClick={() => sessionRef.current && apply(endRun(sessionRef.current))}
           >
             {plan ? 'End round' : 'End run'}
           </button>

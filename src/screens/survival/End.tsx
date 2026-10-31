@@ -30,21 +30,8 @@ const FLASH_MS = 2000;
 /** The rating card's fade over the board before it shows below the move list. */
 const LEAVE_MS = 320;
 
-/** How a run ended. */
-export type Ending =
-  | {
-      kind: 'blunder';
-      /** The move that lost, not on the board: the board stops before it. */
-      played: string;
-      /** The engine's move in the same position. */
-      best: string | null;
-      lost: number;
-      /** The opponent's best answer to it, as a UCI move: the threat that made it a blunder. */
-      reply: string | null;
-    }
-  | { kind: 'won' | 'lost' | 'draw' }
-  /** You ended it yourself, off your prep: counted apart from moves survived. */
-  | { kind: 'ended' };
+import type { Ending } from '../../model/survivalController';
+export type { Ending };
 
 export function endingTitle(ending: Ending, plies: number): string {
   switch (ending.kind) {
