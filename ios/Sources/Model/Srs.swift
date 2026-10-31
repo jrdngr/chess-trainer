@@ -258,3 +258,15 @@ public func runNeed(_ card: Card, _ round: Int, _ now: Double = Env.now()) -> Do
 }
 
 extension Grade: CodingKeyRepresentable {}
+
+/// One review, as the log keeps it.
+public struct ReviewLogEntry: Equatable, Sendable, Codable {
+  public var cardId: String
+  public var at: Double
+  public var grade: Grade
+  public var correct: Bool
+  public var playedSan: String?
+  public var expectedSan: String
+  public var intervalBefore: Double
+  public var intervalAfter: Double
+}

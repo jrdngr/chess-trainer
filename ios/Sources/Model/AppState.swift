@@ -42,8 +42,32 @@ public struct AppState: Equatable, Sendable, Codable {
   public var score = ScoreState()
   public var survival = SurvivalRecord()
   public var mistakes: [Mistake] = []
+  public var lineCards: [String: LineCard] = [:]
+  /// Every review, oldest first.
+  public var log: [ReviewLogEntry] = []
+  public var events: [AppEvent] = []
   public var settings = Settings()
   public init() {}
+
+  enum CodingKeys: String, CodingKey {
+    case repertoires, repertoireOrder, cards, score, survival, mistakes, lineCards, log, events, settings
+  }
+
+  /// A save from before a field existed takes its default.
+  public init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    self.init()
+    repertoires = try c.decodeIfPresent([String: Repertoire].self, forKey: .repertoires) ?? repertoires
+    repertoireOrder = try c.decodeIfPresent([String].self, forKey: .repertoireOrder) ?? repertoireOrder
+    cards = try c.decodeIfPresent([String: Card].self, forKey: .cards) ?? cards
+    score = try c.decodeIfPresent(ScoreState.self, forKey: .score) ?? score
+    survival = try c.decodeIfPresent(SurvivalRecord.self, forKey: .survival) ?? survival
+    mistakes = try c.decodeIfPresent([Mistake].self, forKey: .mistakes) ?? mistakes
+    lineCards = try c.decodeIfPresent([String: LineCard].self, forKey: .lineCards) ?? lineCards
+    log = try c.decodeIfPresent([ReviewLogEntry].self, forKey: .log) ?? log
+    events = normalizeEvents(try c.decodeIfPresent([AppEvent].self, forKey: .events))
+    settings = try c.decodeIfPresent(Settings.self, forKey: .settings) ?? settings
+  }
 
   public var repertoireList: [Repertoire] { repertoireOrder.compactMap { repertoires[$0] } }
 }
@@ -103,31 +127,62 @@ extension AppState {
     }
   }
 
-  /// A starter set as a first Playbook: each opening exactly its own moves,
-  /// starred where the book names it, with the selection it implies.
+  /// A starter set as a first Playbook: each opening exactly its own moves.
   public mutating func seed(_ tree: OpeningTree, _ set: StarterSet) {
-    var picks: [(id: String, color: Color)] = []
-    for opening in setOpenings(set) {
-      let sans = opening.id.split(separator: " ").map(String.init)
-      guard walkSan(sans).moves.count == sans.count else { continue }
-      let repId: String
-      if let found = repertoireList.first(where: { $0.color == opening.color }) {
-        repId = found.id
-      } else {
-        let rep = createRepertoire(repertoireName(opening.color), opening.color)
-        repertoires[rep.id] = rep
-        repertoireOrder.append(rep.id)
-        repId = rep.id
-      }
-      repertoires[repId] = addLine(repertoires[repId]!, sans, .fixed(.picker)).rep
-      if let node = tree.byId[opening.id], node.depth > 0 {
-        if !settings.favoriteOpenings.contains(node.id) { settings.favoriteOpenings.append(node.id) }
-        picks.append((node.id, opening.color))
-      }
+    onboarded(tree, setOpenings(set).map { SeedOpening(sans: $0.id.split(separator: " ").map(String.init), color: $0.color) })
+  }
+
+  /// Finishing onboarding: `useStore.onboarded`. Picked openings go in as
+  /// their own moves and are starred; lines played on the board go in whole,
+  /// marked as played on the board, and starred only through a picked
+  /// opening. A move order that is not legal is not an opening, and is left
+  /// out. Skipping puts nothing in but is still an answer.
+  public mutating func onboarded(_ tree: OpeningTree, _ openings: [SeedOpening], _ board: [OnboardingLine] = []) {
+    let legal = { (sans: [String]) in walkSan(sans).fens.count == sans.count + 1 }
+    let lines: [(line: OnboardingLine, source: MoveSource)] =
+      board.filter { legal($0.sans) }.map { ($0, .board) }
+      + openings.filter { legal($0.sans) }.map { (OnboardingLine(sans: $0.sans, color: $0.color), .picker) }
+    for (line, source) in lines {
+      let repId = ensureRepertoire(line.color)
+      addLine(repId, line.sans, .fixed(source), via: .onboarding, lost: line.lost)
     }
-    settings.selection = selectionFor(picks)
+    // Starred where the book names them, so they lead the quick picker and Home's ladder.
+    let picks = openings.compactMap { opening -> (id: String, color: Color)? in
+      guard let node = tree.byId[opening.sans.joined(separator: " ")], node.depth > 0 else { return nil }
+      return (node.id, opening.color)
+    }
+    for pick in picks where !settings.favoriteOpenings.contains(pick.id) { settings.favoriteOpenings.append(pick.id) }
+    // Nothing picked says nothing about which side they play.
+    if !picks.isEmpty { settings.selection = selectionFor(picks) }
     settings.onboarded = true
   }
+}
+
+/// An opening picked to start with: its own moves, for the side that plays it.
+public struct SeedOpening: Equatable, Sendable {
+  public var sans: [String]
+  public var color: Color
+  public init(sans: [String], color: Color) {
+    self.sans = sans
+    self.color = color
+  }
+}
+
+/// A line played on onboarding's board, with what each move lost, if known.
+public struct OnboardingLine: Equatable, Sendable {
+  public var sans: [String]
+  public var color: Color
+  public var lost: [Double?]?
+  public init(sans: [String], color: Color, lost: [Double?]? = nil) {
+    self.sans = sans
+    self.color = color
+    self.lost = lost
+  }
+}
+
+/// Whose an opening is, read from its move order, unless a side is given.
+public func seedFor(_ sans: [String], _ color: Color? = nil) -> SeedOpening {
+  SeedOpening(sans: sans, color: color ?? playerOf(sans))
 }
 
 /// The global selection picks imply: `onboarding.selectionFor`.

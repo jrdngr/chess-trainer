@@ -234,6 +234,17 @@ public func setNote(_ rep: Repertoire, _ nodeId: String, _ note: String) -> Repe
   return next
 }
 
+/// A move moved up or down among its siblings.
+public func moveSibling(_ rep: Repertoire, _ nodeId: String, _ delta: Int) -> Repertoire {
+  guard let node = rep.nodes[nodeId] else { return rep }
+  var ids = node.parentId.map { rep.nodes[$0]!.children } ?? rep.rootChildren
+  guard let idx = ids.firstIndex(of: nodeId), idx + delta >= 0, idx + delta < ids.count else { return rep }
+  ids.swapAt(idx, idx + delta)
+  var next = rep
+  if let parent = node.parentId { next.nodes[parent]!.children = ids } else { next.rootChildren = ids }
+  return next
+}
+
 /// A position where it is your turn and the tree says what to play.
 public struct DecisionPoint: Equatable, Sendable {
   public var key: String
