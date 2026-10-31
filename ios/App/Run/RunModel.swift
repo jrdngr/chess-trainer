@@ -26,6 +26,8 @@ final class RunModel {
   let tree: OpeningTree
   let index: ReferenceIndex
   private let store: AppStore
+  /// Your favorite openings, for the end screen's ratings list.
+  var favorites: [String] { store.state.settings.favoriteOpenings }
   private let engine: ChessEngine
   private let ctx: RunContext
 
@@ -370,17 +372,28 @@ final class RunModel {
 }
 
 /// Each opening's rating over a run: where it stood before its first move, and after its last.
+/// `byKey` holds the main ratings; `changes` lists Extensions ratings too, in the order first moved.
 struct OrderedRatings {
-  private(set) var order: [String] = []
-  private(set) var byKey: [String: (before: Double, after: Double)] = [:]
+  struct Change {
+    var id: String
+    var ext: Bool
+    var before: Double
+    var after: Double
+    var delta: Double { after - before }
+  }
+
+  private(set) var changes: [Change] = []
+
+  var byKey: [String: (before: Double, after: Double)] {
+    Dictionary(changes.filter { !$0.ext }.map { ($0.id, ($0.before, $0.after)) }, uniquingKeysWith: { a, _ in a })
+  }
 
   mutating func track(_ moves: [RatingMove]) {
-    for move in moves where !move.ext {
-      if let seen = byKey[move.id] {
-        byKey[move.id] = (seen.before, move.after)
+    for move in moves {
+      if let i = changes.firstIndex(where: { $0.id == move.id && $0.ext == move.ext }) {
+        changes[i].after = move.after
       } else {
-        order.append(move.id)
-        byKey[move.id] = (move.before, move.after)
+        changes.append(Change(id: move.id, ext: move.ext, before: move.before, after: move.after))
       }
     }
   }

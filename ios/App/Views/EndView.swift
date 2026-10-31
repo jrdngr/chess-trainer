@@ -1,6 +1,7 @@
 import ChessCore
 import Engine
 import Model
+import Shared
 import SwiftUI
 
 /// The end of a run: `End.tsx`. Final position and End of prep to switch
@@ -35,8 +36,8 @@ struct EndView: View {
   private var last: Int { run.played.count }
   private var fens: [String] { walkSan(run.played).fens }
   private var shownFen: String { fens[min(cursor, last)] }
-  private var blunder: (played: String, best: String?)? {
-    if case .blunder(let played, let best, _, _) = finish.how { return (played, best) }
+  private var blunder: (played: String, best: String?, lost: Double)? {
+    if case .blunder(let played, let best, let lost, _) = finish.how { return (played, best, lost) }
     return nil
   }
   private var onBlunder: Bool { blunder != nil && cursor == last }
@@ -56,11 +57,11 @@ struct EndView: View {
       VStack(spacing: 0) {
         header.padding(.bottom, 14)
         if let prepAt {
-          Picker("", selection: Binding(get: { cursor == prepAt ? 0 : cursor == last ? 1 : -1 }, set: { seek($0 == 0 ? prepAt : last) })) {
-            Text("End of prep").tag(0)
-            Text("Final position").tag(1)
-          }
-          .pickerStyle(.segmented).padding(.bottom, 10)
+          SegmentedControl(
+            value: Binding(get: { cursor == prepAt ? 0 : cursor == last ? 1 : -1 }, set: { seek($0 == 0 ? prepAt : last) }),
+            options: [(0, "End of prep"), (1, "Final position")]
+          )
+          .padding(.bottom, 10)
         }
         evalBar.padding(.bottom, 10)
         if let caption = marks?.caption {
@@ -124,7 +125,9 @@ struct EndView: View {
       }
       MoveStrip(items: strip, cursor: cursor, max: last, onSeek: seek)
       ratingCard
+      RatingsList(items: moved).padding(.top, 10)
       summary
+      if let blunder { compare(blunder) }
     }
     .padding(.top, 12)
   }
@@ -168,6 +171,37 @@ struct EndView: View {
       if let best = blunder.best { items.append(StripItem(san: best, label: label(last), tone: .good, seek: last)) }
     }
     return items
+  }
+
+  /// The ratings this run moved that the end screen names: favorites and the
+  /// opening it was played in, not every opening above it. The run's own
+  /// opening plays on its own card instead.
+  private var moved: [RatingsList.Item] {
+    let playedIn = deepestNodeWithin(model.tree, nodeById(model.tree, run.openingId), run.played).id
+    let favorites = model.favorites
+    return model.ratings.changes
+      .filter { JSRound($0.delta) != 0 }
+      .filter { ($0.id == playedIn || favorites.contains($0.id)) && !(moment != nil && $0.id == model.openingId && !$0.ext) }
+      .map { RatingsList.Item(id: $0.id, ext: $0.ext, name: nodeById(model.tree, $0.id).name, delta: $0.delta, after: $0.after) }
+  }
+
+  /// The engine's move beside the one that ended the run.
+  private func compare(_ blunder: (played: String, best: String?, lost: Double)) -> some View {
+    HStack(spacing: 10) {
+      side("Engine", blunder.best ?? "\u{2014}", Theme.good)
+      side("You played \u{00b7} \u{2212}\(JS.toFixed(blunder.lost / 100, 2))", blunder.played, Theme.bad)
+    }
+    .padding(.top, 8)
+  }
+
+  private func side(_ key: String, _ value: String, _ color: SwiftUI.Color) -> some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(key).font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.text3)
+      Text(value).font(.system(size: 22, weight: .heavy)).foregroundStyle(color)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.horizontal, 14).padding(.vertical, 12)
+    .background(RoundedRectangle(cornerRadius: 18).fill(Theme.surface))
   }
 
   private var isEnded: Bool {
@@ -215,7 +249,9 @@ struct EndView: View {
 
   /// The opening's own rating, as this run moved it.
   private var moment: RatingMoment? {
-    guard let r = model.ratings.byKey[model.openingId], nodeById(model.tree, model.openingId).depth > 0 else { return nil }
+    guard let r = model.ratings.byKey[model.openingId], JSRound(r.after - r.before) != 0,
+      nodeById(model.tree, model.openingId).depth > 0
+    else { return nil }
     return RatingMoment(name: openingName(model.tree, model.openingId), before: r.before, after: r.after)
   }
 

@@ -5,6 +5,7 @@ let package = Package(
   name: "ChessPlaybook",
   platforms: [.iOS(.v18), .macOS(.v15)],
   products: [
+    .library(name: "Shared", targets: ["Shared"]),
     .library(name: "ChessCore", targets: ["ChessCore"]),
     .library(name: "Book", targets: ["Book"]),
     .library(name: "Model", targets: ["Model"]),
