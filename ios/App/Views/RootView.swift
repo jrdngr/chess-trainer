@@ -31,7 +31,10 @@ struct RootView: View {
 
   @ViewBuilder private func content(_ tree: OpeningTree, _ index: ReferenceIndex) -> some View {
     if !store.state.settings.onboarded {
-      StarterView(tree: tree)
+      OnboardingView(tree: tree, index: index) { next in
+        tab = .home
+        mode = next == .autopilot ? .autopilot : nil
+      }
     } else if building {
       BoardBuildView(onBack: { building = false }, onDone: { _ in building = false })
     } else if let mode {

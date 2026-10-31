@@ -26,6 +26,8 @@ struct BoardView: View {
   @Environment(\.boardLook) private var look
   /// What a held lens draws over the position.
   var marks: LensMarks?
+  /// Either side's pieces can be moved, not only `orientation`'s: the opening browser and the board builder.
+  var anySide = false
   var onMove: (LegalMove) -> Void
 
   @State private var selected: String?
@@ -141,7 +143,7 @@ struct BoardView: View {
         return
       }
     }
-    if let piece = pieces[square], piece.color == turn, bothSides || piece.color == orientation {
+    if let piece = pieces[square], piece.color == turn, bothSides || anySide || piece.color == orientation {
       selected = square == selected ? nil : square
     } else {
       selected = nil

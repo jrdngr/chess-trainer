@@ -47,7 +47,11 @@ final class AppStore {
   }
 
   /// The next round's selection, without taking it: `peekRoundSelection`.
-  func peekRoundSelection() -> Selection {
+  func peekRoundSelection() -> Selection { peekRoundSelection(state) }
+
+  /// The same, for a state not saved yet, such as onboarding's Playbook before it goes in:
+  /// the answer is kept for the state it becomes.
+  func peekRoundSelection(_ state: AppState) -> Selection {
     let selection = state.settings.selection
     guard isAnyFavorite(selection), let tree else { return selection }
     let key = "\(selection.color.rawValue) \(state.settings.favoriteOpenings.joined(separator: ",")) \(lastFavorite ?? "")"
