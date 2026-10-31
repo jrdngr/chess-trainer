@@ -1,0 +1,149 @@
+{
+  "area": "tools",
+  "functions": [
+    {
+      "fn": "gameAnalysis.buildPlayerTree",
+      "about": "Your games as a tree of the positions you reached (first 24 plies), with how often, your results, and what you chose at your turns.",
+      "cases": [
+      {"args":["b"],"out":{"games":8,"positions":[" 8g 2/1/5","e4 6g 2/1/3 [c5:6]","e4 c5 6g 2/1/3","e4 c5 Nf3 3g 1/0/2 [d6:3]","e4 c5 Nf3 d6 3g 1/0/2","e4 c5 Nf3 d6 d4 3g 1/0/2 [cxd4:3]","e4 c5 Nf3 d6 d4 cxd4 3g 1/0/2","e4 c5 Nf3 d6 d4 cxd4 Nxd4 3g 1/0/2 [Nf6:3]","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 3g 1/0/2","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 3g 1/0/2 [a6:3]","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 3g 1/0/2","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 3g 1/0/2 [e5:1 e6:2]","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e6 2g 0/0/2","e4 c5 c3 3g 1/1/1 [Nf6:2 d5:1]","e4 c5 c3 Nf6 2g 0/1/1","e4 c5 c3 Nf6 e5 2g 0/1/1 [Nd5:2]","e4 c5 c3 Nf6 e5 Nd5 2g 0/1/1","d4 2g 0/0/2 [Nf6:2]","d4 Nf6 2g 0/0/2","d4 Nf6 c4 2g 0/0/2 [g6:2]","d4 Nf6 c4 g6 2g 0/0/2","d4 Nf6 c4 g6 Nc3 2g 0/0/2 [Bg7:2]","d4 Nf6 c4 g6 Nc3 Bg7 2g 0/0/2","d4 Nf6 c4 g6 Nc3 Bg7 e4 2g 0/0/2 [d6:1 O-O:1]"]}},
+      {"args":["w"],"out":{"games":1,"positions":[]}}
+      ]
+    },
+    {
+      "fn": "gameAnalysis.analyseAgainstRepertoire",
+      "about": "Your games against your Playbook: gaps (reached at least twice with nothing prepared), deviations (you played something other than your prep), and prepared lines that never came up.",
+      "cases": [
+      {"args":[1],"out":["deviation e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 games 3 played e6:2 expected e5","gap e4 c5 c3 games 3 played Nf6:2,d5:1 expected ","gap e4 c5 c3 Nf6 e5 games 2 played Nd5:2 expected ","deviation d4 Nf6 c4 g6 Nc3 Bg7 e4 games 2 played O-O:1 expected d6","gap e4 c5 c3 Nf6 e5 Nd5 Nf3 games 1 played Nc6:1 expected ","gap e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e6 f3 games 1 played b5:1 expected ","gap e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e6 g4 games 1 played h6:1 expected ","gap e4 c5 c3 d5 exd5 games 1 played Qxd5:1 expected ","gap e4 c5 c3 Nf6 e5 Nd5 d4 games 1 played cxd4:1 expected ","gap e4 c5 c3 d5 exd5 Qxd5 d4 games 1 played Nf6:1 expected ","unplayed  games 0 played  expected O-O"]},
+      {"args":[2],"out":["deviation e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 games 3 played e6:2 expected e5","gap e4 c5 c3 games 3 played Nf6:2,d5:1 expected ","gap e4 c5 c3 Nf6 e5 games 2 played Nd5:2 expected ","deviation d4 Nf6 c4 g6 Nc3 Bg7 e4 games 2 played O-O:1 expected d6","unplayed  games 0 played  expected O-O"]}
+      ]
+    },
+    {
+      "fn": "gameAnalysis.measureCoverage",
+      "about": "How long your games stayed in your prep: games in prep for at least 6 plies, the rest, and the average ply they left it.",
+      "cases": [
+      {"args":["b"],"out":{"inPrep":5,"outOfPrep":3,"averageExitPly":7.125,"games":8}},
+      {"args":["w"],"out":{"inPrep":0,"outOfPrep":1,"averageExitPly":4,"games":1}}
+      ]
+    },
+    {
+      "fn": "repair.buildRepairs",
+      "about": "Positions your games or your mistakes log say you got wrong: off prep (you had a move and played another) and unprepared (reached at least twice with nothing), never your first move of the game; weighted by games, off prep 1.5×, and what they cost you. A logged mistake counts as an off-prep position seen in a couple of games unless your games already have it. Autopilot counts every off-prep one as due (AUTO-18).",
+      "cases": [
+      {"args":[false],"out":["offprep games e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 games 3 played e6 expected e5 weight 7.50","offprep games d4 Nf6 c4 g6 Nc3 Bg7 e4 games 2 played O-O expected d6 weight 6.00","unprepared games e4 c5 c3 games 3 played Nf6,d5 expected  weight 4.50","unprepared games e4 c5 c3 Nf6 e5 games 2 played Nd5 expected  weight 3.50"]},
+      {"args":[true],"out":["offprep games e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 games 3 played e6 expected e5 weight 7.50","offprep games d4 Nf6 c4 g6 Nc3 Bg7 e4 games 2 played O-O expected d6 weight 6.00","unprepared games e4 c5 c3 games 3 played Nf6,d5 expected  weight 4.50","unprepared games e4 c5 c3 Nf6 e5 games 2 played Nd5 expected  weight 3.50","offprep drill d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 games 1 played c5 expected O-O weight 2.50"]}
+      ]
+    },
+    {
+      "fn": "stats.series",
+      "about": "The Stats charts for one opening over a window: rounds a day, the rating at each day's end (held through days it did not move), and accuracy over the 7 days ending each day (days with nothing left out).",
+      "cases": [
+      {"args":[7,"2026-10-31"],"out":{"rounds":["2026-10-25:3","2026-10-26:0","2026-10-27:0","2026-10-28:0","2026-10-29:1","2026-10-30:2","2026-10-31:0"],"rating":["160","160","160","160","160","175","175"],"accuracy":["0.767","0.767","0.750","0.750","0.895","0.821","0.821"],"recent":6}},
+      {"args":[14,"2026-10-31"],"out":{"rounds":["2026-10-18:0","2026-10-19:0","2026-10-20:2","2026-10-21:0","2026-10-22:1","2026-10-23:0","2026-10-24:0","2026-10-25:3","2026-10-26:0","2026-10-27:0","2026-10-28:0","2026-10-29:1","2026-10-30:2","2026-10-31:0"],"rating":["0","0","120","120","110","110","110","160","160","160","160","160","175","175"],"accuracy":["0.800","0.800","0.688","0.688","0.688","0.767","0.767","0.750","0.750","0.895","0.821","0.821"],"recent":9}},
+      {"args":[30,"2026-10-31"],"out":{"rounds":["2026-10-02:0","2026-10-03:0","2026-10-04:0","2026-10-05:0","2026-10-06:0","2026-10-07:0","2026-10-08:0","2026-10-09:0","2026-10-10:0","2026-10-11:0","2026-10-12:0","2026-10-13:0","2026-10-14:0","2026-10-15:0","2026-10-16:0","2026-10-17:0","2026-10-18:0","2026-10-19:0","2026-10-20:2","2026-10-21:0","2026-10-22:1","2026-10-23:0","2026-10-24:0","2026-10-25:3","2026-10-26:0","2026-10-27:0","2026-10-28:0","2026-10-29:1","2026-10-30:2","2026-10-31:0"],"rating":["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","120","120","110","110","110","160","160","160","160","160","175","175"],"accuracy":["0.800","0.800","0.688","0.688","0.688","0.767","0.767","0.750","0.750","0.895","0.821","0.821"],"recent":9}}
+      ]
+    },
+    {
+      "fn": "stats.favouriteness",
+      "about": "How an opening ranks among its siblings by rounds in the last 30 days, \"your second favorite Sicilian\"; siblings never played are left out.",
+      "cases": [
+      {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"],"out":{"rank":1,"of":2,"parent":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6","siblings":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6:3","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6:1"]}},
+      {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6"],"out":{"rank":2,"of":2,"parent":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6","siblings":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6:3","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6:1"]}},
+      {"args":["e4 c5"],"out":{"rank":1,"of":1,"parent":"e4","siblings":["e4 c5:5"]}},
+      {"args":["e4 e5"],"out":null}
+      ]
+    },
+    {
+      "fn": "stats.ladders",
+      "about": "Stats' two ladders: your favorites, best rated first, unrated ones kept at the bottom; and every other opening Survival has rated, best first.",
+      "cases": [
+      {"args":[[]],"out":{"favorites":[],"rated":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","e4 c5","d4 Nf6 c4 g6 Nc3","e4 c5 Nf3 Nc6","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6"]}},
+      {"args":[["e4 c5","e4 e5 Nf3 Nc6 Bb5","d4 Nf6 c4 g6 Nc3"]],"out":{"favorites":["e4 c5","d4 Nf6 c4 g6 Nc3","e4 e5 Nf3 Nc6 Bb5"],"rated":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","e4 c5 Nf3 Nc6","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6"]}}
+      ]
+    },
+    {
+      "fn": "stats.niceTicks",
+      "about": "Round chart ticks up to a maximum.",
+      "cases": [
+      {"args":[0],"out":[0]},
+      {"args":[1],"out":[0,0.5,1]},
+      {"args":[4],"out":[0,2,4]},
+      {"args":[7],"out":[0,5,10]},
+      {"args":[12],"out":[0,5,10,15]},
+      {"args":[37],"out":[0,20,40]},
+      {"args":[100],"out":[0,50,100]},
+      {"args":[433],"out":[0,200,400,600]}
+      ]
+    },
+    {
+      "fn": "extensionGraph.layoutGraph",
+      "about": "The Extensions review's graph of one opening: columns are half-moves, rows go depth first, your move first then book moves, rare, mistakes; their replies by share; a move into a position drawn higher up ends in a join; past 16 plies a +N cell. The Extensions filter keeps only paths to an extension.",
+      "cases": [
+      {"args":[false],"out":["- @0: c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5 Nb3 Be6","0.9 @10: h5(rare)","0.8 @9: Bg5 e6 f4 Qb6","2.9 @10: Nbd7(mistake)","0.8 @9: h3 e5 Nde2 h5 g3 h4(rare)","0.1 @2: Nc6 d4 cxd4 Nxd4 Nf6 Nc3 d6 Bg5 Qa5(rare)"]},
+      {"args":[true],"out":["- @0: c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 h5(rare)","0.8 @9: Bg5 Nbd7(mistake)","0.8 @9: h3 e5 Nde2 h5 g3 h4(rare)","0.1 @2: Nc6 d4 cxd4 Nxd4 Nf6 Nc3 d6 Bg5 Qa5(rare)"]}
+      ]
+    },
+    {
+      "fn": "extensionGraph.extensionRoots",
+      "about": "Every extension's first move off the book, top of the tree first: what Keep and Remove act on.",
+      "cases": [
+      {"args":[],"out":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 h5 (rare)","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bg5 Nbd7 (mistake)","e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3 d6 Bg5 Qa5 (rare)","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 h3 e5 Nde2 h5 g3 h4 (rare)"]}
+      ]
+    },
+    {
+      "fn": "extensionGraph.orderedKids",
+      "about": "A position's moves in the order the graph draws them.",
+      "cases": [
+      {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"],"out":["Be3","Bg5","h3"]},
+      {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3"],"out":["e5","h5"]},
+      {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bg5"],"out":["e6","Nbd7"]},
+      {"args":["e4 c5"],"out":["Nf3"]}
+      ]
+    },
+    {
+      "fn": "extensionGraph.keptCurrent",
+      "about": "A kept extension stays reviewed until a move under it is added after the keep.",
+      "cases": [
+      {"args":[null,100],"out":false},
+      {"args":[200,100],"out":true},
+      {"args":[200,300],"out":false},
+      {"args":[50,100],"out":false}
+      ]
+    },
+    {
+      "fn": "boardBuilder.bookChoices",
+      "about": "Play on the board's choices: the book's moves at 5% or more, most played first.",
+      "cases": [
+      {"args":[""],"out":["e4 0.475","d4 0.314","Nf3 0.102","c4 0.057"]},
+      {"args":["e4"],"out":["c5 0.354","e5 0.264","e6 0.118","c6 0.109"]},
+      {"args":["d4 Nf6 c4 g6"],"out":["Nc3 0.762","Nf3 0.113","g3 0.078"]},
+      {"args":["e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O h3 Nb8 d4 Nbd7 c4 c6 cxb5 axb5"],"out":[]}
+      ]
+    },
+    {
+      "fn": "boardBuilder.stylePick",
+      "about": "The move each style highlights among the book moves (Popular, Solid, Attack, Gambit, Fianchetto), or none when nothing fits; most played breaks ties. A style is shown when it would pick a different move, or is the one picked.",
+      "cases": [
+      {"args":[""],"out":{"picks":{"popular":"e4","solid":"Nf3","attack":"e4","gambit":null,"fianchetto":null},"shown":["popular","solid"],"arrows":["e4","d4","Nf3"]}},
+      {"args":["e4"],"out":{"picks":{"popular":"c5","solid":"c6","attack":"c5","gambit":null,"fianchetto":null},"shown":["popular","solid"],"arrows":["c5","e5","e6"]}},
+      {"args":["e4 e5"],"out":{"picks":{"popular":"Nf3","solid":"Nf3","attack":"Nf3","gambit":null,"fianchetto":null},"shown":["popular"],"arrows":["Nf3"]}},
+      {"args":["e4 e5 Nf3 Nc6"],"out":{"picks":{"popular":"Bb5","solid":"Bb5","attack":"Bc4","gambit":null,"fianchetto":null},"shown":["popular","attack"],"arrows":["Bb5","Bc4","Nc3"]}},
+      {"args":["d4"],"out":{"picks":{"popular":"Nf6","solid":"d5","attack":"Nf6","gambit":null,"fianchetto":null},"shown":["popular","solid"],"arrows":["Nf6","d5"]}},
+      {"args":["d4 d5"],"out":{"picks":{"popular":"c4","solid":"Bf4","attack":"Nc3","gambit":null,"fianchetto":null},"shown":["popular","solid","attack"],"arrows":["c4","Nf3","Bf4"]}},
+      {"args":["e4 c5"],"out":{"picks":{"popular":"Nf3","solid":"c3","attack":"Nf3","gambit":null,"fianchetto":"Nc3"},"shown":["popular","solid","fianchetto"],"arrows":["Nf3","Nc3","c3"]}},
+      {"args":["d4 Nf6 c4"],"out":{"picks":{"popular":"e6","solid":"e6","attack":"g6","gambit":"c5","fianchetto":"g6"},"shown":["popular","attack","gambit","fianchetto"],"arrows":["e6","g6","c5"]}}
+      ]
+    },
+    {
+      "fn": "boardBuilder.goals",
+      "about": "The opening's three jobs for a side, read off the position: minor pieces still at home, castled or not, center pawns against the other side's.",
+      "cases": [
+      {"args":["","w"],"out":["Develop: Nb1 Bc1 Bf1 Ng1","Castle: not yet","Center: —"]},
+      {"args":["","b"],"out":["Develop: Nb8 Bc8 Bf8 Ng8","Castle: not yet","Center: —"]},
+      {"args":["e4 e5 Nf3 Nc6 Bc4 Bc5 O-O Nf6 d3","w"],"out":["Develop: Nb1 Bc1","Castle: done","Center: d3 e4 vs e5"]},
+      {"args":["e4 e5 Nf3 Nc6 Bc4 Bc5 O-O Nf6 d3","b"],"out":["Develop: Bc8","Castle: not yet","Center: e5 vs d3 e4"]},
+      {"args":["d4 d5 c4 dxc4 e4 e5 Nf3 exd4 Bxc4 Nc6 O-O Be6","w"],"out":["Develop: Nb1 Bc1","Castle: done","Center: e4 vs d4"]},
+      {"args":["d4 d5 c4 dxc4 e4 e5 Nf3 exd4 Bxc4 Nc6 O-O Be6","b"],"out":["Develop: Bf8 Ng8","Castle: not yet","Center: d4 vs e4"]}
+      ]
+    }
+  ]
+}

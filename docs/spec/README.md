@@ -58,3 +58,4 @@ constant in `spec/constants.json` is what counts.
 | [play.md](play.md) | PLAY | A game against the engine: strengths, the opening walk-in, games kept, Save this opening |
 | [playbook.md](playbook.md) | BOOK | The Playbook tree, move sources, extension kinds, the prepared floor, mistakes |
 | [run.md](run.md) | RUN | A Survival run, which is also every Autopilot round: prep, the book phase, misses, pops, blunders and the end |
+| [tools.md](tools.md) | TOOL | Stats, Import and Analysis, the Extensions review, the Save sheet, Play on the board |

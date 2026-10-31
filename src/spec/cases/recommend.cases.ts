@@ -1,3 +1,5 @@
+import { applySan, positionKey, START_FEN } from "../../chess/core";
+import type { RepairItem } from "../../model/repair";
 import { addLine, createRepertoire } from "../../model/repertoire";
 import { openingTree } from "../../model/openingTree";
 import { referenceIndex } from "../../model/referenceIndex";
@@ -46,6 +48,8 @@ interface Situation {
   starred: string[];
   /** Runs already played in the selection, by the line each ran, a day apart and ending an hour before. */
   played: string[];
+  /** Positions your games or the mistakes log say you slipped off your prep at, by the line to them. */
+  slipped?: string[];
 }
 
 function rep(color: "w" | "b", lines: string[]): Repertoire {
@@ -57,6 +61,29 @@ function rep(color: "w" | "b", lines: string[]): Repertoire {
   for (const line of lines) out = addLine(out, line.split(" "), "book").rep;
   for (const node of Object.values(out.nodes)) node.addedAt = T - 10 * DAY;
   return out;
+}
+
+/** An off-prep repair at the position a line reaches, for the side to move there. */
+function slipAt(line: string, reps: Repertoire[]): RepairItem {
+  const path = line.split(" ");
+  const fen = path.reduce((f, san) => applySan(f, san)!.after, START_FEN);
+  const color = path.length % 2 === 0 ? "w" : "b";
+  return {
+    id: line,
+    kind: "offprep",
+    source: "games",
+    repertoireId: reps.find((r) => r.color === color)?.id ?? "",
+    color,
+    key: positionKey(fen),
+    fen,
+    path,
+    lineText: line,
+    games: 2,
+    results: { wins: 0, draws: 0, losses: 2 },
+    played: [{ san: "h3", count: 2 }],
+    expected: [],
+    weight: 3,
+  };
 }
 
 function recommendIn(s: Situation) {
@@ -102,7 +129,7 @@ function recommendIn(s: Situation) {
     selection: s.selection,
     reps,
     cards,
-    repairs: [],
+    repairs: (s.slipped ?? []).map((line) => slipAt(line, reps)),
     score,
     seen: seenIn(score),
     starred: s.starred,
@@ -232,6 +259,32 @@ const SITUATIONS: [Situation][] = [
     cards: [{ prefix: "", due: true }],
     starred: [QGD.split(" ").slice(0, 4).join(" ")],
     played: [ITALIAN, QGD],
+  }),
+  // A position you slipped off your prep at counts as due, whatever its card says.
+  at({
+    white: [ITALIAN, QGD],
+    cards: [{ prefix: "", due: false }],
+    played: [ITALIAN, QGD],
+  }),
+  at({
+    white: [ITALIAN, QGD],
+    cards: [{ prefix: "", due: false }],
+    played: [ITALIAN, QGD],
+    slipped: ["d4 d5 c4 e6 Nc3 Nf6"],
+  }),
+  at({
+    white: [ITALIAN, QGD],
+    cards: [{ prefix: "", due: false }],
+    played: [ITALIAN, QGD],
+    slipped: [
+      "d4 d5",
+      "d4 d5 c4 e6",
+      "d4 d5 c4 e6 Nc3 Nf6",
+      "e4 e5",
+      "e4 e5 Nf3 Nc6",
+      "e4 e5 Nf3 Nc6 Bc4 Bc5",
+      "e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6",
+    ],
   }),
 ];
 

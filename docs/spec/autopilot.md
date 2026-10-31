@@ -54,6 +54,15 @@ Test steers toward the lines you would meet most; Review toward your weakest.
 Source: `autopilot.LEAN_FOR`, `autopilot.survivalPlanFor`
 Cases: `const:LEAN_FOR`
 
+**AUTO-18** · port
+A position you slipped off your prep at counts as due whatever its card
+says: one your imported games went off prep at, or one in the mistakes log,
+within the selection. Positions you kept reaching with nothing prepared do
+not count. One slip alone is not enough to beat a Test; a few in one opening
+turn the round into a Review of it.
+Source: `recommend.recommend` (slipped), `store/recommendation.evidenceIn`, `repair.buildRepairs`
+Cases: `recommend.recommend`, `repair.buildRepairs`
+
 ## Where a run starts
 
 **AUTO-8** · port
