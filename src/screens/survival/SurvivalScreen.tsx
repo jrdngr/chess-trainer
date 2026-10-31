@@ -1007,24 +1007,16 @@ export function SurvivalScreen({
               Combo ×{comboMultiplier(game.state.extras.combo)}
             </div>
           )}
-          {plan ? (
-            // Autopilot's way out, there from the first move: ending a round at
-            // the end of your prep, or after a slip, still gets the end screen.
-            // Quiet, since playing on is the game.
-            <button
-              className="btn sm soft mt-12"
-              style={{ color: 'var(--text-2)' }}
-              onClick={() => finish(game.state, { kind: 'ended' })}
-            >
-              End round
-            </button>
-          ) : (
-            prepStatus === 'off' && (
-              <button className="btn sm mt-8" onClick={() => finish(game.state, { kind: 'ended' })}>
-                End run
-              </button>
-            )
-          )}
+          {/* The way out, there from the first move: ending at the end of your
+              prep, or after a slip, still gets the end screen. Quiet, since
+              playing on is the game. */}
+          <button
+            className="btn sm soft mt-12"
+            style={{ color: 'var(--text-2)' }}
+            onClick={() => finish(game.state, { kind: 'ended' })}
+          >
+            {plan ? 'End round' : 'End run'}
+          </button>
           {game.state.misses.length > 0 && (
             <div className="ctx">
               {game.state.misses.length} miss{game.state.misses.length === 1 ? '' : 'es'} so far
