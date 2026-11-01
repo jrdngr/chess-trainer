@@ -27,7 +27,7 @@ struct AutopilotView: View {
       if analyzing, let model {
         AnalysisTab(tree: tree, index: index, line: model.run.played, orientation: model.run.color) { analyzing = false }
       } else if let growth {
-        GrowthView(model: growth, onNext: next)
+        GrowthView(model: growth, onClose: exit, onNext: next)
       } else if let model {
         if model.phase == .over, let finish = model.finish {
           EndView(model: model, finish: finish, onNext: next, onGrow: grow, onAnalyze: { analyzing = true }, onExit: exit)

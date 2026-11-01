@@ -30,14 +30,15 @@ struct GrowthView: View {
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
 
-  /// Autopilot's batch, as it opens from the end of a run.
-  init(model: GrowthModel, onNext: @escaping () -> Void) {
-    self.init(model: model, exits: Exits(nextRound: onNext, close: onNext))
+  /// Autopilot's batch, as it opens from the end of a run. Close leaves the
+  /// mode, as the web's `onExit` does; the next round is its own button.
+  init(model: GrowthModel, onClose: @escaping () -> Void, onNext: @escaping () -> Void) {
+    self.init(model: model, exits: Exits(nextRound: onNext, close: onClose))
   }
 
   /// Survival's batch: the same, its way out named for where it goes.
-  init(model: GrowthModel, nextLabel: String, onNext: @escaping () -> Void) {
-    self.init(model: model, exits: Exits(nextRound: onNext, nextLabel: nextLabel, close: onNext))
+  init(model: GrowthModel, nextLabel: String, onClose: @escaping () -> Void, onNext: @escaping () -> Void) {
+    self.init(model: model, exits: Exits(nextRound: onNext, nextLabel: nextLabel, close: onClose))
   }
 
   init(model: GrowthModel, exits: Exits) {
