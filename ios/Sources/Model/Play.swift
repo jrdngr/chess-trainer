@@ -26,9 +26,11 @@ public struct Level: Equatable, Sendable {
 /// The ratings a level can be set to.
 public let MIN_RATING = 600, MAX_RATING = 2200
 
-/// Anchor points the levels are drawn between: rating, depth, temperature.
-private let LEVEL_ANCHORS: [(rating: Int, depth: Int, temperature: Double)] = [
-  (600, 1, 400), (800, 2, 300), (1200, 3, 180), (1600, 5, 110), (2000, 7, 60), (2200, 8, 45),
+/// Anchor points the levels are drawn between: rating, depth, temperature,
+/// and how many candidates it weighs (more for lower ratings, so a poor
+/// move is among them).
+private let LEVEL_ANCHORS: [(rating: Int, depth: Int, temperature: Double, multiPv: Int)] = [
+  (600, 1, 700, 20), (800, 2, 500, 16), (1200, 3, 280, 12), (1600, 5, 150, 8), (2000, 7, 75, 6), (2200, 8, 55, 5),
 ]
 
 /// The level that plays like a rating, between the anchors.
@@ -38,9 +40,11 @@ public func levelFor(rating: Int) -> Level {
   let lower = max(0, upper - 1)
   let a = LEVEL_ANCHORS[lower], b = LEVEL_ANCHORS[upper]
   let t = b.rating == a.rating ? 0 : Double(r - a.rating) / Double(b.rating - a.rating)
-  let depth = Int((Double(a.depth) + t * Double(b.depth - a.depth)).rounded())
+  func between(_ x: Int, _ y: Int) -> Int { Int((Double(x) + t * Double(y - x)).rounded()) }
   let temperature = a.temperature + t * (b.temperature - a.temperature)
-  return Level(id: String(r), name: String(r), rating: r, depth: depth, multiPv: 8, temperature: temperature)
+  return Level(
+    id: String(r), name: String(r), rating: r, depth: between(a.depth, b.depth), multiPv: between(a.multiPv, b.multiPv),
+    temperature: temperature)
 }
 
 /// The levels Play offers.
