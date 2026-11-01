@@ -38,7 +38,7 @@ struct AutopilotView: View {
         VStack(spacing: 12) {
           Text("Nothing to practice yet").font(.headline).foregroundStyle(Theme.text)
           Text("Your Playbook has no lines in this selection.").foregroundStyle(Theme.text2)
-          Button("Back", action: onExit).buttonStyle(.bordered)
+          Button("Back", action: onExit).buttonStyle(PlayButtonStyle(kind: .primary, height: 56, radius: 16, font: 17, block: true))
         }
       } else {
         ProgressView().tint(Theme.text2)

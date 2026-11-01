@@ -28,6 +28,7 @@ struct StarterView: View {
             .padding(16)
             .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
           }
+          .buttonStyle(.plain)
         }
       }
       .padding()

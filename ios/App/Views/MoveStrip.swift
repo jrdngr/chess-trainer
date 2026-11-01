@@ -57,7 +57,7 @@ struct MoveStrip: View {
       Image(systemName: icon).font(.system(size: 16, weight: .semibold)).frame(width: 38, height: 38)
         .background(Circle().fill(Theme.surface))
     }
-    .foregroundStyle(Theme.text).disabled(disabled).opacity(disabled ? 0.4 : 1)
+    .foregroundStyle(Theme.text).buttonStyle(.plain).disabled(disabled).opacity(disabled ? 0.4 : 1)
   }
 
   private func chip(_ item: StripItem) -> some View {

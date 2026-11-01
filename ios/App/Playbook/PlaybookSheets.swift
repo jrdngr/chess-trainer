@@ -128,8 +128,7 @@ struct OpeningMenu: View {
             toasts.show("Deleted \(line.removes) move\(line.removes == 1 ? "" : "s")", action: ("Undo", { store.update { $0.undo(undo) } }))
           }
         }
-        .font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.bad).padding(.horizontal, 12).padding(.vertical, 6)
-        .background(Capsule().fill(Theme.bad.opacity(0.14)))
+        .buttonStyle(PlayButtonStyle(kind: .danger, height: 38, radius: 11, font: 14))
       } else {
         IconButton(icon: "trash", size: 18, plain: true) { confirmingLine = line.tipId }
       }

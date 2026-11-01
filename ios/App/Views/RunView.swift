@@ -117,7 +117,7 @@ struct RunView: View {
         Button(action: onExit) {
           Image(systemName: "xmark").font(.headline).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
         }
-        .foregroundStyle(Theme.text)
+        .foregroundStyle(Theme.text).buttonStyle(.plain)
         Spacer()
         let n = Int(JSRound(model.ratingGained))
         Text(n < 0 ? "\u{2212}\(-n)" : "+\(n)")
@@ -135,7 +135,8 @@ struct RunView: View {
       VStack(spacing: 12) {
         Label(endingTitle(model.session.ending!, model.run.played.count), systemImage: "xmark")
           .foregroundStyle(Theme.bad).font(.headline)
-        Button("Continue") { model.continueToEnd() }.buttonStyle(.borderedProminent).tint(Theme.accent)
+        Button { model.continueToEnd() } label: { HStack(spacing: 8) { Text("Continue"); Icon(name: "next", size: 18) } }
+          .buttonStyle(PlayButtonStyle(kind: .primary, block: true))
         let _ = blunder
       }
     } else {
@@ -165,9 +166,7 @@ struct RunView: View {
           Text("Combo \u{00d7}\(multiplier)").font(.subheadline.bold()).foregroundStyle(Theme.good)
         }
         Button(survival ? "End run" : "End round") { model.endRound() }
-          .font(.subheadline.bold()).foregroundStyle(Theme.text2)
-          .padding(.horizontal, 16).padding(.vertical, 9)
-          .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface)).padding(.top, 8)
+          .buttonStyle(PlayButtonStyle(kind: .soft, height: 38, radius: 11, font: 14)).padding(.top, 8)
         let misses = model.session.state.misses.count
         if misses > 0 {
           Text("\(misses) miss\(misses == 1 ? "" : "es") so far").font(.footnote).foregroundStyle(Theme.text2)

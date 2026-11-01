@@ -78,8 +78,8 @@ struct RepertoireBrowser: View {
                 Text(ourTurn ? "Your move" : "Opponent reply").font(.system(size: 12)).foregroundStyle(Theme.text3)
               }
               Spacer()
-              Button("Cancel") { self.pending = nil }.buttonStyle(.bordered).tint(Theme.text2)
-              Button("Add") { commit(rep, pathSans, pending) }.buttonStyle(.borderedProminent).tint(Theme.accent)
+              Button("Cancel") { self.pending = nil }.buttonStyle(PlayButtonStyle(height: 38, radius: 11, font: 14))
+              Button("Add") { commit(rep, pathSans, pending) }.buttonStyle(PlayButtonStyle(kind: .primary, height: 38, radius: 11, font: 14))
             }
             .padding(14).background(RoundedRectangle(cornerRadius: 18).fill(Theme.accent.opacity(0.14))).padding(.top, 8)
           }

@@ -154,21 +154,20 @@ struct EndView: View {
         }
         Button { onGrow(offer) } label: {
           Label(offer.kind == "opening" ? "Grow this opening" : "Grow this line", systemImage: "plus")
-            .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 14)
         }
-        .background(RoundedRectangle(cornerRadius: 18).fill(Theme.accent)).foregroundStyle(Theme.accentInk)
+        .buttonStyle(PlayButtonStyle(kind: .accent, block: true))
       }
-      HStack(spacing: 12) {
+      HStack(spacing: 8) {
         if blunder != nil || isEnded {
           Button(action: onAnalyze) {
-            Label("Analyze", systemImage: "magnifyingglass").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 14)
+            Label("Analyze", systemImage: "magnifyingglass")
           }
-          .background(RoundedRectangle(cornerRadius: 18).fill(Theme.surface)).foregroundStyle(Theme.text)
+          .buttonStyle(PlayButtonStyle(height: 52, block: true))
         }
         Button(action: onNext) {
-          HStack { Text(survival ? "Next run" : "Next round"); Image(systemName: "chevron.right") }.font(.headline).frame(maxWidth: .infinity).padding(.vertical, 14)
+          HStack(spacing: 8) { Text(survival ? "Next run" : "Next round"); Icon(name: "next", size: 18) }
         }
-        .background(RoundedRectangle(cornerRadius: 18).fill(Color(hex: 0xf5f5f7))).foregroundStyle(Theme.background)
+        .buttonStyle(PlayButtonStyle(kind: .primary, height: 52, block: true))
       }
       MoveStrip(items: strip, cursor: cursor, max: last, onSeek: seek)
       ratingCard
@@ -280,7 +279,7 @@ struct EndView: View {
       Button(action: onExit) {
         Image(systemName: "xmark").font(.headline).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
       }
-      .foregroundStyle(Theme.text)
+      .foregroundStyle(Theme.text).buttonStyle(.plain)
       Spacer()
       Text(openingName(model.tree, model.openingId)).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
       Spacer()

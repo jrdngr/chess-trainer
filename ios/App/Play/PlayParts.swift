@@ -29,20 +29,23 @@ struct PlayAppBar<Trailing: View>: View {
 
 /// The web app's `.btn`: a filled, rounded button.
 struct PlayButtonStyle: ButtonStyle {
-  /// `.primary`, `.soft`, the plain `.btn`, `.accent`, and `.bare` for `.btn.plain`.
-  enum Kind { case primary, soft, plain, accent, bare }
+  /// `.primary`, `.soft`, the plain `.btn`, `.accent`, `.danger`, and `.bare` for `.btn.plain`.
+  enum Kind { case primary, soft, plain, accent, bare, danger }
   var kind = Kind.plain
   var height: CGFloat = 50
   var radius: CGFloat = 14
   var font: CGFloat = 16
+  /// `.block`: as wide as its container.
+  var block = false
   @Environment(\.isEnabled) private var enabled
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.system(size: font, weight: .semibold))
       .foregroundStyle(ink)
-      .padding(.horizontal, 20).frame(minHeight: height)
+      .padding(.horizontal, height < 44 ? 14 : 20).frame(maxWidth: block ? .infinity : nil, minHeight: height)
       .background(RoundedRectangle(cornerRadius: radius).fill(fill))
+      .contentShape(RoundedRectangle(cornerRadius: radius))
       .opacity(enabled ? 1 : 0.35)
       .scaleEffect(configuration.isPressed ? 0.97 : 1)
   }
@@ -52,6 +55,7 @@ struct PlayButtonStyle: ButtonStyle {
     case .primary: SwiftUI.Color(hex: 0x0b0b0e)
     case .accent: Theme.accentInk
     case .bare: Theme.text2
+    case .danger: Theme.bad
     default: Theme.text
     }
   }
@@ -63,6 +67,7 @@ struct PlayButtonStyle: ButtonStyle {
     case .plain: Theme.surface2
     case .accent: Theme.accent
     case .bare: .clear
+    case .danger: Theme.bad.opacity(0.14)
     }
   }
 }

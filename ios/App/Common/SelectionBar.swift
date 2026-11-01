@@ -159,8 +159,12 @@ struct QuickPicker: View {
             }
           }
           if mine.count > Self.favoritesShown {
-            Button(showAll ? "Show fewer" : "Show all \(mine.count)") { showAll.toggle() }
-              .font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text2).frame(maxWidth: .infinity).padding(10)
+            Button { showAll.toggle() } label: {
+              Text(showAll ? "Show fewer" : "Show all \(mine.count)")
+                .font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text2).frame(maxWidth: .infinity).padding(10)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
           }
         }
         section("First move")

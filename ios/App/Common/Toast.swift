@@ -40,9 +40,12 @@ struct ToastHost: View {
         HStack(spacing: 14) {
           Text(toast.message).font(.system(size: 14, weight: .semibold)).foregroundStyle(SwiftUI.Color(hex: 0x0b0b0e))
           if let action = toast.action {
-            Button(action.label) { toasts.run() }
-              .font(.system(size: 13.5, weight: .bold)).foregroundStyle(SwiftUI.Color(hex: 0xf5f5f7))
-              .padding(.horizontal, 14).padding(.vertical, 7).background(Capsule().fill(SwiftUI.Color(hex: 0x0b0b0e)))
+            Button { toasts.run() } label: {
+              Text(action.label)
+                .font(.system(size: 13.5, weight: .bold)).foregroundStyle(SwiftUI.Color(hex: 0xf5f5f7))
+                .padding(.horizontal, 14).padding(.vertical, 7).background(Capsule().fill(SwiftUI.Color(hex: 0x0b0b0e)))
+            }
+            .buttonStyle(.plain)
           }
         }
         .padding(.leading, 18).padding(.trailing, toast.action == nil ? 18 : 6).padding(.vertical, toast.action == nil ? 11 : 6)

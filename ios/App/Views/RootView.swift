@@ -150,16 +150,3 @@ struct RootView: View {
   }
 }
 
-/// A mode not ported yet.
-struct ComingSoon: View {
-  let mode: Mode
-  let onExit: () -> Void
-
-  var body: some View {
-    VStack(spacing: 12) {
-      Text("Not here yet").font(.headline).foregroundStyle(Theme.text)
-      Text("This mode is still being ported.").foregroundStyle(Theme.text2)
-      Button("Back", action: onExit).buttonStyle(.bordered)
-    }
-  }
-}
