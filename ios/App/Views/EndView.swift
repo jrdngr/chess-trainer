@@ -153,7 +153,7 @@ struct EndView: View {
           Text(text).font(.subheadline).foregroundStyle(Theme.text).frame(maxWidth: .infinity, alignment: .leading)
         }
         Button { onGrow(offer) } label: {
-          Label(offer.kind == "opening" ? "Grow this opening" : "Grow this line", systemImage: "plus")
+          Label(offer.kind == "line" && offer.onLine ? "Grow this line" : "Grow this opening", systemImage: "plus")
         }
         .buttonStyle(PlayButtonStyle(kind: .accent, block: true))
       }

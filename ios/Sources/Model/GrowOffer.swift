@@ -128,18 +128,11 @@ private func singleRow(_ rep: Repertoire, _ opening: OpeningNode, depth: Int, to
     topShare: topShare, starred: false, urgency: 0, score: 0, holes: holes, ends: ends)
 }
 
-/// Where growing an opening starts: the position the round ended on, else
-/// its most urgent gap, past Growth's settings when there is none within.
-public func growLaunch(_ rep: Repertoire, _ index: ReferenceIndex, _ tree: OpeningTree, _ opening: OpeningNode, _ played: [String], minShare: Double, maxPly: Int, starred: [String]) -> GrowLaunch? {
-  let found = holeAtEnd(rep, index, played, maxPly)
-  let hole = found.flatMap { holePastBook(index, $0) ? nil : $0 }
-  let tip = found == nil ? endAtEnd(rep, played, maxPly) : nil
-  if let end = tip.flatMap({ pastTheBook(index, $0.fen) ? nil : $0 }) {
-    return GrowLaunch(opening: opening, row: singleRow(rep, opening, depth: end.path.count, topShare: 0, holes: [], ends: [end]), hole: nil, widened: nil)
-  }
-  if let hole {
-    return GrowLaunch(opening: opening, row: singleRow(rep, opening, depth: hole.path.count, topShare: hole.share, holes: [hole], ends: []), hole: hole, widened: nil)
-  }
+/// Where growing an opening starts: Growth's own pick for the opening, the
+/// same one its lobby would start, past Growth's settings when there is none
+/// within. Where the round ended plays no part, so a one-line opening widens
+/// at its early, common replies before any line gets longer (owner, 11-01).
+public func growLaunch(_ rep: Repertoire, _ index: ReferenceIndex, _ tree: OpeningTree, _ opening: OpeningNode, minShare: Double, maxPly: Int, starred: [String]) -> GrowLaunch? {
   let region = (tree: tree, node: opening)
   if let within = recommended(growthRows([rep], index, GrowthOptions(minShare: minShare, maxPly: maxPly, starred: starred, region: region))) {
     return GrowLaunch(opening: opening, row: within, hole: nil, widened: nil)
@@ -151,6 +144,13 @@ public func growLaunch(_ rep: Repertoire, _ index: ReferenceIndex, _ tree: Openi
   return nil
 }
 
+/// Growth's pick starts on the line just played: the reply the round ended
+/// on, or the reply to your last move.
+public func startsOnLine(_ launch: GrowLaunch, _ played: [String]) -> Bool {
+  guard let hole = firstHole(launch.row) else { return false }
+  return hole.path == played || hole.path + [hole.san] == played
+}
+
 /// The end-of-round way into Growth: the opening, or this line.
 public struct GrowOffer: Sendable {
   /// "opening" or "line".
@@ -158,24 +158,25 @@ public struct GrowOffer: Sendable {
   /// Why the card offers it; nil for a stub.
   public var text: String?
   public var launch: GrowLaunch
+  /// Growing starts on the line just played, so the button says "Grow this line".
+  public var onLine: Bool = false
 }
 
 /// What a clean end of prep earns, read after the round is logged.
 public func growOfferAt(rep: Repertoire, index: ReferenceIndex, tree: OpeningTree, opening: OpeningNode, played: [String], rounds: [RoundRecord], minShare: Double, maxPly: Int, starred: [String], stub: Bool = false) -> GrowOffer? {
-  if stub {
-    // Growing a stub starts on your own last move.
-    let mine = played.count - (movedBy(played.count - 1, rep.color) ? 0 : 1)
-    if let launch = growLaunch(rep, index, tree, opening, Array(played.prefix(max(0, mine))), minShare: minShare, maxPly: maxPly, starred: starred) {
-      return GrowOffer(kind: "opening", text: nil, launch: launch)
-    }
+  func launch() -> GrowLaunch? { growLaunch(rep, index, tree, opening, minShare: minShare, maxPly: maxPly, starred: starred) }
+  if stub, let launch = launch() {
+    return GrowOffer(kind: "opening", text: nil, launch: launch)
   }
-  if readyToGrow(rep, tree, opening, rounds), let launch = growLaunch(rep, index, tree, opening, played, minShare: minShare, maxPly: maxPly, starred: starred) {
+  if readyToGrow(rep, tree, opening, rounds), let launch = launch() {
     let more = launch.widened?.why == "rarer" ? " Grow it with rarer replies." : launch.widened != nil ? " Grow it deeper." : ""
     return GrowOffer(kind: "opening", text: "You finish every \(opening.name) line cleanly.\(more)", launch: launch)
   }
+  // Offered where the round ended with room to grow, as before; it grows
+  // wherever Growth's pick is, which is this line only when it is the most urgent.
   let hole = holeAtEnd(rep, index, played, .max)
   let tip = hole == nil ? endAtEnd(rep, played, .max) : nil
   if hole == nil && (tip == nil || pastTheBook(index, tip!.fen)) { return nil }
-  guard let launch = growLaunch(rep, index, tree, opening, played, minShare: minShare, maxPly: .max, starred: starred) else { return nil }
-  return GrowOffer(kind: "line", text: "Grow this line", launch: launch)
+  guard let launch = launch() else { return nil }
+  return GrowOffer(kind: "line", text: "Grow this line", launch: launch, onLine: startsOnLine(launch, played))
 }
