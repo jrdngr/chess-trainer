@@ -74,28 +74,26 @@ struct RootView: View {
         }
       }
     } else {
-      VStack(spacing: 0) {
-        Group {
-          switch tab {
-          case .home: HomeView(tree: tree) { mode = $0 }
-          case .playbook:
-            PlaybookView(tree: tree, index: index, tidyFocus: tidyFocus, onConsumedTidyFocus: { tidyFocus = nil }, onExplore: { sans, side in
-              explore = (sans, side)
-              tab = .analysis
-            }, onDrill: { repId, nodeId, title in
-              guard let rep = store.state.repertoires[repId] else { return }
-              let items = Array(branchItems(rep, nodeId).prefix(40))
-              if items.isEmpty { toasts.show("Nothing to drill") } else { drilling = (items, title) }
-            }, onImport: { importing = true }, onBuild: { building = true })
-          case .stats: StatsView(tree: tree, index: index)
-          case .analysis:
-            AnalysisTab(tree: tree, index: index, line: explore?.sans ?? [], orientation: explore?.side ?? .w)
-              .id(explore?.sans.joined(separator: " ") ?? "")
-          }
-        }
-        .frame(maxHeight: .infinity, alignment: .top)
-        TabBar(tab: $tab, due: countDue(Array(store.state.cards.values)).due)
+      let due = countDue(Array(store.state.cards.values)).due
+      TabView(selection: $tab) {
+        HomeView(tree: tree) { mode = $0 }
+          .tabItem { Label(Tab.home.label, systemImage: Tab.home.symbol) }.tag(Tab.home).badge(due)
+        PlaybookView(tree: tree, index: index, tidyFocus: tidyFocus, onConsumedTidyFocus: { tidyFocus = nil }, onExplore: { sans, side in
+          explore = (sans, side)
+          tab = .analysis
+        }, onDrill: { repId, nodeId, title in
+          guard let rep = store.state.repertoires[repId] else { return }
+          let items = Array(branchItems(rep, nodeId).prefix(40))
+          if items.isEmpty { toasts.show("Nothing to drill") } else { drilling = (items, title) }
+        }, onImport: { importing = true }, onBuild: { building = true })
+          .tabItem { Label(Tab.playbook.label, systemImage: Tab.playbook.symbol) }.tag(Tab.playbook)
+        StatsView(tree: tree, index: index)
+          .tabItem { Label(Tab.stats.label, systemImage: Tab.stats.symbol) }.tag(Tab.stats)
+        AnalysisTab(tree: tree, index: index, line: explore?.sans ?? [], orientation: explore?.side ?? .w)
+          .id(explore?.sans.joined(separator: " ") ?? "")
+          .tabItem { Label(Tab.analysis.label, systemImage: Tab.analysis.symbol) }.tag(Tab.analysis)
       }
+      .tint(Theme.accent)
     }
   }
 
