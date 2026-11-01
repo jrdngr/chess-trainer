@@ -74,10 +74,9 @@ struct RootView: View {
         }
       }
     } else {
-      let due = countDue(Array(store.state.cards.values)).due
       TabView(selection: $tab) {
         HomeView(tree: tree) { mode = $0 }
-          .tabItem { Label(Tab.home.label, systemImage: Tab.home.symbol) }.tag(Tab.home).badge(due)
+          .tabItem { Label(Tab.home.label, systemImage: Tab.home.symbol) }.tag(Tab.home)
         PlaybookView(tree: tree, index: index, tidyFocus: tidyFocus, onConsumedTidyFocus: { tidyFocus = nil }, onExplore: { sans, side in
           explore = (sans, side)
           tab = .analysis
