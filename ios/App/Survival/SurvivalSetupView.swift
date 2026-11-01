@@ -24,6 +24,10 @@ struct SurvivalSetupView: View {
             value: Binding(get: { prefs.steer }, set: { steer in set { $0.steer = steer } }),
             options: SURVIVAL_STEERS.map { ($0, survivalSteerLabel($0)) })
           note(steerNote(prefs.steer))
+          PlaySection(title: "Opponent strength")
+          SegmentedControl(
+            value: Binding(get: { prefs.opponent }, set: { id in set { $0.opponent = id } }),
+            options: [(value: OPPONENT_MATCH, label: "Match me")] + LEVELS.map { (value: $0.id, label: $0.name) })
           PlaySection(title: "Clock")
           SegmentedControl(
             value: Binding(get: { prefs.clock }, set: { clock in set { $0.clock = clock } }),

@@ -21,3 +21,16 @@ jobs:
           ENGINE_BENCH: "1"
       - run: swift test
         working-directory: ios
+
+  # The app itself, which swift test does not build.
+  app:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: xcodegen generate
+        working-directory: ios
+      - run: >-
+          xcodebuild build -project ChessPlaybook.xcodeproj -scheme ChessPlaybookApp
+          -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO -quiet
+        working-directory: ios

@@ -74,10 +74,12 @@ public struct AppState: Equatable, Sendable, Codable {
   public var settings = Settings()
   /// Games imported, and the games played in Play (newest first, ahead of the imports).
   public var importedGames: [ImportedGame] = []
+  /// Your playing strength, from the moves the judge weighed.
+  public var strength = PlayerStrength()
   public init() {}
 
   enum CodingKeys: String, CodingKey {
-    case repertoires, repertoireOrder, cards, score, survival, mistakes, lineCards, log, events, settings, importedGames
+    case repertoires, repertoireOrder, cards, score, survival, mistakes, lineCards, log, events, settings, importedGames, strength
   }
 
   /// A save from before a field existed takes its default.
@@ -95,6 +97,7 @@ public struct AppState: Equatable, Sendable, Codable {
     events = normalizeEvents(try c.decodeIfPresent([AppEvent].self, forKey: .events))
     settings = try c.decodeIfPresent(Settings.self, forKey: .settings) ?? settings
     importedGames = try c.decodeIfPresent([ImportedGame].self, forKey: .importedGames) ?? importedGames
+    strength = try c.decodeIfPresent(PlayerStrength.self, forKey: .strength) ?? strength
   }
 
   public var repertoireList: [Repertoire] { repertoireOrder.compactMap { repertoires[$0] } }

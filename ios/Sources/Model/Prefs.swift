@@ -52,6 +52,19 @@ public struct SurvivalPrefs: Equatable, Sendable, Codable {
   public var combo: Bool
   /// Before your move lands, what it leaves undefended flashes.
   public var undefendedFlash: Bool
+  /// Who plays the other side past the book: `OPPONENT_MATCH` for your own
+  /// strength, or a level's id.
+  public var opponent: String = OPPONENT_MATCH
+}
+
+/// The opponent plays at your own strength.
+public let OPPONENT_MATCH = "match"
+
+extension SurvivalPrefs {
+  /// The level the opponent plays at, given your strength.
+  public func opponentLevel(_ strength: PlayerStrength) -> Level {
+    opponent == OPPONENT_MATCH ? levelMatching(strength) : levelById(opponent)
+  }
 }
 
 public let DEFAULT_SURVIVAL = SurvivalPrefs(
@@ -71,7 +84,8 @@ extension SurvivalPrefs {
       moments: try c.decodeIfPresent(Bool.self, forKey: .moments) ?? d.moments,
       missions: try c.decodeIfPresent(Bool.self, forKey: .missions) ?? d.missions,
       combo: try c.decodeIfPresent(Bool.self, forKey: .combo) ?? d.combo,
-      undefendedFlash: try c.decodeIfPresent(Bool.self, forKey: .undefendedFlash) ?? d.undefendedFlash)
+      undefendedFlash: try c.decodeIfPresent(Bool.self, forKey: .undefendedFlash) ?? d.undefendedFlash,
+      opponent: try c.decodeIfPresent(String.self, forKey: .opponent) ?? d.opponent)
   }
 }
 

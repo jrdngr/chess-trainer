@@ -2,42 +2,80 @@ import ChessCore
 import Foundation
 import Shared
 
-/* Play: a game against the engine, with the opening kept. `src/model/play.ts`.
+/* Play: a game against the engine, with the opening kept.
  *
- * Strength is made here rather than in the engine: a weak level thinks
- * briefly, looks at more candidates, and often takes one that is not the best. */
+ * Strength is made here rather than in the engine, to play like a person of
+ * a given rating: a lower rating searches shallower, so long tactics and
+ * quiet threats go unseen, and picks among the candidates by what each one
+ * costs, so small slips are common and big ones rare. */
 
-/// A Play strength.
+/// A playing strength, named by the rating it plays like.
 public struct Level: Equatable, Sendable {
   public var id: String
   public var name: String
+  public var rating: Int
+  /// How far it looks.
   public var depth: Int
+  /// How many candidate moves it weighs.
   public var multiPv: Int
-  /// How often it declines the best line, 0...1. The rest of the distribution
-  /// is spread over the remaining candidates, nearest first.
-  public var slip: Double
+  /// How readily it gives up centipawns: a move that costs this much is
+  /// e (about 2.7) times less likely than the best.
+  public var temperature: Double
 }
 
-public let LEVELS: [Level] = [
-  Level(id: "casual", name: "Casual", depth: 1, multiPv: 5, slip: 0.65),
-  Level(id: "club", name: "Club", depth: 5, multiPv: 4, slip: 0.3),
-  Level(id: "strong", name: "Strong", depth: 11, multiPv: 3, slip: 0.08),
-  Level(id: "full", name: "Full", depth: 16, multiPv: 1, slip: 0),
+/// The ratings a level can be set to.
+public let MIN_RATING = 600, MAX_RATING = 2200
+
+/// Anchor points the levels are drawn between: rating, depth, temperature.
+private let LEVEL_ANCHORS: [(rating: Int, depth: Int, temperature: Double)] = [
+  (600, 1, 160), (800, 2, 120), (1200, 3, 75), (1600, 5, 45), (2000, 7, 25), (2200, 8, 18),
 ]
 
-public let DEFAULT_LEVEL = "club"
-
-public func levelById(_ id: String) -> Level {
-  LEVELS.first { $0.id == id } ?? LEVELS[1]
+/// The level that plays like a rating, between the anchors.
+public func levelFor(rating: Int) -> Level {
+  let r = max(MIN_RATING, min(MAX_RATING, rating))
+  let upper = LEVEL_ANCHORS.firstIndex { $0.rating >= r } ?? LEVEL_ANCHORS.count - 1
+  let lower = max(0, upper - 1)
+  let a = LEVEL_ANCHORS[lower], b = LEVEL_ANCHORS[upper]
+  let t = b.rating == a.rating ? 0 : Double(r - a.rating) / Double(b.rating - a.rating)
+  let depth = Int((Double(a.depth) + t * Double(b.depth - a.depth)).rounded())
+  let temperature = a.temperature + t * (b.temperature - a.temperature)
+  return Level(id: String(r), name: String(r), rating: r, depth: depth, multiPv: 8, temperature: temperature)
 }
 
-/// Which candidate line to play: weights fall off geometrically from the
-/// best, so a slip usually costs one place. The UCI move, or nil.
+/// The levels Play offers.
+public let LEVELS: [Level] = [800, 1200, 1600, 2000].map { levelFor(rating: $0) }
+
+public let DEFAULT_LEVEL = "1200"
+
+/// Levels saved under their old names.
+private let OLD_LEVELS = ["casual": 800, "club": 1200, "strong": 1600, "full": 2000]
+
+/// A saved level: a rating, or one of the old names.
+public func levelById(_ id: String) -> Level {
+  if let rating = Int(id) ?? OLD_LEVELS[id] { return levelFor(rating: rating) }
+  return levelFor(rating: Int(DEFAULT_LEVEL)!)
+}
+
+/// A line's score in centipawns, mate as a large number.
+private func centipawns(_ line: EngineLine) -> Double? {
+  if let cp = line.cp { return cp }
+  if let mate = line.mate { return mate > 0 ? 10_000 - mate : -10_000 - mate }
+  return nil
+}
+
+/// Which candidate line to play, the UCI move or nil. Each candidate is
+/// weighed by what it costs against the best, so a move that loses a
+/// little is often played and one that loses a piece seldom is.
 public func chooseMove(_ lines: [EngineLine], _ level: Level, _ rand: () -> Double) -> String? {
   let usable = lines.filter { !$0.pv.isEmpty }.jsSorted { Double($0.multipv - $1.multipv) }
   guard let first = usable.first else { return nil }
-  if usable.count == 1 || level.slip <= 0 { return first.pv[0] }
-  let weights = usable.indices.map { $0 == 0 ? 1 - level.slip : level.slip / pow(2, Double($0)) }
+  guard usable.count > 1, level.temperature > 0, let best = centipawns(first) else { return first.pv[0] }
+  // Scores are White's; the best line is the mover's best, so a loss is the distance from it.
+  let weights = usable.map { line -> Double in
+    guard let cp = centipawns(line) else { return 0 }
+    return exp(-min(abs(best - cp), 2000) / level.temperature)
+  }
   var ticket = rand() * weights.reduce(0, +)
   for (i, line) in usable.enumerated() {
     ticket -= weights[i]

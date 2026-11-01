@@ -135,9 +135,68 @@ struct EngineBenchTests {
     var missed: [String] = []
     for c in Self.blunders {
       let fen = walkSan(c.line).fens.last!
-      if let v = await verdict(BasicEngine(), fen, c.san), v.ok { missed.append(c.san) }
+      if let v = await verdict(BasicEngine(), fen, c.san), v.ok { missed.append("\(c.san) (lost \(Int(v.lost)), best \(v.best ?? "?"))") }
     }
     print("BENCH judge: false blunders \(flagged.count)/\(Self.bookMoves.count) \(flagged), missed blunders \(missed.count)/\(Self.blunders.count) \(missed), \(String(format: "%.1f", Date().timeIntervalSince(started)))s")
     #expect(missed.isEmpty)
+  }
+
+  /// Book positions after the first trades, where the opponent plays once the book runs out.
+  static let middlegames = [
+    "r1bqk2r/ppppbppp/3n4/4R3/8/8/PPPP1PPP/RNBQ1BK1 b kq - 0 1",
+    "r1bq1rk1/ppppbppp/3n4/4R3/8/8/PPPP1PPP/RNBQ1BK1 w - - 0 1",
+    "r1bq1rk1/ppppbppp/3n4/4R3/3P4/8/PPP2PPP/RNBQ1BK1 b - - 0 1",
+    "r1bqk2r/ppppbppp/3n4/4n3/8/8/PPPP1PPP/RNBQRBK1 w kq - 0 1",
+    "r1bq1rk1/pppp1ppp/3n1b2/4R3/3P4/8/PPP2PPP/RNBQ1BK1 w - - 0 1",
+    "r1bq1rk1/pppp1ppp/3n1b2/8/3P4/8/PPP1RPPP/RNBQ1BK1 b - - 0 1",
+    "r1bq1rk1/pppp1ppp/3n1b2/8/3P4/8/PPP2PPP/RNBQRBK1 b - - 0 1",
+    "r1bqkb1r/ppp2ppp/2pn4/4p3/3P4/5N2/PPP2PPP/RNBQ1RK1 w kq - 0 1",
+    "r1bqkb1r/ppp2ppp/2pn4/4P3/8/5N2/PPP2PPP/RNBQ1RK1 b kq - 0 1",
+    "r1bqkb1r/ppp2ppp/2p5/4Pn2/8/5N2/PPP2PPP/RNBQ1RK1 w kq - 0 1",
+    "r1bQkb1r/ppp2ppp/2p5/4Pn2/8/5N2/PPP2PPP/RNB2RK1 b kq - 0 1",
+    "r1bk1b1r/ppp2ppp/2p5/4Pn2/8/5N2/PPP2PPP/RNB2RK1 w - - 0 1",
+    "rnbqkb1r/pp2pppp/2p2N2/8/3P4/8/PPP2PPP/R1BQKBNR b KQkq - 0 1",
+    "rnbqkb1r/pp3ppp/2p2p2/8/3P4/8/PPP2PPP/R1BQKBNR w KQkq - 0 1",
+    "r1bk1b1r/ppp2ppp/2p5/4Pn2/8/2N2N2/PPP2PPP/R1B2RK1 b - - 0 1",
+    "rnbqkb1r/ppp1pp1p/6p1/8/3PP3/2n5/PP3PPP/R1BQKBNR w KQkq - 0 1",
+    "rnbqkb1r/ppp1pp1p/6p1/8/3PP3/2P5/P4PPP/R1BQKBNR b KQkq - 0 1",
+    "rnbqk2r/ppp1ppbp/6p1/8/3PP3/2P5/P4PPP/R1BQKBNR w KQkq - 0 1",
+    "r2k1b1r/pppb1ppp/2p5/4Pn2/8/2N2N2/PPP2PPP/R1B2RK1 w - - 0 1",
+    "rnbqkb1r/pp3ppp/2p2p2/8/3P4/2P5/PP3PPP/R1BQKBNR b KQkq - 0 1",
+    "rnbqk2r/pp3ppp/2pb1p2/8/3P4/2P5/PP3PPP/R1BQKBNR w KQkq - 0 1",
+    "r1bqkb1r/pppp1ppp/3n4/1B2n3/8/8/PPPP1PPP/RNBQR1K1 w kq - 0 1",
+    "rnbqk2r/pp3ppp/2pb1p2/8/3P4/2PB4/PP3PPP/R1BQK1NR b KQkq - 0 1",
+    "r1bqk2r/pppp1ppp/2N2n2/8/1b2P3/2N5/PPP2PPP/R1BQKB1R b KQkq - 0 1",
+  ]
+
+  /// What each level's moves cost on average, against a deeper search: how
+  /// human each level plays, to set beside the ratings' expected losses.
+  @Test func levelBench() async {
+    let started = Date()
+    let reference = SearchOptions(maxDepth: 8, timeMs: 800, multiPv: 1)
+    let engine = BasicEngine()
+    var report: [String] = []
+    for level in LEVELS {
+      let rand = mulberry32(seed: Double(level.rating))
+      var total = 0.0, slips = 0, blunders = 0
+      for fen in Self.middlegames {
+        let snap = await engine.analyse(fen, EngineLimits(depth: level.depth, multiPv: level.multiPv))
+        guard let move = chooseMove(snap.lines, level, rand),
+              let best = search(fen, reference, TranspositionTable())?.lines.first else { continue }
+        if move == best.uci { continue }
+        var options = reference
+        options.multiPv = 2
+        options.searchmoves = [best.uci, move]
+        guard let lines = search(fen, options, TranspositionTable())?.lines,
+              let top = lines.first(where: { $0.uci == best.uci }), let mine = lines.first(where: { $0.uci == move }) else { continue }
+        let loss = Double(min(1000, max(0, top.score - mine.score)))
+        total += loss
+        if loss >= 50 { slips += 1 }
+        if loss >= 200 { blunders += 1 }
+      }
+      let n = Double(Self.middlegames.count)
+      report.append(String(format: "%@: avg loss %.0f (expected %.0f), 50+ %d, 200+ %d", level.name, total / n, expectedLoss(Double(level.rating)), slips, blunders))
+    }
+    print("BENCH levels over \(Self.middlegames.count) positions: \(report.joined(separator: " | ")), \(String(format: "%.1f", Date().timeIntervalSince(started)))s")
   }
 }

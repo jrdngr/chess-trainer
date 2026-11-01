@@ -21,9 +21,9 @@ import Testing
   func ids(_ games: [ImportedGame]) -> JSON { games.map { "\($0.id):\($0.source.rawValue)" }.json }
   func color(_ j: JSON) -> Color { Color(rawValue: j.string)! }
 
+  // Levels, move choice and the engine's name on a game no longer match the
+  // web: levels are ratings now. Their own tests are below.
   try check("play", [
-    "play.levelById": { levelById($0[0].string).name.json },
-    "play.chooseMove": { a in chooseMove(lines(a[1].int), levelById(a[0].string), { a[2].number }).json },
     "play.openingLine": { a in openingLine(Array(long.prefix(a[0].int)), color(a[1])).joined(separator: " ").json },
     "play.playedGame": { a in
       let played = playedGame(
@@ -44,5 +44,62 @@ import Testing
       func games(_ j: JSON) -> [ImportedGame] { j.array.map { game($0[0].string, $0[1].string, $0[2].string) } }
       return ids(mergeGames(games(a[0]), games(a[1])))
     },
-  ])
+  ], only: ["play.openingLine", "play.withPlayGame", "play.withPlayGame (cap)", "play.mergeGames"])
+}
+
+/// Candidate lines best first, from White's side, each costing what's given.
+private func candidates(_ losses: [Double]) -> [EngineLine] {
+  losses.enumerated().map { i, loss in EngineLine(multipv: i + 1, depth: 5, cp: 50 - loss, mate: nil, pv: ["m\(i + 1)"]) }
+}
+
+/// How often each candidate is picked over many draws.
+private func picks(_ lines: [EngineLine], _ level: Level) -> [String: Int] {
+  let rand = mulberry32(seed: 7)
+  var counts: [String: Int] = [:]
+  for _ in 0..<4000 { counts[chooseMove(lines, level, rand)!, default: 0] += 1 }
+  return counts
+}
+
+@Test func levelsAreRatings() {
+  #expect(LEVELS.map(\.name) == ["800", "1200", "1600", "2000"])
+  #expect(levelById("1600").rating == 1600)
+  // Saves from before keep a matching strength.
+  #expect(levelById("club").rating == 1200)
+  #expect(levelById("full").rating == 2000)
+  #expect(levelById("nonsense").rating == 1200)
+  // Stronger looks further and gives up less.
+  for (weaker, stronger) in zip(LEVELS, LEVELS.dropFirst()) {
+    #expect(weaker.depth <= stronger.depth)
+    #expect(weaker.temperature > stronger.temperature)
+  }
+  #expect(levelFor(rating: 100).rating == MIN_RATING)
+  #expect(levelFor(rating: 1400).depth == 4)
+}
+
+@Test func slipsAreSmallMoreOftenThanBig() {
+  // Best, a 20cp slip, a piece hung.
+  let lines = candidates([0, 20, 300])
+  let weak = picks(lines, levelFor(rating: 800)), strong = picks(lines, levelFor(rating: 2000))
+  #expect(weak["m2", default: 0] > weak["m3", default: 0])
+  #expect(weak["m3", default: 0] > 0)
+  #expect(strong["m3", default: 0] < 20)
+  #expect(strong["m1", default: 0] > weak["m1", default: 0])
+}
+
+@Test func equalMovesAreEquallyLikely() {
+  let counts = picks(candidates([0, 0]), levelFor(rating: 2000))
+  #expect(abs(counts["m1", default: 0] - counts["m2", default: 0]) < 300)
+}
+
+@Test func mateIsNotPassedUpLightly() {
+  let lines = [
+    EngineLine(multipv: 1, depth: 5, cp: nil, mate: 1, pv: ["mate"]),
+    EngineLine(multipv: 2, depth: 5, cp: 300, mate: nil, pv: ["piece"]),
+  ]
+  #expect(picks(lines, levelFor(rating: 800))["mate", default: 0] == 4000)
+}
+
+@Test func playedGameNamesTheRating() {
+  let game = playedGame(id: "g", color: .w, moves: ["e4", "e5"], result: .win, level: levelById("1600"), at: 0)
+  #expect(game?.black == "Engine (1600)")
 }

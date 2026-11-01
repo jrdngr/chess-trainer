@@ -73,12 +73,6 @@ func snapshotOf(_ fen: String, _ result: DepthResult?, thinking: Bool) -> Engine
   return EngineSnapshot(lines: lines, depth: result?.depth ?? 0, nodes: result?.nodes ?? 0, thinking: thinking, fen: fen)
 }
 
-/* ── the opponent ── */
-
-/// The engine plays the opponent at Club once the book has nothing left.
-/// `Level` and `chooseMove` live in Model's `Play.swift`.
-public let OPPONENT_LEVEL = levelById(DEFAULT_LEVEL)
-
 /// A score as Analysis writes it, in White's frame: "+0.35", "-M3". `formatScore`.
 public func formatScore(_ line: EngineLine) -> String {
   if let mate = line.mate { return "\(mate > 0 ? "" : "-")M\(Int(abs(mate)))" }

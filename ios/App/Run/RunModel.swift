@@ -103,6 +103,10 @@ final class RunModel {
   }
 
   var prefs: SurvivalPrefs { ctx.prefs }
+  /// Who plays the other side past the book. Autopilot's opponent always plays at your strength.
+  var opponentLevel: Level {
+    round != nil ? levelMatching(store.state.strength) : prefs.opponentLevel(store.state.strength)
+  }
   /// With moments, missions or the combo on, a run is scored in points as well as moves.
   var scoredInPoints: Bool { prefs.moments || prefs.missions || prefs.combo }
   /// Announcing or replaying: the board is locked, and the opponent waits.
@@ -234,8 +238,9 @@ final class RunModel {
       }
       // The book has nothing: the engine plays the opponent.
       let fen = self.run.fen
-      let snap = await self.engine.analyse(fen, EngineLimits(depth: OPPONENT_LEVEL.depth, multiPv: OPPONENT_LEVEL.multiPv))
-      let san = chooseMove(snap.lines, OPPONENT_LEVEL, self.picker).flatMap { applyUci(fen, $0)?.san }
+      let level = self.opponentLevel
+      let snap = await self.engine.analyse(fen, EngineLimits(depth: level.depth, multiPv: level.multiPv))
+      let san = chooseMove(snap.lines, level, self.picker).flatMap { applyUci(fen, $0)?.san }
       self.thinking = false
       guard self.live, self.run.fen == fen else { return }
       if let san {
@@ -312,6 +317,7 @@ final class RunModel {
       let judged = await judge(self.engine, base, san: move.san, uci: move.uci, color: color, moments: moments)
       self.pending = nil
       guard self.run.fen == fen else { return }
+      self.store.update { $0.judgedMove(lost: judged.lost) }
       self.apply(judgedMove(self.session, self.ctx, judged, seconds, now))
     }
   }
