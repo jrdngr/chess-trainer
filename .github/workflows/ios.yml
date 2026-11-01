@@ -4,7 +4,7 @@ name: iOS
 # golden cases in spec/. Runs only when either side changes.
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths: ["ios/**", "spec/**", "prototype/src/model/book/book.json", ".github/workflows/ios.yml"]
   pull_request:
     paths: ["ios/**", "spec/**", "prototype/src/model/book/book.json", ".github/workflows/ios.yml"]
@@ -15,5 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: swift --version
+      - run: swift test -c release -Xswiftc -enable-testing --filter EngineBenchTests
+        working-directory: ios
       - run: swift test
         working-directory: ios
