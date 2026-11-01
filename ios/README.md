@@ -79,8 +79,8 @@ one-off script; the constants tests keep them equal to the prototype.
 
 `App/Assets.xcassets/AppIcon.appiconset/AppIcon.png` is a single 1024px
 opaque PNG; iOS masks the corners and scales it down. Its source is
-`Design/app-icon.svg` (three Leitner boxes, the knight card leaving amber for
-green). Re-render the PNG from the SVG after editing it.
+`Design/app-icon.svg` (three Leitner boxes in indigo shades, the knight card
+leaving the middle box for the lightest). Re-render the PNG from the SVG after editing it.
 
 ## Builds and versions
 
