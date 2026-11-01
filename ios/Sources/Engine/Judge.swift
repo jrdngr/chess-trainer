@@ -6,8 +6,10 @@ import Model
 /// async calls. What the position is worth, and what it is worth with your
 /// move forced, both from one search, plus the engine's own move.
 
-/// How long the engine thinks about each question.
+/// How long the engine thinks about each question, at most.
 public let THINK_MS: Double = 700
+/// A search this deep settles a question early: a sound move needs no more.
+public let QUICK_DEPTH = 9
 /// How far a suspected blunder is confirmed: this deep, capped at this long.
 public let CONFIRM_DEPTH = 16
 public let CONFIRM_MS: Double = 4000
@@ -44,7 +46,7 @@ private func scoreOf(_ line: EngineLine) -> Double? {
 
 /// Weigh the position in front of you.
 public func baseline(_ engine: ChessEngine, _ fen: String, moments: Bool) async -> Baseline? {
-  let snap = await engine.analyse(fen, EngineLimits(movetime: THINK_MS, multiPv: moments ? 2 : 1))
+  let snap = await engine.analyse(fen, EngineLimits(depth: QUICK_DEPTH, movetime: THINK_MS, multiPv: moments ? 2 : 1))
   guard let line = snap.lines.first, let cp = scoreOf(line) else { return nil }
   let best = line.pv.first.flatMap { applyUci(fen, $0)?.san }
   let next = moments && snap.lines.count > 1 ? snap.lines[1] : nil
@@ -91,7 +93,7 @@ public func judge(_ engine: ChessEngine, _ base: Baseline, san: String, uci: Str
   ) { snap in
     // A sound move is settled at the quick check.
     guard let verdict = weigh(snap) else { return false }
-    return (verdict.ok || theirs == nil) && clock.elapsed >= THINK_MS
+    return (verdict.ok || theirs == nil) && (clock.elapsed >= THINK_MS || snap.depth >= QUICK_DEPTH)
   }
   let verdict = weigh(snap)
   var judged = Judgement(

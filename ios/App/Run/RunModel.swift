@@ -212,6 +212,8 @@ final class RunModel {
   func stop() {
     for task in tasks { task.cancel() }
     tasks.removeAll()
+    reply?.search.cancel()
+    reply = nil
   }
 
   /* ── turns ── */
@@ -224,6 +226,20 @@ final class RunModel {
     } else if miss == nil {
       opponent()
     }
+  }
+
+  /// The opponent's own engine, so its reply can be searched while the judge
+  /// weighs your move.
+  private static let replyEngine = BasicEngine()
+  /// The reply searched ahead, for the position after your move.
+  private var reply: (fen: String, search: Task<EngineSnapshot, Never>)?
+
+  /// Start searching the opponent's reply to your move straight away.
+  private func searchReply(after fen: String) {
+    reply?.search.cancel()
+    let level = opponentLevel
+    let engine = Self.replyEngine
+    reply = (fen, Task { await engine.analyse(fen, EngineLimits(depth: level.depth, multiPv: level.multiPv)) })
   }
 
   private func opponent() {
@@ -239,7 +255,14 @@ final class RunModel {
       // The book has nothing: the engine plays the opponent.
       let fen = self.run.fen
       let level = self.opponentLevel
-      let snap = await self.engine.analyse(fen, EngineLimits(depth: level.depth, multiPv: level.multiPv))
+      let ready = self.reply.flatMap { $0.fen == fen ? $0.search : nil }
+      self.reply = nil
+      let snap: EngineSnapshot
+      if let ready {
+        snap = await ready.value
+      } else {
+        snap = await Self.replyEngine.analyse(fen, EngineLimits(depth: level.depth, multiPv: level.multiPv))
+      }
       let san = chooseMove(snap.lines, level, self.picker).flatMap { applyUci(fen, $0)?.san }
       self.thinking = false
       guard self.live, self.run.fen == fen else { return }
@@ -305,6 +328,7 @@ final class RunModel {
       return
     }
     pending = move
+    searchReply(after: move.after)
     let fen = run.fen, color = run.color, moments = prefs.moments
     spawn { [weak self] in
       guard let self else { return }
