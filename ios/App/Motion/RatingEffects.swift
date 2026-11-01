@@ -5,11 +5,12 @@ import SwiftUI
 
 /// `ratingDelta`: the change dropping in from 1.6x, 0.5s with an overshoot.
 struct DeltaPop: ViewModifier {
+  var on = true
   @Environment(\.accessibilityReduceMotion) private var reduce
   @State private var shown = false
   func body(content: Content) -> some View {
     content.scaleEffect(shown || reduce ? 1 : 1.6).offset(y: shown || reduce ? 0 : 6).opacity(shown || reduce ? 1 : 0)
-      .onAppear { withAnimation(Motion.pop(0.5)) { shown = true } }
+      .onAppear { withAnimation(on ? Motion.pop(0.5) : nil) { shown = true } }
   }
 }
 
@@ -199,7 +200,7 @@ struct SparkBurst: View {
 }
 
 extension View {
-  func deltaPop() -> some View { modifier(DeltaPop()) }
+  func deltaPop(on: Bool = true) -> some View { modifier(DeltaPop(on: on)) }
   func tierPop(on: Bool, color: Color) -> some View { modifier(TierPop(on: on, color: color)) }
   func numberGlow(_ color: Color, on: Bool) -> some View { modifier(NumberGlow(color: color, on: on)) }
   func promotionRing(on: Bool, color: Color) -> some View { modifier(PromotionRing(on: on, color: color)) }

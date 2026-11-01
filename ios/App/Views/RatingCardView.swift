@@ -39,6 +39,8 @@ struct RatingView: Equatable {
   var moved = false
   /// A tier was gained: the card rings, sparks fly, the new tier stamps in.
   var promoted = false
+  /// The delta drops in as it shows; a card coming back shows it still.
+  var pops = true
 
   static func resting(_ rating: Double) -> RatingView {
     RatingView(rating: rating, shown: rating, width: rankOf(rating).progress)
@@ -66,7 +68,7 @@ struct RatingCardView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
         if view.moved {
           Text(delta >= 0 ? "+\(delta)" : "\(delta)").font(.system(size: 14, weight: .heavy).monospacedDigit())
-            .foregroundStyle(delta < 0 ? Theme.bad : Theme.good).deltaPop()
+            .foregroundStyle(delta < 0 ? Theme.bad : Theme.good).deltaPop(on: view.pops)
         }
         Text("\(Int(JSRound(view.shown)))").font(.system(size: 22, weight: .heavy).monospacedDigit()).foregroundStyle(Theme.text)
           .frame(minWidth: 44, alignment: .trailing)
@@ -120,6 +122,7 @@ struct RestingRatingCard: View {
   private var view: RatingView {
     var v = RatingView.resting(moment.after)
     v.moved = true
+    v.pops = arriving
     return v
   }
 

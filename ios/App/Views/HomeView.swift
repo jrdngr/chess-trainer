@@ -15,8 +15,9 @@ struct HomeView: View {
       VStack(spacing: 0) {
         SelectionBar {
           Button { settings = true } label: {
-            Icon(name: "gear", size: 20).foregroundStyle(Theme.text2).padding(.horizontal, 11).frame(minHeight: 44)
+            Icon(name: "gear", size: 20).foregroundStyle(Theme.text2).padding(.horizontal, 11).frame(minWidth: 44, minHeight: 44)
               .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface))
+              .contentShape(RoundedRectangle(cornerRadius: 14))
           }
           .buttonStyle(.plain)
         }
@@ -51,6 +52,7 @@ struct HomeView: View {
         AutopilotPlate(
           name: store.catalog.map { selectionTrail(tree, $0, round.pick.opening.id).last ?? "" } ?? "",
           sans: round.pick.opening.sans, color: round.pick.color, span: span)
+          .contentShape(RoundedRectangle(cornerRadius: 20))
       }
       .buttonStyle(.plain)
     } else {
@@ -110,6 +112,7 @@ struct AutopilotPlate: View {
         .opacity(0.85).rotationEffect(.degrees(-8))
         .mask(LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: UnitPoint(x: 0.6, y: 0.5)))
         .offset(x: 14, y: -40)
+        .allowsHitTesting(false)
     }
     .background(LinearGradient(colors: [Theme.accent.opacity(0.22), Theme.accent.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
     .overlay(alignment: .topLeading) {

@@ -41,7 +41,8 @@ struct EndView: View {
     _cursor = State(initialValue: finish.ended.run.played.count)
     var blunder = false
     if case .blunder = finish.how { blunder = true }
-    _flashing = State(initialValue: !blunder)
+    _flashing = State(initialValue: !blunder && !model.endSeen)
+    _card = State(initialValue: model.endSeen ? .placed(arriving: false) : .play)
   }
 
   /// Survival opened from Home, not Autopilot's round.
@@ -82,7 +83,10 @@ struct EndView: View {
       }
       scroll.modifier(SurvivalDebugScroll())
     }
-    .onAppear { if reduceMotion { card = .placed(arriving: false) } }
+    .onAppear {
+      if reduceMotion { card = .placed(arriving: false) }
+      model.endSeen = true
+    }
     .task(id: card) {
       guard card == .leave else { return }
       try? await Task.sleep(for: .seconds(0.32))

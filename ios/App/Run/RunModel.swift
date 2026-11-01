@@ -47,6 +47,8 @@ final class RunModel {
   /// Each opening's rating this run: where it stood before, and where it is now.
   private(set) var ratings = OrderedRatings()
   private(set) var finish: Finish?
+  /// The end screen has opened once: its verdict and rating change have played, and stay at rest after.
+  var endSeen = false
   /// The way into Growth a clean end of prep earns.
   private(set) var offer: GrowOffer?
   private(set) var intro = Intro.announce
