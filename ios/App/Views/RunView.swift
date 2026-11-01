@@ -133,8 +133,11 @@ struct RunView: View {
   @ViewBuilder private var prompt: some View {
     if let blunder = model.blunder {
       VStack(spacing: 12) {
-        Label(endingTitle(model.session.ending!, model.run.played.count), systemImage: "xmark")
-          .foregroundStyle(Theme.bad).font(.headline)
+        HStack(spacing: 8) {
+          Icon(name: "cross", size: 18).frame(width: 26, height: 26).background(Circle().fill(Theme.bad.opacity(0.14)))
+          Text(endingTitle(model.session.ending!, model.run.played.count)).font(.system(size: 19, weight: .heavy)).tracking(-0.19)
+        }
+        .foregroundStyle(Theme.bad).padding(.vertical, 6)
         Button { model.continueToEnd() } label: { HStack(spacing: 8) { Text("Continue"); Icon(name: "next", size: 18) } }
           .buttonStyle(PlayButtonStyle(kind: .primary, block: true))
         let _ = blunder
@@ -165,8 +168,8 @@ struct RunView: View {
         if model.prefs.combo && multiplier > 1 {
           Text("Combo \u{00d7}\(multiplier)").font(.subheadline.bold()).foregroundStyle(Theme.good)
         }
-        Button(survival ? "End run" : "End round") { model.endRound() }
-          .buttonStyle(PlayButtonStyle(kind: .soft, height: 38, radius: 11, font: 14)).padding(.top, 8)
+        Button { model.endRound() } label: { Text(survival ? "End run" : "End round").foregroundStyle(Theme.text2) }
+          .buttonStyle(PlayButtonStyle(kind: .soft, height: 38, radius: 11, font: 14)).padding(.top, 12)
         let misses = model.session.state.misses.count
         if misses > 0 {
           Text("\(misses) miss\(misses == 1 ? "" : "es") so far").font(.footnote).foregroundStyle(Theme.text2)
