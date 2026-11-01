@@ -26,6 +26,8 @@ struct RootView: View {
   @State private var analyzing: (sans: [String], side: ChessCore.Color)?
   /// The one opening Growth's way back holds Autopilot to, in place of the saved selection.
   @State private var scope: Selection?
+  /// A find handed over from the end of a round, for Tidy to open on.
+  @State private var tidyFocus: TidyFind?
 
   var body: some View {
     ZStack {
@@ -58,6 +60,14 @@ struct RootView: View {
       ZStack {
         modeView(mode, tree, index)
           .opacity(analyzing == nil ? 1 : 0).allowsHitTesting(analyzing == nil)
+          .environment(\.openTidy) { find in
+            // Leave the mode for Tidy, on the Playbook tab, open on the position the round ended at.
+            tidyFocus = find
+            analyzing = nil
+            self.mode = nil
+            scope = nil
+            tab = .playbook
+          }
         if let analyzing {
           AnalysisTab(tree: tree, index: index, line: analyzing.sans, orientation: analyzing.side) { self.analyzing = nil }
             .id(analyzing.sans.joined(separator: " "))
@@ -69,7 +79,7 @@ struct RootView: View {
           switch tab {
           case .home: HomeView(tree: tree) { mode = $0 }
           case .playbook:
-            PlaybookView(tree: tree, index: index, onExplore: { sans, side in
+            PlaybookView(tree: tree, index: index, tidyFocus: tidyFocus, onConsumedTidyFocus: { tidyFocus = nil }, onExplore: { sans, side in
               explore = (sans, side)
               tab = .analysis
             }, onDrill: { repId, nodeId, title in

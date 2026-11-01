@@ -18,6 +18,7 @@ struct EndView: View {
   /// Back to Survival's setup; nil when Autopilot set the run up.
   let onChangeOptions: (() -> Void)?
   @Environment(AppStore.self) private var store
+  @Environment(\.openTidy) private var openTidy
   /// How many of the run's moves are on the board.
   @State private var cursor: Int
   /// The rating change has played over the board and gone down to its place.
@@ -39,7 +40,7 @@ struct EndView: View {
     _cursor = State(initialValue: finish.ended.run.played.count)
     var blunder = false
     if case .blunder = finish.how { blunder = true }
-    _flashing = State(initialValue: model.round == nil && !blunder)
+    _flashing = State(initialValue: !blunder)
   }
 
   /// Survival opened from Home, not Autopilot's round.
@@ -63,6 +64,13 @@ struct EndView: View {
   private var weighed: String { onBlunder ? (applySan(run.fen, blunder!.played)?.after ?? shownFen) : shownFen }
 
   private func seek(_ n: Int) { cursor = max(0, min(last, n)) }
+
+  /// The misses Tidy has a switch for; only when there is a Tidy to go to.
+  private var hints: [Int: TidyFind] {
+    guard openTidy != nil, let index = store.index else { return [:] }
+    let rep = store.state.repertoireList.first { $0.color == run.color }
+    return tidyHints(finish.ended.misses, rep, index, model.round != nil ? AUTO_GROWTH : store.state.settings.growth)
+  }
 
   var body: some View {
     VStack(spacing: 0) {
@@ -107,7 +115,7 @@ struct EndView: View {
         BoardView(
           fen: shownFen, orientation: run.color, interactive: false,
           lastMove: onBlunder || missAt != nil ? nil : lastMoveOf(Array(run.played.prefix(cursor))),
-          highlights: survival ? highlights(missAt) : [:], marks: marks, onMove: { _ in })
+          highlights: highlights(missAt), marks: marks, onMove: { _ in })
           .overlay {
             if flashing {
               EndVerdict(how: finish.how, plies: last).onTapGesture { flashing = false }.transition(.opacity)
@@ -164,9 +172,9 @@ struct EndView: View {
         summary
       }
       if let blunder { compare(blunder) }
-      if survival {
+      Group {
         VStack(spacing: 0) {
-          MissedPrepList(misses: finish.ended.misses, onSeek: seek)
+          MissedPrepList(misses: finish.ended.misses, hints: hints, onTidy: openTidy, onSeek: seek)
           MovesSurvivedList(tree: model.tree, line: run.played, record: store.state.survival, moves: finish.ended.moves)
           SurvivalEndActions(played: sansToMoveText(run.played + (blunder.map { [$0.played] } ?? [])), onChangeOptions: onChangeOptions)
         }

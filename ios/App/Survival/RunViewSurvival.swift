@@ -24,7 +24,7 @@ extension RunView {
 
   /// Cash out is offered on your turn past prep, with nothing pending, when the engine has you well ahead.
   var cashOutOn: Bool {
-    guard survival, model.live, !model.held, model.myTurn, model.session.prepStatus != .on, model.pending == nil,
+    guard model.live, !model.held, model.myTurn, model.session.prepStatus != .on, model.pending == nil,
       model.flash == nil, !model.momentHere, cashOut.dismissedIn != model.run.id,
       let base = model.baseline, base.fen == model.run.fen
     else { return false }

@@ -65,6 +65,8 @@ struct SurvivalSummary: View {
 /// The prepared positions answered with something else, each one a jump to it.
 struct MissedPrepList: View {
   let misses: [Miss]
+  var hints: [Int: TidyFind] = [:]
+  var onTidy: ((TidyFind) -> Void)? = nil
   let onSeek: (Int) -> Void
 
   var body: some View {
@@ -73,6 +75,7 @@ struct MissedPrepList: View {
         PlaySection(title: "Missed your prep \u{00b7} \(misses.count)")
         ListCard {
           ForEach(misses, id: \.ply) { miss in
+            VStack(spacing: 0) {
             Button { onSeek(miss.ply) } label: {
               HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -85,6 +88,8 @@ struct MissedPrepList: View {
               .padding(.horizontal, 16).padding(.vertical, 10).frame(minHeight: 54).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            if let hint = hints[miss.ply], let onTidy { OffPrepHint(find: hint, onTidy: { onTidy(hint) }, compact: true) }
+            }
           }
         }
       }

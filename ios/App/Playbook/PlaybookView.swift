@@ -9,6 +9,8 @@ struct PlaybookView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
   var tidyFocus: TidyFind? = nil
+  /// The focus is taken: Tidy holds it from here.
+  var onConsumedTidyFocus: () -> Void = {}
   var onExplore: ([String], ChessCore.Color) -> Void = { _, _ in }
   var onDrill: (String, String, String) -> Void = { _, _, _ in }
   var onImport: () -> Void = {}
@@ -17,6 +19,7 @@ struct PlaybookView: View {
   @Environment(AppStore.self) private var store
   @State private var scan = TidyScan()
   @State private var page: Page?
+  @State private var focus: TidyFind?
   @State private var adding = false
   @State private var openingMenu: DerivedOpening?
   @State private var sideMenu: String?
@@ -30,7 +33,7 @@ struct PlaybookView: View {
     let state = store.state
     Group {
       switch page {
-      case .tidy: TidyView(scan: scan, focus: tidyFocus) { page = nil }
+      case .tidy: TidyView(scan: scan, focus: focus) { page = nil }
       case .extensions: ExtensionsView { page = nil }
       case .browse(let repId, let nodeId, let title):
         if state.repertoires[repId] != nil {
@@ -42,7 +45,12 @@ struct PlaybookView: View {
       }
     }
     .task(id: scanInput) { await scan.run(scanInput, tree, index) }
-    .onAppear { if tidyFocus != nil { page = .tidy } }
+    .onAppear {
+      guard let tidyFocus else { return }
+      focus = tidyFocus
+      page = .tidy
+      onConsumedTidyFocus()
+    }
   }
 
   private var scanInput: TidyScan.Input {

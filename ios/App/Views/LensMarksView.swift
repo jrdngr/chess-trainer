@@ -114,7 +114,7 @@ struct LensOverView: View {
       }
       ArrowsView(
         arrows: (marks.arrows ?? []).map { BoardArrow(from: $0.from, to: $0.to, color: LensColors.tone($0.tone)) },
-        cell: cell, position: position)
+        cell: cell, position: position, origins: false)
     }
     .allowsHitTesting(false)
   }

@@ -63,7 +63,7 @@ struct RunView: View {
         Text("From \(sansToMoveText(Array(model.run.played.prefix(model.run.opened))))")
           .font(.footnote).foregroundStyle(Theme.text2).padding(.top, 8)
       }
-      if lens == nil && survival && !model.held && model.blunder == nil { cards.padding(.horizontal) }
+      if lens == nil && !model.held && model.blunder == nil { cards.padding(.horizontal) }
       if lens == nil { prompt.padding() }
       Spacer()
     }

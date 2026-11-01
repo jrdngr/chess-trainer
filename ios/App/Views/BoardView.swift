@@ -69,6 +69,8 @@ struct BoardView: View {
           .onTapGesture { tap(square, pieces) }
         }
         if let marks { LensUnderView(marks: marks, cell: cell, position: position) }
+        // Under the pieces: an arrow never hides what it points at.
+        ArrowsView(arrows: arrows, cell: cell, position: position).allowsHitTesting(false)
         ForEach(Array(pieces.keys), id: \.self) { square in
           let (col, row) = position(square)
           let piece = pieces[square]!
@@ -80,8 +82,6 @@ struct BoardView: View {
             .allowsHitTesting(false)
         }
         if let marks { LensOverView(marks: marks, cell: cell, position: position) }
-        ArrowsView(arrows: arrows, cell: cell, position: position)
-          .allowsHitTesting(false)
         if let pop {
           PopView(pop: pop)
             .position(x: (CGFloat(position(pop.square).col) + 0.5) * cell, y: (CGFloat(position(pop.square).row) + 0.1) * cell)
@@ -194,40 +194,80 @@ struct PieceView: View {
   }
 }
 
+/// Arrows over the board, the web's way: `arrowShape` and the arrows layer
+/// in `Board.tsx`. A disc under the piece a run of arrows starts from, a dark
+/// edge under each so it reads on light and dark squares, every shaft before
+/// any head, and Growth's soft glow under the lot.
 struct ArrowsView: View {
   var arrows: [BoardArrow]
   var cell: CGFloat
   var position: (String) -> (col: Int, row: Int)
+  /// The disc under where a run of arrows starts; a lens's arrows have none.
+  var origins = true
+
+  /// Widths in squares.
+  static let width: CGFloat = 0.13
+  static let edge: CGFloat = 0.025
+  static let glowEdge: CGFloat = 0.04
+  static let ink = SwiftUI.Color(red: 10 / 255, green: 12 / 255, blue: 20 / 255).opacity(0.7)
 
   var body: some View {
     Canvas { context, _ in
-      for arrow in arrows {
+      let drawn = arrows.map { shape(center($0.from), center($0.to)) }
+      for (arrow, d) in zip(arrows, drawn) {
         guard let glow = arrow.glow else { continue }
         var halo = context
         halo.addFilter(.blur(radius: cell * 0.07))
         halo.opacity = 0.85
-        var line = Path()
-        line.move(to: center(arrow.from))
-        line.addLine(to: center(arrow.to))
-        halo.stroke(line, with: .color(glow), style: StrokeStyle(lineWidth: cell * 0.34, lineCap: .round))
+        halo.stroke(d.shaft, with: .color(glow), style: StrokeStyle(lineWidth: cell * 0.34, lineCap: .round))
+        halo.fill(d.head, with: .color(glow))
+        halo.stroke(d.head, with: .color(glow), style: StrokeStyle(lineWidth: cell * 0.2, lineJoin: .round))
       }
-      for arrow in arrows {
-        let a = center(arrow.from), b = center(arrow.to)
-        let angle = atan2(b.y - a.y, b.x - a.x)
-        let head = cell * 0.32
-        let end = CGPoint(x: b.x - cos(angle) * head * 0.8, y: b.y - sin(angle) * head * 0.8)
-        var shaft = Path()
-        shaft.move(to: a)
-        shaft.addLine(to: end)
-        context.stroke(shaft, with: .color(arrow.color.opacity(0.85)), style: StrokeStyle(lineWidth: cell * 0.16, lineCap: .round))
-        var tip = Path()
-        tip.move(to: b)
-        tip.addLine(to: CGPoint(x: b.x - cos(angle - 0.5) * head, y: b.y - sin(angle - 0.5) * head))
-        tip.addLine(to: CGPoint(x: b.x - cos(angle + 0.5) * head, y: b.y - sin(angle + 0.5) * head))
-        tip.closeSubpath()
-        context.fill(tip, with: .color(arrow.color.opacity(0.9)))
+      // Where a run of arrows starts: a disc under the piece that moves first.
+      for (arrow, d) in zip(arrows, drawn) where origins && !arrows.contains(where: { $0.to == arrow.from }) {
+        let r = cell * 0.4
+        let disc = Path(ellipseIn: CGRect(x: d.from.x - r, y: d.from.y - r, width: 2 * r, height: 2 * r))
+        var faint = context
+        faint.opacity = 0.45
+        faint.fill(disc, with: .color(arrow.color))
+        faint.stroke(disc, with: .color(Self.ink), lineWidth: cell * Self.edge)
+      }
+      for (arrow, d) in zip(arrows, drawn) {
+        let edge = arrow.glow == nil ? Self.edge : Self.glowEdge
+        context.stroke(d.shaft, with: .color(arrow.glow ?? Self.ink),
+                       style: StrokeStyle(lineWidth: cell * (Self.width + edge * 2), lineCap: .round))
+      }
+      for (arrow, d) in zip(arrows, drawn) {
+        context.stroke(d.shaft, with: .color(arrow.color), style: StrokeStyle(lineWidth: cell * Self.width, lineCap: .round))
+      }
+      for (arrow, d) in zip(arrows, drawn) {
+        context.stroke(d.head, with: .color(arrow.glow ?? Self.ink),
+                       style: StrokeStyle(lineWidth: cell * (arrow.glow == nil ? Self.edge * 2 : Self.glowEdge * 3.2), lineJoin: .round))
+        context.fill(d.head, with: .color(arrow.color))
       }
     }
+  }
+
+  /// The head is three stroke widths long, its tip a little past the target's
+  /// centre; the shaft stops at the head's base, its round cap just reaching it.
+  private func shape(_ from: CGPoint, _ to: CGPoint) -> (from: CGPoint, shaft: Path, head: Path) {
+    let w = Self.width * cell
+    let dx = to.x - from.x, dy = to.y - from.y
+    let len = max(hypot(dx, dy), 1)
+    let ux = dx / len, uy = dy / len
+    let tip = CGPoint(x: to.x + ux * w * 1.4, y: to.y + uy * w * 1.4)
+    let base = CGPoint(x: tip.x - ux * w * 3, y: tip.y - uy * w * 3)
+    let half = w * 1.5
+    var head = Path()
+    head.move(to: tip)
+    head.addLine(to: CGPoint(x: base.x - uy * half, y: base.y + ux * half))
+    head.addLine(to: CGPoint(x: base.x + uy * half, y: base.y - ux * half))
+    head.closeSubpath()
+    let back = w / 2 - 0.01 * cell
+    var shaft = Path()
+    shaft.move(to: from)
+    shaft.addLine(to: CGPoint(x: base.x - ux * back, y: base.y - uy * back))
+    return (from, shaft, head)
   }
 
   private func center(_ square: String) -> CGPoint {
