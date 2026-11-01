@@ -17,5 +17,7 @@ jobs:
       - run: swift --version
       - run: swift test -c release -Xswiftc -enable-testing --filter EngineBenchTests
         working-directory: ios
+        env:
+          ENGINE_BENCH: "1"
       - run: swift test
         working-directory: ios
