@@ -33,6 +33,8 @@ struct BoardView: View {
   var onMove: (LegalMove) -> Void
 
   @State private var selected: String?
+  @State private var tracker = PieceTracker()
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   private var light: SwiftUI.Color { look.theme.light }
   private var dark: SwiftUI.Color { look.theme.dark }
@@ -71,19 +73,18 @@ struct BoardView: View {
         if let marks { LensUnderView(marks: marks, cell: cell, position: position) }
         // Under the pieces: an arrow never hides what it points at.
         ArrowsView(arrows: arrows, cell: cell, position: position).allowsHitTesting(false)
-        ForEach(Array(pieces.keys), id: \.self) { square in
-          let (col, row) = position(square)
-          let piece = pieces[square]!
-          // Sized to match the web board's pieces.
-          PieceView(piece: piece, size: cell * 0.78)
-            .opacity(marks?.ghost == true && piece.type != .p ? 0.18 : 1)
-            .frame(width: cell, height: cell)
-            .offset(x: CGFloat(col) * cell, y: CGFloat(row) * cell)
-            .allowsHitTesting(false)
+        let ids = tracker.ids(fen, pieces)
+        ForEach(pieces.keys.sorted().map { (id: ids[$0] ?? 0, square: $0) }, id: \.id) { placed in
+          let piece = pieces[placed.square]!
+          PlacedPiece(id: placed.id, square: placed.square, piece: piece, cell: cell, position: position(placed.square),
+                      ghost: marks?.ghost == true && piece.type != .p)
         }
+        .animation(reduceMotion ? nil : Motion.slide(0.16), value: fen)
         if let marks { LensOverView(marks: marks, cell: cell, position: position) }
         if let pop {
           PopView(pop: pop)
+            .modifier(MoveScoreFloat())
+            .id("\(pop.square)\(pop.text)\(fen)")
             .position(x: (CGFloat(position(pop.square).col) + 0.5) * cell, y: (CGFloat(position(pop.square).row) + 0.1) * cell)
             .allowsHitTesting(false)
         }
@@ -103,6 +104,7 @@ struct BoardView: View {
         .stroke(color.opacity(0.35 + 0.55 * glow.strength), lineWidth: 3 + 5 * glow.strength)
         .blur(radius: 2)
         .allowsHitTesting(false)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.8), value: glow)
     }
   }
 
@@ -198,6 +200,26 @@ struct PieceView: View {
 /// in `Board.tsx`. A disc under the piece a run of arrows starts from, a dark
 /// edge under each so it reads on light and dark squares, every shaft before
 /// any head, and Growth's soft glow under the lot.
+/// One piece on its square. Keyed by the piece, not the square, so a move
+/// slides it: the web's `.piece` left/top transition.
+private struct PlacedPiece: View {
+  let id: Int
+  let square: String
+  let piece: BoardPiece
+  let cell: CGFloat
+  let position: (col: Int, row: Int)
+  let ghost: Bool
+
+  var body: some View {
+    // Sized to match the web board's pieces.
+    PieceView(piece: piece, size: cell * 0.78)
+      .opacity(ghost ? 0.18 : 1)
+      .frame(width: cell, height: cell)
+      .offset(x: CGFloat(position.col) * cell, y: CGFloat(position.row) * cell)
+      .allowsHitTesting(false)
+  }
+}
+
 struct ArrowsView: View {
   var arrows: [BoardArrow]
   var cell: CGFloat
@@ -293,7 +315,6 @@ struct PopView: View {
     .padding(.vertical, 2)
     .background(Capsule().fill(Theme.background.opacity(0.85)))
     .overlay(Capsule().stroke(pop.ext ? Theme.ext : .clear, lineWidth: 1))
-    .transition(.opacity.combined(with: .move(edge: .bottom)))
   }
 }
 

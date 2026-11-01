@@ -24,11 +24,11 @@ struct RunView: View {
         if survival {
           PlayIntroCover(trail: introTrail, mode: "Survival")
         } else {
-          Theme.background.ignoresSafeArea()
-          IntroPlate(
-            name: openingName(model.tree, model.introOpening), sans: nodeById(model.tree, model.introOpening).sans,
-            color: model.run.color, span: model.span)
-          .padding()
+          PlateIntroCover {
+            IntroPlate(
+              name: openingName(model.tree, model.introOpening), sans: nodeById(model.tree, model.introOpening).sans,
+              color: model.run.color, span: model.span)
+          }
         }
       }
     }
@@ -47,6 +47,7 @@ struct RunView: View {
         onMove: model.play
       )
       .overlay(alignment: .top) { flash }
+      .overlay { if model.pulse { IntroPulse() } }
       .overlay {
         if let held = model.flash {
           FlashRings(loose: held.loose, orientation: model.run.color, onTakeBack: model.takeBack)
@@ -181,27 +182,35 @@ struct RunView: View {
         .padding(.horizontal, 14).padding(.vertical, 6)
         .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.45), radius: 10, y: 6)
         .padding(.top, 8)
-    } else if model.intro == .replay {
-      HStack(spacing: 6) {
-        Text("Autoplay").font(.caption.bold()).padding(.horizontal, 6).padding(.vertical, 2)
-          .background(Capsule().fill(Theme.accent.opacity(0.25))).foregroundStyle(Theme.accent)
-        Text(openingName(model.tree, model.introOpening)).font(.subheadline.bold()).foregroundStyle(Theme.text)
+    } else if model.intro == .replay || (model.intro == .done && model.introPath.isEmpty && model.session.state.moves == 0 && model.miss == nil) {
+      // While the way in plays, and over a round from move one until your first move.
+      HStack(spacing: 8) {
+        if model.intro == .replay {
+          Text("Autoplay").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.background)
+            .padding(.horizontal, 10).padding(.vertical, 4).background(Capsule().fill(Theme.accent))
+        }
+        Text(openingName(model.tree, model.introOpening)).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text).lineLimit(1)
       }
-      .padding(.horizontal, 12).padding(.vertical, 6)
-      .background(Capsule().fill(Theme.background.opacity(0.9))).padding(.top, 10)
+      .padding(.leading, model.intro == .replay ? 8 : 16).padding(.trailing, 16).padding(.vertical, 8)
+      .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
+      .padding(.top, 10).allowsHitTesting(false)
+      .introPillIn().id(model.intro == .replay ? "replay" : "wait")
     } else if let miss = model.miss {
-      pill("Off your prep \u{00b7} \(miss.expected) was yours", Theme.accent)
+      pill("Off your prep \u{00b7} \(miss.expected) was yours", Theme.accent).id("miss-\(miss.from)\(miss.to)")
     } else if let note = model.note {
-      pill(note.text, note.tone == "good" ? Theme.good : note.tone == "bad" ? Theme.bad : Theme.accent)
+      pill(note.text, note.tone == "good" ? Theme.good : note.tone == "bad" ? Theme.bad : Theme.accent).id("note-\(note.text)")
     }
   }
 
+  /// A verdict over the top of the board: `.board-flash.top` with its `.flash-pill`, fading in, held and out.
   private func pill(_ text: String, _ color: SwiftUI.Color) -> some View {
-    Text(text).font(.subheadline.bold()).foregroundStyle(color)
-      .padding(.horizontal, 12).padding(.vertical, 6)
-      .background(Capsule().fill(Theme.background.opacity(0.9)))
-      .padding(.top, 10)
+    Text(text).font(.system(size: 19, weight: .heavy)).foregroundStyle(color).multilineTextAlignment(.center)
+      .padding(.leading, 14).padding(.trailing, 22).padding(.vertical, 12)
+      .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
+      .padding(.top, 10).padding(.horizontal, 20)
+      .boardFlash()
   }
+
 
   private var lastMove: (from: String, to: String)? {
     if model.blunder != nil { return nil }

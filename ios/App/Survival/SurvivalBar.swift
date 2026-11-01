@@ -65,6 +65,7 @@ struct SurvivalClock: View {
       .font(.system(size: 13, weight: .bold).monospacedDigit()).foregroundStyle(out ? Theme.text3 : Theme.text)
       .padding(.leading, 6).padding(.trailing, 10).padding(.vertical, 4)
       .background(Capsule().fill(Theme.surface2))
+      .shake(on: out)
     }
   }
 }

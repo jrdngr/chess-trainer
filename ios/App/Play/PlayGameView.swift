@@ -71,8 +71,7 @@ struct PlayGameView: View {
       BoardView(
         fen: game.fen, orientation: game.color, interactive: game.myTurn && !game.held,
         lastMove: lastMoveOf(game.moves), onMove: game.play)
-        .colorMultiply(game.over != nil ? SwiftUI.Color(white: 0.8) : .white)
-        .saturation(game.over != nil ? 0.8 : 1)
+        .dimmed(game.over != nil)
         .overlay(alignment: .top) { if game.showsPill, let name = trail.last { IntroPill(name: name) } }
     }
   }

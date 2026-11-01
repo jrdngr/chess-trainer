@@ -21,8 +21,9 @@ struct EndView: View {
   @Environment(\.openTidy) private var openTidy
   /// How many of the run's moves are on the board.
   @State private var cursor: Int
-  /// The rating change has played over the board and gone down to its place.
-  @State private var played = false
+  /// Where the rating card is: playing over the board (once the verdict clears), fading on its way down, or in its place.
+  @State private var card: RatingStage = .play
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var lens: LensKind?
   @State private var evalLine: EngineLine?
   /// The verdict over the board as the screen opens; a blunder was shown on the board already.
@@ -81,6 +82,12 @@ struct EndView: View {
       }
       scroll.modifier(SurvivalDebugScroll())
     }
+    .onAppear { if reduceMotion { card = .placed(arriving: false) } }
+    .task(id: card) {
+      guard card == .leave else { return }
+      try? await Task.sleep(for: .seconds(0.32))
+      card = .placed(arriving: true)
+    }
     .task {
       guard flashing else { return }
       try? await Task.sleep(for: .seconds(2))
@@ -118,13 +125,9 @@ struct EndView: View {
           highlights: highlights(missAt), marks: marks, onMove: { _ in })
           .overlay {
             if flashing {
-              EndVerdict(how: finish.how, plies: last).onTapGesture { flashing = false }.transition(.opacity)
-            } else if let moment, !played {
-              ZStack {
-                Theme.background.opacity(0.6)
-                RatingPlayback(moment: moment) { withAnimation { played = true } }
-              }
-              .transition(.opacity)
+              EndVerdict(how: finish.how, plies: last).boardFlash().onTapGesture { flashing = false }
+            } else if let moment, card == .play || card == .leave {
+              RatingOverBoard(moment: moment, leaving: card == .leave) { if card == .play { card = .leave } }
             }
           }
         LensBar(held: $lens)
@@ -308,6 +311,12 @@ struct EndView: View {
 
   /// The opening's own rating, as this run moved it.
   private var moment: RatingMoment? {
+    #if DEBUG
+      // `RATING_MOMENT=240,262` plays that change, for checking the playback.
+      if let raw = ProcessInfo.processInfo.environment["RATING_MOMENT"]?.split(separator: ",").compactMap({ Double($0) }), raw.count == 2 {
+        return RatingMoment(name: openingName(model.tree, model.openingId), before: raw[0], after: raw[1])
+      }
+    #endif
     guard let r = model.ratings.byKey[model.openingId], JSRound(r.after - r.before) != 0,
       nodeById(model.tree, model.openingId).depth > 0
     else { return nil }
@@ -315,9 +324,14 @@ struct EndView: View {
   }
 
   @ViewBuilder private var ratingCard: some View {
-    if let moment, played {
-      RatingCardView(moment: moment, rating: moment.after, shown: moment.after, width: rankOf(moment.after).progress)
-        .transition(.move(edge: .top).combined(with: .opacity))
+    if let moment, case .placed(let arriving) = card {
+      RestingRatingCard(moment: moment, arriving: arriving).padding(.top, 12)
     }
   }
+}
+
+/// The rating card's place on the end screen: `card` in `survival/End.tsx`.
+enum RatingStage: Equatable {
+  case play, leave
+  case placed(arriving: Bool)
 }

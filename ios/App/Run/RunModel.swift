@@ -16,7 +16,7 @@ final class RunModel {
   enum Intro { case announce, replay, done }
 
   /// How long the announcement holds, and the beat between replayed moves: `RoundIntro.tsx`.
-  static let announceMs = 2.5, replayMs = 0.4
+  static let announceMs = 2.5, replayMs = 0.4, pulseMs = 0.9
 
   /// How long a miss, a score popup and a note stay over the board; the opponent's beat.
   static let missMs = 2.0, scoreMs = 1.4, noteMs = 1.6, replyMs = 0.42
@@ -175,9 +175,18 @@ final class RunModel {
         model.replayStep()
       } else {
         model.intro = .done
+        model.pulseEdge()
         model.begin()
       }
     }
+  }
+
+  /// The board's edge pulses once the replay hands you the move.
+  private(set) var pulse = false
+
+  private func pulseEdge() {
+    pulse = true
+    later(Self.pulseMs) { $0.pulse = false }
   }
 
   /// A tap skips the rest of the replay.
@@ -185,6 +194,7 @@ final class RunModel {
     guard intro == .replay else { return }
     introPly = introPath.count
     intro = .done
+    pulseEdge()
     begin()
   }
 

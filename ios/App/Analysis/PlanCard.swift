@@ -26,7 +26,7 @@ struct PlanCard: View {
           HStack(spacing: 8) {
             Text("PLAN").font(.system(size: 12, weight: .bold)).tracking(0.5).foregroundStyle(Color(hex: 0x22c3e6))
             Text(structureLabel(structure)).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
-            Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3).rotationEffect(.degrees(open ? -90 : 90))
+            Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3).rotationEffect(.degrees(open ? -90 : 90)).animation(.easeInOut(duration: 0.15), value: open)
             Spacer(minLength: 0)
           }
           .padding(.vertical, 6).contentShape(Rectangle())

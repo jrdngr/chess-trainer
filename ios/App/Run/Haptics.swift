@@ -11,4 +11,16 @@ enum Haptics {
     guard on else { return }
     (ms >= 20 ? heavy : light).impactOccurred()
   }
+
+  /// A whole pattern, buzz and pause alternating, in milliseconds: `haptic([20, 40, 20])`.
+  static func pattern(_ ms: [Int], on: Bool) {
+    guard on else { return }
+    var at = 0
+    for (i, step) in ms.enumerated() {
+      if i % 2 == 0 {
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(at)) { buzz(step, on: true) }
+      }
+      at += step
+    }
+  }
 }

@@ -76,6 +76,7 @@ struct ClockHud: View {
       .foregroundStyle(clock.expired ? Theme.text3 : Theme.text)
       .padding(.leading, 6).padding(.trailing, 10).padding(.vertical, 4)
       .background(Capsule().fill(Theme.surface2))
+      .shake(on: clock.expired)
     }
   }
 }

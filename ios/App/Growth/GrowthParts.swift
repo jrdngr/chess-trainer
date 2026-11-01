@@ -154,7 +154,7 @@ struct BoardFlash: View {
         .padding(.leading, 22).padding(.trailing, 22).padding(.vertical, 12)
         .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
     }
-    .transition(.opacity)
+    .boardFlash()
   }
 }
 

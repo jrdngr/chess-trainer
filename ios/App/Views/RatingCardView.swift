@@ -20,134 +20,111 @@ extension Color {
   }
 }
 
-/// The card, drawn from a view of it: still, or mid-playback. `RatingCard.tsx`.
-struct RatingCardView: View {
-  let moment: RatingMoment
+/// The card's state, still or mid-playback: `View` in `RatingCard.tsx`.
+struct RatingView: Equatable {
+  /// The rating the tier names and the paint follow.
   var rating: Double
+  /// The number shown, counting toward the new rating.
   var shown: Double
+  /// How full the bar is, 0...1.
   var width: Double
-  var moved = true
+  /// How long the width takes to get where it is going; 0 snaps.
+  var speed: Double = 0
+  /// A tier crossed: the bar flashes in this color. Changes count up each flash.
   var flash: Color?
+  var flashes = 0
+  /// The stretch a change within a tier added or took away, glowing.
+  var stretch: (from: Double, to: Double, gain: Bool)?
+  /// The change has started: the delta shows.
+  var moved = false
+  /// A tier was gained: the card rings, sparks fly, the new tier stamps in.
   var promoted = false
 
-  var body: some View {
-    let rank = rankOf(rating)
-    let color = fillColor(rating)
-    let delta = Int(JSRound(moment.after - moment.before))
-    VStack(alignment: .leading, spacing: 6) {
-      HStack {
-        Text(moment.name).font(.subheadline.bold()).foregroundStyle(Theme.text).lineLimit(1)
-        Spacer()
-        if moved {
-          Text(delta >= 0 ? "+\(delta)" : "\(delta)").font(.subheadline.bold().monospacedDigit())
-            .foregroundStyle(delta < 0 ? Theme.bad : Theme.good)
-        }
-        Text("\(Int(JSRound(shown)))").font(.headline.monospacedDigit()).foregroundStyle(Theme.text)
-      }
-      HStack {
-        Text(rank.heldLabel).font(.caption.bold()).foregroundStyle(color)
-          .scaleEffect(promoted ? 1.15 : 1).animation(.spring(duration: 0.4), value: promoted)
-        Spacer()
-        Text(rank.nextLabel ?? "").font(.caption).foregroundStyle(Theme.text2)
-      }
-      GeometryReader { geo in
-        ZStack(alignment: .leading) {
-          Capsule().fill(Theme.surface2)
-          Capsule().fill(color).frame(width: geo.size.width * width)
-            .shadow(color: color.opacity(0.8), radius: 6)
-          if let flash { Capsule().fill(flash) }
-        }
-      }
-      .frame(height: 8)
-    }
-    .padding(14)
-    .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface))
-    .overlay(RoundedRectangle(cornerRadius: 14).stroke(promoted ? color : .clear, lineWidth: 2))
+  static func resting(_ rating: Double) -> RatingView {
+    RatingView(rating: rating, shown: rating, width: rankOf(rating).progress)
+  }
+
+  static func == (a: RatingView, b: RatingView) -> Bool {
+    a.rating == b.rating && a.shown == b.shown && a.width == b.width && a.speed == b.speed && a.flash == b.flash
+      && a.flashes == b.flashes && a.moved == b.moved && a.promoted == b.promoted
+      && a.stretch?.from == b.stretch?.from && a.stretch?.to == b.stretch?.to
   }
 }
 
-/// The rating change playing over the board as the end screen opens: a gain
-/// grows the bar; a promotion fills it, flashes the new tier, stamps its name
-/// and regrows; a drop flashes red and shrinks. A tap skips to the end.
-struct RatingPlayback: View {
+/// The card itself, drawn from a view: still, or mid-playback. `Card` in `RatingCard.tsx`.
+struct RatingCardView: View {
   let moment: RatingMoment
-  let onDone: () -> Void
+  var view: RatingView
 
-  /// Before the bar moves; a change within a tier; the fill, flash and regrowth of a promotion; the hold.
-  static let lead = 0.7, grow = 0.9, top = 0.65, flashTime = 0.76, regrow = 0.7, hold = 1.1
+  var body: some View {
+    let rank = rankOf(view.rating)
+    let color = fillColor(view.rating)
+    let delta = Int(JSRound(moment.after - moment.before))
+    VStack(alignment: .leading, spacing: 0) {
+      HStack(alignment: .firstTextBaseline, spacing: 8) {
+        Text(moment.name).font(.system(size: 16, weight: .bold)).tracking(-0.16).foregroundStyle(Theme.text).lineLimit(1)
+          .frame(maxWidth: .infinity, alignment: .leading)
+        if view.moved {
+          Text(delta >= 0 ? "+\(delta)" : "\(delta)").font(.system(size: 14, weight: .heavy).monospacedDigit())
+            .foregroundStyle(delta < 0 ? Theme.bad : Theme.good).deltaPop()
+        }
+        Text("\(Int(JSRound(view.shown)))").font(.system(size: 22, weight: .heavy).monospacedDigit()).foregroundStyle(Theme.text)
+          .frame(minWidth: 44, alignment: .trailing)
+          .numberGlow(color, on: view.promoted)
+      }
+      HStack(alignment: .firstTextBaseline) {
+        Text(rank.heldLabel).foregroundStyle(color).tierPop(on: view.promoted, color: color).id(rank.heldLabel)
+        Spacer()
+        Text(rank.nextLabel ?? "")
+      }
+      .font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.text2).padding(.top, 10)
+      RatingTrack(view: view, color: color).frame(height: 10).padding(.top, 6)
+    }
+    .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 16)
+    .background(RoundedRectangle(cornerRadius: 18).fill(Theme.surface))
+    .overlay { if view.promoted { PromotionShine().clipShape(RoundedRectangle(cornerRadius: 18)) } }
+    .promotionRing(on: view.promoted, color: color)
+  }
+}
 
-  @State private var rating: Double
-  @State private var shown: Double
-  @State private var width: Double
-  @State private var moved = false
-  @State private var flash: Color?
-  @State private var promoted = false
+/// The bar: the fill growing at the view's speed, the stretch glowing, the flash, the sparks.
+struct RatingTrack: View {
+  let view: RatingView
+  let color: Color
+  @Environment(\.accessibilityReduceMotion) private var reduce
 
-  init(moment: RatingMoment, onDone: @escaping () -> Void) {
-    self.moment = moment
-    self.onDone = onDone
-    _rating = State(initialValue: moment.before)
-    _shown = State(initialValue: moment.before)
-    _width = State(initialValue: rankOf(moment.before).progress)
+  var body: some View {
+    GeometryReader { geo in
+      let w = geo.size.width
+      ZStack(alignment: .leading) {
+        RoundedRectangle(cornerRadius: 5).fill(Theme.surface3)
+        paint(view.rating).frame(width: w)
+          .mask(alignment: .leading) { RoundedRectangle(cornerRadius: 5).frame(width: w * view.width) }
+          .shadow(color: color, radius: 5)
+          .animation(view.speed > 0 && !reduce ? Motion.arrive(view.speed) : nil, value: view.width)
+        if let s = view.stretch, s.from != s.to {
+          StretchGlow(gain: s.gain).frame(width: w * abs(s.to - s.from)).offset(x: w * min(s.from, s.to))
+        }
+        if let flash = view.flash { RatingFlash(color: flash).id(view.flashes) }
+        if view.promoted { SparkBurst(color: color).offset(x: w) }
+      }
+    }
+  }
+}
+
+/// The rating change at rest, where it stays on the end screen: `RatingCard`, arriving from above.
+struct RestingRatingCard: View {
+  let moment: RatingMoment
+  var arriving = true
+
+  private var view: RatingView {
+    var v = RatingView.resting(moment.after)
+    v.moved = true
+    return v
   }
 
   var body: some View {
-    VStack(spacing: 14) {
-      if promoted {
-        Text(rankOf(rating).heldLabel).font(.system(size: 40, weight: .heavy)).foregroundStyle(fillColor(rating))
-          .shadow(color: fillColor(rating), radius: 12)
-          .transition(.scale.combined(with: .opacity))
-      }
-      RatingCardView(moment: moment, rating: rating, shown: shown, width: width, moved: moved, flash: flash, promoted: promoted)
-    }
-    .padding()
-    .contentShape(Rectangle())
-    .onTapGesture(perform: onDone)
-    .task { await play() }
-  }
-
-  private func wait(_ seconds: Double) async { try? await Task.sleep(for: .seconds(seconds)) }
-
-  private func count(from: Double, to: Double, over seconds: Double) async {
-    let steps = max(1, Int(seconds * 30))
-    for i in 1...steps {
-      let t = Double(i) / Double(steps)
-      shown = from + (to - from) * (1 - pow(1 - t, 3))
-      await wait(seconds / Double(steps))
-    }
-  }
-
-  private func play() async {
-    let before = moment.before, after = moment.after
-    let was = rankOf(before), now = rankOf(after)
-    await wait(Self.lead)
-    moved = true
-    if now.reached == was.reached {
-      withAnimation(.easeOut(duration: Self.grow)) { width = now.progress }
-      await count(from: before, to: after, over: Self.grow)
-    } else if now.reached > was.reached {
-      withAnimation(.easeOut(duration: Self.top)) { width = 1 }
-      await count(from: before, to: now.floor, over: Self.top)
-      rating = after
-      flash = fillColor(after)
-      withAnimation { promoted = true }
-      await wait(Self.flashTime)
-      flash = nil
-      width = 0
-      withAnimation(.easeOut(duration: Self.regrow)) { width = now.progress }
-      await count(from: now.floor, to: after, over: Self.regrow)
-    } else {
-      // No tier is red, so the flash reads only as a drop.
-      flash = Theme.bad
-      width = 1
-      async let counting: Void = count(from: before, to: after, over: Self.flashTime + Self.regrow)
-      await wait(Self.flashTime)
-      flash = nil
-      rating = after
-      withAnimation(.easeOut(duration: Self.regrow)) { width = now.progress }
-      await counting
-    }
-    await wait(Self.hold)
-    onDone()
+    RatingCardView(moment: moment, view: view)
+      .modifier(Arriving(offset: -40, scale: 0.97, duration: arriving ? 0.5 : 0, delay: 0))
   }
 }

@@ -31,6 +31,7 @@ final class Toasts {
 /// Where toasts appear, over everything.
 struct ToastHost: View {
   @Environment(Toasts.self) private var toasts
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     VStack {
@@ -47,11 +48,11 @@ struct ToastHost: View {
         .padding(.leading, 18).padding(.trailing, toast.action == nil ? 18 : 6).padding(.vertical, toast.action == nil ? 11 : 6)
         .background(Capsule().fill(SwiftUI.Color(hex: 0xf5f5f7)))
         .shadow(color: .black.opacity(0.4), radius: 12, y: 6)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .transition(.asymmetric(insertion: .offset(y: 12).combined(with: .opacity), removal: .identity))
         .padding(.bottom, 76)
       }
     }
-    .animation(.spring(duration: 0.3), value: toasts.current?.id)
+    .animation(reduceMotion ? nil : Motion.arrive(0.22), value: toasts.current?.id)
     .allowsHitTesting(toasts.current?.action != nil)
   }
 }

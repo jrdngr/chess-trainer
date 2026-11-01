@@ -84,28 +84,12 @@ struct PlaySection: View {
   }
 }
 
-/// The game or run announced full screen: the mode, then the opening. `round-intro`.
+/// The game or run announced full screen: the shared `IntroCover`, named for the mode.
 struct PlayIntroCover: View {
   var trail: [String]
   /// The mode as the round is called: Play, Survival or Growth.
   var mode = "Play"
-  @State private var shown = false
-
-  var body: some View {
-    VStack(spacing: 18) {
-      Text(mode).font(.system(size: 56, weight: .heavy)).tracking(-1.5).foregroundStyle(Theme.text)
-        .scaleEffect(shown ? 1 : 0.8).opacity(shown ? 1 : 0)
-      Text(trail.joined(separator: " \u{203a} ")).font(.system(size: 24, weight: .bold)).foregroundStyle(Theme.accent)
-        .multilineTextAlignment(.center)
-        .offset(y: shown ? 0 : 14).opacity(shown ? 1 : 0)
-        .animation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.6).delay(0.25), value: shown)
-    }
-    .padding(.horizontal, 16)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(Theme.background.ignoresSafeArea())
-    .animation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.6), value: shown)
-    .onAppear { shown = true }
-  }
+  var body: some View { IntroCover(mode: mode, trail: trail) }
 }
 
 /// The opening, on a pill over the board until your first move: `intro-pill`.
@@ -116,6 +100,7 @@ struct IntroPill: View {
       .padding(.horizontal, 16).padding(.vertical, 8)
       .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
       .padding(.top, 10).allowsHitTesting(false)
+      .introPillIn()
   }
 }
 

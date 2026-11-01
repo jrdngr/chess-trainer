@@ -81,29 +81,6 @@ final class RoundIntro {
   }
 }
 
-/// The announcement, full screen: `.round-intro`.
-struct IntroCover: View {
-  var mode: String
-  var trail: [String]
-  @State private var shown = false
-
-  var body: some View {
-    VStack(spacing: 18) {
-      Text(mode).font(.system(size: 56, weight: .heavy)).tracking(-1.7).lineLimit(1).minimumScaleFactor(0.5)
-        .foregroundStyle(Theme.text).scaleEffect(shown ? 1 : 0.8).opacity(shown ? 1 : 0)
-      Text(trail.joined(separator: " \u{203a} ")).font(.system(size: 24, weight: .bold)).foregroundStyle(Theme.accent)
-        .multilineTextAlignment(.center).offset(y: shown ? 0 : 14).opacity(shown ? 1 : 0)
-        .animation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.6).delay(0.25), value: shown)
-    }
-    .padding(.horizontal, 16)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(Theme.background.ignoresSafeArea())
-    .contentShape(Rectangle())
-    .animation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.6), value: shown)
-    .onAppear { shown = true }
-  }
-}
-
 /// Over the board while a round begins: the pill, tap-to-skip and the pulse.
 struct IntroOverlay: View {
   var intro: RoundIntro
@@ -123,13 +100,10 @@ struct IntroOverlay: View {
         .padding(.leading, intro.replaying ? 8 : 16).padding(.trailing, 16).padding(.vertical, 8)
         .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
         .padding(.top, 10).allowsHitTesting(false)
+        .introPillIn().id(intro.replaying)
       }
-      if intro.pulse {
-        RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.accent, lineWidth: 6).padding(-8).allowsHitTesting(false)
-          .transition(.opacity)
-      }
+      if intro.pulse { IntroPulse() }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    .animation(.easeOut(duration: 0.3), value: intro.pulse)
   }
 }

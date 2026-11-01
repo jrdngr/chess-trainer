@@ -5,6 +5,7 @@ import SwiftUI
 struct RankBar<Centre: View>: View {
   var rank: Rank
   @ViewBuilder var centre: Centre
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     let fill = SwiftUI.Color(hexString: (rank.held ?? rank.next ?? UNRATED).color)
@@ -21,6 +22,7 @@ struct RankBar<Centre: View>: View {
           paint(rank.rating).frame(width: geo.size.width)
             .mask(alignment: .leading) { Capsule().frame(width: geo.size.width * rank.progress) }
             .shadow(color: fill.opacity(0.7), radius: 4)
+            .animation(reduceMotion ? nil : Motion.arrive(0.7), value: rank.progress)
         }
       }
       .frame(height: 8)

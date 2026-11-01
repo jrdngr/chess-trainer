@@ -133,6 +133,6 @@ func squares(_ move: LegalMove?, _ tone: SwiftUI.Color) -> [String: SwiftUI.Colo
 extension View {
   /// The board dimmed while a miss is explained: `dimmed`.
   func dimmed(_ on: Bool) -> some View {
-    colorMultiply(on ? SwiftUI.Color(white: 0.8) : .white).saturation(on ? 0.8 : 1)
+    colorMultiply(on ? SwiftUI.Color(white: 0.8) : .white).saturation(on ? 0.8 : 1).animation(.easeInOut(duration: 0.2), value: on)
   }
 }
