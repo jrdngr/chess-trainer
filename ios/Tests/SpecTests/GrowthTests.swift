@@ -57,18 +57,9 @@ func rowJSON(_ r: GrowthRow) -> JSON {
       }
     }
   }
-  func launchJSON(_ l: GrowLaunch) -> JSON {
-    obj(["opening": l.opening.id, "row": rowJSON(l.row), "hole": l.hole.map(holeJSON) ?? .null,
-         "widened": l.widened.map { obj(["why": $0.why, "minShare": $0.minShare, "maxPly": $0.maxPly == .max ? JSON.string("Infinity") : .number(Double($0.maxPly))]) } ?? .null])
-  }
+  // growOfferAt no longer matches the web: every grow starts at Growth's own
+  // pick, not where the round ended. Its own tests are below.
   try check("growOffer", [
-    "growOffer.growOfferAt": { a in
-      let end = a[0]
-      let offer = growOfferAt(
-        rep: repOf(end), index: index, tree: tree, opening: nodeById(tree, end["opening"].string), played: line(end["played"].string),
-        rounds: rounds(end), minShare: 1, maxPly: 18, starred: [], stub: end.object["stub"]?.bool ?? false)
-      return offer.map { obj(["kind": $0.kind, "text": $0.text, "launch": launchJSON($0.launch)]) } ?? .null
-    },
     "growOffer.readyToGrow": { a in readyToGrow(repOf(a[0]), tree, nodeById(tree, a[0]["opening"].string), rounds(a[0])).json },
     "growOffer.practiceOwed": { a in encoded(practiceOwed(repOf(a[0]), tree, nodeById(tree, a[0]["opening"].string), rounds(a[0]))) },
     "growOffer.practiceCap": { practiceCap($0[0].int).json },
@@ -76,5 +67,32 @@ func rowJSON(_ r: GrowthRow) -> JSON {
     "growOffer.offerOpening": { a in
       offerOpening(tree, nodeById(tree, a[0].string), a[1].stringOrNil.map { nodeById(tree, $0) }, line(a[2].string)).id.json
     },
-  ])
+  ], only: ["growOffer.readyToGrow", "growOffer.practiceOwed", "growOffer.practiceCap", "growOffer.practiceText", "growOffer.offerOpening"])
+}
+
+/// A one-line opening widens before it lengthens: a clean run to the end of
+/// its only line grows a common early reply it does not answer.
+@Test func lineGrowWidensFirst() {
+  let tree = openingTree(bookIndex)
+  let played = line("d4 d5 c4 e6 Nc3")
+  let opening = deepestNodeWithin(tree, tree.root, Array(played.prefix(3)))
+  let offer = growOfferAt(
+    rep: rep(.w, ["d4 d5 c4 e6 Nc3"]), index: bookIndex, tree: tree, opening: opening, played: played,
+    rounds: [], minShare: 1, maxPly: 18, starred: [])
+  #expect(offer?.kind == "line")
+  #expect(offer?.onLine == false)
+  let hole = offer.flatMap { firstHole($0.launch.row) }
+  #expect(hole?.path == line("d4 d5 c4"))
+  #expect(["c6", "dxc4"].contains(hole?.san ?? ""))
+}
+
+/// Where Growth's pick is the reply the round ended on, the button says this line.
+@Test func lineGrowOnTheLinePlayed() {
+  let tree = openingTree(bookIndex)
+  let played = line("d4 d5 c4 c6")
+  let opening = deepestNodeWithin(tree, tree.root, Array(played.prefix(3)))
+  let r = rep(.w, ["d4 d5 c4 e6 Nc3", "d4 d5 c4 dxc4 e3", "d4 d5 c4 Nf6 cxd5", "d4 d5 c4 Bf5 Nc3"])
+  let offer = growOfferAt(rep: r, index: bookIndex, tree: tree, opening: opening, played: played, rounds: [], minShare: 1, maxPly: 18, starred: [])
+  #expect(offer?.kind == "line")
+  #expect(offer?.onLine == true)
 }
