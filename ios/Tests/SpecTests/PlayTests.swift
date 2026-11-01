@@ -82,7 +82,7 @@ private func picks(_ lines: [EngineLine], _ level: Level) -> [String: Int] {
   let weak = picks(lines, levelFor(rating: 800)), strong = picks(lines, levelFor(rating: 2000))
   #expect(weak["m2", default: 0] > weak["m3", default: 0])
   #expect(weak["m3", default: 0] > 0)
-  #expect(strong["m3", default: 0] < 20)
+  #expect(strong["m3", default: 0] * 5 < weak["m3", default: 0])
   #expect(strong["m1", default: 0] > weak["m1", default: 0])
 }
 

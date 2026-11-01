@@ -6,7 +6,7 @@ import Testing
 
 /// How the engine does, printed for comparing builds. Runs only with
 /// ENGINE_BENCH set (CI's release step), since the judge bench takes minutes.
-@Suite(.enabled(if: ProcessInfo.processInfo.environment["ENGINE_BENCH"] != nil))
+@Suite(.serialized, .enabled(if: ProcessInfo.processInfo.environment["ENGINE_BENCH"] != nil))
 struct EngineBenchTests {
   static let positions = [
     START_FEN,
@@ -146,27 +146,52 @@ struct EngineBenchTests {
     "r1bqk2r/ppppbppp/3n4/4R3/8/8/PPPP1PPP/RNBQ1BK1 b kq - 0 1",
     "r1bq1rk1/ppppbppp/3n4/4R3/8/8/PPPP1PPP/RNBQ1BK1 w - - 0 1",
     "r1bq1rk1/ppppbppp/3n4/4R3/3P4/8/PPP2PPP/RNBQ1BK1 b - - 0 1",
-    "r1bqk2r/ppppbppp/3n4/4n3/8/8/PPPP1PPP/RNBQRBK1 w kq - 0 1",
     "r1bq1rk1/pppp1ppp/3n1b2/4R3/3P4/8/PPP2PPP/RNBQ1BK1 w - - 0 1",
     "r1bq1rk1/pppp1ppp/3n1b2/8/3P4/8/PPP1RPPP/RNBQ1BK1 b - - 0 1",
     "r1bq1rk1/pppp1ppp/3n1b2/8/3P4/8/PPP2PPP/RNBQRBK1 b - - 0 1",
-    "r1bqkb1r/ppp2ppp/2pn4/4p3/3P4/5N2/PPP2PPP/RNBQ1RK1 w kq - 0 1",
     "r1bqkb1r/ppp2ppp/2pn4/4P3/8/5N2/PPP2PPP/RNBQ1RK1 b kq - 0 1",
     "r1bqkb1r/ppp2ppp/2p5/4Pn2/8/5N2/PPP2PPP/RNBQ1RK1 w kq - 0 1",
     "r1bQkb1r/ppp2ppp/2p5/4Pn2/8/5N2/PPP2PPP/RNB2RK1 b kq - 0 1",
     "r1bk1b1r/ppp2ppp/2p5/4Pn2/8/5N2/PPP2PPP/RNB2RK1 w - - 0 1",
-    "rnbqkb1r/pp2pppp/2p2N2/8/3P4/8/PPP2PPP/R1BQKBNR b KQkq - 0 1",
     "rnbqkb1r/pp3ppp/2p2p2/8/3P4/8/PPP2PPP/R1BQKBNR w KQkq - 0 1",
     "r1bk1b1r/ppp2ppp/2p5/4Pn2/8/2N2N2/PPP2PPP/R1B2RK1 b - - 0 1",
-    "rnbqkb1r/ppp1pp1p/6p1/8/3PP3/2n5/PP3PPP/R1BQKBNR w KQkq - 0 1",
     "rnbqkb1r/ppp1pp1p/6p1/8/3PP3/2P5/P4PPP/R1BQKBNR b KQkq - 0 1",
     "rnbqk2r/ppp1ppbp/6p1/8/3PP3/2P5/P4PPP/R1BQKBNR w KQkq - 0 1",
     "r2k1b1r/pppb1ppp/2p5/4Pn2/8/2N2N2/PPP2PPP/R1B2RK1 w - - 0 1",
     "rnbqkb1r/pp3ppp/2p2p2/8/3P4/2P5/PP3PPP/R1BQKBNR b KQkq - 0 1",
     "rnbqk2r/pp3ppp/2pb1p2/8/3P4/2P5/PP3PPP/R1BQKBNR w KQkq - 0 1",
-    "r1bqkb1r/pppp1ppp/3n4/1B2n3/8/8/PPPP1PPP/RNBQR1K1 w kq - 0 1",
     "rnbqk2r/pp3ppp/2pb1p2/8/3P4/2PB4/PP3PPP/R1BQK1NR b KQkq - 0 1",
-    "r1bqk2r/pppp1ppp/2N2n2/8/1b2P3/2N5/PPP2PPP/R1BQKB1R b KQkq - 0 1",
+    "rnbqk2r/ppp1ppbp/6p1/8/3PP3/2P2N2/P4PPP/R1BQKB1R b KQkq - 0 1",
+    "r1bqk2r/p1pp1ppp/2p2n2/8/1b2P3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 1",
+    "rnbq1rk1/pp3ppp/2pb1p2/8/3P4/2PB4/PP3PPP/R1BQK1NR w KQ - 0 1",
+    "rnbk1b1r/ppp2ppp/5n2/4p3/4P3/2N5/PPP2PPP/R1B1KBNR w KQ - 0 1",
+    "r1bqk2r/p1pp1ppp/2p2n2/8/1b2P3/2NB4/PPP2PPP/R1BQK2R b KQkq - 0 1",
+    "r2k1b1r/pppb1ppp/2p5/4Pn2/8/2N2N2/PPP2PPP/R1BR2K1 b - - 0 1",
+    "r1bqkb1r/p1pp1ppp/2p2n2/8/4P3/8/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+    "r1bqkb1r/pp3ppp/2np4/1N1Pp3/8/8/PPP2PPP/R1BQKB1R b KQkq - 0 1",
+    "rnbqk2r/pp2ppbp/6p1/2p5/3PP3/2P2N2/P4PPP/R1BQKB1R w KQkq - 0 1",
+    "r1bqkb1r/p2p1ppp/2p1pn2/8/4P3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 1",
+    "rnb2rk1/ppp2pp1/4pq1p/8/1bBP4/2N1PN2/PP3PPP/2RQK2R b K - 0 1",
+    "rnb2rk1/pp3pp1/4pq1p/2p5/1bBP4/2N1PN2/PP3PPP/2RQK2R w K - 0 1",
+    "rnbqkb1r/pp2pppp/2p5/8/4Q3/5N2/PPPP1PPP/R1B1KB1R b KQkq - 0 1",
+    "r1bqkb1r/p2p1ppp/2p1pn2/4P3/8/2N5/PPP2PPP/R1BQKB1R b KQkq - 0 1",
+    "r1bqkb1r/p2p1ppp/2p1p3/3nP3/8/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 1",
+    "r1bqkb1r/p2p1ppp/2p1p3/3nP3/4N3/8/PPP2PPP/R1BQKB1R b KQkq - 0 1",
+    "rnbq1rk1/pp3ppp/2pb1p2/8/3P4/2PB4/PPQ2PPP/R1B1K1NR b KQ - 0 1",
+    "rnbqkb1r/ppp2ppp/3p4/8/8/2P2N2/PPP2PPP/R1BQKB1R b KQkq - 0 1",
+    "r1bqkb1r/pppp1ppp/3n4/1B2R3/8/8/PPPP1PPP/RNBQ2K1 b kq - 0 1",
+    "r1bqk2r/ppppbppp/3n4/1B2R3/8/8/PPPP1PPP/RNBQ2K1 w kq - 0 1",
+    "rnb1k2r/pp3ppp/2p2q2/3p4/2PPp3/2P1P1P1/P4PBP/R2QK1NR b KQkq - 0 1",
+    "r1b1k2r/pp1n1ppp/2p2q2/3p4/2PPp3/2P1P1P1/P4PBP/R2QK1NR w KQkq - 0 1",
+    "r1b1k2r/pp1n1ppp/2p2q2/3P4/3Pp3/2P1P1P1/P4PBP/R2QK1NR b KQkq - 0 1",
+    "r1bqk2r/p1p2ppp/2p2n2/3p4/1b2P3/2NB4/PPP2PPP/R1BQK2R w KQkq - 0 1",
+    "rnbqkb1r/pp3ppp/3p4/1N1Pp3/8/8/PPP2PPP/R1BQKB1R w KQkq - 0 1",
+    "rnbqk2r/ppp1bppp/3p4/8/8/2P2N2/PPP2PPP/R1BQKB1R w KQkq - 0 1",
+    "rnbqr1k1/pp3ppp/2pb1p2/8/3P4/2PB4/PPQ2PPP/R1B1K1NR w KQ - 0 1",
+    "rnbqr1k1/pp3ppp/2pb1p2/8/3P4/2PB4/PPQ1NPPP/R1B1K2R b KQ - 0 1",
+    "rnb2rk1/pp3pp1/4pq1p/2p5/1bBP4/2N1PN2/PP3PPP/2RQ1RK1 b - - 0 1",
+    "r1bqnrk1/ppppbppp/8/4R3/3P4/8/PPP2PPP/RNBQ1BK1 w - - 0 1"
+,
   ]
 
   /// What each level's moves cost on average, against a deeper search: how

@@ -257,6 +257,11 @@ final class Position {
       | (at.rook(target, occupied) & (set(by, ROOK) | queens))
   }
 
+  /// Does a pawn of the given side guard this square?
+  @inline(__always) func pawnGuards(_ target: Int, by: Int) -> Bool {
+    at.pawn[(by ^ 1) << 6 | target] & set(by, PAWN) != 0
+  }
+
   /// Is this square attacked by the given side?
   func attacked(_ target: Int, by: Int) -> Bool {
     attackers(target, by: by, occupied) != 0

@@ -28,7 +28,7 @@ public let MIN_RATING = 600, MAX_RATING = 2200
 
 /// Anchor points the levels are drawn between: rating, depth, temperature.
 private let LEVEL_ANCHORS: [(rating: Int, depth: Int, temperature: Double)] = [
-  (600, 1, 160), (800, 2, 120), (1200, 3, 75), (1600, 5, 45), (2000, 7, 25), (2200, 8, 18),
+  (600, 1, 400), (800, 2, 300), (1200, 3, 180), (1600, 5, 110), (2000, 7, 60), (2200, 8, 45),
 ]
 
 /// The level that plays like a rating, between the anchors.
@@ -74,7 +74,7 @@ public func chooseMove(_ lines: [EngineLine], _ level: Level, _ rand: () -> Doub
   // Scores are White's; the best line is the mover's best, so a loss is the distance from it.
   let weights = usable.map { line -> Double in
     guard let cp = centipawns(line) else { return 0 }
-    return exp(-min(abs(best - cp), 2000) / level.temperature)
+    return exp(-abs(best - cp) / level.temperature)
   }
   var ticket = rand() * weights.reduce(0, +)
   for (i, line) in usable.enumerated() {

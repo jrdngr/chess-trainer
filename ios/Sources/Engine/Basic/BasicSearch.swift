@@ -181,8 +181,15 @@ private final class Searcher {
       if flag == EXACT || (flag == LOWER && stored >= beta) || (flag == UPPER && stored <= alpha) { return stored }
     }
     let alphaAtStart = alpha
+    let nullWindow = beta - alpha == 1
+    let staticEval = inCheck ? -INF : evaluate(pos)
 
-    if allowNull && !inCheck && depth >= 3 && beta < MATE_BOUND && pos.hasPieces(pos.side) && evaluate(pos) >= beta {
+    // Off the main line, close to the leaves, far enough ahead that a quiet move will not undo it.
+    if nullWindow && !inCheck && depth <= 3 && abs(beta) < MATE_BOUND && staticEval - 100 * depth >= beta {
+      return staticEval
+    }
+
+    if allowNull && !inCheck && depth >= 3 && beta < MATE_BOUND && pos.hasPieces(pos.side) && staticEval >= beta {
       pos.makeNull()
       let score: Int
       do { score = -(try negamax(depth - 3, -beta, -beta + 1, ply + 1, false)) } catch {
@@ -205,7 +212,8 @@ private final class Searcher {
           score = -(try negamax(depth - 1, -beta, -alpha, ply + 1, true))
         } else {
           // Late quiet moves rarely matter: look at them a little shallower first.
-          let reduce = depth >= 3 && legal > 4 && quiet && !inCheck && !pos.inCheck() ? 1 : 0
+          let late = depth >= 3 && legal > 4 && quiet && !inCheck && !pos.inCheck()
+          let reduce = !late ? 0 : depth >= 5 && legal > 12 ? 2 : 1
           score = -(try negamax(depth - 1 - reduce, -alpha - 1, -alpha, ply + 1, true))
           if score > alpha && (reduce > 0 || score < beta) { score = -(try negamax(depth - 1, -beta, -alpha, ply + 1, true)) }
         }
@@ -265,8 +273,12 @@ private final class Searcher {
     var best = stand
     for move in orderCaptures(pos.pseudoMoves(true)) {
       // Even winning the piece outright would not get back to alpha.
-      let gain = PIECE_VALUE[pos.board[toOf(move)] & 7] + (promoOf(move) != 0 ? 800 : 0)
+      let victim = PIECE_VALUE[pos.board[toOf(move)] & 7]
+      let gain = victim + (promoOf(move) != 0 ? 800 : 0)
       if stand + gain + 200 < alpha && promoOf(move) == 0 { continue }
+      // A bigger piece taking a smaller one a pawn guards loses the difference.
+      let attacker = PIECE_VALUE[pos.board[fromOf(move)] & 7]
+      if attacker > victim + 50 && promoOf(move) == 0 && pos.pawnGuards(toOf(move), by: pos.side ^ 1) { continue }
       if !pos.make(move) { continue }
       let score: Int
       do { score = -(try quiesce(-beta, -alpha, ply + 1)) } catch {
