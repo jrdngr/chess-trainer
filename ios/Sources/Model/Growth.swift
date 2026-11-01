@@ -65,7 +65,7 @@ private let UNWEIGHED_SHARE = 0.5
 
 /// Growth's rows for some trees, ranked by urgency.
 public func growthRows(_ reps: [Repertoire], _ index: ReferenceIndex, _ opts: GrowthOptions = GrowthOptions()) -> [GrowthRow] {
-  let starred = (opts.starred ?? []).map { $0.split(separator: " ").map(String.init) }
+  let starredLines = (opts.starred ?? []).map { $0.split(separator: " ").map(String.init) }
   let scoped = opts.region.flatMap { $0.node.depth > 0 ? $0 : nil }
   let offered = scoped.map { openingsInSelection($0.tree, $0.node) }
   let above = scoped.map { Set(ancestorsOf($0.tree, $0.node.id).map(\.name)) }
@@ -89,7 +89,7 @@ public func growthRows(_ reps: [Repertoire], _ index: ReferenceIndex, _ opts: Gr
         id: id, repertoireId: rep.id, color: rep.color, name: name, eco: eco, depth: hole.path.count, topShare: 0,
         starred: false, urgency: 0, score: 0, holes: [], ends: [])
       row.depth = min(row.depth, hole.path.count)
-      row.starred = row.starred || isStarred(starred, line)
+      row.starred = row.starred || isStarred(starredLines, line)
       row.holes.append(hole)
       row.topShare = max(row.topShare, holeShare(hole))
       byName[id] = row
