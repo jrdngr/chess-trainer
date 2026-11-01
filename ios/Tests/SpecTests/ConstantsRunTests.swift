@@ -17,7 +17,7 @@ import Testing
   expect(s, "COMBO_HOLD", COMBO_HOLD)
   expect(s, "CONVERT_FROM", CONVERT_FROM)
   expect(s, "CONVERT_WINDOW", CONVERT_WINDOW)
-  expect(s, "DEFAULT_SURVIVAL", encoded(DEFAULT_SURVIVAL))
+  expect(s, "DEFAULT_SURVIVAL", webEncoded(DEFAULT_SURVIVAL))
   expect(s, "EDGE_MOVES", EDGE_MOVES)
   expect(s, "EMPTY_SURVIVAL_SCORE", encoded(EMPTY_SURVIVAL_SCORE))
   expect(s, "GLOW_MINOR", GLOW_MINOR)
@@ -61,7 +61,11 @@ import Testing
   expect("autopilotPrefs", "AUTO_DRILL", encoded(AUTO_DRILL))
   expect("autopilotPrefs", "AUTO_GROWTH", encoded(AUTO_GROWTH))
   expect("autopilotPrefs", "DEFAULT_AUTOPILOT", encoded(DEFAULT_AUTOPILOT))
-  expect("modes", "DEFAULT_PLAY", encoded(DEFAULT_PLAY))
+  // DEFAULT_PLAY differs on purpose: levels are ratings now (PlayTests).
+  var play = DEFAULT_PLAY
+  play.level = "club"
+  expect("modes", "DEFAULT_PLAY", encoded(play))
+  #expect(levelById(DEFAULT_PLAY.level) == levelById("club"))
   expect("modes", "GROWTH_DEPTHS", GROWTH_DEPTHS)
   expect("modes", "SHARE_STEPS", SHARE_STEPS)
   expect("openingRun", "CLOCK_MODES", CLOCK_MODES.map(\.rawValue))

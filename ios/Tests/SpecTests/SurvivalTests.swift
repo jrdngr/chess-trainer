@@ -42,6 +42,6 @@ func color(_ j: JSON) -> Color { Color(rawValue: j.string)! }
       return recentForm(score).json
     },
     "survival.normalizeSurvival": { a in encoded(a[0] == .null ? SurvivalRecord() : a[0].decoded(SurvivalRecord.self)) },
-    "survival.DEFAULT_SURVIVAL": { _ in encoded(DEFAULT_SURVIVAL) },
+    "survival.DEFAULT_SURVIVAL": { _ in webEncoded(DEFAULT_SURVIVAL) },
   ])
 }

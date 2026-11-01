@@ -143,7 +143,7 @@ private func fixed4(_ x: Double) -> Double { Double(JS.toFixed(x, 4))! }
         "share": byShare(moves, san: \.san, share: \.share, delta).map(\.san),
       ])
     },
-    "autopilotPrefs.autopilotModes": { encoded(autopilotModes(AutopilotPrefs(moveScores: $0[0].bool, boardGlow: $0[1].bool))) },
+    "autopilotPrefs.autopilotModes": { webEncoded(autopilotModes(AutopilotPrefs(moveScores: $0[0].bool, boardGlow: $0[1].bool))) },
   ])
 }
 
