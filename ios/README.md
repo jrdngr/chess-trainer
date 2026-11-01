@@ -81,3 +81,9 @@ one-off script; the constants tests keep them equal to the prototype.
 opaque PNG; iOS masks the corners and scales it down. Its source is
 `Design/app-icon.svg` (three Leitner boxes, the knight card leaving amber for
 green). Re-render the PNG from the SVG after editing it.
+
+## Builds and versions
+
+- Xcode Cloud builds every push to `main`. `ci_scripts/ci_post_clone.sh` installs XcodeGen and generates the project, since `ChessPlaybook.xcodeproj` is not checked in.
+- The marketing version is `MARKETING_VERSION` in `project.yml`. To bump it, edit it there and regenerate.
+- Xcode Cloud sets the build number on every archive. Local builds stay at `1`. They are only for installing on a device, never for uploading.
