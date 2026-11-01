@@ -1,5 +1,10 @@
 # Claude notes for this repo
 
+**Since 2026-11-01 only the native app in `ios/` changes.** `prototype/` and
+`spec/` (with `docs/spec/`) are frozen historical records: don't edit them,
+regenerate cases, re-record e2e, or republish the artifact. The sections below
+on publishing and the port's reference apply only to that history.
+
 The web prototype lives in `prototype/`, and every npm command runs from
 there. `ios/` is the native app; `spec/` and `docs/` are shared by both.
 
