@@ -25,56 +25,74 @@ typealias Bitboard = UInt64
   return sq
 }
 
-/* ── attack tables ── */
+/* ── attack tables ──
+ * Flat buffers allocated once and never freed: plain arrays of arrays cost
+ * a bounds check, an indirection and reference counting on every lookup. */
 
-private func stepTable(_ steps: [(Int, Int)]) -> [Bitboard] {
-  (0..<64).map { sq -> Bitboard in
-    var b: Bitboard = 0
-    for (df, dr) in steps {
-      let f = fileOf(sq) + df, r = rankOf(sq) + dr
-      if f >= 0 && f < 8 && r >= 0 && r < 8 { b |= bit(r * 8 + f) }
-    }
-    return b
-  }
+private func table(_ count: Int, _ fill: (Int) -> Bitboard) -> UnsafeMutablePointer<Bitboard> {
+  let p = UnsafeMutablePointer<Bitboard>.allocate(capacity: count)
+  for i in 0..<count { p[i] = fill(i) }
+  return p
 }
 
-let KNIGHT_ATTACKS = stepTable([(1, 2), (2, 1), (2, -1), (1, -2), (-1, -2), (-2, -1), (-2, 1), (-1, 2)])
-let KING_ATTACKS = stepTable([(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)])
-/// The squares a pawn of each side attacks from a square.
-let PAWN_ATTACKS = [stepTable([(-1, 1), (1, 1)]), stepTable([(-1, -1), (1, -1)])]
+private func steps(_ sq: Int, _ list: [(Int, Int)]) -> Bitboard {
+  var b: Bitboard = 0
+  for (df, dr) in list {
+    let f = fileOf(sq) + df, r = rankOf(sq) + dr
+    if f >= 0 && f < 8 && r >= 0 && r < 8 { b |= bit(r * 8 + f) }
+  }
+  return b
+}
 
 /// Rays out from each square, one per direction. The first four run toward
 /// higher squares (N, E, NE, NW), the last four toward lower (S, W, SW, SE).
 private let DIRECTIONS = [(0, 1), (1, 0), (1, 1), (-1, 1), (0, -1), (-1, 0), (-1, -1), (1, -1)]
-private let RAYS: [[Bitboard]] = DIRECTIONS.map { (d: (Int, Int)) -> [Bitboard] in
-  let (df, dr) = d
-  return (0..<64).map { sq -> Bitboard in
-    var b: Bitboard = 0
-    var f = fileOf(sq) + df, r = rankOf(sq) + dr
-    while f >= 0 && f < 8 && r >= 0 && r < 8 {
-      b |= bit(r * 8 + f)
-      f += df
-      r += dr
+
+/// Every attack table, read through pointers the board keeps to hand.
+struct AttackTables: @unchecked Sendable {
+  let knight: UnsafeMutablePointer<Bitboard>
+  let king: UnsafeMutablePointer<Bitboard>
+  /// The squares a pawn attacks, side * 64 + square.
+  let pawn: UnsafeMutablePointer<Bitboard>
+  /// direction * 64 + square.
+  let rays: UnsafeMutablePointer<Bitboard>
+
+  init() {
+    knight = table(64) { steps($0, [(1, 2), (2, 1), (2, -1), (1, -2), (-1, -2), (-2, -1), (-2, 1), (-1, 2)]) }
+    king = table(64) { steps($0, [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]) }
+    pawn = table(128) { i in i < 64 ? steps(i, [(-1, 1), (1, 1)]) : steps(i - 64, [(-1, -1), (1, -1)]) }
+    rays = table(8 * 64) { i in
+      let (df, dr) = DIRECTIONS[i >> 6]
+      let sq = i & 63
+      var b: Bitboard = 0
+      var f = fileOf(sq) + df, r = rankOf(sq) + dr
+      while f >= 0 && f < 8 && r >= 0 && r < 8 {
+        b |= bit(r * 8 + f)
+        f += df
+        r += dr
+      }
+      return b
     }
-    return b
+  }
+
+  @inline(__always) func ray(_ dir: Int, _ sq: Int, _ occupied: Bitboard) -> Bitboard {
+    let r = rays[dir << 6 | sq]
+    let blockers = r & occupied
+    if blockers == 0 { return r }
+    let first = dir < 4 ? blockers.trailingZeroBitCount : 63 - blockers.leadingZeroBitCount
+    return r ^ rays[dir << 6 | first]
+  }
+
+  @inline(__always) func rook(_ sq: Int, _ occupied: Bitboard) -> Bitboard {
+    ray(0, sq, occupied) | ray(1, sq, occupied) | ray(4, sq, occupied) | ray(5, sq, occupied)
+  }
+
+  @inline(__always) func bishop(_ sq: Int, _ occupied: Bitboard) -> Bitboard {
+    ray(2, sq, occupied) | ray(3, sq, occupied) | ray(6, sq, occupied) | ray(7, sq, occupied)
   }
 }
 
-@inline(__always) private func ray(_ dir: Int, _ sq: Int, _ occupied: Bitboard) -> Bitboard {
-  let r = RAYS[dir][sq]
-  let blockers = r & occupied
-  if blockers == 0 { return r }
-  let first = dir < 4 ? blockers.trailingZeroBitCount : 63 - blockers.leadingZeroBitCount
-  return r ^ RAYS[dir][first]
-}
-
-@inline(__always) func rookAttacks(_ sq: Int, _ occupied: Bitboard) -> Bitboard {
-  ray(0, sq, occupied) | ray(1, sq, occupied) | ray(4, sq, occupied) | ray(5, sq, occupied)
-}
-
-@inline(__always) func bishopAttacks(_ sq: Int, _ occupied: Bitboard) -> Bitboard {
-  ray(2, sq, occupied) | ray(3, sq, occupied) | ray(6, sq, occupied) | ray(7, sq, occupied)
-}
+let ATTACKS = AttackTables()
 
 /// Castling rights kept after a move touches a square.
 private let CASTLE_KEEP: [Int] = {
@@ -136,11 +154,12 @@ func moveToUci(_ m: Int) -> String {
 
 final class Position {
   /// The piece code on each square, 0 when empty.
-  var board = [Int](repeating: 0, count: 64)
+  let board = UnsafeMutablePointer<Int>.allocate(capacity: 64)
   /// One set per piece code.
-  var pieces = [Bitboard](repeating: 0, count: 16)
+  let pieces = UnsafeMutablePointer<Bitboard>.allocate(capacity: 16)
   /// Every piece of each side.
-  var bySide: [Bitboard] = [0, 0]
+  let bySide = UnsafeMutablePointer<Bitboard>.allocate(capacity: 2)
+  private let at = ATTACKS
   /// 0 White, 1 Black.
   var side = WHITE_SIDE
   /// 1 White short, 2 White long, 4 Black short, 8 Black long.
@@ -159,7 +178,16 @@ final class Position {
     pieces[type | (side == BLACK_SIDE ? BLACK : 0)]
   }
 
+  deinit {
+    board.deallocate()
+    pieces.deallocate()
+    bySide.deallocate()
+  }
+
   init(_ fen: String) {
+    board.initialize(repeating: 0, count: 64)
+    pieces.initialize(repeating: 0, count: 16)
+    bySide.initialize(repeating: 0, count: 2)
     let parts = fen.split(separator: " ").map(String.init)
     var rank = 7, file = 0
     for ch in parts[0] {
@@ -222,11 +250,11 @@ final class Position {
   /// Every piece of the given side that attacks this square.
   func attackers(_ target: Int, by: Int, _ occupied: Bitboard) -> Bitboard {
     let queens = set(by, QUEEN)
-    return (PAWN_ATTACKS[by ^ 1][target] & set(by, PAWN))
-      | (KNIGHT_ATTACKS[target] & set(by, KNIGHT))
-      | (KING_ATTACKS[target] & set(by, KING))
-      | (bishopAttacks(target, occupied) & (set(by, BISHOP) | queens))
-      | (rookAttacks(target, occupied) & (set(by, ROOK) | queens))
+    return (at.pawn[(by ^ 1) << 6 | target] & set(by, PAWN))
+      | (at.knight[target] & set(by, KNIGHT))
+      | (at.king[target] & set(by, KING))
+      | (at.bishop(target, occupied) & (set(by, BISHOP) | queens))
+      | (at.rook(target, occupied) & (set(by, ROOK) | queens))
   }
 
   /// Is this square attacked by the given side?
@@ -273,9 +301,10 @@ final class Position {
         let two = one + forward
         if !capturesOnly && rankOf(from) == startRank && board[two] == 0 { out.append(pack(from, two, 0, DOUBLE_PUSH)) }
       }
-      var hits = PAWN_ATTACKS[us][from] & enemy
+      let pawnHits = at.pawn[us << 6 | from]
+      var hits = pawnHits & enemy
       while hits != 0 { pawnTo(from, popLowest(&hits), CAPTURE) }
-      if ep >= 0 && PAWN_ATTACKS[us][from] & bit(ep) != 0 { out.append(pack(from, ep, 0, CAPTURE | EN_PASSANT)) }
+      if ep >= 0 && pawnHits & bit(ep) != 0 { out.append(pack(from, ep, 0, CAPTURE | EN_PASSANT)) }
     }
 
     // Pieces.
@@ -285,11 +314,11 @@ final class Position {
         let f = popLowest(&from)
         let attacks: Bitboard
         switch type {
-        case KNIGHT: attacks = KNIGHT_ATTACKS[f]
-        case BISHOP: attacks = bishopAttacks(f, occ)
-        case ROOK: attacks = rookAttacks(f, occ)
-        case QUEEN: attacks = bishopAttacks(f, occ) | rookAttacks(f, occ)
-        default: attacks = KING_ATTACKS[f]
+        case KNIGHT: attacks = at.knight[f]
+        case BISHOP: attacks = at.bishop(f, occ)
+        case ROOK: attacks = at.rook(f, occ)
+        case QUEEN: attacks = at.bishop(f, occ) | at.rook(f, occ)
+        default: attacks = at.king[f]
         }
         var to = attacks & targets
         while to != 0 {

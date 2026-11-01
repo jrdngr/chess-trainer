@@ -6,38 +6,52 @@ private let MG_VALUE = [0, 82, 337, 365, 477, 1025, 0]
 private let EG_VALUE = [0, 94, 281, 297, 512, 936, 0]
 private let PHASE = [0, 0, 1, 1, 2, 4, 0]
 
-/// Piece value plus square, per piece code and square.
-private let TABLES: (mg: [[Int]], eg: [[Int]]) = {
-  var mg = [[Int]](repeating: [Int](repeating: 0, count: 64), count: 16)
-  var eg = mg
-  for type in PAWN...KING {
-    for sq in 0..<64 {
-      // The tables run from a8, as White sees the board.
-      let white = sq ^ 56
-      let black = sq
-      mg[type][sq] = MG_VALUE[type] + MG_TABLES[type][white]
-      eg[type][sq] = EG_VALUE[type] + EG_TABLES[type][white]
-      mg[type | BLACK][sq] = MG_VALUE[type] + MG_TABLES[type][black]
-      eg[type | BLACK][sq] = EG_VALUE[type] + EG_TABLES[type][black]
-    }
-  }
-  return (mg, eg)
-}()
+/// Evaluation tables in flat buffers, like the attack tables.
+private struct EvalTables: @unchecked Sendable {
+  /// Piece value plus square, piece code * 64 + square.
+  let mg: UnsafeMutablePointer<Int>
+  let eg: UnsafeMutablePointer<Int>
+  /// The squares in front of a pawn on its own file and both neighbours, side * 64 + square.
+  let passed: UnsafeMutablePointer<Bitboard>
+  let files: UnsafeMutablePointer<Bitboard>
+  /// The files either side of each file.
+  let neighbours: UnsafeMutablePointer<Bitboard>
 
-private let FILE_A: Bitboard = 0x0101_0101_0101_0101
-private let FILES: [Bitboard] = (0..<8).map { FILE_A << UInt64($0) }
-
-/// The squares in front of a pawn on its own file and both neighbours.
-private let PASSED_MASK: [[Bitboard]] = (0..<2).map { side in
-  (0..<64).map { sq in
-    var mask: Bitboard = 0
-    let f = fileOf(sq)
-    for nf in max(0, f - 1)...min(7, f + 1) {
-      for r in 0..<8 where side == 0 ? r > rankOf(sq) : r < rankOf(sq) { mask |= bit(r * 8 + nf) }
+  init() {
+    mg = .allocate(capacity: 16 * 64)
+    eg = .allocate(capacity: 16 * 64)
+    mg.initialize(repeating: 0, count: 16 * 64)
+    eg.initialize(repeating: 0, count: 16 * 64)
+    for type in PAWN...KING {
+      for sq in 0..<64 {
+        // The tables run from a8, as White sees the board.
+        let white = sq ^ 56
+        let black = sq
+        mg[type << 6 | sq] = MG_VALUE[type] + MG_TABLES[type][white]
+        eg[type << 6 | sq] = EG_VALUE[type] + EG_TABLES[type][white]
+        mg[(type | BLACK) << 6 | sq] = MG_VALUE[type] + MG_TABLES[type][black]
+        eg[(type | BLACK) << 6 | sq] = EG_VALUE[type] + EG_TABLES[type][black]
+      }
     }
-    return mask
+    files = .allocate(capacity: 8)
+    neighbours = .allocate(capacity: 8)
+    for f in 0..<8 { files[f] = 0x0101_0101_0101_0101 << UInt64(f) }
+    for f in 0..<8 { neighbours[f] = (f > 0 ? files[f - 1] : 0) | (f < 7 ? files[f + 1] : 0) }
+    passed = .allocate(capacity: 128)
+    for side in 0..<2 {
+      for sq in 0..<64 {
+        var mask: Bitboard = 0
+        let f = fileOf(sq)
+        for nf in max(0, f - 1)...min(7, f + 1) {
+          for r in 0..<8 where side == 0 ? r > rankOf(sq) : r < rankOf(sq) { mask |= bit(r * 8 + nf) }
+        }
+        passed[side << 6 | sq] = mask
+      }
+    }
   }
 }
+
+private let EVAL = EvalTables()
 
 /// Material values for ordering captures and pruning hopeless ones.
 let PIECE_VALUE = [0, 100, 320, 330, 500, 900, 20000]
@@ -46,17 +60,18 @@ private let PASSED_MG = [0, 5, 10, 15, 25, 40, 60, 0]
 private let PASSED_EG = [0, 10, 20, 35, 60, 100, 150, 0]
 
 func evaluate(_ pos: Position) -> Int {
+  let t = EVAL
   var mg = 0, eg = 0, phase = 0
   for side in 0..<2 {
     let sign = side == 1 ? -1 : 1
     for type in PAWN...KING {
       let code = type | (side == 1 ? BLACK : 0)
-      var set = pos.pieces[code]
-      phase += PHASE[type] * set.nonzeroBitCount
-      while set != 0 {
-        let s = popLowest(&set)
-        mg += sign * TABLES.mg[code][s]
-        eg += sign * TABLES.eg[code][s]
+      var each = pos.pieces[code]
+      phase += PHASE[type] * each.nonzeroBitCount
+      while each != 0 {
+        let s = popLowest(&each)
+        mg += sign * t.mg[code << 6 | s]
+        eg += sign * t.eg[code << 6 | s]
       }
     }
     if pos.set(side, BISHOP).nonzeroBitCount >= 2 {
@@ -65,22 +80,21 @@ func evaluate(_ pos: Position) -> Int {
     }
     let pawns = pos.set(side, PAWN)
     let enemyPawns = pos.set(side ^ 1, PAWN)
-    var files = [Int](repeating: 0, count: 8)
-    for f in 0..<8 { files[f] = (pawns & FILES[f]).nonzeroBitCount }
-    for f in 0..<8 where files[f] > 1 {
-      mg -= sign * 10 * (files[f] - 1)
-      eg -= sign * 20 * (files[f] - 1)
+    for f in 0..<8 {
+      let count = (pawns & t.files[f]).nonzeroBitCount
+      if count > 1 {
+        mg -= sign * 10 * (count - 1)
+        eg -= sign * 20 * (count - 1)
+      }
     }
     var each = pawns
     while each != 0 {
       let s = popLowest(&each)
-      let f = fileOf(s)
-      let isolated = (f == 0 || files[f - 1] == 0) && (f == 7 || files[f + 1] == 0)
-      if isolated {
+      if pawns & t.neighbours[fileOf(s)] == 0 {
         mg -= sign * 12
         eg -= sign * 15
       }
-      if PASSED_MASK[side][s] & enemyPawns == 0 {
+      if t.passed[side << 6 | s] & enemyPawns == 0 {
         let advance = side == 1 ? 7 - rankOf(s) : rankOf(s)
         mg += sign * PASSED_MG[advance]
         eg += sign * PASSED_EG[advance]
