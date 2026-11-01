@@ -74,3 +74,10 @@ one-off script; the constants tests keep them equal to the prototype.
   generator is `mulberry32`, bit for bit.
 - Not yet ported: the famous games the explorer pins to positions
   (`topGames`), left for the screen that shows them.
+
+## App icon
+
+`App/Assets.xcassets/AppIcon.appiconset/AppIcon.png` is a single 1024px
+opaque PNG; iOS masks the corners and scales it down. Its source is
+`Design/app-icon.svg` (three Leitner boxes, the knight card leaving amber for
+green). Re-render the PNG from the SVG after editing it.
