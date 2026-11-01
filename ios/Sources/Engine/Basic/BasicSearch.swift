@@ -1,9 +1,9 @@
 import Foundation
 
-/// The backup engine's search: alpha-beta with iterative deepening, a capture
+/// The engine's search: alpha-beta with iterative deepening, a capture
 /// search at the leaves, and the usual move ordering. A depth that runs out
 /// of time is thrown away, so every line reported comes from one finished
-/// depth. `src/engine/basic/search.ts`.
+/// depth.
 
 let MATE = 30000
 private let MATE_BOUND = MATE - 1000
@@ -73,7 +73,7 @@ private final class Searcher {
   private var nodes = 0
   private let deadline: Double
   private var killers = [[Int]](repeating: [0, 0], count: MAX_PLY)
-  private var history = [Int](repeating: 0, count: 128 * 128)
+  private var history = [Int](repeating: 0, count: 64 * 64)
   private var pvTable = [[Int]](repeating: [Int](repeating: 0, count: MAX_PLY), count: MAX_PLY)
   private var pvLength = [Int](repeating: 0, count: MAX_PLY)
   private var previousPv: [Int] = []
@@ -233,7 +233,7 @@ private final class Searcher {
               killers[ply][1] = killers[ply][0]
               killers[ply][0] = move
             }
-            history[fromOf(move) * 128 + toOf(move)] += depth * depth
+            history[fromOf(move) * 64 + toOf(move)] += depth * depth
           }
           store(slot, depth, score, LOWER, move, ply)
           return score
@@ -265,7 +265,7 @@ private final class Searcher {
     var best = stand
     for move in orderCaptures(pos.pseudoMoves(true)) {
       // Even winning the piece outright would not get back to alpha.
-      let gain = PIECE_VALUE[pos.sq[toOf(move)] & 7] + (promoOf(move) != 0 ? 800 : 0)
+      let gain = PIECE_VALUE[pos.board[toOf(move)] & 7] + (promoOf(move) != 0 ? 800 : 0)
       if stand + gain + 200 < alpha && promoOf(move) == 0 { continue }
       if !pos.make(move) { continue }
       let score: Int
@@ -285,9 +285,9 @@ private final class Searcher {
 
   /// Most valuable victim first, then least valuable attacker.
   private func captureScore(_ move: Int) -> Double {
-    let victimType = pos.sq[toOf(move)] & 7
+    let victimType = pos.board[toOf(move)] & 7
     let victim = flagsOf(move) & CAPTURE != 0 ? (victimType != 0 ? PIECE_VALUE[victimType] : PIECE_VALUE[1]) : 0
-    let attacker = PIECE_VALUE[pos.sq[fromOf(move)] & 7]
+    let attacker = PIECE_VALUE[pos.board[fromOf(move)] & 7]
     return Double(victim * 10) - Double(attacker) / 100 + (promoOf(move) != 0 ? Double(PIECE_VALUE[promoOf(move)] * 10) : 0)
   }
 
@@ -310,7 +310,7 @@ private final class Searcher {
     return moves.map { m -> (Int, Double) in
       let k: Double
       if m == pvMove { k = 2e9 } else if m == hashMove { k = 1e9 } else if flagsOf(m) & CAPTURE != 0 || promoOf(m) != 0 { k = 1e8 + captureScore(m) } else if m == k0 { k = 9e7 } else if m == k1 { k = 8e7 } else {
-        k = Double(history[fromOf(m) * 128 + toOf(m)])
+        k = Double(history[fromOf(m) * 64 + toOf(m)])
       }
       return (m, k)
     }.enumerated().sorted { a, b in

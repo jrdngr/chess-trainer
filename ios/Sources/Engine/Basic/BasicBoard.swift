@@ -1,5 +1,6 @@
-/// The backup engine's own board: 0x88 squares, moves packed into numbers,
-/// make and unmake in place. `src/engine/basic/board.ts`.
+/// The engine's own board: bitboards (one 64-bit set per piece, square 0 is
+/// a1, 63 is h8) beside a square-by-square array for "what stands here",
+/// moves packed into numbers, make and unmake in place.
 
 let PAWN = 1, KNIGHT = 2, BISHOP = 3, ROOK = 4, QUEEN = 5, KING = 6
 /// Set on a piece code for Black.
@@ -9,21 +10,81 @@ let WHITE_SIDE = 0, BLACK_SIDE = 1
 /// Move flags.
 let CAPTURE = 1, EN_PASSANT = 2, CASTLE = 4, DOUBLE_PUSH = 8
 
-private let KNIGHT_STEPS = [33, 31, 18, 14, -33, -31, -18, -14]
-private let KING_STEPS = [1, -1, 16, -16, 15, 17, -15, -17]
-private let DIAGONALS = [15, 17, -15, -17]
-private let LINES = [1, -1, 16, -16]
 private let PIECE_CHARS = Array(" pnbrqk")
+
+typealias Bitboard = UInt64
+
+@inline(__always) func bit(_ sq: Int) -> Bitboard { 1 << UInt64(sq) }
+@inline(__always) func fileOf(_ sq: Int) -> Int { sq & 7 }
+@inline(__always) func rankOf(_ sq: Int) -> Int { sq >> 3 }
+
+/// Takes the lowest square off a set and returns it.
+@inline(__always) func popLowest(_ b: inout Bitboard) -> Int {
+  let sq = b.trailingZeroBitCount
+  b &= b &- 1
+  return sq
+}
+
+/* ── attack tables ── */
+
+private func stepTable(_ steps: [(Int, Int)]) -> [Bitboard] {
+  (0..<64).map { sq -> Bitboard in
+    var b: Bitboard = 0
+    for (df, dr) in steps {
+      let f = fileOf(sq) + df, r = rankOf(sq) + dr
+      if f >= 0 && f < 8 && r >= 0 && r < 8 { b |= bit(r * 8 + f) }
+    }
+    return b
+  }
+}
+
+let KNIGHT_ATTACKS = stepTable([(1, 2), (2, 1), (2, -1), (1, -2), (-1, -2), (-2, -1), (-2, 1), (-1, 2)])
+let KING_ATTACKS = stepTable([(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)])
+/// The squares a pawn of each side attacks from a square.
+let PAWN_ATTACKS = [stepTable([(-1, 1), (1, 1)]), stepTable([(-1, -1), (1, -1)])]
+
+/// Rays out from each square, one per direction. The first four run toward
+/// higher squares (N, E, NE, NW), the last four toward lower (S, W, SW, SE).
+private let DIRECTIONS = [(0, 1), (1, 0), (1, 1), (-1, 1), (0, -1), (-1, 0), (-1, -1), (1, -1)]
+private let RAYS: [[Bitboard]] = DIRECTIONS.map { (d: (Int, Int)) -> [Bitboard] in
+  let (df, dr) = d
+  return (0..<64).map { sq -> Bitboard in
+    var b: Bitboard = 0
+    var f = fileOf(sq) + df, r = rankOf(sq) + dr
+    while f >= 0 && f < 8 && r >= 0 && r < 8 {
+      b |= bit(r * 8 + f)
+      f += df
+      r += dr
+    }
+    return b
+  }
+}
+
+@inline(__always) private func ray(_ dir: Int, _ sq: Int, _ occupied: Bitboard) -> Bitboard {
+  let r = RAYS[dir][sq]
+  let blockers = r & occupied
+  if blockers == 0 { return r }
+  let first = dir < 4 ? blockers.trailingZeroBitCount : 63 - blockers.leadingZeroBitCount
+  return r ^ RAYS[dir][first]
+}
+
+@inline(__always) func rookAttacks(_ sq: Int, _ occupied: Bitboard) -> Bitboard {
+  ray(0, sq, occupied) | ray(1, sq, occupied) | ray(4, sq, occupied) | ray(5, sq, occupied)
+}
+
+@inline(__always) func bishopAttacks(_ sq: Int, _ occupied: Bitboard) -> Bitboard {
+  ray(2, sq, occupied) | ray(3, sq, occupied) | ray(6, sq, occupied) | ray(7, sq, occupied)
+}
 
 /// Castling rights kept after a move touches a square.
 private let CASTLE_KEEP: [Int] = {
-  var keep = [Int](repeating: 15, count: 128)
-  keep[0x04] = 15 & ~3
-  keep[0x00] = 15 & ~2
-  keep[0x07] = 15 & ~1
-  keep[0x74] = 15 & ~12
-  keep[0x70] = 15 & ~8
-  keep[0x77] = 15 & ~4
+  var keep = [Int](repeating: 15, count: 64)
+  keep[4] = 15 & ~3
+  keep[0] = 15 & ~2
+  keep[7] = 15 & ~1
+  keep[60] = 15 & ~12
+  keep[56] = 15 & ~8
+  keep[63] = 15 & ~4
   return keep
 }()
 
@@ -39,7 +100,7 @@ private struct Zobrist {
       return UInt64(seed)
     }
     func key() -> UInt64 { next() | next() << 32 }
-    pieces = (0..<(16 * 128)).map { _ in key() }
+    pieces = (0..<(16 * 64)).map { _ in key() }
     castle = (0..<16).map { _ in key() }
     ep = (0..<8).map { _ in key() }
     side = key()
@@ -47,16 +108,15 @@ private struct Zobrist {
 }
 private let Z = Zobrist()
 
-@inline(__always) func fromOf(_ m: Int) -> Int { m & 127 }
-@inline(__always) func toOf(_ m: Int) -> Int { (m >> 7) & 127 }
-@inline(__always) func promoOf(_ m: Int) -> Int { (m >> 14) & 7 }
-@inline(__always) func flagsOf(_ m: Int) -> Int { m >> 17 }
+/* ── moves ── */
+
+@inline(__always) func fromOf(_ m: Int) -> Int { m & 63 }
+@inline(__always) func toOf(_ m: Int) -> Int { (m >> 6) & 63 }
+@inline(__always) func promoOf(_ m: Int) -> Int { (m >> 12) & 7 }
+@inline(__always) func flagsOf(_ m: Int) -> Int { m >> 15 }
 @inline(__always) private func pack(_ from: Int, _ to: Int, _ promo: Int, _ flags: Int) -> Int {
-  from | (to << 7) | (promo << 14) | (flags << 17)
+  from | (to << 6) | (promo << 12) | (flags << 15)
 }
-@inline(__always) func onBoard(_ sq: Int) -> Bool { sq & 0x88 == 0 }
-@inline(__always) func fileOf(_ sq: Int) -> Int { sq & 7 }
-@inline(__always) func rankOf(_ sq: Int) -> Int { sq >> 4 }
 
 private func squareName(_ sq: Int) -> String {
   String(UnicodeScalar(UInt8(97 + fileOf(sq)))) + String(rankOf(sq) + 1)
@@ -64,7 +124,7 @@ private func squareName(_ sq: Int) -> String {
 
 private func parseSquare(_ name: String) -> Int {
   let u = Array(name.utf8)
-  return (Int(u[1]) - 49) * 16 + (Int(u[0]) - 97)
+  return (Int(u[1]) - 49) * 8 + (Int(u[0]) - 97)
 }
 
 func moveToUci(_ m: Int) -> String {
@@ -72,8 +132,15 @@ func moveToUci(_ m: Int) -> String {
   return squareName(fromOf(m)) + squareName(toOf(m)) + (promo != 0 ? String(PIECE_CHARS[promo]) : "")
 }
 
+/* ── the position ── */
+
 final class Position {
-  var sq = [Int](repeating: 0, count: 128)
+  /// The piece code on each square, 0 when empty.
+  var board = [Int](repeating: 0, count: 64)
+  /// One set per piece code.
+  var pieces = [Bitboard](repeating: 0, count: 16)
+  /// Every piece of each side.
+  var bySide: [Bitboard] = [0, 0]
   /// 0 White, 1 Black.
   var side = WHITE_SIDE
   /// 1 White short, 2 White long, 4 Black short, 8 Black long.
@@ -85,6 +152,12 @@ final class Position {
   private var history: [Int] = []
   /// Keys before each move played, for repetitions and taking moves back.
   private(set) var past: [UInt64] = []
+
+  var occupied: Bitboard { bySide[0] | bySide[1] }
+
+  @inline(__always) func set(_ side: Int, _ type: Int) -> Bitboard {
+    pieces[type | (side == BLACK_SIDE ? BLACK : 0)]
+  }
 
   init(_ fen: String) {
     let parts = fen.split(separator: " ").map(String.init)
@@ -99,9 +172,8 @@ final class Position {
         let lower = Character(ch.lowercased())
         let type = PIECE_CHARS.firstIndex(of: lower)!
         let black = ch == lower
-        let square = rank * 16 + file
-        sq[square] = type | (black ? BLACK : 0)
-        if type == KING { kings[black ? 1 : 0] = square }
+        put(type | (black ? BLACK : 0), rank * 8 + file)
+        if type == KING { kings[black ? 1 : 0] = rank * 8 + file }
         file += 1
       }
     }
@@ -113,16 +185,28 @@ final class Position {
     rehash()
   }
 
+  @inline(__always) private func put(_ piece: Int, _ s: Int) {
+    board[s] = piece
+    pieces[piece] |= bit(s)
+    bySide[piece >> 3] |= bit(s)
+  }
+
+  @inline(__always) private func remove(_ piece: Int, _ s: Int) {
+    board[s] = 0
+    pieces[piece] &= ~bit(s)
+    bySide[piece >> 3] &= ~bit(s)
+  }
+
   private func rehash() {
     var k: UInt64 = 0
-    for s in 0..<128 where s & 0x88 == 0 && sq[s] != 0 { k ^= Z.pieces[sq[s] * 128 + s] }
+    for s in 0..<64 where board[s] != 0 { k ^= Z.pieces[board[s] * 64 + s] }
     k ^= Z.castle[castling]
     if ep >= 0 { k ^= Z.ep[fileOf(ep)] }
     if side == BLACK_SIDE { k ^= Z.side }
     key = k
   }
 
-  @inline(__always) private func toggle(_ piece: Int, _ s: Int) { key ^= Z.pieces[piece * 128 + s] }
+  @inline(__always) private func toggle(_ piece: Int, _ s: Int) { key ^= Z.pieces[piece * 64 + s] }
 
   /// This position came up before, since the last capture or pawn move.
   func repeated() -> Bool {
@@ -135,47 +219,19 @@ final class Position {
     return false
   }
 
+  /// Every piece of the given side that attacks this square.
+  func attackers(_ target: Int, by: Int, _ occupied: Bitboard) -> Bitboard {
+    let queens = set(by, QUEEN)
+    return (PAWN_ATTACKS[by ^ 1][target] & set(by, PAWN))
+      | (KNIGHT_ATTACKS[target] & set(by, KNIGHT))
+      | (KING_ATTACKS[target] & set(by, KING))
+      | (bishopAttacks(target, occupied) & (set(by, BISHOP) | queens))
+      | (rookAttacks(target, occupied) & (set(by, ROOK) | queens))
+  }
+
   /// Is this square attacked by the given side?
   func attacked(_ target: Int, by: Int) -> Bool {
-    let colour = by == BLACK_SIDE ? BLACK : 0
-    if by == WHITE_SIDE {
-      if onBoard(target - 15) && sq[target - 15] == PAWN { return true }
-      if onBoard(target - 17) && sq[target - 17] == PAWN { return true }
-    } else {
-      if onBoard(target + 15) && sq[target + 15] == (PAWN | BLACK) { return true }
-      if onBoard(target + 17) && sq[target + 17] == (PAWN | BLACK) { return true }
-    }
-    for step in KNIGHT_STEPS {
-      let s = target + step
-      if onBoard(s) && sq[s] == (KNIGHT | colour) { return true }
-    }
-    for step in KING_STEPS {
-      let s = target + step
-      if onBoard(s) && sq[s] == (KING | colour) { return true }
-    }
-    for step in DIAGONALS {
-      var s = target + step
-      while onBoard(s) {
-        let p = sq[s]
-        if p != 0 {
-          if p == (BISHOP | colour) || p == (QUEEN | colour) { return true }
-          break
-        }
-        s += step
-      }
-    }
-    for step in LINES {
-      var s = target + step
-      while onBoard(s) {
-        let p = sq[s]
-        if p != 0 {
-          if p == (ROOK | colour) || p == (QUEEN | colour) { return true }
-          break
-        }
-        s += step
-      }
-    }
-    return false
+    attackers(target, by: by, occupied) != 0
   }
 
   func inCheck(_ who: Int? = nil) -> Bool {
@@ -187,12 +243,15 @@ final class Position {
   /// With `capturesOnly`, captures and queen promotions.
   func pseudoMoves(_ capturesOnly: Bool = false) -> [Int] {
     var out: [Int] = []
-    out.reserveCapacity(48)
-    let us = side == BLACK_SIDE ? BLACK : 0
-    let forward = side == WHITE_SIDE ? 16 : -16
-    let startRank = side == WHITE_SIDE ? 1 : 6
-    let lastRank = side == WHITE_SIDE ? 7 : 0
-    func enemy(_ p: Int) -> Bool { p != 0 && (p & BLACK) != us }
+    out.reserveCapacity(capturesOnly ? 16 : 48)
+    let us = side, them = side ^ 1
+    let own = bySide[us], enemy = bySide[them], occ = own | enemy
+    let targets = capturesOnly ? enemy : ~own
+
+    // Pawns.
+    let forward = us == WHITE_SIDE ? 8 : -8
+    let startRank = us == WHITE_SIDE ? 1 : 6
+    let lastRank = us == WHITE_SIDE ? 7 : 0
     func pawnTo(_ from: Int, _ to: Int, _ flags: Int) {
       if rankOf(to) == lastRank {
         out.append(pack(from, to, QUEEN, flags))
@@ -205,74 +264,60 @@ final class Position {
         out.append(pack(from, to, 0, flags))
       }
     }
-    var from = 0
-    while from < 128 {
-      if from & 0x88 != 0 { from += 8; continue }
-      defer { from += 1 }
-      let piece = sq[from]
-      if piece == 0 || (piece & BLACK) != us { continue }
-      let type = piece & 7
-      if type == PAWN {
-        let one = from + forward
-        if onBoard(one) && sq[one] == 0 {
-          if !capturesOnly || rankOf(one) == lastRank { pawnTo(from, one, 0) }
-          let two = one + forward
-          if !capturesOnly && rankOf(from) == startRank && sq[two] == 0 { out.append(pack(from, two, 0, DOUBLE_PUSH)) }
-        }
-        for d in [forward - 1, forward + 1] {
-          let to = from + d
-          if !onBoard(to) { continue }
-          if enemy(sq[to]) { pawnTo(from, to, CAPTURE) } else if to == ep { out.append(pack(from, to, 0, CAPTURE | EN_PASSANT)) }
-        }
-        continue
+    var pawns = set(us, PAWN)
+    while pawns != 0 {
+      let from = popLowest(&pawns)
+      let one = from + forward
+      if board[one] == 0 {
+        if !capturesOnly || rankOf(one) == lastRank { pawnTo(from, one, 0) }
+        let two = one + forward
+        if !capturesOnly && rankOf(from) == startRank && board[two] == 0 { out.append(pack(from, two, 0, DOUBLE_PUSH)) }
       }
-      if type == KNIGHT || type == KING {
-        for step in type == KNIGHT ? KNIGHT_STEPS : KING_STEPS {
-          let to = from + step
-          if !onBoard(to) { continue }
-          let target = sq[to]
-          if target == 0 {
-            if !capturesOnly { out.append(pack(from, to, 0, 0)) }
-          } else if enemy(target) {
-            out.append(pack(from, to, 0, CAPTURE))
-          }
+      var hits = PAWN_ATTACKS[us][from] & enemy
+      while hits != 0 { pawnTo(from, popLowest(&hits), CAPTURE) }
+      if ep >= 0 && PAWN_ATTACKS[us][from] & bit(ep) != 0 { out.append(pack(from, ep, 0, CAPTURE | EN_PASSANT)) }
+    }
+
+    // Pieces.
+    for type in KNIGHT...KING {
+      var from = set(us, type)
+      while from != 0 {
+        let f = popLowest(&from)
+        let attacks: Bitboard
+        switch type {
+        case KNIGHT: attacks = KNIGHT_ATTACKS[f]
+        case BISHOP: attacks = bishopAttacks(f, occ)
+        case ROOK: attacks = rookAttacks(f, occ)
+        case QUEEN: attacks = bishopAttacks(f, occ) | rookAttacks(f, occ)
+        default: attacks = KING_ATTACKS[f]
         }
-        if type == KING && !capturesOnly { castleMoves(from, &out) }
-        continue
-      }
-      let steps = type == BISHOP ? DIAGONALS : type == ROOK ? LINES : KING_STEPS
-      for step in steps {
-        var to = from + step
-        while onBoard(to) {
-          let target = sq[to]
-          if target == 0 {
-            if !capturesOnly { out.append(pack(from, to, 0, 0)) }
-            to += step
-            continue
-          }
-          if enemy(target) { out.append(pack(from, to, 0, CAPTURE)) }
-          break
+        var to = attacks & targets
+        while to != 0 {
+          let t = popLowest(&to)
+          out.append(pack(f, t, 0, enemy & bit(t) != 0 ? CAPTURE : 0))
         }
       }
     }
+    if !capturesOnly { castleMoves(&out) }
     return out
   }
 
-  private func castleMoves(_ from: Int, _ out: inout [Int]) {
+  private func castleMoves(_ out: inout [Int]) {
     let them = side ^ 1
-    if side == WHITE_SIDE && from == 0x04 {
-      if castling & 1 != 0 && sq[0x05] == 0 && sq[0x06] == 0 && sq[0x07] == ROOK && !attacked(0x04, by: them) && !attacked(0x05, by: them) {
-        out.append(pack(0x04, 0x06, 0, CASTLE))
+    let occ = occupied
+    if side == WHITE_SIDE && kings[0] == 4 {
+      if castling & 1 != 0 && occ & (bit(5) | bit(6)) == 0 && board[7] == ROOK && !attacked(4, by: them) && !attacked(5, by: them) {
+        out.append(pack(4, 6, 0, CASTLE))
       }
-      if castling & 2 != 0 && sq[0x03] == 0 && sq[0x02] == 0 && sq[0x01] == 0 && sq[0x00] == ROOK && !attacked(0x04, by: them) && !attacked(0x03, by: them) {
-        out.append(pack(0x04, 0x02, 0, CASTLE))
+      if castling & 2 != 0 && occ & (bit(1) | bit(2) | bit(3)) == 0 && board[0] == ROOK && !attacked(4, by: them) && !attacked(3, by: them) {
+        out.append(pack(4, 2, 0, CASTLE))
       }
-    } else if side == BLACK_SIDE && from == 0x74 {
-      if castling & 4 != 0 && sq[0x75] == 0 && sq[0x76] == 0 && sq[0x77] == (ROOK | BLACK) && !attacked(0x74, by: them) && !attacked(0x75, by: them) {
-        out.append(pack(0x74, 0x76, 0, CASTLE))
+    } else if side == BLACK_SIDE && kings[1] == 60 {
+      if castling & 4 != 0 && occ & (bit(61) | bit(62)) == 0 && board[63] == (ROOK | BLACK) && !attacked(60, by: them) && !attacked(61, by: them) {
+        out.append(pack(60, 62, 0, CASTLE))
       }
-      if castling & 8 != 0 && sq[0x73] == 0 && sq[0x72] == 0 && sq[0x71] == 0 && sq[0x70] == (ROOK | BLACK) && !attacked(0x74, by: them) && !attacked(0x73, by: them) {
-        out.append(pack(0x74, 0x72, 0, CASTLE))
+      if castling & 8 != 0 && occ & (bit(57) | bit(58) | bit(59)) == 0 && board[56] == (ROOK | BLACK) && !attacked(60, by: them) && !attacked(59, by: them) {
+        out.append(pack(60, 58, 0, CASTLE))
       }
     }
   }
@@ -280,29 +325,33 @@ final class Position {
   /// Play a move. False, with the move already taken back, when it leaves the mover in check.
   func make(_ m: Int) -> Bool {
     let from = fromOf(m), to = toOf(m), flags = flagsOf(m)
-    let piece = sq[from]
-    let forward = side == WHITE_SIDE ? 16 : -16
+    let piece = board[from]
+    let forward = side == WHITE_SIDE ? 8 : -8
     let capturedAt = flags & EN_PASSANT != 0 ? to - forward : to
-    let captured = sq[capturedAt]
+    let captured = board[capturedAt]
     history.append(captured | (castling << 4) | ((ep + 1) << 8) | (halfmove << 16))
     past.append(key)
 
-    if captured != 0 { toggle(captured, capturedAt) }
+    if captured != 0 {
+      toggle(captured, capturedAt)
+      remove(captured, capturedAt)
+    }
     toggle(piece, from)
-    sq[capturedAt] = 0
-    sq[from] = 0
+    remove(piece, from)
     let promo = promoOf(m)
-    sq[to] = promo != 0 ? promo | (piece & BLACK) : piece
-    toggle(sq[to], to)
+    let landed = promo != 0 ? promo | (piece & BLACK) : piece
+    put(landed, to)
+    toggle(landed, to)
 
     if piece & 7 == KING {
       kings[side] = to
       if flags & CASTLE != 0 {
         let (rookFrom, rookTo) = to > from ? (to + 1, to - 1) : (to - 2, to + 1)
-        toggle(sq[rookFrom], rookFrom)
-        toggle(sq[rookFrom], rookTo)
-        sq[rookTo] = sq[rookFrom]
-        sq[rookFrom] = 0
+        let rook = board[rookFrom]
+        toggle(rook, rookFrom)
+        toggle(rook, rookTo)
+        remove(rook, rookFrom)
+        put(rook, rookTo)
       }
     }
     key ^= Z.castle[castling]
@@ -324,18 +373,20 @@ final class Position {
     let state = history.removeLast()
     side ^= 1
     let from = fromOf(m), to = toOf(m), flags = flagsOf(m)
-    let moved = sq[to]
+    let moved = board[to]
     let piece = promoOf(m) != 0 ? PAWN | (moved & BLACK) : moved
-    let forward = side == WHITE_SIDE ? 16 : -16
-    sq[from] = piece
-    sq[to] = 0
-    sq[flags & EN_PASSANT != 0 ? to - forward : to] = state & 15
+    let forward = side == WHITE_SIDE ? 8 : -8
+    remove(moved, to)
+    put(piece, from)
+    let captured = state & 15
+    if captured != 0 { put(captured, flags & EN_PASSANT != 0 ? to - forward : to) }
     if piece & 7 == KING {
       kings[side] = from
       if flags & CASTLE != 0 {
         let (rookFrom, rookTo) = to > from ? (to + 1, to - 1) : (to - 2, to + 1)
-        sq[rookFrom] = sq[rookTo]
-        sq[rookTo] = 0
+        let rook = board[rookTo]
+        remove(rook, rookTo)
+        put(rook, rookFrom)
       }
     }
     castling = (state >> 4) & 15
@@ -372,11 +423,6 @@ final class Position {
 
   /// Any knight, bishop, rook or queen left for this side.
   func hasPieces(_ who: Int) -> Bool {
-    let colour = who == BLACK_SIDE ? BLACK : 0
-    for s in 0..<128 where s & 0x88 == 0 {
-      let p = sq[s]
-      if p != 0 && (p & BLACK) == colour && p & 7 != PAWN && p & 7 != KING { return true }
-    }
-    return false
+    bySide[who] & ~(set(who, PAWN) | set(who, KING)) != 0
   }
 }
