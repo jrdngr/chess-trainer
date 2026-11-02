@@ -25,7 +25,7 @@ struct IntroPagesView: View {
       .padding(.horizontal, 8).frame(height: 44)
       TabView(selection: $page) {
         flashCards.tag(0)
-        boardPage(marks: lensMarks(lens ?? .space, Self.fen, .w), plan: nil, title: "Lenses",
+        boardPage(marks: lens.map { lensMarks($0, Self.fen, .w) }, plan: nil, title: "Lenses",
                   text: "Hold a lens button to get extra info about the board.") {
           EmptyView()
         }
@@ -72,7 +72,7 @@ struct IntroPagesView: View {
       Text("Flash cards you play").font(.system(size: 30, weight: .heavy)).tracking(-0.9).foregroundStyle(Theme.text)
         .padding(.top, 24)
       VStack(alignment: .leading, spacing: 16) {
-        point("\u{265F}", "Your openings are the cards.")
+        point("\u{265F}\u{FE0E}", "Your openings are the cards.")
         point("\u{265A}", "Each one is a real game until you blunder.")
         point("\u{265E}", "Autoplays to the position you need to drill most.")
       }
@@ -92,6 +92,7 @@ struct IntroPagesView: View {
     .shadow(color: .black.opacity(0.55), radius: 15, y: 14)
   }
 
+  /// The pawn has an emoji form, so its glyph carries the text-style selector to take the accent like the others.
   private func point(_ glyph: String, _ text: String) -> some View {
     HStack(alignment: .top, spacing: 12) {
       Text(glyph).font(.system(size: 21)).foregroundStyle(Theme.accent)
