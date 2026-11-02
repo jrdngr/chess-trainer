@@ -286,7 +286,7 @@ final class RunModel {
     spawn { [weak self] in
       guard let self else { return }
       let base = await Engine.baseline(self.engine, fen, moments: moments)
-      guard let base, self.run.fen == fen else { return }
+      guard let base, !Task.isCancelled, self.live, self.run.fen == fen else { return }
       self.baseline = base
       self.update(sawEval(self.session, base.cp))
       if self.live && self.myTurn { self.update(missionFrom(self.session, self.prefs, base.cp)) }
@@ -298,6 +298,8 @@ final class RunModel {
   /// that leaves a piece loose is held a moment first, to take back.
   func play(_ move: LegalMove) {
     guard live, !held, myTurn, pending == nil, flash == nil else { return }
+    // Your time stops when you move, not when a held move lands.
+    let seconds = Date().timeIntervalSince(turnStarted)
     if prefs.undefendedFlash {
       let loose = newlyLoose(run.fen, move.after, run.color, from: move.from, to: move.to)
       if !loose.isEmpty {
@@ -306,21 +308,20 @@ final class RunModel {
         later(Self.flashMs) { model in
           guard let held = model.flash, held.move.uci == move.uci else { return }
           model.flash = nil
-          model.commit(move)
+          model.commit(move, seconds: seconds)
         }
         return
       }
     }
-    commit(move)
+    commit(move, seconds: seconds)
   }
 
   /// The flash's Take back: the held move never lands.
   func takeBack() { flash = nil }
 
-  private func commit(_ move: LegalMove) {
+  private func commit(_ move: LegalMove, seconds: Double) {
     guard live, !held, myTurn, pending == nil else { return }
     miss = nil
-    let seconds = Date().timeIntervalSince(turnStarted)
     let now = Env.now()
     if prepNow.contains(move.san) {
       apply(playPrepared(session, ctx, move, seconds, now))
@@ -339,7 +340,8 @@ final class RunModel {
       }
       let judged = await judge(self.engine, base, san: move.san, uci: move.uci, color: color, moments: moments)
       self.pending = nil
-      guard self.run.fen == fen else { return }
+      // Ended while the judge was out: the move never counted.
+      guard !Task.isCancelled, self.live, self.run.fen == fen else { return }
       self.store.update { $0.judgedMove(lost: judged.lost) }
       self.apply(judgedMove(self.session, self.ctx, judged, seconds, now))
     }
