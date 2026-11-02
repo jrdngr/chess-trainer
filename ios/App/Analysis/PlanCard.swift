@@ -98,3 +98,27 @@ struct PlanLegend: View {
     }
   }
 }
+
+/// The plan card's content: the structure as its label, then the steps.
+struct PlanCardBody: View {
+  let fen: String
+  let me: ChessCore.Color
+  let structure: Structure
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(structureLabel(structure).uppercased()).font(.system(size: 11, weight: .heavy)).tracking(0.7)
+        .foregroundStyle(PlanColors.plan).lineLimit(1)
+      PlanSteps(fen: fen, me: me, structure: structure)
+    }
+  }
+}
+
+extension View {
+  /// The plan card's ground: a surface with the plan's cyan along its top edge.
+  func planCardFrame() -> some View {
+    background(Theme.surface)
+      .overlay(alignment: .top) { Rectangle().fill(PlanColors.plan).frame(height: 2) }
+      .clipShape(RoundedRectangle(cornerRadius: 16))
+  }
+}

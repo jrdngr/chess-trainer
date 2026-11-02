@@ -154,6 +154,8 @@ struct RunView: View {
           LensLegend(kind: lens, endgame: isEndgame(model.shownFen))
         } else if planHeld {
           PlanLegend(fen: model.shownFen, me: model.run.color)
+        } else if model.intro == .plan {
+          HandoffPlanCard(fen: model.run.fen, me: model.run.color)
         } else if model.blunder != nil {
           ending
         } else {
@@ -170,7 +172,9 @@ struct RunView: View {
   /// One fixed-height slot: the goal past prep, else the moves played for you.
   @ViewBuilder private var goalSlot: some View {
     Group {
-      if model.intro == .replay {
+      if model.intro == .replay, let handoff = model.handoff {
+        HandoffMoves(handoff: handoff, played: model.introPly)
+      } else if model.intro == .replay {
         movesLine(sansToMoveText(Array(model.introPath.prefix(model.introPly))))
       } else if !model.held, model.prefs.missions, let mission = model.session.state.extras.mission {
         GoalCard(mission: mission)
@@ -215,14 +219,27 @@ struct RunView: View {
     .frame(height: 28)
   }
 
-  private var footer: some View {
+  @ViewBuilder private var footer: some View {
+    if model.intro == .plan {
+      HandoffPlayButton(onPlay: model.playFromHandoff)
+    } else {
+      runFooter
+    }
+  }
+
+  private var runFooter: some View {
     HStack {
       let misses = model.session.state.misses.count
       Text(misses > 0 ? "\(misses) miss\(misses == 1 ? "" : "es") so far" : "").font(.footnote).foregroundStyle(Theme.text2)
       Spacer()
-      Button { model.endRound() } label: { Text(survival ? "End run" : "End round").foregroundStyle(Theme.text2) }
-        .buttonStyle(PlayButtonStyle(kind: .soft, height: 34, radius: 17, font: 13.5))
-        .disabled(model.blunder != nil)
+      if model.handoff != nil && model.intro == .replay {
+        Button { model.skipIntro() } label: { Text("Skip").foregroundStyle(Theme.text) }
+          .buttonStyle(PlayButtonStyle(kind: .soft, height: 34, radius: 17, font: 13.5))
+      } else {
+        Button { model.endRound() } label: { Text(survival ? "End run" : "End round").foregroundStyle(Theme.text2) }
+          .buttonStyle(PlayButtonStyle(kind: .soft, height: 34, radius: 17, font: 13.5))
+          .disabled(model.blunder != nil)
+      }
     }
   }
 
