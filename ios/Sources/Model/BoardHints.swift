@@ -5,11 +5,11 @@ import Shared
 /// Colors are "mine" and "theirs" from your side.
 
 public enum LensKind: String, Sendable, Codable, CaseIterable {
-  case pawns, pieces, space, kings, eval
+  case pawns, pieces, kings, eval
 }
 
 public let LENSES: [(kind: LensKind, label: String)] = [
-  (.pawns, "Pawns"), (.pieces, "Pieces"), (.space, "Space"), (.kings, "Kings"), (.eval, "Eval"),
+  (.pawns, "Pawns"), (.pieces, "Pieces"), (.kings, "Kings"), (.eval, "Eval"),
 ]
 
 public enum TintColor: String, Sendable, Codable {
@@ -37,6 +37,8 @@ public struct LensMarks: Equatable, Sendable, Codable {
   public var tags: [Tag]?
   public var dots: [String]?
   public var rings: [Ring]?
+  /// Each side's least active piece, marked in its square's corner.
+  public var badges: [String]?
   public var stars: [Star]?
   public var zone: [String]?
   public var pips: [Pip]?
@@ -350,13 +352,14 @@ public func piecesLens(_ fen: String, _ me: Color) -> LensMarks {
   let grid = Grid(fen)
   let acts = activity(fen)
   var marks = LensMarks()
-  marks.tints = acts.map { Tint(square: $0.square, color: $0.ratio >= 0.9 ? .green : $0.ratio >= 0.45 ? .amber : .red, strength: 2) }
-  var rings: [Ring] = []
+  marks.tints = controlTints(fen, me)
+  let rings = acts.map { Ring(square: $0.square, tone: $0.ratio >= 0.9 ? "good" : $0.ratio >= 0.45 ? "passive" : "bad") }
+  var badges: [String] = []
   for color in [Color.w, .b] {
     let own = acts.filter { $0.color == color }
     guard let firstOwn = own.first else { continue }
     let worst = own.dropFirst().reduce(firstOwn) { $1.ratio < $0.ratio ? $1 : $0 }
-    rings.append(Ring(square: worst.square, tone: "bad"))
+    badges.append(worst.square)
   }
   var stars: [Star] = []
   for color in [Color.w, .b] {
@@ -371,6 +374,7 @@ public func piecesLens(_ fen: String, _ me: Color) -> LensMarks {
   var arrows: [LensArrow] = []
   for path in routes { for i in 1..<path.count { arrows.append(LensArrow(from: path[i - 1], to: path[i], tone: "route")) } }
   marks.rings = rings
+  marks.badges = badges
   marks.stars = stars
   marks.arrows = arrows
   return marks
@@ -450,7 +454,9 @@ public func spaceCount(_ fen: String, _ me: Color) -> (mine: Int, theirs: Int) {
   return (mine, theirs)
 }
 
-public func spaceLens(_ fen: String, _ me: Color) -> LensMarks {
+/// Who holds each square and by how much: blue yours, red theirs, purple contested
+/// (leaning to whoever has the cheaper attacker). Drawn under the Pieces lens.
+public func controlTints(_ fen: String, _ me: Color) -> [Tint] {
   var tints: [Tint] = []
   for c in control(fen, me) {
     guard let holder = c.holder else { continue }
@@ -460,11 +466,7 @@ public func spaceLens(_ fen: String, _ me: Color) -> LensMarks {
       tints.append(Tint(square: c.square, color: holder == "mine" ? .blue : .red, strength: min(3, c.margin)))
     }
   }
-  let count = spaceCount(fen, me)
-  var marks = LensMarks()
-  marks.tints = tints
-  marks.caption = "Space \u{00b7} you \(count.mine) \u{2013} \(count.theirs) them"
-  return marks
+  return tints
 }
 
 /* ── kings ── */
@@ -614,7 +616,6 @@ public func lensMarks(_ kind: LensKind, _ fen: String, _ me: Color, _ prevFen: S
   switch kind {
   case .pawns: marks = pawnsLens(fen)
   case .pieces: marks = piecesLens(fen, me)
-  case .space: marks = spaceLens(fen, me)
   case .kings: marks = kingsLens(fen, me)
   case .eval: marks = LensMarks()
   }
@@ -631,13 +632,13 @@ public func heldLens(_ kind: LensKind, _ fen: String, _ me: Color, _ prevFen: St
 
 /// The pieces a lens marks, or nil to dim none: pawns for Pawns, the pieces it
 /// rates for Pieces, and the kings with their shields and attackers for Kings.
-/// Space dims nothing: its squares are the point. Eval dims nothing: it is about the game, not a piece.
+/// Eval dims nothing: it is about the game, not a piece.
 func lensFocus(_ kind: LensKind, _ marks: LensMarks, _ fen: String) -> [String]? {
   var squares: [String]
   switch kind {
   case .pawns: squares = piecesFromFen(fen).filter { $0.type == .p }.map(\.square)
-  case .pieces: squares = (marks.tints ?? []).map(\.square) + (marks.rings ?? []).map(\.square) + (marks.arrows ?? []).map(\.from)
-  case .space, .eval: return nil
+  case .pieces: squares = (marks.rings ?? []).map(\.square) + (marks.arrows ?? []).map(\.from)
+  case .eval: return nil
   case .kings: squares = (marks.shields ?? []).map(\.square) + (marks.pips ?? []).map(\.square) + (marks.zone ?? [])
   }
   let occupied = Set(piecesFromFen(fen).map(\.square))

@@ -93,6 +93,7 @@ extension Earned {
     put("tags", m.tags?.map { "\($0.square):\($0.tone)" })
     put("dots", m.dots)
     put("rings", m.rings?.map { "\($0.square):\($0.tone)" })
+    put("badges", m.badges)
     put("stars", m.stars?.map { "\($0.square):\($0.side.rawValue)" })
     put("zone", m.zone)
     put("pips", m.pips?.map { "\($0.square):\($0.attackers)/\($0.defenders)" })

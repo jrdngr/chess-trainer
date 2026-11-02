@@ -31,6 +31,7 @@ enum LensColors {
     case "warn": orange
     case "mine": blue
     case "good": green
+    case "passive": amber
     case "route": lightBlue
     default: red
     }
@@ -67,7 +68,7 @@ struct LensUnderView: View {
   }
 }
 
-/// The marks over the pieces: rings, tags, stars, pips, shields, lines and arrows.
+/// The marks over the pieces: rings, badges, tags, stars, pips, shields, lines and arrows.
 struct LensOverView: View {
   var marks: LensMarks
   var cell: CGFloat
@@ -77,7 +78,16 @@ struct LensOverView: View {
     ZStack(alignment: .topLeading) {
       lines
       ForEach(marks.rings ?? [], id: \.square) { r in
-        Circle().strokeBorder(LensColors.tone(r.tone), lineWidth: 3).at(r.square, cell, position)
+        // A dark edge on both sides keeps the ring readable on any square tint.
+        Circle().strokeBorder(.black.opacity(0.6), lineWidth: 6)
+          .overlay(Circle().strokeBorder(LensColors.tone(r.tone), lineWidth: 3).padding(1.5))
+          .at(r.square, cell, position)
+      }
+      ForEach(marks.badges ?? [], id: \.self) { square in
+        WorstBadge(size: cell * 0.32)
+          .padding(cell * 0.04)
+          .frame(width: cell, height: cell, alignment: .bottomLeading)
+          .at(square, cell, position)
       }
       ForEach(marks.tags ?? [], id: \.square) { t in
         Circle().fill(t.tone == "good" ? LensColors.green : LensColors.red)
@@ -151,5 +161,17 @@ extension View {
   fileprivate func at(_ square: String, _ cell: CGFloat, _ position: (String) -> (col: Int, row: Int)) -> some View {
     let p = position(square)
     return frame(width: cell, height: cell).offset(x: CGFloat(p.col) * cell, y: CGFloat(p.row) * cell)
+  }
+}
+
+/// The mark on a side's least active piece: a small red disc with a down arrow.
+struct WorstBadge: View {
+  var size: CGFloat
+
+  var body: some View {
+    Circle().fill(LensColors.lightRed)
+      .overlay(Image(systemName: "arrow.down").font(.system(size: size * 0.62, weight: .heavy)).foregroundStyle(.black.opacity(0.8)))
+      .overlay(Circle().strokeBorder(.black.opacity(0.6), lineWidth: 1.5))
+      .frame(width: size, height: size)
   }
 }

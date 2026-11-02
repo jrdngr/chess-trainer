@@ -76,10 +76,6 @@
         "label": "Pieces"
       },
       {
-        "kind": "space",
-        "label": "Space"
-      },
-      {
         "kind": "kings",
         "label": "Kings"
       },
