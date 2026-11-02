@@ -133,3 +133,59 @@ public func stepText(_ text: String, _ a: Color, _ me: Color) -> String {
     .replacing(#/\{([^}]+)\}/#) { m in me == .b ? "...\(m.1)" : String(m.1) }
     .replacing(#/<([^>]+)>/#) { m in me == .w ? "...\(m.1)" : String(m.1) }
 }
+
+/// Each structure's plan in a few words, for the side it is named after and then its opponent.
+public let PLAN_HEADLINES: [String: (a: String, b: String)] = [
+  "stonewall": ("Knight to e5", "The e4 outpost"),
+  "carlsbad": ("Minority attack", "Kingside play"),
+  "french-chain": ("Hold d4, attack the king", "Hit the chain's base"),
+  "caro-advance": ("Kingside space", "Free the bishop, hit d4"),
+  "czech-benoni": ("Open the queenside", "The f5 break"),
+  "kid-chain": ("Queenside break", "Kingside storm"),
+  "benoni": ("The e5 push", "Queenside majority"),
+  "hedgehog": ("Keep the squeeze", "Wait, then break"),
+  "botvinnik": ("Knight to d5", "The d4 hole"),
+  "maroczy": ("Keep the bind", "Trade and break"),
+  "dragon": ("Open the h-file", "The c-file"),
+  "scheveningen": ("Kingside pawn storm", "Central break"),
+  "sicilian-e5": ("The d5 hole", "Free your game with d5"),
+  "hanging-pawns": ("Push at the right moment", "Attack the pawns"),
+  "iqp": ("Play for the attack", "Blockade d5"),
+  "big-center": ("Push for space", "Hit the center"),
+  "central-tension": ("Keep the tension", "Hold e5"),
+  "symmetrical": ("Fight for the outposts", "Fight for e4"),
+  "open-center": ("Activity first", "Activity first"),
+]
+
+/// Your side's plan in a few words, its squares placed for the board.
+public func planHeadline(_ structure: Structure, _ me: Color) -> String? {
+  PLAN_HEADLINES[structure.template.id].map { stepText(structure.a == me ? $0.a : $0.b, structure.a, me) }
+}
+
+/// A piece of a step's words: plain, or a move it names.
+public struct StepRun: Equatable, Sendable {
+  public var text: String
+  public var move: Bool
+}
+
+/// Your side's plan as runs of words, the moves marked so they can stand out.
+/// Each step's runs join to the same words as `planFor`'s.
+public func planRuns(_ structure: Structure, _ me: Color) -> [[StepRun]] {
+  let steps = structure.a == me ? structure.template.a : structure.template.b
+  return steps.map { stepRuns($0.text, structure.a, me) }
+}
+
+/// A step's words split at its marked moves, each placed as `stepText` places it.
+public func stepRuns(_ text: String, _ a: Color, _ me: Color) -> [StepRun] {
+  var runs: [StepRun] = []
+  var rest = Substring(text)
+  while let m = rest.firstMatch(of: #/\{[^}]+\}|<[^>]+>/#) {
+    if m.range.lowerBound > rest.startIndex {
+      runs.append(StepRun(text: stepText(String(rest[..<m.range.lowerBound]), a, me), move: false))
+    }
+    runs.append(StepRun(text: stepText(String(m.output), a, me), move: true))
+    rest = rest[m.range.upperBound...]
+  }
+  if !rest.isEmpty { runs.append(StepRun(text: stepText(String(rest), a, me), move: false)) }
+  return runs
+}

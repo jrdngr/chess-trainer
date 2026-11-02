@@ -21,15 +21,14 @@ struct PlanCard: View {
 
   private func card(_ structure: Structure) -> some View {
     VStack(alignment: .leading, spacing: 0) {
-      HStack(spacing: 4) {
+      HStack(alignment: .top, spacing: 4) {
         Button { open.toggle() } label: {
-          HStack(spacing: 8) {
-            Text("PLAN").font(.system(size: 12, weight: .bold)).tracking(0.5).foregroundStyle(PlanColors.plan)
-            Text(structureLabel(structure)).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
+          HStack(alignment: .center, spacing: 8) {
+            PlanTitle(structure: structure, me: me)
             Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3).rotationEffect(.degrees(open ? -90 : 90)).animation(.easeInOut(duration: 0.15), value: open)
             Spacer(minLength: 0)
           }
-          .padding(.vertical, 6).contentShape(Rectangle())
+          .padding(.vertical, 8).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         Button {
@@ -42,13 +41,13 @@ struct PlanCard: View {
       }
       if open { steps(structure) }
     }
-    .padding(.leading, 12).padding([.trailing, .vertical], 4)
-    .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
+    .padding(.leading, 14).padding([.trailing, .vertical], 4)
+    .planCardFrame()
     .padding(.top, 8)
   }
 
   private func steps(_ structure: Structure) -> some View {
-    PlanSteps(fen: fen, me: me, structure: structure).padding(.leading, 4).padding(.trailing, 8).padding(.bottom, 8)
+    PlanSteps(fen: fen, me: me, structure: structure).padding(.trailing, 10).padding(.bottom, 10)
   }
 }
 
@@ -58,7 +57,8 @@ enum PlanColors {
   static let ink = SwiftUI.Color(hex: 0x04212a)
 }
 
-/// The plan's steps, ticked where a step's square is reached.
+/// The plan's steps, numbered in the plan's cyan, the moves they name in bold,
+/// ticked where a step's square is reached.
 struct PlanSteps: View {
   let fen: String
   let me: ChessCore.Color
@@ -66,49 +66,68 @@ struct PlanSteps: View {
 
   var body: some View {
     let steps = planFor(structure, me)
-    VStack(alignment: .leading, spacing: 4) {
+    let runs = planRuns(structure, me)
+    VStack(alignment: .leading, spacing: 6) {
       ForEach(Array(steps.enumerated()), id: \.offset) { i, step in
         let done = step.goals?.contains { goalRoute(fen, me, $0).done } ?? false
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-          Text("\(i + 1).").foregroundStyle(Theme.text2)
-          if done { Icon(name: "check", size: 14).foregroundStyle(Theme.good) }
-          Text(step.text).foregroundStyle(done ? Theme.text3 : Theme.text2)
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+          Text("\(i + 1)").font(.system(size: 13.5, weight: .heavy).monospacedDigit())
+            .foregroundStyle(done ? Theme.good : PlanColors.plan)
+          words(runs[i]).foregroundStyle(done ? Theme.text3 : Theme.text2)
         }
         .font(.system(size: 13.5)).lineSpacing(2)
       }
     }
   }
+
+  private func words(_ runs: [StepRun]) -> Text {
+    runs.reduce(Text("")) { out, run in
+      out + (run.move ? Text(run.text).fontWeight(.bold).foregroundColor(Theme.text) : Text(run.text))
+    }
+  }
 }
 
-/// The Plan lens held: the structure's name and its steps, where a lens key would show.
+/// The plan's name: the structure as a small cyan label over your plan's headline.
+struct PlanTitle: View {
+  let structure: Structure
+  let me: ChessCore.Color
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 3) {
+      Text(structureLabel(structure).uppercased()).font(.system(size: 11, weight: .heavy)).tracking(0.7)
+        .foregroundStyle(PlanColors.plan).lineLimit(1)
+      if let headline = planHeadline(structure, me) {
+        Text(headline).font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.text).lineLimit(2)
+      }
+    }
+  }
+}
+
+/// The Plan lens held: the plan's name and its steps, where a lens key would show.
 struct PlanLegend: View {
   let fen: String
   let me: ChessCore.Color
 
   var body: some View {
     if let structure = structureOf(fen) {
-      VStack(alignment: .leading, spacing: 8) {
-        Text(structureLabel(structure)).font(.system(size: 14, weight: .semibold)).foregroundStyle(PlanColors.plan)
-        PlanSteps(fen: fen, me: me, structure: structure)
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.horizontal, 14).padding(.vertical, 12)
-      .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface))
-      .padding(.top, 12)
+      PlanCardBody(fen: fen, me: me, structure: structure)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14).padding(.vertical, 12)
+        .planCardFrame()
+        .padding(.top, 12)
     }
   }
 }
 
-/// The plan card's content: the structure as its label, then the steps.
+/// The plan card's content: the plan's name, then the steps.
 struct PlanCardBody: View {
   let fen: String
   let me: ChessCore.Color
   let structure: Structure
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text(structureLabel(structure).uppercased()).font(.system(size: 11, weight: .heavy)).tracking(0.7)
-        .foregroundStyle(PlanColors.plan).lineLimit(1)
+    VStack(alignment: .leading, spacing: 10) {
+      PlanTitle(structure: structure, me: me)
       PlanSteps(fen: fen, me: me, structure: structure)
     }
   }

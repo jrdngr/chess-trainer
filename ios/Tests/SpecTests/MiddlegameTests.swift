@@ -135,3 +135,43 @@ private func handoffRun() throws -> (session: RunSession, tree: OpeningTree) {
   #expect(played.steer == .lines)
   #expect(played.moments && played.missions && played.combo)
 }
+
+@Test func everyStructureHasAHeadlineForEachSide() {
+  for template in STRUCTURE_TEMPLATES {
+    let headlines = PLAN_HEADLINES[template.id]
+    #expect(headlines != nil, "\(template.id)")
+    #expect(headlines?.a.isEmpty == false && headlines?.b.isEmpty == false, "\(template.id)")
+  }
+  #expect(PLAN_HEADLINES.count == STRUCTURE_TEMPLATES.count)
+}
+
+@Test func theHandoffsStructureNamesYourPlan() throws {
+  // At the QGD handoff White has the Carlsbad's minority attack; Black plays on the kingside.
+  let structure = try #require(structureOf(FENS[22]))
+  #expect(structure.template.id == "carlsbad")
+  #expect(planHeadline(structure, .w) == "Minority attack")
+  #expect(planHeadline(structure, .b) == "Kingside play")
+}
+
+@Test func aPlansBoldMovesReadAsItsSteps() {
+  // Every step, for each side and either color as side a, joins back to planFor's words.
+  var marked = 0
+  for template in STRUCTURE_TEMPLATES {
+    for a in [Color.w, .b] {
+      let structure = Structure(template: template, a: a)
+      for me in [Color.w, .b] {
+        let runs = planRuns(structure, me)
+        #expect(runs.map { $0.map(\.text).joined() } == planFor(structure, me).map(\.text), "\(template.id)")
+        marked += runs.joined().filter(\.move).count
+      }
+    }
+  }
+  #expect(marked > 0)
+}
+
+@Test func aHeadlinesSquaresArePlacedForTheBoard() throws {
+  let stonewall = try #require(STRUCTURE_TEMPLATES.first { $0.id == "stonewall" })
+  #expect(planHeadline(Structure(template: stonewall, a: .w), .w) == "Knight to e5")
+  #expect(planHeadline(Structure(template: stonewall, a: .b), .b) == "Knight to e4")
+  #expect(planHeadline(Structure(template: stonewall, a: .b), .w) == "The e5 outpost")
+}
