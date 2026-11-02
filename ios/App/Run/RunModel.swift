@@ -12,10 +12,11 @@ import Observation
 final class RunModel {
   enum Phase { case playing, blunder, over }
   /// The round's intro: announced full screen, then the way in played out on a locked board.
-  enum Intro { case announce, replay, done }
+  /// A Middlegame run then shows the plan card at the handoff before your clock starts.
+  enum Intro { case announce, replay, plan, done }
 
-  /// How long the announcement holds, and the beat between replayed moves.
-  static let announceMs = 2.5, replayMs = 0.4, pulseMs = 0.9
+  /// How long the announcement holds, and the beat between replayed moves (a Middlegame run's is quicker).
+  static let announceMs = 2.5, replayMs = 0.4, handoffReplayMs = 0.12, pulseMs = 0.9
 
   /// How long a miss, a score popup and a note stay over the board (a touch clears a miss or a note sooner); the opponent's beat.
   static let missMs = 2.0, scoreMs = 1.4, noteMs = 2.0, replyMs = 0.42
@@ -24,8 +25,10 @@ final class RunModel {
   /// How long the Undefended flash holds your move before it lands.
   static let flashMs = 1.3
 
-  /// Autopilot's round; nil for a run set up on Survival's own screen.
+  /// Autopilot's round; nil for a run set up on Survival's or Middlegame's own screen.
   let round: AutoRound?
+  /// A Middlegame run's handoff: the moves played for you, and who chose each.
+  let handoff: Handoff?
   let selection: Selection
   let tree: OpeningTree
   let index: ReferenceIndex
@@ -88,9 +91,21 @@ final class RunModel {
     self.init(begun: begun, round: nil, prefs: prefs, growth: growth, selection: selection, store: store, tree: tree, index: index, engine: engine)
   }
 
-  private init(begun: SurvivalStart, round: AutoRound?, prefs: SurvivalPrefs, growth: GrowthPrefs, selection: Selection,
+  /// A Middlegame run, begun at its handoff: `options` start at `handoff.line`.
+  convenience init?(middlegame options: StartOptions, handoff: Handoff, prefs: SurvivalPrefs, selection: Selection,
+                    store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
+    var options = options
+    options.at = handoff.line
+    guard let begun = startSurvival(options), begun.state.run.played == handoff.line else { return nil }
+    self.init(
+      begun: begun, round: nil, handoff: handoff, prefs: middlegamePrefs(prefs), growth: store.state.settings.growth,
+      selection: selection, store: store, tree: tree, index: index, engine: engine)
+  }
+
+  private init(begun: SurvivalStart, round: AutoRound?, handoff: Handoff? = nil, prefs: SurvivalPrefs, growth: GrowthPrefs, selection: Selection,
                store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
     self.round = round
+    self.handoff = handoff
     self.selection = selection
     self.store = store
     self.tree = tree
@@ -98,7 +113,7 @@ final class RunModel {
     self.engine = engine
     self.growth = growth
     picker = mulberry32(seed: (Env.random() * 2_147_483_648).rounded(.down))
-    session = beginSession(begun)
+    session = handoff != nil ? beginMiddlegame(begun) : beginSession(begun)
     let losses = lossesIn(store.state.repertoireList)
     ctx = RunContext(
       index: index, prefs: prefs, autopilot: round != nil,
@@ -115,8 +130,8 @@ final class RunModel {
   var scoredInPoints: Bool { prefs.moments || prefs.missions || prefs.combo }
   /// Announcing or replaying: the board is locked, and the opponent waits.
   var held: Bool { intro != .done }
-  /// The moves the intro plays out: the way in, with Autoplay on.
-  var introPath: [String] { store.state.settings.autoplay ? Array(run.played.prefix(run.opened)) : [] }
+  /// The moves the intro plays out: the way in, with Autoplay on; a Middlegame run's handoff always.
+  var introPath: [String] { handoff != nil || store.state.settings.autoplay ? Array(run.played.prefix(run.opened)) : [] }
   /// The opening the round is announced as. A run from move one is named by the opening it is steered toward.
   var introOpening: String {
     run.enteredIn ?? round?.pick.opening.id
@@ -167,8 +182,9 @@ final class RunModel {
     return r.after - r.before
   }
 
+  /// A Middlegame run was announced while its handoff was built, so it goes straight to the board.
   func start() {
-    later(Self.announceMs) { $0.toBoard() }
+    if handoff != nil { toBoard() } else { later(Self.announceMs) { $0.toBoard() } }
   }
 
   /// The announcement gives way to the board: the way in plays out, or the round begins.
@@ -179,17 +195,35 @@ final class RunModel {
   }
 
   private func replayStep() {
-    later(Self.replayMs) { model in
+    later(handoff != nil ? Self.handoffReplayMs : Self.replayMs) { model in
       guard model.intro == .replay else { return }
       if model.introPly < model.introPath.count {
         model.introPly += 1
         model.replayStep()
       } else {
-        model.intro = .done
-        model.pulseEdge()
-        model.begin()
+        model.replayDone()
       }
     }
+  }
+
+  /// The way in has played out: a Middlegame run shows the structure's plan first, where it has one.
+  private func replayDone() {
+    introPly = introPath.count
+    if handoff != nil && structureOf(run.fen) != nil {
+      intro = .plan
+      return
+    }
+    intro = .done
+    pulseEdge()
+    begin()
+  }
+
+  /// The plan card's Play: your clock starts.
+  func playFromHandoff() {
+    guard intro == .plan else { return }
+    intro = .done
+    pulseEdge()
+    begin()
   }
 
   /// The board's edge pulses once the replay hands you the move.
@@ -203,10 +237,7 @@ final class RunModel {
   /// A tap skips the rest of the replay.
   func skipIntro() {
     guard intro == .replay else { return }
-    introPly = introPath.count
-    intro = .done
-    pulseEdge()
-    begin()
+    replayDone()
   }
 
   private func begin() {
@@ -408,9 +439,24 @@ final class RunModel {
   private func finished(_ f: Finish) {
     stop()
     finish = f
-    before = store.state.survival
+    before = handoff != nil ? store.state.middlegame : store.state.survival
     let line = f.ended.run.played
     let points = scoredInPoints ? f.ended.extras.points : f.ended.moves
+    if let handoff {
+      // Counted against the openings your own line went through. No prep was asked, so no rating or card moves.
+      let yours = Array(handoff.line.prefix(handoff.prep))
+      store.update { state in
+        if case .ended = f.how { state.endMiddlegameEarly(tree, yours) } else { state.endMiddlegame(tree, yours, points) }
+        if case .blunder(_, _, _, _, let slip?) = f.how, slip.from > slip.to {
+          let run = f.ended.run
+          state.endgames.save(SavedEndgame(
+            id: "saved-\(positionKey(run.fen))", fen: run.fen, goal: slip.from == .win ? .win : .hold,
+            name: openingName(tree, run.openingId), at: Env.now()))
+        }
+      }
+      settle(f)
+      return
+    }
     store.update { state in
       if case .ended = f.how {
         state.endSurvivalEarly(tree, line)
@@ -428,6 +474,11 @@ final class RunModel {
       }
     }
     offer = offerFor(store.state, tree, index, f, region: f.ended.run.openingId, growth: growth)
+    settle(f)
+  }
+
+  /// What floats over the board goes, and the blunder or the end screen comes up.
+  private func settle(_ f: Finish) {
     pop = nil
     note = nil
     miss = nil

@@ -5,6 +5,8 @@ import SwiftUI
 /// Survival's app bar: close, "Survival" over the selection, and what sits
 /// on the right (the clock and the run's count). `AppBar` with `actions`.
 struct SurvivalBar<Actions: View>: View {
+  /// The mode's name: Survival, or Middlegame.
+  var title = "Survival"
   var subtitle: String?
   var onClose: () -> Void
   @ViewBuilder var actions: Actions
@@ -13,7 +15,7 @@ struct SurvivalBar<Actions: View>: View {
     HStack(spacing: 12) {
       IconButton(icon: "close", action: onClose)
       VStack(spacing: 1) {
-        Text("Survival").font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.text)
+        Text(title).font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.text)
         if let subtitle { Text(subtitle).font(.system(size: 13)).foregroundStyle(Theme.text2) }
       }
       .lineLimit(1).frame(maxWidth: .infinity)
@@ -79,7 +81,7 @@ struct SurvivalRunBar: View {
 
   var body: some View {
     let state = model.session.state
-    SurvivalBar(subtitle: runSubtitle(store, model.run.color, model.openingId), onClose: onExit) {
+    SurvivalBar(title: model.handoff != nil ? "Middlegame" : "Survival", subtitle: runSubtitle(store, model.run.color, model.openingId), onClose: onExit) {
       if let budget = clockSeconds(model.prefs.clock), model.live, !model.held, model.myTurn {
         SurvivalClock(budget: budget, since: model.turnStarted).id(model.turnStarted)
       }

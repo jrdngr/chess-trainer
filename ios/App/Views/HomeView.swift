@@ -27,9 +27,10 @@ struct HomeView: View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 10) {
           tile("Survival", "flame", .survival)
           tile("Drill", "cards", .drill)
+          tile("Middlegame", "middlegame", .middlegame)
+          tile("Endgames", "flag", .endgame)
           tile("Growth", "sprout", .growth)
           tile("Play", "play", .play)
-          tile("Endgames", "flag", .endgame)
         }
         VStack(spacing: 10) {
           SurvivalRuns()

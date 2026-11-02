@@ -100,6 +100,9 @@ extension Icon {
     "flag": IconSpec(strokeWidth: 2, parts: [
       IconPart(.path("M6 21V4"), fill: .none, stroke: .current, opacity: (1, 1)),
       IconPart(.path("M6 4h11.5l-2.5 4 2.5 4H6"), fill: .whenFilled, stroke: .current, opacity: (1, 1))]),
+    "middlegame": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.path("M12 21V13L6.5 7.5M12 13l5.5-5.5"), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.path("M6 11.5V7h4.5M18 11.5V7h-4.5"), fill: .none, stroke: .current, opacity: (1, 1))]),
     "sprout": IconSpec(strokeWidth: 2, parts: [
       IconPart(.path("M12 21v-9"), fill: .none, stroke: .current, opacity: (1, 1)),
       IconPart(.path("M12 12C12 8 9.5 5.5 5 5.5c0 4 2.5 6.5 7 6.5z"), fill: .whenFilled, stroke: .current, opacity: (1, 1)),

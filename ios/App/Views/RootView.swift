@@ -5,7 +5,7 @@ import SwiftUI
 
 /// A mode open over the tabs.
 enum Mode: Equatable {
-  case autopilot, survival, drill, growth, play, endgame
+  case autopilot, survival, drill, growth, play, endgame, middlegame
 }
 
 /// The app: onboarding ahead of everything, a mode over the tabs, or the tabs.
@@ -28,6 +28,8 @@ struct RootView: View {
   @State private var scope: Selection?
   /// A find handed over from the end of a round, for Tidy to open on.
   @State private var tidyFocus: TidyFind?
+  /// A line from the opening sheet for Middlegame mode to play out.
+  @State private var middlegameLine: MiddlegameLine?
 
   var body: some View {
     ZStack {
@@ -105,6 +107,8 @@ struct RootView: View {
         .id(scope.map { "\($0.color.rawValue):\($0.opening)" } ?? "autopilot")
     case .play: PlayView(tree: tree, index: index) { leave() }
     case .endgame: EndgameView { leave() }
+    case .middlegame:
+      MiddlegameView(tree: tree, index: index, exact: middlegameLine, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) })
     case .drill: DrillView(tree: tree, index: index) { leave() }
     case .growth:
       GrowthModeView(
@@ -129,6 +133,7 @@ struct RootView: View {
     analyzing = nil
     mode = nil
     scope = nil
+    middlegameLine = nil
     tab = .home
   }
 
