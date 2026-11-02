@@ -12,8 +12,9 @@ generated from it were removed on 2026-11-02; their final state is on the
 
 ## Checks
 
-Run the Swift tests before pushing; GitHub Actions runs them on every push to
-`dev` and `main`, and builds the app.
+Run the Swift tests before pushing. Xcode Cloud builds every push to `dev`
+and then runs them (`ios/ci_scripts/ci_post_xcodebuild.sh`); it publishes
+nothing from `dev`.
 
 ```bash
 cd ios && swift test

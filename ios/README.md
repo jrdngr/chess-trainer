@@ -48,6 +48,6 @@ leaving the middle box for the lightest). Re-render the PNG from the SVG after e
 
 ## Builds and versions
 
-- Xcode Cloud builds every push to `main`. `ci_scripts/ci_post_clone.sh` installs XcodeGen and generates the project, since `ChessPlaybook.xcodeproj` is not checked in.
+- Xcode Cloud archives every push to `main` for TestFlight, and builds every push to `dev` without publishing; after a `dev` build, `ci_scripts/ci_post_xcodebuild.sh` runs `swift test`. `ci_scripts/ci_post_clone.sh` installs XcodeGen and generates the project, since `ChessPlaybook.xcodeproj` is not checked in.
 - The marketing version is `MARKETING_VERSION` in `project.yml`. To bump it, edit it there and regenerate.
 - Xcode Cloud sets the build number on every archive. Local builds stay at `1`. They are only for installing on a device, never for uploading.
