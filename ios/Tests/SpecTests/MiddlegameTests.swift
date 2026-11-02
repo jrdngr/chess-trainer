@@ -21,8 +21,9 @@ private let FENS = walkSan(QGD).fens
 }
 
 @Test func middlegameStartsByMoveFifteenRegardless() {
-  #expect(!middlegameStarted(START_FEN, ply: MIDDLEGAME_BY_PLY - 1))
-  #expect(middlegameStarted(START_FEN, ply: MIDDLEGAME_BY_PLY))
+  // Ply 30 is White's 16th move: move 15 has been played by both sides.
+  #expect(!middlegameStarted(START_FEN, ply: 29))
+  #expect(middlegameStarted(START_FEN, ply: 30))
 }
 
 @Test func aKingThatLostItsCastlingRightsHasMoved() {
@@ -91,6 +92,51 @@ private func movesAt(_ plies: Range<Int>) -> [String: [String]] {
   }
 }
 
+@Test func anEngineMoveInTheBandBeatsABookMoveOutsideIt() async {
+  // At move 7 Black's book has only c6, which would take the eval to +4; the engine's Nbd7 keeps it.
+  var book = movesAt(14..<22)
+  book[positionKey(FENS[13])] = ["c6"]
+  let handoff = await buildHandoff(
+    YOURS, color: .w, tools: tools(book: book, engine: [positionKey(FENS[13]): ["Nbd7"]], scores: ["c6": 400]), seed: 1)
+  #expect(handoff?.line[13] == "Nbd7")
+  #expect(handoff?.kinds[13] == .engine)
+  #expect(handoff?.line == QGD)
+}
+
+@Test func theEnginesMovesAreHeldToTheBandAtTheBandsDepth() async {
+  // The level's shallow search scores c6 level with Nbd7 and likes it far more; the band's own search has c6 at +4.
+  let base = tools(book: [:], engine: movesAt(14..<20), scores: ["c6": 400])
+  let at13 = positionKey(FENS[13])
+  let t = HandoffTools(
+    book: base.book, evaluate: base.evaluate, score: base.score,
+    engineMoves: { fen in
+      if positionKey(fen) != at13 { return await base.engineMoves(fen) }
+      return [HandoffCandidate(san: "c6", weight: 99, cp: 30), HandoffCandidate(san: "Nbd7", weight: 1, cp: 30)]
+    })
+  for seed in 0..<10 {
+    let handoff = await buildHandoff(YOURS, color: .w, tools: t, seed: Double(seed))
+    #expect(handoff?.line[13] == "Nbd7")
+  }
+}
+
+@Test func aDrawWithNoLineOfYoursPlaysNothingOut() throws {
+  // Only a Black Playbook: a White draw in the Italian falls back on the opening's own moves, which aren't yours.
+  let tree = openingTree(bookIndex)
+  var state = AppState()
+  state.seed(tree, STARTER_SETS[0])
+  let italian = line("e4 e5 Nf3 Nc6 Bc4")
+  let node = try #require(deepestNodeAlong(tree, italian))
+  let blackOnly = state.repertoireList.filter { $0.color == .b }
+  var opts = StartOptions(steer: .lines, tree: tree, reps: blackOnly, node: node, color: .w)
+  opts.seed = 1
+  let fallback = try #require(startSurvival(opts))
+  #expect(middlegameLine(fallback, blackOnly) == [])
+  // With the White Playbook the starter set saved, the draw is its line.
+  opts.reps = state.repertoireList
+  let drawn = try #require(startSurvival(opts))
+  #expect(middlegameLine(drawn, state.repertoireList) == italian)
+}
+
 /// A run started at the QGD handoff, White to play move 12.
 private func handoffRun() throws -> (session: RunSession, tree: OpeningTree) {
   let tree = openingTree(bookIndex)
@@ -154,7 +200,7 @@ private func handoffRun() throws -> (session: RunSession, tree: OpeningTree) {
   #expect(planHeadline(structure, .b) == "Kingside play")
 }
 
-@Test func aPlansBoldMovesReadAsItsSteps() {
+@Test func aPlansBoldMovesReadAsItsSteps() throws {
   // Every step, for each side and either color as side a, joins back to planFor's words.
   var marked = 0
   for template in STRUCTURE_TEMPLATES {
@@ -168,6 +214,17 @@ private func handoffRun() throws -> (session: RunSession, tree: OpeningTree) {
     }
   }
   #expect(marked > 0)
+  // Black's side of the Carlsbad: its own moves take the dots, White's don't.
+  let carlsbad = try #require(STRUCTURE_TEMPLATES.first { $0.id == "carlsbad" })
+  let runs = planRuns(Structure(template: carlsbad, a: .w), .b)
+  #expect(runs[0] == [
+    StepRun(text: "Play on the kingside: ", move: false), StepRun(text: "...Ne4", move: true),
+    StepRun(text: " and ", move: false), StepRun(text: "...f5", move: true),
+  ])
+  #expect(runs[1] == [
+    StepRun(text: "Meet ", move: false), StepRun(text: "b5", move: true), StepRun(text: " by taking or by ", move: false),
+    StepRun(text: "...c5", move: true), StepRun(text: " at the right moment", move: false),
+  ])
 }
 
 @Test func aHeadlinesSquaresArePlacedForTheBoard() throws {
