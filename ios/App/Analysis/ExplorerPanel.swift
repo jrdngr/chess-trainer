@@ -160,7 +160,10 @@ func bookSource(_ index: ReferenceIndex) -> String {
 private enum BookFile {
   static let source: String? = {
     guard let url = Bundle.main.url(forResource: "book", withExtension: "json"),
-      let handle = try? FileHandle(forReadingFrom: url), let head = try? handle.read(upToCount: 400),
+      let handle = try? FileHandle(forReadingFrom: url), let head = (try? handle.read(upToCount: 400)).flatMap({ data in
+        try? handle.close()
+        return data
+      }),
       let text = String(data: head, encoding: .utf8),
       let match = text.firstMatch(of: /"source":"([^"]*)"/)
     else { return nil }
