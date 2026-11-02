@@ -41,9 +41,10 @@ extension ChessEngine {
 /// The engine: the search in `Basic/`.
 /// `onUpdate` returning true stops the search there.
 public actor BasicEngine: ChessEngine {
-  /// How long a search runs when the caller only names a depth, and the longest any runs.
+  /// How long a search runs when the caller only names a depth, and the longest any runs:
+  /// the judge's confirmation of a suspected blunder.
   static let defaultMs: Double = 1000
-  static let maxMs: Double = 2000
+  static let maxMs: Double = CONFIRM_MS
 
   private let tt = TranspositionTable()
 
