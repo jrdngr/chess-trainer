@@ -89,6 +89,13 @@ the book:
 After the book comes **Out of book**, and the middlegame extras take over:
 moments, missions, the combo, plan cards and lenses.
 
+Once little material is left (queens 4, rooks 2, minor pieces 1, 8 or less
+in all), the header says **Endgame** and a blunder means giving away the
+result: a win slipping to a draw, or a draw to a loss. A slower win costs
+points, never the run, and a missed mate gets a note instead of ending it.
+The lenses switch to their endgame forms. Autopilot never starts a round in
+an endgame: endgames are drilled in Endgame mode.
+
 ## Ending a round
 
 A small, quiet End round button is under the board from the first move of

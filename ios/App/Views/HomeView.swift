@@ -29,6 +29,7 @@ struct HomeView: View {
           tile("Drill", "cards", .drill)
           tile("Growth", "sprout", .growth)
           tile("Play", "play", .play)
+          tile("Endgames", "flag", .endgame)
         }
         VStack(spacing: 10) {
           SurvivalRuns()

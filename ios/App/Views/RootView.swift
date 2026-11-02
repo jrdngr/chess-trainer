@@ -5,7 +5,7 @@ import SwiftUI
 
 /// A mode open over the tabs.
 enum Mode: Equatable {
-  case autopilot, survival, drill, growth, play
+  case autopilot, survival, drill, growth, play, endgame
 }
 
 /// The app: onboarding ahead of everything, a mode over the tabs, or the tabs.
@@ -104,6 +104,7 @@ struct RootView: View {
       AutopilotView(tree: tree, index: index, scope: scope) { leave() }
         .id(scope.map { "\($0.color.rawValue):\($0.opening)" } ?? "autopilot")
     case .play: PlayView(tree: tree, index: index) { leave() }
+    case .endgame: EndgameView { leave() }
     case .drill: DrillView(tree: tree, index: index) { leave() }
     case .growth:
       GrowthModeView(

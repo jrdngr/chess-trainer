@@ -419,6 +419,13 @@ final class RunModel {
       }
       ratings.track(state.settleRun(tree, f.answers, line))
       state.endRound(tree, runRound(f, tree, at: Env.now()))
+      // An endgame result that slipped away is kept for Endgame mode, from the position before the move.
+      if case .blunder(_, _, _, _, let slip?) = f.how, slip.from > slip.to {
+        let run = f.ended.run
+        state.endgames.save(SavedEndgame(
+          id: "saved-\(positionKey(run.fen))", fen: run.fen, goal: slip.from == .win ? .win : .hold,
+          name: openingName(tree, run.openingId), at: Env.now()))
+      }
     }
     offer = offerFor(store.state, tree, index, f, region: f.ended.run.openingId, growth: growth)
     pop = nil

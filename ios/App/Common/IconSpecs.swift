@@ -97,6 +97,9 @@ extension Icon {
     "cards": IconSpec(strokeWidth: 2, parts: [
       IconPart(.rect(7, 3.5, 12, 15, 2), fill: .whenFilled, stroke: .current, opacity: (1, 1)),
       IconPart(.path("M5 7v11.5a2 2 0 0 0 2 2h9"), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "flag": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.path("M6 21V4"), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.path("M6 4h11.5l-2.5 4 2.5 4H6"), fill: .whenFilled, stroke: .current, opacity: (1, 1))]),
     "sprout": IconSpec(strokeWidth: 2, parts: [
       IconPart(.path("M12 21v-9"), fill: .none, stroke: .current, opacity: (1, 1)),
       IconPart(.path("M12 12C12 8 9.5 5.5 5 5.5c0 4 2.5 6.5 7 6.5z"), fill: .whenFilled, stroke: .current, opacity: (1, 1)),
