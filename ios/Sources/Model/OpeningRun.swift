@@ -457,10 +457,22 @@ public struct EvalVerdict: Equatable, Sendable, Codable {
   public var lost: Double
 }
 
+/// Past this lead, in centipawns, the blunder line starts to grow.
+public let BLUNDER_SCALE_FROM: Double = 100
+/// How much the blunder line grows for each centipawn you lead by past `BLUNDER_SCALE_FROM`.
+public let BLUNDER_SCALE: Double = 0.25
+
+/// The most a move can give away before it is a blunder: `BLUNDER_LIMIT` when level or behind,
+/// more the further ahead you are. `before` is in White's frame.
+public func blunderLimit(_ color: Color, _ before: Double) -> Double {
+  let lead = color == .w ? before : -before
+  return BLUNDER_LIMIT + BLUNDER_SCALE * max(0, lead - BLUNDER_SCALE_FROM)
+}
+
 /// Judge a move past the prep: over the limit is a blunder.
-public func judgeByEval(_ color: Color, _ before: Double, _ after: Double, _ limit: Double = BLUNDER_LIMIT) -> EvalVerdict {
+public func judgeByEval(_ color: Color, _ before: Double, _ after: Double) -> EvalVerdict {
   let lost = max(0, evalLoss(color, before, after))
-  return EvalVerdict(ok: lost <= limit, lost: lost)
+  return EvalVerdict(ok: lost <= blunderLimit(color, before), lost: lost)
 }
 
 /// How the line would have gone on from here.

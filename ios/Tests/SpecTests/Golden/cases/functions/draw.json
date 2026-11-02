@@ -88,14 +88,22 @@
     },
     {
       "fn": "openingRun.judgeByEval",
-      "about": "Past the prep a move is judged by what it gives away from your side (never less than nothing): over 80cp is a blunder.",
+      "about": "Past the prep a move is judged by what it gives away from your side (never less than nothing): over 80cp is a blunder, plus a quarter of every centipawn you led by past +100 before the move.",
       "cases": [
       {"args":["w",30,-50],"out":{"ok":true,"lost":80}},
       {"args":["w",30,-51],"out":{"ok":false,"lost":81}},
       {"args":["w",30,120],"out":{"ok":true,"lost":0}},
       {"args":["b",30,110],"out":{"ok":true,"lost":80}},
       {"args":["b",30,111],"out":{"ok":false,"lost":81}},
-      {"args":["b",30,-200],"out":{"ok":true,"lost":0}}
+      {"args":["b",30,-200],"out":{"ok":true,"lost":0}},
+      {"args":["w",600,450],"out":{"ok":true,"lost":150}},
+      {"args":["w",600,395],"out":{"ok":true,"lost":205}},
+      {"args":["w",600,394],"out":{"ok":false,"lost":206}},
+      {"args":["b",-600,-450],"out":{"ok":true,"lost":150}},
+      {"args":["b",-600,-394],"out":{"ok":false,"lost":206}},
+      {"args":["w",500,150],"out":{"ok":false,"lost":350}},
+      {"args":["w",-300,-381],"out":{"ok":false,"lost":81}},
+      {"args":["b",300,381],"out":{"ok":false,"lost":81}}
       ]
     },
     {
