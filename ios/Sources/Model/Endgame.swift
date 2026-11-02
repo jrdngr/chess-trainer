@@ -60,9 +60,13 @@ public func judgeEndgame(
 }
 
 /// Judge a move past the prep in the position `fen`: by its result in an
-/// endgame, by the blunder line before that.
-public func judgeMove(_ fen: String, _ color: Color, _ before: Double, _ after: Double) -> EvalVerdict {
-  isEndgame(fen) ? judgeEndgame(color, before, after) : judgeByEval(color, before, after)
+/// endgame, by the blunder line before that. `exact` results put any position
+/// under the endgame rules.
+public func judgeMove(
+  _ fen: String, _ color: Color, _ before: Double, _ after: Double,
+  exact: (before: GameResult, after: GameResult)? = nil
+) -> EvalVerdict {
+  exact != nil || isEndgame(fen) ? judgeEndgame(color, before, after, exact: exact) : judgeByEval(color, before, after)
 }
 
 /// What a slip in an endgame did to the result, for the end screen: "Win

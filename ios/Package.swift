@@ -16,7 +16,8 @@ let package = Package(
     .target(name: "ChessCore", dependencies: ["Shared"]),
     .target(name: "Book", dependencies: ["Shared", "ChessCore"]),
     .target(name: "Model", dependencies: ["Shared", "ChessCore", "Book"]),
-    .target(name: "Engine", dependencies: ["ChessCore", "Model"]),
+    .target(name: "Fathom", exclude: ["tbchess.c", "LICENSE"]),
+    .target(name: "Engine", dependencies: ["ChessCore", "Model", "Fathom"], resources: [.copy("Syzygy")]),
     .testTarget(name: "ChessCoreTests", dependencies: ["ChessCore"]),
     .testTarget(name: "EngineTests", dependencies: ["ChessCore", "Model", "Engine"]),
     .testTarget(

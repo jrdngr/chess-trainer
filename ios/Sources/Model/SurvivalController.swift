@@ -75,9 +75,11 @@ public struct Judgement: Equatable, Sendable {
   public var reply: String?
   /// An endgame where the engine had a mate and your move doesn't keep it.
   public var missedMate: Bool
+  /// The exact results before and after your move, where the tablebase knows them.
+  public var exact: Slip?
   public init(
     san: String, ok: Bool, lost: Double, best: String?, before: Double, after: Double, moment: Bool, found: Bool, reply: String?,
-    missedMate: Bool = false
+    missedMate: Bool = false, exact: Slip? = nil
   ) {
     self.san = san
     self.ok = ok
@@ -89,6 +91,7 @@ public struct Judgement: Equatable, Sendable {
     self.found = found
     self.reply = reply
     self.missedMate = missedMate
+    self.exact = exact
   }
 }
 
@@ -283,7 +286,9 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     if let rid = run.repertoireId { step.effects.append(.missed(repertoireId: rid, fen: run.fen, played: judged.san, expected: first)) }
   }
   if !judged.ok {
-    let slip = isEndgame(run.fen) ? Slip(from: resultOf(run.color, judged.before), to: resultOf(run.color, judged.after)) : nil
+    let slip =
+      judged.exact
+      ?? (isEndgame(run.fen) ? Slip(from: resultOf(run.color, judged.before), to: resultOf(run.color, judged.after)) : nil)
     return then(step) {
       finish($0, $0.state, .blunder(played: judged.san, best: judged.best, lost: judged.lost, reply: judged.reply, slip: slip))
     }

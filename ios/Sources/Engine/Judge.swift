@@ -66,6 +66,13 @@ public func judge(_ engine: ChessEngine, _ base: Baseline, san: String, uci: Str
   /// At a moment you missed, the second best is what your move answers to.
   let second = moment && theirs != nil ? base.second.flatMap { $0.uci != uci ? $0.uci : nil } : nil
   let clock = Clock()
+  /// The exact results before and after your move, where the tablebase covers both positions.
+  let exact: (before: GameResult, after: GameResult)? = {
+    guard let before = Tablebase.probe(base.fen, for: color),
+      let next = applyUci(base.fen, uci), let after = Tablebase.probe(next.after, for: color)
+    else { return nil }
+    return (before, after)
+  }()
 
   @Sendable func weigh(_ snap: EngineSnapshot) -> (ok: Bool, lost: Double, before: Double, after: Double, found: Bool, reply: String?, missedMate: Bool)? {
     guard let yours = snap.lines.first(where: { $0.pv.first == uci }) else { return nil }
@@ -77,11 +84,11 @@ public func judge(_ engine: ChessEngine, _ base: Baseline, san: String, uci: Str
     guard let yourCp = scoreOf(yours), let topCp = scoreOf(top) else { return nil }
     // Your move scored above the engine's: nothing lost.
     let before = colorBest(color, topCp, yourCp)
-    let result = judgeMove(base.fen, color, before, yourCp)
+    let result = judgeMove(base.fen, color, before, yourCp, exact: exact)
     let found = moment && result.lost <= MOMENT_FOUND
     // A moment missed is judged against the next best move.
     let nextCp = next.flatMap(scoreOf)
-    let ok = moment && !found && nextCp != nil ? judgeMove(base.fen, color, colorBest(color, nextCp!, yourCp), yourCp).ok : result.ok
+    let ok = moment && !found && nextCp != nil ? judgeMove(base.fen, color, colorBest(color, nextCp!, yourCp), yourCp, exact: exact).ok : result.ok
     // In an endgame, a mate the engine had and your move doesn't keep: the run goes on, but you hear about it.
     func mates(_ line: EngineLine) -> Bool { line.mate.map { ($0 > 0) == (color == .w) } ?? false }
     let missedMate = isEndgame(base.fen) && mates(top) && !mates(yours)
@@ -101,7 +108,7 @@ public func judge(_ engine: ChessEngine, _ base: Baseline, san: String, uci: Str
   var judged = Judgement(
     san: san, ok: verdict?.ok ?? true, lost: verdict?.lost ?? 0, best: base.best, before: verdict?.before ?? base.cp,
     after: verdict?.after ?? base.cp, moment: moment, found: verdict?.found ?? false, reply: verdict?.reply ?? nil,
-    missedMate: verdict?.missedMate ?? false)
+    missedMate: verdict?.missedMate ?? false, exact: exact.map { Slip(from: $0.before, to: $0.after) })
   // Your move is the engine's own choice: sound, and at a moment, found.
   if theirs == nil {
     judged.ok = true
