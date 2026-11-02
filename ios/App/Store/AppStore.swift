@@ -27,14 +27,27 @@ final class AppStore {
       else { return nil }
       return (index, openingTree(index))
     }.value
-    if let data = try? Data(contentsOf: file), let saved = try? JSONDecoder().decode(AppState.self, from: data) {
-      state = saved
+    if let data = try? Data(contentsOf: file) {
+      do {
+        state = try JSONDecoder().decode(AppState.self, from: data)
+      } catch {
+        // The next save would overwrite it with a fresh state: keep the unreadable one beside it.
+        print("load failed: \(error)")
+        keepUnreadable(data)
+      }
     }
     if let built {
       index = built.0
       tree = built.1
       catalog = pickerCatalog(built.1)
     }
+  }
+
+  /// A save this version cannot read, kept as `playbook-unreadable-<time>.json`.
+  private func keepUnreadable(_ data: Data) {
+    let stamp = Int(Date().timeIntervalSince1970)
+    let copy = file.deletingLastPathComponent().appending(path: "playbook-unreadable-\(stamp).json")
+    try? data.write(to: copy, options: .atomic)
   }
 
   func save() {
