@@ -119,9 +119,11 @@ struct RunView: View {
     .padding(.horizontal).padding(.vertical, 10)
   }
 
-  /// Under the board: what a held lens shows, or the goal and the status; then the lenses and End round.
+  /// Under the board: the lenses, then what a held lens shows, or the goal and the status; End round at the bottom.
   private var dock: some View {
     VStack(spacing: 0) {
+      LensBar(held: $lens, enabled: lensEnabled, plan: $planHeld, planEnabled: lensEnabled && structureOf(model.shownFen) != nil)
+        .opacity(model.held ? 0 : 1).allowsHitTesting(!model.held)
       VStack(spacing: 0) {
         if let lens {
           LensLegend(kind: lens)
@@ -134,10 +136,8 @@ struct RunView: View {
           status.padding(.top, 14)
         }
       }
-      // Gives way before the board does: what doesn't fit is cut, never pushed up.
-      .frame(minHeight: 0, maxHeight: .infinity, alignment: .top).clipped()
-      LensBar(held: $lens, enabled: lensEnabled, plan: $planHeld, planEnabled: lensEnabled && structureOf(model.shownFen) != nil)
-        .opacity(model.held ? 0 : 1).allowsHitTesting(!model.held)
+      // Gives way before the board does: what doesn't fit is cut, never pushed up, and can't take a touch outside it.
+      .frame(minHeight: 0, maxHeight: .infinity, alignment: .top).clipped().contentShape(Rectangle())
       footer.padding(.top, 10).padding(.bottom, 8).opacity(model.blunder == nil ? 1 : 0)
     }
   }
