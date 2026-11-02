@@ -76,25 +76,15 @@ public func prepSummary(_ found: Int, _ asked: Int, _ seconds: [Double], _ book:
 
 public enum GlowTone: String, Sendable, Codable { case green, yellow, red }
 
-/// Who is better, as the board's glow shows it.
+/// A tint around the board.
 public struct Glow: Equatable, Sendable, Codable {
   public var tone: GlowTone
   /// 0...1, how bright.
   public var strength: Double
 }
 
-public let GLOW_PAWN: Double = 100
-public let GLOW_MINOR: Double = 300
-public let GLOW_SPAN: Double = 400
-
-/// The glow for a position, from the engine's score in White's frame, or nil when level.
-public func glowFor(_ color: Color, _ cp: Double) -> Glow? {
-  let mine = color == .w ? cp : -cp
-  if mine >= GLOW_PAWN { return Glow(tone: .green, strength: min(1, (mine - GLOW_PAWN) / GLOW_SPAN)) }
-  if mine <= -GLOW_MINOR { return Glow(tone: .red, strength: 0.5 + 0.5 * min(1, (-mine - GLOW_MINOR) / GLOW_SPAN)) }
-  if mine <= -GLOW_PAWN { return Glow(tone: .yellow, strength: 0.5) }
-  return nil
-}
+/// The board's glow while a moment is up.
+public let MOMENT_GLOW = Glow(tone: .green, strength: 0.5)
 
 /* ── points, moments, combo ── */
 

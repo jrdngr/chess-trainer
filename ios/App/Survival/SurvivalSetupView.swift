@@ -37,8 +37,6 @@ struct SurvivalSetupView: View {
           ListCard {
             ToggleRow(label: "Move scores", hint: "What each move the engine judges cost you, in centipawns, over its square",
                       on: prefs.moveScores) { set { $0.moveScores.toggle() } }
-            ToggleRow(label: "Board glow", hint: "The board's edge tints green when you are better and red when you are worse",
-                      on: prefs.boardGlow) { set { $0.boardGlow.toggle() } }
             ToggleRow(label: "Undefended flash", on: prefs.undefendedFlash) { set { $0.undefendedFlash.toggle() } }
           }
           PlaySection(title: "Past the opening")

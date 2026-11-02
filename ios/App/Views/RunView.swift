@@ -40,7 +40,11 @@ struct RunView: View {
   private var board: some View {
     VStack(spacing: 0) {
       if survival { SurvivalRunBar(model: model, onExit: onExit) } else { header }
-      CapturedRow(fen: model.shownFen, orientation: model.run.color).padding(.horizontal).padding(.top, 12)
+      // The Eval lens's bar takes the captured row's place, so the board never moves.
+      CapturedRow(fen: model.shownFen, orientation: model.run.color)
+        .opacity(evalHeld ? 0 : 1)
+        .overlay { if evalHeld { EvalLensBar(cp: model.session.evalCp) } }
+        .padding(.horizontal).padding(.top, 12)
       BoardView(
         fen: model.shownFen, orientation: model.run.color,
         interactive: model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil && model.flash == nil,
@@ -48,6 +52,7 @@ struct RunView: View {
         marks: marks,
         onMove: model.play
       )
+      .overlay { if let pulse = model.edgePulse { EdgePulse(color: pulse.found ? Theme.good : Theme.bad).id(pulse.id) } }
       .overlay(alignment: .top) { flash }
       .overlay { if model.pulse { IntroPulse() } }
       .overlay {
@@ -57,9 +62,11 @@ struct RunView: View {
       }
       .padding(.horizontal).padding(.top, 6)
       .layoutPriority(1)
-      .onTapGesture { model.intro == .replay ? model.skipIntro() : model.clearMiss() }
+      .onTapGesture { if model.intro == .replay { model.skipIntro() } }
       dock.padding(.horizontal).frame(maxHeight: .infinity, alignment: .top)
     }
+    // Any touch clears a miss or a note over the board.
+    .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in model.clearOverlays() })
     .task(id: lens == .pawns ? model.shownFen : nil) {
       guard lens == .pawns else { return }
       let fen = model.shownFen
@@ -78,6 +85,7 @@ struct RunView: View {
   }
 
   private var lensEnabled: Bool { model.live && model.intro == .done }
+  private var evalHeld: Bool { lens == .eval && lensEnabled }
 
   /// What the held lens draws: `useLens`.
   private var marks: LensMarks? {
@@ -85,6 +93,7 @@ struct RunView: View {
     let me = model.run.color
     let fens = walkSan(Array(model.run.played.dropLast())).fens
     var marks = heldLens(lens, model.shownFen, me, model.run.played.isEmpty ? nil : fens.last)
+    if lens == .eval { marks.tints = evalLensTints(model.session.lastJudged, played: model.run.played.count) }
     if lens == .pawns, let breaks, breaks.fen == model.shownFen {
       let sides: [ChessCore.Color] = [.w, .b]
       marks.arrows = sides.compactMap { (side: ChessCore.Color) -> LensArrow? in
@@ -122,10 +131,12 @@ struct RunView: View {
   /// Under the board: the lenses, then what a held lens shows, or the goal and the status; End round at the bottom.
   private var dock: some View {
     VStack(spacing: 0) {
-      LensBar(held: $lens, enabled: lensEnabled, plan: $planHeld, planEnabled: lensEnabled && structureOf(model.shownFen) != nil)
+      LensBar(held: $lens, lenses: LENSES, enabled: lensEnabled, plan: $planHeld, planEnabled: lensEnabled && structureOf(model.shownFen) != nil)
         .opacity(model.held ? 0 : 1).allowsHitTesting(!model.held)
       VStack(spacing: 0) {
-        if let lens {
+        if lens == .eval {
+          EvalRunCard(trail: model.session.evalTrail, last: model.session.lastJudged, color: model.run.color)
+        } else if let lens {
           LensLegend(kind: lens)
         } else if planHeld {
           PlanLegend(fen: model.shownFen, me: model.run.color)
@@ -235,7 +246,7 @@ struct RunView: View {
       .padding(.top, 10).allowsHitTesting(false)
       .introPillIn().id(model.intro == .replay ? "replay" : "wait")
     } else if let miss = model.miss {
-      pill("Off your prep \u{00b7} \(miss.expected) was yours", Theme.accent).id("miss-\(miss.from)\(miss.to)")
+      pill("Off your prep", Theme.accent).id("miss-\(miss.from)\(miss.to)")
     } else if let note = model.note {
       pill(note.text, note.tone == "good" ? Theme.good : note.tone == "bad" ? Theme.bad : Theme.accent).id("note-\(note.text)")
     }
@@ -259,8 +270,9 @@ struct RunView: View {
   }
 
   private var highlights: [String: SwiftUI.Color] {
-    guard let b = model.blunder else { return [:] }
-    return [b.move.from: Theme.bad, b.move.to: Theme.bad]
+    if let b = model.blunder { return [b.move.from: Theme.bad, b.move.to: Theme.bad] }
+    if let best = model.missedBest { return [best.from: Theme.bad, best.to: Theme.bad] }
+    return [:]
   }
 
   private var arrows: [BoardArrow] {
@@ -268,7 +280,6 @@ struct RunView: View {
       return b.threat.map { [BoardArrow(from: $0.from, to: $0.to, color: Theme.bad)] } ?? []
     }
     if let miss = model.miss { return [BoardArrow(from: miss.from, to: miss.to, color: Theme.good)] }
-    if let best = model.missedBest { return [BoardArrow(from: best.from, to: best.to, color: Theme.good)] }
     return []
   }
 }

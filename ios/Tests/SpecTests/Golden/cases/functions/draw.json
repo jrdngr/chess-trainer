@@ -203,12 +203,10 @@
     },
     {
       "fn": "autopilotPrefs.autopilotModes",
-      "about": "How an Autopilot round plays each mode, whatever the mode's own setup says; only the move scores and board glow follow Autopilot's settings.",
+      "about": "How an Autopilot round plays each mode, whatever the mode's own setup says; only the move scores follow Autopilot's settings.",
       "cases": [
-      {"args":[true,true],"out":{"survival":{"steer":"lines","clock":"off","moveScores":true,"boardGlow":true,"moments":true,"missions":true,"combo":true,"undefendedFlash":false},"drill":{"form":"positions","draw":"due","newPerSession":8,"followLine":true,"weakFirst":false,"explain":true,"batchSimilar":true,"clock":"off"},"growth":{"minShare":1,"maxPly":18,"nudgePriority":"transposition","nudgePawns":false,"pastBook":false}}},
-      {"args":[true,false],"out":{"survival":{"steer":"lines","clock":"off","moveScores":true,"boardGlow":false,"moments":true,"missions":true,"combo":true,"undefendedFlash":false},"drill":{"form":"positions","draw":"due","newPerSession":8,"followLine":true,"weakFirst":false,"explain":true,"batchSimilar":true,"clock":"off"},"growth":{"minShare":1,"maxPly":18,"nudgePriority":"transposition","nudgePawns":false,"pastBook":false}}},
-      {"args":[false,true],"out":{"survival":{"steer":"lines","clock":"off","moveScores":false,"boardGlow":true,"moments":true,"missions":true,"combo":true,"undefendedFlash":false},"drill":{"form":"positions","draw":"due","newPerSession":8,"followLine":true,"weakFirst":false,"explain":true,"batchSimilar":true,"clock":"off"},"growth":{"minShare":1,"maxPly":18,"nudgePriority":"transposition","nudgePawns":false,"pastBook":false}}},
-      {"args":[false,false],"out":{"survival":{"steer":"lines","clock":"off","moveScores":false,"boardGlow":false,"moments":true,"missions":true,"combo":true,"undefendedFlash":false},"drill":{"form":"positions","draw":"due","newPerSession":8,"followLine":true,"weakFirst":false,"explain":true,"batchSimilar":true,"clock":"off"},"growth":{"minShare":1,"maxPly":18,"nudgePriority":"transposition","nudgePawns":false,"pastBook":false}}}
+      {"args":[true],"out":{"survival":{"steer":"lines","clock":"off","moveScores":true,"moments":true,"missions":true,"combo":true,"undefendedFlash":false},"drill":{"form":"positions","draw":"due","newPerSession":8,"followLine":true,"weakFirst":false,"explain":true,"batchSimilar":true,"clock":"off"},"growth":{"minShare":1,"maxPly":18,"nudgePriority":"transposition","nudgePawns":false,"pastBook":false}}},
+      {"args":[false],"out":{"survival":{"steer":"lines","clock":"off","moveScores":false,"moments":true,"missions":true,"combo":true,"undefendedFlash":false},"drill":{"form":"positions","draw":"due","newPerSession":8,"followLine":true,"weakFirst":false,"explain":true,"batchSimilar":true,"clock":"off"},"growth":{"minShare":1,"maxPly":18,"nudgePriority":"transposition","nudgePawns":false,"pastBook":false}}}
       ]
     }
   ]

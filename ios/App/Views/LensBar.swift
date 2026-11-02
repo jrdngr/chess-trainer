@@ -5,6 +5,8 @@ import SwiftUI
 /// let go and the board is clean again.
 struct LensBar: View {
   @Binding var held: LensKind?
+  /// Eval only where the screen has the engine's word on the game.
+  var lenses = LENSES.filter { $0.kind != .eval }
   var enabled = true
   /// The structure's plan, held like a lens, where the screen offers it.
   var plan: Binding<Bool>? = nil
@@ -12,7 +14,7 @@ struct LensBar: View {
 
   var body: some View {
     HStack(spacing: 6) {
-      ForEach(LENSES, id: \.kind) { lens in
+      ForEach(lenses, id: \.kind) { lens in
         let on = held == lens.kind
         button(lens.label, on: on, ink: Theme.text2, fill: Theme.accent, onInk: Theme.accentInk, enabled: enabled) {
           if held != lens.kind { held = lens.kind }
@@ -143,9 +145,6 @@ struct LensLegend: View {
       Row(swatch: shield(LensColors.green), label: "Safe"),
       Row(swatch: shield(LensColors.amber), label: "Exposed"),
       Row(swatch: shield(LensColors.red), label: "Under attack"),
-    ],
-    .threats: [
-      Row(swatch: arrow(LensColors.red), label: "Attacks a loose piece"),
     ],
   ]
 }

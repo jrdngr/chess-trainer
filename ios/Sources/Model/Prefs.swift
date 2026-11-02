@@ -44,8 +44,6 @@ public struct SurvivalPrefs: Equatable, Sendable, Codable {
   public var clock: ClockMode
   /// What each engine-judged move cost, floated up from its square.
   public var moveScores: Bool
-  /// A tint around the board for who is better.
-  public var boardGlow: Bool
   public var moments: Bool
   public var missions: Bool
   public var combo: Bool
@@ -67,7 +65,7 @@ extension SurvivalPrefs {
 }
 
 public let DEFAULT_SURVIVAL = SurvivalPrefs(
-  steer: .lines, clock: .off, moveScores: true, boardGlow: true, moments: true, missions: true, combo: true,
+  steer: .lines, clock: .off, moveScores: true, moments: true, missions: true, combo: true,
   undefendedFlash: false)
 
 extension SurvivalPrefs {
@@ -79,7 +77,6 @@ extension SurvivalPrefs {
       steer: try c.decodeIfPresent(SurvivalSteer.self, forKey: .steer) ?? d.steer,
       clock: try c.decodeIfPresent(ClockMode.self, forKey: .clock) ?? d.clock,
       moveScores: try c.decodeIfPresent(Bool.self, forKey: .moveScores) ?? d.moveScores,
-      boardGlow: try c.decodeIfPresent(Bool.self, forKey: .boardGlow) ?? d.boardGlow,
       moments: try c.decodeIfPresent(Bool.self, forKey: .moments) ?? d.moments,
       missions: try c.decodeIfPresent(Bool.self, forKey: .missions) ?? d.missions,
       combo: try c.decodeIfPresent(Bool.self, forKey: .combo) ?? d.combo,
@@ -115,14 +112,12 @@ public struct GrowthPrefs: Equatable, Sendable, Codable {
 /// Autopilot's own options: matters of taste only.
 public struct AutopilotPrefs: Equatable, Sendable, Codable {
   public var moveScores: Bool
-  public var boardGlow: Bool
-  public init(moveScores: Bool, boardGlow: Bool) {
+  public init(moveScores: Bool) {
     self.moveScores = moveScores
-    self.boardGlow = boardGlow
   }
 }
 
-public let DEFAULT_AUTOPILOT = AutopilotPrefs(moveScores: true, boardGlow: true)
+public let DEFAULT_AUTOPILOT = AutopilotPrefs(moveScores: true)
 
 /// Drill rounds: no clock, Why? always offered.
 public let AUTO_DRILL = DrillPrefs(
@@ -138,7 +133,7 @@ public let AUTO_GROWTH = GrowthPrefs(minShare: 1, maxPly: 18, nudgePriority: .tr
 /// Survival rounds: Autopilot steers, there is no clock, the feedback is yours.
 public func autoSurvival(_ prefs: AutopilotPrefs) -> SurvivalPrefs {
   SurvivalPrefs(
-    steer: .lines, clock: .off, moveScores: prefs.moveScores, boardGlow: prefs.boardGlow, moments: true,
+    steer: .lines, clock: .off, moveScores: prefs.moveScores, moments: true,
     missions: true, combo: true, undefendedFlash: false)
 }
 

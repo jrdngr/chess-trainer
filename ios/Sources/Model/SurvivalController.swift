@@ -113,9 +113,39 @@ public struct RunSession {
   public var prepTimes: [Double] = []
   /// The engine's score after your last scored move, White's side.
   public var lastScored: Double?
-  /// The engine's last word on the game, White's side, for the glow.
+  /// The engine's last word on the game, White's side.
   public var evalCp: Double?
+  /// The engine's score before your first judged move and after each one, White's side: the Eval lens's chart.
+  public var evalTrail: [Double] = []
+  /// Your last judged move, for the Eval lens.
+  public var lastJudged: JudgedMark?
   public var ending: Ending?
+}
+
+/// One of your judged moves: where it went, and the eval swing it closed on from your side (nil across a mate).
+public struct JudgedMark: Equatable, Sendable {
+  /// The move's index in the line played.
+  public var ply: Int
+  public var san: String
+  public var from: String
+  public var to: String
+  public var swing: Double?
+  public init(ply: Int, san: String, from: String, to: String, swing: Double?) {
+    self.ply = ply
+    self.san = san
+    self.from = from
+    self.to = to
+    self.swing = swing
+  }
+}
+
+/// The Eval lens's mark on the board: your last judged move's squares, tinted by the swing it
+/// closed on (green gained, amber gave a little back, red gave back more), while it is still
+/// your latest move. `played` is how many moves the line has.
+public func evalLensTints(_ last: JudgedMark?, played: Int) -> [Tint] {
+  guard let last, last.ply >= played - 2, let swing = last.swing, let score = moveScore(swing) else { return [] }
+  let color: TintColor = score.tone == .up ? .green : score.tone == .slight ? .amber : .red
+  return [last.from, last.to].map { Tint(square: $0, color: color, strength: 3) }
 }
 
 /// What the run asks the store to keep when it ends.
@@ -141,7 +171,9 @@ public enum Effect {
   case pop(Pop)
   case note(Note?)
   case miss(MissFlash)
-  /// The moment's move you missed, drawn green while its note shows.
+  /// A moment settled by your move: the board's edge pulses green for found, red for missed.
+  case moment(found: Bool)
+  /// The moment's move you missed, its squares red until your next move.
   case missedBest((from: String, to: String)?)
   case finish(Finish)
 }
@@ -250,9 +282,12 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     effects.append(.buzz(expected.isEmpty ? 10 : 14))
     let swing = evalSwing(run.color, s.lastScored ?? judged.before, judged.after)
     s.evalCp = judged.after
+    if s.evalTrail.isEmpty { s.evalTrail.append(s.lastScored ?? judged.before) }
+    s.evalTrail.append(judged.after)
     s.lastScored = judged.after
     let score = prefs.moveScores && swing != nil ? moveScore(swing!) : nil
     let landed = applySan(run.fen, judged.san)
+    if let landed { s.lastJudged = JudgedMark(ply: run.played.count, san: judged.san, from: landed.from, to: landed.to, swing: swing) }
     if book && ctx.autopilot, let landed {
       effects.append(.pop(Pop(square: landed.to, text: secondsText(seconds), tone: speedTone(seconds), found: true, book: true)))
     } else if let score, let landed {
@@ -264,7 +299,8 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     // Moments are a thing past your prep; a book move keeps the combo going.
     let scored = judgedExtras(s.state.extras, ExtrasPrefs(prefs), run.color, JudgedMove(
       lost: book ? 0 : judged.lost, after: judged.after, moment: judged.moment && expected.isEmpty, found: judged.found, fen: landed?.after))
-    effects.append(.note(noteFor(scored.earned, judged.best)))
+    effects.append(.note(noteFor(scored.earned)))
+    if let moment = scored.earned.moment { effects.append(.moment(found: moment.found)) }
     let shown = scored.earned.moment.map { !$0.found } == true ? judged.best.flatMap { applySan(run.fen, $0) } : nil
     effects.append(.missedBest(shown.map { ($0.from, $0.to) }))
     let moved = afterMove(s, playYours(s.state, judged.san, expected.first, scored.extras))
@@ -356,21 +392,17 @@ public func prepLabel(_ session: RunSession) -> PrepLabel? {
   return nil
 }
 
-/// What a judged move earned, said over the board.
-public func noteFor(_ earned: Earned, _ best: String?) -> Note? {
-  var parts: [(text: String, good: Bool)] = []
-  let dot = " \u{00b7} "
-  if let moment = earned.moment {
-    parts.append(moment.found ? ("Found it\(dot)+\(moment.bonus)", true) : (best.map { "Missed it\(dot)\($0) was there" } ?? "Missed it", false))
-  }
+/// What a judged move earned, said over the board, one thing at a time: a missed moment first
+/// (its move is shown on the board), then the mission, then a broken combo. A found moment says
+/// nothing: the board pulses and its score pops.
+public func noteFor(_ earned: Earned) -> Note? {
+  if let moment = earned.moment, !moment.found { return Note(text: "Missed it", tone: "bad") }
   if let mission = earned.mission {
-    parts.append(mission.result == .done
-      ? ("\(missionTitle(mission.kind)) complete\(dot)+\(mission.bonus)", true)
-      : ("\(missionTitle(mission.kind)) failed", false))
+    let done = mission.result == .done
+    return Note(text: "\(missionTitle(mission.kind)) \(done ? "complete" : "failed")", tone: done ? "good" : "bad")
   }
-  if earned.moment == nil && earned.combo == "broke" { parts.append(("Combo broken", false)) }
-  if parts.isEmpty { return nil }
-  return Note(text: parts.map(\.text).joined(separator: dot), tone: parts.allSatisfy(\.good) ? "good" : "bad")
+  if earned.moment == nil && earned.combo == "broke" { return Note(text: "Combo broken", tone: "bad") }
+  return nil
 }
 
 /// Whether it is the player's turn in the run.

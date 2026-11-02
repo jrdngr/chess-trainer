@@ -5,11 +5,11 @@ import Shared
 /// Colors are "mine" and "theirs" from your side.
 
 public enum LensKind: String, Sendable, Codable, CaseIterable {
-  case pawns, pieces, space, kings, threats
+  case pawns, pieces, space, kings, eval
 }
 
 public let LENSES: [(kind: LensKind, label: String)] = [
-  (.pawns, "Pawns"), (.pieces, "Pieces"), (.space, "Space"), (.kings, "Kings"), (.threats, "Threats"),
+  (.pawns, "Pawns"), (.pieces, "Pieces"), (.space, "Space"), (.kings, "Kings"), (.eval, "Eval"),
 ]
 
 public enum TintColor: String, Sendable, Codable {
@@ -570,7 +570,7 @@ public func kingsLens(_ fen: String, _ me: Color) -> LensMarks {
   return marks
 }
 
-/* ── threats ── */
+/* ── loose pieces ── */
 
 public struct Loose: Equatable, Sendable {
   public var square: String
@@ -601,35 +601,6 @@ public func loosePieces(_ fen: String) -> [Loose] {
   return out
 }
 
-private func attackPairs(_ fen: String, _ attacker: Color) -> [Segment] {
-  let grid = Grid(fen)
-  var out: [Segment] = []
-  for man in grid.men where man.color == attacker {
-    for (file, rank) in attacksOf(grid, man) {
-      if let target = grid.man(file, rank), target.color != attacker { out.append(Segment(from: man.square, to: target.square)) }
-    }
-  }
-  return out
-}
-
-/// What the opponent's last move newly threatens.
-public func newThreats(_ prevFen: String, _ fen: String, _ me: Color) -> [Segment] {
-  let loose = Set(loosePieces(fen).filter { $0.color == me }.map(\.square))
-  let before = Set(attackPairs(prevFen, me.other).map { $0.from + $0.to })
-  return attackPairs(fen, me.other).filter { loose.contains($0.to) && !before.contains($0.from + $0.to) }
-}
-
-public func threatsLens(_ fen: String, _ me: Color, _ prevFen: String? = nil) -> LensMarks {
-  let loose = loosePieces(fen)
-  var marks = LensMarks()
-  marks.rings = loose.map { Ring(square: $0.square, tone: $0.kind == "hanging" ? "bad" : "warn") }
-  let turn = String(fen.split(separator: " ")[1])
-  marks.arrows = prevFen != nil && turn == me.rawValue ? newThreats(prevFen!, fen, me).map { LensArrow(from: $0.from, to: $0.to, tone: "threat") } : []
-  let mine = loose.filter { $0.color == me }.count
-  marks.caption = loose.isEmpty ? "Nothing hanging" : "Yours at risk \(mine) \u{00b7} theirs \(loose.count - mine)"
-  return marks
-}
-
 /// Your men a move leaves loose that were not before it: the Undefended flash.
 public func newlyLoose(_ before: String, _ after: String, _ me: Color, from: String, to: String) -> [String] {
   let was = Set(loosePieces(before).filter { $0.color == me }.map(\.square))
@@ -645,51 +616,29 @@ public func lensMarks(_ kind: LensKind, _ fen: String, _ me: Color, _ prevFen: S
   case .pieces: marks = piecesLens(fen, me)
   case .space: marks = spaceLens(fen, me)
   case .kings: marks = kingsLens(fen, me)
-  case .threats: marks = threatsLens(fen, me, prevFen)
+  case .eval: marks = LensMarks()
   }
   return marks
 }
 
-/// What the board draws for a held lens: `lensMarks`, with Threats drawn as a red
-/// arrow from each attacker to the loose piece it hits instead of rings, and the
-/// pieces to keep bright.
+/// What the board draws for a held lens: `lensMarks`, and the pieces to keep bright.
+/// The Eval lens draws nothing from the board alone: the run's screen adds what the engine said.
 public func heldLens(_ kind: LensKind, _ fen: String, _ me: Color, _ prevFen: String? = nil) -> LensMarks {
   var marks = lensMarks(kind, fen, me, prevFen)
-  if kind == .threats {
-    marks.rings = nil
-    marks.arrows = threatArrows(fen)
-  }
   marks.focus = lensFocus(kind, marks, fen)
   return marks
 }
 
-/// Every attack on a loose piece: all its attackers when it hangs (or is a king),
-/// only the cheaper ones when it is hit by a cheaper piece.
-func threatArrows(_ fen: String) -> [LensArrow] {
-  let grid = Grid(fen)
-  let map = attackMap(grid)
-  let value = { (man: Man) in man.type == .k ? 100 : PIECE_VALUES[man.type]! }
-  var out: [LensArrow] = []
-  for loose in loosePieces(fen) {
-    guard let target = grid.men.first(where: { $0.square == loose.square }) else { continue }
-    let attackers = by(map[target.rank * 8 + target.file], target.color.other)
-    let shown = loose.kind == "hanging" ? attackers : attackers.filter { value($0) < value(target) }
-    out += shown.map { LensArrow(from: $0.square, to: target.square, tone: "threat") }
-  }
-  return out
-}
-
 /// The pieces a lens marks, or nil to dim none: pawns for Pawns, the pieces it
-/// rates for Pieces, the kings with their shields and attackers for Kings, and
-/// both ends of every threat for Threats. Space dims nothing: its squares are the point.
+/// rates for Pieces, and the kings with their shields and attackers for Kings.
+/// Space dims nothing: its squares are the point. Eval dims nothing: it is about the game, not a piece.
 func lensFocus(_ kind: LensKind, _ marks: LensMarks, _ fen: String) -> [String]? {
   var squares: [String]
   switch kind {
   case .pawns: squares = piecesFromFen(fen).filter { $0.type == .p }.map(\.square)
   case .pieces: squares = (marks.tints ?? []).map(\.square) + (marks.rings ?? []).map(\.square) + (marks.arrows ?? []).map(\.from)
-  case .space: return nil
+  case .space, .eval: return nil
   case .kings: squares = (marks.shields ?? []).map(\.square) + (marks.pips ?? []).map(\.square) + (marks.zone ?? [])
-  case .threats: squares = (marks.rings ?? []).map(\.square) + (marks.arrows ?? []).flatMap { [$0.from, $0.to] }
   }
   let occupied = Set(piecesFromFen(fen).map(\.square))
   return Array(Set(squares).intersection(occupied)).sorted()

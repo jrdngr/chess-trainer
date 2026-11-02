@@ -50,8 +50,6 @@ struct SettingsSheet: View {
         ListCard {
           ToggleRow(label: "Move scores", hint: "What each move the engine judges cost you, in centipawns, over its square",
                     on: settings.autopilot.moveScores) { store.update { $0.settings.autopilot.moveScores.toggle() } }
-          ToggleRow(label: "Board glow", hint: "The board's edge tints green when you are better and red when you are worse",
-                    on: settings.autopilot.boardGlow) { store.update { $0.settings.autopilot.boardGlow.toggle() } }
         }
         section("Engine")
         ListCard {

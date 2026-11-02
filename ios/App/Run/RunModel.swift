@@ -17,8 +17,10 @@ final class RunModel {
   /// How long the announcement holds, and the beat between replayed moves.
   static let announceMs = 2.5, replayMs = 0.4, pulseMs = 0.9
 
-  /// How long a miss, a score popup and a note stay over the board; the opponent's beat.
-  static let missMs = 2.0, scoreMs = 1.4, noteMs = 1.6, replyMs = 0.42
+  /// How long a miss, a score popup and a note stay over the board (a touch clears a miss or a note sooner); the opponent's beat.
+  static let missMs = 2.0, scoreMs = 1.4, noteMs = 2.0, replyMs = 0.42
+  /// How long the board's edge pulses when a moment is settled.
+  static let edgePulseMs = 1.5
   /// How long the Undefended flash holds your move before it lands.
   static let flashMs = 1.3
 
@@ -38,7 +40,10 @@ final class RunModel {
   private(set) var pop: Pop?
   private(set) var note: Note?
   private(set) var miss: MissFlash?
+  /// The moment's move you missed: its squares stay red until your next move.
   private(set) var missedBest: (from: String, to: String)?
+  /// The board's edge pulsing for a moment settled: green found, red missed. `id` restarts it.
+  private(set) var edgePulse: (found: Bool, id: Int)?
   /// Your move, on the board while the engine judges it.
   private(set) var pending: LegalMove?
   private(set) var thinking = false
@@ -138,7 +143,8 @@ final class RunModel {
   var momentHere: Bool {
     prefs.moments && live && myTurn && pending == nil && prepNow.isEmpty && baseline?.fen == run.fen && baseline?.isMomentFor(run.color) == true
   }
-  var glow: Glow? { prefs.boardGlow ? session.evalCp.map { glowFor(run.color, $0) } ?? nil : nil }
+  /// The board glows only while a moment is up.
+  var glow: Glow? { momentHere ? MOMENT_GLOW : nil }
 
   /// The board as shown: your move stands while it is judged, a blunder stays until Continue.
   var shownFen: String {
@@ -322,6 +328,8 @@ final class RunModel {
   private func commit(_ move: LegalMove, seconds: Double) {
     guard live, !held, myTurn, pending == nil else { return }
     miss = nil
+    note = nil
+    missedBest = nil
     let now = Env.now()
     if prepNow.contains(move.san) {
       apply(playPrepared(session, ctx, move, seconds, now))
@@ -386,6 +394,8 @@ final class RunModel {
         if let n { show(note: n) } else { note = nil }
       case .miss(let m):
         show(miss: m)
+      case .moment(let found):
+        pulse(found: found)
       case .missedBest(let move):
         missedBest = move
       case .finish(let f):
@@ -436,9 +446,15 @@ final class RunModel {
   private func show(note n: Note) {
     note = n
     later(Self.noteMs) { model in
-      guard model.note == n else { return }
-      model.note = nil
-      model.missedBest = nil
+      if model.note == n { model.note = nil }
+    }
+  }
+
+  private func pulse(found: Bool) {
+    let id = (edgePulse?.id ?? 0) + 1
+    edgePulse = (found, id)
+    later(Self.edgePulseMs) { model in
+      if model.edgePulse?.id == id { model.edgePulse = nil }
     }
   }
 
@@ -451,8 +467,9 @@ final class RunModel {
     }
   }
 
-  /// A tap on the board clears a miss sooner.
-  func clearMiss() {
+  /// A touch anywhere clears a miss or a note sooner. The missed moment's squares stay.
+  func clearOverlays() {
+    note = nil
     guard miss != nil else { return }
     miss = nil
     advance()

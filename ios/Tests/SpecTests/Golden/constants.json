@@ -33,8 +33,7 @@
       "pastBook": false
     },
     "DEFAULT_AUTOPILOT": {
-      "moveScores": true,
-      "boardGlow": true
+      "moveScores": true
     }
   },
   "src/model/boardBuilder.ts": {
@@ -85,8 +84,8 @@
         "label": "Kings"
       },
       {
-        "kind": "threats",
-        "label": "Threats"
+        "kind": "eval",
+        "label": "Eval"
       }
     ]
   },
@@ -2598,7 +2597,6 @@
       "steer": "lines",
       "clock": "off",
       "moveScores": true,
-      "boardGlow": true,
       "moments": true,
       "missions": true,
       "combo": true,
@@ -2613,9 +2611,6 @@
       "ended": 0,
       "bestPoints": 0
     },
-    "GLOW_MINOR": 300,
-    "GLOW_PAWN": 100,
-    "GLOW_SPAN": 400,
     "HISTORY_RUNS": 16,
     "MISSION_BONUS": 15,
     "MISSION_BREAK": 3,

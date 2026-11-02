@@ -23,7 +23,6 @@ func color(_ j: JSON) -> Color { Color(rawValue: j.string)! }
   try check("survival", [
     "survival.moveScore": { a in moveScore(a[0].number).map { obj(["cp": $0.cp, "tone": $0.tone.rawValue]) } ?? .null },
     "survival.evalSwing": { evalSwing(color($0[0]), $0[1].number, $0[2].number).json },
-    "survival.glowFor": { a in glowFor(color(a[0]), a[1].number).map(encoded) ?? .null },
     "survival.speedTone": { speedTone($0[0].number).rawValue.json },
     "survival.secondsText": { secondsText($0[0].number).json },
     "survival.prepSummary": { prepSummary($0[0].int, $0[1].int, $0[2].numbers, $0[3].int).json },

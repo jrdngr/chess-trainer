@@ -39,6 +39,8 @@ private func effectJSON(_ effect: Effect, _ tree: OpeningTree) -> JSON {
     return obj(["kind": "note", "note": note.map { obj(["text": $0.text, "tone": $0.tone]) } ?? .null])
   case .miss(let m):
     return obj(["kind": "miss", "miss": obj(["expected": m.expected, "from": m.from, "to": m.to])])
+  case .moment(let found):
+    return obj(["kind": "moment", "found": found])
   case .missedBest(let move):
     return obj(["kind": "missedBest", "move": move.map { obj(["from": $0.from, "to": $0.to]) } ?? .null])
   case .finish(let f):

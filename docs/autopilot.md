@@ -23,7 +23,8 @@ Every change should pass these tests:
 - **Instant, visible feedback.** On every prepared move you see whether it
   was right and how fast it was. Past your prep, a book move gets the same
   tick and time in the book's color, and after the book you see the engine's
-  move scores and the board glow.
+  move scores. When there's a strong move to find, the board glows green, and it
+  pulses green or red once you've found or missed it.
 - **Speed decides what you drill.** It never costs points or ends a run. It
   grades the position's card, and the cards decide which positions runs start
   at and steer toward.
