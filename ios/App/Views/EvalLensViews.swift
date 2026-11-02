@@ -11,16 +11,19 @@ struct EvalLensBar: View {
   var result: EndResult? = nil
 
   var body: some View {
-    HStack(spacing: 10) {
+    // The bar keeps the captured row's place; the result word sits just above it.
+    PlayEvalBar(line: cp.map { cp in
+      abs(cp) >= 10_000
+        ? EngineLine(multipv: 1, depth: 0, cp: nil, mate: cp > 0 ? 1 : -1, pv: [])
+        : EngineLine(multipv: 1, depth: 0, cp: cp, mate: nil, pv: [])
+    })
+    .overlay(alignment: .top) {
       if let result {
         Text(Self.word(result)).font(.system(size: 13, weight: .heavy))
           .foregroundStyle(result == .win ? Theme.good : result == .loss ? Theme.bad : Theme.text)
+          .fixedSize()
+          .alignmentGuide(.top) { $0[.bottom] + 4 }
       }
-      PlayEvalBar(line: cp.map { cp in
-        abs(cp) >= 10_000
-          ? EngineLine(multipv: 1, depth: 0, cp: nil, mate: cp > 0 ? 1 : -1, pv: [])
-          : EngineLine(multipv: 1, depth: 0, cp: cp, mate: nil, pv: [])
-      })
     }
   }
 

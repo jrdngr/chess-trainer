@@ -64,6 +64,14 @@ private let ROOKS = "r1r3k1/5ppp/8/8/8/8/5PPP/R1R3K1 w - - 0 1"
   #expect(judgeMove(ROOKS, .w, 0, -100).ok)
 }
 
+@Test func endgameRulesStayOnOnceTheGameReachedAnEndgame() {
+  // A full point dropped from a level position with material back on the board: a held draw once the game has been an endgame.
+  #expect(!judgeMove(START, .w, 0, -100).ok)
+  #expect(judgeMove(START, .w, 0, -100, reached: true).ok)
+  #expect(!endgameReached([]))
+  #expect(!endgameReached(["e4", "e5", "Nf3"]))
+}
+
 @Test func slipTextNamesTheResultGivenAway() {
   #expect(slipText(.win, .draw) == "Win slipped to a draw")
   #expect(slipText(.draw, .loss) == "Draw slipped to a loss")
