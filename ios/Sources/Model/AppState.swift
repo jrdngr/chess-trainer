@@ -25,6 +25,8 @@ public struct Settings: Equatable, Sendable, Codable {
   public var play = DEFAULT_PLAY
   /// Survival's own setup, as its setup screen leaves it.
   public var survival = DEFAULT_SURVIVAL
+  /// Middlegame mode's setup.
+  public var middlegame = DEFAULT_MIDDLEGAME
   public var drill = DEFAULT_DRILL
   public init() {}
 
@@ -32,6 +34,7 @@ public struct Settings: Equatable, Sendable, Codable {
     case selection, favoriteOpenings, autopilot, hapticFeedback, showCoordinates, onboarded, seenIntro, autoplay
     case engineEnabled, boardTheme, lichessUsername, chesscomUsername, growth, play
     case survival
+    case middlegame
     case drill
   }
 
@@ -54,6 +57,7 @@ public struct Settings: Equatable, Sendable, Codable {
     growth = try c.decodeIfPresent(GrowthPrefs.self, forKey: .growth) ?? growth
     play = try c.decodeIfPresent(PlayPrefs.self, forKey: .play) ?? play
     survival = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .survival) ?? survival
+    middlegame = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .middlegame) ?? middlegame
     drill = try c.decodeIfPresent(SavedDrillPrefs.self, forKey: .drill)?.prefs ?? drill
   }
 }
@@ -79,10 +83,12 @@ public struct AppState: Equatable, Sendable, Codable {
   public var strength = PlayerStrength()
   /// Endgame mode: its cards, family ratings and saved positions.
   public var endgames = EndgameRecord()
+  /// Middlegame mode's points, per opening and overall: a Survival record kept in points.
+  public var middlegame = SurvivalRecord()
   public init() {}
 
   enum CodingKeys: String, CodingKey {
-    case repertoires, repertoireOrder, cards, score, survival, mistakes, lineCards, log, events, settings, importedGames, strength, endgames
+    case repertoires, repertoireOrder, cards, score, survival, mistakes, lineCards, log, events, settings, importedGames, strength, endgames, middlegame
   }
 
   /// A save from before a field existed takes its default.
@@ -102,6 +108,7 @@ public struct AppState: Equatable, Sendable, Codable {
     importedGames = try c.decodeIfPresent([ImportedGame].self, forKey: .importedGames) ?? importedGames
     strength = try c.decodeIfPresent(PlayerStrength.self, forKey: .strength) ?? strength
     endgames = try c.decodeIfPresent(EndgameRecord.self, forKey: .endgames) ?? endgames
+    middlegame = try c.decodeIfPresent(SurvivalRecord.self, forKey: .middlegame) ?? middlegame
   }
 
   public var repertoireList: [Repertoire] { repertoireOrder.compactMap { repertoires[$0] } }
@@ -136,6 +143,15 @@ extension AppState {
 
   public mutating func endSurvivalEarly(_ tree: OpeningTree, _ line: [String]) {
     survival = recordEndedSurvival(survival, tree, line)
+  }
+
+  /// A Middlegame run, logged in points against every opening your line went through.
+  public mutating func endMiddlegame(_ tree: OpeningTree, _ line: [String], _ points: Int) {
+    middlegame = recordSurvival(middlegame, tree, line, points, points)
+  }
+
+  public mutating func endMiddlegameEarly(_ tree: OpeningTree, _ line: [String]) {
+    middlegame = recordEndedSurvival(middlegame, tree, line)
   }
 
   /// A prepared position answered in a run: its card reviewed, and marked with the run that asked it.

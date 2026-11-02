@@ -89,3 +89,49 @@ private func movesAt(_ plies: Range<Int>) -> [String: [String]] {
     #expect(handoff?.line[13] == "Nbd7")
   }
 }
+
+/// A run started at the QGD handoff, White to play move 12.
+private func handoffRun() throws -> (session: RunSession, tree: OpeningTree) {
+  let tree = openingTree(bookIndex)
+  var state = AppState()
+  state.seed(tree, STARTER_SETS[0])
+  var opts = StartOptions(steer: .lines, tree: tree, reps: state.repertoireList, node: nodeById(tree, ""), color: .w)
+  opts.at = QGD
+  opts.seed = 1
+  let begun = try #require(startSurvival(opts))
+  return (beginMiddlegame(begun), tree)
+}
+
+@Test func aMiddlegameRunAsksNoPrepAndHasNoBookPhase() throws {
+  let (session, _) = try handoffRun()
+  #expect(session.state.run.played == QGD)
+  #expect(prepMoves(session).isEmpty)
+  #expect(prepLabel(session) == .middlegame)
+  #expect(!bookRanOut(session, bookIndex))
+  // The first goal comes from the eval at the handoff.
+  let set = missionFrom(session, middlegamePrefs(DEFAULT_SURVIVAL), 40)
+  #expect(set.state.extras.mission?.kind == missionFor(.w, 40, set.state.run.fen).kind)
+  // The end screen's Handoff tab is where your board began.
+  #expect(set.prepEnd == QGD)
+}
+
+@Test func middlegamePointsAreKeptApartFromSurvival() throws {
+  let (_, tree) = try handoffRun()
+  var state = AppState()
+  state.endMiddlegame(tree, YOURS, 120)
+  state.endMiddlegame(tree, YOURS, 80)
+  #expect(state.middlegame.global.bestPoints == 120)
+  #expect(state.middlegame.global.recent == [120, 80])
+  #expect(state.survival == SurvivalRecord())
+  let data = try JSONEncoder().encode(state)
+  #expect(try JSONDecoder().decode(AppState.self, from: data) == state)
+}
+
+@Test func theModeAlwaysScoresInPoints() {
+  var prefs = DEFAULT_SURVIVAL
+  prefs.steer = .book
+  prefs.combo = false
+  let played = middlegamePrefs(prefs)
+  #expect(played.steer == .lines)
+  #expect(played.moments && played.missions && played.combo)
+}

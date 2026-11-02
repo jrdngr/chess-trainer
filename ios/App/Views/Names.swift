@@ -31,6 +31,7 @@ func prepStatusText(_ label: PrepLabel) -> (text: String, color: SwiftUIColor) {
   case .off: return ("Off prep", Theme.bad)
   case .book: return ("In the book", Theme.book)
   case .out: return ("Out of book", Theme.text2)
+  case .middlegame: return ("Middlegame", PlanColors.plan)
   }
 }
 

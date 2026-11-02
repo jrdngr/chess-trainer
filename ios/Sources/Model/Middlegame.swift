@@ -192,3 +192,43 @@ public func buildHandoff(_ yours: [String], color: Color, tools: HandoffTools, s
   }
   return Handoff(line: line, kinds: kinds, center: center)
 }
+
+/* ── the run ── */
+
+/// What a Middlegame run's opponent steers toward: one of your lines, or one ending where your prep has a gap.
+public let MIDDLEGAME_STEERS: [SurvivalSteer] = [.lines, .gaps]
+
+/// Middlegame mode's setup. It is scored in points, so moments, missions and the combo are always on.
+public let DEFAULT_MIDDLEGAME = SurvivalPrefs(
+  steer: .lines, clock: .off, moveScores: true, moments: true, missions: true, combo: true,
+  undefendedFlash: false)
+
+/// A setup as the mode plays it: a steer it knows, and the extras on.
+public func middlegamePrefs(_ prefs: SurvivalPrefs) -> SurvivalPrefs {
+  var out = prefs
+  if !MIDDLEGAME_STEERS.contains(out.steer) { out.steer = .lines }
+  out.moments = true
+  out.missions = true
+  out.combo = true
+  return out
+}
+
+/// The line a Middlegame run plays out: the one Survival's draw picked, to its end.
+public func middlegameLine(_ begun: SurvivalStart) -> [String] {
+  begun.state.run.target
+}
+
+/// A run begun at the handoff. Your prep is never asked (a transposition back into
+/// your Playbook grades nothing), the book phase is over before it starts, and the
+/// opponent plays from the book and the engine, not from your lines.
+public func beginMiddlegame(_ begun: SurvivalStart) -> RunSession {
+  var session = beginSession(begun)
+  session.source.prepAt = { _ in [] }
+  session.source.weightsAt = { _, _ in [] }
+  session.redraw = { $0 }
+  session.prepStatus = .complete
+  session.bookOver = true
+  session.prepEnd = begun.state.run.played
+  session.middlegame = true
+  return session
+}

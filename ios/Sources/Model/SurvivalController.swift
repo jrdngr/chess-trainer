@@ -140,6 +140,8 @@ public struct RunSession {
   /// Your last judged move, for the Eval lens.
   public var lastJudged: JudgedMark?
   public var ending: Ending?
+  /// Middlegame mode's run: handed over past your prep and the book, so neither is asked.
+  public var middlegame = false
 }
 
 /// One of your judged moves: where it went, and the eval swing it closed on from your side (nil across a mate).
@@ -407,11 +409,12 @@ public func endRun(_ session: RunSession) -> Step {
 }
 
 public enum PrepLabel: String, Sendable {
-  case on, complete, off, book, out
+  case on, complete, off, book, out, middlegame
 }
 
 /// What the prompt says of your prep.
 public func prepLabel(_ session: RunSession) -> PrepLabel? {
+  if session.middlegame { return .middlegame }
   if session.prepStatus == .complete && session.bookTo != nil && !session.bookOver { return .book }
   if session.prepStatus == .complete && session.bookOver { return .out }
   if session.prepSeen || session.prepStatus == .off || (session.prepStatus == .on && !prepMoves(session).isEmpty) {
