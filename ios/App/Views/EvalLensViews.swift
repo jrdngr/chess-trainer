@@ -78,7 +78,7 @@ struct EvalTrailChart: View {
       var line = Path()
       for (i, v) in clamped.enumerated() {
         let point = CGPoint(x: x(i), y: y(v))
-        i == 0 ? line.move(to: point) : line.addLine(to: point)
+        if i == 0 { line.move(to: point) } else { line.addLine(to: point) }
       }
       context.stroke(line, with: .color(Theme.accent), style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round))
 
