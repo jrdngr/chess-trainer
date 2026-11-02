@@ -4,10 +4,12 @@ import SwiftUI
 
 /// Tidy: places where another move is closer to the rest of your lines.
 /// Switching keeps that move and drops yours, with everything under it.
-/// `focus` is a find from the end of a round, shown first and open.
+/// `focus` is a find from the end of a round, shown first and open, once:
+/// `onFocusShown` tells the owner it has been pinned.
 struct TidyView: View {
   let scan: TidyScan
   var focus: TidyFind?
+  var onFocusShown: () -> Void = {}
   let onBack: () -> Void
 
   @Environment(AppStore.self) private var store
@@ -54,6 +56,7 @@ struct TidyView: View {
       if let focus {
         pinned = focus
         open = focus.id
+        onFocusShown()
       }
     }
     .task(id: list.map(\.id)) { scan.ask(list) }

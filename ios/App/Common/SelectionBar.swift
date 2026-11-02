@@ -10,6 +10,10 @@ struct SelectionBar<Trailing: View>: View {
   @ViewBuilder var trailing: Trailing
   @State private var picking: Picking?
   @State private var browsing = false
+  /// The presentation to open once the current one is dismissed.
+  @State private var next: Next?
+
+  enum Next { case browse, quick }
 
   enum Picking: String, Identifiable {
     case color, quick
@@ -32,18 +36,22 @@ struct SelectionBar<Trailing: View>: View {
       trailing
     }
     .buttonStyle(.plain)
-    .sheet(item: $picking) { which in
+    .sheet(item: $picking, onDismiss: {
+      if next == .browse { next = nil; browsing = true }
+    }) { which in
       Group {
         switch which {
         case .color: ColorPickerSheet { picking = nil }
-        case .quick: QuickPicker(onClose: { picking = nil }, onBrowse: { picking = nil; browsing = true })
+        case .quick: QuickPicker(onClose: { picking = nil }, onBrowse: { next = .browse; picking = nil })
         }
       }
       .presentationDetents(which == .color ? [.height(300)] : [.large])
       .presentationBackground(Theme.background)
     }
-    .fullScreenCover(isPresented: $browsing) {
-      BrowsePicker(onClose: { browsing = false }, onBack: { browsing = false; picking = .quick })
+    .fullScreenCover(isPresented: $browsing, onDismiss: {
+      if next == .quick { next = nil; picking = .quick }
+    }) {
+      BrowsePicker(onClose: { browsing = false }, onBack: { next = .quick; browsing = false })
         .background(Theme.background)
     }
   }

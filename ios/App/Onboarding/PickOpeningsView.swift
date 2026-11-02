@@ -57,6 +57,8 @@ struct PickOpeningsView: View {
       }
     }
     .onAppear(perform: debugOpen)
+    // The Picked chip goes when its list empties, so the default chip takes over.
+    .onChange(of: picked.isEmpty) { if picked.isEmpty && chip == .picked { pickChip(.book) } }
   }
 
   /// Debug builds open `PICK_CHIP=book|suggest|shelves|picked`, and with `PICK_OPEN=1` the first row's list, for screenshots.

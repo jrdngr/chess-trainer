@@ -35,7 +35,7 @@ struct PlaybookView: View {
     let state = store.state
     Group {
       switch page {
-      case .tidy: TidyView(scan: scan, focus: focus) { page = nil }
+      case .tidy: TidyView(scan: scan, focus: focus, onFocusShown: { focus = nil }) { page = nil }
       case .extensions: ExtensionsView { page = nil }
       case .browse(let repId, let nodeId, let title):
         if state.repertoires[repId] != nil {

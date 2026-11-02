@@ -86,8 +86,9 @@ the book:
 - The prep segments keep counting through the book phase, in the book's
   color, so a short opening still fills out the bar.
 
-After the book comes **Out of book**, and the middlegame extras take over:
-moments, missions, the combo, plan cards and lenses.
+Moments and missions start as soon as your prep runs out, book phase
+included. After the book comes **Out of book**, and the rest of the
+middlegame extras take over: the combo, plan cards and lenses.
 
 Once little material is left (queens 4, rooks 2, minor pieces 1, 8 or less
 in all), the header says **Endgame** and a blunder means giving away the

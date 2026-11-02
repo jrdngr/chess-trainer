@@ -11,7 +11,8 @@ enum OnboardingNext: Equatable { case home, autopilot }
 /// Three ways in: a starter set, picked by style; the openings you already
 /// play, picked one at a time; or lines played in on the board. Nothing goes
 /// in until the ready screen is left, so "Add more openings" can still list
-/// and drop them. Skipping is a real answer: nothing goes in, and it is never
+/// and drop them. Lines saved on the board are held the same way, Back
+/// included. Skipping is a real answer: nothing goes in, and it is never
 /// asked again.
 struct OnboardingView: View {
   let tree: OpeningTree
@@ -39,8 +40,11 @@ struct OnboardingView: View {
           onBack: { if !listed.isEmpty && !pending.isEmpty { ready([]) } else { step = .path } },
           onAdd: { ready([]) })
       case .board:
-        BoardBuildView(onBack: { step = .path }, onDone: { saved in
-          if saved.isEmpty { step = .path } else { ready(boardRows(store.state, tree, index, saved.map(\.onboarding))) }
+        BoardBuildView(onBack: { saved in
+          hold(boardHeld(saved))
+          step = .path
+        }, onDone: { saved in
+          if saved.isEmpty { step = .path } else { ready(boardHeld(saved)) }
         }, doneLabel: "Done", hold: true)
       case .ready:
         ReadyView(tree: tree, rows: pending, onMore: { step = .pick }, onDone: confirm)
@@ -53,9 +57,22 @@ struct OnboardingView: View {
   }
 
   private func ready(_ rows: [PendingOpening]) {
-    pending = pending.filter { row in !rows.contains { $0.key == row.key } } + rows
+    hold(rows)
     listed = pending.map(\.key)
     step = .ready
+  }
+
+  private func hold(_ rows: [PendingOpening]) {
+    pending = pending.filter { row in !rows.contains { $0.key == row.key } } + rows
+  }
+
+  /// The board's rows for every line held from the board, the ones held before and the ones just saved.
+  private func boardHeld(_ saved: [BoardLine]) -> [PendingOpening] {
+    var lines = boardLines(pending)
+    for line in saved.map(\.onboarding) where !lines.contains(where: { $0.color == line.color && $0.sans == line.sans }) {
+      lines.append(line)
+    }
+    return boardRows(store.state, tree, index, lines)
   }
 
   private func confirm(_ next: OnboardingNext) {

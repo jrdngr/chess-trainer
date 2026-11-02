@@ -108,7 +108,7 @@ private func check(_ name: String, _ i: Int, _ fn: String, _ what: String, _ got
         let item = try #require(current(state), "\(name) step \(i): nothing to ask")
         let san = call["san"].string
         let move = applySan(item.fen, san) ?? wrongMove(item.fen, item.expected.map { $0.san })
-        let followUp = followLine ? followUpFor(item, items, r) : nil
+        let followUp = followLine ? followUpFor(item, items, r, played: san) : nil
         _ = check(name, i, fn, "followUp", followUp?.cardId.json ?? .null, call["followUp"])
         _ = check(name, i, fn, "card", cards[item.cardId].map(encoded) ?? .null, call["card"])
         (state, effects) = Env.at(clock) { answer(state, move, call["took"].number, cards[item.cardId], followUp) }

@@ -59,7 +59,7 @@ struct RootView: View {
     } else if let drilling {
       DrillSessionView(tree: tree, index: index, store: store, items: drilling.items, title: drilling.title) { self.drilling = nil }
     } else if building {
-      BoardBuildView(onBack: { building = false }, onDone: { _ in building = false })
+      BoardBuildView(onBack: { _ in building = false }, onDone: { _ in building = false })
     } else if let mode {
       ZStack {
         modeView(mode, tree, index)

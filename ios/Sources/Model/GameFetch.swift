@@ -74,6 +74,8 @@ public func fetchChesscomGames(_ username: String, max: Int = 100, get: HTTPGet 
       for g in try JSONDecoder().decode(Month.self, from: month.body).games ?? [] {
         guard let pgn = g.pgn, g.rules == nil || g.rules == "chess" else { continue }
         for var p in gamesFromPgn(pgn, username, .chesscom) {
+          // Chess.com's PGN names the site, not the game: the game's own URL tells games apart.
+          if let url = g.url { p.id = "\(p.source.rawValue)_\(url)" }
           p.url = g.url ?? p.url
           games.append(p)
         }

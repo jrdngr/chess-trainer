@@ -13,9 +13,9 @@ import Testing
   #expect(lapsed.interval == 20)
 
   let easy = review(lapsed, .easy, lapsed.due).card
-  let firstGood = review(lapsed, .good, lapsed.due).card
-  let good = review(firstGood, .good, firstGood.due).card
+  let good = review(lapsed, .good, lapsed.due).card
   #expect(easy.stage == .review)
+  #expect(good.stage == .review)
   #expect(good.interval == 20)
   #expect(easy.interval == 20)
 }

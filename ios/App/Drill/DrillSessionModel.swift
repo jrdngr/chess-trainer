@@ -85,7 +85,7 @@ final class DrillSessionModel {
 
   func play(_ move: LegalMove) {
     guard let item, drill.phase == .ask else { return }
-    let followUp = prefs.followLine ? followUpFor(item, items, store.state.repertoires[item.repertoireId]) : nil
+    let followUp = prefs.followLine ? followUpFor(item, items, store.state.repertoires[item.repertoireId], played: move.san) : nil
     run(answer(drill, move, clock.elapsedNow(), card, followUp))
   }
 

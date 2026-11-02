@@ -158,7 +158,8 @@ public func review<C: Schedule>(_ card: C, _ grade: Grade, _ now: Double = Env.n
     step = 0
     delay = (inLearning ? cfg.learningSteps[0] : cfg.relearningSteps[0]) * MINUTE
   } else if inLearning {
-    let steps = cfg.learningSteps
+    // Lapses only count from review, so a learning card with one is relearning.
+    let steps = card.stage == .learning && card.lapses > 0 ? cfg.relearningSteps : cfg.learningSteps
     if grade == .easy {
       stage = .review
       step = 0

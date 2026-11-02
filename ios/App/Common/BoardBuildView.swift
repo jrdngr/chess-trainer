@@ -16,10 +16,11 @@ struct BoardLine: Equatable {
 /// off. The arrows are the book's most played moves, one lit by the style
 /// you pick. Shared by onboarding and the Playbook tab.
 struct BoardBuildView: View {
-  let onBack: () -> Void
+  /// Gets the lines saved so far, as `onDone` does.
+  let onBack: ([BoardLine]) -> Void
   let onDone: ([BoardLine]) -> Void
   var doneLabel = "Done"
-  /// Hand the saved lines to `onDone` without putting them in the Playbook.
+  /// Hand the saved lines to `onBack` and `onDone` without putting them in the Playbook.
   var hold = false
 
   @Environment(AppStore.self) private var store
@@ -63,7 +64,7 @@ struct BoardBuildView: View {
     let savable = !toSave.isEmpty && toSave.indices.contains { ($0 % 2 == 0) == (color == .w) }
 
     VStack(spacing: 0) {
-      AppBar(title: family ?? "On the board", subtitle: variation, onBack: onBack) {
+      AppBar(title: family ?? "On the board", subtitle: variation, onBack: { onBack(saved) }) {
         IconButton(icon: "flip") { flipped.toggle() }
       }
       ScrollView {

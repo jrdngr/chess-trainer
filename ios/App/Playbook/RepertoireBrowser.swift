@@ -22,6 +22,8 @@ struct RepertoireBrowser: View {
   @State private var pending: LegalMove?
   @State private var menuFor: String?
   @State private var cutting: String?
+  /// A branch chosen for deletion in the node menu; its confirm sheet opens once the menu is gone.
+  @State private var cutNext: String?
   @State private var sideMenu = false
   @State private var saving: [String]?
   @State private var savingSource = MoveSource.manual
@@ -121,8 +123,10 @@ struct RepertoireBrowser: View {
     .sheet(isPresented: $sideMenu) {
       SideMenu(repId: rep.id, onDeleted: onBack) { sideMenu = false }.presentationDetents([.medium]).presentationBackground(Theme.background)
     }
-    .sheet(item: Binding(get: { menuFor.map(RepRef.init) }, set: { menuFor = $0?.id })) { ref in
-      NodeMenu(rep: rep, nodeId: ref.id, onNavigate: { menuFor = nil; goTo($0, line) }, onDelete: { menuFor = nil; cutting = $0 },
+    .sheet(item: Binding(get: { menuFor.map(RepRef.init) }, set: { menuFor = $0?.id }), onDismiss: {
+      if let id = cutNext { cutNext = nil; cutting = id }
+    }) { ref in
+      NodeMenu(rep: rep, nodeId: ref.id, onNavigate: { menuFor = nil; goTo($0, line) }, onDelete: { cutNext = $0; menuFor = nil },
                onDrill: { menuFor = nil; onDrill(rep.id, $0, $1) })
         .presentationDetents([.medium, .large]).presentationBackground(Theme.background)
     }

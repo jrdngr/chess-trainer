@@ -103,11 +103,23 @@ public func expectedSan(_ item: TrainingItem) -> String? {
   item.expected.first(where: \.preferred)?.san ?? item.expected.first?.san
 }
 
-/// The next decision point down this line: your answer, their reply, and the position after.
-public func followUpFor(_ item: TrainingItem, _ items: [TrainingItem], _ rep: Repertoire?) -> TrainingItem? {
-  guard rep != nil, item.continuation.count >= 2 else { return nil }
-  guard let afterMine = applySan(item.fen, item.continuation[0]),
-        let afterReply = applySan(afterMine.after, item.continuation[1]) else { return nil }
+/// The next decision point down the line of `played` (the preferred answer when nil):
+/// that move, their reply, and the position after. Nil for a move the position
+/// does not want, or one the tree has no reply to.
+public func followUpFor(_ item: TrainingItem, _ items: [TrainingItem], _ rep: Repertoire?, played: String? = nil) -> TrainingItem? {
+  guard let rep else { return nil }
+  let line: [String]
+  if let played, played != item.continuation.first {
+    guard let move = item.expected.first(where: { $0.san == played }) else { return nil }
+    let replies = childrenOf(rep, move.nodeId)
+    guard let reply = replies.first(where: \.preferred) ?? replies.first else { return nil }
+    line = [played, reply.san]
+  } else {
+    line = item.continuation
+  }
+  guard line.count >= 2,
+        let afterMine = applySan(item.fen, line[0]),
+        let afterReply = applySan(afterMine.after, line[1]) else { return nil }
   return items.first { $0.fen == afterReply.after && $0.cardId != item.cardId }
 }
 
@@ -174,11 +186,23 @@ public func regradeLast(_ state: DrillState, _ value: Grade) -> DrillStep {
   return (next, [.regrade(item: last.item, before: last.before, grade: value, played: last.played)])
 }
 
-/// The sitting as one round; nil with nothing answered.
+/// The positions answered so far, in order: one entry per answer.
+private func answeredItems(_ state: DrillState) -> [TrainingItem] {
+  let before = Array(state.queue.prefix(state.index))
+  guard state.phase != .ask, let item = current(state) else { return before }
+  return before + [item]
+}
+
+/// The sitting as one round, credited to the color most of its answers were for
+/// (the first answer's on a tie); nil with nothing answered.
 public func drillRound(_ state: DrillState, _ openingId: String, at: Double = Env.now()) -> RoundRecord? {
   let s = state.stats
   if s.answered == 0 { return nil }
+  let answered = answeredItems(state)
+  let black = answered.filter { $0.orientation == .b }.count
+  let white = answered.count - black
+  let color: Color = black == white ? (answered.first?.orientation ?? .w) : (black > white ? .b : .w)
   return RoundRecord(
-    mode: .drill, openingId: openingId, color: current(state)?.orientation == .b ? .b : .w,
+    mode: .drill, openingId: openingId, color: color,
     answered: s.answered, correct: s.correct, perfect: s.correct == s.answered && s.answered >= 5, at: at)
 }
