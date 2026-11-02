@@ -9,6 +9,8 @@ import SwiftUI
 struct MiddlegameLine: Equatable {
   var color: ChessCore.Color
   var sans: [String]
+  /// The line ends on a reply your Playbook can't meet: you take over there.
+  var gap = false
 }
 
 /// Middlegame mode, opened from Home or from a line on the opening sheet: one of
@@ -76,7 +78,10 @@ struct MiddlegameView: View {
     let selection = (line ?? exact).map(selectionOf) ?? store.takeRoundSelection()
     let seed = (Env.random() * 2_147_483_648).rounded(.down)
     var options = survivalStart(prefs, selection, store.state, tree, seed: seed)
-    guard let drawn = line ?? startSurvival(options).map({ MiddlegameLine(color: $0.state.run.color, sans: middlegameLine($0, store.state.repertoireList)) }),
+    guard let drawn = line ?? startSurvival(options).map({ begun -> MiddlegameLine in
+      let yours = middlegameLine(begun, store.state.repertoireList)
+      return MiddlegameLine(color: begun.state.run.color, sans: yours.sans, gap: yours.gap)
+    }),
       !drawn.sans.isEmpty
     else {
       toasts.show("No line to play out here")
@@ -92,7 +97,7 @@ struct MiddlegameView: View {
     job?.cancel()
     job = Task {
       let began = Date()
-      let handoff = await buildHandoff(drawn.sans, color: drawn.color, tools: tools, seed: seed)
+      let handoff = await buildHandoff(drawn.sans, color: drawn.color, tools: tools, seed: seed, gap: drawn.gap)
       // The announcement holds at least as long as Survival's, however quick the build.
       let left = RunModel.announceMs - Date().timeIntervalSince(began)
       if left > 0 { try? await Task.sleep(for: .seconds(left)) }

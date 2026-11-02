@@ -159,12 +159,18 @@ public struct HandoffTools: Sendable {
 /// sides, then the engine where the book runs out first, every move held to the band.
 /// It stops on your turn, once the middlegame has started and the book has nothing more,
 /// or once the game reaches an endgame. Nil when your line can't be played or the game ends on the way.
-public func buildHandoff(_ yours: [String], color: Color, tools: HandoffTools, seed: Double) async -> Handoff? {
+/// A `gap` line ends on the reply your Playbook has no answer for: you take over right there,
+/// and that reply is the book's, not yours.
+public func buildHandoff(_ yours: [String], color: Color, tools: HandoffTools, seed: Double, gap: Bool = false) async -> Handoff? {
   let rand = mulberry32(seed: seed)
   let walk = walkSan(yours)
   guard !yours.isEmpty, walk.moves.count == yours.count, let tip = walk.fens.last,
     let center = await tools.evaluate(tip)
   else { return nil }
+  if gap && fenTurn(tip) == color {
+    if positionStatus(tip).gameOver { return nil }
+    return Handoff(line: yours, kinds: Array(repeating: .prep, count: yours.count - 1) + [.book], center: center)
+  }
   var line = yours
   var kinds = [HandoffKind](repeating: .prep, count: yours.count)
   var fen = tip
@@ -238,13 +244,13 @@ public func middlegamePrefs(_ prefs: SurvivalPrefs) -> SurvivalPrefs {
 
 /// The line a Middlegame run plays out: the one Survival's draw picked, to its end.
 /// Empty when the draw found no line of yours and fell back on the opening's own moves.
-/// A gap's line is yours up to the reply your Playbook has no answer for.
-public func middlegameLine(_ begun: SurvivalStart, _ reps: [Repertoire]) -> [String] {
+/// A gap's line is yours up to the reply your Playbook has no answer for, its last move.
+public func middlegameLine(_ begun: SurvivalStart, _ reps: [Repertoire]) -> (sans: [String], gap: Bool) {
   let run = begun.state.run
-  guard let rep = reps.first(where: { $0.id == run.repertoireId }), !run.target.isEmpty,
-    nodeAtLine(rep, run.target) != nil || nodeAtLine(rep, Array(run.target.dropLast())) != nil
-  else { return [] }
-  return run.target
+  guard let rep = reps.first(where: { $0.id == run.repertoireId }), !run.target.isEmpty else { return ([], false) }
+  if nodeAtLine(rep, run.target) != nil { return (run.target, false) }
+  if nodeAtLine(rep, Array(run.target.dropLast())) != nil { return (run.target, true) }
+  return ([], false)
 }
 
 /// A run begun at the handoff. Your prep is never asked (a transposition back into
