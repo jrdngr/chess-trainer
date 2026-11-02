@@ -447,17 +447,14 @@ final class RunModel {
     before = handoff != nil ? store.state.middlegame : store.state.survival
     let line = f.ended.run.played
     let points = scoredInPoints ? f.ended.extras.points : f.ended.moves
+    // An endgame result that slipped away is kept for Endgame mode, from the position before the move.
+    let given = endgameGivenAway(f.how, fen: f.ended.run.fen, name: openingName(tree, f.ended.run.openingId), at: Env.now())
     if let handoff {
       // Counted against the openings your own line went through. No prep was asked, so no rating or card moves.
       let yours = Array(handoff.line.prefix(handoff.prep))
       store.update { state in
         if case .ended = f.how { state.endMiddlegameEarly(tree, yours) } else { state.endMiddlegame(tree, yours, points) }
-        if case .blunder(_, _, _, _, let slip?) = f.how, slip.from > slip.to {
-          let run = f.ended.run
-          state.endgames.save(SavedEndgame(
-            id: "saved-\(positionKey(run.fen))", fen: run.fen, goal: slip.from == .win ? .win : .hold,
-            name: openingName(tree, run.openingId), at: Env.now()))
-        }
+        if let given { state.endgames.save(given) }
       }
       settle(f)
       return
@@ -470,13 +467,7 @@ final class RunModel {
       }
       ratings.track(state.settleRun(tree, f.answers, line))
       state.endRound(tree, runRound(f, tree, at: Env.now()))
-      // An endgame result that slipped away is kept for Endgame mode, from the position before the move.
-      if case .blunder(_, _, _, _, let slip?) = f.how, slip.from > slip.to {
-        let run = f.ended.run
-        state.endgames.save(SavedEndgame(
-          id: "saved-\(positionKey(run.fen))", fen: run.fen, goal: slip.from == .win ? .win : .hold,
-          name: openingName(tree, run.openingId), at: Env.now()))
-      }
+      if let given { state.endgames.save(given) }
     }
     offer = offerFor(store.state, tree, index, f, region: f.ended.run.openingId, growth: growth)
     settle(f)

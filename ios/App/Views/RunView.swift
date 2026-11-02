@@ -75,7 +75,7 @@ struct RunView: View {
     }
   }
 
-  /// Debug builds can pin a lens with `PIN_LENS=space`, for screenshots.
+  /// Debug builds can pin a lens with `PIN_LENS=pieces`, for screenshots.
   private static var pinnedLens: LensKind? {
     #if DEBUG
       ProcessInfo.processInfo.environment["PIN_LENS"].flatMap(LensKind.init(rawValue:))

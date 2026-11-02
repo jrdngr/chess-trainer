@@ -24,6 +24,17 @@ private let OPPOSITION = "8/8/4k3/8/4K3/4P3/8/8"
   #expect(Tablebase.probe("8/8/4k3/8/8/8/8/3NK3 w - - 0 1") == .draw)
 }
 
+@Test func enPassantRightsChangeTheResult() {
+  // Black saves the game only by taking en passant; without the right, Black loses.
+  #expect(Tablebase.probe("8/8/8/8/3pP3/8/8/k1K5 b - e3 0 1") == .draw)
+  #expect(Tablebase.probe("8/8/8/8/3pP3/8/8/k1K5 b - - 0 1") == .loss)
+}
+
+@Test func aMatedSideHasLost() {
+  #expect(Tablebase.probe("7k/6Q1/6K1/8/8/8/8/8 b - - 0 1") == .loss)
+  #expect(Tablebase.probe("7k/6Q1/6K1/8/8/8/8/8 b - - 0 1", for: .w) == .win)
+}
+
 @Test func positionsPastTheTablesAreUnknown() {
   // Lucena has five pieces.
   #expect(Tablebase.probe("3K4/3P1k2/8/8/8/8/2r5/4R3 w - - 0 1") == nil)

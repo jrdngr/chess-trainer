@@ -95,6 +95,16 @@ private func coordsOf(_ square: String) -> (Int, Int) {
   #expect(record.saved.first?.id == "\(SAVED_ENDGAMES_CAP + 4)")
 }
 
+@Test func aSavedEndgameStartsAFreshFiftyMoveCount() {
+  // Saved deep into a game's fifty-move count: one quiet move would draw it there.
+  let saved = SavedEndgame(id: "s", fen: "8/8/4k3/8/8/8/4K3/7R w - - 99 80", goal: .win, name: "", at: 0)
+  let entry = saved.entry
+  let move = applyUci(entry.fen!, "h1h2")!
+  #expect(endgameOutcome(entry, move.after, you: .w, yourMoves: 1, promoted: false, stillWon: true) == nil)
+  // No pawn of yours to queen: the win is to be mated.
+  #expect(entry.mission == .mateIn(50))
+}
+
 @Test func roundsEndAtTheGoal() {
   let queen = ENDGAME_LIBRARY.first { $0.id == "mate-queen" }!
   // Mate delivered inside the mission's count, and past it.

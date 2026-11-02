@@ -46,10 +46,11 @@ struct LensUnderView: View {
 
   var body: some View {
     ZStack(alignment: .topLeading) {
-      ForEach(marks.tints ?? [], id: \.square) { t in
+      // Keyed by position: two marks can share a square (both sides' key squares, both kings' zones).
+      ForEach(Array((marks.tints ?? []).enumerated()), id: \.offset) { _, t in
         Rectangle().fill(LensColors.tint(t.color).opacity(LensColors.tintAlpha[t.strength] ?? 0.3)).at(t.square, cell, position)
       }
-      ForEach(marks.zone ?? [], id: \.self) { square in
+      ForEach(Array((marks.zone ?? []).enumerated()), id: \.offset) { _, square in
         Rectangle().fill(SwiftUI.Color(red: 15 / 255, green: 23 / 255, blue: 42 / 255).opacity(0.3))
           .overlay(Rectangle().strokeBorder(.white.opacity(0.9), lineWidth: 1.5).padding(2))
           .overlay(Rectangle().strokeBorder(.black.opacity(0.6), lineWidth: 2))
@@ -122,7 +123,7 @@ struct LensOverView: View {
           .frame(width: cell, height: cell, alignment: .topLeading)
           .at(s.square, cell, position)
       }
-      ForEach(marks.pips ?? [], id: \.square) { p in
+      ForEach(Array((marks.pips ?? []).enumerated()), id: \.offset) { _, p in
         HStack(spacing: 2) {
           ForEach(0..<min(p.attackers, 4), id: \.self) { _ in Circle().fill(LensColors.lightRed).frame(width: 5, height: 5) }
           ForEach(0..<min(p.defenders, 4), id: \.self) { _ in Circle().fill(LensColors.lightBlue).frame(width: 5, height: 5) }

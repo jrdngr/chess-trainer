@@ -23,7 +23,8 @@ public func passers(_ fen: String) -> [Passer] {
     let enemy = grid.men.filter { $0.type == .p && $0.color != p.color }
     let connected = passed.contains { $0.color == p.color && abs(coords($0.square).file - file) == 1 }
     let protected = own.contains { abs($0.file - file) == 1 && $0.rank + forward(p.color) == rank }
-    let outside = !enemy.isEmpty && enemy.allSatisfy { abs($0.file - file) >= 3 }
+    // Outside: every enemy pawn stands three or more files away, all on the same side of it.
+    let outside = !enemy.isEmpty && (enemy.allSatisfy { $0.file - file >= 3 } || enemy.allSatisfy { file - $0.file >= 3 })
     let kind = connected ? "C" : protected ? "P" : outside ? "O" : nil
     return Passer(square: p.square, color: p.color, kind: kind)
   }
@@ -39,7 +40,8 @@ public func pawnSquare(_ fen: String, _ square: String, _ color: Color) -> Segme
   let queening = promotionRank(color)
   let size = abs(queening - start)
   let king = grid.men.first { $0.type == .k && $0.color != color }
-  let toward = king.map { $0.file >= file ? 1 : -1 } ?? (file < 4 ? 1 : -1)
+  // A king on the pawn's own file is inside either way: draw toward the side with room.
+  let toward = king.flatMap { k -> Int? in k.file == file ? nil : k.file > file ? 1 : -1 } ?? (file < 4 ? 1 : -1)
   let far = min(7, max(0, file + toward * size))
   return Segment(from: sq(file, start), to: sq(far, queening))
 }
