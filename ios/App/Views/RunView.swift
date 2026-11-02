@@ -108,7 +108,12 @@ struct RunView: View {
     ZStack {
       VStack(spacing: 6) {
         Text(openingName(model.tree, model.openingId)).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
-        PrepSegmentsView(span: model.span, height: 4).frame(maxWidth: 150)
+        if isEndgame(model.shownFen) {
+          // Endgame rules: moves are judged by the result they keep.
+          Text("ENDGAME").font(.system(size: 11, weight: .bold)).tracking(0.7).foregroundStyle(Theme.text2)
+        } else {
+          PrepSegmentsView(span: model.span, height: 4).frame(maxWidth: 150)
+        }
       }
       .padding(.horizontal, 60)
       HStack {

@@ -151,13 +151,13 @@ final class RunModel {
     if held { return walkSan(introPath).fens[min(introPly, introPath.count)] }
     if let flash { return flash.move.after }
     if let pending { return pending.after }
-    if case .blunder(let played, _, _, _) = session.ending, phase == .blunder { return applySan(run.fen, played)?.after ?? run.fen }
+    if case .blunder(let played, _, _, _, _) = session.ending, phase == .blunder { return applySan(run.fen, played)?.after ?? run.fen }
     return run.fen
   }
 
   /// The blunder and the threat that made it one.
   var blunder: (move: LegalMove, threat: LegalMove?)? {
-    guard phase == .blunder, case .blunder(let played, _, _, let reply) = session.ending, let move = applySan(run.fen, played) else { return nil }
+    guard phase == .blunder, case .blunder(let played, _, _, let reply, _) = session.ending, let move = applySan(run.fen, played) else { return nil }
     return (move, reply.flatMap { applyUci(move.after, $0) })
   }
 

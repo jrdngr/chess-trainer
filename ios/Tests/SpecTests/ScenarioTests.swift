@@ -11,7 +11,7 @@ extension MoveResult {
 
 private func endingJSON(_ e: Ending) -> JSON {
   switch e {
-  case .blunder(let played, let best, let lost, let reply):
+  case .blunder(let played, let best, let lost, let reply, _):
     return obj(["kind": "blunder", "played": played, "best": best, "lost": lost, "reply": reply])
   case .won: return obj(["kind": "won"])
   case .lost: return obj(["kind": "lost"])

@@ -53,7 +53,7 @@ struct EndView: View {
   private var fens: [String] { walkSan(run.played).fens }
   private var shownFen: String { fens[min(cursor, last)] }
   private var blunder: (played: String, best: String?, lost: Double)? {
-    if case .blunder(let played, let best, let lost, _) = finish.how { return (played, best, lost) }
+    if case .blunder(let played, let best, let lost, _, _) = finish.how { return (played, best, lost) }
     return nil
   }
   private var onBlunder: Bool { blunder != nil && cursor == last }

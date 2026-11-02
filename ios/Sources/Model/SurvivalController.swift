@@ -10,10 +10,21 @@ import Shared
 /// How a run ended.
 public enum Ending: Equatable, Sendable {
   /// `played` is the move that lost, not on the board; `reply` the threat, as UCI.
-  case blunder(played: String, best: String?, lost: Double, reply: String?)
+  /// In an endgame, `slip` is the result it gave away.
+  case blunder(played: String, best: String?, lost: Double, reply: String?, slip: Slip?)
   case won, lost, draw
   /// You ended it yourself.
   case ended
+}
+
+/// An endgame result a move gave away: from a win to a draw, say.
+public struct Slip: Equatable, Sendable {
+  public var from: GameResult
+  public var to: GameResult
+  public init(from: GameResult, to: GameResult) {
+    self.from = from
+    self.to = to
+  }
 }
 
 /// Where you stand against your prep. Latched once complete or off.
@@ -62,7 +73,12 @@ public struct Judgement: Equatable, Sendable {
   public var moment: Bool
   public var found: Bool
   public var reply: String?
-  public init(san: String, ok: Bool, lost: Double, best: String?, before: Double, after: Double, moment: Bool, found: Bool, reply: String?) {
+  /// An endgame where the engine had a mate and your move doesn't keep it.
+  public var missedMate: Bool
+  public init(
+    san: String, ok: Bool, lost: Double, best: String?, before: Double, after: Double, moment: Bool, found: Bool, reply: String?,
+    missedMate: Bool = false
+  ) {
     self.san = san
     self.ok = ok
     self.lost = lost
@@ -72,6 +88,7 @@ public struct Judgement: Equatable, Sendable {
     self.moment = moment
     self.found = found
     self.reply = reply
+    self.missedMate = missedMate
   }
 }
 
@@ -266,7 +283,10 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     if let rid = run.repertoireId { step.effects.append(.missed(repertoireId: rid, fen: run.fen, played: judged.san, expected: first)) }
   }
   if !judged.ok {
-    return then(step) { finish($0, $0.state, .blunder(played: judged.san, best: judged.best, lost: judged.lost, reply: judged.reply)) }
+    let slip = isEndgame(run.fen) ? Slip(from: resultOf(run.color, judged.before), to: resultOf(run.color, judged.after)) : nil
+    return then(step) {
+      finish($0, $0.state, .blunder(played: judged.san, best: judged.best, lost: judged.lost, reply: judged.reply, slip: slip))
+    }
   }
   return then(step) { current in
     var effects: [Effect] = []
@@ -299,9 +319,12 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     // Moments are a thing past your prep; a book move keeps the combo going.
     let scored = judgedExtras(s.state.extras, ExtrasPrefs(prefs), run.color, JudgedMove(
       lost: book ? 0 : judged.lost, after: judged.after, moment: judged.moment && expected.isEmpty, found: judged.found, fen: landed?.after))
-    effects.append(.note(noteFor(scored.earned)))
+    // A mate missed in a won ending: the run goes on, marked like a missed moment.
+    let mateMissed = judged.missedMate && scored.earned.moment == nil
+    effects.append(.note(mateMissed ? Note(text: "Missed mate", tone: "bad") : noteFor(scored.earned)))
     if let moment = scored.earned.moment { effects.append(.moment(found: moment.found)) }
-    let shown = scored.earned.moment.map { !$0.found } == true ? judged.best.flatMap { applySan(run.fen, $0) } : nil
+    if mateMissed { effects.append(.moment(found: false)) }
+    let shown = scored.earned.moment.map { !$0.found } == true || mateMissed ? judged.best.flatMap { applySan(run.fen, $0) } : nil
     effects.append(.missedBest(shown.map { ($0.from, $0.to) }))
     let moved = afterMove(s, playYours(s.state, judged.san, expected.first, scored.extras))
     return (moved.session, effects + moved.effects)
