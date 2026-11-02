@@ -43,7 +43,8 @@ struct LensBar: View {
       .frame(maxWidth: .infinity).padding(.vertical, 8)
       .background(RoundedRectangle(cornerRadius: 10).fill(on ? fill : Theme.surface2))
       .opacity(enabled ? 1 : 0.5)
-      .gesture(
+      // High priority, so a tap gesture further up the screen never holds the press back.
+      .highPriorityGesture(
         DragGesture(minimumDistance: 0)
           .onChanged { _ in if enabled { press() } }
           .onEnded { _ in release() })
