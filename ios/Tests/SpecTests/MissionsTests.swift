@@ -37,7 +37,26 @@ extension Earned {
     "survival.firstMission": { a in
       encoded(firstMission(a[0].decoded(Extras.self), missions: a[1]["missions"].bool, color(a[2]), a[3].number, a.count > 4 ? a[4].stringOrNil : nil))
     },
-  ])
+  ], only: ["survival.missionFor", "survival.planMission", "survival.missionText", "survival.stepMission", "survival.judgedExtras", "survival.prepExtras"])
+  // firstMission no longer matches the web: the first mission comes from the
+  // eval even where the pawns form a plan. Its own tests are below.
+}
+
+/// Where the prep runs out in an isolated queen pawn, the first mission is
+/// still the eval's, never Follow the plan.
+@Test func firstMissionIgnoresThePlan() {
+  var fen = START_FEN
+  for san in "e4 c6 d4 d5 exd5 cxd5 c4 Nf6 Nc3 e6 Nf3 Be7 cxd5 Nxd5".split(separator: " ") { fen = applySan(fen, String(san))!.after }
+  #expect(structureOf(fen) != nil)
+  #expect(firstMission(Extras(), missions: true, .w, 30, fen).mission?.kind == .lead)
+  #expect(firstMission(Extras(), missions: true, .w, 150, fen).mission?.kind == .edge)
+}
+
+/// The goal card counts down your moves; Keep your edge counts the moves held.
+@Test func missionTurnsLeftCountsDown() {
+  #expect(missionTurnsLeft(Mission(kind: .convert, moves: 2)) == CONVERT_WINDOW - 2)
+  #expect(missionTurnsLeft(Mission(kind: .lead, moves: 5)) == MISSION_WINDOW - 5)
+  #expect(missionTurnsLeft(Mission(kind: .edge, moves: 7, held: 4)) == EDGE_MOVES - 4)
 }
 
 /// spec/cases/functions/lenses.json

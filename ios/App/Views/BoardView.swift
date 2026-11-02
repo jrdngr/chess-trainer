@@ -166,6 +166,8 @@ struct BoardView: View {
 struct PieceView: View {
   var piece: BoardPiece
   var size: CGFloat
+  /// A black piece edged in white, to read on the dark background off the board.
+  var outlined = false
 
   private static let shapes: [PieceType: String] = [
     .p: PieceShapes.p, .n: PieceShapes.n, .b: PieceShapes.b, .r: PieceShapes.r, .q: PieceShapes.q, .k: PieceShapes.k,
@@ -175,10 +177,11 @@ struct PieceView: View {
     let white = piece.color == .w
     let fill = SwiftUI.Color(hex: white ? 0xf6f8fb : 0x20262f)
     let stroke = SwiftUI.Color(hex: white ? 0x2b3441 : 0x05080c)
-    let line = StrokeStyle(lineWidth: 1.5 * size / 45, lineCap: .round, lineJoin: .round)
+    let edged = outlined && !white
+    let line = StrokeStyle(lineWidth: (edged ? 1.8 : 1.5) * size / 45, lineCap: .round, lineJoin: .round)
     ZStack {
       SVGPath(d: Self.shapes[piece.type]!).fill(fill)
-      SVGPath(d: Self.shapes[piece.type]!).stroke(stroke, style: line)
+      SVGPath(d: Self.shapes[piece.type]!).stroke(edged ? SwiftUI.Color(hex: 0xf2f4f8) : stroke, style: line)
       if piece.type == .k {
         SVGPath(d: PieceShapes.kingCross).stroke(stroke, style: StrokeStyle(lineWidth: 2.2 * size / 45, lineCap: .round))
       }

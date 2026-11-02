@@ -86,6 +86,27 @@ public func missionTitle(_ kind: MissionKind) -> String {
   }
 }
 
+/// What the goal card asks for, under the mission's name.
+public func missionTarget(_ kind: MissionKind) -> String {
+  switch kind {
+  case .edge: return "Stay at +1 or better"
+  case .lead: return "Reach +1"
+  case .dig: return "Get back to \u{2212}0.5"
+  case .plan: return "Reach a step of the plan"
+  case .convert: return "Trade a piece"
+  }
+}
+
+/// Your moves left before the mission is settled.
+public func missionTurnsLeft(_ mission: Mission) -> Int {
+  switch mission.kind {
+  case .edge: return EDGE_MOVES - mission.held
+  case .plan: return PLAN_WINDOW - mission.moves
+  case .convert: return CONVERT_WINDOW - mission.moves
+  default: return MISSION_WINDOW - mission.moves
+  }
+}
+
 /// The mission's line under "Your move".
 public func missionText(_ mission: Mission) -> String {
   func left(_ window: Int) -> String {
@@ -266,10 +287,10 @@ public func prepExtras(_ extras: Extras) -> Extras {
   return out
 }
 
-/// The first mission, set where the prep runs out: a plan step when the pawns form one, else from the eval.
+/// The first mission, set from the eval where the prep runs out.
 public func firstMission(_ extras: Extras, missions on: Bool, _ color: Color, _ cp: Double, _ fen: String? = nil) -> Extras {
   if !on || extras.mission != nil || extras.missionBreak > 0 || extras.missions.done + extras.missions.failed > 0 { return extras }
   var out = extras
-  out.mission = fen.flatMap { planMission($0, color, cp) } ?? missionFor(color, cp, fen)
+  out.mission = missionFor(color, cp, fen)
   return out
 }

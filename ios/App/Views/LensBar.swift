@@ -6,26 +6,48 @@ import SwiftUI
 struct LensBar: View {
   @Binding var held: LensKind?
   var enabled = true
+  /// The structure's plan, held like a lens, where the screen offers it.
+  var plan: Binding<Bool>? = nil
+  var planEnabled = false
 
   var body: some View {
     HStack(spacing: 6) {
       ForEach(LENSES, id: \.kind) { lens in
         let on = held == lens.kind
-        Text(lens.label)
-          .font(.system(size: 12.5, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
-          .foregroundStyle(on ? Theme.accentInk : Theme.text2)
-          .frame(maxWidth: .infinity).padding(.vertical, 8)
-          .background(RoundedRectangle(cornerRadius: 10).fill(on ? Theme.accent : Theme.surface2))
-          .opacity(enabled ? 1 : 0.5)
-          .gesture(
-            DragGesture(minimumDistance: 0)
-              .onChanged { _ in if enabled && held != lens.kind { held = lens.kind } }
-              .onEnded { _ in held = nil })
-          .accessibilityAddTraits(.isButton)
+        button(lens.label, on: on, ink: Theme.text2, fill: Theme.accent, onInk: Theme.accentInk, enabled: enabled) {
+          if held != lens.kind { held = lens.kind }
+        } release: { held = nil }
+      }
+      if let plan {
+        button("Plan", on: plan.wrappedValue, ink: PlanColors.plan, fill: PlanColors.plan, onInk: PlanColors.ink, enabled: enabled && planEnabled) {
+          if !plan.wrappedValue { plan.wrappedValue = true }
+        } release: { plan.wrappedValue = false }
       }
     }
     .padding(.top, 8)
-    .onChange(of: enabled) { if !enabled { held = nil } }
+    .onChange(of: enabled) {
+      guard !enabled else { return }
+      held = nil
+      if let plan { plan.wrappedValue = false }
+    }
+    .onChange(of: planEnabled) { if !planEnabled, let plan { plan.wrappedValue = false } }
+  }
+
+  private func button(
+    _ label: String, on: Bool, ink: SwiftUI.Color, fill: SwiftUI.Color, onInk: SwiftUI.Color, enabled: Bool,
+    press: @escaping () -> Void, release: @escaping () -> Void
+  ) -> some View {
+    Text(label)
+      .font(.system(size: 12.5, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
+      .foregroundStyle(on ? onInk : ink)
+      .frame(maxWidth: .infinity).padding(.vertical, 8)
+      .background(RoundedRectangle(cornerRadius: 10).fill(on ? fill : Theme.surface2))
+      .opacity(enabled ? 1 : 0.5)
+      .gesture(
+        DragGesture(minimumDistance: 0)
+          .onChanged { _ in if enabled { press() } }
+          .onEnded { _ in release() })
+      .accessibilityAddTraits(.isButton)
   }
 }
 

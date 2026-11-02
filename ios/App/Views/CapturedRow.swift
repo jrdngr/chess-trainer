@@ -3,7 +3,8 @@ import SwiftUI
 
 /// What has come off the board, and who is ahead by how much: `Captured`
 /// in `Board.tsx`. Yours first, wherever you are sitting; the lead is named
-/// by colour, "+3 white".
+/// by color, "+3 white". Black pieces are edged in white so they read on
+/// the dark background.
 struct CapturedRow: View {
   var fen: String
   var orientation: ChessCore.Color
@@ -14,7 +15,7 @@ struct CapturedRow: View {
     let theirs = orientation == .w ? m.byBlack : m.byWhite
     HStack(spacing: 1) {
       taken(mine, orientation.other)
-      if !mine.isEmpty && !theirs.isEmpty { Spacer().frame(width: 10) }
+      if !mine.isEmpty && !theirs.isEmpty { Spacer().frame(width: 16) }
       taken(theirs, orientation)
       Spacer()
       if m.lead != 0 {
@@ -31,7 +32,7 @@ struct CapturedRow: View {
 
   private func taken(_ pieces: [PieceType], _ color: ChessCore.Color) -> some View {
     ForEach(Array(pieces.enumerated()), id: \.offset) { _, type in
-      PieceView(piece: BoardPiece(square: "a1", type: type, color: color), size: 18).opacity(0.85)
+      PieceView(piece: BoardPiece(square: "a1", type: type, color: color), size: 18, outlined: true)
     }
   }
 }

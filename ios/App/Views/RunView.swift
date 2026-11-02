@@ -3,16 +3,17 @@ import Engine
 import Model
 import SwiftUI
 
-/// A run in play: the board, what floats over it, and the prompt under it.
-/// A Survival run you set up (no Autopilot round) adds its own pieces: the
-/// app bar with the clock, the plan and Cash out cards, and the Undefended flash.
+/// A run in play: the board, what floats over it, and the dock under it.
+/// The board takes the screen's width first; the dock (goal card, status,
+/// lenses, End round) has what is left, so nothing in it can shrink the board.
+/// A Survival run you set up (no Autopilot round) adds its own app bar with the clock.
 struct RunView: View {
   @Bindable var model: RunModel
   let onExit: () -> Void
   @Environment(AppStore.self) var store
   @State private var lens: LensKind? = Self.pinnedLens
+  @State private var planHeld = false
   @State private var breaks: (fen: String, found: PawnBreaks.Breaks)?
-  @State var cashOut = CashOut()
 
   /// Survival opened from Home, not Autopilot's round.
   var survival: Bool { model.round == nil }
@@ -39,6 +40,7 @@ struct RunView: View {
   private var board: some View {
     VStack(spacing: 0) {
       if survival { SurvivalRunBar(model: model, onExit: onExit) } else { header }
+      CapturedRow(fen: model.shownFen, orientation: model.run.color).padding(.horizontal).padding(.top, 12)
       BoardView(
         fen: model.shownFen, orientation: model.run.color,
         interactive: model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil && model.flash == nil,
@@ -53,23 +55,10 @@ struct RunView: View {
           FlashRings(loose: held.loose, orientation: model.run.color, onTakeBack: model.takeBack)
         }
       }
-      .padding(.horizontal).padding(.top, 24)
+      .padding(.horizontal).padding(.top, 6)
+      .layoutPriority(1)
       .onTapGesture { model.intro == .replay ? model.skipIntro() : model.clearMiss() }
-      if !model.held { LensBar(held: $lens, enabled: lensEnabled).padding(.horizontal) }
-      if let lens {
-        LensLegend(kind: lens).padding(.horizontal)
-      } else if model.intro == .replay {
-        Text(sansToMoveText(Array(model.introPath.prefix(model.introPly)))).font(.footnote).foregroundStyle(Theme.text2).padding(.top, 8)
-      } else if model.run.opened > 0 {
-        Text("From \(sansToMoveText(Array(model.run.played.prefix(model.run.opened))))")
-          .font(.footnote).foregroundStyle(Theme.text2).padding(.top, 8)
-      }
-      if lens == nil && !model.held && model.blunder == nil { cards.padding(.horizontal) }
-      if lens == nil { prompt.padding() }
-      Spacer()
-    }
-    .task(id: cashOutOn ? model.run.fen : nil) {
-      if cashOutOn { await cashOut.look(model.run.fen, model.run.color) }
+      dock.padding(.horizontal).frame(maxHeight: .infinity, alignment: .top)
     }
     .task(id: lens == .pawns ? model.shownFen : nil) {
       guard lens == .pawns else { return }
@@ -130,52 +119,100 @@ struct RunView: View {
     .padding(.horizontal).padding(.vertical, 10)
   }
 
-  @ViewBuilder private var prompt: some View {
-    if let blunder = model.blunder {
-      VStack(spacing: 12) {
-        HStack(spacing: 8) {
-          Icon(name: "cross", size: 18).frame(width: 26, height: 26).background(Circle().fill(Theme.bad.opacity(0.14)))
-          Text(endingTitle(model.session.ending!, model.run.played.count)).font(.system(size: 19, weight: .heavy)).tracking(-0.19)
+  /// Under the board: what a held lens shows, or the goal and the status; then the lenses and End round.
+  private var dock: some View {
+    VStack(spacing: 0) {
+      VStack(spacing: 0) {
+        if let lens {
+          LensLegend(kind: lens)
+        } else if planHeld {
+          PlanLegend(fen: model.shownFen, me: model.run.color)
+        } else if model.blunder != nil {
+          ending
+        } else {
+          goalSlot.padding(.top, 12)
+          status.padding(.top, 14)
         }
-        .foregroundStyle(Theme.bad).padding(.vertical, 6)
-        Button { model.continueToEnd() } label: { HStack(spacing: 8) { Text("Continue"); Icon(name: "next", size: 18) } }
-          .buttonStyle(PlayButtonStyle(kind: .primary, block: true))
-        let _ = blunder
       }
-    } else {
-      VStack(spacing: 6) {
-        HStack(spacing: 8) {
-          if model.thinking || model.pending != nil {
-            ProgressView().controlSize(.small)
-          } else {
-            Circle().fill(model.run.color == .w ? SwiftUI.Color.white : SwiftUI.Color.black).frame(width: 12, height: 12)
-              .overlay(Circle().stroke(Theme.text3))
-          }
-          Text(model.pending != nil ? "Judging" : model.myTurn && !model.thinking ? "Your move" : "Reply")
-            .font(.headline).foregroundStyle(Theme.text)
-        }
-        if let label = model.label {
-          let status = prepStatusText(label)
-          Text(status.text).font(.subheadline.bold()).foregroundStyle(status.color)
-        }
-        if model.momentHere {
-          Text("There's something here").font(.subheadline.bold()).foregroundStyle(Theme.accent)
-        }
-        if model.prefs.missions, let mission = model.session.state.extras.mission {
-          Text(missionText(mission)).font(.subheadline).foregroundStyle(Theme.text2)
-        }
-        let multiplier = comboMultiplier(model.session.state.extras.combo)
-        if model.prefs.combo && multiplier > 1 {
-          Text("Combo \u{00d7}\(multiplier)").font(.subheadline.bold()).foregroundStyle(Theme.good)
-        }
-        Button { model.endRound() } label: { Text(survival ? "End run" : "End round").foregroundStyle(Theme.text2) }
-          .buttonStyle(PlayButtonStyle(kind: .soft, height: 38, radius: 11, font: 14)).padding(.top, 12)
-        let misses = model.session.state.misses.count
-        if misses > 0 {
-          Text("\(misses) miss\(misses == 1 ? "" : "es") so far").font(.footnote).foregroundStyle(Theme.text2)
-        }
+      // Gives way before the board does: what doesn't fit is cut, never pushed up.
+      .frame(minHeight: 0, maxHeight: .infinity, alignment: .top).clipped()
+      LensBar(held: $lens, enabled: lensEnabled, plan: $planHeld, planEnabled: lensEnabled && structureOf(model.shownFen) != nil)
+        .opacity(model.held ? 0 : 1).allowsHitTesting(!model.held)
+      footer.padding(.top, 10).padding(.bottom, 8).opacity(model.blunder == nil ? 1 : 0)
+    }
+  }
+
+  /// One fixed-height slot: the goal past prep, else the moves played for you.
+  @ViewBuilder private var goalSlot: some View {
+    Group {
+      if model.intro == .replay {
+        movesLine(sansToMoveText(Array(model.introPath.prefix(model.introPly))))
+      } else if !model.held, model.prefs.missions, let mission = model.session.state.extras.mission {
+        GoalCard(mission: mission)
+      } else if model.run.opened > 0 {
+        movesLine("From \(sansToMoveText(Array(model.run.played.prefix(model.run.opened))))")
+      } else {
+        Color.clear
       }
     }
+    .frame(height: GoalCard.height)
+  }
+
+  private func movesLine(_ text: String) -> some View {
+    Text(text).font(.footnote).foregroundStyle(Theme.text2).multilineTextAlignment(.center).lineLimit(2)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+
+  /// Whose move, where you stand against your prep, and the combo, on one line.
+  private var status: some View {
+    HStack(spacing: 9) {
+      if model.thinking || model.pending != nil {
+        ProgressView().controlSize(.small)
+      } else {
+        Circle().fill(model.run.color == .w ? SwiftUI.Color.white : SwiftUI.Color.black).frame(width: 12, height: 12)
+          .overlay(Circle().stroke(Theme.text3))
+      }
+      Text(model.pending != nil ? "Judging" : model.myTurn && !model.thinking ? "Your move" : "Reply")
+        .font(.headline).foregroundStyle(Theme.text)
+      if model.momentHere {
+        Text("There's something here").font(.subheadline.bold()).foregroundStyle(Theme.accent)
+      } else if let label = model.label {
+        let prep = prepStatusText(label)
+        Text(prep.text).font(.subheadline.bold()).foregroundStyle(prep.color)
+      }
+      let multiplier = comboMultiplier(model.session.state.extras.combo)
+      if model.prefs.combo && multiplier > 1 {
+        Text("\u{00d7}\(multiplier)").font(.system(size: 12.5, weight: .heavy).monospacedDigit()).foregroundStyle(Theme.good)
+          .padding(.horizontal, 9).padding(.vertical, 3).background(Capsule().fill(Theme.good.opacity(0.12)))
+      }
+    }
+    .lineLimit(1).minimumScaleFactor(0.85)
+    .frame(height: 28)
+  }
+
+  private var footer: some View {
+    HStack {
+      let misses = model.session.state.misses.count
+      Text(misses > 0 ? "\(misses) miss\(misses == 1 ? "" : "es") so far" : "").font(.footnote).foregroundStyle(Theme.text2)
+      Spacer()
+      Button { model.endRound() } label: { Text(survival ? "End run" : "End round").foregroundStyle(Theme.text2) }
+        .buttonStyle(PlayButtonStyle(kind: .soft, height: 34, radius: 17, font: 13.5))
+        .disabled(model.blunder != nil)
+    }
+  }
+
+  /// A blunder ends the run: its name, and on to the end screen.
+  private var ending: some View {
+    VStack(spacing: 12) {
+      HStack(spacing: 8) {
+        Icon(name: "cross", size: 18).frame(width: 26, height: 26).background(Circle().fill(Theme.bad.opacity(0.14)))
+        Text(endingTitle(model.session.ending!, model.run.played.count)).font(.system(size: 19, weight: .heavy)).tracking(-0.19)
+      }
+      .foregroundStyle(Theme.bad).padding(.vertical, 6)
+      Button { model.continueToEnd() } label: { HStack(spacing: 8) { Text("Continue"); Icon(name: "next", size: 18) } }
+        .buttonStyle(PlayButtonStyle(kind: .primary, block: true))
+    }
+    .padding(.top, 16)
   }
 
   @ViewBuilder private var flash: some View {
@@ -232,7 +269,7 @@ struct RunView: View {
     }
     if let miss = model.miss { return [BoardArrow(from: miss.from, to: miss.to, color: Theme.good)] }
     if let best = model.missedBest { return [BoardArrow(from: best.from, to: best.to, color: Theme.good)] }
-    return cashOutOn ? cashOut.arrows(cashOut.trade(at: model.run.fen)) : []
+    return []
   }
 }
 

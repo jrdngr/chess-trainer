@@ -24,7 +24,7 @@ struct PlanCard: View {
       HStack(spacing: 4) {
         Button { open.toggle() } label: {
           HStack(spacing: 8) {
-            Text("PLAN").font(.system(size: 12, weight: .bold)).tracking(0.5).foregroundStyle(Color(hex: 0x22c3e6))
+            Text("PLAN").font(.system(size: 12, weight: .bold)).tracking(0.5).foregroundStyle(PlanColors.plan)
             Text(structureLabel(structure)).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
             Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3).rotationEffect(.degrees(open ? -90 : 90)).animation(.easeInOut(duration: 0.15), value: open)
             Spacer(minLength: 0)
@@ -48,8 +48,25 @@ struct PlanCard: View {
   }
 
   private func steps(_ structure: Structure) -> some View {
+    PlanSteps(fen: fen, me: me, structure: structure).padding(.leading, 4).padding(.trailing, 8).padding(.bottom, 8)
+  }
+}
+
+/// The plan's cyan, on its label and the Plan lens.
+enum PlanColors {
+  static let plan = SwiftUI.Color(hex: 0x22c3e6)
+  static let ink = SwiftUI.Color(hex: 0x04212a)
+}
+
+/// The plan's steps, ticked where a step's square is reached.
+struct PlanSteps: View {
+  let fen: String
+  let me: ChessCore.Color
+  let structure: Structure
+
+  var body: some View {
     let steps = planFor(structure, me)
-    return VStack(alignment: .leading, spacing: 4) {
+    VStack(alignment: .leading, spacing: 4) {
       ForEach(Array(steps.enumerated()), id: \.offset) { i, step in
         let done = step.goals?.contains { goalRoute(fen, me, $0).done } ?? false
         HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -60,6 +77,24 @@ struct PlanCard: View {
         .font(.system(size: 13.5)).lineSpacing(2)
       }
     }
-    .padding(.leading, 4).padding(.trailing, 8).padding(.bottom, 8)
+  }
+}
+
+/// The Plan lens held: the structure's name and its steps, where a lens key would show.
+struct PlanLegend: View {
+  let fen: String
+  let me: ChessCore.Color
+
+  var body: some View {
+    if let structure = structureOf(fen) {
+      VStack(alignment: .leading, spacing: 8) {
+        Text(structureLabel(structure)).font(.system(size: 14, weight: .semibold)).foregroundStyle(PlanColors.plan)
+        PlanSteps(fen: fen, me: me, structure: structure)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.horizontal, 14).padding(.vertical, 12)
+      .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface))
+      .padding(.top, 12)
+    }
   }
 }
