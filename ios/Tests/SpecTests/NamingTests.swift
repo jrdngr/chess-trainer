@@ -3,7 +3,7 @@ import ChessCore
 import Model
 import Testing
 
-/// spec/cases/functions/naming.json
+/// Golden/cases/functions/naming.json
 @Test func naming() throws {
   let tree = openingTree(bookIndex)
   try check("naming", [

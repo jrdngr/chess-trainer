@@ -3,7 +3,7 @@ import Foundation
 import Model
 import Testing
 
-/// spec/cases/functions/onboarding.json: whose an opening is, the selection
+/// Golden/cases/functions/onboarding.json: whose an opening is, the selection
 /// picks imply, and what finishing onboarding puts in.
 @Test func onboardingCases() throws {
   let tree = openingTree(bookIndex)

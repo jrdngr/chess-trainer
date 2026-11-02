@@ -1,8 +1,8 @@
 import ChessCore
 
 /// The hand-written half of the opening picker: how sharp each opening is,
-/// and how the biggest families split into groups. `src/model/pickerData.ts`,
-/// written out from `spec/constants.json`; a test keeps the two equal.
+/// and how the biggest families split into groups. `SpecTests` checks it
+/// against `Golden/constants.json`.
 
 /// 1 is quiet and positional, 5 a knife fight from move one.
 public typealias Sharpness = Int

@@ -2,8 +2,8 @@ import Model
 import Shared
 import SwiftUI
 
-/// One series over the days, with a crosshair the reader drags along it:
-/// `LineChart` in `charts.tsx`. Drawn on the web's 320-wide grid, scaled to fit.
+/// One series over the days, with a crosshair the reader drags along it.
+/// Drawn on a 320-wide grid, scaled to fit.
 struct LineChart: View {
   var points: [DayPoint]
   var color: Color

@@ -1,7 +1,7 @@
 import ChessCore
 import Model
 
-/// Each side's best pawn break, for the Pawns lens: `src/engine/pawnBreaks.ts`.
+/// Each side's best pawn break, for the Pawns lens.
 /// Asked on its own engine, so a held lens never interrupts the game.
 public enum PawnBreaks {
   static let thinkMs: Double = 300

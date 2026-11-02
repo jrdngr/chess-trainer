@@ -3,7 +3,7 @@ import Model
 import SwiftUI
 
 /* The opening browser's lists, shared by the browser and onboarding's Pick
- * openings: `BrowsePicker.tsx` and `.bp-*` in the web app's styles. */
+ * openings. */
 
 /// A suggestion's reason, in its own color: `WHY_COLOR`.
 let WHY_COLOR: [ReasonKind: UInt32] = [.hole: 0xf97316, .like: 0x2dd4bf, .style: 0xa855f7]
@@ -238,7 +238,7 @@ struct BrowseSearchField: View {
   }
 }
 
-/// A round icon button: `.icon-btn`, plain where the web's is.
+/// A round icon button.
 struct RoundIconButton: View {
   var icon: String
   var plain = false

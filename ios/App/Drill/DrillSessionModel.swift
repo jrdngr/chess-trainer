@@ -3,8 +3,8 @@ import Foundation
 import Model
 import Observation
 
-/// A sitting of Drill positions, driven through the drill controller: the
-/// screen half of `DrillSession.tsx`. It owns the clock, the flash's timer
+/// A sitting of Drill positions, driven through the drill controller.
+/// It owns the clock, the flash's timer
 /// and the store's side of each effect.
 @MainActor @Observable
 final class DrillSessionModel {

@@ -14,7 +14,7 @@ struct BoardLine: Equatable {
 /// Play on the board: build a Playbook by playing the moves in. You play
 /// your side and the book answers for the other, unless Book replies is
 /// off. The arrows are the book's most played moves, one lit by the style
-/// you pick. Shared by onboarding and the Playbook tab. `BoardScreen.tsx`.
+/// you pick. Shared by onboarding and the Playbook tab.
 struct BoardBuildView: View {
   let onBack: () -> Void
   let onDone: ([BoardLine]) -> Void

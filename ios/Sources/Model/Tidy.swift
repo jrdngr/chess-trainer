@@ -2,7 +2,7 @@ import Book
 import ChessCore
 import Shared
 
-/// Tidy: finding the places a repertoire could converge. `src/model/tidy.ts`.
+/// Tidy: finding the places a repertoire could converge.
 ///
 /// Every move you have chosen is compared with the moves you could have chosen
 /// instead, by the same familiarity the Growth arrows use. Where another move

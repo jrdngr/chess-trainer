@@ -2,7 +2,7 @@ import Model
 import SwiftUI
 
 /// The screen that decides a Survival run: what the opponent steers toward,
-/// and the clock. Start sits on top, so the same run as last time is one tap. `Setup.tsx`.
+/// and the clock. Start sits on top, so the same run as last time is one tap.
 struct SurvivalSetupView: View {
   @Environment(AppStore.self) private var store
   let tree: OpeningTree
@@ -87,7 +87,7 @@ struct SurvivalSetupView: View {
   }
 }
 
-/// One opening's best and recent form, and this run's count beside it. `ScoreRow` in `Setup.tsx`.
+/// One opening's best and recent form, and this run's count beside it.
 struct ScoreRow: View {
   var name: String
   var score: SurvivalScore

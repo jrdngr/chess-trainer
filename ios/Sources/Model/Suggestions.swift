@@ -3,7 +3,7 @@ import ChessCore
 import Foundation
 import Shared
 
-/// The picker's suggestions: the second half of `src/model/browse.ts`.
+/// The picker's suggestions.
 
 private struct Suggestion {
   var row: BrowseRow

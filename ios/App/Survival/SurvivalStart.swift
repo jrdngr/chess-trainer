@@ -2,8 +2,7 @@ import Book
 import ChessCore
 import Model
 
-/// The run Survival's own screen starts: `start` in `SurvivalScreen.tsx`
-/// with no plan. Your setup steers it, your cards and your games say where
+/// The run Survival's own screen starts. Your setup steers it, your cards and your games say where
 /// it leans, and it plays inside the selection taken for this run.
 func survivalStart(_ prefs: SurvivalPrefs, _ selection: Selection, _ state: AppState, _ tree: OpeningTree, seed: Double) -> StartOptions {
   let evidence = evidenceIn(state, tree, state.settings.selection)

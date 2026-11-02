@@ -1,7 +1,7 @@
 import ChessCore
 import Foundation
 
-/// Games from a PGN, tagged with the side you had: `gamesFromPgn` in `services/gameSources.ts`.
+/// Games from a PGN, tagged with the side you had.
 
 /// The two sites games are fetched from.
 public enum GameSite: String, Sendable, CaseIterable {
@@ -38,7 +38,6 @@ public func gamesFromPgn(_ pgn: String, _ username: String, _ source: ImportedGa
 }
 
 /// A pasted PGN's games, with the side guessed from a name that only appears in a player's.
-/// `loadPgn` and `guessColor` in `ImportScreen.tsx`.
 public func pastedGames(_ pgn: String, _ username: String) -> [ImportedGame] {
   let trimmed = username.trimmingCharacters(in: .whitespacesAndNewlines)
   let name = trimmed.isEmpty ? "you" : trimmed

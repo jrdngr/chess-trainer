@@ -3,13 +3,13 @@ import Foundation
 import Model
 import Testing
 
-/// spec/cases/scenarios/growth.json: each sitting replayed through the Swift
+/// Golden/cases/scenarios/growth.json: each sitting replayed through the Swift
 /// GrowthController. The opponent's replies and the next batch are worked
 /// out here, as the screen would, and checked against the recorded calls.
 @Test func growthScenarios() throws {
   let index = bookIndex
   let tree = openingTree(index)
-  let file = try JSON.parse(Data(contentsOf: Cases.root.appendingPathComponent("spec/cases/scenarios/growth.json")))
+  let file = try JSON.parse(Data(contentsOf: Cases.golden.appendingPathComponent("cases/scenarios/growth.json")))
   var replayed = 0
   for scenario in file["scenarios"].array {
     let name = scenario["name"].string

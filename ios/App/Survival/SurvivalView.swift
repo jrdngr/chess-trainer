@@ -5,7 +5,7 @@ import Model
 import SwiftUI
 
 /// Survival, opened from Home: set it up, then one run after another until
-/// you close it. `SurvivalScreen.tsx` with no plan. A run plays on
+/// you close it. A run plays on
 /// `RunModel` and `RunView`, and ends on `EndView`, as Autopilot's do.
 struct SurvivalView: View {
   let tree: OpeningTree

@@ -2,7 +2,7 @@ import ChessCore
 import Shared
 
 /// Autopilot: one Survival run after another, each decided for you,
-/// including where it starts. `src/model/autopilot.ts`.
+/// including where it starts.
 
 /// Runs the way in goes unplayed before a cold start wants it.
 public let COLD_GAP: Double = 6
@@ -109,7 +109,7 @@ public func roundSpan(_ rep: Repertoire?, _ pick: Recommendation, _ at: [String]
   return PrepSpan(played: min(way.count, total), total: total)
 }
 
-/// How badly a position has gone: lapses count double. `session.ts`.
+/// How badly a position has gone: lapses count double.
 public func weakness(_ item: TrainingItem, _ cards: [String: Card]) -> Int {
   guard let card = cards[item.cardId] else { return 0 }
   return card.lapses * 2 + card.incorrect - card.correct

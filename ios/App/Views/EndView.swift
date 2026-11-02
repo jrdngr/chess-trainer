@@ -4,7 +4,7 @@ import Model
 import Shared
 import SwiftUI
 
-/// The end of a run: `End.tsx`. Final position and End of prep to switch
+/// The end of a run. Final position and End of prep to switch
 /// between, the board, Grow this line, Analyze and Next round, then what
 /// the run came to and the rating it moved. A Survival run you set up
 /// (no Autopilot round) adds its own parts: `SurvivalEndParts`.
@@ -333,7 +333,7 @@ struct EndView: View {
   }
 }
 
-/// The rating card's place on the end screen: `card` in `survival/End.tsx`.
+/// The rating card's place on the end screen.
 enum RatingStage: Equatable {
   case play, leave
   case placed(arriving: Bool)

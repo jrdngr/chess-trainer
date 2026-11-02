@@ -1,52 +1,29 @@
 # Claude notes for this repo
 
-**Since 2026-11-01 only the native app in `ios/` changes.** `prototype/` and
-`spec/` (with `docs/spec/`) are frozen historical records: don't edit them,
-regenerate cases, re-record e2e, or republish the artifact. The sections below
-on publishing and the port's reference apply only to that history.
+The product is the native iOS app in `ios/`. The web prototype and the spec
+generated from it were removed on 2026-11-02; their final state is on the
+`archive/web-prototype` branch, for reference only.
 
-The web prototype lives in `prototype/`, and every npm command runs from
-there. `ios/` is the native app; `spec/` and `docs/` are shared by both.
+## Branches
 
-## Republish the artifact before handing the turn back
+- Work on `dev` and push there.
+- Merge `dev` into `main` only when the owner says the next release is
+  settled. Every push to `main` starts an Xcode Cloud build.
 
-This project is published as a Claude Artifact, and the live page is the thing
-people actually look at. A change that only exists in the repo is not done.
+## Checks
 
-Batching is fine — republish once per batch of changes, not after every edit.
-What matters is that the artifact is current at the end of every turn: never
-finish a reply having changed app code, styles, or assets without republishing
-first.
+Run the Swift tests before pushing; GitHub Actions runs them on every push to
+`dev` and `main`, and builds the app.
 
 ```bash
-cd prototype && npm run build && npm run artifact
+cd ios && swift test
 ```
 
-then publish `prototype/dist-artifact/index.html` with the Artifact tool, updating the
-existing artifact rather than creating a new one:
-
-- URL: https://claude.ai/code/artifact/8909c26a-7c93-47bc-9547-a426307eecd2
-- Pass that `url` so the link stays the same, and pass the supporting files from
-  `prototype/dist-artifact/files.json` (`root: "prototype/dist"`, `engine/stockfish.js` — the
-  Stockfish worker needs a real URL and cannot be inlined).
-- The favicon (♟️) and title stay as they are; do not pass a new one.
-- Capabilities are `{db: {}, downloads: true}` (cloud sync and the JSON export).
-  Omit `capabilities` on a normal republish so they carry forward; restate the
-  full set if you ever change them.
-
-Run `npm test` and `npm run typecheck` before publishing. Commit the change and
-the republish together, so the repo and the live artifact never drift apart.
+`ios/Tests/SpecTests/Golden/` holds recorded answers the model must keep
+giving. When a change to the app's behavior is intended, update the affected
+cases in the same commit and say why in the message.
 
 ## Autopilot's intent
 
 Before changing Autopilot, read [docs/autopilot.md](docs/autopilot.md). It
 says what Autopilot is for, and each change should pass its tests.
-
-## Keeping the port's reference current
-
-The native port is checked against `spec/` (see
-[docs/native-port/plan.md](docs/native-port/plan.md)). When a change touches a
-model constant or any text the app shows, regenerate with
-`npm run spec:constants` and `npm run spec:copy`; `npm test` fails until you
-do. When it changes what a screen does, run `npm run e2e`, and re-record with
-`npm run e2e -- -u` only for an intended change, reviewing the trace diff.

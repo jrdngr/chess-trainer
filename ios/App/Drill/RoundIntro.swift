@@ -4,7 +4,7 @@ import SwiftUI
 
 /// How a Drill round begins: the mode and the opening announced full
 /// screen, then the way to the first position played out on a locked board,
-/// the opening on a pill over it. `useRoundIntro` in `RoundIntro.tsx`.
+/// the opening on a pill over it.
 @MainActor @Observable
 final class RoundIntro {
   enum Stage { case announce, replay, done }

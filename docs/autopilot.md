@@ -112,11 +112,8 @@ gained so far.
 
 ## Free and paid
 
-The paywall exists only in the native app. The web prototype has none.
-
 | Free | Paid |
 | --- | --- |
 | Autopilot, Play, Analysis, the Playbook tab with editing and Tidy, ratings, Home, Stats, Milestones | Survival, Drill (positions and lines), full Growth, game import |
 
-The native app builds Autopilot before any of the paid modes. Standalone
-Survival and the other paid modes get improved after that.
+Standalone Survival and the other paid modes get improved after Autopilot.

@@ -2,7 +2,7 @@ import ChessCore
 import Foundation
 import Model
 
-/// What a search is asked for: `src/engine/types.ts`.
+/// What a search is asked for.
 public struct EngineLimits: Sendable {
   /// With movetime as well, the search stops at whichever it reaches first.
   public var depth: Int?
@@ -38,7 +38,7 @@ extension ChessEngine {
   }
 }
 
-/// The prototype's backup engine: `src/engine/heuristic.ts` and `basic/`.
+/// The engine: the search in `Basic/`.
 /// `onUpdate` returning true stops the search there.
 public actor BasicEngine: ChessEngine {
   /// How long a search runs when the caller only names a depth, and the longest any runs.

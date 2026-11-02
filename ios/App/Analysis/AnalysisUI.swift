@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The web app's small pieces this screen uses: `.section`, `.chip`, `.btn`,
-/// `IconButton`, `Empty` and a sheet's head, from `styles.css` and `ui.tsx`.
+/// The small pieces this screen uses: sections, chips, buttons, icon buttons,
+/// an empty state and a sheet's head.
 
 /// A section's title, with something on the right: `.section`.
 struct AnalysisSectionHead<Aside: View>: View {
@@ -147,7 +147,7 @@ struct SheetCard<Content: View>: View {
   }
 }
 
-/// Move text as the web sets it: `.movetext`.
+/// Move text.
 struct MoveText: View {
   var text: String
 

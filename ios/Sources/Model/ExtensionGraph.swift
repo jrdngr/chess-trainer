@@ -4,7 +4,6 @@ import Shared
 
 /// The Extensions review's graph: one opening drawn as a grid of moves, laid
 /// out by fixed rules so the picture is computed, never hand-tuned.
-/// `src/model/extensionGraph.ts`.
 ///
 /// - Columns are half-moves from the opening's root.
 /// - Rows go depth first: a node's first child carries on along its row, each
@@ -15,7 +14,7 @@ import Shared
 ///   A line past `GRAPH_MAX_PLIES` ends in a "+N" cell.
 /// - The Extensions filter keeps only the paths down to an extension.
 
-/// `MAX_PLIES` in the prototype; renamed, as `Picker.swift` has its own.
+/// How many plies the graph draws. `Picker.swift` has its own `MAX_PLIES`.
 public let GRAPH_MAX_PLIES = 16
 
 public enum CellKind: Equatable, Sendable {

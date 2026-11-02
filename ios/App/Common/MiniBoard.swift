@@ -2,8 +2,7 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// A still board of the position a move order reaches: `MiniBoard` in
-/// `Selection.tsx`. `lastMove` lights the move that reached it.
+/// A still board of the position a move order reaches. `lastMove` lights the move that reached it.
 struct MiniBoard: View {
   var sans: [String]
   var orientation: ChessCore.Color

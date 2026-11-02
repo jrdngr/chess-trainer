@@ -93,7 +93,7 @@ private func noon(_ key: String) -> Double {
 }
 
 
-/// spec/cases/functions/tools.json
+/// Golden/cases/functions/tools.json
 @Test func tools() throws {
   let index = bookIndex
   let tree = openingTree(index)

@@ -3,7 +3,7 @@ import Foundation
 import Model
 import Testing
 
-/// spec/cases/functions/play.json, built as `play.cases.ts` builds them.
+/// Golden/cases/functions/play.json, built as `play.cases.ts` builds them.
 @Test func play() throws {
   let at = ISO8601DateFormatter().date(from: "2026-10-01T12:00:00Z")!.timeIntervalSince1970 * 1000
   let long = "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O h3 Nb8 d4 Nbd7 c4 c6 cxb5 axb5 Nc3 Bb7 Bg5 b4 Nb1 h6 Bh4 c5 dxe5 Nxe5 Nxe5 dxe5 Qxd8 Rfxd8 Nd2 Bd6 f3"

@@ -2,10 +2,10 @@ import Foundation
 import Model
 import Shared
 
-/// The windows the charts read over: `WINDOWS` in `StatsScreen.tsx`.
+/// The windows the charts read over.
 let STATS_WINDOWS: [(value: Int, label: String)] = [(30, "30 days"), (90, "90 days"), (365, "Year")]
 
-/// Each mode's name in the tallies: `MODE_NAMES` in `recommend.ts`.
+/// Each mode's name in the tallies.
 func modeName(_ mode: ActivityMode) -> String {
   switch mode {
   case .run: "Autopilot (old)"

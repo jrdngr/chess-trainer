@@ -1,7 +1,7 @@
 import Foundation
 import Shared
 
-/// Milestones: goals reached once and kept, `src/model/milestones.ts`. Every
+/// Milestones: goals reached once and kept. Every
 /// one is read from what the app already records, so whatever was done
 /// before they existed counts.
 

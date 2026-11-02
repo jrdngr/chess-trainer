@@ -3,7 +3,7 @@ import Foundation
 import Model
 import Testing
 
-/// spec/cases/functions/data.json: the event log, sync's status line and Reset progress.
+/// Golden/cases/functions/data.json: the event log, sync's status line and Reset progress.
 @Test func dataCases() throws {
   let at = Date(timeIntervalSince1970: 1_793_448_000).timeIntervalSince1970 * 1000
 

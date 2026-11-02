@@ -4,8 +4,8 @@ import Model
 import Shared
 import Testing
 
-/// The browse functions in spec/cases/functions/picker.json, set up as
-/// `src/spec/cases/picker.cases.ts` sets them up.
+/// The browse functions in Golden/cases/functions/picker.json, set up as
+/// `src/Golden/cases/picker.cases.ts` sets them up.
 @Test func browse() throws {
   let tree = openingTree(bookIndex)
   let catalog = pickerCatalog(tree)

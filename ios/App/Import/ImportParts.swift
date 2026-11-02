@@ -147,7 +147,7 @@ struct FindingCard: View {
 }
 
 extension View {
-  /// Dimmed and untappable, as the web's `.btn:disabled` (one layer at 0.35, not the label dimmed twice).
+  /// Dimmed and untappable: one layer at 0.35, not the label dimmed twice.
   func unavailable(_ off: Bool) -> some View {
     compositingGroup().opacity(off ? 0.35 : 1).allowsHitTesting(!off)
   }

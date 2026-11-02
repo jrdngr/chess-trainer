@@ -1,8 +1,8 @@
 import ChessCore
 import SwiftUI
 
-/// What has come off the board, and who is ahead by how much: `Captured`
-/// in `Board.tsx`. Yours first, wherever you are sitting; the lead is named
+/// What has come off the board, and who is ahead by how much.
+/// Yours first, wherever you are sitting; the lead is named
 /// by color, "+3 white". Black pieces are edged in white so they read on
 /// the dark background.
 struct CapturedRow: View {

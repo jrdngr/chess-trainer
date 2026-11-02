@@ -3,7 +3,7 @@ import ChessCore
 import Shared
 
 /// A Survival run (Autopilot's too) as a pure controller: `state + event →
-/// state + effects`. `src/model/survivalController.ts`. The screen owns
+/// state + effects`. The screen owns
 /// timing, the engine and the store; it feeds each thing that happens in and
 /// carries out the effects in order.
 

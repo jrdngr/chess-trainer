@@ -4,7 +4,7 @@ import Observation
 
 /// The scan behind Tidy, over the selection: every find. Shared by the
 /// Playbook's Tidy row and Tidy itself, so its count and the list are the
-/// same piece of work. `useTidyScan` in `TidyScreen.tsx`.
+/// same piece of work.
 @MainActor @Observable
 final class TidyScan {
   /// Nil while the first scan runs; a rescan keeps showing the last list until it is whole.

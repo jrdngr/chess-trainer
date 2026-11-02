@@ -1,7 +1,7 @@
 import Model
 import SwiftUI
 
-/// What kind of game, and what to keep from it: `Setup.tsx`.
+/// What kind of game, and what to keep from it.
 struct PlaySetupView: View {
   @Environment(AppStore.self) private var store
   let onStart: (PlayPrefs) -> Void

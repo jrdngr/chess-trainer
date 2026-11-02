@@ -19,6 +19,8 @@ let package = Package(
     .target(name: "Engine", dependencies: ["ChessCore", "Model"]),
     .testTarget(name: "ChessCoreTests", dependencies: ["ChessCore"]),
     .testTarget(name: "EngineTests", dependencies: ["ChessCore", "Model", "Engine"]),
-    .testTarget(name: "SpecTests", dependencies: ["Shared", "ChessCore", "Book", "Model"]),
+    .testTarget(
+      name: "SpecTests", dependencies: ["Shared", "ChessCore", "Book", "Model"],
+      exclude: ["Golden"]),
   ]
 )

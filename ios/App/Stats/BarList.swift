@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Horizontal bars for a few named things, one hue, value at the tip:
-/// `BarList` in `charts.tsx`.
+/// Horizontal bars for a few named things, one hue, value at the tip.
 struct BarList: View {
   struct Row {
     var label: String

@@ -1,7 +1,7 @@
 import ChessCore
 
-/// What the app keeps, and what a run changes in it: the parts of
-/// `src/store/useStore.ts` Autopilot needs, as pure functions on one value.
+/// What the app keeps, and what a run changes in it, as pure functions on
+/// one value.
 /// The app saves it; the event log, sync and imported games come later.
 
 public struct Settings: Equatable, Sendable, Codable {

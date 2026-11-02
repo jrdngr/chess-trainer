@@ -10,7 +10,7 @@ func shortLabel(_ label: String) -> String {
   return label
 }
 
-/// Where a node sits, as short names from its family down: `selectionTrail` in `Selection.tsx`.
+/// Where a node sits, as short names from its family down.
 func selectionTrail(_ tree: OpeningTree, _ catalog: PickerCatalog, _ openingId: String) -> [String] {
   if openingId == ANY_FAVORITE { return ["Any favorite"] }
   let node = nodeById(tree, openingId)

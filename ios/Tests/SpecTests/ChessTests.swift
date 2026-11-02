@@ -2,7 +2,7 @@ import ChessCore
 import Model
 import Testing
 
-/// spec/cases/functions/chess.json: chess.js, move for move.
+/// Golden/cases/functions/chess.json: chess.js, move for move.
 @Test func chess() throws {
   try check("chess", [
     "core.randomGame": { a in

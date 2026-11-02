@@ -1,8 +1,7 @@
 import Book
 import ChessCore
 
-/// A Growth run as a pure controller, the same shape as SurvivalController:
-/// `src/model/growthController.ts`.
+/// A Growth run as a pure controller, the same shape as SurvivalController.
 
 public enum GrowthPhase: String, Sendable {
   case walking, hole, answered, done, lost

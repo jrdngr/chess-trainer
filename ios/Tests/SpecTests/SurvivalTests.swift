@@ -5,7 +5,7 @@ import Testing
 
 func color(_ j: JSON) -> Color { Color(rawValue: j.string)! }
 
-/// spec/cases/functions/survival.json
+/// Golden/cases/functions/survival.json
 @Test func survival() throws {
   let tree = openingTree(bookIndex)
   func record(_ runs: [JSON], _ opening: String) -> JSON {

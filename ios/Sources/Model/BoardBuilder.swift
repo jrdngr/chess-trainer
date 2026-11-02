@@ -3,7 +3,6 @@ import ChessCore
 import Shared
 
 /// Play on the board: building a Playbook by playing the moves in.
-/// `src/model/boardBuilder.ts`.
 ///
 /// The board offers the book's most played moves as arrows, one of them
 /// highlighted, and the style you pick decides which. Only book moves are
@@ -109,7 +108,7 @@ public func arrowChoices(_ choices: [BookChoice], _ highlight: String?) -> [Book
 
 /* ── goals ── */
 
-/// One of the opening's three jobs for a side. `Goal` in the prototype.
+/// One of the opening's three jobs for a side.
 public struct BoardGoal: Equatable, Sendable {
   public var label: String
   public var value: String

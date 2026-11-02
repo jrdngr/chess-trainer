@@ -3,7 +3,7 @@ import Model
 import Shared
 import Testing
 
-/// The milestone functions in spec/cases/functions/home.json.
+/// The milestone functions in Golden/cases/functions/home.json.
 @Test func milestonesOnHome() throws {
   let tree = openingTree(bookIndex)
 

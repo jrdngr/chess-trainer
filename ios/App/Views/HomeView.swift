@@ -3,7 +3,7 @@ import Model
 import SwiftUI
 
 /// Home: the selection, Autopilot's next round on its button, the modes,
-/// and Survival, Favorites and Milestones. `HomeScreen.tsx`.
+/// and Survival, Favorites and Milestones.
 struct HomeView: View {
   let tree: OpeningTree
   let onOpen: (Mode) -> Void

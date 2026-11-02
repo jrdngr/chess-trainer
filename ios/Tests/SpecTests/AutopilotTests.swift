@@ -3,7 +3,7 @@ import Foundation
 import Model
 import Testing
 
-/// spec/cases/functions/autopilot.json, the Autopilot half.
+/// Golden/cases/functions/autopilot.json, the Autopilot half.
 @Test func autopilot() throws {
   let now = 1_790_845_200_000.0
   let r = rep(.w, ["e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d3", "e4 e5 Nf3 Nc6 Bc4 Nf6 d3 Bc5 c3", "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3"])
@@ -47,7 +47,7 @@ import Testing
   ], only: ["autopilot.chooseStart", "autopilot.startKind", "autopilot.splitItems", "autopilot.coldNeed", "autopilot.insideStart", "recommend.missingPrep", "autopilot.prepDepth"])
 }
 
-/// spec/cases/functions/recommend.json
+/// Golden/cases/functions/recommend.json
 @Test func recommendations() throws {
   let tree = openingTree(bookIndex)
   let t = 1_790_845_200_000.0

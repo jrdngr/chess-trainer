@@ -5,7 +5,7 @@ import Model
 import SwiftUI
 
 /// Autopilot: one Survival run after another, each decided for you. Stop is
-/// the close button, and stopping goes Home. `AutopilotScreen.tsx`.
+/// the close button, and stopping goes Home.
 struct AutopilotView: View {
   let tree: OpeningTree
   let index: ReferenceIndex

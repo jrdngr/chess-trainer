@@ -1,7 +1,7 @@
 import Model
 import SwiftUI
 
-/// A held lens's marks on the board: `LensUnder` and `LensOver` in `Board.tsx`.
+/// A held lens's marks on the board, under and over the pieces.
 enum LensColors {
   static func rgb(_ r: Double, _ g: Double, _ b: Double) -> SwiftUI.Color { SwiftUI.Color(red: r / 255, green: g / 255, blue: b / 255) }
   static let blue = rgb(59, 130, 246)
@@ -138,7 +138,7 @@ struct LensOverView: View {
   }
 }
 
-/// The king's shield: the web's 24-point path.
+/// The king's shield, on a 24-point grid.
 struct ShieldShape: Shape {
   func path(in rect: CGRect) -> Path {
     SVGPath.parse("M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3z")

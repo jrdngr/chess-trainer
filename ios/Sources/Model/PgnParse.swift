@@ -1,7 +1,7 @@
 import ChessCore
 import Foundation
 
-/// Reading PGN: `parsePgn` and `mainline` in `src/chess/pgn.ts`.
+/// Reading PGN: `parsePgn` and `mainline`.
 
 /// A move in a game's tree. `children.nodes[0]` is the main continuation; the rest are variations of it.
 public final class PgnNode {
@@ -12,7 +12,7 @@ public final class PgnNode {
   init(san: String) { self.san = san }
 }
 
-/// A list of moves that a parse appends to, shared like the prototype's arrays.
+/// A list of moves that a parse appends to, shared by reference.
 public final class PgnList {
   public var nodes: [PgnNode] = []
 }

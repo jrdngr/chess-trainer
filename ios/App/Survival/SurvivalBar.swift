@@ -41,7 +41,7 @@ func runSubtitle(_ store: AppStore, _ color: ChessCore.Color, _ opening: String)
 }
 
 /// The move clock: a ring that empties as the budget goes, then greys out
-/// at nothing. Running out ends nothing. `SurvivalClock` in `Clock.tsx`.
+/// at nothing. Running out ends nothing.
 struct SurvivalClock: View {
   let budget: Double
   let since: Date

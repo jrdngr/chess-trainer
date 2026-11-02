@@ -4,7 +4,7 @@ import SwiftUI
 import UIKit
 
 /// What a Survival run you set up came to, in points when moments, missions
-/// or the combo were on, else in moves; and a new best. The card in `End.tsx`.
+/// or the combo were on, else in moves; and a new best.
 struct SurvivalSummary: View {
   let finish: Finish
   let prefs: SurvivalPrefs

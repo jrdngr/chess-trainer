@@ -1,4 +1,4 @@
-/// The prototype's piece shapes, SVG paths on a 45×45 grid: `src/components/Pieces.tsx`,
+/// The piece shapes, SVG paths on a 45×45 grid,
 /// written out by a script.
 enum PieceShapes {
   static let p = "M22.5 10.5a4.2 4.2 0 0 0-2.55 7.54c-2.35 1.18-3.95 3.6-3.95 6.4 0 1.98.8 3.78 2.1 5.08-3.6 1.5-6.1 5.9-6.1 11.1h21.9c0-5.2-2.5-9.6-6.1-11.1a7.13 7.13 0 0 0 2.1-5.08c0-2.8-1.6-5.22-3.95-6.4A4.2 4.2 0 0 0 22.5 10.5z"

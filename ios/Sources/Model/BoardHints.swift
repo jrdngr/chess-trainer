@@ -2,7 +2,7 @@ import ChessCore
 import Shared
 
 /// Reading a middlegame position for the lenses, from the board alone.
-/// `src/model/boardHints.ts`. Colors are "mine" and "theirs" from your side.
+/// Colors are "mine" and "theirs" from your side.
 
 public enum LensKind: String, Sendable, Codable, CaseIterable {
   case pawns, pieces, space, kings, threats

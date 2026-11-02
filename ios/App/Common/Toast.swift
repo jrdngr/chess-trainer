@@ -1,7 +1,7 @@
 import Observation
 import SwiftUI
 
-/// A short message along the bottom, with an action such as Undo: `toast` in `ui.tsx`.
+/// A short message along the bottom, with an action such as Undo.
 @MainActor @Observable
 final class Toasts {
   struct Toast: Identifiable {

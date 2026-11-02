@@ -4,7 +4,6 @@ import SwiftUI
 
 /// One opening's page: its rating and ladder, how much a favorite it is among
 /// its siblings, its charts, its modes and its played variations.
-/// `OpeningPage` in `StatsScreen.tsx`.
 struct OpeningStatsView: View {
   let tree: OpeningTree
   let node: OpeningNode

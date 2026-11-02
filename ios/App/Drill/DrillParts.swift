@@ -2,7 +2,7 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// What each grade button says: `GRADE_LABELS` in `DrillSession.tsx`.
+/// What each grade button says.
 let GRADE_LABELS: [Grade: String] = [.again: "Guessed", .hard: "Hard", .good: "Knew it", .easy: "Easy"]
 
 /// The count in the app bar: `.chip.num.wide`.

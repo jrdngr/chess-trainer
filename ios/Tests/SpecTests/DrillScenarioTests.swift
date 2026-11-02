@@ -3,7 +3,7 @@ import Foundation
 import Model
 import Testing
 
-/// spec/cases/scenarios/drill.json: each sitting replayed call by call
+/// Golden/cases/scenarios/drill.json: each sitting replayed call by call
 /// through the Swift drill controllers. The cards are kept here as the store
 /// keeps them, and what the screen works out (the follow-up, the item, the
 /// next draw) is worked out here and checked against the recorded call.
@@ -11,7 +11,7 @@ import Testing
 private let NOW = 1_790_845_200_000.0
 
 private func drillFile() throws -> JSON {
-  try JSON.parse(Data(contentsOf: Cases.root.appendingPathComponent("spec/cases/scenarios/drill.json")))
+  try JSON.parse(Data(contentsOf: Cases.golden.appendingPathComponent("cases/scenarios/drill.json")))
 }
 
 private func pattern(_ p: [Int]) -> JSON { p.count == 1 ? p[0].json : p.json }
@@ -247,9 +247,9 @@ private func lineJSON(_ l: DrillLine) -> JSON {
   #expect(replayed == expected)
 }
 
-/// Drill's constants against spec/constants.json.
+/// Drill's constants against Golden/constants.json.
 @Test func drillConstants() throws {
-  let all = try JSON.parse(Data(contentsOf: Cases.root.appendingPathComponent("spec/constants.json")))
+  let all = try JSON.parse(Data(contentsOf: Cases.golden.appendingPathComponent("constants.json")))
   func expect(_ file: String, _ name: String, _ value: JSON) {
     let want = all["src/model/\(file).ts"][name]
     #expect(want != .null && matches(value, want), "\(file).\(name): \(value) is not \(want)")

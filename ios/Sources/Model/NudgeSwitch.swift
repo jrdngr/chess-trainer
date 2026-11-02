@@ -2,7 +2,7 @@ import Book
 import ChessCore
 import Shared
 
-/// Moves the book does not have, and comparing moves for Tidy. Part of `src/model/nudge.ts`.
+/// Moves the book does not have, and comparing moves for Tidy.
 
 /// Legal moves the book leaves out, or ranks under `minShare`, that are
 /// familiar anyway: they transpose, head toward your lines, or are a habit.

@@ -2,7 +2,7 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// A rating's tier as a thin bar with its name over it: `TierBar` in `ScoreBar.tsx`.
+/// A rating's tier as a thin bar with its name over it.
 struct TierBar: View {
   var rating: Double
   var rated: Int
@@ -49,7 +49,7 @@ func mixHex(_ a: String, _ b: String, _ amount: Double) -> String {
   return "#" + zip(x, y).map { String(format: "%02x", Int(JSRound(Double($0) + Double($1 - $0) * amount))) }.joined()
 }
 
-/// A side as a small dot: `SideDot` in `Selection.tsx`.
+/// A side as a small dot.
 struct SideDot: View {
   var side: ChessCore.Color
   var body: some View {

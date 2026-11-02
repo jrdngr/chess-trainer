@@ -2,8 +2,7 @@ import ChessCore
 import Foundation
 import Model
 
-/// The engine as Survival's judge: `src/screens/survival/useJudge.ts` as two
-/// async calls. What the position is worth, and what it is worth with your
+/// The engine as Survival's judge, as two async calls. What the position is worth, and what it is worth with your
 /// move forced, both from one search, plus the engine's own move.
 
 /// How long the engine thinks about each question, at most.

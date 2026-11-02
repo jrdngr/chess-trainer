@@ -2,7 +2,7 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// What a drill session will consist of, decided before it starts: `Setup.tsx`.
+/// What a drill session will consist of, decided before it starts.
 struct DrillSetupView: View {
   @Environment(AppStore.self) private var store
   let tree: OpeningTree
@@ -81,7 +81,7 @@ struct DrillSetupView: View {
   }
 }
 
-/// A number with − and + either side: `Stepper` in `ui.tsx`.
+/// A number with − and + either side.
 struct StepperRow: View {
   var label: String
   var value: Int

@@ -5,7 +5,6 @@ import SwiftUI
 
 /// What happens after a wrong move: the engine plays on from it and shows
 /// the reply that punishes it, beside what the prepared move was worth.
-/// `WhySheet` in `DrillSession.tsx`.
 struct WhySheet: View {
   /// The position that was asked about.
   let fen: String

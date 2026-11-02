@@ -1,7 +1,7 @@
 import Book
 import ChessCore
 
-/// A stand-in game archive for the import flow: `model/seed/sampleGames.ts`.
+/// A stand-in game archive for the import flow.
 /// Walked from the book with a fixed seed. Everything here is synthetic, and
 /// opponent names are deliberately generic.
 
@@ -74,7 +74,7 @@ public func generateSampleArchive(
 }
 
 /// `games.sort((a, b) => (a.date < b.date ? 1 : -1))` as V8 runs it on a short array
-/// (a run, then binary insertion), so equal dates land in the same order as on the web.
+/// (a run, then binary insertion), so equal dates keep the order the golden cases recorded.
 private func newestFirst(_ input: [ImportedGame]) -> [ImportedGame] {
   var a = input
   let compare = { (x: ImportedGame, y: ImportedGame) -> Int in x.date! < y.date! ? 1 : -1 }

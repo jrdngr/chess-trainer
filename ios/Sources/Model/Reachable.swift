@@ -1,7 +1,6 @@
 import ChessCore
 
 /// Reachability, for the nudges: could one position still become another?
-/// The reachability part of `src/model/nudge.ts`.
 
 struct PlacedPiece {
   var square: String

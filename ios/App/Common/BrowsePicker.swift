@@ -5,7 +5,6 @@ import SwiftUI
 
 /// The full opening picker: a board you can always play on, the name of what
 /// is on it, and lists underneath that each move the board somewhere.
-/// `BrowsePicker.tsx`.
 ///
 /// Choose selects exactly the board's line and closes; the close button leaves
 /// the selection as it was. Nothing is selected by tapping a row, which only

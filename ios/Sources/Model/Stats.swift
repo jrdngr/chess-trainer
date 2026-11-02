@@ -2,7 +2,7 @@ import Foundation
 import Shared
 
 /// Stats: the numbers behind one opening, or the whole game, shaped for a
-/// chart. `src/model/stats.ts`. Everything reads the per-day tallies the
+/// chart. Everything reads the per-day tallies the
 /// record keeps and folds them into series; nothing is stored twice.
 
 public struct DayPoint: Equatable, Sendable {

@@ -3,7 +3,7 @@ import ChessCore
 import Model
 import Shared
 
-/// What Growth's lobby shows, worked out from the saved state: `Lobby.tsx`.
+/// What Growth's lobby shows, worked out from the saved state.
 /// Where the work is, shallowest first; and for a side with nothing in it
 /// yet, where it starts.
 struct GrowthLobby {

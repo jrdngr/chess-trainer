@@ -3,7 +3,7 @@ import ChessCore
 import Shared
 
 /// What Autopilot's next Survival run should be: an opening inside the
-/// selection, a colour, and a focus. `src/model/recommend.ts`.
+/// selection, a colour, and a focus.
 
 public enum Focus: String, Sendable, Codable, CaseIterable {
   case test, review

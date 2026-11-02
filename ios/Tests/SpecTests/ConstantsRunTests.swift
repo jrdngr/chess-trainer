@@ -2,10 +2,10 @@ import Foundation
 import Model
 import Testing
 
-/// The run's constants against spec/constants.json: Survival, missions,
+/// The run's constants against Golden/constants.json: Survival, missions,
 /// Autopilot, recommend, freshness, the draw, holes, lenses.
 @Test func runConstants() throws {
-  let all = try JSON.parse(Data(contentsOf: Cases.root.appendingPathComponent("spec/constants.json")))
+  let all = try JSON.parse(Data(contentsOf: Cases.golden.appendingPathComponent("constants.json")))
   func expect(_ file: String, _ name: String, _ value: JSONable, sourceLocation: SourceLocation = #_sourceLocation) {
     let want = all["src/model/\(file).ts"][name]
     #expect(want != .null, "\(file).\(name) is not in constants.json", sourceLocation: sourceLocation)

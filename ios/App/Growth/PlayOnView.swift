@@ -5,7 +5,7 @@ import SwiftUI
 
 /// A game carried on from the end of a line, against the engine: your own
 /// colour, a short fixed think, take-backs a pair at a time, and nothing
-/// recorded. `PlayOn.tsx`.
+/// recorded.
 struct PlayOnView: View {
   let from: String
   let color: ChessCore.Color

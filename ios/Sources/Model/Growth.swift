@@ -4,7 +4,7 @@ import Foundation
 import Shared
 
 /// Growth: the repertoire gets wider, one batch of answers at a time. The
-/// rows and the run of `src/model/growth.ts`; the holes are in `Holes.swift`.
+/// rows and the run; the holes are in `Holes.swift`.
 
 /// One line's tip, with the opponent to move and nothing of yours for what they play.
 public struct LineEnd: Equatable, Sendable {

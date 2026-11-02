@@ -1,4 +1,4 @@
-// Written out from `prototype/src/model/seed/games.ts` by a one-off script.
+// Generated data: the famous games Analysis offers.
 
 let REFERENCE_GAMES: [ReferenceGame] = [
   ReferenceGame(

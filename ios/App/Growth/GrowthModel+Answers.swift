@@ -2,7 +2,7 @@ import Book
 import ChessCore
 import Model
 
-/// The answers a hole offers, as `GrowthScreen.tsx` works them out: the book's
+/// The answers a hole offers: the book's
 /// (or the engine's past it), a familiar move pulled in from further down,
 /// coloured toward your patterns, ranked, and given the arrows' roles.
 extension GrowthModel {

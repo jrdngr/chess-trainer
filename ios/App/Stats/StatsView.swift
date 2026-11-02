@@ -5,7 +5,7 @@ import SwiftUI
 
 /// Stats: your favorite openings, the others you have played, and the
 /// activity of the whole game; every row opens that opening's own page over
-/// it. `StatsScreen.tsx`.
+/// it.
 struct StatsView: View {
   let tree: OpeningTree
   let index: ReferenceIndex

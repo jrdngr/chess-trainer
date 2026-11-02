@@ -1,6 +1,6 @@
 import ChessCore
 
-/// Growth's arrows at a hole: who recommends each one. `src/model/answerArrows.ts`.
+/// Growth's arrows at a hole: who recommends each one.
 ///
 /// Blue is the reply strong players choose most. The other two are the
 /// engine's best, purple and then a lighter purple. When strong players and the

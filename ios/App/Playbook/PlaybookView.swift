@@ -4,7 +4,7 @@ import Model
 import SwiftUI
 
 /// The Playbook tab: your openings, listed by family per side, with Tidy and
-/// the Extensions review on top. `RepertoireScreen.tsx`.
+/// the Extensions review on top.
 struct PlaybookView: View {
   let tree: OpeningTree
   let index: ReferenceIndex

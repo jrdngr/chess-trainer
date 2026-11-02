@@ -14,7 +14,7 @@ extension Earned {
   }
 }
 
-/// spec/cases/functions/missions.json
+/// Golden/cases/functions/missions.json
 @Test func missions() throws {
   func prefs(_ j: JSON) -> ExtrasPrefs {
     ExtrasPrefs(moments: j["moments"].bool, missions: j["missions"].bool, combo: j["combo"].bool)
@@ -59,7 +59,7 @@ extension Earned {
   #expect(missionTurnsLeft(Mission(kind: .edge, moves: 7, held: 4)) == EDGE_MOVES - 4)
 }
 
-/// spec/cases/functions/lenses.json
+/// Golden/cases/functions/lenses.json
 @Test func lenses() throws {
   func walk(_ text: String) -> [String] {
     var fens = [START_FEN]

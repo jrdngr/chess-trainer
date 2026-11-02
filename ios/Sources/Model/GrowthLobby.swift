@@ -2,9 +2,8 @@ import Book
 import ChessCore
 import Shared
 
-/// What Growth's lobby and sitting read besides the rows: `src/model/growth.ts`
-/// (`reachesOpening`, `enginePositions`, `needsEngine`) and the lobby's
-/// choices from `src/model/modes.ts`.
+/// What Growth's lobby and sitting read besides the rows (`reachesOpening`,
+/// `enginePositions`, `needsEngine`), and the lobby's choices.
 
 /// "Worth answering": the share of games a reply needs, most selective first.
 public let SHARE_STEPS: [Double] = [3, 1, 0.2]

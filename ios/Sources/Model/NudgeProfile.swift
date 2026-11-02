@@ -2,8 +2,7 @@ import Book
 import ChessCore
 import Shared
 
-/// Nudges: keeping a repertoire narrow while it grows. `src/model/nudge.ts`,
-/// in four files: the profile and context here, the signals, the arrows, and
+/// Nudges: keeping a repertoire narrow while it grows. Four files: the profile and context here, the signals, the arrows, and
 /// the switches Tidy offers.
 ///
 /// A move that lands in a position you already know, or one you already play

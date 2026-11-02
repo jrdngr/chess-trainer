@@ -3,7 +3,7 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// Drill positions: `DrillSession.tsx`. The Playbook opens it directly with
+/// Drill positions. The Playbook opens it directly with
 /// a branch's items (`branchItems(rep, nodeId).prefix(40)`) and a title.
 struct DrillSessionView: View {
   @Environment(AppStore.self) private var store

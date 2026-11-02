@@ -1,7 +1,7 @@
 import ChessCore
 
 /// Starter sets: a ready-made Playbook for a new player, by style.
-/// `src/model/starterSets.ts`; the sets are written out from `spec/constants.json`.
+/// `SpecTests` checks the sets against `Golden/constants.json`.
 
 public enum SetSlot: String, Sendable, CaseIterable {
   case w, e4, d4

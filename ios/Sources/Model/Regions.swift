@@ -2,7 +2,7 @@ import Book
 import ChessCore
 import Shared
 
-/// Regions of the opening tree: the second half of `openingTree.ts`.
+/// Regions of the opening tree.
 
 /// Where a line stands relative to a region.
 public enum LineStatus: String, Sendable {

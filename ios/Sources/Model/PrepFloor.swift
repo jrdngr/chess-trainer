@@ -1,4 +1,4 @@
-/// How often a reply you prepared comes up, at the least. `src/model/prepFloor.ts`.
+/// How often a reply you prepared comes up, at the least.
 public let PREPARED_FLOOR = 0.15
 
 /// The most of one position the lifted moves may take between them.

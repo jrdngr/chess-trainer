@@ -6,7 +6,7 @@ import SwiftUI
 
 /// One sitting of Growth: the reply you have no answer to, the answers on
 /// offer with who recommends them, and the reveal once the batch is done.
-/// `Run` in `GrowthScreen.tsx`. Autopilot's batch ends in Next round;
+/// Autopilot's batch ends in Next round;
 /// Growth from Home in New run, with the rest of the reveal.
 struct GrowthView: View {
   /// Where the reveal leads.
@@ -31,7 +31,7 @@ struct GrowthView: View {
   @Environment(Toasts.self) private var toasts
 
   /// Autopilot's batch, as it opens from the end of a run. Close leaves the
-  /// mode, as the web's `onExit` does; the next round is its own button.
+  /// mode; the next round is its own button.
   init(model: GrowthModel, onClose: @escaping () -> Void, onNext: @escaping () -> Void) {
     self.init(model: model, exits: Exits(nextRound: onNext, close: onClose))
   }

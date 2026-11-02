@@ -1,6 +1,6 @@
 import Book
 
-/// Where a move came from, said in a word or two. `src/model/moveSource.ts`.
+/// Where a move came from, said in a word or two.
 public let SOURCE_LABELS: [MoveSource: String] = [
   .picker: "Opening picker",
   .book: "Book",

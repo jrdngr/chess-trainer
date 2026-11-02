@@ -1,6 +1,6 @@
 import ChessCore
 
-/// What an engine search reports: `src/engine/types.ts`.
+/// What an engine search reports.
 public struct EngineLine: Equatable, Sendable, Codable {
   public var multipv: Int
   public var depth: Int
@@ -36,7 +36,7 @@ public struct Trade: Equatable, Sendable, Codable {
   public var san: String
 }
 
-/// The trade worth offering among the engine's lines, if any: `engine/cashOut.ts`.
+/// The trade worth offering among the engine's lines, if any.
 public func pickTrade(_ fen: String, _ lines: [EngineLine], _ me: Color) -> Trade? {
   guard let best = lineScore(lines.first, me), best >= CASH_OUT_FROM else { return nil }
   let moves = legalMoves(fen)

@@ -4,8 +4,7 @@ import Foundation
 import Model
 import Observation
 
-/// One sitting of Growth, driven through GrowthController: `Run` in
-/// `GrowthScreen.tsx`. Autopilot's batch, grown from the end of a run, and
+/// One sitting of Growth, driven through GrowthController. Autopilot's batch, grown from the end of a run, and
 /// Growth opened from Home are both one of these; `Launch.paced` is the
 /// difference. The answers on offer are `GrowthModel+Answers.swift`, the
 /// announcement `GrowthModel+Intro.swift`.

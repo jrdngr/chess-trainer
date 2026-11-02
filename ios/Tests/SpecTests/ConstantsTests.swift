@@ -2,10 +2,10 @@ import Foundation
 import Model
 import Testing
 
-/// The ported modules' constants against spec/constants.json, which is
+/// The ported modules' constants against Golden/constants.json, which is
 /// extracted from the prototype's TypeScript, so none of them drifts quietly.
 @Test func constants() throws {
-  let all = try JSON.parse(Data(contentsOf: Cases.root.appendingPathComponent("spec/constants.json")))
+  let all = try JSON.parse(Data(contentsOf: Cases.golden.appendingPathComponent("constants.json")))
   func expect(_ file: String, _ name: String, _ value: JSON, sourceLocation: SourceLocation = #_sourceLocation) {
     let want = all["src/model/\(file).ts"][name]
     #expect(want != .null, "\(file).\(name) is not in constants.json", sourceLocation: sourceLocation)

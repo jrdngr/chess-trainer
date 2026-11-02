@@ -1,7 +1,7 @@
 import ChessCore
 import Shared
 
-/// Your games against your Playbook. `src/model/gameAnalysis.ts`.
+/// Your games against your Playbook.
 
 /// One position in the player's own game history.
 public struct PlayedNode {

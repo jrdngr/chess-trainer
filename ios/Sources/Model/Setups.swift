@@ -1,7 +1,6 @@
 import ChessCore
 
 /// Setups: plans that are several moves, with names players use.
-/// `src/model/setups.ts`.
 ///
 /// A habit is one exact move, but g3 means a fianchetto, and so does Bg2. Like
 /// the kin sets, this is chess knowledge written down. Moves every opening

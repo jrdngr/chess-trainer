@@ -2,7 +2,7 @@ import ChessCore
 import Model
 import Testing
 
-/// The selection functions in spec/cases/functions/growth.json.
+/// The selection functions in Golden/cases/functions/growth.json.
 @Test func selection() throws {
   let tree = openingTree(bookIndex)
   func choice(_ j: JSON) -> ColorChoice { ColorChoice(rawValue: j.string)! }
@@ -28,7 +28,7 @@ import Testing
   ], only: ["selection.colorsOf", "selection.colorLabel", "selection.lineInRegion", "anyFavorite.favoritesIn", "anyFavorite.pickFavorite", "anyFavorite.resolveFavorite"])
 }
 
-/// The picker functions in spec/cases/functions/picker.json.
+/// The picker functions in Golden/cases/functions/picker.json.
 @Test func picker() throws {
   let tree = openingTree(bookIndex)
   let catalog = pickerCatalog(tree)

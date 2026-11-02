@@ -3,8 +3,8 @@ import Book
 import ChessCore
 import Shared
 
-/// How a run's line is drawn and how the opponent replies: the part of
-/// `src/model/openingRun.ts` Survival and Autopilot use.
+/// How a run's line is drawn and how the opponent replies, for Survival and
+/// Autopilot.
 
 /// What a run knows about a position: what keeps it alive, how likely each
 /// reply is, and what your prep says.
@@ -148,8 +148,7 @@ public enum Steer: String, Sendable { case popular, weak, gaps }
 /// How much less often a hole may be met than the best one and still be drawn.
 public let DRAW_WINDOW: Double = 8
 
-/// A run's board and the line steered toward. The parts of the prototype's
-/// `Run` that Survival reads.
+/// A run's board and the line steered toward: what Survival reads of a run.
 public struct Run: Equatable, Sendable {
   public var id: String
   public var sourceLabel: String

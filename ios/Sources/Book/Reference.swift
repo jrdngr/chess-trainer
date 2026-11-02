@@ -1,7 +1,7 @@
 import ChessCore
 import Shared
 
-/// Reading the book: `src/model/reference.ts`.
+/// Reading the book.
 
 /// A name, plus how deep into the line it was recognised.
 public struct NamedLine: Equatable, Sendable {

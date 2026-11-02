@@ -3,7 +3,7 @@ import SwiftUI
 
 /// The Extensions review's graph, drawn from `layoutGraph`'s rows: book
 /// moves filled, extensions outlined, a saved mistake with a warning mark.
-/// White's columns carry the move numbers. `ExtensionGraph.tsx`.
+/// White's columns carry the move numbers.
 struct ExtensionGraphView: View {
   let rows: [GraphRow]
   /// The ply of column 0's moves: 0 is White's first move.

@@ -1,6 +1,6 @@
 import ChessCore
 
-/// A game brought in from elsewhere, or played here in Play: `ImportedGame` in `model/types.ts`.
+/// A game brought in from elsewhere, or played here in Play.
 public struct ImportedGame: Equatable, Sendable, Codable {
   /// Where the game came from: an import, or one you played here in Play.
   public enum Source: String, Sendable, Codable {

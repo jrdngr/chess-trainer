@@ -2,7 +2,7 @@ import ChessCore
 import Model
 import Testing
 
-/// The starter set functions in spec/cases/functions/onboarding.json.
+/// The starter set functions in Golden/cases/functions/onboarding.json.
 @Test func starterSets() throws {
   let tree = openingTree(bookIndex)
   try check("onboarding", [

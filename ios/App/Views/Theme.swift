@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The prototype's palette: `src/styles.css`.
+/// The app's palette.
 enum Theme {
   static let background = Color(hex: 0x0d0d10)
   static let surface = Color(hex: 0x17171c)

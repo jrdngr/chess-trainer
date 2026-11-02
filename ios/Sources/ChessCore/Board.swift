@@ -1,5 +1,5 @@
 /// A chess position, laid out the way chess.js lays it out (0x88, a8 first),
-/// so move order, SAN and FEN come out exactly as the prototype's.
+/// so move order, SAN and FEN come out exactly as chess.js's.
 
 public enum Color: String, Sendable, Codable {
   case w, b

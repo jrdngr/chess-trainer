@@ -4,7 +4,7 @@ import Shared
 import SwiftUI
 
 /// Your imported games against a Playbook: coverage, then the gaps and
-/// deviations. `GameReview` in `ImportScreen.tsx`.
+/// deviations.
 struct GameReviewView: View {
   let games: [ImportedGame]
   let onBack: () -> Void

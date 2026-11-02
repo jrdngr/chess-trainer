@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A section's title, and an aside on the right: `Section` in `ui.tsx`.
+/// A section's title, and an aside on the right.
 struct StatsSection: View {
   var title: String
   var aside: String?

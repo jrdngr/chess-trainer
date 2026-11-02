@@ -2,7 +2,7 @@ import Model
 import SwiftUI
 
 /// Import games: from Lichess or Chess.com, a pasted PGN, or a sample
-/// archive; then what they say against your Playbook. `ImportScreen.tsx`.
+/// archive; then what they say against your Playbook.
 struct ImportView: View {
   let onBack: () -> Void
   @Environment(AppStore.self) private var store

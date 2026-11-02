@@ -1,7 +1,7 @@
 import ChessCore
 
 /// Drill positions as a pure controller: `state + event → state + effects`.
-/// `src/model/drillController.ts`. The screen owns the clock, the flash's
+/// The screen owns the clock, the flash's
 /// timer and the store.
 
 /// How many positions to line up at a time, and when to line up more.

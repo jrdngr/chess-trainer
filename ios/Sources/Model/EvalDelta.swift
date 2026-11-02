@@ -1,7 +1,7 @@
 import ChessCore
 import Shared
 
-/// How much a move moves the eval bar, from the side playing it. `src/model/evalDelta.ts`.
+/// How much a move moves the eval bar, from the side playing it.
 
 /// A mate, as a score.
 private let MATE: Double = 10_000

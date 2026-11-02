@@ -5,7 +5,7 @@ import Shared
 import SwiftUI
 
 /// What sits under the board as the sitting goes: whose move, the reply to
-/// answer and the answers, or the reveal. `GrowthScreen.tsx`.
+/// answer and the answers, or the reveal.
 struct GrowthPhaseView: View {
   @Bindable var model: GrowthModel
   let exits: GrowthView.Exits

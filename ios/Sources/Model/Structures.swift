@@ -1,6 +1,6 @@
 import ChessCore
 
-/// Named pawn structures and the plans that go with them. `src/model/structures.ts`.
+/// Named pawn structures and the plans that go with them.
 /// The templates and their tests are in `StructureTemplates.swift`.
 
 /// A piece and the square a plan wants it on.
@@ -34,7 +34,7 @@ public struct StructureTemplate: Equatable, Sendable, Codable {
 
   enum CodingKeys: String, CodingKey { case id, name, sided, a, b }
 
-  /// `sided` is written only when true, as the prototype's templates are.
+  /// `sided` is written only when true.
   public func encode(to encoder: Encoder) throws {
     var c = encoder.container(keyedBy: CodingKeys.self)
     try c.encode(id, forKey: .id)

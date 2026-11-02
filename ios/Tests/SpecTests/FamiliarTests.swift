@@ -54,7 +54,7 @@ private func candidates(_ fen: String) -> [NudgeCandidate] {
   popularReplies(bookIndex, fen, MIN_SHARE).map { NudgeCandidate(san: $0.san, share: $0.share) }
 }
 
-/// spec/cases/functions/familiar.json
+/// Golden/cases/functions/familiar.json
 @Test func familiar() throws {
   let index = bookIndex
   let openings = openingTree(index)

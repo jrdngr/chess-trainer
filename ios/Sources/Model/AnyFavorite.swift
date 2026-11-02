@@ -2,7 +2,7 @@ import Foundation
 import ChessCore
 import Shared
 
-/// "Any favorite": one of your favorites per round. `src/model/anyFavorite.ts`.
+/// "Any favorite": one of your favorites per round.
 public let ANY_FAVORITE = "*favorites"
 
 public func isAnyFavorite(_ selection: Selection) -> Bool {

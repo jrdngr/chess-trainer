@@ -6,7 +6,7 @@ import Testing
 
 private func fixed4(_ x: Double) -> Double { Double(JS.toFixed(x, 4))! }
 
-/// spec/cases/functions/draw.json
+/// Golden/cases/functions/draw.json
 @Test func draw() throws {
   let index = bookIndex
   let tree = openingTree(index)

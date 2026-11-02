@@ -6,7 +6,7 @@ private let RATED_SHOWN = 6
 
 /// The tab's own page: your favorites and then the other rated openings, each
 /// with the rung it holds, and under them the activity that is true of the
-/// whole game. `YourOpenings` in `StatsScreen.tsx`.
+/// whole game.
 struct YourOpeningsView: View {
   let tree: OpeningTree
   @Binding var days: Int
@@ -92,7 +92,7 @@ struct YourOpeningsView: View {
   }
 }
 
-/// Accuracy over the window, a seven-day average. `Accuracy` in `StatsScreen.tsx`.
+/// Accuracy over the window, a seven-day average.
 struct AccuracySection: View {
   var stats: NodeStats
   var days: Int

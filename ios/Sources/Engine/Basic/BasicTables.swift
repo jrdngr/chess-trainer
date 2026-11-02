@@ -1,4 +1,4 @@
-/// PeSTO's square tables, as the backup engine has them: `src/engine/basic/evaluate.ts`,
+/// PeSTO's square tables, as the backup engine has them,
 /// written out by a script. Tables run a8..h8, a7..h7, … a1..h1, from White's side.
 
 let MG_TABLES: [[Int]] = [

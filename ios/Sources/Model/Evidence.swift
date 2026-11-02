@@ -1,7 +1,6 @@
 import ChessCore
 
-/// What your games say, as Autopilot reads it: `evidenceIn` in
-/// `store/recommendation.ts`, and `evidenceFor` in `model/growth.ts`.
+/// What your games say, as Autopilot reads it: `evidenceIn` and `evidenceFor`.
 
 /// What your games say about the selection: the positions you got wrong with
 /// a move prepared, and the ones you kept reaching with nothing.

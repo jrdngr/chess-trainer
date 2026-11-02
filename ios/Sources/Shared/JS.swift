@@ -1,6 +1,6 @@
 import Foundation
 
-/// The few places the prototype's numbers and orderings come from JavaScript
+/// The few places the model's numbers and orderings come from JavaScript
 /// itself. Each matches the JS built-in exactly, so ported code can call it
 /// where the TypeScript calls the original.
 public enum JS {
@@ -50,7 +50,7 @@ public enum JS {
     return "\(x)"
   }
 
-  /// `a.localeCompare(b)` in the prototype's default locale.
+  /// `a.localeCompare(b)` in the `en_US` locale.
   public static func localeCompare(_ a: String, _ b: String) -> Int {
     switch a.compare(b, options: [], range: nil, locale: locale) {
     case .orderedAscending: return -1

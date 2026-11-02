@@ -4,7 +4,7 @@ import SwiftUI
 
 /// Tidy: places where another move is closer to the rest of your lines.
 /// Switching keeps that move and drops yours, with everything under it.
-/// `focus` is a find from the end of a round, shown first and open. `TidyScreen.tsx`.
+/// `focus` is a find from the end of a round, shown first and open.
 struct TidyView: View {
   let scan: TidyScan
   var focus: TidyFind?

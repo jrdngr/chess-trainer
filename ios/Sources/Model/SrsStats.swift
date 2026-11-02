@@ -1,5 +1,5 @@
 /// What Drill's setup shows of the schedule: `retention`, `masteryBuckets`
-/// and `forecast` in `src/model/srs.ts`.
+/// and `forecast`.
 
 /// Retention across all reviewed cards, 0...1; nil when nothing is reviewed.
 public func retention(_ cards: [Card]) -> Double? {

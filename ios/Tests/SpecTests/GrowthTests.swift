@@ -21,7 +21,7 @@ func rowJSON(_ r: GrowthRow) -> JSON {
   ])
 }
 
-/// The growth functions in spec/cases/functions/growth.json.
+/// The growth functions in Golden/cases/functions/growth.json.
 @Test func growth() throws {
   let index = bookIndex
   func options(_ j: JSON) -> GrowthOptions {
@@ -39,7 +39,7 @@ func rowJSON(_ r: GrowthRow) -> JSON {
   ], only: ["growth.holeShare", "growth.movesToFit", "growth.addsToFit", "growth.rowUrgency", "growth.optionsAt", "growth.choicesAt", "growth.pastTheBook", "growth.growthRows"])
 }
 
-/// spec/cases/functions/growOffer.json
+/// Golden/cases/functions/growOffer.json
 @Test func growOffers() throws {
   let index = bookIndex
   let tree = openingTree(index)

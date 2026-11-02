@@ -1,4 +1,4 @@
-/// The four tabs: `nav` in `App.tsx`, shown in the system tab bar.
+/// The four tabs, shown in the system tab bar.
 enum Tab: String, CaseIterable {
   case home, playbook, stats, analysis
 
@@ -11,7 +11,7 @@ enum Tab: String, CaseIterable {
     }
   }
 
-  /// The SF Symbol closest to the web's icon: a bolt, a branching tree, a line chart, a magnifier.
+  /// Each tab's SF Symbol: a bolt, a branching tree, a line chart, a magnifier.
   var symbol: String {
     switch self {
     case .home: "bolt.fill"

@@ -2,7 +2,7 @@ import ChessCore
 import Foundation
 
 /// What the engine would play where the book knows nothing, as worked out so
-/// far. `src/model/engineReplies.ts`: the model reads it synchronously and
+/// far. The model reads it synchronously and
 /// the screens fill it in as the engine answers.
 
 /// How many moves the engine is asked for past the book.

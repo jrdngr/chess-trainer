@@ -1,5 +1,4 @@
-/// What each mode plays on, and Autopilot's fixed setup. `modes.ts`,
-/// `survival.ts`'s prefs and `autopilotPrefs.ts`.
+/// What each mode plays on, and Autopilot's fixed setup.
 
 /// How long you get for each of your own moves.
 public enum ClockMode: String, Sendable, Codable, CaseIterable {
@@ -131,7 +130,7 @@ public let AUTO_DRILL = DrillPrefs(
   batchSimilar: true, clock: .off)
 
 /// Growth rounds, and what counts as ready to grow. Autopilot never grows past the book.
-/// Growth's own defaults: `modes.ts`.
+/// Growth's own defaults.
 public let DEFAULT_GROWTH = GrowthPrefs(minShare: 1, maxPly: 18, nudgePriority: .transposition, nudgePawns: false, pastBook: false)
 
 public let AUTO_GROWTH = GrowthPrefs(minShare: 1, maxPly: 18, nudgePriority: .transposition, nudgePawns: false, pastBook: false)

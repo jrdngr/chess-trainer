@@ -9,7 +9,7 @@ func openingName(_ tree: OpeningTree, _ id: String) -> String {
   return entryForNode(pickerCatalog(tree), node)?.label ?? node.name
 }
 
-/// How a run ended, as its title: `End.tsx`.
+/// How a run ended, as its title.
 func endingTitle(_ ending: Ending, _ plies: Int) -> String {
   switch ending {
   case .blunder: return "Blunder on move \(moveNumber(plies))"

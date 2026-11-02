@@ -2,7 +2,7 @@ import ChessCore
 import Foundation
 import Shared
 
-/// The rating: how well you know one opening. `src/model/scoring.ts`.
+/// The rating: how well you know one opening.
 ///
 /// A rating moves like a chess rating: each prepared position answered in a
 /// run is one result against that opening, sized by how well the rating
@@ -414,5 +414,5 @@ public func ratingChange(_ stats: NodeStats, _ days: Double, _ now: Double = Env
   stats.rating - ratingOn(stats, dayKey(now - days * DAY))
 }
 
-// Keyed by mode name when saved, as the prototype's record is.
+// Keyed by mode name when saved.
 extension ActivityMode: CodingKeyRepresentable {}

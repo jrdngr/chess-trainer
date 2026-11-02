@@ -2,14 +2,14 @@ import Book
 import Model
 import SwiftUI
 
-/// Opens Tidy on a find, from wherever a round ends: `onTidy` in `App.tsx`.
+/// Opens Tidy on a find, from wherever a round ends.
 extension EnvironmentValues {
   @Entry var openTidy: ((TidyFind) -> Void)? = nil
 }
 
 /// The line under a miss when a move off your prep was closer to the rest of
 /// your lines than the prepared one, in the colour Growth would draw it, and
-/// the way to Tidy. `OffPrepHint.tsx`.
+/// the way to Tidy.
 struct OffPrepHint: View {
   let find: TidyFind
   let onTidy: () -> Void

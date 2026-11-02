@@ -6,7 +6,7 @@ import SwiftUI
 
 /// Analysis: board, engine, and the reference book in one place. The
 /// engine's lines above, the book's moves and games below, and the named
-/// lines the book knows from this position. `AnalysisScreen.tsx`.
+/// lines the book knows from this position.
 struct AnalysisTab: View {
   let tree: OpeningTree
   let index: ReferenceIndex

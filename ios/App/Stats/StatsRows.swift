@@ -2,7 +2,7 @@ import Model
 import SwiftUI
 
 /// A row in a list that opens something: a dot, a name over a line of meta,
-/// a value, a chevron. `.list-row` as `StatsScreen.tsx` uses it.
+/// a value, a chevron.
 struct StatsRow: View {
   var dot: Color?
   var title: String

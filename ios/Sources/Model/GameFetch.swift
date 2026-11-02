@@ -1,6 +1,6 @@
 import Foundation
 
-/// Live clients for the two public game APIs: `services/gameSources.ts`.
+/// Live clients for the two public game APIs.
 /// Only a public username lookup is sent; nothing signs in.
 
 public enum FetchFailure: String, Sendable {
@@ -23,7 +23,7 @@ public let urlSessionGet: HTTPGet = { url, accept in
   return ((response as? HTTPURLResponse)?.statusCode ?? 0, data)
 }
 
-/// A request that never got an answer: the web's "blocked" (it could not reach the site), or another error.
+/// A request that never got an answer: "blocked" (it could not reach the site), or another error.
 private func classify(_ error: Error) -> FetchResult {
   if error is URLError { return .failed(.blocked, error.localizedDescription) }
   return .failed(.network, error.localizedDescription)

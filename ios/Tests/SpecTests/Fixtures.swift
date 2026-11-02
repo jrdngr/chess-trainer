@@ -1,9 +1,9 @@
 import Book
 import Foundation
 
-/// The prototype's book, pinned for every parity case.
+/// The book the app ships, shared by every golden case.
 let bookIndex: ReferenceIndex = {
-  let url = Cases.root.appendingPathComponent("prototype/src/model/book/book.json")
+  let url = Cases.book
   return try! decodeBook(Data(contentsOf: url))
 }()
 

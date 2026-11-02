@@ -1,7 +1,7 @@
 import Model
 import SwiftUI
 
-/// A round's rating change, played on its bar: `usePlayback` in `RatingCard.tsx`.
+/// A round's rating change, played on its bar.
 /// A gain grows the bar with the stretch it added glowing; a promotion fills it
 /// to the end, flashes it in the new tier's color, throws sparks and regrows it
 /// from the left; a drop flashes red and shrinks. The number counts along.

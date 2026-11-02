@@ -68,12 +68,12 @@ private func sessionJSON(_ s: RunSession) -> JSON {
   ])
 }
 
-/// spec/cases/scenarios/survival.json: each run replayed call by call
+/// Golden/cases/scenarios/survival.json: each run replayed call by call
 /// through the Swift controller, its effects and session compared at every step.
 @Test func survivalScenarios() throws {
   let index = bookIndex
   let tree = openingTree(index)
-  let file = try JSON.parse(Data(contentsOf: Cases.root.appendingPathComponent("spec/cases/scenarios/survival.json")))
+  let file = try JSON.parse(Data(contentsOf: Cases.golden.appendingPathComponent("cases/scenarios/survival.json")))
   var replayed = 0
   defer { #expect(replayed == file["scenarios"].array.reduce(0) { $0 + $1["steps"].array.count }) }
   for scenario in file["scenarios"].array {

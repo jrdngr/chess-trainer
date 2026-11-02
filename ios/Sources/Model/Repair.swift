@@ -2,7 +2,6 @@ import ChessCore
 import Shared
 
 /// Repair: the openings you actually got wrong, in games you actually played.
-/// `src/model/repair.ts`.
 ///
 /// Everything comes from imported games compared against the repertoire, and
 /// mistakes logged in the app; no position is invented. Two things can be

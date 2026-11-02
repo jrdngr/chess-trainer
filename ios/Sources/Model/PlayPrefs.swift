@@ -1,4 +1,4 @@
-/// What Play remembers between visits: `PlayPrefs` in `src/model/modes.ts`.
+/// What Play remembers between visits.
 public struct PlayPrefs: Equatable, Sendable, Codable {
   /// One of LEVELS.
   public var level: String

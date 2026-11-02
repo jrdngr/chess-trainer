@@ -4,7 +4,7 @@ import Foundation
 import Model
 import Observation
 
-/// One game against the engine: `Game` in `PlayScreen.tsx`.
+/// One game against the engine.
 @MainActor @Observable
 final class PlayGame {
   struct Over: Equatable {
@@ -205,7 +205,7 @@ func prepIndex(_ rep: Repertoire?) -> [String: [String]] {
   return out
 }
 
-/// A Playbook's name without its side: `displayName` in `repertoire.ts`.
+/// A Playbook's name without its side.
 func displayName(_ name: String) -> String {
   let trimmed = name.replacingOccurrences(of: #"^\s*(white|black)\s*[—–\-:]\s*"#, with: "", options: [.regularExpression, .caseInsensitive])
     .trimmingCharacters(in: .whitespaces)

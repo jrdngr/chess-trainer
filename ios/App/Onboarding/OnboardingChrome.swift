@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A screen's bar: back, a large or centred title, and actions. `AppBar` in `ui.tsx`.
+/// A screen's bar: back, a large or centred title, and actions.
 struct OnbAppBar<Actions: View>: View {
   var title: String
   var subtitle: String?

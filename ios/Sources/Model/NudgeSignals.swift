@@ -2,7 +2,7 @@ import Book
 import ChessCore
 import Shared
 
-/// The signals the nudges are coloured by. Part of `src/model/nudge.ts`.
+/// The signals the nudges are coloured by.
 
 struct Signals {
   var san: String

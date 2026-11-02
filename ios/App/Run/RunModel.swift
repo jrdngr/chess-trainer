@@ -5,8 +5,7 @@ import Foundation
 import Model
 import Observation
 
-/// One Survival run on screen, Autopilot's or one you set up: `SurvivalScreen.tsx`'s
-/// job. It feeds the controller what happens (your moves, the judge's verdicts,
+/// One Survival run on screen, Autopilot's or one you set up. It feeds the controller what happens (your moves, the judge's verdicts,
 /// the opponent's replies), carries out the effects in order, and keeps what
 /// the view draws.
 @MainActor @Observable
@@ -15,7 +14,7 @@ final class RunModel {
   /// The round's intro: announced full screen, then the way in played out on a locked board.
   enum Intro { case announce, replay, done }
 
-  /// How long the announcement holds, and the beat between replayed moves: `RoundIntro.tsx`.
+  /// How long the announcement holds, and the beat between replayed moves.
   static let announceMs = 2.5, replayMs = 0.4, pulseMs = 0.9
 
   /// How long a miss, a score popup and a note stay over the board; the opponent's beat.

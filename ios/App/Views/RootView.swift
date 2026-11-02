@@ -3,12 +3,12 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// A mode open over the tabs: `mode` in `App.tsx`.
+/// A mode open over the tabs.
 enum Mode: Equatable {
   case autopilot, survival, drill, growth, play
 }
 
-/// The app: onboarding ahead of everything, a mode over the tabs, or the tabs. `App.tsx`.
+/// The app: onboarding ahead of everything, a mode over the tabs, or the tabs.
 struct RootView: View {
   @Environment(AppStore.self) private var store
   @State private var tab: Tab = Self.debugTab ?? .home

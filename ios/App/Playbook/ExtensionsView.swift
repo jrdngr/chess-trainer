@@ -41,7 +41,7 @@ func extensionOpenings(_ reps: [Repertoire], _ index: ReferenceIndex) -> [Extens
 /// The Extensions review: one opening at a time, drawn as a graph of your
 /// lines with the extensions outlined. Keep or Remove act on the whole
 /// extension the move belongs to; a mistake can be switched to the book's
-/// move. `ExtensionsScreen.tsx`.
+/// move.
 struct ExtensionsView: View {
   let onBack: () -> Void
   @Environment(AppStore.self) private var store

@@ -3,7 +3,7 @@ import ChessCore
 import Shared
 
 /// Survival: how far you get before your first blunder. Every Autopilot
-/// round is one. `src/model/survival.ts`; missions are in `Missions.swift`.
+/// round is one. Missions are in `Missions.swift`.
 
 /// How a move's score reads: green for eval gained, yellow or red for eval lost.
 public enum ScoreTone: String, Sendable, Codable {

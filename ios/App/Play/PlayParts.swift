@@ -3,7 +3,7 @@ import Engine
 import Model
 import SwiftUI
 
-/// The compact app bar: a close button, a centred title and subtitle, and a trailing slot. `AppBar` in `ui.tsx`.
+/// The compact app bar: a close button, a centred title and subtitle, and a trailing slot.
 struct PlayAppBar<Trailing: View>: View {
   var title: String
   var subtitle: String?
@@ -27,7 +27,7 @@ struct PlayAppBar<Trailing: View>: View {
   }
 }
 
-/// The web app's `.btn`: a filled, rounded button.
+/// A filled, rounded button.
 struct PlayButtonStyle: ButtonStyle {
   /// `.primary`, `.soft`, the plain `.btn`, `.accent`, `.danger`, and `.bare` for `.btn.plain`.
   enum Kind { case primary, soft, plain, accent, bare, danger }
@@ -72,7 +72,7 @@ struct PlayButtonStyle: ButtonStyle {
   }
 }
 
-/// A section heading with an optional note on the right: `Section` in `ui.tsx`.
+/// A section heading with an optional note on the right.
 struct PlaySection: View {
   var title: String
   var aside: String?

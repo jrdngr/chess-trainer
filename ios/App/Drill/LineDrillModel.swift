@@ -4,8 +4,8 @@ import Foundation
 import Model
 import Observation
 
-/// Drill a line at a time, driven through `LineDrillController`: the screen
-/// half of `LineDrill.tsx`. It owns the timers, the clock and drawing lines.
+/// Drill a line at a time, driven through `LineDrillController`.
+/// It owns the timers, the clock and drawing lines.
 @MainActor @Observable
 final class LineDrillModel {
   typealias L = LineDrillController

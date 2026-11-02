@@ -1,10 +1,9 @@
 import SwiftUI
 
-/// The web app's motion, in SwiftUI: its easing curves and its keyframe
-/// animations, each honoring Reduce Motion as the web does with
-/// `prefers-reduced-motion`. See ios/docs/animations.md.
+/// The app's motion: its easing curves and keyframe animations, each
+/// honoring Reduce Motion.
 enum Motion {
-  /// `cubic-bezier(0.22, 1, 0.36, 1)`: the web's arrivals.
+  /// `cubic-bezier(0.22, 1, 0.36, 1)`: arrivals.
   static func arrive(_ seconds: Double) -> Animation { .timingCurve(0.22, 1, 0.36, 1, duration: seconds) }
   /// `cubic-bezier(0.3, 0.9, 0.4, 1)`: a piece sliding to its square.
   static func slide(_ seconds: Double) -> Animation { .timingCurve(0.3, 0.9, 0.4, 1, duration: seconds) }
@@ -33,7 +32,7 @@ struct BoardFlashFade: ViewModifier {
 }
 
 extension View {
-  /// Fades in, holds and fades out over `duration`, as the web's board flash does.
+  /// Fades in, holds and fades out over `duration`.
   func boardFlash(_ duration: Double = 2) -> some View { modifier(BoardFlashFade(duration: duration)) }
 
   /// Arrives from below and fades in: `riOpening` and `ratingArrive`.

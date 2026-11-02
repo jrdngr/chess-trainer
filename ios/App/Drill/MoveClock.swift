@@ -4,7 +4,7 @@ import Observation
 import SwiftUI
 
 /// A budget for one move: only your own thinking is charged, and running out
-/// ends nothing. `useMoveClock` in `Clock.tsx`.
+/// ends nothing.
 @MainActor @Observable
 final class MoveClock {
   /// Seconds per move, or nil with no clock.

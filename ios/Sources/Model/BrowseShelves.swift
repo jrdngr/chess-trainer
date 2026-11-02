@@ -1,4 +1,4 @@
-/// The picker's shelves: openings picked by hand, by character. `SHELVES` in `src/model/browse.ts`.
+/// The picker's shelves: openings picked by hand, by character.
 public struct Shelf: Sendable {
   public var id: String
   public var label: String

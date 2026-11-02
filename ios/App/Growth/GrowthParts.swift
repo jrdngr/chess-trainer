@@ -5,7 +5,7 @@ import Shared
 import SwiftUI
 
 /// The pieces of Growth's sitting: `.prompt`, `.verdict`, the answer rows
-/// and their eval tags, the pills over the board. `GrowthScreen.tsx`.
+/// and their eval tags, the pills over the board.
 
 /// Who is to move and what it means: `.prompt`.
 struct GrowthPrompt: View {

@@ -1,8 +1,7 @@
 import ChessCore
 
-/// The named pawn structures, most specific first: `STRUCTURE_TEMPLATES` and
-/// each template's test in `src/model/structures.ts`, written out by a script
-/// from that file and `spec/constants.json`. A test keeps the data equal.
+/// The named pawn structures, most specific first, each with its test.
+/// `SpecTests` checks the data against `Golden/constants.json`.
 
 let TEMPLATES: [(template: StructureTemplate, test: @Sendable (Pawns, Color, Color) -> Bool)] = [
   (

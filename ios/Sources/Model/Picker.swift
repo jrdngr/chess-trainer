@@ -3,7 +3,7 @@ import ChessCore
 import Shared
 
 /// The opening picker's catalogue: the book's names arranged the way the
-/// book spells them, Family: Branch, Line. `src/model/picker.ts`.
+/// book spells them, Family: Branch, Line.
 
 public final class PickerEntry: @unchecked Sendable {
   /// The full name this entry stands for.
@@ -400,7 +400,7 @@ public func sideForPick(_ catalog: PickerCatalog, _ node: OpeningNode) -> Color?
   return entryForNode(catalog, node)?.side ?? playerOf(node.sans)
 }
 
-/// Where the book names an opening a move late. `onboarding.ts`.
+/// Where the book names an opening a move late.
 public let NAMED_LATE: [String: Color] = [
   // King's Indian Defence.
   "d4 Nf6 c4 g6 Nc3": .b,

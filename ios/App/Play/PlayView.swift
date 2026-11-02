@@ -3,7 +3,7 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// Play: the setup, then a game against the engine. `PlayScreen.tsx`.
+/// Play: the setup, then a game against the engine.
 struct PlayView: View {
   @Environment(AppStore.self) private var store
   let tree: OpeningTree

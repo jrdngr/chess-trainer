@@ -1,6 +1,6 @@
 import Shared
 
-/// Where sync stands, for the Sync row: `src/store/cloud.ts`.
+/// Where sync stands, for the Sync row.
 public enum CloudStatus: Equatable, Sendable {
   case unavailable
   case idle(lastSyncedAt: Double?)

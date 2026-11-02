@@ -4,7 +4,7 @@ import Shared
 import SwiftUI
 
 /// The book's moves from a position, its famous games, and where it all
-/// comes from: `ExplorerPanel.tsx`.
+/// comes from.
 struct ExplorerPanel: View {
   let index: ReferenceIndex
   let fen: String

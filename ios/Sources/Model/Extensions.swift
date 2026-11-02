@@ -1,9 +1,9 @@
 import Book
 import ChessCore
 
-/// Extensions: the moves in your Playbook that are not book moves. `src/model/extensions.ts`.
+/// Extensions: the moves in your Playbook that are not book moves.
 
-/// The least share of strong players' games a book move has: `openingRun.ts`.
+/// The least share of strong players' games a book move has.
 public let BOOK_SHARE = 0.05
 /// Centipawns given away past which a move is a mistake: the line a run ends at.
 public let BLUNDER_LIMIT: Double = 80

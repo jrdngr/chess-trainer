@@ -2,8 +2,8 @@ import Book
 import ChessCore
 import Shared
 
-/// Holes: replies you have no answer to. The part of `src/model/growth.ts`
-/// a run's draw and Grow this line need.
+/// Holes: replies you have no answer to, as a run's draw and Grow this line
+/// need them.
 
 /// How often a hole comes up, in percent, for ranking.
 public func holeShare(share: Double, kept: Bool) -> Double {

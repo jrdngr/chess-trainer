@@ -5,7 +5,7 @@ import Shared
 import SwiftUI
 
 /// Growth's lobby: where the work is, the settings it is found with, and
-/// where a side with nothing in it starts. `Lobby.tsx`.
+/// where a side with nothing in it starts.
 struct GrowthLobbyView: View {
   let tree: OpeningTree
   let index: ReferenceIndex

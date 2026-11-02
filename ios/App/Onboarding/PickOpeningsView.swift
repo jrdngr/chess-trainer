@@ -5,7 +5,6 @@ import SwiftUI
 
 /// Picking openings by name: the book's families, suggestions and shelves as
 /// lists, with no board, since playing the moves in is Play on the board.
-/// `PickOpenings` in `OnboardingScreen.tsx`.
 ///
 /// Tapping a row picks that opening, its own moves and no more, and tapping it
 /// again drops it; › opens what is under it. Picked lists everything held so

@@ -1,7 +1,6 @@
 import ChessCore
 
-/// Past the opening: missions, and the extras a judged move earns. The
-/// second half of `src/model/survival.ts`.
+/// Past the opening: missions, and the extras a judged move earns.
 
 public enum MissionKind: String, Sendable, Codable {
   case edge, lead, dig, plan, convert

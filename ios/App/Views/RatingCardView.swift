@@ -20,7 +20,7 @@ extension Color {
   }
 }
 
-/// The card's state, still or mid-playback: `View` in `RatingCard.tsx`.
+/// The card's state, still or mid-playback.
 struct RatingView: Equatable {
   /// The rating the tier names and the paint follow.
   var rating: Double
@@ -53,7 +53,7 @@ struct RatingView: Equatable {
   }
 }
 
-/// The card itself, drawn from a view: still, or mid-playback. `Card` in `RatingCard.tsx`.
+/// The card itself, drawn from a view: still, or mid-playback.
 struct RatingCardView: View {
   let moment: RatingMoment
   var view: RatingView

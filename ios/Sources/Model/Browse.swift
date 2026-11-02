@@ -3,7 +3,7 @@ import ChessCore
 import Foundation
 import Shared
 
-/// What the opening picker lists below its board. `src/model/browse.ts`.
+/// What the opening picker lists below its board.
 ///
 /// Every list is rows that stand for a line: tapping one plays the line out on
 /// the board, and a row with rows under it opens them. The picker selects what

@@ -1,7 +1,7 @@
 import ChessCore
 
 /// A log of what changed the repertoire, and what Growth put in front of
-/// you: `src/model/events.ts`. The repertoire says what your prep is, never
+/// you. The repertoire says what your prep is, never
 /// how it got that way; this is the record that does. Data for diagnosing,
 /// not a screen.
 
@@ -10,7 +10,7 @@ public enum EventPlace: String, Sendable, Codable {
   case home, repertoire, tidy, analysis, stats, growth, autopilot, survival, drill, repair, play, `import`, onboarding, board, session, unknown
 }
 
-/// One event. Each kind uses its own fields, as the prototype's union does;
+/// One event. Each kind uses its own fields;
 /// the rest stay nil, so the saved JSON has the same shape.
 public struct AppEvent: Equatable, Sendable, Codable {
   public var kind: String

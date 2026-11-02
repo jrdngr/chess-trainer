@@ -1,6 +1,6 @@
 import Foundation
 
-/// Kin: openings that share their moves. `src/model/kin.ts`.
+/// Kin: openings that share their moves.
 ///
 /// A habit is a move you keep choosing, and the arrows count habits inside one
 /// opening. But the book's families are narrower than the ideas in them: the

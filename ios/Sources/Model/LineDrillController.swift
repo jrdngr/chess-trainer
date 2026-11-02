@@ -1,8 +1,7 @@
 import ChessCore
 
-/// Drill lines as a pure controller: `src/model/lineDrillController.ts`.
+/// Drill lines as a pure controller.
 /// The screen owns the clock, the timers, drawing lines and the store.
-/// The prototype's module functions are statics on `LineDrillController`.
 
 /// Playing the line; a right move shown for a beat; a miss explained; or the line done and graded.
 public enum LinePhase: String, Sendable { case play, flash, wrong, done }

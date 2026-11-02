@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The web app's line icons on a 24-unit grid: `Icons.tsx`. `filled` is the
+/// The app's line icons on a 24-unit grid. `filled` is the
 /// solid form some icons take when selected.
 struct Icon: View {
   var name: String

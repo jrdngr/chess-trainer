@@ -1,6 +1,6 @@
 import UIKit
 
-/// The prototype's `haptic` buzz patterns, as taps of the feedback generator.
+/// Buzz patterns, as taps of the feedback generator.
 @MainActor
 enum Haptics {
   private static let light = UIImpactFeedbackGenerator(style: .light)

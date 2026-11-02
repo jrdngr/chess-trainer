@@ -3,7 +3,7 @@ import Model
 import SwiftUI
 
 /// The schedule of the position cards in scope, under Drill's setup: what
-/// comes due this week, and where each card stands. `Setup.tsx`.
+/// comes due this week, and where each card stands.
 struct DrillSchedule: View {
   let cards: [Card]
   /// Positions in scope, cards or not.

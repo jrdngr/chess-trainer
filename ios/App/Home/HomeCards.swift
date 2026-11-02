@@ -24,7 +24,7 @@ struct HomeCard<Content: View>: View {
 }
 
 /// The last runs' moves survived as bars, the latest lit, a dashed line at
-/// the best. Follows the selection. `SurvivalRuns` in `HomeWidgets.tsx`.
+/// the best. Follows the selection.
 struct SurvivalRuns: View {
   @Environment(AppStore.self) private var store
 

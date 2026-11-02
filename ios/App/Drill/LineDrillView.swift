@@ -3,7 +3,7 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// Drill, a line at a time: `LineDrill.tsx`. The opponent's moves play
+/// Drill, a line at a time. The opponent's moves play
 /// themselves, each of yours is asked, and the whole line takes one grade.
 struct LineDrillView: View {
   @Environment(AppStore.self) private var store

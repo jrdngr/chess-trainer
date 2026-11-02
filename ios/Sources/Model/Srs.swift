@@ -1,6 +1,6 @@
 import Shared
 
-/// Spaced repetition: a small SM-2 variant. `src/model/srs.ts`.
+/// Spaced repetition: a small SM-2 variant.
 
 public let MINUTE: Double = 60_000
 public let DAY: Double = 86_400_000

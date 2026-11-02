@@ -2,7 +2,7 @@ import Model
 import SwiftUI
 
 /// The lobby's settings: how common a reply must be, how deep, past the
-/// book, and what the green arrow nudges toward. The second half of `Lobby.tsx`.
+/// book, and what the green arrow nudges toward.
 struct GrowthSettings: View {
   let prefs: GrowthPrefs
   let change: ((inout GrowthPrefs) -> Void) -> Void

@@ -3,8 +3,8 @@ import Model
 import Shared
 import SwiftUI
 
-/// Saving a line, the same sheet everywhere a line comes in by hand:
-/// `SaveSheet.tsx`. It splits the line where it leaves the book, and the
+/// Saving a line, the same sheet everywhere a line comes in by hand.
+/// It splits the line where it leaves the book, and the
 /// engine checks the extension under it as the sheet opens; a mistake of
 /// yours is flagged, and the extension can be left out or saved too.
 struct SaveSheet: View {

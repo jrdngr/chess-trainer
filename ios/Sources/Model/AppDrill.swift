@@ -2,7 +2,7 @@
 /// `regrade`, `gradeLine` and `clearMistake` (`logMistake` is in
 /// `PlayPrefs.swift`), and Drill's own options.
 
-/// Drill's defaults: `DEFAULT_DRILL` in `modes.ts`.
+/// Drill's defaults.
 public let DEFAULT_DRILL = DrillPrefs(
   form: .positions, draw: .due, newPerSession: 8, followLine: true, weakFirst: false, explain: true,
   batchSimilar: true, clock: .off)

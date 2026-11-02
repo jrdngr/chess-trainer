@@ -4,7 +4,7 @@ import Foundation
 import Shared
 
 /// The opening tree: every named opening the book knows, nested the way a
-/// player thinks about them. `src/model/openingTree.ts`.
+/// player thinks about them.
 public final class OpeningNode: @unchecked Sendable {
   /// The defining move order, space-joined. The root's id is "".
   public let id: String
@@ -23,7 +23,7 @@ public final class OpeningNode: @unchecked Sendable {
   public internal(set) var parentId: String?
   public internal(set) var children: [OpeningNode] = []
 
-  // What `regionOf` and `approachOne` work out, kept per node like the prototype's WeakMaps.
+  // What `regionOf` and `approachOne` work out, cached per node.
   private var _approach: Set<String>?
   private var _region: Region?
   private static let lock = NSLock()

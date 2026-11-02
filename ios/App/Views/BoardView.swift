@@ -162,7 +162,7 @@ struct BoardView: View {
   }
 }
 
-/// A piece, drawn with the prototype's own shapes: `Pieces.tsx`.
+/// A piece, drawn with the app's own shapes.
 struct PieceView: View {
   var piece: BoardPiece
   var size: CGFloat
@@ -199,12 +199,11 @@ struct PieceView: View {
   }
 }
 
-/// Arrows over the board, the web's way: `arrowShape` and the arrows layer
-/// in `Board.tsx`. A disc under the piece a run of arrows starts from, a dark
+/// Arrows over the board. A disc under the piece a run of arrows starts from, a dark
 /// edge under each so it reads on light and dark squares, every shaft before
 /// any head, and Growth's soft glow under the lot.
 /// One piece on its square. Keyed by the piece, not the square, so a move
-/// slides it: the web's `.piece` left/top transition.
+/// slides it.
 private struct PlacedPiece: View {
   let id: Int
   let square: String
@@ -214,7 +213,6 @@ private struct PlacedPiece: View {
   let ghost: Bool
 
   var body: some View {
-    // Sized to match the web board's pieces.
     PieceView(piece: piece, size: cell * 0.78)
       .opacity(ghost ? 0.18 : 1)
       .frame(width: cell, height: cell)

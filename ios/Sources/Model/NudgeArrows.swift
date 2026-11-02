@@ -2,7 +2,7 @@ import Book
 import ChessCore
 import Shared
 
-/// Choosing the nudges' colours, and saying why. Part of `src/model/nudge.ts`.
+/// Choosing the nudges' colours, and saying why.
 
 public enum NudgeTone: String, Sendable {
   case toward

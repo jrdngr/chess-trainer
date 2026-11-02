@@ -2,7 +2,7 @@ import Book
 import ChessCore
 import Shared
 
-/// Openings, derived from the tree rather than stored. `src/model/openings.ts`.
+/// Openings, derived from the tree rather than stored.
 
 public struct DerivedOpening: Equatable, Sendable {
   /// Stable within a repertoire: the node the region begins at.

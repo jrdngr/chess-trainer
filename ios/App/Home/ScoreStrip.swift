@@ -1,7 +1,7 @@
 import Model
 import SwiftUI
 
-/// A rating's place between its tier and the next: `RankBar` in `ScoreBar.tsx`.
+/// A rating's place between its tier and the next.
 struct RankBar<Centre: View>: View {
   var rank: Rank
   @ViewBuilder var centre: Centre

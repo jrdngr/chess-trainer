@@ -2,7 +2,7 @@ import Model
 import SwiftUI
 
 /// The next four milestones to earn, ringed by how close they are; all of
-/// them in a sheet. `MilestonesCard` in `HomeWidgets.tsx`.
+/// them in a sheet.
 struct MilestonesCard: View {
   @Environment(AppStore.self) private var store
   @State private var open = false

@@ -1,6 +1,6 @@
 import ChessCore
 
-/// A named book line to inspect and import: `BookLine` in `model/types.ts`.
+/// A named book line to inspect and import.
 struct BookLine: Identifiable, Equatable {
   var id: String
   var name: String
@@ -30,7 +30,7 @@ func bookLinesFrom(_ visible: [String]) -> [BookLine] {
   return BOOK_LINES.filter { line in visible.indices.allSatisfy { $0 < line.moves.count && line.moves[$0] == visible[$0] } }
 }
 
-/// The famous games through a position, at most 8: `attachGames` in `book.ts`.
+/// The famous games through a position, at most 8.
 func topGames(_ fen: String) -> [ReferenceGame] {
   TopGames.byKey[positionKey(fen)] ?? []
 }

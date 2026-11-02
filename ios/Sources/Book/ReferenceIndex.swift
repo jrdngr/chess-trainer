@@ -37,8 +37,7 @@ public struct CatalogueEntry: Equatable, Sendable {
 
 /// The reference book: every position it knows by key, and the names on them.
 ///
-/// `prototype/src/model/book.ts` and `reference.ts`. The famous games the web app pins
-/// to positions (`topGames`) are left for the explorer screen that shows them.
+/// The famous games pinned to positions (`topGames`) are not decoded yet.
 public final class ReferenceIndex: @unchecked Sendable {
   public let entries: OrderedMap<String, ExplorerEntry>
   public let names: OrderedMap<String, OpeningName>
@@ -84,7 +83,7 @@ func normaliseName(_ name: String) -> String {
   name.replacing(#/\bDefense\b/#, with: "Defence")
 }
 
-/// Decode `book.json`. Wire format, as `book.ts` documents it:
+/// Decode `book.json`. Wire format:
 ///   positions: [positionKey, gamesAtPosition, [[san, shareBp, whitePct, drawPct, next], ...]]
 ///   names:     [positionKey, sanPath, eco, name]
 public func decodeBook(_ data: Data) throws -> ReferenceIndex {

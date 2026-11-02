@@ -2,7 +2,7 @@ import Model
 import SwiftUI
 
 /// The lens bar under a board: hold a lens to see it over the position;
-/// let go and the board is clean again. `src/components/Lenses.tsx`.
+/// let go and the board is clean again.
 struct LensBar: View {
   @Binding var held: LensKind?
   var enabled = true

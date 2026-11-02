@@ -4,7 +4,7 @@ import Model
 import SwiftUI
 
 /// Growth opened from Home: the lobby, and a sitting on the row it starts.
-/// `GrowthScreen` in `GrowthScreen.tsx`, with no launch. `onPractice` is
+/// `onPractice` is
 /// Autopilot held to the opening just grown; `onAnalyze` the Analysis tab
 /// on a line, seen from a side.
 struct GrowthModeView: View {

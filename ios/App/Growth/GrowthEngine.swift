@@ -4,8 +4,8 @@ import Model
 import Observation
 
 /// What Growth asks the engine: what it would play past the book
-/// (`engine/engineReplies.ts`, kept in the model's cache), and the eval bar
-/// with what each answer on offer does to it (`engine/moveEvals.ts`).
+/// (kept in the model's cache), and the eval bar
+/// with what each answer on offer does to it.
 @MainActor @Observable
 final class GrowthEngine {
   static let shared = GrowthEngine()

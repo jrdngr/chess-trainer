@@ -1,6 +1,6 @@
 import ChessCore
 
-/// The positions you answer, as the training screens ask them: the item half of `src/model/session.ts`.
+/// The positions you answer, as the training screens ask them.
 
 public struct ExpectedMove: Equatable, Sendable {
   public var nodeId: String

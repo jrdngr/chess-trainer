@@ -7,7 +7,6 @@ import SwiftUI
 enum OnboardingNext: Equatable { case home, autopilot }
 
 /// The first screens a new profile sees: building the first Playbook.
-/// `OnboardingScreen.tsx`.
 ///
 /// Three ways in: a starter set, picked by style; the openings you already
 /// play, picked one at a time; or lines played in on the board. Nothing goes

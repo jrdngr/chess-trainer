@@ -3,7 +3,7 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// Drill: the setup, then the session it describes. `DrillScreen.tsx`.
+/// Drill: the setup, then the session it describes.
 struct DrillView: View {
   @Environment(AppStore.self) private var store
   let tree: OpeningTree

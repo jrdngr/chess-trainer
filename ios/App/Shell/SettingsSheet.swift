@@ -1,7 +1,7 @@
 import Model
 import SwiftUI
 
-/// Settings: the board, Autopilot's extras, the engine, sync and data. `SettingsSheet.tsx`.
+/// Settings: the board, Autopilot's extras, the engine, sync and data.
 struct SettingsSheet: View {
   @Environment(AppStore.self) private var store
   @Environment(\.dismiss) private var dismiss
@@ -99,7 +99,7 @@ struct SettingsSheet: View {
   }
 }
 
-/// A rounded list of rows with lines between them: `.list` in the web app's styles.
+/// A rounded list of rows with lines between them.
 struct ListCard<Content: View>: View {
   @ViewBuilder var content: Content
 
@@ -117,7 +117,7 @@ struct ListCard<Content: View>: View {
   }
 }
 
-/// A setting that is on or off: `Toggle` in `ui.tsx`.
+/// A setting that is on or off.
 struct ToggleRow: View {
   var label: String
   var hint: String?

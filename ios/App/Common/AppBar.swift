@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A screen's top bar: a large title, or a back button with a title and
-/// subtitle, and icon buttons on the right. `AppBar` in `ui.tsx`.
+/// subtitle, and icon buttons on the right.
 struct AppBar<Actions: View>: View {
   var title: String
   var subtitle: String? = nil
@@ -36,7 +36,7 @@ extension AppBar where Actions == EmptyView {
   }
 }
 
-/// A round icon button: `IconButton` in `ui.tsx`. `plain` has no background.
+/// A round icon button. `plain` has no background.
 struct IconButton: View {
   var icon: String
   var size: CGFloat = 20
@@ -89,7 +89,7 @@ struct ExtPill: View {
   }
 }
 
-/// A section's heading over a list, with an aside: `Section` in `ui.tsx`.
+/// A section's heading over a list, with an aside.
 struct SectionHead: View {
   var title: String
   var aside: String? = nil
@@ -104,7 +104,7 @@ struct SectionHead: View {
   }
 }
 
-/// Nothing to show yet, and what would fill it: `Empty` in `ui.tsx`.
+/// Nothing to show yet, and what would fill it.
 struct EmptyNote: View {
   var title: String
   var hint: String

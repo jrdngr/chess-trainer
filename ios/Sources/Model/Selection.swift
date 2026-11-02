@@ -1,7 +1,7 @@
 import ChessCore
 
 /// The global selection: which side, and which region of the opening tree,
-/// every mode works in. `src/model/selection.ts`.
+/// every mode works in.
 
 public enum ColorChoice: String, Sendable, Codable {
   case w, b, random

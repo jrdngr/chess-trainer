@@ -13,7 +13,7 @@ struct StripItem {
   var seek: Int?
 }
 
-/// A scrolling row of moves with a cursor and arrows: `Strip` in `ui.tsx`.
+/// A scrolling row of moves with a cursor and arrows.
 struct MoveStrip: View {
   var items: [StripItem]
   var cursor: Int

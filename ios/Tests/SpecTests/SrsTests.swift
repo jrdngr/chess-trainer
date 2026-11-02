@@ -2,7 +2,7 @@ import Foundation
 import Model
 import Testing
 
-/// spec/cases/functions/srs.json
+/// Golden/cases/functions/srs.json
 @Test func srs() throws {
   let start = 1_790_845_200_000.0  // 2026-10-01T09:00:00Z
   func schedule(_ grades: [Grade]) -> [Card] {

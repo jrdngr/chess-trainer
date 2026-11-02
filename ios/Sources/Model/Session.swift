@@ -1,7 +1,7 @@
 import ChessCore
 import Shared
 
-/// Lining positions up into a sitting: the session half of `src/model/session.ts`.
+/// Lining positions up into a sitting.
 /// The items are `TrainingItems.swift`; `weakness` and `weakestFirst` are in `Autopilot.swift`.
 
 /// Items restricted to the subtree under `nodeId`, its own position included.
@@ -43,7 +43,7 @@ public struct SessionOptions: Sendable {
   }
 }
 
-/// Fisher–Yates, as the prototype draws it.
+/// Fisher–Yates, drawing from the end.
 public func shuffle<T>(_ arr: [T], _ rand: () -> Double) -> [T] {
   var out = arr
   var i = out.count - 1

@@ -1,7 +1,7 @@
 /// A dictionary that remembers insertion order, like a JS `Map`.
 ///
-/// The prototype reads several maps in insertion order and its answers depend
-/// on it (ties broken by whichever came first), so the port keeps the order.
+/// The model reads several maps in insertion order and its answers depend
+/// on it (ties broken by whichever came first).
 public struct OrderedMap<Key: Hashable, Value> {
   public private(set) var keys: [Key] = []
   private var storage: [Key: Value] = [:]

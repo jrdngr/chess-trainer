@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The rating card's effects, each a web keyframe animation. Under Reduce
+/// The rating card's effects, each a keyframe animation. Under Reduce
 /// Motion each shows its end state, or nothing for the ones that only flash.
 
 /// `ratingDelta`: the change dropping in from 1.6x, 0.5s with an overshoot.
@@ -169,7 +169,7 @@ struct SparkBurst: View {
   @Environment(\.accessibilityReduceMotion) private var reduce
   @State private var thrown = false
 
-  /// Angle, distance and flight time of each, as the web spreads them.
+  /// Angle, distance and flight time of each.
   static let sparks: [(a: Double, d: CGFloat, t: Double)] = (0..<16).map { i in
     let tilt: Double = i % 2 == 1 ? 9 : -5
     let a: Double = (Double(i) * 22.5 + tilt).rounded()

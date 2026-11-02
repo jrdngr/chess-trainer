@@ -1,6 +1,6 @@
 import Shared
 
-/// Mistakes made inside the app. `src/model/mistakes.ts`.
+/// Mistakes made inside the app.
 
 public enum MistakeSource: String, Sendable, Codable {
   case drill, openingRun, play

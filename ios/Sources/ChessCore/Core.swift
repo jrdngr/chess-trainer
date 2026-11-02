@@ -1,4 +1,4 @@
-/// The chess the app needs, by FEN: `src/chess/core.ts`.
+/// The chess the app needs, by FEN.
 
 public let START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 

@@ -1,4 +1,4 @@
-// Written out from `prototype/src/model/seed/bookLines.ts` by a one-off script.
+// Generated data: the named book lines Analysis offers.
 
 let BOOK_LINES: [BookLine] = [
   BookLine(

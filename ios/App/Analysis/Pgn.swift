@@ -1,7 +1,7 @@
 import ChessCore
 import Foundation
 
-/// What Analysis needs of `chess/pgn.ts`: the first game's mainline, read
+/// What Analysis needs of PGN: the first game's mainline, read
 /// from pasted PGN, and a line written back out.
 enum Pgn {
   private static let results: Set<String> = ["1-0", "0-1", "1/2-1/2", "*"]

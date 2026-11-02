@@ -8,7 +8,7 @@ extension RatingMove: JSONable {
   }
 }
 
-/// spec/cases/functions/ratings.json
+/// Golden/cases/functions/ratings.json
 @Test func ratings() throws {
   let tree = openingTree(bookIndex)
   let at = 1_790_845_200_000.0
@@ -70,7 +70,7 @@ private func stats(_ days: [JSON], rating: Double = 0, rated: Int? = nil) -> Nod
   return s
 }
 
-/// The scoring functions in spec/cases/functions/home.json and autopilot.json.
+/// The scoring functions in Golden/cases/functions/home.json and autopilot.json.
 @Test func scoringOnHome() throws {
   try check("home", [
     "scoring.streak": { streak(stats($0[0].array, rated: 0), noon($0[1].string)).json },

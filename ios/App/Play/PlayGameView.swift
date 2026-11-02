@@ -2,7 +2,7 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// A game in play, and its end: `Game` in `PlayScreen.tsx`. `onNew` is back
+/// A game in play, and its end. `onNew` is back
 /// to the setup for a new game; `onClose` is out of Play altogether.
 struct PlayGameView: View {
   @Environment(AppStore.self) private var store

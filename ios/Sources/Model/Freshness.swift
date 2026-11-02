@@ -1,7 +1,6 @@
 import ChessCore
 
 /// Freshness: what the last few rounds were about, so the next one is not.
-/// `src/model/freshness.ts`.
 
 /// Rounds until a position seen counts as not seen.
 public let HORIZON = 3

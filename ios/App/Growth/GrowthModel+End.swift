@@ -1,7 +1,7 @@
 import Model
 
 /// What the reveal at the end of a batch offers: practice the opening just
-/// grown, or another run on what is now most worth extending. `GrowthScreen.tsx`.
+/// grown, or another run on what is now most worth extending.
 extension GrowthModel {
   /// The opening grown, and how much practice it is owed, read from the live tree.
   var practice: (opening: OpeningNode, owed: PracticeOwed)? {

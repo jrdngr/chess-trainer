@@ -69,7 +69,7 @@ extension SelectionBar where Trailing == EmptyView {
   init() { self.init { EmptyView() } }
 }
 
-/// Which side you play: `ColorPicker` in `Selection.tsx`.
+/// Which side you play.
 struct ColorPickerSheet: View {
   @Environment(AppStore.self) private var store
   let onClose: () -> Void
@@ -95,7 +95,7 @@ struct ColorPickerSheet: View {
   }
 }
 
-/// A row to pick: `ChoiceRow` in `ui.tsx`.
+/// A row to pick.
 struct ChoiceRow<Leading: View>: View {
   var title: String
   var meta: String?

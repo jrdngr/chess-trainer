@@ -3,7 +3,7 @@ import ChessCore
 import Shared
 
 /// Line drills: Drill's way of asking a whole line from move one.
-/// `src/model/lineDrill.ts`. Each line has its own `LineCard`, moved only by
+/// Each line has its own `LineCard`, moved only by
 /// the one grade given at its end.
 
 public struct DrillLine: Equatable, Sendable {
@@ -112,7 +112,7 @@ public struct DrawOptions {
 
 /// Draw up to `count` different lines: by tier (`draw`), then in proportion
 /// to how often you would meet each, times its weakness when leaning weak.
-/// See `lineDrill.ts` for `only`, `avoid`, `budget` and `similar`.
+/// `DrawOptions` documents `only`, `avoid`, `budget` and `similar`.
 public func drawLines(_ o: DrawOptions) -> [DrillLine] {
   let rep = o.rep
   let now = o.now ?? Env.now()

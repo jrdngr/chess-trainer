@@ -1,8 +1,8 @@
 import Model
 import SwiftUI
 
-/// What a round did to your ratings, one line per opening it is handed:
-/// `Ratings.tsx`. Nothing at all when the round moved none of them.
+/// What a round did to your ratings, one line per opening it is handed.
+/// Nothing at all when the round moved none of them.
 struct RatingsList: View {
   struct Item {
     var id: String
@@ -52,7 +52,7 @@ struct RatingsList: View {
   }
 }
 
-/// A two-sided control, `.segmented` in the web app's styles.
+/// A two-sided control.
 struct SegmentedControl<Value: Hashable>: View {
   @Binding var value: Value
   var options: [(value: Value, label: String)]

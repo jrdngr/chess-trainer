@@ -1,4 +1,4 @@
-// Written out from prototype/src/components/Icons.tsx by a one-off script.
+// Generated data: the line icons' paths.
 
 extension Icon {
   static let specs: [String: IconSpec] = [

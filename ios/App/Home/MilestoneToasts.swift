@@ -3,7 +3,7 @@ import SwiftUI
 
 /// A toast for each milestone earned, once the round that earned it is
 /// recorded; what was already earned when the app opened is never
-/// announced. `useMilestoneToasts` in `HomeWidgets.tsx`.
+/// announced.
 struct MilestoneToasts: ViewModifier {
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts

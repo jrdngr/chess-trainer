@@ -1,7 +1,7 @@
 import ChessCore
 import Shared
 
-/// The Playbook tree: one per side. `src/model/repertoire.ts` and the tree types in `types.ts`.
+/// The Playbook tree: one per side.
 
 /// Where a move came from: see `SOURCE_LABELS`.
 public enum MoveSource: String, Sendable, Codable, CaseIterable {
@@ -45,7 +45,7 @@ public struct Repertoire: Equatable, Sendable, Codable {
 
 nonisolated(unsafe) private var idCounter = 0
 
-/// A fresh id: unique within a session, like the prototype's.
+/// A fresh id: unique within a session.
 public func newId(_ prefix: String = "n") -> String {
   idCounter += 1
   return "\(prefix)_\(String(Int64(Env.now()), radix: 36))_\(String(idCounter, radix: 36))"
@@ -295,8 +295,7 @@ public func leafLines(_ rep: Repertoire) -> [(tipId: String, sans: [String])] {
   return out.jsSorted { cmp($1.sans.count, $0.sans.count) }
 }
 
-/// Every node in the order it was added, as the prototype's `Object.values(rep.nodes)`
-/// reads them: by when, then by the counter `newId` ends an id with.
+/// Every node in the order it was added: by when, then by the counter `newId` ends an id with.
 public func nodesInOrder(_ rep: Repertoire) -> [RepMove] {
   func counter(_ id: String) -> Int { id.split(separator: "_").last.flatMap { Int($0, radix: 36) } ?? 0 }
   return rep.nodes.values.sorted { a, b in

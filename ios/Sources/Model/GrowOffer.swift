@@ -1,7 +1,7 @@
 import Book
 import ChessCore
 
-/// The offer to grow, at the end of a run: `src/model/growOffer.ts`.
+/// The offer to grow, at the end of a run.
 
 /// Clean finishes every line needs, since it last changed, before the opening is ready to grow.
 public let CLEAN_FINISHES = 3

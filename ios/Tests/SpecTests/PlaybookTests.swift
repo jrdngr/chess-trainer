@@ -36,7 +36,7 @@ private func listed(_ o: DerivedOpening) -> JSON {
   ])
 }
 
-/// spec/cases/functions/playbook.json
+/// Golden/cases/functions/playbook.json
 @Test func playbook() throws {
   let index = bookIndex
   func mistake(_ key: String, _ played: String) -> Mistake {
