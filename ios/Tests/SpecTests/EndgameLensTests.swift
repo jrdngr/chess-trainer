@@ -24,6 +24,15 @@ private let BAD_BISHOP = "1r4k1/4b1p1/3p1p2/1P1Kp3/6P1/8/7N/1R6 w - - 0 1"
   #expect(pawnSquare("8/8/8/8/8/8/P7/7k w - - 0 1", "a2", .w) == Segment(from: "a3", to: "f8"))
   // With a rook to stop it, the race is off.
   #expect(lensMarks(.pawns, "r7/8/4k3/P7/8/8/8/6K1 w - - 0 1", .w).boxes == [])
+  // A king on the pawn's own file: the square runs toward the board, not off its edge.
+  #expect(pawnSquare("7k/8/8/8/7P/8/8/K7 w - - 0 1", "h4", .w) == Segment(from: "h4", to: "d8"))
+}
+
+@Test func anOutsidePasserHasEveryEnemyPawnOnOneSide() {
+  let found = passers("4k3/8/p6p/8/4P3/8/8/4K3 w - - 0 1")
+  // e4 has enemy pawns on both wings: passed, but not outside.
+  #expect(found.first { $0.square == "e4" }?.kind == nil)
+  #expect(found.first { $0.square == "a6" }?.kind == "O")
 }
 
 @Test func keySquaresFollowThePawn() {

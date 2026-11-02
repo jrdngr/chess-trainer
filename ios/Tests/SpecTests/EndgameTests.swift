@@ -70,3 +70,19 @@ private let ROOKS = "r1r3k1/5ppp/8/8/8/8/5PPP/R1R3K1 w - - 0 1"
   #expect(slipText(.draw, .draw) == nil)
   #expect(slipText(.draw, .win) == nil)
 }
+
+@Test func aGivenAwayEndingIsKeptFromThePositionBeforeTheMove() throws {
+  // Black to move, deep into the fifty-move count, gave a won rook ending away.
+  let fen = "8/8/8/4k3/8/8/2r5/4K3 b - - 87 120"
+  let slip = Ending.blunder(played: "Kd4", best: "Ke4", lost: 500, reply: nil, slip: ResultSlip(from: .win, to: .draw))
+  let kept = try #require(endgameGivenAway(slip, fen: fen, name: "Sicilian", at: 5))
+  // Still Black to move, the fifty-move count started afresh, so the win is there to be played for.
+  #expect(kept.fen == "8/8/8/4k3/8/8/2r5/4K3 b - - 0 120")
+  #expect(kept.goal == .win)
+  // A draw given away as a loss is kept to be held.
+  let held = Ending.blunder(played: "Kd4", best: "Ke4", lost: 300, reply: nil, slip: ResultSlip(from: .draw, to: .loss))
+  #expect(endgameGivenAway(held, fen: fen, name: "Sicilian", at: 5)?.goal == .hold)
+  // A middlegame blunder, or a run that ended on the board, keeps nothing.
+  #expect(endgameGivenAway(.blunder(played: "Kd4", best: nil, lost: 500, reply: nil, slip: nil), fen: fen, name: "", at: 5) == nil)
+  #expect(endgameGivenAway(.draw, fen: fen, name: "", at: 5) == nil)
+}

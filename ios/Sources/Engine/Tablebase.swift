@@ -17,11 +17,14 @@ public enum Tablebase {
   }()
 
   /// The result for the side to move in `fen`, or nil when the tables don't
-  /// cover it: more than four pieces, castling rights left, or a failed probe.
+  /// cover it: more than four pieces, castling rights left, a king missing, a
+  /// fifty-move count of 50 or more, or a failed probe.
   public static func probe(_ fen: String) -> EndResult? {
     let fields = fen.split(separator: " ").map(String.init)
     guard fields.count >= 2 else { return nil }
     if fields.count > 2 && fields[2] != "-" { return nil }
+    // The tables assume a fresh fifty-move count; well into it, a table win may be a draw.
+    if fields.count > 4, let clock = Int(fields[4]), clock >= 50 { return nil }
     var white: UInt64 = 0, black: UInt64 = 0, kings: UInt64 = 0, queens: UInt64 = 0
     var rooks: UInt64 = 0, bishops: UInt64 = 0, knights: UInt64 = 0, pawns: UInt64 = 0
     var count = 0
@@ -44,7 +47,9 @@ public enum Tablebase {
       count += 1
       file += 1
     }
-    guard count <= maxPieces, ready else { return nil }
+    // Fathom reads the king squares without checking them: one king a side, or no probe.
+    guard count <= maxPieces, (white & kings).nonzeroBitCount == 1, (black & kings).nonzeroBitCount == 1, ready
+    else { return nil }
     var ep: UInt32 = 0
     if fields.count > 3, fields[3] != "-", let sq = square(fields[3]) { ep = UInt32(sq) }
     let wdl = tb_probe_wdl_impl(white, black, kings, queens, rooks, bishops, knights, pawns, ep, fields[1] == "w")

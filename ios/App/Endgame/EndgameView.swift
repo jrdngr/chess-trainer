@@ -62,6 +62,7 @@ struct EndgameHomeView: View {
             Text(due.isEmpty ? "Play the next one" : "Play \(due.count) due").frame(maxWidth: .infinity)
           }
           .buttonStyle(PlayButtonStyle(kind: .accent, block: true))
+          .disabled(due.isEmpty && record.next(Env.now()) == nil)
           ForEach(ENDGAME_FAMILIES, id: \.id) { family in
             let rows = record.entries.filter { $0.family == family.id }
             if !rows.isEmpty { section(family, rows, record) }

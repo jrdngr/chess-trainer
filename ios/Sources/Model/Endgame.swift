@@ -76,3 +76,15 @@ public func slipText(_ from: EndResult, _ to: EndResult) -> String? {
   func word(_ r: EndResult) -> String { r == .win ? "win" : r == .draw ? "draw" : "loss" }
   return "\(word(from).prefix(1).uppercased())\(word(from).dropFirst()) slipped to a \(word(to))"
 }
+
+/// The position Endgame mode keeps when a run ends on an endgame result given
+/// away: `fen` is the position before the move, yours to play. Its fifty-move
+/// count starts afresh, so the round it becomes has the moves to win. Nil when
+/// the run ended any other way.
+public func endgameGivenAway(_ how: Ending, fen: String, name: String, at: Double) -> SavedEndgame? {
+  guard case .blunder(_, _, _, _, let slip?) = how, slip.to < slip.from else { return nil }
+  var fields = fen.split(separator: " ", omittingEmptySubsequences: false).map(String.init)
+  if fields.count > 4 { fields[4] = "0" }
+  let fresh = fields.joined(separator: " ")
+  return SavedEndgame(id: "saved-\(positionKey(fresh))", fen: fresh, goal: slip.from == .win ? .win : .hold, name: name, at: at)
+}

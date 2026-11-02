@@ -151,10 +151,14 @@ public struct SavedEndgame: Equatable, Sendable, Codable {
 public let SAVED_ENDGAMES_CAP = 30
 
 public extension SavedEndgame {
+  /// The position with fresh move counters, so the fifty-move count starts with the round.
+  /// A win with a pawn of yours is to be queened; a win without one, mated.
   var entry: EndgameEntry {
-    EndgameEntry(
-      id: id, family: "games", name: name, fen: fen, setup: nil, goal: goal,
-      mission: goal == .win ? .queenPawn : .holdFor(15), intro: nil)
+    let you = fenTurn(fen)
+    let pawn = piecesFromFen(fen).contains { $0.type == .p && $0.color == you }
+    return EndgameEntry(
+      id: id, family: "games", name: name, fen: "\(positionKey(fen)) 0 1", setup: nil, goal: goal,
+      mission: goal == .hold ? .holdFor(15) : pawn ? .queenPawn : .mateIn(50), intro: nil)
   }
 }
 

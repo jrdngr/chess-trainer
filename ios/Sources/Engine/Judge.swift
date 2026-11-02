@@ -105,13 +105,13 @@ public func judge(_ engine: ChessEngine, _ base: Baseline, san: String, uci: Str
     base.fen,
     EngineLimits(depth: CONFIRM_DEPTH, movetime: CONFIRM_MS, multiPv: searchmoves.count, searchmoves: searchmoves)
   ) { snap in
-    // A sound move is settled at the quick check.
+    // A sound move, or one the tablebase or a known ending already settles, is settled at the quick check.
     guard let verdict = weigh(snap) else { return false }
-    return (verdict.ok || theirs == nil) && (clock.elapsed >= THINK_MS || snap.depth >= QUICK_DEPTH)
+    return (verdict.ok || theirs == nil || exact != nil) && (clock.elapsed >= THINK_MS || snap.depth >= QUICK_DEPTH)
   }
   let verdict = weigh(snap)
   var judged = Judgement(
-    san: san, ok: verdict?.ok ?? true, lost: verdict?.lost ?? 0, best: base.best, before: verdict?.before ?? base.cp,
+    san: san, ok: verdict?.ok ?? exact.map { $0.after >= $0.before } ?? true, lost: verdict?.lost ?? 0, best: base.best, before: verdict?.before ?? base.cp,
     after: verdict?.after ?? base.cp, moment: moment, found: verdict?.found ?? false, reply: verdict?.reply ?? nil,
     missedMate: verdict?.missedMate ?? false, exact: exact.map { ResultSlip(from: $0.before, to: $0.after) })
   // Your move is the engine's own choice: sound, and at a moment, found.
