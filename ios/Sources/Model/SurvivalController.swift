@@ -290,7 +290,7 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
   if !judged.ok {
     let slip =
       judged.exact
-      ?? (isEndgame(run.fen) ? ResultSlip(from: resultOf(run.color, judged.before), to: resultOf(run.color, judged.after)) : nil)
+      ?? (endgameReached(run.played) ? ResultSlip(from: resultOf(run.color, judged.before), to: resultOf(run.color, judged.after)) : nil)
     return then(step) {
       finish($0, $0.state, .blunder(played: judged.san, best: judged.best, lost: judged.lost, reply: judged.reply, slip: slip))
     }

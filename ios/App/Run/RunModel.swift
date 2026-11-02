@@ -149,6 +149,15 @@ final class RunModel {
     return PrepSpan(played: min(run.played.count, total), total: total, book: book > 0 ? book : nil, ext: ext < total ? ext : nil)
   }
   var run: Run { session.state.run }
+
+  @ObservationIgnored private var reachedFor: (played: [String], on: Bool)?
+  /// The game has been an endgame at some point, so its endgame rules are on.
+  var endgameOn: Bool {
+    if let reachedFor, reachedFor.played == run.played { return reachedFor.on }
+    let on = endgameReached(run.played)
+    reachedFor = (run.played, on)
+    return on
+  }
   var myTurn: Bool { playersTurn(session) }
   var live: Bool { phase == .playing && session.ending == nil }
   var prepNow: [String] { prepMoves(session) }
@@ -368,7 +377,7 @@ final class RunModel {
     }
     pending = move
     searchReply(after: move.after)
-    let fen = run.fen, color = run.color, moments = prefs.moments
+    let fen = run.fen, color = run.color, moments = prefs.moments, reached = endgameOn
     spawn { [weak self] in
       guard let self else { return }
       var base = self.baseline?.fen == fen ? self.baseline : nil
@@ -377,7 +386,7 @@ final class RunModel {
         self.pending = nil
         return
       }
-      let judged = await judge(self.engine, base, san: move.san, uci: move.uci, color: color, moments: moments)
+      let judged = await judge(self.engine, base, san: move.san, uci: move.uci, color: color, moments: moments, reached: reached)
       self.pending = nil
       // Ended while the judge was out: the move never counted.
       guard !Task.isCancelled, self.live, self.run.fen == fen else { return }

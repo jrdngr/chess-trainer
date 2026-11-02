@@ -88,7 +88,7 @@ struct RunView: View {
   /// otherwise from the engine's score.
   private var endgameResult: EndResult? {
     let fen = model.shownFen
-    guard isEndgame(fen) else { return nil }
+    guard isEndgame(fen) || (fen == model.run.fen && model.endgameOn) else { return nil }
     let me = model.run.color
     return exactResult(fen, for: me) ?? model.session.evalCp.map { resultOf(me, $0) }
   }
@@ -117,8 +117,8 @@ struct RunView: View {
     ZStack {
       VStack(spacing: 6) {
         Text(openingName(model.tree, model.openingId)).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
-        if isEndgame(model.shownFen) {
-          // Endgame rules: moves are judged by the result they keep.
+        if model.endgameOn {
+          // Endgame rules, on for the rest of the game once it reaches an endgame: moves are judged by the result they keep.
           Text("ENDGAME").font(.system(size: 11, weight: .bold)).tracking(0.7).foregroundStyle(Theme.text2)
         } else {
           PrepSegmentsView(span: model.span, height: 4).frame(maxWidth: 150)

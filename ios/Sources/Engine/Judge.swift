@@ -64,8 +64,12 @@ private final class Clock: @unchecked Sendable {
 }
 
 /// Judge your move against the baseline: a sound move settles at the quick
-/// check, a suspected blunder waits for the whole search.
-public func judge(_ engine: ChessEngine, _ base: Baseline, san: String, uci: String, color: Color, moments: Bool) async -> Judgement {
+/// check, a suspected blunder waits for the whole search. `reached` is true
+/// once the game has been an endgame, so its endgame rules stay on.
+public func judge(
+  _ engine: ChessEngine, _ base: Baseline, san: String, uci: String, color: Color, moments: Bool, reached: Bool = false
+) async -> Judgement {
+  let endgame = reached || isEndgame(base.fen)
   let theirs = base.bestUci.flatMap { $0 != uci ? $0 : nil }
   let moment = moments && base.isMomentFor(color)
   /// At a moment you missed, the second best is what your move answers to.
@@ -89,14 +93,14 @@ public func judge(_ engine: ChessEngine, _ base: Baseline, san: String, uci: Str
     guard let yourCp = scoreOf(yours), let topCp = scoreOf(top) else { return nil }
     // Your move scored above the engine's: nothing lost.
     let before = colorBest(color, topCp, yourCp)
-    let result = judgeMove(base.fen, color, before, yourCp, exact: exact)
+    let result = judgeMove(base.fen, color, before, yourCp, exact: exact, reached: endgame)
     let found = moment && result.lost <= MOMENT_FOUND
     // A moment missed is judged against the next best move.
     let nextCp = next.flatMap(scoreOf)
-    let ok = moment && !found && nextCp != nil ? judgeMove(base.fen, color, colorBest(color, nextCp!, yourCp), yourCp, exact: exact).ok : result.ok
+    let ok = moment && !found && nextCp != nil ? judgeMove(base.fen, color, colorBest(color, nextCp!, yourCp), yourCp, exact: exact, reached: endgame).ok : result.ok
     // In an endgame, a mate the engine had and your move doesn't keep: the run goes on, but you hear about it.
     func mates(_ line: EngineLine) -> Bool { line.mate.map { ($0 > 0) == (color == .w) } ?? false }
-    let missedMate = isEndgame(base.fen) && mates(top) && !mates(yours)
+    let missedMate = endgame && mates(top) && !mates(yours)
     return (ok, result.lost, before, yourCp, found, yours.pv.count > 1 ? yours.pv[1] : nil, missedMate)
   }
 

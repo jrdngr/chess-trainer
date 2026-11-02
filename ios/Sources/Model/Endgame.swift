@@ -37,6 +37,10 @@ public func gamePhase(_ fen: String) -> Int {
 
 public func isEndgame(_ fen: String) -> Bool { gamePhase(fen) <= ENDGAME_PHASE }
 
+/// Whether a game played from the start has reached an endgame at any point:
+/// once it has, its endgame rules stay on, even after a promotion adds material.
+public func endgameReached(_ played: [String]) -> Bool { walkSan(played).fens.contains(where: isEndgame) }
+
 /// The result an engine score points to for one side; the score is White's.
 public func resultOf(_ color: Color, _ cp: Double) -> EndResult {
   let mine = color == .w ? cp : -cp
@@ -60,13 +64,13 @@ public func judgeEndgame(
 }
 
 /// Judge a move past the prep in the position `fen`: by its result in an
-/// endgame, by the blunder line before that. `exact` results put any position
-/// under the endgame rules.
+/// endgame, by the blunder line before that. `exact` results, or a game that
+/// has `reached` an endgame, put any position under the endgame rules.
 public func judgeMove(
   _ fen: String, _ color: Color, _ before: Double, _ after: Double,
-  exact: (before: EndResult, after: EndResult)? = nil
+  exact: (before: EndResult, after: EndResult)? = nil, reached: Bool = false
 ) -> EvalVerdict {
-  exact != nil || isEndgame(fen) ? judgeEndgame(color, before, after, exact: exact) : judgeByEval(color, before, after)
+  exact != nil || reached || isEndgame(fen) ? judgeEndgame(color, before, after, exact: exact) : judgeByEval(color, before, after)
 }
 
 /// What a slip in an endgame did to the result, for the end screen: "Win
