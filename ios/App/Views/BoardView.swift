@@ -77,7 +77,7 @@ struct BoardView: View {
         ForEach(pieces.keys.sorted().map { (id: ids[$0] ?? 0, square: $0) }, id: \.id) { placed in
           let piece = pieces[placed.square]!
           PlacedPiece(id: placed.id, square: placed.square, piece: piece, cell: cell, position: position(placed.square),
-                      ghost: marks?.ghost == true && piece.type != .p)
+                      ghost: marks.map { $0.focus.map { !$0.contains(placed.square) } ?? ($0.ghost == true && piece.type != .p) } ?? false)
         }
         .animation(reduceMotion ? nil : Motion.slide(0.16), value: fen)
         if let marks { LensOverView(marks: marks, cell: cell, position: position) }

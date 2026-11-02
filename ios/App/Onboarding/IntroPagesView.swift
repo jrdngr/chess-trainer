@@ -11,8 +11,8 @@ struct IntroPagesView: View {
   @State private var page = 0
   @State private var lens: LensKind?
 
-  /// A Carlsbad, where every lens has something to show and Plan has a plan.
-  static let line = ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "cxd5", "exd5", "e3", "c6", "Bd3", "Be7", "Nf3", "Nbd7"]
+  /// A Carlsbad, where every lens has something to show (...h6 puts the bishop on g5 at risk) and Plan has a plan.
+  static let line = ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "cxd5", "exd5", "Bg5", "c6", "e3", "Be7", "Bd3", "Nbd7", "Nf3", "h6"]
   private static let fen = walkSan(line).fens.last!
   private static let pages = 4
 

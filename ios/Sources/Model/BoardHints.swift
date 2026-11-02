@@ -45,6 +45,9 @@ public struct LensMarks: Equatable, Sendable, Codable {
   public var lines: [Segment]?
   public var arrows: [LensArrow]?
   public var caption: String?
+  /// The squares of the pieces the lens is about. The board dims every other piece,
+  /// so a held lens always shows, even when it finds nothing.
+  public var focus: [String]?
   public init() {}
 }
 
@@ -636,11 +639,30 @@ public func newlyLoose(_ before: String, _ after: String, _ me: Color, from: Str
 }
 
 public func lensMarks(_ kind: LensKind, _ fen: String, _ me: Color, _ prevFen: String? = nil) -> LensMarks {
+  var marks: LensMarks
   switch kind {
-  case .pawns: return pawnsLens(fen)
-  case .pieces: return piecesLens(fen, me)
-  case .space: return spaceLens(fen, me)
-  case .kings: return kingsLens(fen, me)
-  case .threats: return threatsLens(fen, me, prevFen)
+  case .pawns: marks = pawnsLens(fen)
+  case .pieces: marks = piecesLens(fen, me)
+  case .space: marks = spaceLens(fen, me)
+  case .kings: marks = kingsLens(fen, me)
+  case .threats: marks = threatsLens(fen, me, prevFen)
   }
+  marks.focus = lensFocus(kind, marks, fen)
+  return marks
+}
+
+/// The pieces a lens marks: pawns for Pawns, the pieces it rates for Pieces,
+/// none for Space (its squares are the point), the kings with their shields
+/// and attackers for Kings, and what is at risk for Threats.
+func lensFocus(_ kind: LensKind, _ marks: LensMarks, _ fen: String) -> [String] {
+  var squares: [String]
+  switch kind {
+  case .pawns: squares = piecesFromFen(fen).filter { $0.type == .p }.map(\.square)
+  case .pieces: squares = (marks.tints ?? []).map(\.square) + (marks.rings ?? []).map(\.square) + (marks.arrows ?? []).map(\.from)
+  case .space: squares = []
+  case .kings: squares = (marks.shields ?? []).map(\.square) + (marks.pips ?? []).map(\.square) + (marks.zone ?? [])
+  case .threats: squares = (marks.rings ?? []).map(\.square) + (marks.arrows ?? []).flatMap { [$0.from, $0.to] }
+  }
+  let occupied = Set(piecesFromFen(fen).map(\.square))
+  return Array(Set(squares).intersection(occupied)).sorted()
 }
