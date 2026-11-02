@@ -7,6 +7,7 @@ struct SettingsSheet: View {
   @Environment(\.dismiss) private var dismiss
   /// The reset waiting to be confirmed, if either: one at a time.
   @State private var armed: Reset?
+  @State private var intro = false
 
   enum Reset { case progress, all }
 
@@ -22,7 +23,19 @@ struct SettingsSheet: View {
           }
           .buttonStyle(.plain)
         }
-        section("Board", first: true)
+        ListCard {
+          Button { intro = true } label: {
+            HStack {
+              Text("How it works").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+              Spacer()
+              Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3)
+            }
+            .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+        }
+        .padding(.top, 16)
+        section("Board")
         ListCard {
           SegmentedControl(
             value: Binding(get: { settings.boardTheme }, set: { t in store.update { $0.settings.boardTheme = t } }),
@@ -61,6 +74,7 @@ struct SettingsSheet: View {
       .padding(20)
     }
     .onDisappear { armed = nil }
+    .fullScreenCover(isPresented: $intro) { IntroPagesView { intro = false } }
   }
 
   private func section(_ title: String, first: Bool = false) -> some View {

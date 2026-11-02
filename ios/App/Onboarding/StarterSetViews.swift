@@ -41,6 +41,8 @@ struct SetListView: View {
     }
     .padding(16).frame(maxWidth: .infinity, alignment: .leading)
     .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
+    // The first set is the one to start with: it carries the accent, like Suggest a set.
+    .overlay { if set.id == STARTER_SETS[0].id { RoundedRectangle(cornerRadius: 16).strokeBorder(Theme.accent, lineWidth: 1.5) } }
     .contentShape(Rectangle())
   }
 }

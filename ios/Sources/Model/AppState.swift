@@ -13,6 +13,8 @@ public struct Settings: Equatable, Sendable, Codable {
   public var showCoordinates = true
   /// Whether the opening question has been put to this player.
   public var onboarded = false
+  /// Whether the pages on how the app works have been shown.
+  public var seenIntro = false
   /// Rounds that start inside an opening play the moves into it for you first.
   public var autoplay = true
   public var engineEnabled = true
@@ -28,7 +30,7 @@ public struct Settings: Equatable, Sendable, Codable {
   public init() {}
 
   enum CodingKeys: String, CodingKey {
-    case selection, favoriteOpenings, autopilot, hapticFeedback, showCoordinates, onboarded, autoplay
+    case selection, favoriteOpenings, autopilot, hapticFeedback, showCoordinates, onboarded, seenIntro, autoplay
     case engineEnabled, boardTheme, cloudSync, lichessUsername, chesscomUsername, growth, play
     case survival
     case drill
@@ -44,6 +46,7 @@ public struct Settings: Equatable, Sendable, Codable {
     hapticFeedback = try c.decodeIfPresent(Bool.self, forKey: .hapticFeedback) ?? hapticFeedback
     showCoordinates = try c.decodeIfPresent(Bool.self, forKey: .showCoordinates) ?? showCoordinates
     onboarded = try c.decodeIfPresent(Bool.self, forKey: .onboarded) ?? onboarded
+    seenIntro = try c.decodeIfPresent(Bool.self, forKey: .seenIntro) ?? seenIntro
     autoplay = try c.decodeIfPresent(Bool.self, forKey: .autoplay) ?? autoplay
     engineEnabled = try c.decodeIfPresent(Bool.self, forKey: .engineEnabled) ?? engineEnabled
     boardTheme = try c.decodeIfPresent(BoardTheme.self, forKey: .boardTheme) ?? boardTheme

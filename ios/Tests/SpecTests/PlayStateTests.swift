@@ -8,6 +8,8 @@ import Testing
   let old = try JSONDecoder().decode(AppState.self, from: Data(#"{"settings":{"onboarded":true}}"#.utf8))
   #expect(old.settings.play == DEFAULT_PLAY)
   #expect(old.importedGames.isEmpty)
+  // A profile from before the intro pages still gets them once.
+  #expect(!old.settings.seenIntro)
   let partial = try JSONDecoder().decode(AppState.self, from: Data(#"{"settings":{"play":{"level":"strong"}}}"#.utf8))
   #expect(partial.settings.play.level == "strong")
   #expect(partial.settings.play.takeBacks == DEFAULT_PLAY.takeBacks)

@@ -45,7 +45,9 @@ struct RootView: View {
   }
 
   @ViewBuilder private func content(_ tree: OpeningTree, _ index: ReferenceIndex) -> some View {
-    if !store.state.settings.onboarded {
+    if !store.state.settings.seenIntro {
+      IntroPagesView { store.update { $0.settings.seenIntro = true } }
+    } else if !store.state.settings.onboarded {
       OnboardingView(tree: tree, index: index) { next in
         tab = .home
         mode = next == .autopilot ? .autopilot : nil
@@ -139,8 +141,13 @@ struct RootView: View {
   }
 
   /// Debug builds onboard a fresh install with a starter set, `SEED_SET=classical`, for screenshots.
+  /// `SEED_SET` and `ONB_STEP` both skip the intro pages.
   private func debugSeed() {
     #if DEBUG
+      let env = ProcessInfo.processInfo.environment
+      if env["SEED_SET"] != nil || env["ONB_STEP"] != nil, !store.state.settings.seenIntro {
+        store.update { $0.settings.seenIntro = true }
+      }
       guard let id = ProcessInfo.processInfo.environment["SEED_SET"], let tree = store.tree,
         !store.state.settings.onboarded, let set = STARTER_SETS.first(where: { $0.id == id })
       else { return }
