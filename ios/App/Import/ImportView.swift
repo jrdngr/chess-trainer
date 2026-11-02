@@ -74,6 +74,8 @@ struct ImportView: View {
   private func run() async {
     let name = trimmed
     guard !name.isEmpty else { return }
+    // The site asked, even if the picker moves while the fetch runs.
+    let site = self.site
     loading = true
     error = nil
     let result = await fetchGames(site, name, max: 120)
@@ -82,7 +84,6 @@ struct ImportView: View {
     case .failed(let reason, let message):
       error = (message, reason == .blocked)
     case .ok(let fetched):
-      let site = self.site
       store.update {
         $0.setImportedGames(fetched)
         if site == .lichess { $0.settings.lichessUsername = name } else { $0.settings.chesscomUsername = name }

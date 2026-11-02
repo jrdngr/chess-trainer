@@ -20,12 +20,14 @@ func colorOf(white: String, black: String, _ username: String) -> Color? {
 }
 
 /// Turn a PGN blob into importable games, tagging which side the user had.
+/// A game set up from another position is left out: an imported game's moves are read from the start.
 public func gamesFromPgn(_ pgn: String, _ username: String, _ source: ImportedGame.Source = .pgn) -> [ImportedGame] {
   var out: [ImportedGame] = []
   for (i, game) in parsePgn(pgn).enumerated() {
+    let h = game.headers
+    if let fen = h["FEN"], positionKey(fen) != positionKey(START_FEN) { continue }
     let moves = pgnMainline(game)
     if moves.isEmpty { continue }
-    let h = game.headers
     let white = h["White"] ?? "White"
     let black = h["Black"] ?? "Black"
     out.append(ImportedGame(

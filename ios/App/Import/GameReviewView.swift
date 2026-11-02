@@ -24,7 +24,12 @@ struct GameReviewView: View {
 
   private var reps: [Repertoire] { store.state.repertoireList }
   private var rep: Repertoire? { store.state.repertoires[repId] ?? reps.first }
-  private var reportKey: String { "\(rep?.id ?? "")|\(games.count)|\(games.first?.id ?? "")" }
+  /// The report is rebuilt whenever the Playbook or any game changes, a game's side included.
+  private struct ReportKey: Equatable {
+    var repId: String?
+    var games: [ImportedGame]
+  }
+  private var reportKey: ReportKey { ReportKey(repId: rep?.id, games: games) }
 
   var body: some View {
     VStack(spacing: 0) {

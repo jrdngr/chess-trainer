@@ -166,6 +166,7 @@ public func undo(_ session: GrowthSession, _ live: Repertoire?, all: Bool = fals
   next.answer = nil
   next.batch = step.batch
   next.run = step.run
+  next.edge = false
   next.phase = .hole
   return (next, effects)
 }

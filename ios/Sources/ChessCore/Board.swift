@@ -94,6 +94,8 @@ struct Board {
           lastDigit = true
         } else {
           guard let type = PieceType(rawValue: ch.lowercased()), f < 8 else { return nil }
+          // A pawn on the first or last rank has no move the generator can index.
+          guard type != .p || (r != 0 && r != 7) else { return nil }
           let color: Color = ch.isUppercase ? .w : .b
           let sq = r * 16 + f
           if type == .k {
@@ -115,6 +117,17 @@ struct Board {
     if rights.contains("Q") { castling[.w] |= Flag.qside }
     if rights.contains("k") { castling[.b] |= Flag.kside }
     if rights.contains("q") { castling[.b] |= Flag.qside }
+    // A right counts only with its king and rook at home: castling from anywhere else steps off the board.
+    for color in [Color.w, .b] {
+      let home = color == .w ? 116 : 4
+      guard kings[color] == home else {
+        castling[color] = 0
+        continue
+      }
+      for rook in Board.rooks[color]! where squares[rook.square] != Piece(type: .r, color: color) {
+        castling[color] &= ~rook.flag
+      }
+    }
     if tokens[3] != "-" {
       guard let sq = ox88(tokens[3]), rank(sq) == (turn == .w ? 2 : 5) else { return nil }
       ep = sq

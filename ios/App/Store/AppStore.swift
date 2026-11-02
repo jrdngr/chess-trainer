@@ -15,6 +15,8 @@ final class AppStore {
   var lastFavorite: String?
   /// Any favorite resolved ahead of time, so Home's button and the round it starts agree.
   @ObservationIgnored private var ahead: (key: String, selection: Selection)?
+  /// The save exists but could not be read (locked, say): saving now would replace it with a fresh state.
+  @ObservationIgnored private var saveBlocked = false
 
   private let file = URL.applicationSupportDirectory.appending(path: "playbook.json")
 
@@ -27,19 +29,28 @@ final class AppStore {
       else { return nil }
       return (index, openingTree(index))
     }.value
-    if let data = try? Data(contentsOf: file) {
-      do {
-        state = try JSONDecoder().decode(AppState.self, from: data)
-      } catch {
-        // The next save would overwrite it with a fresh state: keep the unreadable one beside it.
-        print("load failed: \(error)")
-        keepUnreadable(data)
+    if FileManager.default.fileExists(atPath: file.path(percentEncoded: false)) {
+      if let data = try? Data(contentsOf: file) {
+        decode(data)
+      } else {
+        print("load failed: playbook.json could not be read")
+        saveBlocked = true
       }
     }
     if let built {
       index = built.0
       tree = built.1
       catalog = pickerCatalog(built.1)
+    }
+  }
+
+  private func decode(_ data: Data) {
+    do {
+      state = try JSONDecoder().decode(AppState.self, from: data)
+    } catch {
+      // The next save would overwrite it with a fresh state: keep the unreadable one beside it.
+      print("load failed: \(error)")
+      keepUnreadable(data)
     }
   }
 
@@ -51,6 +62,7 @@ final class AppStore {
   }
 
   func save() {
+    guard !saveBlocked else { return }
     do {
       try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
       try JSONEncoder().encode(state).write(to: file, options: .atomic)

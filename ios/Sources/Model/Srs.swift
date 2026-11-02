@@ -162,7 +162,7 @@ public func review<C: Schedule>(_ card: C, _ grade: Grade, _ now: Double = Env.n
     if grade == .easy {
       stage = .review
       step = 0
-      interval = clampInterval(cfg.easyInterval, cfg)
+      interval = clampInterval(card.lapses > 0 ? max(cfg.easyInterval, card.interval) : cfg.easyInterval, cfg)
       delay = interval * DAY
     } else if grade == .hard {
       // Stay on the step, but come back a little sooner than "good".

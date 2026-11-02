@@ -64,6 +64,8 @@ final class RunModel {
   private var spanHeld: PrepSpan?
   /// A move held back by the Undefended flash: what it leaves loose.
   private(set) var flash: (move: LegalMove, loose: [String])?
+  /// Counts held moves, so a flash's timer lands only the hold it began with.
+  private var flashCount = 0
   /// The Survival record as it stood before this run ended, to tell a new best.
   private(set) var before: SurvivalRecord?
 
@@ -282,7 +284,7 @@ final class RunModel {
     thinking = true
     spawn { [weak self] in
       try? await Task.sleep(for: .seconds(Self.replyMs))
-      guard let self, self.live, !self.myTurn else { return }
+      guard let self, !Task.isCancelled, self.live, !self.myTurn else { return }
       if let step = bookTurn(self.session, self.index, self.picker) {
         self.thinking = false
         self.apply(step)
@@ -301,7 +303,7 @@ final class RunModel {
       }
       let san = chooseMove(snap.lines, level, self.picker).flatMap { applyUci(fen, $0)?.san }
       self.thinking = false
-      guard self.live, self.run.fen == fen else { return }
+      guard !Task.isCancelled, self.live, self.run.fen == fen else { return }
       if let san {
         self.apply(engineMove(self.session, san))
       }
@@ -341,9 +343,11 @@ final class RunModel {
       let loose = newlyLoose(run.fen, move.after, run.color, from: move.from, to: move.to)
       if !loose.isEmpty {
         Haptics.buzz(12, on: store.state.settings.hapticFeedback)
+        flashCount += 1
+        let count = flashCount
         flash = (move, loose)
         later(Self.flashMs) { model in
-          guard let held = model.flash, held.move.uci == move.uci else { return }
+          guard model.flash != nil, model.flashCount == count else { return }
           model.flash = nil
           model.commit(move, seconds: seconds)
         }
@@ -388,6 +392,7 @@ final class RunModel {
 
   /// You ended the round.
   func endRound() {
+    guard finish == nil else { return }
     stop()
     pending = nil
     flash = nil

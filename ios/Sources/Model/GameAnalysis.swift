@@ -25,10 +25,13 @@ public struct PlayerTree {
 
 private enum Outcome { case win, draw, loss }
 
+/// A game without a decisive result ("1/2-1/2", or "*" for one unfinished) counts as a draw.
 private func scoreFor(_ game: ImportedGame, _ color: Color) -> Outcome {
-  if game.result == "1/2-1/2" { return .draw }
-  let whiteWon = game.result == "1-0"
-  return whiteWon == (color == .w) ? .win : .loss
+  switch game.result {
+  case "1-0": return color == .w ? .win : .loss
+  case "0-1": return color == .b ? .win : .loss
+  default: return .draw
+  }
 }
 
 /// Fold a set of games into a tree of the positions the player actually reached.

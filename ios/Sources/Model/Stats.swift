@@ -13,9 +13,12 @@ public struct DayPoint: Equatable, Sendable {
 }
 
 /// Midnight, local time, `back` days before `now`.
+/// Steps back by calendar days, so a day that daylight saving makes 23 hours long is not skipped.
 private func dayStart(_ now: Double, _ back: Int) -> Double {
-  let date = Date(timeIntervalSince1970: (now - Double(back) * DAY) / 1000)
-  return Calendar.current.startOfDay(for: date).timeIntervalSince1970 * 1000
+  let calendar = Calendar.current
+  let today = calendar.startOfDay(for: Date(timeIntervalSince1970: now / 1000))
+  let day = calendar.date(byAdding: .day, value: -back, to: today) ?? today
+  return day.timeIntervalSince1970 * 1000
 }
 
 /// The last `days` days, oldest first, each with the rounds played that day.

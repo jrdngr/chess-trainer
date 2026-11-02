@@ -45,7 +45,10 @@ struct AnalysisTab: View {
   private var fens: [String] { walkSan(visible).fens }
   var fen: String { fens.last! }
   private var settings: Settings { store.state.settings }
-  private var best: EngineLine? { engine.sanLines.first?.line }
+  /// The engine's last word, once it is about the position shown.
+  private var current: EngineSnapshot? { engine.snapshot.flatMap { $0.fen == fen ? $0 : nil } }
+  private var lines: [SanLine] { current == nil ? [] : engine.sanLines }
+  private var best: EngineLine? { lines.first?.line }
 
   var body: some View {
     VStack(spacing: 0) {
@@ -76,7 +79,7 @@ struct AnalysisTab: View {
   @ViewBuilder private var content: some View {
     VStack(spacing: 0) {
       if settings.engineEnabled {
-        EvalRow(best: best, depth: engine.snapshot?.depth ?? 0).padding(.bottom, 10)
+        EvalRow(best: best, depth: current?.depth ?? 0).padding(.bottom, 10)
       }
       if let caption = marks?.caption {
         Text(caption).font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.text).frame(minHeight: 22).padding(.bottom, 6)
@@ -107,7 +110,7 @@ struct AnalysisTab: View {
     }
     EngineSection(
       label: "Basic evaluator", enabled: settings.engineEnabled, started: engine.started,
-      thinking: engine.snapshot?.thinking ?? true, fen: fen, lines: engine.sanLines,
+      thinking: current?.thinking ?? true, fen: fen, lines: lines,
       onToggle: { store.update { $0.settings.engineEnabled.toggle() } }, onPlay: play)
     AnalysisSectionHead(title: "Reference") {
       Button { showReference.toggle() } label: { AnalysisChip(text: showReference ? "Hide" : "Show") }.buttonStyle(.plain)

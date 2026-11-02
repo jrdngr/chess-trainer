@@ -1,4 +1,5 @@
 import ChessCore
+import Foundation
 import Shared
 
 /// The Playbook tree: one per side.
@@ -44,11 +45,15 @@ public struct Repertoire: Equatable, Sendable, Codable {
 }
 
 nonisolated(unsafe) private var idCounter = 0
+private let idLock = NSLock()
 
-/// A fresh id: unique within a session.
+/// A fresh id: unique within a session, from any thread.
 public func newId(_ prefix: String = "n") -> String {
-  idCounter += 1
-  return "\(prefix)_\(String(Int64(Env.now()), radix: 36))_\(String(idCounter, radix: 36))"
+  let count = idLock.withLock {
+    idCounter += 1
+    return idCounter
+  }
+  return "\(prefix)_\(String(Int64(Env.now()), radix: 36))_\(String(count, radix: 36))"
 }
 
 public func createRepertoire(_ name: String, _ color: Color, _ id: String? = nil) -> Repertoire {
@@ -270,7 +275,9 @@ public func decisionPoints(_ rep: Repertoire) -> [DecisionPoint] {
         for kid in kids where !merged.contains(where: { $0.san == kid.san }) { merged.append(kid) }
         byKey[key]!.options = merged
       } else {
-        let options = kids.jsSorted { a, b in Double((b.preferred ? 1 : 0) - (a.preferred ? 1 : 0)) }
+        var options = kids.jsSorted { a, b in Double((b.preferred ? 1 : 0) - (a.preferred ? 1 : 0)) }
+        // A shorter way to a position already met keeps the options found the longer way.
+        for move in byKey[key]?.options ?? [] where !options.contains(where: { $0.san == move.san }) { options.append(move) }
         byKey[key] = DecisionPoint(key: key, fen: fen, repertoireId: rep.id, options: options, pathSans: pathSans, depth: pathSans.count)
       }
     }

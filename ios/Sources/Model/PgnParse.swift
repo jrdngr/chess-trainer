@@ -64,11 +64,12 @@ private func tokenize(_ text: String) -> [Token] {
       if RESULTS.contains(word) {
         tokens.append(.result(word))
       } else {
-        // Strip move numbers and dots: "12." "12..." "12.Nf3" are all valid.
-        let san = word.replacing(/^\d+\.*/, with: "").replacing(/^\.+/, with: "")
+        // Strip move numbers and dots: "12." "12..." "12.Nf3" are all valid. A number
+        // needs its dot, so "0-0" stays castling; a bare "12" is dropped below.
+        // Decorations chess.js does not need go too, so a lone "!?" is no move.
+        let san = word.replacing(/^\d+\.+/, with: "").replacing(/^\.+/, with: "").replacing(/[?!]+$/, with: "")
         if !san.isEmpty, san.wholeMatch(of: /\d+/) == nil {
-          // Drop decorations chess.js does not need.
-          tokens.append(.move(san.replacing(/[?!]+$/, with: "")))
+          tokens.append(.move(san))
         }
       }
     }

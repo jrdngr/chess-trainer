@@ -273,7 +273,8 @@ private final class Searcher {
     var best = stand
     for move in orderCaptures(pos.pseudoMoves(true)) {
       // Even winning the piece outright would not get back to alpha.
-      let victim = PIECE_VALUE[pos.board[toOf(move)] & 7]
+      // En passant lands on an empty square: the pawn it takes stands beside it.
+      let victim = flagsOf(move) & EN_PASSANT != 0 ? PIECE_VALUE[PAWN] : PIECE_VALUE[pos.board[toOf(move)] & 7]
       let gain = victim + (promoOf(move) != 0 ? 800 : 0)
       if stand + gain + 200 < alpha && promoOf(move) == 0 { continue }
       // A bigger piece taking a smaller one a pawn guards loses the difference.

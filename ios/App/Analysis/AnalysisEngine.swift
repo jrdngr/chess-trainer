@@ -42,6 +42,9 @@ final class AnalysisEngine {
 
   /// Search `fen` until done or cancelled; call from a `.task(id:)`.
   func run(_ fen: String?) async {
+    // Depths the last search already sent on their way are dropped from here.
+    generation += 1
+    let gen = generation
     guard let fen else {
       snapshot = nil
       return
@@ -49,8 +52,6 @@ final class AnalysisEngine {
     try? await Task.sleep(for: .milliseconds(220))
     if Task.isCancelled { return }
     started = true
-    generation += 1
-    let gen = generation
     let final = await engine.analyse(fen, EngineLimits(depth: 16, multiPv: 3)) { [weak self] snap in
       Task { @MainActor in self?.take(snap, gen) }
       return Task.isCancelled

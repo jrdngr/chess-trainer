@@ -116,6 +116,8 @@ struct RepertoireBrowser: View {
         lineTip = startNodeId
       }
     }
+    // A move waiting to be added belongs to the position it was played on.
+    .onChange(of: nodeId) { pending = nil }
     .sheet(isPresented: $sideMenu) {
       SideMenu(repId: rep.id, onDeleted: onBack) { sideMenu = false }.presentationDetents([.medium]).presentationBackground(Theme.background)
     }

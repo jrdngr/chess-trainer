@@ -6,7 +6,8 @@ import Foundation
 enum Pgn {
   private static let results: Set<String> = ["1-0", "0-1", "1/2-1/2", "*"]
 
-  /// The first game's mainline SAN, checked against the rules; nil when the text holds no game.
+  /// The first game's mainline SAN, checked against the rules; nil when the text holds no game,
+  /// or a game set up from a position other than the start, which Analysis cannot show.
   static func mainline(_ pgn: String) -> [String]? {
     let text = pgn.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
     var fenHeader: String?
@@ -24,7 +25,9 @@ enum Pgn {
     }
     let sans = firstLine(body.joined(separator: "\n"))
     if sans.isEmpty && !sawGame { return nil }
-    var fen = fenHeader ?? START_FEN
+    // Analysis walks every line from the start position.
+    if let fenHeader, positionKey(fenHeader) != positionKey(START_FEN) { return nil }
+    var fen = START_FEN
     var out: [String] = []
     for san in sans {
       guard let move = applySan(fen, san) else { break }
@@ -63,10 +66,10 @@ enum Pgn {
         let word = String(chars[i..<j])
         i = j
         guard depth == 0, !results.contains(word) else { continue }
-        // "12." "12..." "12.Nf3" are all move numbers in front of a move.
-        var san = word.replacing(/^\d+\.*/, with: "").replacing(/^\.+/, with: "")
+        // "12." "12..." "12.Nf3" are all move numbers in front of a move; a number
+        // needs its dot, so "0-0" stays castling. A lone "!?" is no move.
+        let san = word.replacing(/^\d+\.+/, with: "").replacing(/^\.+/, with: "").replacing(/[?!]+$/, with: "")
         guard !san.isEmpty, san.wholeMatch(of: /\d+/) == nil else { continue }
-        san = san.replacing(/[?!]+$/, with: "")
         out.append(san)
       }
     }

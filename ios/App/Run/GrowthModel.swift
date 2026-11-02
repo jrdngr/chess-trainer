@@ -55,6 +55,8 @@ final class GrowthModel {
   @ObservationIgnored var startLength = 0
 
   @ObservationIgnored private var logged = false
+  /// The sitting has been left: nothing more happens between taps.
+  @ObservationIgnored private var left = false
   /// The round this sitting will log on the way out (paced).
   @ObservationIgnored private var pending: RoundRecord?
   @ObservationIgnored private var timer: Task<Void, Never>?
@@ -142,6 +144,7 @@ final class GrowthModel {
 
   /// Leaving the sitting: the round is logged on the way out.
   func leave() {
+    left = true
     timer?.cancel()
     if launch.paced, let pending { store.update { $0.endRound(tree, pending) } }
     pending = nil
@@ -184,6 +187,7 @@ final class GrowthModel {
   func log(_ event: AppEvent) { store.update { $0.logEvent(event) } }
 
   func settle() {
+    guard !left else { return }
     if launch.paced { settlePaced() } else { settleNow() }
   }
 

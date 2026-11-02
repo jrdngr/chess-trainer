@@ -41,6 +41,7 @@ final class PlayGame {
   @ObservationIgnored private let evalEngine = BasicEngine()
   @ObservationIgnored private var turnTask: Task<Void, Never>?
   @ObservationIgnored private var evalTask: Task<Void, Never>?
+  @ObservationIgnored private var introTask: Task<Void, Never>?
 
   /// How long the announcement holds before the board, unless tapped away: `ANNOUNCE_MS`.
   static let announceMs = 2500
@@ -73,8 +74,9 @@ final class PlayGame {
 
   /// The announcement goes after its beat, or at a tap.
   func begin() {
-    Task { [weak self] in
+    introTask = Task { [weak self] in
       try? await Task.sleep(for: .milliseconds(Self.announceMs))
+      guard !Task.isCancelled else { return }
       self?.toBoard()
     }
   }
@@ -86,6 +88,7 @@ final class PlayGame {
   }
 
   func stop() {
+    introTask?.cancel()
     turnTask?.cancel()
     evalTask?.cancel()
   }

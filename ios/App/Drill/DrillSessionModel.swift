@@ -19,9 +19,13 @@ final class DrillSessionModel {
   private let opts: DrillOptions
   @ObservationIgnored private let rand: () -> Double
   @ObservationIgnored private var logged = false
+  /// Waits out the round's intro, then starts the clock.
+  @ObservationIgnored private var waiter: Task<Void, Never>?
+  /// The beat on a right move before the next position.
+  @ObservationIgnored private var beat: Task<Void, Never>?
   private(set) var drill: DrillState
   var revealLine = false
-  var showMoves = false
+  var showMoves = false { didSet { syncClock() } }
   var explore = false { didSet { syncClock() } }
   var why = false
 
@@ -69,9 +73,10 @@ final class DrillSessionModel {
       debugPlay()
     #endif
     syncClock()
-    Task { [weak self] in
+    waiter = Task { [weak self] in
       while let self, self.held {
         try? await Task.sleep(for: .milliseconds(150))
+        if Task.isCancelled { return }
         self.syncClock()
       }
       self?.syncClock()
@@ -95,6 +100,8 @@ final class DrillSessionModel {
   /// End the sitting: log what was answered, if anything.
   func stop() {
     log()
+    waiter?.cancel()
+    beat?.cancel()
     clock.stop()
     intro?.stop()
   }
@@ -136,8 +143,9 @@ final class DrillSessionModel {
       case .mistake(let mistake): store.update { $0.logMistake(mistake) }
       case .flash(let next):
         // A beat on the move just made, so it registers before the board changes.
-        Task { [weak self] in
+        beat = Task { [weak self] in
           try? await Task.sleep(for: .milliseconds(650))
+          guard !Task.isCancelled else { return }
           self?.next(next)
         }
       }
