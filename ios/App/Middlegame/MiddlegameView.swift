@@ -45,7 +45,8 @@ struct MiddlegameView: View {
           EndView(
             model: model, finish: finish, onNext: { start(store.state.settings.middlegame) },
             onGrow: { _ in }, onAnalyze: { onAnalyze(model.run.played, model.run.color) }, onExit: exit,
-            onChangeOptions: exact == nil ? { setup() } : nil)
+            onChangeOptions: exact == nil ? { setup() } : nil,
+            onSameLine: last == nil ? nil : { if let last { start(store.state.settings.middlegame, line: last) } })
         } else {
           RunView(model: model, onExit: exit)
         }

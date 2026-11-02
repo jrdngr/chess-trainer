@@ -11,6 +11,8 @@ struct SurvivalSummary: View {
   let scoredInPoints: Bool
   /// The record as it stood before this run.
   let before: SurvivalRecord
+  /// The record keeps points alone (Middlegame's), so only a points best counts.
+  var pointsOnly = false
 
   var body: some View {
     let state = finish.ended
@@ -43,10 +45,10 @@ struct SurvivalSummary: View {
 
   private var newBestText: String? {
     let moves = finish.ended.moves, points = finish.ended.extras.points
-    let moveBest = !ended && moves > 0 && moves > before.global.best
+    let moveBest = !pointsOnly && !ended && moves > 0 && moves > before.global.best
     let pointBest = scoredInPoints && !ended && points > 0 && points > before.global.bestPoints
     if moveBest && pointBest { return "New best, in points and moves" }
-    if pointBest { return "New best score" }
+    if pointBest { return pointsOnly ? "New best" : "New best score" }
     return moveBest ? "New best" : nil
   }
 
@@ -103,10 +105,12 @@ struct MovesSurvivedList: View {
   let line: [String]
   let record: SurvivalRecord
   let moves: Int
+  /// What the record counts: moves survived, or Middlegame's points.
+  var title = "Moves survived"
 
   var body: some View {
     VStack(spacing: 0) {
-      PlaySection(title: "Moves survived")
+      PlaySection(title: title)
       ListCard {
         ForEach(along, id: \.self) { id in
           ScoreRow(name: nodeById(tree, id).name, score: survivalFor(record, id), now: moves)

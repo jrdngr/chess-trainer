@@ -88,6 +88,9 @@ struct RootView: View {
           guard let rep = store.state.repertoires[repId] else { return }
           let items = Array(branchItems(rep, nodeId).prefix(40))
           if items.isEmpty { toasts.show("Nothing to drill") } else { drilling = (items, title) }
+        }, onMiddlegame: { side, sans in
+          middlegameLine = MiddlegameLine(color: side, sans: sans)
+          mode = .middlegame
         }, onImport: { importing = true }, onBuild: { building = true })
           .tabItem { Label(Tab.playbook.label, systemImage: Tab.playbook.symbol) }.tag(Tab.playbook)
         StatsView(tree: tree, index: index)

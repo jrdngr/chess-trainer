@@ -13,6 +13,8 @@ struct PlaybookView: View {
   var onConsumedTidyFocus: () -> Void = {}
   var onExplore: ([String], ChessCore.Color) -> Void = { _, _ in }
   var onDrill: (String, String, String) -> Void = { _, _, _ in }
+  /// Play a line out to a middlegame, as this side.
+  var onMiddlegame: (ChessCore.Color, [String]) -> Void = { _, _ in }
   var onImport: () -> Void = {}
   var onBuild: () -> Void = {}
 
@@ -136,6 +138,9 @@ struct PlaybookView: View {
       } onOpenLine: { repId, tipId, title in
         openingMenu = nil
         page = .browse(repId: repId, nodeId: tipId, title: title)
+      } onMiddlegame: { repId, sans in
+        openingMenu = nil
+        if let rep = store.state.repertoires[repId] { onMiddlegame(rep.color, sans) }
       } onClose: { openingMenu = nil }
       .presentationDetents([.medium, .large]).presentationBackground(Theme.background)
     }

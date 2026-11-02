@@ -7,7 +7,8 @@ import SwiftUI
 /// The end of a run. Final position and End of prep to switch
 /// between, the board, Grow this line, Analyze and Next round, then what
 /// the run came to and the rating it moved. A Survival run you set up
-/// (no Autopilot round) adds its own parts: `SurvivalEndParts`.
+/// (no Autopilot round) adds its own parts: `SurvivalEndParts`. A Middlegame
+/// run names its start Handoff, scores in points and offers Same line.
 struct EndView: View {
   let model: RunModel
   let finish: Finish
@@ -17,6 +18,8 @@ struct EndView: View {
   let onExit: () -> Void
   /// Back to Survival's setup; nil when Autopilot set the run up.
   let onChangeOptions: (() -> Void)?
+  /// Middlegame's: the same line played out again.
+  let onSameLine: (() -> Void)?
   @Environment(AppStore.self) private var store
   @Environment(\.openTidy) private var openTidy
   /// How many of the run's moves are on the board.
@@ -30,7 +33,8 @@ struct EndView: View {
   @State private var flashing: Bool
 
   init(model: RunModel, finish: Finish, onNext: @escaping () -> Void, onGrow: @escaping (GrowOffer) -> Void,
-       onAnalyze: @escaping () -> Void, onExit: @escaping () -> Void, onChangeOptions: (() -> Void)? = nil) {
+       onAnalyze: @escaping () -> Void, onExit: @escaping () -> Void, onChangeOptions: (() -> Void)? = nil,
+       onSameLine: (() -> Void)? = nil) {
     self.model = model
     self.finish = finish
     self.onNext = onNext
@@ -38,6 +42,7 @@ struct EndView: View {
     self.onAnalyze = onAnalyze
     self.onExit = onExit
     self.onChangeOptions = onChangeOptions
+    self.onSameLine = onSameLine
     _cursor = State(initialValue: finish.ended.run.played.count)
     var blunder = false
     if case .blunder = finish.how { blunder = true }
@@ -47,6 +52,8 @@ struct EndView: View {
 
   /// Survival opened from Home, not Autopilot's round.
   private var survival: Bool { model.round == nil }
+  /// A Middlegame run, begun at its handoff.
+  private var middlegame: Bool { model.handoff != nil }
 
   private var run: Run { finish.ended.run }
   private var last: Int { run.played.count }
@@ -77,8 +84,11 @@ struct EndView: View {
   var body: some View {
     VStack(spacing: 0) {
       if survival {
-        SurvivalBar(subtitle: runSubtitle(store, run.color, run.enteredIn ?? run.openingId), onClose: onExit) {
-          SurvivalCountChip(value: finish.ended.moves)
+        SurvivalBar(
+          title: middlegame ? "Middlegame" : "Survival", subtitle: runSubtitle(store, run.color, run.enteredIn ?? run.openingId),
+          onClose: onExit
+        ) {
+          SurvivalCountChip(value: middlegame ? finish.ended.extras.points : finish.ended.moves)
         }
       }
       scroll.modifier(SurvivalDebugScroll())
@@ -113,7 +123,7 @@ struct EndView: View {
         if let prepAt {
           SegmentedControl(
             value: Binding(get: { cursor == prepAt ? 0 : cursor == last ? 1 : -1 }, set: { seek($0 == 0 ? prepAt : last) }),
-            options: [(0, "End of prep"), (1, "Final position")]
+            options: [(0, middlegame ? "Handoff" : "End of prep"), (1, "Final position")]
           )
           .padding(.bottom, 10)
         }
@@ -158,9 +168,15 @@ struct EndView: View {
         .buttonStyle(PlayButtonStyle(kind: .accent, block: true))
       }
       HStack(spacing: 8) {
-        if blunder != nil || isEnded {
+        if blunder != nil || isEnded || middlegame {
           Button(action: onAnalyze) {
             Label("Analyze", systemImage: "magnifyingglass")
+          }
+          .buttonStyle(PlayButtonStyle(height: 52, block: true))
+        }
+        if let onSameLine {
+          Button(action: onSameLine) {
+            Label("Same line", systemImage: "arrow.counterclockwise")
           }
           .buttonStyle(PlayButtonStyle(height: 52, block: true))
         }
@@ -173,7 +189,9 @@ struct EndView: View {
       ratingCard
       RatingsList(items: moved).padding(.top, 10)
       if survival {
-        SurvivalSummary(finish: finish, prefs: model.prefs, scoredInPoints: model.scoredInPoints, before: model.before ?? SurvivalRecord())
+        SurvivalSummary(
+          finish: finish, prefs: model.prefs, scoredInPoints: model.scoredInPoints, before: model.before ?? SurvivalRecord(),
+          pointsOnly: middlegame)
       } else {
         summary
       }
@@ -181,7 +199,13 @@ struct EndView: View {
       Group {
         VStack(spacing: 0) {
           MissedPrepList(misses: finish.ended.misses, hints: hints, onTidy: openTidy, onSeek: seek)
-          MovesSurvivedList(tree: model.tree, line: run.played, record: store.state.survival, moves: finish.ended.moves)
+          if let handoff = model.handoff {
+            MovesSurvivedList(
+              tree: model.tree, line: Array(handoff.line.prefix(handoff.prep)), record: store.state.middlegame,
+              moves: finish.ended.extras.points, title: "Middlegame points")
+          } else {
+            MovesSurvivedList(tree: model.tree, line: run.played, record: store.state.survival, moves: finish.ended.moves)
+          }
           SurvivalEndActions(played: sansToMoveText(run.played + (blunder.map { [$0.played] } ?? [])), onChangeOptions: onChangeOptions)
         }
         .padding(.top, -14)

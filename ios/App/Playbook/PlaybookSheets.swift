@@ -52,14 +52,16 @@ struct NewOpeningSheet: View {
   }
 }
 
-/// What can be done to one opening: drill it, open or delete one of its
-/// lines, or delete the whole thing. Both deletes ask twice; a line also
+/// What can be done to one opening: drill it, open one of its lines, play
+/// one out to a middlegame or delete it, or delete the whole thing. Both deletes ask twice; a line also
 /// gets an Undo. `OpeningMenu`.
 struct OpeningMenu: View {
   let picked: DerivedOpening
   let index: ReferenceIndex
   let onDrill: (String, String, String) -> Void
   let onOpenLine: (String, String, String) -> Void
+  /// Play this line out to a middlegame: the side's repertoire and the line's moves.
+  let onMiddlegame: (String, [String]) -> Void
   let onClose: () -> Void
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
@@ -130,6 +132,8 @@ struct OpeningMenu: View {
         }
         .buttonStyle(PlayButtonStyle(kind: .danger, height: 38, radius: 11, font: 14))
       } else {
+        IconButton(icon: "middlegame", size: 18, plain: true) { onMiddlegame(rep.id, line.path) }
+          .accessibilityLabel("Play out to a middlegame")
         IconButton(icon: "trash", size: 18, plain: true) { confirmingLine = line.tipId }
       }
     }
