@@ -44,7 +44,8 @@ private let FENS = walkSan(QGD).fens
 }
 
 @Test func withNothingInTheBandTheClosestIsPlayed() {
-  let candidates = [HandoffCandidate(san: "a", weight: 9, cp: -150), HandoffCandidate(san: "b", weight: 1, cp: 260)]
+  // Both are outside the band; "b" is closer to it, however often "a" is played.
+  let candidates = [HandoffCandidate(san: "a", weight: 9, cp: -260), HandoffCandidate(san: "b", weight: 1, cp: 150)]
   #expect(pickInBand(candidates, center: 0, mulberry32(1)) == "b")
 }
 
