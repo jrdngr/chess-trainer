@@ -46,21 +46,6 @@
       ]
     },
     {
-      "fn": "cloud.describeStatus",
-      "about": "The Sync row's status line.",
-      "cases": [
-      {"args":[{"kind":"unavailable"}],"out":"Not available here — this device only"},
-      {"args":[{"kind":"syncing"}],"out":"Syncing…"},
-      {"args":[{"kind":"idle","lastSyncedAt":null}],"out":"Ready"},
-      {"args":[{"kind":"idle","lastSyncedAt":1793447970000}],"out":"Synced just now"},
-      {"args":[{"kind":"synced","lastSyncedAt":1793446800000}],"out":"Synced 20 min ago"},
-      {"args":[{"kind":"synced","lastSyncedAt":1793437200000}],"out":"Synced 3 h ago"},
-      {"args":[{"kind":"synced","lastSyncedAt":1793188800000}],"out":"Synced 3 d ago"},
-      {"args":[{"kind":"too-large","bytes":250000}],"out":"Too large to sync (244 KiB of 240)"},
-      {"args":[{"kind":"error","message":"Sync failed"}],"out":"Sync failed"}
-      ]
-    },
-    {
       "fn": "store.resetProgress",
       "about": "Reset progress: what it clears and what it keeps.",
       "cases": [

@@ -19,7 +19,6 @@ public struct Settings: Equatable, Sendable, Codable {
   public var autoplay = true
   public var engineEnabled = true
   public var boardTheme = BoardTheme.slate
-  public var cloudSync = true
   public var lichessUsername = ""
   public var chesscomUsername = ""
   public var growth = DEFAULT_GROWTH
@@ -31,7 +30,7 @@ public struct Settings: Equatable, Sendable, Codable {
 
   enum CodingKeys: String, CodingKey {
     case selection, favoriteOpenings, autopilot, hapticFeedback, showCoordinates, onboarded, seenIntro, autoplay
-    case engineEnabled, boardTheme, cloudSync, lichessUsername, chesscomUsername, growth, play
+    case engineEnabled, boardTheme, lichessUsername, chesscomUsername, growth, play
     case survival
     case drill
   }
@@ -50,7 +49,6 @@ public struct Settings: Equatable, Sendable, Codable {
     autoplay = try c.decodeIfPresent(Bool.self, forKey: .autoplay) ?? autoplay
     engineEnabled = try c.decodeIfPresent(Bool.self, forKey: .engineEnabled) ?? engineEnabled
     boardTheme = try c.decodeIfPresent(BoardTheme.self, forKey: .boardTheme) ?? boardTheme
-    cloudSync = try c.decodeIfPresent(Bool.self, forKey: .cloudSync) ?? cloudSync
     lichessUsername = try c.decodeIfPresent(String.self, forKey: .lichessUsername) ?? lichessUsername
     chesscomUsername = try c.decodeIfPresent(String.self, forKey: .chesscomUsername) ?? chesscomUsername
     growth = try c.decodeIfPresent(GrowthPrefs.self, forKey: .growth) ?? growth

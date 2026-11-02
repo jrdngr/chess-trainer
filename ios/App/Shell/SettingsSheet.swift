@@ -1,7 +1,7 @@
 import Model
 import SwiftUI
 
-/// Settings: the board, Autopilot's extras, the engine, sync and data.
+/// Settings: the board, Autopilot's extras, the engine and data.
 struct SettingsSheet: View {
   @Environment(AppStore.self) private var store
   @Environment(\.dismiss) private var dismiss
@@ -55,16 +55,11 @@ struct SettingsSheet: View {
         }
         section("Engine")
         ListCard {
-          ToggleRow(label: "Run Stockfish", hint: "Used by Analysis and by Drill's explanations, with a built-in evaluator as fallback",
+          ToggleRow(label: "Engine", hint: "Analysis's lines and Play's eval bar",
                     on: settings.engineEnabled) { store.update { $0.settings.engineEnabled.toggle() } }
         }
         Text("How each mode plays is set on that mode's own screen.").font(.system(size: 12.5)).foregroundStyle(Theme.text3)
           .padding(.horizontal, 4).padding(.top, 8)
-        section("Sync")
-        ListCard {
-          ToggleRow(label: "Sync across devices", hint: settings.cloudSync ? describeStatus(.unavailable) : "Saved on this device",
-                    on: settings.cloudSync) { store.update { $0.settings.cloudSync.toggle() } }
-        }
         section("Data")
         ListCard {
           resetRow(.progress, "Reset progress", color: Theme.text) { $0.resetProgress() }

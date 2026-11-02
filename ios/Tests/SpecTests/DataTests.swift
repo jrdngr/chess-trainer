@@ -55,17 +55,6 @@ import Testing
     return out
   }
 
-  func status(_ s: JSON) -> CloudStatus {
-    switch s["kind"].string {
-    case "unavailable": return .unavailable
-    case "syncing": return .syncing
-    case "idle": return .idle(lastSyncedAt: s["lastSyncedAt"].numberOrNil)
-    case "synced": return .synced(lastSyncedAt: s["lastSyncedAt"].number)
-    case "too-large": return .tooLarge(bytes: s["bytes"].int)
-    default: return .error(message: s["message"].string)
-    }
-  }
-
   try check("data", [
     "events.log": { play($0[0].array) },
     "events.appendEvent": { a in
@@ -85,7 +74,6 @@ import Testing
       let r = removedBetween(before, after)
       return obj(["removed": r.removed, "count": r.count])
     },
-    "cloud.describeStatus": { a in Env.at(at) { describeStatus(status(a[0])).json } },
     "store.resetProgress": { _ in
       var state = AppState()
       Env.at(at) {
