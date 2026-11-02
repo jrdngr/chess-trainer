@@ -101,6 +101,9 @@ extension Earned {
     put("emptyPawns", m.emptyPawns)
     put("lines", m.lines?.map { "\($0.from)-\($0.to)" }, sort: false)
     put("arrows", m.arrows?.map { "\($0.from)-\($0.to):\($0.tone)" }, sort: false)
+    put("letters", m.letters?.map { "\($0.square):\($0.text)" })
+    put("boxes", m.boxes?.map { "\($0.from)-\($0.to)" })
+    put("guides", m.guides?.map { "\($0.from)-\($0.to):\($0.tone)" }, sort: false)
     return .object(out)
   }
   try check("lenses", [

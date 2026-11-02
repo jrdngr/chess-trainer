@@ -18,7 +18,7 @@ public enum Tablebase {
 
   /// The result for the side to move in `fen`, or nil when the tables don't
   /// cover it: more than four pieces, castling rights left, or a failed probe.
-  public static func probe(_ fen: String) -> GameResult? {
+  public static func probe(_ fen: String) -> EndResult? {
     let fields = fen.split(separator: " ").map(String.init)
     guard fields.count >= 2 else { return nil }
     if fields.count > 2 && fields[2] != "-" { return nil }
@@ -57,7 +57,7 @@ public enum Tablebase {
   }
 
   /// The result for `color` in `fen`, whoever is to move.
-  public static func probe(_ fen: String, for color: Color) -> GameResult? {
+  public static func probe(_ fen: String, for color: Color) -> EndResult? {
     guard let r = probe(fen) else { return nil }
     let toMove = fen.split(separator: " ").dropFirst().first == "w" ? Color.w : Color.b
     return toMove == color ? r : r.flipped

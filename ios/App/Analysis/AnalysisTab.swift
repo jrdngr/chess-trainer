@@ -88,7 +88,7 @@ struct AnalysisTab: View {
         arrows: marks == nil ? bestArrow : [], marks: marks, bothSides: true, onMove: { play($0.san) })
       LensBar(held: $lens)
       if let lens {
-        LensLegend(kind: lens)
+        LensLegend(kind: lens, endgame: isEndgame(fen))
       } else {
         below
       }

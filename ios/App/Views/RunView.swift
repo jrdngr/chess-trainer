@@ -43,7 +43,7 @@ struct RunView: View {
       // The Eval lens's bar takes the captured row's place, so the board never moves.
       CapturedRow(fen: model.shownFen, orientation: model.run.color)
         .opacity(evalHeld ? 0 : 1)
-        .overlay { if evalHeld { EvalLensBar(cp: model.session.evalCp) } }
+        .overlay { if evalHeld { EvalLensBar(cp: model.session.evalCp, result: endgameResult) } }
         .padding(.horizontal).padding(.top, 12)
       BoardView(
         fen: model.shownFen, orientation: model.run.color,
@@ -82,6 +82,15 @@ struct RunView: View {
     #else
       nil
     #endif
+  }
+
+  /// The Eval lens's word on an endgame, from your side: exact where the tables or a known ending settle it,
+  /// otherwise from the engine's score.
+  private var endgameResult: EndResult? {
+    let fen = model.shownFen
+    guard isEndgame(fen) else { return nil }
+    let me = model.run.color
+    return exactResult(fen, for: me) ?? model.session.evalCp.map { resultOf(me, $0) }
   }
 
   private var lensEnabled: Bool { model.live && model.intro == .done }
@@ -142,7 +151,7 @@ struct RunView: View {
         if lens == .eval {
           EvalRunCard(trail: model.session.evalTrail, last: model.session.lastJudged, color: model.run.color)
         } else if let lens {
-          LensLegend(kind: lens)
+          LensLegend(kind: lens, endgame: isEndgame(model.shownFen))
         } else if planHeld {
           PlanLegend(fen: model.shownFen, me: model.run.color)
         } else if model.blunder != nil {

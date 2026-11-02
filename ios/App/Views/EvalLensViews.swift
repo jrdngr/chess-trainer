@@ -7,14 +7,24 @@ import SwiftUI
 struct EvalLensBar: View {
   /// The engine's last word, White's side; a mate reads as ±10000.
   var cp: Double?
+  /// In an endgame, the result with best play from your side.
+  var result: EndResult? = nil
 
   var body: some View {
-    PlayEvalBar(line: cp.map { cp in
-      abs(cp) >= 10_000
-        ? EngineLine(multipv: 1, depth: 0, cp: nil, mate: cp > 0 ? 1 : -1, pv: [])
-        : EngineLine(multipv: 1, depth: 0, cp: cp, mate: nil, pv: [])
-    })
+    HStack(spacing: 10) {
+      if let result {
+        Text(Self.word(result)).font(.system(size: 13, weight: .heavy))
+          .foregroundStyle(result == .win ? Theme.good : result == .loss ? Theme.bad : Theme.text)
+      }
+      PlayEvalBar(line: cp.map { cp in
+        abs(cp) >= 10_000
+          ? EngineLine(multipv: 1, depth: 0, cp: nil, mate: cp > 0 ? 1 : -1, pv: [])
+          : EngineLine(multipv: 1, depth: 0, cp: cp, mate: nil, pv: [])
+      })
+    }
   }
+
+  static func word(_ result: EndResult) -> String { result == .win ? "Win" : result == .loss ? "Loss" : "Draw" }
 }
 
 /// The Eval lens's card under the board: your last judged move and its swing, over the run's eval so far.

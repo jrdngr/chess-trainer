@@ -11,17 +11,17 @@ import Shared
 public enum Ending: Equatable, Sendable {
   /// `played` is the move that lost, not on the board; `reply` the threat, as UCI.
   /// In an endgame, `slip` is the result it gave away.
-  case blunder(played: String, best: String?, lost: Double, reply: String?, slip: Slip?)
+  case blunder(played: String, best: String?, lost: Double, reply: String?, slip: ResultSlip?)
   case won, lost, draw
   /// You ended it yourself.
   case ended
 }
 
 /// An endgame result a move gave away: from a win to a draw, say.
-public struct Slip: Equatable, Sendable {
-  public var from: GameResult
-  public var to: GameResult
-  public init(from: GameResult, to: GameResult) {
+public struct ResultSlip: Equatable, Sendable {
+  public var from: EndResult
+  public var to: EndResult
+  public init(from: EndResult, to: EndResult) {
     self.from = from
     self.to = to
   }
@@ -76,10 +76,10 @@ public struct Judgement: Equatable, Sendable {
   /// An endgame where the engine had a mate and your move doesn't keep it.
   public var missedMate: Bool
   /// The exact results before and after your move, where the tablebase knows them.
-  public var exact: Slip?
+  public var exact: ResultSlip?
   public init(
     san: String, ok: Bool, lost: Double, best: String?, before: Double, after: Double, moment: Bool, found: Bool, reply: String?,
-    missedMate: Bool = false, exact: Slip? = nil
+    missedMate: Bool = false, exact: ResultSlip? = nil
   ) {
     self.san = san
     self.ok = ok
@@ -288,7 +288,7 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
   if !judged.ok {
     let slip =
       judged.exact
-      ?? (isEndgame(run.fen) ? Slip(from: resultOf(run.color, judged.before), to: resultOf(run.color, judged.after)) : nil)
+      ?? (isEndgame(run.fen) ? ResultSlip(from: resultOf(run.color, judged.before), to: resultOf(run.color, judged.after)) : nil)
     return then(step) {
       finish($0, $0.state, .blunder(played: judged.san, best: judged.best, lost: judged.lost, reply: judged.reply, slip: slip))
     }

@@ -14,10 +14,10 @@ public let RESULT_WIN_CP: Double = 300
 /// measured, so a mate missed in a won ending costs a few points, not thousands.
 public let ENDGAME_SCORE_CAP: Double = 600
 
-public enum GameResult: Int, Sendable, Codable, Comparable {
+public enum EndResult: Int, Sendable, Codable, Comparable {
   case loss, draw, win
-  public static func < (a: GameResult, b: GameResult) -> Bool { a.rawValue < b.rawValue }
-  public var flipped: GameResult { self == .win ? .loss : self == .loss ? .win : .draw }
+  public static func < (a: EndResult, b: EndResult) -> Bool { a.rawValue < b.rawValue }
+  public var flipped: EndResult { self == .win ? .loss : self == .loss ? .win : .draw }
 }
 
 /// How much material is left: 1 per knight or bishop, 2 per rook, 4 per queen.
@@ -38,7 +38,7 @@ public func gamePhase(_ fen: String) -> Int {
 public func isEndgame(_ fen: String) -> Bool { gamePhase(fen) <= ENDGAME_PHASE }
 
 /// The result an engine score points to for one side; the score is White's.
-public func resultOf(_ color: Color, _ cp: Double) -> GameResult {
+public func resultOf(_ color: Color, _ cp: Double) -> EndResult {
   let mine = color == .w ? cp : -cp
   return mine >= RESULT_WIN_CP ? .win : mine <= -RESULT_WIN_CP ? .loss : .draw
 }
@@ -50,7 +50,7 @@ public func resultOf(_ color: Color, _ cp: Double) -> GameResult {
 /// engine's score: then a worse result always fails.
 public func judgeEndgame(
   _ color: Color, _ before: Double, _ after: Double,
-  exact: (before: GameResult, after: GameResult)? = nil
+  exact: (before: EndResult, after: EndResult)? = nil
 ) -> EvalVerdict {
   func cap(_ x: Double) -> Double { max(-ENDGAME_SCORE_CAP, min(ENDGAME_SCORE_CAP, x)) }
   let lost = max(0, evalLoss(color, cap(before), cap(after)))
@@ -64,15 +64,15 @@ public func judgeEndgame(
 /// under the endgame rules.
 public func judgeMove(
   _ fen: String, _ color: Color, _ before: Double, _ after: Double,
-  exact: (before: GameResult, after: GameResult)? = nil
+  exact: (before: EndResult, after: EndResult)? = nil
 ) -> EvalVerdict {
   exact != nil || isEndgame(fen) ? judgeEndgame(color, before, after, exact: exact) : judgeByEval(color, before, after)
 }
 
 /// What a slip in an endgame did to the result, for the end screen: "Win
 /// slipped to a draw". Nil when the result held.
-public func slipText(_ from: GameResult, _ to: GameResult) -> String? {
+public func slipText(_ from: EndResult, _ to: EndResult) -> String? {
   guard to < from else { return nil }
-  func word(_ r: GameResult) -> String { r == .win ? "win" : r == .draw ? "draw" : "loss" }
+  func word(_ r: EndResult) -> String { r == .win ? "win" : r == .draw ? "draw" : "loss" }
   return "\(word(from).prefix(1).uppercased())\(word(from).dropFirst()) slipped to a \(word(to))"
 }

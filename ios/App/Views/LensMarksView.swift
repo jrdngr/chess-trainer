@@ -38,7 +38,7 @@ enum LensColors {
   }
 }
 
-/// The marks under the pieces: tints, a king's zone, holes, missing shield pawns.
+/// The marks under the pieces: tints, a king's zone, a pawn's square, holes, missing shield pawns.
 struct LensUnderView: View {
   var marks: LensMarks
   var cell: CGFloat
@@ -55,6 +55,15 @@ struct LensUnderView: View {
           .overlay(Rectangle().strokeBorder(.black.opacity(0.6), lineWidth: 2))
           .at(square, cell, position)
       }
+      ForEach(marks.boxes ?? [], id: \.from) { box in
+        let a = position(box.from), b = position(box.to)
+        let col = min(a.col, b.col), row = min(a.row, b.row)
+        let width = CGFloat(abs(a.col - b.col) + 1) * cell, height = CGFloat(abs(a.row - b.row) + 1) * cell
+        Rectangle().fill(LensColors.green.opacity(0.12))
+          .overlay(Rectangle().strokeBorder(LensColors.green, style: StrokeStyle(lineWidth: 2, dash: [6, 4])))
+          .frame(width: width, height: height)
+          .offset(x: CGFloat(col) * cell, y: CGFloat(row) * cell)
+      }
       ForEach(marks.dots ?? [], id: \.self) { square in
         Circle().fill(LensColors.amber.opacity(0.9)).frame(width: cell * 0.22, height: cell * 0.22)
           .at(square, cell, position)
@@ -68,7 +77,7 @@ struct LensUnderView: View {
   }
 }
 
-/// The marks over the pieces: rings, badges, tags, stars, pips, shields, lines and arrows.
+/// The marks over the pieces: rings, badges, tags, passer letters, stars, pips, shields, lines, guides and arrows.
 struct LensOverView: View {
   var marks: LensMarks
   var cell: CGFloat
@@ -95,6 +104,16 @@ struct LensOverView: View {
           .padding(cell * 0.07)
           .frame(width: cell, height: cell, alignment: .topTrailing)
           .at(t.square, cell, position)
+      }
+      ForEach(marks.letters ?? [], id: \.square) { l in
+        Text(l.text).font(.system(size: cell * 0.24, weight: .heavy))
+          .foregroundStyle(.black.opacity(0.85))
+          .frame(width: cell * 0.3, height: cell * 0.3)
+          .background(Circle().fill(LensColors.green))
+          .overlay(Circle().strokeBorder(.black.opacity(0.6), lineWidth: 1))
+          .padding(cell * 0.04)
+          .frame(width: cell, height: cell, alignment: .bottomTrailing)
+          .at(l.square, cell, position)
       }
       ForEach(marks.stars ?? [], id: \.square) { s in
         Text("\u{2605}").font(.system(size: cell * 0.3)).foregroundStyle(s.side == .mine ? LensColors.lightBlue : LensColors.lightRed)
@@ -138,6 +157,15 @@ struct LensOverView: View {
         context.stroke(
           path, with: .color(LensColors.red.opacity(0.6)),
           style: StrokeStyle(lineWidth: cell * 0.07, lineCap: .round, dash: [cell * 0.18, cell * 0.12]))
+      }
+      for guide in marks.guides ?? [] {
+        var path = Path()
+        path.move(to: center(guide.from))
+        path.addLine(to: center(guide.to))
+        let color = guide.tone == "cutoff" ? LensColors.amber : SwiftUI.Color(red: 245 / 255, green: 245 / 255, blue: 247 / 255)
+        // A dark edge under the dashes keeps them readable on any square.
+        context.stroke(path, with: .color(.black.opacity(0.5)), style: StrokeStyle(lineWidth: cell * 0.1, lineCap: .round))
+        context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: cell * 0.07, lineCap: .round, dash: [cell * 0.2, cell * 0.12]))
       }
     }
   }

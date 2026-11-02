@@ -53,6 +53,11 @@ public func baseline(_ engine: ChessEngine, _ fen: String, moments: Bool) async 
   return Baseline(fen: fen, cp: cp, best: best, bestUci: line.pv.first, second: second)
 }
 
+/// The result with best play for `color`, where the tablebase or a known ending settles it.
+public func exactResult(_ fen: String, for color: Color) -> EndResult? {
+  Tablebase.probe(fen, for: color) ?? knownEnding(fen)?.result(for: color)
+}
+
 private final class Clock: @unchecked Sendable {
   let started = Date()
   var elapsed: Double { Date().timeIntervalSince(started) * 1000 }
@@ -66,10 +71,10 @@ public func judge(_ engine: ChessEngine, _ base: Baseline, san: String, uci: Str
   /// At a moment you missed, the second best is what your move answers to.
   let second = moment && theirs != nil ? base.second.flatMap { $0.uci != uci ? $0.uci : nil } : nil
   let clock = Clock()
-  /// The exact results before and after your move, where the tablebase covers both positions.
-  let exact: (before: GameResult, after: GameResult)? = {
-    guard let before = Tablebase.probe(base.fen, for: color),
-      let next = applyUci(base.fen, uci), let after = Tablebase.probe(next.after, for: color)
+  /// The exact results before and after your move, where the tablebase or a known ending settles both positions.
+  let exact: (before: EndResult, after: EndResult)? = {
+    guard let before = exactResult(base.fen, for: color),
+      let next = applyUci(base.fen, uci), let after = exactResult(next.after, for: color)
     else { return nil }
     return (before, after)
   }()
@@ -108,7 +113,7 @@ public func judge(_ engine: ChessEngine, _ base: Baseline, san: String, uci: Str
   var judged = Judgement(
     san: san, ok: verdict?.ok ?? true, lost: verdict?.lost ?? 0, best: base.best, before: verdict?.before ?? base.cp,
     after: verdict?.after ?? base.cp, moment: moment, found: verdict?.found ?? false, reply: verdict?.reply ?? nil,
-    missedMate: verdict?.missedMate ?? false, exact: exact.map { Slip(from: $0.before, to: $0.after) })
+    missedMate: verdict?.missedMate ?? false, exact: exact.map { ResultSlip(from: $0.before, to: $0.after) })
   // Your move is the engine's own choice: sound, and at a moment, found.
   if theirs == nil {
     judged.ok = true

@@ -136,7 +136,7 @@ struct EndView: View {
           }
         LensBar(held: $lens)
         if let lens {
-          LensLegend(kind: lens)
+          LensLegend(kind: lens, endgame: isEndgame(shownFen))
         } else {
           below
         }

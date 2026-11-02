@@ -24,7 +24,20 @@ public struct Ring: Equatable, Sendable, Codable { public var square: String; pu
 public struct Star: Equatable, Sendable, Codable { public var square: String; public var side: Side }
 public struct Pip: Equatable, Sendable, Codable { public var square: String; public var attackers: Int; public var defenders: Int }
 public struct Shield: Equatable, Sendable, Codable { public var square: String; public var grade: KingGrade }
-public struct Segment: Equatable, Sendable, Codable { public var from: String; public var to: String }
+public struct Segment: Equatable, Sendable, Codable {
+  public var from: String; public var to: String
+  public init(from: String, to: String) { self.from = from; self.to = to }
+}
+/// A letter in a square's corner: a passed pawn's kind in an endgame.
+public struct Letter: Equatable, Sendable, Codable {
+  public var square: String; public var text: String; public var tone: String
+  public init(square: String, text: String, tone: String) { self.square = square; self.text = text; self.tone = tone }
+}
+/// A dashed guide across the board: "opposition" between the kings, "cutoff" along a rook's file.
+public struct Guide: Equatable, Sendable, Codable {
+  public var from: String; public var to: String; public var tone: String
+  public init(from: String, to: String, tone: String) { self.from = from; self.to = to; self.tone = tone }
+}
 public struct LensArrow: Equatable, Sendable, Codable {
   public var from: String; public var to: String; public var tone: String
   public init(from: String, to: String, tone: String) { self.from = from; self.to = to; self.tone = tone }
@@ -46,6 +59,10 @@ public struct LensMarks: Equatable, Sendable, Codable {
   public var emptyPawns: [String]?
   public var lines: [Segment]?
   public var arrows: [LensArrow]?
+  public var letters: [Letter]?
+  /// A pawn's square, corner to corner, for the race against the king.
+  public var boxes: [Segment]?
+  public var guides: [Guide]?
   public var caption: String?
   /// The squares of the pieces the lens is about. The board dims every other piece,
   /// so a held lens always shows, even when it finds nothing.
@@ -98,16 +115,16 @@ func sq(_ file: Int, _ rank: Int) -> String {
 }
 
 /// A rank counted from a side's own back rank, 0...7.
-private func rel(_ color: Color, _ rank: Int) -> Int { color == .w ? rank : 7 - rank }
-private func forward(_ color: Color) -> Int { color == .w ? 1 : -1 }
+func rel(_ color: Color, _ rank: Int) -> Int { color == .w ? rank : 7 - rank }
+func forward(_ color: Color) -> Int { color == .w ? 1 : -1 }
 
 private let KNIGHT = [(1, 2), (2, 1), (2, -1), (1, -2), (-1, -2), (-2, -1), (-2, 1), (-1, 2)]
-private let KING = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
-private let DIAG = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
-private let ORTHO = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+let KING = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
+let DIAG = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+let ORTHO = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
 /// Every square a man attacks. With `xray`, a line runs on through a friendly piece moving along it.
-private func attacksOf(_ grid: Grid, _ man: Man, _ xray: Bool = false) -> [(file: Int, rank: Int)] {
+func attacksOf(_ grid: Grid, _ man: Man, _ xray: Bool = false) -> [(file: Int, rank: Int)] {
   var out: [(file: Int, rank: Int)] = []
   func step(_ df: Int, _ dr: Int) {
     let f = man.file + df, r = man.rank + dr
@@ -143,7 +160,7 @@ private func attacksOf(_ grid: Grid, _ man: Man, _ xray: Bool = false) -> [(file
 }
 
 /// Who attacks each square: index rank * 8 + file.
-private func attackMap(_ grid: Grid) -> [[Man]] {
+func attackMap(_ grid: Grid) -> [[Man]] {
   var map = [[Man]](repeating: [], count: 64)
   for man in grid.men {
     for (file, rank) in attacksOf(grid, man, true) { map[rank * 8 + file].append(man) }
@@ -151,7 +168,7 @@ private func attackMap(_ grid: Grid) -> [[Man]] {
   return map
 }
 
-private func by(_ list: [Man], _ color: Color) -> [Man] { list.filter { $0.color == color } }
+func by(_ list: [Man], _ color: Color) -> [Man] { list.filter { $0.color == color } }
 private func cheapest(_ list: [Man]) -> Int {
   list.map { $0.type == .k ? 100 : PIECE_VALUES[$0.type]! }.min() ?? Int.max
 }
@@ -612,21 +629,20 @@ public func newlyLoose(_ before: String, _ after: String, _ me: Color, from: Str
 }
 
 public func lensMarks(_ kind: LensKind, _ fen: String, _ me: Color, _ prevFen: String? = nil) -> LensMarks {
-  var marks: LensMarks
+  let ending = isEndgame(fen)
   switch kind {
-  case .pawns: marks = pawnsLens(fen)
-  case .pieces: marks = piecesLens(fen, me)
-  case .kings: marks = kingsLens(fen, me)
-  case .eval: marks = LensMarks()
+  case .pawns: return ending ? endgamePawnsLens(fen, me) : pawnsLens(fen)
+  case .pieces: return ending ? endgamePiecesLens(fen, me) : piecesLens(fen, me)
+  case .kings: return ending ? endgameKingsLens(fen, me) : kingsLens(fen, me)
+  case .eval: return LensMarks()
   }
-  return marks
 }
 
 /// What the board draws for a held lens: `lensMarks`, and the pieces to keep bright.
 /// The Eval lens draws nothing from the board alone: the run's screen adds what the engine said.
 public func heldLens(_ kind: LensKind, _ fen: String, _ me: Color, _ prevFen: String? = nil) -> LensMarks {
   var marks = lensMarks(kind, fen, me, prevFen)
-  marks.focus = lensFocus(kind, marks, fen)
+  marks.focus = marks.focus ?? lensFocus(kind, marks, fen)
   return marks
 }
 
