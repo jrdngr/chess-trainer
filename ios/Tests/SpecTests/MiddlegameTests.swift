@@ -130,11 +130,23 @@ private func movesAt(_ plies: Range<Int>) -> [String: [String]] {
   var opts = StartOptions(steer: .lines, tree: tree, reps: blackOnly, node: node, color: .w)
   opts.seed = 1
   let fallback = try #require(startSurvival(opts))
-  #expect(middlegameLine(fallback, blackOnly) == [])
+  #expect(middlegameLine(fallback, blackOnly).sans.isEmpty)
   // With the White Playbook the starter set saved, the draw is its line.
   opts.reps = state.repertoireList
   let drawn = try #require(startSurvival(opts))
-  #expect(middlegameLine(drawn, state.repertoireList) == italian)
+  let yours = middlegameLine(drawn, state.repertoireList)
+  #expect(yours.sans == italian)
+  #expect(!yours.gap)
+}
+
+@Test func aGapLineIsHandedOverAtTheGap() async {
+  // Your line to 7.Bd3, then Black's 7...c6, which your Playbook has no answer for: you take it from there.
+  let gapLine = Array(QGD.prefix(13)) + ["c6"]
+  let t = tools(book: [positionKey(walkSan(gapLine).fens.last!): ["Qc2"]], engine: movesAt(13..<22))
+  let handoff = await buildHandoff(gapLine, color: .w, tools: t, seed: 1, gap: true)
+  #expect(handoff?.line == gapLine)
+  #expect(handoff?.kinds == Array(repeating: .prep, count: 13) + [.book])
+  #expect(handoff?.prep == 13)
 }
 
 /// A run started at the QGD handoff, White to play move 12.
