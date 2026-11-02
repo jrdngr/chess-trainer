@@ -73,16 +73,17 @@ struct PlanSteps: View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
           Text("\(i + 1)").font(.system(size: 13.5, weight: .heavy).monospacedDigit())
             .foregroundStyle(done ? Theme.good : PlanColors.plan)
-          words(runs[i]).foregroundStyle(done ? Theme.text3 : Theme.text2)
+          words(runs[i], done: done).foregroundStyle(done ? Theme.text3 : Theme.text2)
         }
         .font(.system(size: 13.5)).lineSpacing(2)
       }
     }
   }
 
-  private func words(_ runs: [StepRun]) -> Text {
+  /// A step's words, its moves in bold: bright while the step is to do, dimmed with it once done.
+  private func words(_ runs: [StepRun], done: Bool) -> Text {
     runs.reduce(Text("")) { out, run in
-      out + (run.move ? Text(run.text).fontWeight(.bold).foregroundColor(Theme.text) : Text(run.text))
+      out + (run.move ? Text(run.text).fontWeight(.bold).foregroundColor(done ? Theme.text3 : Theme.text) : Text(run.text))
     }
   }
 }

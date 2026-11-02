@@ -166,6 +166,10 @@ public func planHeadline(_ structure: Structure, _ me: Color) -> String? {
 public struct StepRun: Equatable, Sendable {
   public var text: String
   public var move: Bool
+  public init(text: String, move: Bool) {
+    self.text = text
+    self.move = move
+  }
 }
 
 /// Your side's plan as runs of words, the moves marked so they can stand out.

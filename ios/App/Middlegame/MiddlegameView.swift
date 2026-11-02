@@ -39,7 +39,15 @@ struct MiddlegameView: View {
   var body: some View {
     Group {
       if let building {
-        PlayIntroCover(trail: building, mode: "Middlegame")
+        // The announcement fades out on its own; a long build waits under it, and can be left.
+        ZStack {
+          VStack(spacing: 18) {
+            ProgressView().tint(Theme.text2)
+            Button("Cancel", action: exit).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text2)
+          }
+          .frame(maxWidth: .infinity, maxHeight: .infinity).background(Theme.background)
+          PlayIntroCover(trail: building, mode: "Middlegame").allowsHitTesting(false)
+        }
       } else if let model {
         if model.phase == .over, let finish = model.finish {
           EndView(
@@ -62,16 +70,17 @@ struct MiddlegameView: View {
   }
 
   /// Draw a line from the setup (or take `line`), build its handoff, then begin the run there.
+  /// A run from the opening sheet draws its next lines through that line's own opening.
   private func start(_ saved: SurvivalPrefs, line: MiddlegameLine? = nil) {
     let prefs = middlegamePrefs(saved)
-    let selection = store.takeRoundSelection()
+    let selection = (line ?? exact).map(selectionOf) ?? store.takeRoundSelection()
     let seed = (Env.random() * 2_147_483_648).rounded(.down)
     var options = survivalStart(prefs, selection, store.state, tree, seed: seed)
-    if let line { options.color = line.color == .w ? .w : .b }
-    guard let drawn = line ?? startSurvival(options).map({ MiddlegameLine(color: $0.state.run.color, sans: middlegameLine($0)) }),
+    guard let drawn = line ?? startSurvival(options).map({ MiddlegameLine(color: $0.state.run.color, sans: middlegameLine($0, store.state.repertoireList)) }),
       !drawn.sans.isEmpty
     else {
       toasts.show("No line to play out here")
+      if exact != nil && model == nil { onExit() }
       return
     }
     options.color = drawn.color == .w ? .w : .b
@@ -101,6 +110,11 @@ struct MiddlegameView: View {
       model = run
       run.start()
     }
+  }
+
+  /// The opening a line is in and its side, as a selection to draw from.
+  private func selectionOf(_ line: MiddlegameLine) -> Selection {
+    Selection(color: line.color == .w ? .w : .b, opening: deepestNodeAlong(tree, line.sans)?.id ?? tree.root.id)
   }
 
   /// The opening the line is in, as the announcement names it.

@@ -13,7 +13,7 @@ struct HandoffMoves: View {
   static let engine = SwiftUI.Color(hex: 0xc4b5fd)
 
   var body: some View {
-    text.font(.system(size: 13.5).monospacedDigit()).lineSpacing(3).lineLimit(3)
+    text.font(.system(size: 13.5).monospacedDigit()).lineSpacing(3).lineLimit(2)
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
       .padding(.horizontal, 12).padding(.vertical, 8)
       .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
@@ -22,8 +22,8 @@ struct HandoffMoves: View {
   /// The last few moves as one run of text, the newest underlined.
   private var text: Text {
     let shown = min(played, handoff.line.count)
-    // Whole moves only, so a line never starts on Black's half of one.
-    let from = max(0, shown - 18) / 2 * 2
+    // Six whole moves fit the slot's two lines; a line never starts on Black's half of one.
+    let from = max(0, shown - 12) / 2 * 2
     var out = Text("")
     for ply in from..<shown {
       if ply % 2 == 0 { out = out + Text("\(ply / 2 + 1). ").foregroundColor(Theme.text3) }

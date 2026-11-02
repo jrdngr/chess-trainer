@@ -174,16 +174,26 @@ public func buildHandoff(_ yours: [String], color: Color, tools: HandoffTools, s
     let options = tools.book(fen)
     let mine = fenTurn(fen) == color
     if mine && (ply >= HANDOFF_MAX_PLY || isEndgame(fen) || (middlegameStarted(fen, ply: ply) && options.isEmpty)) { break }
-    var san: String?
-    var kind = HandoffKind.book
+    // The book's moves first, then the engine's; with none of either in the band, the closest of all.
+    var book: [HandoffCandidate] = []
     if !options.isEmpty && ply < HANDOFF_MAX_PLY {
       let scores = await tools.score(fen, options.map(\.san))
-      let candidates = options.compactMap { o in scores[o.san].map { HandoffCandidate(san: o.san, weight: o.games, cp: $0) } }
-      san = pickInBand(candidates, center: center, rand)
+      book = options.compactMap { o in scores[o.san].map { HandoffCandidate(san: o.san, weight: o.games, cp: $0) } }
     }
-    if san == nil {
-      kind = .engine
-      san = pickInBand(await tools.engineMoves(fen), center: center, rand)
+    var san: String?
+    var kind = HandoffKind.book
+    if book.contains(where: { inBand(center, $0.cp) }) {
+      san = pickInBand(book, center: center, rand)
+    } else {
+      let engine = await engineCandidates(fen, tools)
+      if engine.contains(where: { inBand(center, $0.cp) }) || book.isEmpty {
+        kind = .engine
+        san = pickInBand(engine, center: center, rand)
+      } else {
+        let closest = pickInBand(book + engine, center: center, rand)
+        if !book.contains(where: { $0.san == closest }) { kind = .engine }
+        san = closest
+      }
     }
     guard let san, let move = applySan(fen, san) else { return nil }
     line.append(san)
@@ -191,6 +201,19 @@ public func buildHandoff(_ yours: [String], color: Color, tools: HandoffTools, s
     fen = move.after
   }
   return Handoff(line: line, kinds: kinds, center: center)
+}
+
+/// The engine's moves at your level, each scored again as deep as the band's center,
+/// so the band compares like with like.
+private func engineCandidates(_ fen: String, _ tools: HandoffTools) async -> [HandoffCandidate] {
+  let moves = await tools.engineMoves(fen)
+  if moves.isEmpty { return [] }
+  let scores = await tools.score(fen, moves.map(\.san))
+  return moves.map { move in
+    var out = move
+    if let cp = scores[move.san] { out.cp = cp }
+    return out
+  }
 }
 
 /* ── the run ── */
@@ -214,8 +237,14 @@ public func middlegamePrefs(_ prefs: SurvivalPrefs) -> SurvivalPrefs {
 }
 
 /// The line a Middlegame run plays out: the one Survival's draw picked, to its end.
-public func middlegameLine(_ begun: SurvivalStart) -> [String] {
-  begun.state.run.target
+/// Empty when the draw found no line of yours and fell back on the opening's own moves.
+/// A gap's line is yours up to the reply your Playbook has no answer for.
+public func middlegameLine(_ begun: SurvivalStart, _ reps: [Repertoire]) -> [String] {
+  let run = begun.state.run
+  guard let rep = reps.first(where: { $0.id == run.repertoireId }), !run.target.isEmpty,
+    nodeAtLine(rep, run.target) != nil || nodeAtLine(rep, Array(run.target.dropLast())) != nil
+  else { return [] }
+  return run.target
 }
 
 /// A run begun at the handoff. Your prep is never asked (a transposition back into
