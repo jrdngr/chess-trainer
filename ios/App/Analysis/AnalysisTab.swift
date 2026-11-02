@@ -144,7 +144,7 @@ struct AnalysisTab: View {
   /// What the held lens draws: `useLens`.
   private var marks: LensMarks? {
     guard let lens else { return nil }
-    var marks = lensMarks(lens, fen, orientation, fens.count > 1 ? fens[fens.count - 2] : nil)
+    var marks = heldLens(lens, fen, orientation, fens.count > 1 ? fens[fens.count - 2] : nil)
     if lens == .pawns, let breaks, breaks.fen == fen {
       let sides: [ChessCore.Color] = [.w, .b]
       marks.arrows = sides.compactMap { (side: ChessCore.Color) -> LensArrow? in

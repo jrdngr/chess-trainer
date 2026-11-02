@@ -209,7 +209,7 @@ struct EndView: View {
   /// What a held lens draws over the shown position.
   private var marks: LensMarks? {
     guard let lens else { return nil }
-    return lensMarks(lens, shownFen, run.color, cursor > 0 ? fens[cursor - 1] : nil)
+    return heldLens(lens, shownFen, run.color, cursor > 0 ? fens[cursor - 1] : nil)
   }
 
   /// The run's moves, a miss on the position it was asked in, then the blunder beside the engine's move.

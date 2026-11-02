@@ -647,19 +647,47 @@ public func lensMarks(_ kind: LensKind, _ fen: String, _ me: Color, _ prevFen: S
   case .kings: marks = kingsLens(fen, me)
   case .threats: marks = threatsLens(fen, me, prevFen)
   }
+  return marks
+}
+
+/// What the board draws for a held lens: `lensMarks`, with Threats drawn as a red
+/// arrow from each attacker to the loose piece it hits instead of rings, and the
+/// pieces to keep bright.
+public func heldLens(_ kind: LensKind, _ fen: String, _ me: Color, _ prevFen: String? = nil) -> LensMarks {
+  var marks = lensMarks(kind, fen, me, prevFen)
+  if kind == .threats {
+    marks.rings = nil
+    marks.arrows = threatArrows(fen)
+  }
   marks.focus = lensFocus(kind, marks, fen)
   return marks
 }
 
-/// The pieces a lens marks: pawns for Pawns, the pieces it rates for Pieces,
-/// none for Space (its squares are the point), the kings with their shields
-/// and attackers for Kings, and what is at risk for Threats.
-func lensFocus(_ kind: LensKind, _ marks: LensMarks, _ fen: String) -> [String] {
+/// Every attack on a loose piece: all its attackers when it hangs (or is a king),
+/// only the cheaper ones when it is hit by a cheaper piece.
+func threatArrows(_ fen: String) -> [LensArrow] {
+  let grid = Grid(fen)
+  let map = attackMap(grid)
+  let value = { (man: Man) in man.type == .k ? 100 : PIECE_VALUES[man.type]! }
+  var out: [LensArrow] = []
+  for loose in loosePieces(fen) {
+    guard let target = grid.men.first(where: { $0.square == loose.square }) else { continue }
+    let attackers = by(map[target.rank * 8 + target.file], target.color.other)
+    let shown = loose.kind == "hanging" ? attackers : attackers.filter { value($0) < value(target) }
+    out += shown.map { LensArrow(from: $0.square, to: target.square, tone: "threat") }
+  }
+  return out
+}
+
+/// The pieces a lens marks, or nil to dim none: pawns for Pawns, the pieces it
+/// rates for Pieces, the kings with their shields and attackers for Kings, and
+/// both ends of every threat for Threats. Space dims nothing: its squares are the point.
+func lensFocus(_ kind: LensKind, _ marks: LensMarks, _ fen: String) -> [String]? {
   var squares: [String]
   switch kind {
   case .pawns: squares = piecesFromFen(fen).filter { $0.type == .p }.map(\.square)
   case .pieces: squares = (marks.tints ?? []).map(\.square) + (marks.rings ?? []).map(\.square) + (marks.arrows ?? []).map(\.from)
-  case .space: squares = []
+  case .space: return nil
   case .kings: squares = (marks.shields ?? []).map(\.square) + (marks.pips ?? []).map(\.square) + (marks.zone ?? [])
   case .threats: squares = (marks.rings ?? []).map(\.square) + (marks.arrows ?? []).flatMap { [$0.from, $0.to] }
   }

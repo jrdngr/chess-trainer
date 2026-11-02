@@ -25,17 +25,17 @@ struct IntroPagesView: View {
       .padding(.horizontal, 8).frame(height: 44)
       TabView(selection: $page) {
         flashCards.tag(0)
-        boardPage(marks: lens.map { lensMarks($0, Self.fen, .w) }, plan: nil, title: "Lenses",
+        boardPage(marks: lens.map { heldLens($0, Self.fen, .w) }, plan: nil, title: "Lenses",
                   text: "Hold a lens button to get extra info about the board.") {
           EmptyView()
         }
         .tag(1)
-        boardPage(marks: lens.map { lensMarks($0, Self.fen, .w) }, plan: false, title: "Goals",
+        boardPage(marks: lens.map { heldLens($0, Self.fen, .w) }, plan: false, title: "Goals",
                   text: "Past your prep, you get a goal with a deadline.") {
           GoalCard(mission: Mission(kind: .convert)).padding(.top, 12)
         }
         .tag(2)
-        boardPage(marks: lens.map { lensMarks($0, Self.fen, .w) }, plan: true, title: "Plans",
+        boardPage(marks: lens.map { heldLens($0, Self.fen, .w) }, plan: true, title: "Plans",
                   text: "Hold Plan for the ideas behind the position.") {
           PlanLegend(fen: Self.fen, me: .w).padding(.top, 12)
         }

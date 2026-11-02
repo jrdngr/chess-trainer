@@ -84,7 +84,7 @@ struct RunView: View {
     guard let lens, lensEnabled else { return nil }
     let me = model.run.color
     let fens = walkSan(Array(model.run.played.dropLast())).fens
-    var marks = lensMarks(lens, model.shownFen, me, model.run.played.isEmpty ? nil : fens.last)
+    var marks = heldLens(lens, model.shownFen, me, model.run.played.isEmpty ? nil : fens.last)
     if lens == .pawns, let breaks, breaks.fen == model.shownFen {
       let sides: [ChessCore.Color] = [.w, .b]
       marks.arrows = sides.compactMap { (side: ChessCore.Color) -> LensArrow? in

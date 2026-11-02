@@ -145,9 +145,7 @@ struct LensLegend: View {
       Row(swatch: shield(LensColors.red), label: "Under attack"),
     ],
     .threats: [
-      Row(swatch: ring(LensColors.red), label: "Hanging"),
-      Row(swatch: ring(LensColors.orange), label: "Hit by a cheaper piece"),
-      Row(swatch: arrow(LensColors.red), label: "New threat from their last move"),
+      Row(swatch: arrow(LensColors.red), label: "Attacks a loose piece"),
     ],
   ]
 }
