@@ -90,3 +90,13 @@ private func stats(_ days: [JSON], rating: Double = 0, rated: Int? = nil) -> Nod
     "srs.runNeed": { a in runNeed(a[0].decoded(Card.self), a[1].int, 1_790_845_200_000).json },
   ], only: ["scoring.recordStart", "srs.runNeed"])
 }
+
+/// Just after midnight following the 23-hour day daylight saving starts on,
+/// the streak still counts that day.
+@Test func streakAcrossSpringForward() throws {
+  var calendar = Calendar(identifier: .gregorian)
+  calendar.timeZone = try #require(TimeZone(identifier: "America/New_York"))
+  let days: [JSON] = ["2026-03-07", "2026-03-08", "2026-03-09"].map { .array([.string($0), .number(1), .null]) }
+  let justAfterMidnight = try #require(calendar.date(from: DateComponents(year: 2026, month: 3, day: 9, hour: 0, minute: 30)))
+  #expect(streak(stats(days, rated: 0), justAfterMidnight.timeIntervalSince1970 * 1000, calendar: calendar) == 3)
+}

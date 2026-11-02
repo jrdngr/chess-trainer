@@ -192,8 +192,8 @@ public struct ScoreState: Equatable, Sendable, Codable {
 public let EMPTY_SCORE = ScoreState()
 
 /// The local calendar day a moment falls on.
-public func dayKey(_ at: Double) -> String {
-  let parts = Calendar.current.dateComponents([.year, .month, .day], from: Date(timeIntervalSince1970: at / 1000))
+public func dayKey(_ at: Double, _ calendar: Calendar = .current) -> String {
+  let parts = calendar.dateComponents([.year, .month, .day], from: Date(timeIntervalSince1970: at / 1000))
   return String(format: "%d-%02d-%02d", parts.year!, parts.month!, parts.day!)
 }
 
@@ -385,14 +385,17 @@ public func accuracy(answered: Int, correct: Int) -> Double? {
 
 /// Days in a row with a round, counting back from today, or from yesterday
 /// when nothing has been played yet today.
-public func streak(_ stats: NodeStats, _ now: Double = Env.now()) -> Int {
+/// Steps back by calendar days, so a day that daylight saving makes 23 hours long is not skipped.
+public func streak(_ stats: NodeStats, _ now: Double = Env.now(), calendar: Calendar = .current) -> Int {
   let played = Set(stats.days.filter { $0.value.rounds > 0 }.map(\.key))
+  var day = calendar.startOfDay(for: Date(timeIntervalSince1970: now / 1000))
+  func key(_ date: Date) -> String { dayKey(date.timeIntervalSince1970 * 1000, calendar) }
+  func before(_ date: Date) -> Date { calendar.date(byAdding: .day, value: -1, to: date)! }
   var count = 0
-  var cursor = now
-  if !played.contains(dayKey(cursor)) { cursor -= DAY }
-  while played.contains(dayKey(cursor)) {
+  if !played.contains(key(day)) { day = before(day) }
+  while played.contains(key(day)) {
     count += 1
-    cursor -= DAY
+    day = before(day)
   }
   return count
 }
@@ -410,8 +413,10 @@ public func ratingOn(_ stats: NodeStats, _ key: String) -> Double {
 }
 
 /// How far a rating has moved over the last `days` days.
-public func ratingChange(_ stats: NodeStats, _ days: Double, _ now: Double = Env.now()) -> Double {
-  stats.rating - ratingOn(stats, dayKey(now - days * DAY))
+public func ratingChange(_ stats: NodeStats, _ days: Double, _ now: Double = Env.now(), calendar: Calendar = .current) -> Double {
+  let date = Date(timeIntervalSince1970: now / 1000)
+  let then = calendar.date(byAdding: .day, value: -Int(days), to: date) ?? date.addingTimeInterval(-days * DAY / 1000)
+  return stats.rating - ratingOn(stats, dayKey(then.timeIntervalSince1970 * 1000, calendar))
 }
 
 // Keyed by mode name when saved.
