@@ -75,11 +75,11 @@ extension Earned {
   #expect(stepMission(set, .w, 150, captured).result == .failed)
 
   #expect(theirMoveMission(lastTurn.mission, .w, 250, walk("e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 dxc6")) == .done)
-  #expect(theirMoveMission(lastTurn.mission, .w, 250, walk("e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 d6")) == .failed)
+  #expect(theirMoveMission(lastTurn.mission, .w, 250, walk("e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 Nf6")) == .failed)
 
   // Mid-window, the recapture credits at once; any other reply leaves the mission running.
   let early = Mission(kind: .convert, moves: 2, pieces: PieceCount(mine: 7, theirs: 7))
-  #expect(theirMoveMission(early, .w, 250, walk("e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 d6")) == nil)
+  #expect(theirMoveMission(early, .w, 250, walk("e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 Nf6")) == nil)
   var extras = Extras()
   extras.mission = early
   let settled = theirExtras(extras, .w, 250, walk("e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 dxc6"))

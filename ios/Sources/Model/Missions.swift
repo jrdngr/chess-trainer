@@ -9,6 +9,7 @@ public enum MissionKind: String, Sendable, Codable {
 public struct PieceCount: Equatable, Sendable, Codable {
   public var mine: Int
   public var theirs: Int
+  public init(mine: Int, theirs: Int) { self.mine = mine; self.theirs = theirs }
 }
 
 public struct Mission: Equatable, Sendable, Codable {
