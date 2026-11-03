@@ -3,7 +3,7 @@ import Model
 import SwiftUI
 
 /// Home: the selection, Autopilot's next round on its button, the modes,
-/// and Survival, Favorites and Milestones.
+/// and Favorites and Milestones.
 struct HomeView: View {
   let tree: OpeningTree
   let onOpen: (Mode) -> Void
@@ -33,7 +33,6 @@ struct HomeView: View {
           tile("Play", "play", .play)
         }
         VStack(spacing: 10) {
-          SurvivalRuns()
           FavoritesLadder()
           MilestonesCard()
         }
