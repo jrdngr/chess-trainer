@@ -71,19 +71,34 @@ private func picks(_ lines: [EngineLine], _ level: Level) -> [String: Int] {
   for (weaker, stronger) in zip(LEVELS, LEVELS.dropFirst()) {
     #expect(weaker.depth <= stronger.depth)
     #expect(weaker.temperature > stronger.temperature)
+    #expect(weaker.window > stronger.window)
   }
   #expect(levelFor(rating: 100).rating == MIN_RATING)
   #expect(levelFor(rating: 1400).depth == 4)
 }
 
 @Test func slipsAreSmallMoreOftenThanBig() {
-  // Best, a 20cp slip, a piece hung.
-  let lines = candidates([0, 20, 300])
-  let weak = picks(lines, levelFor(rating: 800)), strong = picks(lines, levelFor(rating: 2000))
+  // Best, a 10cp slip, a 50cp one.
+  let lines = candidates([0, 10, 50])
+  let weak = picks(lines, levelFor(rating: 800)), strong = picks(lines, levelFor(rating: 1600))
   #expect(weak["m2", default: 0] > weak["m3", default: 0])
   #expect(weak["m3", default: 0] > 0)
-  #expect(strong["m3", default: 0] * 5 < weak["m3", default: 0])
   #expect(strong["m1", default: 0] > weak["m1", default: 0])
+}
+
+@Test func aSeenBlunderIsNeverPlayed() {
+  // One move keeps the piece; eleven drop it (9...Rb8 instead of 9...Nxf5).
+  let lines = candidates([0] + Array(repeating: 300, count: 11))
+  for level in [levelFor(rating: MIN_RATING)] + LEVELS {
+    #expect(picks(lines, level)["m1", default: 0] == 4000)
+  }
+}
+
+@Test func aLossPastTheWindowIsNeverPlayed() {
+  let level = levelFor(rating: 1200)
+  let counts = picks(candidates([0, level.window - 5, level.window + 5]), level)
+  #expect(counts["m2", default: 0] > 0)
+  #expect(counts["m3", default: 0] == 0)
 }
 
 @Test func equalMovesAreEquallyLikely() {

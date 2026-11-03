@@ -6,8 +6,8 @@ import Shared
  *
  * Strength is made here rather than in the engine, to play like a person of
  * a given rating: a lower rating searches shallower, so long tactics and
- * quiet threats go unseen, and picks among the candidates by what each one
- * costs, so small slips are common and big ones rare. */
+ * quiet threats go unseen, and picks among the good moves it sees. A move it
+ * sees losing more than its level's window is never played on purpose. */
 
 /// A playing strength, named by the rating it plays like.
 public struct Level: Equatable, Sendable {
@@ -18,19 +18,21 @@ public struct Level: Equatable, Sendable {
   public var depth: Int
   /// How many candidate moves it weighs.
   public var multiPv: Int
-  /// How readily it gives up centipawns: a move that costs this much is
-  /// e (about 2.7) times less likely than the best.
+  /// How readily it gives up centipawns inside the window: a move that
+  /// costs this much is e (about 2.7) times less likely than the best.
   public var temperature: Double
+  /// The most a move it plays may cost against its best, in centipawns.
+  public var window: Double
 }
 
 /// The ratings a level can be set to.
 public let MIN_RATING = 600, MAX_RATING = 2200
 
 /// Anchor points the levels are drawn between: rating, depth, temperature,
-/// and how many candidates it weighs (more for lower ratings, so a poor
-/// move is among them).
-private let LEVEL_ANCHORS: [(rating: Int, depth: Int, temperature: Double, multiPv: Int)] = [
-  (600, 1, 700, 20), (800, 2, 500, 16), (1200, 3, 280, 12), (1600, 5, 150, 8), (2000, 7, 75, 6), (2200, 8, 55, 5),
+/// how many candidates it weighs, and the window.
+private let LEVEL_ANCHORS: [(rating: Int, depth: Int, temperature: Double, multiPv: Int, window: Double)] = [
+  (600, 1, 700, 20, 150), (800, 2, 500, 16, 100), (1200, 3, 280, 12, 60), (1600, 5, 150, 8, 40), (2000, 7, 75, 6, 25),
+  (2200, 8, 55, 5, 20),
 ]
 
 /// The level that plays like a rating, between the anchors.
@@ -42,9 +44,10 @@ public func levelFor(rating: Int) -> Level {
   let t = b.rating == a.rating ? 0 : Double(r - a.rating) / Double(b.rating - a.rating)
   func between(_ x: Int, _ y: Int) -> Int { Int((Double(x) + t * Double(y - x)).rounded()) }
   let temperature = a.temperature + t * (b.temperature - a.temperature)
+  let window = a.window + t * (b.window - a.window)
   return Level(
     id: String(r), name: String(r), rating: r, depth: between(a.depth, b.depth), multiPv: between(a.multiPv, b.multiPv),
-    temperature: temperature)
+    temperature: temperature, window: window)
 }
 
 /// The levels Play offers.
@@ -68,24 +71,31 @@ private func centipawns(_ line: EngineLine) -> Double? {
   return nil
 }
 
-/// Which candidate line to play, the UCI move or nil. Each candidate is
-/// weighed by what it costs against the best, so a move that loses a
-/// little is often played and one that loses a piece seldom is.
-public func chooseMove(_ lines: [EngineLine], _ level: Level, _ rand: () -> Double) -> String? {
-  let usable = lines.filter { !$0.pv.isEmpty }.jsSorted { Double($0.multipv - $1.multipv) }
-  guard let first = usable.first else { return nil }
-  guard usable.count > 1, level.temperature > 0, let best = centipawns(first) else { return first.pv[0] }
+/// The candidate lines a level may play, best first, each with its score
+/// and weight: the ones inside the window of the best, a move costing more
+/// being likelier the less it costs. With no temperature, only the best.
+public func levelMoves(_ lines: [EngineLine], _ level: Level) -> [(line: EngineLine, cp: Double, weight: Double)] {
+  let scored = lines.filter { !$0.pv.isEmpty }.jsSorted { Double($0.multipv - $1.multipv) }
+    .compactMap { line in centipawns(line).map { (line: line, cp: $0) } }
+  guard let best = scored.first?.cp else { return [] }
+  if level.temperature <= 0 { return [(scored[0].line, best, 1)] }
   // Scores are White's; the best line is the mover's best, so a loss is the distance from it.
-  let weights = usable.map { line -> Double in
-    guard let cp = centipawns(line) else { return 0 }
-    return exp(-abs(best - cp) / level.temperature)
+  return scored.filter { abs(best - $0.cp) <= level.window }
+    .map { ($0.line, $0.cp, exp(-abs(best - $0.cp) / level.temperature)) }
+}
+
+/// Which candidate line to play, the UCI move or nil: one of the good moves
+/// inside the level's window, so it plays a less ideal move but never one
+/// it sees losing more.
+public func chooseMove(_ lines: [EngineLine], _ level: Level, _ rand: () -> Double) -> String? {
+  let moves = levelMoves(lines, level)
+  guard !moves.isEmpty else { return lines.first { !$0.pv.isEmpty }?.pv[0] }
+  var ticket = rand() * moves.reduce(0) { $0 + $1.weight }
+  for move in moves {
+    ticket -= move.weight
+    if ticket <= 0 { return move.line.pv[0] }
   }
-  var ticket = rand() * weights.reduce(0, +)
-  for (i, line) in usable.enumerated() {
-    ticket -= weights[i]
-    if ticket <= 0 { return line.pv[0] }
-  }
-  return usable.last!.pv[0]
+  return moves.last!.line.pv[0]
 }
 
 /// How long a game's opening is worth keeping, in plies.

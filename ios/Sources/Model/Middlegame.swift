@@ -93,17 +93,8 @@ public func bookCandidates(_ index: ReferenceIndex, _ fen: String) -> [(san: Str
 
 /// The engine's candidate moves at a level, weighted the way `chooseMove` picks among them.
 public func levelCandidates(_ fen: String, _ lines: [EngineLine], _ level: Level) -> [HandoffCandidate] {
-  let usable = lines.filter { !$0.pv.isEmpty }.jsSorted { Double($0.multipv - $1.multipv) }
-  let scored = usable.compactMap { line -> (san: String, cp: Double)? in
-    guard let san = applyUci(fen, line.pv[0])?.san else { return nil }
-    if let cp = line.cp { return (san, cp) }
-    if let mate = line.mate { return (san, mate > 0 ? 10_000 - mate : -10_000 - mate) }
-    return nil
-  }
-  guard let best = scored.first?.cp else { return [] }
-  return scored.map { move in
-    let weight = level.temperature > 0 ? exp(-abs(best - move.cp) / level.temperature) : (move.cp == best ? 1 : 0)
-    return HandoffCandidate(san: move.san, weight: weight, cp: move.cp)
+  levelMoves(lines, level).compactMap { move in
+    applyUci(fen, move.line.pv[0]).map { HandoffCandidate(san: $0.san, weight: move.weight, cp: move.cp) }
   }
 }
 
