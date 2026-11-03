@@ -141,10 +141,11 @@ private let RARE = 0.0001
 
 private func holeWorth(_ hole: Hole) -> Double { max(hole.reach * holeShare(hole), RARE) }
 
-/// The hole a run should start at: the one met most often, shallower on a tie.
+/// The hole a run should start at: the shallowest, the one met most often on a
+/// tie. A row widens at its earliest replies before any line gets longer.
 public func firstHole(_ row: GrowthRow) -> Hole? {
   guard var best = row.holes.first else { return nil }
-  for hole in row.holes.dropFirst() where holeWorth(hole) > holeWorth(best) || (holeWorth(hole) == holeWorth(best) && hole.path.count < best.path.count) {
+  for hole in row.holes.dropFirst() where hole.path.count < best.path.count || (hole.path.count == best.path.count && holeWorth(hole) > holeWorth(best)) {
     best = hole
   }
   return best

@@ -96,3 +96,15 @@ func rowJSON(_ r: GrowthRow) -> JSON {
   #expect(offer?.kind == "line")
   #expect(offer?.onLine == true)
 }
+
+/// A one-line Ruy Lopez grows its earliest reply first, though forks deep in
+/// the main line are met more often than the third-move sidelines.
+@Test func growthStartsAtTheShallowestReply() {
+  let tree = openingTree(bookIndex)
+  let main = "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O h3"
+  let opening = deepestNodeWithin(tree, tree.root, line("e4 e5 Nf3 Nc6 Bb5"))
+  let launch = growLaunch(rep(.w, [main]), bookIndex, tree, opening, minShare: 1, maxPly: 18, starred: [])
+  let hole = launch.flatMap { firstHole($0.row) }
+  #expect(hole?.path == line("e4 e5 Nf3 Nc6 Bb5"))
+  #expect(hole?.san == "Nf6")
+}

@@ -47,7 +47,7 @@ public enum GrowthEffect: Sendable {
 
 public typealias GrowthStep = (session: GrowthSession, effects: [GrowthEffect])
 
-/// A run begins at the hole it was handed, or the one the row most wants answered,
+/// A run begins at the hole it was handed, or the row's shallowest one,
 /// or at a line's tip for the book to reply; otherwise it walks from move one.
 public func beginGrowth(_ tree: Repertoire, _ row: GrowthRow, _ hole: Hole? = nil) -> GrowthSession {
   let start = hole ?? firstHole(row)
