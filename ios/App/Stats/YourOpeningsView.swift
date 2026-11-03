@@ -4,9 +4,9 @@ import SwiftUI
 /// Rated openings shown before "Show all": the ones played last.
 private let RATED_SHOWN = 6
 
-/// The tab's own page: the graphs first (activity, Survival's last runs, then
-/// the windowed charts), and under them your favorites and the other rated
-/// openings, each with the rung it holds.
+/// The tab's own page: the graphs first (the activity hero, the window,
+/// Survival's last runs, rounds by mode and accuracy), and under them your
+/// favorites and the other rated openings, each with the rung it holds.
 struct YourOpeningsView: View {
   let tree: OpeningTree
   @Binding var days: Int
@@ -24,23 +24,14 @@ struct YourOpeningsView: View {
       LargeTitleBar(title: "Stats")
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
-          StatsSection(title: "Activity", first: true)
-          activity(stats)
+          ActivityHero(stats: stats, days: days).padding(.top, 8)
+          SegmentedControl(value: $days, options: STATS_WINDOWS).padding(.top, 16)
           SurvivalRuns()
-          StatsSection(title: "Window")
-          SegmentedControl(value: $days, options: STATS_WINDOWS)
-          StatsSection(title: "Rounds a day")
-          StatsCard { LineChart(points: dailyRounds(stats, days), color: Theme.accent) }
+          ModeShare(stats: stats)
           AccuracySection(stats: stats, days: days)
-          StatsSection(title: "By mode", aside: "rounds")
-          StatsCard {
-            BarList(rows: ACTIVITY_MODES.map { .init(label: modeName($0), value: stats.byMode[$0]?.rounds ?? 0) }, color: Theme.accent)
-          }
-          StatsSection(title: "Favorites", aside: mine.isEmpty ? nil : "by rating")
+          StatsSection(title: "Favorites", aside: mine.isEmpty ? nil : "by rating \u{00b7} \(windowText(days))")
           favorites(mine)
           if !others.isEmpty { rated(others) }
-          StatsNote(text: Text("Only Survival moves a rating. Drill and Growth are counted here and nowhere else."), center: true)
-            .padding(.top, 12)
         }
         .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 44)
       }
@@ -55,7 +46,7 @@ struct YourOpeningsView: View {
           .font(.system(size: 13)).foregroundStyle(Theme.text2)
       }
     } else {
-      ListCard { ForEach(mine, id: \.node.id) { RatedRow(entry: $0, onOpen: onOpen) } }
+      ListCard { ForEach(mine, id: \.node.id) { FavoriteRow(entry: $0, days: days, onOpen: onOpen) } }
     }
   }
 
@@ -76,30 +67,5 @@ struct YourOpeningsView: View {
         }
       }
     }
-  }
-
-  private func activity(_ stats: NodeStats) -> some View {
-    let rounds = roundsOf(stats)
-    let daysPlayed = streak(stats)
-    let acc = accuracy(answered: stats.answered, correct: stats.correct)
-    return StatsHero(big: "\(rounds)", label: rounds == 1 ? "round" : "rounds") {
-      FlowRow(spacing: 8) {
-        if daysPlayed > 0 { StatsPill(dot: Theme.warn, bold: "\(daysPlayed)", text: "day streak") }
-        if let acc { StatsPill(bold: percentText(acc), text: "accuracy") }
-        StatsPill(bold: "\(stats.answered)", text: "answered")
-      }
-      .padding(.top, 16)
-    }
-  }
-}
-
-/// Accuracy over the window, a seven-day average.
-struct AccuracySection: View {
-  var stats: NodeStats
-  var days: Int
-
-  var body: some View {
-    StatsSection(title: "Accuracy", aside: "seven-day average")
-    StatsCard { LineChart(points: rollingAccuracy(stats, days), color: Theme.good, max: 1, percent: true) }
   }
 }

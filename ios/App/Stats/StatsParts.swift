@@ -115,3 +115,16 @@ struct FlowRow: Layout {
     return rows
   }
 }
+
+/// A change in a tinted capsule: green when it is good news, red when not.
+struct StatsBadge: View {
+  var text: String
+  var good: Bool
+
+  var body: some View {
+    let color = good ? Theme.good : Theme.bad
+    Text(text).font(.system(size: 12, weight: .bold).monospacedDigit()).foregroundStyle(color)
+      .padding(.horizontal, 8).padding(.vertical, 3)
+      .background(Capsule().fill(color.opacity(0.12)))
+  }
+}

@@ -12,6 +12,11 @@ struct LineChart: View {
   var max: Double?
   /// Ticks as percentages.
   var percent = false
+  /// Faint single-day values behind a smoothed line.
+  var dots: [DayPoint] = []
+  /// Show the latest value under the chart while nobody is dragging; off
+  /// when the card already says it.
+  var restingReadout = true
 
   @State private var hover: Int?
   @State private var width: CGFloat = 320
@@ -71,8 +76,13 @@ struct LineChart: View {
     area.addLine(to: CGPoint(x: scale.x(last.at), y: bottom))
     area.addLine(to: CGPoint(x: scale.x(points[0].at), y: bottom))
     area.closeSubpath()
-    context.fill(area, with: .color(color.opacity(0.1)))
-    context.stroke(line, with: .color(color), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+    context.fill(area, with: .linearGradient(
+      Gradient(colors: [color.opacity(0.28), color.opacity(0)]), startPoint: CGPoint(x: 0, y: pad.top), endPoint: CGPoint(x: 0, y: bottom)))
+    for dot in dots where dot.at >= points[0].at && dot.at <= last.at {
+      let at = CGPoint(x: scale.x(dot.at), y: scale.y(dot.value))
+      context.fill(Path(ellipseIn: CGRect(x: at.x - 1.8, y: at.y - 1.8, width: 3.6, height: 3.6)), with: .color(color.opacity(0.35)))
+    }
+    context.stroke(line, with: .color(color), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
     marker(&context, CGPoint(x: scale.x(last.at), y: scale.y(last.value)), 4)
     if let hover, points.indices.contains(hover) {
       let p = points[hover]
@@ -107,6 +117,7 @@ struct LineChart: View {
       Text(label(point.value)).font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text)
     }
     .padding(.horizontal, 2)
+    .opacity(shown == nil && !restingReadout ? 0 : 1)
   }
 
   private func label(_ value: Double) -> String { percent ? percentText(value) : "\(Int(JSRound(value)))" }
