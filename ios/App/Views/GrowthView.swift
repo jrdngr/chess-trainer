@@ -17,8 +17,6 @@ struct GrowthView: View {
     var nextLabel = "Next round"
     var again: (() -> Void)?
     var analyze: (() -> Void)?
-    /// The card that points back to practising.
-    var practice: ((Selection) -> Void)?
     var playFrom: ((String) -> Void)?
     /// Back to the lobby.
     var back: (() -> Void)?

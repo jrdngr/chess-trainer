@@ -28,50 +28,6 @@
       ]
     },
     {
-      "fn": "growOffer.practiceOwed",
-      "about": "An opening’s lines, how many are short of three clean finishes, and the cap.",
-      "cases": [
-      {"args":[{"color":"b","lines":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6"],"opening":"d4 Nf6 c4 g6","played":"d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3","finishes":0}],"out":{"lines":1,"owed":1,"cap":3}},
-      {"args":[{"color":"b","lines":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6"],"opening":"d4 Nf6 c4 g6","played":"d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","finishes":0}],"out":{"lines":1,"owed":1,"cap":3}},
-      {"args":[{"color":"b","lines":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6"],"opening":"d4 Nf6 c4 g6","played":"d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","finishes":3}],"out":{"lines":1,"owed":0,"cap":3}},
-      {"args":[{"color":"b","lines":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6"],"opening":"d4 Nf6 c4 g6","played":"d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","finishes":2}],"out":{"lines":1,"owed":1,"cap":3}},
-      {"args":[{"color":"w","lines":["e4 e5 Nf3 Nc6 Bc4 Bc5","e4 e5 Nf3 Nc6 Bc4 Nf6 d3"],"opening":"e4 e5 Nf3 Nc6 Bc4","played":"e4 e5 Nf3 Nc6 Bc4 Bc5","finishes":3}],"out":{"lines":2,"owed":0,"cap":3}},
-      {"args":[{"color":"w","lines":["e4 e5 Nf3 Nc6 Bc4"],"opening":"e4 e5 Nf3 Nc6 Bc4","played":"e4 e5 Nf3 Nc6 Bc4","finishes":0,"stub":true}],"out":{"lines":1,"owed":1,"cap":3}},
-      {"args":[{"color":"b","lines":["d4 Nf6 c4 g6"],"opening":"d4 Nf6 c4 g6","played":"d4 Nf6 c4 g6","finishes":0,"stub":true}],"out":{"lines":1,"owed":1,"cap":3}}
-      ]
-    },
-    {
-      "fn": "growOffer.practiceCap",
-      "about": "How many unpracticed lines an opening may carry before Growth points back.",
-      "cases": [
-      {"args":[0],"out":3},
-      {"args":[1],"out":3},
-      {"args":[2],"out":3},
-      {"args":[3],"out":3},
-      {"args":[4],"out":3},
-      {"args":[5],"out":3},
-      {"args":[6],"out":2},
-      {"args":[7],"out":2},
-      {"args":[8],"out":2},
-      {"args":[9],"out":2},
-      {"args":[10],"out":2},
-      {"args":[11],"out":2},
-      {"args":[12],"out":1},
-      {"args":[13],"out":1},
-      {"args":[14],"out":1}
-      ]
-    },
-    {
-      "fn": "growOffer.practiceText",
-      "about": "What Growth's card says an opening is owed.",
-      "cases": [
-      {"args":["King's Indian Defence",0],"out":"King's Indian Defence line grown."},
-      {"args":["King's Indian Defence",1],"out":"1 King's Indian Defence line to practice."},
-      {"args":["King's Indian Defence",2],"out":"2 King's Indian Defence lines to practice."},
-      {"args":["King's Indian Defence",5],"out":"5 King's Indian Defence lines to practice."}
-      ]
-    },
-    {
       "fn": "growOffer.offerOpening",
       "about": "The opening an offer is about: the one the round started inside, or the selection, or the family a round from move one ended in.",
       "cases": [

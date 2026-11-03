@@ -61,13 +61,10 @@ func rowJSON(_ r: GrowthRow) -> JSON {
   // pick, not where the round ended. Its own tests are below.
   try check("growOffer", [
     "growOffer.readyToGrow": { a in readyToGrow(repOf(a[0]), tree, nodeById(tree, a[0]["opening"].string), rounds(a[0])).json },
-    "growOffer.practiceOwed": { a in encoded(practiceOwed(repOf(a[0]), tree, nodeById(tree, a[0]["opening"].string), rounds(a[0]))) },
-    "growOffer.practiceCap": { practiceCap($0[0].int).json },
-    "growOffer.practiceText": { practiceText($0[0].string, $0[1].int).json },
     "growOffer.offerOpening": { a in
       offerOpening(tree, nodeById(tree, a[0].string), a[1].stringOrNil.map { nodeById(tree, $0) }, line(a[2].string)).id.json
     },
-  ], only: ["growOffer.readyToGrow", "growOffer.practiceOwed", "growOffer.practiceCap", "growOffer.practiceText", "growOffer.offerOpening"])
+  ], only: ["growOffer.readyToGrow", "growOffer.offerOpening"])
 }
 
 /// A one-line opening widens before it lengthens: a clean run to the end of

@@ -116,10 +116,6 @@ struct RootView: View {
     case .growth:
       GrowthModeView(
         tree: tree, index: index, onExit: { leave() },
-        onPractice: { selection in
-          scope = selection
-          self.mode = .autopilot
-        },
         onAnalyze: { analyzing = ($0, $1) })
     case .survival:
       SurvivalView(

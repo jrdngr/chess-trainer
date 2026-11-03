@@ -41,31 +41,6 @@ public func readyToGrow(_ rep: Repertoire, _ tree: OpeningTree, _ opening: Openi
   return !lines.isEmpty && lines.allSatisfy { $0.finishes >= CLEAN_FINISHES }
 }
 
-public struct PracticeOwed: Equatable, Sendable, Codable {
-  public var lines: Int
-  public var owed: Int
-  public var cap: Int
-}
-
-/// How many unpracticed lines an opening may carry before Growth points back.
-public func practiceCap(_ lines: Int) -> Int {
-  lines < 6 ? 3 : lines < 12 ? 2 : 1
-}
-
-public func practiceOwed(_ rep: Repertoire, _ tree: OpeningTree, _ opening: OpeningNode, _ rounds: [RoundRecord]) -> PracticeOwed {
-  let lines = lineFinishes(rep, tree, opening, rounds)
-  return PracticeOwed(lines: lines.count, owed: lines.filter { $0.finishes < CLEAN_FINISHES }.count, cap: practiceCap(lines.count))
-}
-
-public func atPracticeCap(_ practice: PracticeOwed) -> Bool {
-  practice.owed > 0 && practice.owed >= practice.cap
-}
-
-/// What Growth's card says an opening is owed.
-public func practiceText(_ name: String, _ owed: Int) -> String {
-  owed > 0 ? "\(owed) \(name) line\(owed == 1 ? "" : "s") to practice." : "\(name) line grown."
-}
-
 /// The repertoire node a line reaches, by any move order.
 private func nodeAt(_ rep: Repertoire, _ sans: [String], _ fen: String) -> String? {
   var nodeId: String?

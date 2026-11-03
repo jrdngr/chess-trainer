@@ -1,18 +1,8 @@
 import Model
 
-/// What the reveal at the end of a batch offers: practice the opening just
-/// grown, or another run on what is now most worth extending.
+/// What the reveal at the end of a batch offers: another run on what is now
+/// most worth extending.
 extension GrowthModel {
-  /// The opening grown, and how much practice it is owed, read from the live tree.
-  var practice: (opening: OpeningNode, owed: PracticeOwed)? {
-    guard phase == .done, let live else { return nil }
-    let opening = offerOpening(tree, launch.opening, nil, run.path)
-    return (opening, practiceOwed(live, tree, opening, store.state.score.rounds))
-  }
-
-  /// The card points back once the opening owes its cap of practice.
-  var pointsBack: Bool { practice.map { atPracticeCap($0.owed) } ?? false }
-
   /// What the verdict says.
   var verdict: (tone: GrowthVerdict.Tone, text: String) {
     let sans = addedSans

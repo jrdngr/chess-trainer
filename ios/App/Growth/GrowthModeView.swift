@@ -4,14 +4,11 @@ import Model
 import SwiftUI
 
 /// Growth opened from Home: the lobby, and a sitting on the row it starts.
-/// `onPractice` is
-/// Autopilot held to the opening just grown; `onAnalyze` the Analysis tab
-/// on a line, seen from a side.
+/// `onAnalyze` opens the Analysis tab on a line, seen from a side.
 struct GrowthModeView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
   let onExit: () -> Void
-  let onPractice: (Selection) -> Void
   let onAnalyze: ([String], ChessCore.Color) -> Void
 
   @Environment(AppStore.self) private var store
@@ -41,7 +38,6 @@ struct GrowthModeView: View {
     GrowthView.Exits(
       again: { again(model) },
       analyze: { onAnalyze(model.run.path, model.run.color) },
-      practice: onPractice,
       playFrom: { playFrom = $0 },
       back: { sitting = nil },
       close: onExit)
@@ -99,7 +95,7 @@ struct GrowthModeView: View {
       if done, let model = await debugReady() { model.finish() }
       for _ in 0..<runs {
         while let model = await debugReady() { if let san = model.ranked.first?.san { model.pick(san) } }
-        guard let model = sitting, !model.pointsBack else { break }
+        guard let model = sitting else { break }
         again(model)
         try? await Task.sleep(for: .seconds(4))
       }

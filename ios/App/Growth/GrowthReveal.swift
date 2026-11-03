@@ -2,9 +2,8 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// The reveal once a batch is done: the card back to practising, what was
-/// added, the line now, Undo, another batch, and a game from here.
-/// Autopilot's batch shows only what was added and the line.
+/// The reveal once a batch is done: what was added, Undo, another batch,
+/// and a game from here. Autopilot's batch shows only what was added.
 struct GrowthReveal: View {
   @Bindable var model: GrowthModel
   let exits: GrowthView.Exits
@@ -13,14 +12,7 @@ struct GrowthReveal: View {
     let full = exits.nextRound == nil
     let more = full ? model.more : nil
     VStack(spacing: 0) {
-      if let practice = model.practice, let go = exits.practice, model.pointsBack {
-        backCard(practice.opening, practice.owed.owed) { go(Selection(color: model.run.color == .w ? .w : .b, opening: practice.opening.id)) }
-      }
       GrowthVerdict(tone: model.verdict.tone, text: model.verdict.text)
-      PlaySection(title: "The line now").frame(maxWidth: .infinity)
-      Text(sansToMoveText(model.run.path)).font(.system(size: 13, design: .monospaced)).foregroundStyle(Theme.text2).lineSpacing(6)
-        .frame(maxWidth: .infinity, alignment: .leading).padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
       if full {
         if !model.session.history.isEmpty {
           HStack(spacing: 10) {
@@ -46,21 +38,6 @@ struct GrowthReveal: View {
         }
       }
     }
-  }
-
-  private func backCard(_ opening: OpeningNode, _ owed: Int, _ go: @escaping () -> Void) -> some View {
-    HStack(spacing: 12) {
-      Text(practiceText(opening.name, owed)).font(.system(size: 14)).foregroundStyle(Theme.text)
-        .frame(maxWidth: .infinity, alignment: .leading)
-      Button(action: go) {
-        HStack(spacing: 6) { Text("Practice these lines"); Icon(name: "next", size: 16) }
-      }
-      .buttonStyle(PlayButtonStyle(kind: .accent, height: 38, radius: 11, font: 14))
-      .fixedSize()
-    }
-    .padding(.horizontal, 14).padding(.vertical, 12)
-    .background(RoundedRectangle(cornerRadius: 16).fill(Theme.accent.opacity(0.16)))
-    .padding(.bottom, 12)
   }
 
   private func wide(_ title: String, icon: String? = nil, _ action: @escaping () -> Void) -> some View {
