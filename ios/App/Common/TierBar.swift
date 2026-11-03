@@ -20,7 +20,11 @@ struct TierBar: View {
       }
       .overlay {
         Text(rated == 0 ? NEW_LABEL : rank.heldLabel).font(.system(size: 11, weight: .bold)).foregroundStyle(Theme.text)
-          .shadow(color: .black.opacity(0.9), radius: 1, y: 1).fixedSize()
+          .shadow(color: .black, radius: 1.5)
+          .shadow(color: .black, radius: 2.5)
+          .shadow(color: .black.opacity(0.8), radius: 4)
+          .shadow(color: .black, radius: 1, y: 1)
+          .fixedSize()
       }
     }
     .frame(height: 5).padding(.vertical, 6)
