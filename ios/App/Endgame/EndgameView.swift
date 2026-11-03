@@ -84,7 +84,7 @@ struct EndgameHomeView: View {
       ForEach(rows, id: \.id) { entry in
         Button { onPlay(entry) } label: {
           HStack(spacing: 10) {
-            SideDot(side: entry.fen.map(fenTurn) ?? .w)
+            if let fen = entry.fen { SideDot(side: fenTurn(fen)) }
             Text(entry.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
             Spacer()
             if let card = record.cards[entry.id], card.due <= Env.now() {

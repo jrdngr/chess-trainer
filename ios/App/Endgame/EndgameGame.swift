@@ -42,7 +42,7 @@ final class EndgameGame {
   init(entry: EndgameEntry, store: AppStore) {
     self.entry = entry
     self.store = store
-    start = endgameStart(entry, Env.random)
+    start = endgameStart(entry, Env.random) { exactResult($0, for: $1) }
     fen = start
     color = fenTurn(start)
     phase = entry.intro != nil && !store.state.endgames.seenIntros.contains(entry.id) ? .intro : .playing

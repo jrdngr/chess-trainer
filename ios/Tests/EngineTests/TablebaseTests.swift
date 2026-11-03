@@ -42,10 +42,58 @@ private let OPPOSITION = "8/8/4k3/8/4K3/4P3/8/8"
   #expect(Tablebase.probe("4k3/8/8/8/8/8/8/R3K3 w Q - 0 1") == nil)
 }
 
-@Test func libraryGoalsMatchTheTables() {
-  // Every library position the tables cover asks for the result they give: Win it is a win, Hold it a draw.
-  for entry in ENDGAME_LIBRARY {
-    guard let fen = entry.fen, let result = Tablebase.probe(fen) else { continue }
-    #expect(result == (entry.goal == .win ? .win : .draw), "\(entry.id)")
+/// Rounds of one library entry from a fixed seed, checked against the tables.
+private func starts(_ entry: EndgameEntry, _ count: Int = 40) -> [String] {
+  let rand = mulberry32(5)
+  return (0..<count).map { _ in endgameStart(entry, rand) { Tablebase.probe($0, for: $1) } }
+}
+
+private let PAWN_ENTRIES = ENDGAME_LIBRARY.filter { $0.family == "pawn" }
+
+@Test func pawnEndingsVaryAndGiveYouTheGoal() {
+  #expect(PAWN_ENTRIES.count == 6)
+  for entry in PAWN_ENTRIES {
+    let fens = starts(entry)
+    for fen in fens {
+      // You are to move, and the tables give you the goal: Win it is a win, Hold it a draw.
+      #expect(Tablebase.probe(fen) == (entry.goal == .win ? .win : .draw), "\(entry.id) \(fen)")
+      #expect(!positionStatus(fen).gameOver, "\(entry.id) \(fen)")
+    }
+    #expect(Set(fens.map(positionKey)).count >= 20, "\(entry.id)")
+    #expect(Set(fens.map(fenTurn)).count == 2, "\(entry.id)")
+    // You play the side with the pawn when winning, the bare king when holding.
+    for fen in fens {
+      let pawn = piecesFromFen(fen).first { $0.type == .p }!
+      #expect((pawn.color == fenTurn(fen)) == (entry.goal == .win), "\(entry.id) \(fen)")
+    }
+  }
+}
+
+@Test func theSquareRuleDecidesTheRace() {
+  for entry in PAWN_ENTRIES where entry.setup == .square {
+    for fen in starts(entry) {
+      let pieces = piecesFromFen(fen)
+      let pawn = pieces.first { $0.type == .p }!
+      let them = pieces.first { $0.type == .k && $0.color != pawn.color }!
+      let (pf, pr) = (Int(Array(pawn.square.utf8)[0]) - 97, Int(Array(pawn.square.utf8)[1]) - 49)
+      let (kf, kr) = (Int(Array(them.square.utf8)[0]) - 97, Int(Array(them.square.utf8)[1]) - 49)
+      let queening = pawn.color == .w ? 7 : 0
+      let steps = abs(queening - pr)
+      let d = max(abs(kf - pf), abs(kr - queening))
+      // Running, their king starts outside the square; chasing, your king starts inside it.
+      if entry.goal == .win {
+        #expect(d > steps, "\(fen)")
+      } else {
+        #expect(d <= steps + 1, "\(fen)")
+      }
+    }
+  }
+}
+
+@Test func pawnEndingsFallBackToATextbookPosition() {
+  // With no result known, no fresh position passes: the setup's own position is played.
+  for entry in PAWN_ENTRIES {
+    let fen = endgameStart(entry, mulberry32(3)) { _, _ in nil }
+    #expect(Tablebase.probe(fen) == (entry.goal == .win ? .win : .draw), "\(entry.id) \(fen)")
   }
 }

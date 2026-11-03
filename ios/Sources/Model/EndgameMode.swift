@@ -49,6 +49,21 @@ public enum BasicMate: String, Sendable, Codable, CaseIterable {
   case queen, rook, bishops
 }
 
+/// How a library entry's positions are set up. Each round draws a fresh
+/// position from its setup: the colors swapped at random, the board mirrored
+/// left to right at random, and the result for you checked before you see it.
+public enum EndgameSetup: Equatable, Sendable {
+  case mate(BasicMate)
+  /// A lone pawn racing their king. Win it: run with it. Hold it: catch it.
+  case square
+  /// Your king near the key squares in front of your pawn. Hold it: keep their king off them.
+  case keySquares
+  /// The kings face each other in front of the pawn.
+  case opposition
+  case lucena
+  case philidor
+}
+
 public struct EndgameFamily: Equatable, Sendable {
   public var id: String
   public var name: String
@@ -58,9 +73,9 @@ public struct EndgameEntry: Equatable, Sendable {
   public var id: String
   public var family: String
   public var name: String
-  /// The position, you to move; nil for a basic mate, set up fresh each time.
+  /// The one position to play, you to move; nil for a library entry, set up fresh each round.
   public var fen: String?
-  public var setup: BasicMate?
+  public var setup: EndgameSetup?
   public var goal: EndgameGoal
   public var mission: EndgameMission
   public var intro: EndgameIntro?
@@ -75,53 +90,74 @@ public let ENDGAME_FAMILIES: [EndgameFamily] = [
 
 public let ENDGAME_LIBRARY: [EndgameEntry] = [
   EndgameEntry(
-    id: "mate-queen", family: "mates", name: "Queen mate", fen: nil, setup: .queen, goal: .win, mission: .mateIn(10),
+    id: "mate-queen", family: "mates", name: "Queen mate", fen: nil, setup: .mate(.queen), goal: .win, mission: .mateIn(10),
     intro: EndgameIntro(title: "Box the king in", lines: [
       "Take squares away with the queen, a knight\u{2019}s move from the king.",
       "Bring your king up, then mate on the edge.",
     ])),
   EndgameEntry(
-    id: "mate-rook", family: "mates", name: "Rook mate", fen: nil, setup: .rook, goal: .win, mission: .mateIn(16),
+    id: "mate-rook", family: "mates", name: "Rook mate", fen: nil, setup: .mate(.rook), goal: .win, mission: .mateIn(16),
     intro: EndgameIntro(title: "Shrink the box", lines: [
       "Cut the king off with the rook.",
       "Take the opposition with your king, then push it back a rank with a check.",
     ])),
   EndgameEntry(
-    id: "mate-bishops", family: "mates", name: "Two bishops", fen: nil, setup: .bishops, goal: .win, mission: .mateIn(19),
+    id: "mate-bishops", family: "mates", name: "Two bishops", fen: nil, setup: .mate(.bishops), goal: .win, mission: .mateIn(19),
     intro: EndgameIntro(title: "Bishops side by side", lines: [
       "Let the bishops wall the king off together.",
       "Drive it to a corner with your king\u{2019}s help, and watch for stalemate.",
     ])),
   EndgameEntry(
-    id: "kp-key-squares", family: "pawn", name: "Key squares", fen: "8/8/4k3/8/4K3/8/4P3/8 w - - 0 1", setup: nil, goal: .win,
+    id: "kp-key-squares", family: "pawn", name: "Key squares", fen: nil, setup: .keySquares, goal: .win,
     mission: .queenPawn,
-    intro: EndgameIntro(title: "Your king on a key square", lines: [
-      "Your king already stands on a key square: the pawn queens.",
-      "Lead with the king, and push the pawn only when it is safe.",
+    intro: EndgameIntro(title: "Reach a key square", lines: [
+      "The three squares two in front of your pawn are its key squares.",
+      "Get your king onto one and the pawn queens. Lead with the king, and push the pawn only when it is safe.",
     ])),
   EndgameEntry(
-    id: "kp-opposition", family: "pawn", name: "Opposition", fen: "8/8/4k3/8/8/4K3/4P3/8 b - - 0 1", setup: nil, goal: .hold,
+    id: "kp-key-squares-hold", family: "pawn", name: "Key squares", fen: nil, setup: .keySquares, goal: .hold,
+    mission: .holdFor(15),
+    intro: EndgameIntro(title: "Keep them off the key squares", lines: [
+      "The three squares two in front of their pawn are its key squares.",
+      "Keep their king off them: stay in front of the pawn.",
+    ])),
+  EndgameEntry(
+    id: "kp-opposition-win", family: "pawn", name: "Opposition", fen: nil, setup: .opposition, goal: .win,
+    mission: .queenPawn,
+    intro: EndgameIntro(title: "Take the opposition", lines: [
+      "Face their king with one square between, and leave them to move.",
+      "When their king steps aside, walk past it to a key square.",
+    ])),
+  EndgameEntry(
+    id: "kp-opposition", family: "pawn", name: "Opposition", fen: nil, setup: .opposition, goal: .hold,
     mission: .holdFor(15),
     intro: EndgameIntro(title: "Take the opposition", lines: [
       "Stand in front of the pawn, facing their king with one square between.",
       "When the pawn steps up, step back in front of it.",
     ])),
   EndgameEntry(
-    id: "kp-square", family: "pawn", name: "Square rule", fen: "8/8/8/8/P7/8/8/5k1K w - - 0 1", setup: nil, goal: .win,
+    id: "kp-square", family: "pawn", name: "Square rule", fen: nil, setup: .square, goal: .win,
     mission: .queenPawn,
     intro: EndgameIntro(title: "Outrun the king", lines: [
       "Their king is outside the pawn\u{2019}s square: it can\u{2019}t catch the pawn.",
       "Run with the pawn.",
     ])),
   EndgameEntry(
-    id: "rook-lucena", family: "rook", name: "Lucena", fen: "3K4/3P1k2/8/8/8/8/2r5/4R3 w - - 0 1", setup: nil, goal: .win,
+    id: "kp-square-hold", family: "pawn", name: "Square rule", fen: nil, setup: .square, goal: .hold,
+    mission: .holdFor(12),
+    intro: EndgameIntro(title: "Step into the square", lines: [
+      "Picture a square from the pawn to its queening rank. Your king can step into it: the pawn is caught.",
+      "Head for the pawn\u{2019}s path, not the pawn.",
+    ])),
+  EndgameEntry(
+    id: "rook-lucena", family: "rook", name: "Lucena", fen: nil, setup: .lucena, goal: .win,
     mission: .queenPawn,
     intro: EndgameIntro(title: "Build a bridge", lines: [
       "Lift your rook to the 4th rank.",
       "Walk your king out, then block the checks with the rook.",
     ])),
   EndgameEntry(
-    id: "rook-philidor", family: "rook", name: "Philidor", fen: "8/8/8/8/4pk2/R7/1r6/4K3 w - - 0 1", setup: nil, goal: .hold,
+    id: "rook-philidor", family: "rook", name: "Philidor", fen: nil, setup: .philidor, goal: .hold,
     mission: .holdFor(20),
     intro: EndgameIntro(title: "Hold the third rank", lines: [
       "Keep your rook on your third rank while their king can\u{2019}t get in front.",
@@ -282,22 +318,7 @@ public func basicMateSetup(_ kind: BasicMate, _ rand: @escaping () -> Double) ->
     case .rook: guard place("R") != nil else { continue }
     case .bishops: guard place("B", light: true) != nil, place("B", light: false) != nil else { continue }
     }
-    var rows: [String] = []
-    for r in stride(from: 7, through: 0, by: -1) {
-      var row = "", empty = 0
-      for f in 0..<8 {
-        if let p = cells[r * 8 + f] {
-          if empty > 0 { row += String(empty) }
-          empty = 0
-          row.append(p)
-        } else {
-          empty += 1
-        }
-      }
-      if empty > 0 { row += String(empty) }
-      rows.append(row)
-    }
-    let placement = rows.joined(separator: "/")
+    let placement = placementOf(cells)
     // Their king must not stand in check with White to move.
     guard !positionStatus("\(placement) b - - 0 1").check else { continue }
     let fen = "\(placement) w - - 0 1"
@@ -311,9 +332,174 @@ public func basicMateSetup(_ kind: BasicMate, _ rand: @escaping () -> Double) ->
   }
 }
 
-/// The position a round of this entry starts from.
-public func endgameStart(_ entry: EndgameEntry, _ rand: @escaping () -> Double) -> String {
-  entry.fen ?? basicMateSetup(entry.setup ?? .queen, rand)
+/* ── fresh positions for each round ── */
+
+/// A board as 64 cells, a1 first, holding FEN piece letters.
+typealias Cells = [Character?]
+
+private func placementOf(_ cells: Cells) -> String {
+  var rows: [String] = []
+  for r in stride(from: 7, through: 0, by: -1) {
+    var row = "", empty = 0
+    for f in 0..<8 {
+      if let p = cells[r * 8 + f] {
+        if empty > 0 { row += String(empty) }
+        empty = 0
+        row.append(p)
+      } else {
+        empty += 1
+      }
+    }
+    if empty > 0 { row += String(empty) }
+    rows.append(row)
+  }
+  return rows.joined(separator: "/")
+}
+
+private func fenOf(_ cells: Cells, _ turn: Color) -> String {
+  "\(placementOf(cells)) \(turn == .w ? "w" : "b") - - 0 1"
+}
+
+private func cellsOf(_ fen: String) -> Cells {
+  var cells = Cells(repeating: nil, count: 64)
+  for piece in piecesFromFen(fen) {
+    let (f, r) = coords(piece.square)
+    let letter = Character(piece.type.rawValue)
+    cells[r * 8 + f] = piece.color == .w ? Character(letter.uppercased()) : letter
+  }
+  return cells
+}
+
+/// The same board with the colors swapped (ranks turned round), mirrored left to right, or both.
+private func turned(_ cells: Cells, swap: Bool, mirror: Bool) -> Cells {
+  var out = Cells(repeating: nil, count: 64)
+  for r in 0..<8 {
+    for f in 0..<8 {
+      guard let p = cells[r * 8 + f] else { continue }
+      let piece = swap ? Character(p.isUppercase ? p.lowercased() : p.uppercased()) : p
+      out[(swap ? 7 - r : r) * 8 + (mirror ? 7 - f : f)] = piece
+    }
+  }
+  return out
+}
+
+/// The position as a start: kings apart, the side not to move not in check, the game not over.
+private func legalStart(_ cells: Cells, _ turn: Color) -> String? {
+  guard let wk = cells.firstIndex(of: Character("K")), let bk = cells.firstIndex(of: Character("k")),
+    max(abs(wk % 8 - bk % 8), abs(wk / 8 - bk / 8)) >= 2
+  else { return nil }
+  let fen = fenOf(cells, turn)
+  guard !positionStatus(fenOf(cells, turn.other)).check, !positionStatus(fen).gameOver else { return nil }
+  return fen
+}
+
+private func dist(_ a: (Int, Int), _ b: (Int, Int)) -> Int { max(abs(a.0 - b.0), abs(a.1 - b.1)) }
+
+/// A position drawn from a setup, White the side with the pawn and pawns moving up the board.
+/// `attacking` is whether you play that side; you are to move.
+private func candidate(_ setup: EndgameSetup, attacking: Bool, _ rand: @escaping () -> Double) -> Cells? {
+  func pick(_ range: ClosedRange<Int>) -> Int { range.lowerBound + min(range.count - 1, Int(rand() * Double(range.count))) }
+  var cells = Cells(repeating: nil, count: 64)
+  func put(_ piece: Character, _ at: (Int, Int)) -> Bool {
+    guard (0...7).contains(at.0), (0...7).contains(at.1), cells[at.1 * 8 + at.0] == nil else { return false }
+    cells[at.1 * 8 + at.0] = piece
+    return true
+  }
+  switch setup {
+  case .mate:
+    return nil
+  case .square:
+    let pawn = (pick(0...7), pick(2...4))
+    let steps = 7 - pawn.1
+    let them = (pick(0...7), pick(0...7))
+    let d = dist(them, (pawn.0, 7))
+    // Runner to move: their king just outside the pawn's square. Chaser to move: just inside it.
+    guard attacking ? (d == steps + 1 || d == steps + 2) : (d == steps || d == steps + 1) else { return nil }
+    // Your king too far off to help, and not in the pawn's way.
+    let king = (pick(0...7), pick(0...7))
+    guard dist(king, pawn) >= 4, king.0 != pawn.0 || king.1 < pawn.1 else { return nil }
+    guard put("P", pawn), put("k", them), put("K", king) else { return nil }
+  case .keySquares:
+    let pawn = (pick(1...6), pick(1...3))
+    let keys = (pawn.0 - 1...pawn.0 + 1).map { ($0, pawn.1 + 2) }
+    // The pawn's king beside it, a step or two from the key squares but not on one.
+    let king = (pick(0...7), pick(0...7))
+    let toKey = keys.map { dist(king, $0) }.min()!
+    guard (1...2).contains(toKey), dist(king, pawn) <= 2 else { return nil }
+    let them = (pick(0...7), pick(pawn.1 + 1...7))
+    guard dist(them, pawn) <= 4 else { return nil }
+    guard put("P", pawn), put("K", king), put("k", them) else { return nil }
+  case .opposition:
+    let pawn = (pick(1...6), pick(1...3))
+    // The pawn's king just ahead of it, their king two or three ranks beyond, near its file.
+    let king = (pawn.0 + pick(-1...1), pawn.1 + 1)
+    let them = (king.0 + pick(-1...1), king.1 + pick(2...3))
+    guard put("P", pawn), put("K", king), put("k", them) else { return nil }
+  case .lucena:
+    let pawn = (pick(1...6), 6)
+    let side = rand() < 0.5 ? -1 : 1
+    // Their king cut off two or three files away, the cutting rook between.
+    let them = (pawn.0 + side * pick(2...3), pick(4...7))
+    let rook = (pawn.0 + side * pick(1...(abs(them.0 - pawn.0) - 1)), pick(0...4))
+    // Their rook on the other side of the pawn, ready to check.
+    let theirRook = (pick(0...7), pick(0...3))
+    guard (theirRook.0 - pawn.0) * side < 0 else { return nil }
+    guard put("P", pawn), put("K", (pawn.0, 7)), put("k", them), put("R", rook), put("r", theirRook) else { return nil }
+  case .philidor:
+    let pawn = (pick(1...6), pick(2...4))
+    let king = (pawn.0 + pick(-2...2), pick(max(0, pawn.1 - 1)...4))
+    // Their king in front of the pawn, their rook holding the sixth.
+    let them = (pawn.0 + pick(-1...1), pick(6...7))
+    let theirRook = (pick(0...7), 5)
+    let rook = (pick(0...7), pick(0...4))
+    guard put("P", pawn), put("K", king), put("k", them), put("r", theirRook), put("R", rook) else { return nil }
+  }
+  return cells
+}
+
+/// The setup's textbook position, for when no fresh one turns up.
+private func fallback(_ setup: EndgameSetup, _ goal: EndgameGoal) -> String {
+  switch setup {
+  case .mate(let kind): basicMateSetup(kind, { 0.5 })
+  case .square: goal == .win ? "8/8/8/8/P7/8/8/5k1K w - - 0 1" : "8/8/8/8/P2k4/8/8/7K b - - 0 1"
+  case .keySquares, .opposition: "8/8/4k3/8/8/4K3/4P3/8 \(goal == .win ? "w" : "b") - - 0 1"
+  case .lucena: "3K4/3P1k2/8/8/8/8/2r5/4R3 w - - 0 1"
+  case .philidor: "8/8/8/8/4pk2/R7/1r6/4K3 w - - 0 1"
+  }
+}
+
+/// The position a round of this entry starts from, you to move: a saved one
+/// as it was, a library one fresh from its setup. `result` gives the result
+/// with best play for a side where it is known (the tablebases); a fresh
+/// position is kept only when it gives you the entry's goal.
+public func endgameStart(
+  _ entry: EndgameEntry, _ rand: @escaping () -> Double, result: (String, Color) -> EndResult?
+) -> String {
+  if let fen = entry.fen { return fen }
+  let setup = entry.setup ?? .mate(.queen)
+  let swap = rand() < 0.5, mirror = rand() < 0.5
+  if case .mate(let kind) = setup {
+    let fen = basicMateSetup(kind, rand)
+    return swap ? fenOf(turned(cellsOf(fen), swap: true, mirror: false), .b) : fen
+  }
+  let attacking = entry.goal == .win
+  // In the setup's frame White has the pawn; you are White when you attack.
+  let you: Color = attacking != swap ? .w : .b
+  for _ in 0..<3000 {
+    guard let cells = candidate(setup, attacking: attacking, rand),
+      let fen = legalStart(turned(cells, swap: swap, mirror: mirror), you)
+    else { continue }
+    switch setup {
+    case .lucena, .philidor:
+      guard let known = knownEnding(fen), known.name == (setup == .lucena ? "Lucena" : "Philidor"),
+        known.result(for: you) == (attacking ? .win : .draw)
+      else { continue }
+    default:
+      guard result(fen, you) == (attacking ? .win : .draw) else { continue }
+    }
+    return fen
+  }
+  return fallback(setup, entry.goal)
 }
 
 /* ── how a round ends ── */

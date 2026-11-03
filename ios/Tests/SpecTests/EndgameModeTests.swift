@@ -5,22 +5,46 @@ import Testing
 
 /// Endgame mode: the library, fresh basic-mate setups, the schedule and how a round ends.
 
-@Test func libraryPositionsAreEndgamesWithYouToMove() {
+@Test func libraryEntriesAreSetUpFreshEachRound() {
   for entry in ENDGAME_LIBRARY {
     #expect(ENDGAME_FAMILIES.contains { $0.id == entry.family }, "\(entry.id)")
     #expect(entry.intro != nil, "\(entry.id)")
-    guard let fen = entry.fen else {
-      #expect(entry.setup != nil, "\(entry.id)")
-      continue
-    }
-    #expect(isEndgame(fen), "\(entry.id)")
-    #expect(!positionStatus(fen).gameOver, "\(entry.id)")
+    #expect(entry.fen == nil && entry.setup != nil, "\(entry.id)")
   }
-  // The rook endings are the known ones: Lucena to win, Philidor to hold.
-  let lucena = ENDGAME_LIBRARY.first { $0.id == "rook-lucena" }!
-  #expect(knownEnding(lucena.fen!)?.result(for: fenTurn(lucena.fen!)) == .win)
-  let philidor = ENDGAME_LIBRARY.first { $0.id == "rook-philidor" }!
-  #expect(knownEnding(philidor.fen!)?.result(for: fenTurn(philidor.fen!)) == .draw)
+}
+
+/// Rounds of one entry, from a fixed seed. The tables are not in this target: no result is known.
+private func starts(_ id: String, _ count: Int = 40) -> [String] {
+  let entry = ENDGAME_LIBRARY.first { $0.id == id }!
+  let rand = mulberry32(11)
+  return (0..<count).map { _ in endgameStart(entry, rand) { _, _ in nil } }
+}
+
+@Test func rookEndingsVaryAndStayTheKnownEnding() {
+  for (id, name, result) in [("rook-lucena", "Lucena", EndResult.win), ("rook-philidor", "Philidor", .draw)] {
+    let fens = starts(id)
+    for fen in fens {
+      #expect(isEndgame(fen), "\(fen)")
+      #expect(!positionStatus(fen).gameOver, "\(fen)")
+      let known = knownEnding(fen)
+      #expect(known?.name == name, "\(fen)")
+      #expect(known?.result(for: fenTurn(fen)) == result, "\(fen)")
+    }
+    #expect(Set(fens.map(positionKey)).count >= 20, "\(id)")
+    #expect(Set(fens.map(fenTurn)).count == 2, "\(id)")
+  }
+}
+
+@Test func basicMatesComeInBothColors() {
+  let fens = starts("mate-rook")
+  #expect(Set(fens.map(fenTurn)).count == 2)
+  for fen in fens {
+    let you = fenTurn(fen)
+    let pieces = piecesFromFen(fen)
+    #expect(pieces.filter { $0.color != you }.map(\.type) == [.k], "\(fen)")
+    #expect(pieces.filter { $0.color == you }.map(\.type.rawValue).sorted() == ["k", "r"], "\(fen)")
+    #expect(!positionStatus(fen).gameOver, "\(fen)")
+  }
 }
 
 @Test func basicMateSetupsAreLegalAndQuiet() {
