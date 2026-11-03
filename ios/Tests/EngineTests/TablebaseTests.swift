@@ -55,7 +55,7 @@ private let PAWN_ENTRIES = ENDGAME_LIBRARY.filter { $0.family == "pawn" }
   for entry in PAWN_ENTRIES {
     let fens = starts(entry)
     for fen in fens {
-      // You are to move, and the tables give you the goal: Win it is a win, Hold it a draw.
+      // You are to move, and the tables give you the goal: Win is a win, Hold Draw a draw.
       #expect(Tablebase.probe(fen) == (entry.goal == .win ? .win : .draw), "\(entry.id) \(fen)")
       #expect(!positionStatus(fen).gameOver, "\(entry.id) \(fen)")
     }
