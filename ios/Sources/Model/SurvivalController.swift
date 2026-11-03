@@ -346,13 +346,28 @@ public func bookTurn(_ session: RunSession, _ index: ReferenceIndex, _ rng: () -
   var steered = session.state
   if offLine { steered.run = session.redraw(run) }
   guard let san = bookReply(session.source, index, steered, rng) else { return nil }
-  return afterMove(session, playTheirs(steered, san))
+  return theirMove(session, playTheirs(steered, san))
 }
 
 /// The engine's move for the opponent, where the book had none.
 public func engineMove(_ session: RunSession, _ san: String) -> Step {
   if session.ending != nil { return unchanged(session) }
-  return afterMove(session, playTheirs(session.state, san))
+  return theirMove(session, playTheirs(session.state, san))
+}
+
+/// The opponent's move landed: a Convert it mission may settle on it, then the game may be over.
+private func theirMove(_ session: RunSession, _ state: SurvivalRun) -> Step {
+  var state = state
+  var effects: [Effect] = []
+  if let cp = session.lastScored {
+    let settled = theirExtras(state.extras, state.run.color, cp, state.run.fen)
+    if let earned = settled.earned {
+      state.extras = settled.extras
+      effects.append(.note(noteFor(earned)))
+    }
+  }
+  let moved = afterMove(session, state)
+  return (moved.session, effects + moved.effects)
 }
 
 /// Your turn with nothing prepared, having followed your prep so far: the line is done.

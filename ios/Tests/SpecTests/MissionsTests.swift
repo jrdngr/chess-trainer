@@ -59,6 +59,37 @@ extension Earned {
   #expect(missionTurnsLeft(Mission(kind: .edge, moves: 7, held: 4)) == EDGE_MOVES - 4)
 }
 
+/// Convert it: a trade settles on the opponent's recapture, and a capture on your last turn
+/// waits for their reply.
+@Test func convertSettlesOnTheRecapture() {
+  func walk(_ text: String) -> String {
+    var fen = START_FEN
+    for san in line(text) { fen = applySan(fen, san)!.after }
+    return fen
+  }
+  let set = Mission(kind: .convert, moves: 5, pieces: PieceCount(mine: 7, theirs: 7))
+  let captured = walk("e4 e5 Nf3 Nc6 Bb5 a6 Bxc6")
+  let lastTurn = stepMission(set, .w, 250, captured)
+  #expect(lastTurn.result == nil)
+  #expect(missionTurnsLeft(lastTurn.mission) == 0)
+  #expect(stepMission(set, .w, 150, captured).result == .failed)
+
+  #expect(theirMoveMission(lastTurn.mission, .w, 250, walk("e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 dxc6")) == .done)
+  #expect(theirMoveMission(lastTurn.mission, .w, 250, walk("e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 d6")) == .failed)
+
+  // Mid-window, the recapture credits at once; any other reply leaves the mission running.
+  let early = Mission(kind: .convert, moves: 2, pieces: PieceCount(mine: 7, theirs: 7))
+  #expect(theirMoveMission(early, .w, 250, walk("e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 d6")) == nil)
+  var extras = Extras()
+  extras.mission = early
+  let settled = theirExtras(extras, .w, 250, walk("e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 dxc6"))
+  #expect(settled.earned?.mission?.result == .done)
+  #expect(settled.extras.points == MISSION_BONUS)
+  #expect(settled.extras.missions.done == 1)
+  #expect(settled.extras.mission == nil)
+  #expect(settled.extras.missionBreak == MISSION_BREAK)
+}
+
 /// Golden/cases/functions/lenses.json
 @Test func lenses() throws {
   func walk(_ text: String) -> [String] {

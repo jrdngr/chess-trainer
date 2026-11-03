@@ -150,9 +150,21 @@ public func stepMission(_ mission: Mission, _ color: Color, _ cp: Double, _ fen:
     if let fen, let was = mission.pieces {
       let now = pieceCount(fen, color)
       if now.mine < was.mine && now.theirs < was.theirs && at >= CONVERT_FROM { return (next, .done) }
+      // A capture on your last turn waits for their reply: a recapture completes the trade.
+      if next.moves >= CONVERT_WINDOW && now.theirs < was.theirs && at >= CONVERT_FROM { return (next, nil) }
     }
     return (next, next.moves >= CONVERT_WINDOW ? .failed : nil)
   }
+}
+
+/// The opponent's move against a Convert it mission, with the eval after your last judged move
+/// and the position after their move: their recapture completes the trade, and a last-turn
+/// capture they leave alone fails it.
+public func theirMoveMission(_ mission: Mission, _ color: Color, _ cp: Double, _ fen: String) -> MissionResult? {
+  guard mission.kind == .convert, let was = mission.pieces else { return nil }
+  let now = pieceCount(fen, color)
+  if now.mine < was.mine && now.theirs < was.theirs && mine(color, cp) >= CONVERT_FROM { return .done }
+  return mission.moves >= CONVERT_WINDOW ? .failed : nil
 }
 
 public struct Moments: Equatable, Sendable, Codable {
@@ -277,6 +289,18 @@ public func judgedExtras(_ extras: Extras, _ prefs: ExtrasPrefs, _ color: Color,
   out.missionBreak = missionBreak
   out.missions = missions
   return (out, Earned(points: points - extras.points, moment: momentEarned, mission: missionEarned, combo: up ? "up" : broke ? "broke" : nil))
+}
+
+/// The opponent's move: a Convert it mission may settle on it.
+public func theirExtras(_ extras: Extras, _ color: Color, _ cp: Double, _ fen: String) -> (extras: Extras, earned: Earned?) {
+  guard let current = extras.mission, let result = theirMoveMission(current, color, cp, fen) else { return (extras, nil) }
+  let bonus = result == .done ? MISSION_BONUS : 0
+  var out = extras
+  out.points += bonus
+  if result == .done { out.missions.done += 1 } else { out.missions.failed += 1 }
+  out.mission = nil
+  out.missionBreak = MISSION_BREAK
+  return (out, Earned(points: bonus, moment: nil, mission: (current.kind, result, bonus), combo: nil))
 }
 
 /// A move your prep answered: a point, at ×1.
