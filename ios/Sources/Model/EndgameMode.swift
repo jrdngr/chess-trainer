@@ -1,14 +1,14 @@
 import ChessCore
 
 /// Endgame mode: a library of must-know endings, each played out against the
-/// engine with one goal. Win it: a known win to convert. Hold it: a known draw
+/// engine with one goal. Win: a known win to convert. Hold Draw: a known draw
 /// to hold. Each position is a card on its own schedule, and each family of
 /// endings has its own tier.
 
 public enum EndgameGoal: String, Sendable, Codable {
   case win, hold
-  /// "Win it" or "Hold it".
-  public var label: String { self == .win ? "Win it" : "Hold it" }
+  /// "Win" or "Hold Draw".
+  public var label: String { self == .win ? "Win" : "Hold Draw" }
 }
 
 /// What a round asks of you on top of its goal.
@@ -54,9 +54,9 @@ public enum BasicMate: String, Sendable, Codable, CaseIterable {
 /// left to right at random, and the result for you checked before you see it.
 public enum EndgameSetup: Equatable, Sendable {
   case mate(BasicMate)
-  /// A lone pawn racing their king. Win it: run with it. Hold it: catch it.
+  /// A lone pawn racing their king. Win: run with it. Hold Draw: catch it.
   case square
-  /// Your king near the key squares in front of your pawn. Hold it: keep their king off them.
+  /// Your king near the key squares in front of your pawn. Hold Draw: keep their king off them.
   case keySquares
   /// The kings face each other in front of the pawn.
   case opposition
