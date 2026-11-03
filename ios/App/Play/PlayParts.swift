@@ -21,7 +21,8 @@ struct PlayAppBar<Trailing: View>: View {
         if let subtitle { Text(subtitle).font(.system(size: 13)).foregroundStyle(Theme.text2) }
       }
       .lineLimit(1).frame(maxWidth: .infinity)
-      trailing.frame(width: 38)
+      // Holds its width even when empty, so the title stays centred.
+      Color.clear.frame(width: 38, height: 1).overlay { trailing }
     }
     .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 10).frame(minHeight: 56)
   }
@@ -104,9 +105,11 @@ struct IntroPill: View {
   var name: String
   var body: some View {
     Text(name).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text).lineLimit(1)
-      .padding(.horizontal, 16).padding(.vertical, 8)
+      .padding(.horizontal, 16).padding(.vertical, 6)
       .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
-      .padding(.top, 10).allowsHitTesting(false)
+      .allowsHitTesting(false)
+      // Over the empty captured row above the board, not on the back rank's pieces.
+      .offset(y: -36)
       .introPillIn()
   }
 }

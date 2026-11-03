@@ -194,7 +194,7 @@ struct OpeningRow: View {
 
   var body: some View {
     let meta = [
-      opening.eco, "\(opening.lines) \(opening.lines == 1 ? "line" : "lines")", "\((opening.depth + 1) / 2) moves deep",
+      opening.eco, "\(opening.lines) \(opening.lines == 1 ? "line" : "lines")", "\((opening.depth + 1) / 2) \((opening.depth + 1) / 2 == 1 ? "move" : "moves") deep",
       opening.variations.isEmpty ? nil : "\(opening.variations.count) \(opening.variations.count == 1 ? "variation" : "variations")",
     ].compactMap { $0 }.joined(separator: " \u{00b7} ")
     HStack(spacing: 0) {

@@ -99,7 +99,9 @@ struct IntroOverlay: View {
         }
         .padding(.leading, intro.replaying ? 8 : 16).padding(.trailing, 16).padding(.vertical, 8)
         .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
-        .padding(.top, 10).allowsHitTesting(false)
+        .allowsHitTesting(false)
+        // Over the gap above the board, not on the back rank's pieces.
+        .offset(y: -42)
         .introPillIn().id(intro.replaying)
       }
       if intro.pulse { IntroPulse() }

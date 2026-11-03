@@ -64,6 +64,7 @@ struct SegmentedControl<Value: Hashable>: View {
         Button { value = option.value } label: {
           Text(option.label).font(.system(size: 13.5, weight: .semibold))
             .foregroundStyle(active ? Theme.text : Theme.text2)
+            .lineLimit(1).minimumScaleFactor(0.8).padding(.horizontal, 6)
             .frame(maxWidth: .infinity, minHeight: 36)
             .background(RoundedRectangle(cornerRadius: 9).fill(active ? Theme.surface3 : .clear))
             .contentShape(Rectangle())

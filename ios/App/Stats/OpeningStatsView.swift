@@ -16,7 +16,7 @@ struct OpeningStatsView: View {
     let score = store.state.score
     let starred = store.state.settings.favoriteOpenings
     let stats = nodeStats(score, node.id)
-    let trail = ancestorsOf(tree, node.id).dropLast()
+    let trail = ancestorsOf(tree, node.id).dropLast().filter { $0.name != node.name }
     let isStarred = starred.contains(node.id)
     VStack(spacing: 0) {
       PageBar(title: node.name, subtitle: trail.isEmpty ? bookMoveText(node.sans) : trail.map(\.name).joined(separator: " \u{203a} "), onBack: onBack) {

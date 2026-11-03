@@ -60,7 +60,7 @@ struct PlayGameView: View {
           if game.over == nil { actions.padding(.top, 12) }
           if game.over != nil && !game.moves.isEmpty { movetext }
         }
-        .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 28)
+        .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 28)
       }
     }
   }

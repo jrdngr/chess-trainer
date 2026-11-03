@@ -49,8 +49,12 @@ struct LineChart: View {
     .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
     .contentShape(Rectangle())
     .simultaneousGesture(
-      DragGesture(minimumDistance: 0)
-        .onChanged { drag in hover = nearest(drag.location.x / width * Self.W, scale) }
+      // Only a sideways drag reads the chart, so a swipe that starts on it still scrolls the page.
+      DragGesture(minimumDistance: 8)
+        .onChanged { drag in
+          guard hover != nil || abs(drag.translation.width) > abs(drag.translation.height) else { return }
+          hover = nearest(drag.location.x / width * Self.W, scale)
+        }
         .onEnded { _ in hover = nil })
   }
 
@@ -64,7 +68,9 @@ struct LineChart: View {
       context.draw(tickText(label(tick)), at: CGPoint(x: pad.left - 6, y: y), anchor: .trailing)
     }
     let last = points[points.count - 1]
-    context.draw(tickText(dateLabel(points[0].at, scale.days)), at: CGPoint(x: pad.left, y: height - 9.5), anchor: .leading)
+    if points.count > 1 {
+      context.draw(tickText(dateLabel(points[0].at, scale.days)), at: CGPoint(x: pad.left, y: height - 9.5), anchor: .leading)
+    }
     context.draw(tickText(dateLabel(last.at, scale.days)), at: CGPoint(x: right, y: height - 9.5), anchor: .trailing)
 
     var line = Path()
@@ -143,8 +149,9 @@ struct LineChart: View {
       let top = max ?? Swift.max(1, points.map(\.value).max() ?? 0)
       ticks = max != nil ? [0, top / 2, top] : niceTicks(top)
       ceiling = ticks.last.flatMap { $0 == 0 ? nil : $0 } ?? 1
-      first = points.first?.at ?? 0
-      let last = points.last?.at ?? first + 1
+      let last = points.last?.at ?? 1
+      // A lone point is today's, so it sits at the right edge.
+      first = points.count > 1 ? points[0].at : last - 1
       span = Swift.max(1, last - first)
       plotH = height - LineChart.pad.top - LineChart.pad.bottom
       days = Int(JSRound(span / 86_400_000)) + 1

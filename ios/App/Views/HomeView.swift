@@ -112,6 +112,8 @@ struct AutopilotPlate: View {
       MiniBoard(sans: sans, orientation: color, size: 176, lastMove: true)
         .opacity(0.85).rotationEffect(.degrees(-8))
         .mask(LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: UnitPoint(x: 0.6, y: 0.5)))
+        // Gone before the plate's bottom edge, so no piece peeks past the prep bar.
+        .mask(LinearGradient(colors: [.black, .clear], startPoint: UnitPoint(x: 0.5, y: 0.6), endPoint: UnitPoint(x: 0.5, y: 0.72)))
         .offset(x: 14, y: -40)
         .allowsHitTesting(false)
     }
