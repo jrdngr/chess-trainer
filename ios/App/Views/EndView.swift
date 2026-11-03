@@ -172,19 +172,23 @@ struct EndView: View {
           Button(action: onAnalyze) {
             Label("Analyze", systemImage: "magnifyingglass")
           }
-          .buttonStyle(PlayButtonStyle(height: 52, block: true))
+          .buttonStyle(PlayButtonStyle(height: 52, block: true, inset: 8))
         }
         if let onSameLine {
           Button(action: onSameLine) {
             Label("Same line", systemImage: "arrow.counterclockwise")
           }
-          .buttonStyle(PlayButtonStyle(height: 52, block: true))
+          .buttonStyle(PlayButtonStyle(height: 52, block: true, inset: 8))
         }
         Button(action: onNext) {
-          HStack(spacing: 8) { Text(survival ? "Next run" : "Next round"); Icon(name: "next", size: 18) }
+          HStack(spacing: 6) { Text(survival ? "Next run" : "Next round"); Icon(name: "next", size: 18) }
         }
-        .buttonStyle(PlayButtonStyle(kind: .primary, height: 52, block: true))
+        .buttonStyle(PlayButtonStyle(kind: .primary, height: 52, block: true, inset: 8))
       }
+      // Three buttons share a phone's width: each label stays on one line.
+      .labelStyle(TightLabelStyle())
+      .lineLimit(1)
+      .minimumScaleFactor(0.8)
       MoveStrip(items: strip, cursor: cursor, max: last, onSeek: seek)
       ratingCard
       RatingsList(items: moved).padding(.top, 10)
@@ -361,4 +365,11 @@ struct EndView: View {
 enum RatingStage: Equatable {
   case play, leave
   case placed(arriving: Bool)
+}
+
+/// Icon and title close together, so a label fits a third of the row.
+private struct TightLabelStyle: LabelStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    HStack(spacing: 6) { configuration.icon; configuration.title }
+  }
 }

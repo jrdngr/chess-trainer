@@ -37,13 +37,15 @@ struct PlayButtonStyle: ButtonStyle {
   var font: CGFloat = 16
   /// `.block`: as wide as its container.
   var block = false
+  /// Side padding, when the default is too wide for the row.
+  var inset: CGFloat?
   @Environment(\.isEnabled) private var enabled
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.system(size: font, weight: .semibold))
       .foregroundStyle(ink)
-      .padding(.horizontal, height < 44 ? 14 : 20).frame(maxWidth: block ? .infinity : nil, minHeight: height)
+      .padding(.horizontal, inset ?? (height < 44 ? 14 : 20)).frame(maxWidth: block ? .infinity : nil, minHeight: height)
       .background(RoundedRectangle(cornerRadius: radius).fill(fill))
       .contentShape(RoundedRectangle(cornerRadius: radius))
       .opacity(enabled ? 1 : 0.35)
