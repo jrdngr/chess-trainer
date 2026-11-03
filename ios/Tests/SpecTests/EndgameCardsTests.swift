@@ -65,7 +65,7 @@ private func planPage(_ id: String, _ fen: String, _ me: Color) -> Int? {
   // The kings face each other off the edge: check.
   let facing = endgamePlan(card("mate-rook").entry, pages[2].fen, .w)!
   #expect(facing.page == 2)
-  #expect(facing.marks.tints?.contains(Tint(square: "d4", color: .amber, strength: 3)) == true)
+  #expect(facing.marks.tints?.contains { $0.square == "d4" && $0.color == .amber && $0.strength == 3 } == true)
   // Their box is ranks 5 to 8, less the a-file the rook also holds.
   let box = Set((facing.marks.tints ?? []).filter { $0.color == .red }.map(\.square))
   #expect(box.count == 28)
