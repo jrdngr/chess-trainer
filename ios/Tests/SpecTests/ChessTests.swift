@@ -33,3 +33,16 @@ import Testing
     },
   ])
 }
+
+/// The captured row's material: even trades cancel, only what a side is up remains.
+@Test func materialShowsTheNetDifference() {
+  // A pawn each is traded, then Bxf7+ Kxf7 gives a bishop for a pawn.
+  var fen = START_FEN
+  for san in line("e4 d5 exd5 Qxd5 Nc3 Qa5 Nf3 Nf6 Bc4 Bg4 Bxf7+ Kxf7") { fen = applySan(fen, san)!.after }
+  // White gave a bishop for a pawn: Black is up a bishop, White up a pawn.
+  #expect(material(fen) == Material(byWhite: [.p], byBlack: [.b], lead: -2))
+  // A set-up queen mate: one queen, not 30 captures.
+  #expect(material("8/8/8/4k3/8/8/8/3QK3 w - - 0 1") == Material(byWhite: [.q], byBlack: [], lead: 9))
+  // Level material: nothing.
+  #expect(material(START_FEN) == Material(byWhite: [], byBlack: [], lead: 0))
+}

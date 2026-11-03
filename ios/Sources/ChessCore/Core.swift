@@ -147,29 +147,37 @@ public func kingSquare(_ fen: String, _ color: Color) -> String? {
 public let PIECE_VALUES: [PieceType: Int] = [.p: 1, .n: 3, .b: 3, .r: 5, .q: 9, .k: 0]
 
 public struct Material: Equatable, Sendable {
+  /// The pieces White has that Black doesn't, by type: what White is up.
   public var byWhite: [PieceType]
+  /// The pieces Black has that White doesn't.
   public var byBlack: [PieceType]
   public var lead: Int
+
+  public init(byWhite: [PieceType], byBlack: [PieceType], lead: Int) {
+    self.byWhite = byWhite
+    self.byBlack = byBlack
+    self.lead = lead
+  }
 }
 
-/// What has come off the board, and who is ahead.
+/// The material difference, as Lichess shows it: pieces that cancel out
+/// (a knight each) are left out, so only what one side is up remains,
+/// pawns first. A promoted piece counts as the piece it became.
 public func material(_ fen: String) -> Material {
-  let fullSide: [PieceType] = [.p, .p, .p, .p, .p, .p, .p, .p, .n, .n, .b, .b, .r, .r, .q]
-  var left: [Color: [PieceType]] = [.w: [], .b: []]
+  var count: [Color: [PieceType: Int]] = [.w: [:], .b: [:]]
   var lead = 0
-  for piece in piecesFromFen(fen) {
-    left[piece.color]!.append(piece.type)
+  for piece in piecesFromFen(fen) where piece.type != .k {
+    count[piece.color]![piece.type, default: 0] += 1
     lead += (piece.color == .w ? 1 : -1) * PIECE_VALUES[piece.type]!
   }
-  func taken(_ side: [PieceType]) -> [PieceType] {
-    var rest = side
-    var out: [PieceType] = []
-    for type in fullSide {
-      if let at = rest.firstIndex(of: type) { rest.remove(at: at) } else { out.append(type) }
-    }
-    return out
+  var byWhite: [PieceType] = []
+  var byBlack: [PieceType] = []
+  for type: PieceType in [.p, .n, .b, .r, .q] {
+    let d = count[.w]![type, default: 0] - count[.b]![type, default: 0]
+    if d > 0 { byWhite += Array(repeating: type, count: d) }
+    if d < 0 { byBlack += Array(repeating: type, count: -d) }
   }
-  return Material(byWhite: taken(left[.b]!), byBlack: taken(left[.w]!), lead: lead)
+  return Material(byWhite: byWhite, byBlack: byBlack, lead: lead)
 }
 
 /// A SAN sequence as numbered move text: "1.e4 c5" reads "1. e4 c5".
