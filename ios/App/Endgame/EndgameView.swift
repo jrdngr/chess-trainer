@@ -105,8 +105,8 @@ struct EndgameHomeView: View {
   }
 }
 
-/// One position on the board: its intro card first time round, the goal card,
-/// the lens bar, and how it ended.
+/// One position on the board: its card before the round, the goal card,
+/// the lens bar with the ending's Plan, and how it ended.
 struct EndgameRoundView: View {
   @Environment(AppStore.self) private var store
   @Bindable var game: EndgameGame
@@ -114,12 +114,14 @@ struct EndgameRoundView: View {
   let onNext: () -> Void
   let onClose: () -> Void
   @State private var lens: LensKind?
+  /// The ending's plan, held like a lens.
+  @State private var plan = false
 
   var body: some View {
     ZStack {
       screen
       if game.phase == .intro, let intro = game.entry.intro {
-        EndgameIntroCard(name: game.entry.name, intro: intro, fen: game.start, color: game.color) { game.toBoard() }
+        EndgameIntroCard(name: game.entry.name, goal: game.entry.goal.label, intro: intro) { game.toBoard() }
           .transition(.opacity)
       }
     }
@@ -156,8 +158,9 @@ struct EndgameRoundView: View {
                   .padding(.top, 10)
               }
             }
-          LensBar(held: $lens, lenses: LENSES, enabled: game.phase == .playing)
+          LensBar(held: $lens, lenses: LENSES, enabled: game.phase == .playing, plan: $plan, planEnabled: livePlan != nil)
           if let lens, lens != .eval { LensLegend(kind: lens, endgame: true) }
+          if plan, let live = livePlan, let intro = game.entry.intro { planCard(intro.pages[live.page]) }
           if let outcome = game.outcome { ending(outcome) } else { goal }
           if game.phase == .playing {
             Button { game.resign() } label: { Text("Give up").frame(maxWidth: .infinity) }
@@ -170,8 +173,26 @@ struct EndgameRoundView: View {
   }
 
   private var marks: LensMarks? {
-    guard let lens, lens != .eval, game.phase == .playing else { return nil }
+    guard game.phase == .playing else { return nil }
+    if plan { return livePlan?.marks }
+    guard let lens, lens != .eval else { return nil }
     return heldLens(lens, game.fen, game.color)
+  }
+
+  /// Where the game stands in the ending's plan; nil for an ending without one.
+  private var livePlan: EndgamePlan? { endgamePlan(game.entry, game.fen, game.color) }
+
+  /// The step of the plan the board is on, from the ending's card.
+  private func planCard(_ page: CardPage) -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Text("PLAN").font(.system(size: 11, weight: .heavy)).tracking(0.8).foregroundStyle(PlanColors.plan)
+      Text(page.title).font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.text)
+      Text(page.caption).font(.system(size: 14)).foregroundStyle(Theme.text2).fixedSize(horizontal: false, vertical: true)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.horizontal, 14).padding(.vertical, 12)
+    .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface))
+    .padding(.top, 12)
   }
 
   /// Where you missed a mate, the move that had it, in red.
@@ -235,29 +256,113 @@ struct EndgameRoundView: View {
   private var familyName: String { ENDGAME_FAMILIES.first { $0.id == game.entry.family }?.name ?? "" }
 }
 
-/// The card before a position's first round: its name, the idea, and the board behind.
+/// The card before every round of an ending: pages of teaching positions,
+/// some with a line to step through. Close on every page goes to the board,
+/// and so does the last page's button.
 struct EndgameIntroCard: View {
   let name: String
+  let goal: String
   let intro: EndgameIntro
-  let fen: String
-  let color: ChessCore.Color
   let onPlay: () -> Void
+  @State private var page = 0
+  /// How many of the page's moves have been played.
+  @State private var played = 0
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 14) {
-      Text(name.uppercased()).font(.system(size: 12, weight: .heavy)).tracking(0.9).foregroundStyle(Theme.accent)
-      Text(intro.title).font(.system(size: 26, weight: .heavy)).foregroundStyle(Theme.text)
-      BoardView(fen: fen, orientation: color, interactive: false, lastMove: nil, onMove: { _ in })
+    let current = intro.pages[page]
+    let shown = current.after(played)
+    let next = played < current.steps.count ? current.steps[played] : nil
+    VStack(alignment: .leading, spacing: 12) {
+      HStack {
+        Text("\(name) \u{00B7} \(goal)".uppercased()).font(.system(size: 12, weight: .heavy)).tracking(0.9).foregroundStyle(Theme.accent)
+        Spacer()
+        Button(action: onPlay) {
+          Icon(name: "close", size: 16).foregroundStyle(Theme.text2)
+            .frame(width: 32, height: 32).background(Circle().fill(Theme.surface2))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Close")
+      }
+      Text(current.title).font(.system(size: 24, weight: .heavy)).foregroundStyle(Theme.text)
+      BoardView(
+        fen: shown.fen, orientation: intro.side, interactive: false, lastMove: shown.last,
+        highlights: highlights(shown.marks, shown.fen),
+        arrows: next.map { [BoardArrow(from: $0.from, to: $0.to, color: Theme.warn)] } ?? [],
+        onMove: { _ in })
         .allowsHitTesting(false)
-      ForEach(intro.lines, id: \.self) { line in
-        Text(line).font(.system(size: 16)).foregroundStyle(Theme.text).fixedSize(horizontal: false, vertical: true)
+      if !current.steps.isEmpty {
+        Text("Move \(played) of \(current.steps.count)").font(.system(size: 13, weight: .semibold, design: .monospaced))
+          .foregroundStyle(Theme.text2)
+      }
+      Text(played > 0 ? current.steps[played - 1].caption : current.caption)
+        .font(.system(size: 16)).foregroundStyle(Theme.text).fixedSize(horizontal: false, vertical: true)
+      if !current.legend.isEmpty {
+        HStack(spacing: 12) {
+          ForEach(current.legend, id: \.label) { row in
+            HStack(spacing: 5) {
+              RoundedRectangle(cornerRadius: 3).fill(Self.color(row.tone)).frame(width: 10, height: 10)
+              Text(row.label).font(.system(size: 12)).foregroundStyle(Theme.text2)
+            }
+          }
+        }
       }
       Spacer(minLength: 0)
-      Button(action: onPlay) { Text("Play it").frame(maxWidth: .infinity) }
+      HStack(spacing: 6) {
+        ForEach(intro.pages.indices, id: \.self) { i in
+          Capsule().fill(i == page ? Theme.accent : Theme.surface3).frame(width: i == page ? 18 : 7, height: 7)
+        }
+      }
+      .frame(maxWidth: .infinity)
+      HStack(spacing: 10) {
+        Button(action: back) { Text("Back").frame(maxWidth: .infinity) }
+          .buttonStyle(PlayButtonStyle(kind: .soft, block: true))
+          .disabled(page == 0 && played == 0)
+        Button(action: forward) {
+          Text(next != nil ? "Next move" : page == intro.pages.count - 1 ? "Play it" : "Next").frame(maxWidth: .infinity)
+        }
         .buttonStyle(PlayButtonStyle(kind: .accent, block: true))
+      }
     }
     .padding(20)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .background(Theme.background.ignoresSafeArea())
+  }
+
+  private func forward() {
+    if played < intro.pages[page].steps.count {
+      played += 1
+    } else if page < intro.pages.count - 1 {
+      page += 1
+      played = 0
+    } else {
+      onPlay()
+    }
+  }
+
+  private func back() {
+    if played > 0 {
+      played -= 1
+    } else if page > 0 {
+      page -= 1
+      played = 0
+    }
+  }
+
+  /// The marked squares, and the king in check in red.
+  private func highlights(_ marks: [String: CardTone], _ fen: String) -> [String: SwiftUI.Color] {
+    var out = marks.mapValues { Self.color($0) }
+    if positionStatus(fen).check, let king = kingSquare(fen, fenTurn(fen)) { out[king] = Theme.bad.opacity(0.7) }
+    return out
+  }
+
+  static func color(_ tone: CardTone) -> SwiftUI.Color {
+    switch tone {
+    case .line: Theme.bad.opacity(0.45)
+    case .box: Theme.bad.opacity(0.22)
+    case .key: Theme.good.opacity(0.5)
+    case .zone: Theme.good.opacity(0.28)
+    case .focus: Theme.warn.opacity(0.6)
+    case .bridge: Theme.accent.opacity(0.55)
+    }
   }
 }
