@@ -45,7 +45,8 @@ final class EndgameGame {
     start = endgameStart(entry, Env.random) { exactResult($0, for: $1) }
     fen = start
     color = fenTurn(start)
-    phase = entry.intro != nil && !store.state.endgames.seenIntros.contains(entry.id) ? .intro : .playing
+    // The card comes before every round of an ending that has one.
+    phase = entry.intro != nil ? .intro : .playing
   }
 
   var myTurn: Bool { phase == .playing && fenTurn(fen) == color && !thinking }

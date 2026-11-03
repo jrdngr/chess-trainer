@@ -38,12 +38,6 @@ public enum EndgameMission: Equatable, Sendable, Codable {
   }
 }
 
-/// The card shown before a position is played the first time, and on asking.
-public struct EndgameIntro: Equatable, Sendable {
-  public var title: String
-  public var lines: [String]
-}
-
 /// The material a basic-mate setup is drawn with, beside the two kings.
 public enum BasicMate: String, Sendable, Codable, CaseIterable {
   case queen, rook, bishops
@@ -91,78 +85,45 @@ public let ENDGAME_FAMILIES: [EndgameFamily] = [
 public let ENDGAME_LIBRARY: [EndgameEntry] = [
   EndgameEntry(
     id: "mate-queen", family: "mates", name: "Queen mate", fen: nil, setup: .mate(.queen), goal: .win, mission: .mateIn(10),
-    intro: EndgameIntro(title: "Box the king in", lines: [
-      "Take squares away with the queen, a knight\u{2019}s move from the king.",
-      "Bring your king up, then mate on the edge.",
-    ])),
+    intro: QUEEN_MATE_CARD),
   EndgameEntry(
     id: "mate-rook", family: "mates", name: "Rook mate", fen: nil, setup: .mate(.rook), goal: .win, mission: .mateIn(16),
-    intro: EndgameIntro(title: "Shrink the box", lines: [
-      "Cut the king off with the rook.",
-      "Take the opposition with your king, then push it back a rank with a check.",
-    ])),
+    intro: ROOK_MATE_CARD),
   EndgameEntry(
     id: "mate-bishops", family: "mates", name: "Two bishops", fen: nil, setup: .mate(.bishops), goal: .win, mission: .mateIn(19),
-    intro: EndgameIntro(title: "Bishops side by side", lines: [
-      "Let the bishops wall the king off together.",
-      "Drive it to a corner with your king\u{2019}s help, and watch for stalemate.",
-    ])),
+    intro: BISHOPS_MATE_CARD),
   EndgameEntry(
     id: "kp-key-squares", family: "pawn", name: "Key squares", fen: nil, setup: .keySquares, goal: .win,
     mission: .queenPawn,
-    intro: EndgameIntro(title: "Reach a key square", lines: [
-      "The three squares two in front of your pawn are its key squares.",
-      "Get your king onto one and the pawn queens. Lead with the king, and push the pawn only when it is safe.",
-    ])),
+    intro: KEY_SQUARES_WIN_CARD),
   EndgameEntry(
     id: "kp-key-squares-hold", family: "pawn", name: "Key squares", fen: nil, setup: .keySquares, goal: .hold,
     mission: .holdFor(15),
-    intro: EndgameIntro(title: "Keep them off the key squares", lines: [
-      "The three squares two in front of their pawn are its key squares.",
-      "Keep their king off them: stay in front of the pawn.",
-    ])),
+    intro: KEY_SQUARES_HOLD_CARD),
   EndgameEntry(
     id: "kp-opposition-win", family: "pawn", name: "Opposition", fen: nil, setup: .opposition, goal: .win,
     mission: .queenPawn,
-    intro: EndgameIntro(title: "Take the opposition", lines: [
-      "Face their king with one square between, and leave them to move.",
-      "When their king steps aside, walk past it to a key square.",
-    ])),
+    intro: OPPOSITION_WIN_CARD),
   EndgameEntry(
     id: "kp-opposition", family: "pawn", name: "Opposition", fen: nil, setup: .opposition, goal: .hold,
     mission: .holdFor(15),
-    intro: EndgameIntro(title: "Take the opposition", lines: [
-      "Stand in front of the pawn, facing their king with one square between.",
-      "When the pawn steps up, step back in front of it.",
-    ])),
+    intro: OPPOSITION_HOLD_CARD),
   EndgameEntry(
     id: "kp-square", family: "pawn", name: "Square rule", fen: nil, setup: .square, goal: .win,
     mission: .queenPawn,
-    intro: EndgameIntro(title: "Outrun the king", lines: [
-      "Their king is outside the pawn\u{2019}s square: it can\u{2019}t catch the pawn.",
-      "Run with the pawn.",
-    ])),
+    intro: SQUARE_WIN_CARD),
   EndgameEntry(
     id: "kp-square-hold", family: "pawn", name: "Square rule", fen: nil, setup: .square, goal: .hold,
     mission: .holdFor(12),
-    intro: EndgameIntro(title: "Step into the square", lines: [
-      "Picture a square from the pawn to its queening rank. Your king can step into it: the pawn is caught.",
-      "Head for the pawn\u{2019}s path, not the pawn.",
-    ])),
+    intro: SQUARE_HOLD_CARD),
   EndgameEntry(
     id: "rook-lucena", family: "rook", name: "Lucena", fen: nil, setup: .lucena, goal: .win,
     mission: .queenPawn,
-    intro: EndgameIntro(title: "Build a bridge", lines: [
-      "Lift your rook to the 4th rank.",
-      "Walk your king out, then block the checks with the rook.",
-    ])),
+    intro: LUCENA_CARD),
   EndgameEntry(
     id: "rook-philidor", family: "rook", name: "Philidor", fen: nil, setup: .philidor, goal: .hold,
     mission: .holdFor(20),
-    intro: EndgameIntro(title: "Hold the third rank", lines: [
-      "Keep your rook on your third rank while their king can\u{2019}t get in front.",
-      "Once the pawn steps onto it, check from behind.",
-    ])),
+    intro: PHILIDOR_CARD),
 ]
 
 /// A position from one of your games where an endgame result slipped away,
