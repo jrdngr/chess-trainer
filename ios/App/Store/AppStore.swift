@@ -39,7 +39,6 @@ final class AppStore {
     if let data = try? Data(contentsOf: profilesFile), let list = try? JSONDecoder().decode(ProfileList.self, from: data) {
       profiles = list
     }
-    moveLegacySave()
     readState()
     if let built {
       index = built.0
@@ -79,22 +78,6 @@ final class AppStore {
     let stamp = Int(Date().timeIntervalSince1970)
     let copy = file.deletingLastPathComponent().appending(path: "playbook-unreadable-\(stamp).json")
     try? data.write(to: copy, options: .atomic)
-  }
-
-  /// A save from before profiles becomes the first profile's, unless that profile already has one.
-  private func moveLegacySave() {
-    let fm = FileManager.default
-    let legacy = folder.appending(path: ProfileList.legacySavePath)
-    let main = folder.appending(path: ProfileList.savePath(ProfileList.mainId))
-    guard fm.fileExists(atPath: legacy.path(percentEncoded: false)), !fm.fileExists(atPath: main.path(percentEncoded: false)),
-      profiles.profiles.contains(where: { $0.id == ProfileList.mainId })
-    else { return }
-    do {
-      try fm.createDirectory(at: main.deletingLastPathComponent(), withIntermediateDirectories: true)
-      try fm.moveItem(at: legacy, to: main)
-    } catch {
-      print("move failed: \(error)")
-    }
   }
 
   private func saveProfiles() {

@@ -26,9 +26,6 @@ public struct ProfileList: Equatable, Sendable, Codable {
   /// Where a profile's save lives, under the app's data folder.
   public static func savePath(_ id: String) -> String { "profiles/\(id)/playbook.json" }
 
-  /// Where the app kept its one save before profiles; `AppStore` moves it into the first profile.
-  public static let legacySavePath = "playbook.json"
-
   /// A typed name, trimmed; blank takes "Profile N" for the next free N.
   public func cleanName(_ typed: String) -> String {
     let trimmed = typed.trimmingCharacters(in: .whitespacesAndNewlines)
