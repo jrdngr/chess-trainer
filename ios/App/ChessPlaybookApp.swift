@@ -7,7 +7,8 @@ struct ChessPlaybookApp: App {
 
   var body: some Scene {
     WindowGroup {
-      RootView()
+      // A new session (another profile, or a reset) starts every screen over.
+      RootView().id(store.session)
         .environment(store)
         .environment(toasts)
         .preferredColorScheme(.dark)

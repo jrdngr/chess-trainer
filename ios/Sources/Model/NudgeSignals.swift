@@ -63,7 +63,7 @@ private func keyAfter(_ fen: String, _ san: String) -> String? {
 
 /// Everything the arrows are coloured by, for one position and the moves asked about there.
 func signalsFor(
-  _ profile: Profile, _ index: ReferenceIndex, _ path: [String], _ fen: String, _ sans: [String],
+  _ profile: NudgeProfile, _ index: ReferenceIndex, _ path: [String], _ fen: String, _ sans: [String],
   _ prefs: NudgePrefs, _ minShare: Double, _ opts: SignalOptions = SignalOptions()
 ) -> (signals: [Signals], family: String?) {
   let keys = opts.pathKeys ?? pathKeys(path, profile.rootFen)
