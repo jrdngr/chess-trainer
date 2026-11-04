@@ -31,7 +31,7 @@ struct RankBar<Centre: View>: View {
 }
 
 /// The rating of the opening you have selected: its tier, its rating and how
-/// far it is from the next. Nothing for Any opening or Any favorite. `ScoreStrip`.
+/// far it is from the next. Nothing for My Playbook or Any favorite. `ScoreStrip`.
 struct ScoreStrip: View {
   @Environment(AppStore.self) private var store
 

@@ -3,26 +3,45 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// Growth opened from Home: the lobby, and a sitting on the row it starts.
-/// `onAnalyze` opens Analysis on a line, seen from a side.
+/// Growth opened from Home: a sitting where the lobby's Start would begin it
+/// (the lobby itself when `straight` is off), and the lobby whenever there is
+/// nothing to start. The sitting's settings button opens Growth's settings
+/// with Restart. `onAnalyze` opens Analysis on a line, seen from a side.
 struct GrowthModeView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
   let onExit: () -> Void
   let onAnalyze: ([String], ChessCore.Color) -> Void
+  /// Start a sitting at once, without stopping at the lobby.
+  var straight = false
 
   @Environment(AppStore.self) private var store
   @State private var sitting: GrowthModel?
+  @State private var settings = false
+  /// Restarted from the settings: the lobby starts again at once, however Growth opened.
+  @State private var restarted = false
 
   var body: some View {
     ZStack {
       if let sitting {
         GrowthSitting(model: sitting, onAnalyze: onAnalyze, onExit: onExit)
+          .environment(\.openModeSettings) { settings = true }
       } else {
-        GrowthLobbyView(tree: tree, index: index, onStart: start, onExit: onExit)
+        GrowthLobbyView(tree: tree, index: index, onStart: start, onExit: onExit, autoStart: straight || restarted)
       }
     }
+    .sheet(isPresented: $settings) {
+      GrowthSettingsSheet(unsaved: sitting?.unsaved ?? 0, onRestart: restart) { settings = false }
+        .presentationBackground(Theme.background)
+    }
     .task { debugStart() }
+  }
+
+  /// Leave the sitting, unsaved moves and all, and start again where the lobby would.
+  private func restart() {
+    settings = false
+    sitting = nil
+    restarted = true
   }
 
   /// A sitting on a row, as the lobby's settings find holes: on `launch`'s
@@ -30,6 +49,7 @@ struct GrowthModeView: View {
   func start(_ row: GrowthRow, _ launch: GrowthLobby.Launch) {
     let prefs = store.state.settings.growth
     let selection = store.state.settings.selection
+    store.update { $0.notePlayed() }
     sitting = GrowthModel(
       launch: GrowthModel.Launch(
         row: row, hole: launch.hole, opening: regionOf(tree, selection),
@@ -71,4 +91,32 @@ struct GrowthModeView: View {
       if done, let model = await debugReady() { model.finish() }
     }
   #endif
+}
+
+/// Growth's settings over a sitting, with Restart on top.
+struct GrowthSettingsSheet: View {
+  /// Moves the sitting would lose.
+  let unsaved: Int
+  let onRestart: () -> Void
+  let onClose: () -> Void
+  @Environment(AppStore.self) private var store
+  @State private var discarding = false
+
+  var body: some View {
+    VStack(spacing: 0) {
+      PlayAppBar(title: "Growth", onClose: onClose) { EmptyView() }
+      ScrollView {
+        VStack(alignment: .leading, spacing: 0) {
+          Button { if unsaved > 0 { discarding = true } else { onRestart() } } label: { Text("Restart").frame(maxWidth: .infinity) }
+            .buttonStyle(PlayButtonStyle(kind: .primary, height: 56, radius: 16, font: 17))
+          GrowthSettings(prefs: store.state.settings.growth) { change in store.update { change(&$0.settings.growth) } }
+        }
+        .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 28)
+      }
+    }
+    .confirmationDialog(unsaved == 1 ? "Discard 1 move?" : "Discard \(unsaved) moves?", isPresented: $discarding, titleVisibility: .visible) {
+      Button("Discard", role: .destructive, action: onRestart)
+      Button("Keep playing", role: .cancel) {}
+    }
+  }
 }

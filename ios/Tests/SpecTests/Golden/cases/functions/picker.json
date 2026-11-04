@@ -1290,7 +1290,7 @@
       "fn": "browse.lineName",
       "about": "The name a line shows under in the picker: family and its deepest named entry, short.",
       "cases": [
-      {"args":[""],"out":"Any opening"},
+      {"args":[""],"out":"My Playbook"},
       {"args":["e4"],"out":"King's Pawn"},
       {"args":["e4 c5"],"out":"Sicilian"},
       {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"],"out":"Sicilian: Najdorf"},

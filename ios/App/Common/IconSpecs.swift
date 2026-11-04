@@ -107,5 +107,9 @@ extension Icon {
       IconPart(.path("M12 21v-9"), fill: .none, stroke: .current, opacity: (1, 1)),
       IconPart(.path("M12 12C12 8 9.5 5.5 5 5.5c0 4 2.5 6.5 7 6.5z"), fill: .whenFilled, stroke: .current, opacity: (1, 1)),
       IconPart(.path("M12 14c0-3.5 2.2-6 6.5-6 0 3.6-2.3 6-6.5 6z"), fill: .whenFilled, stroke: .current, opacity: (1, 1))]),
+    "tune": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.path("M4 7h9M17 7h3M4 17h3M11 17h9"), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.circle(15, 7, 2), fill: .whenFilled, stroke: .current, opacity: (1, 1)),
+      IconPart(.circle(9, 17, 2), fill: .whenFilled, stroke: .current, opacity: (1, 1))]),
   ]
 }

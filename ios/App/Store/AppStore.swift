@@ -172,12 +172,14 @@ final class AppStore {
   }
 
   /// The next round's selection, taken: the one after lands on another favorite.
+  /// A single opening picked goes to the front of Recent.
   func takeRoundSelection() -> Selection {
     let taken = peekRoundSelection()
     if isAnyFavorite(state.settings.selection) {
       if !taken.opening.isEmpty { lastFavorite = taken.opening }
       ahead = nil
     }
+    update { $0.notePlayed() }
     return taken
   }
 

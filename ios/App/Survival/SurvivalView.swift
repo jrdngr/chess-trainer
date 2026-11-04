@@ -4,8 +4,9 @@ import Engine
 import Model
 import SwiftUI
 
-/// Survival, opened from Home: set it up, then one run after another until
-/// you close it. A run plays on
+/// Survival, opened from Home: straight into a run on your saved settings
+/// (or the setup first, when `straight` is off), then one run after another
+/// until you close it. The run's settings button opens the setup over it. A run plays on
 /// `RunModel` and `RunView`, and ends on `EndView`, as Autopilot's do.
 struct SurvivalView: View {
   let tree: OpeningTree
@@ -13,11 +14,16 @@ struct SurvivalView: View {
   let onExit: () -> Void
   /// Leave for the Analysis tab on this line, seen from this side.
   let onAnalyze: (_ sans: [String], _ side: ChessCore.Color) -> Void
+  /// Start a run at once, without the setup screen.
+  var straight = false
 
   @Environment(AppStore.self) private var store
   @State private var model: RunModel?
   @State private var growth: GrowthModel?
   @State private var debugged = false
+  /// Whether the first run has been tried: until then a straight start shows nothing.
+  @State private var opened = false
+  @State private var settings = false
   private static let engine = BasicEngine()
 
   var body: some View {
@@ -32,12 +38,26 @@ struct SurvivalView: View {
             onChangeOptions: { setup() })
         } else {
           RunView(model: model, onExit: exit)
+            .environment(\.openModeSettings) { settings = true }
         }
+      } else if straight && !opened {
+        Theme.background.ignoresSafeArea()
       } else {
         SurvivalSetupView(tree: tree, onStart: { start($0) }, onExit: onExit)
       }
     }
-    .task { debugOpen() }
+    .sheet(isPresented: $settings) {
+      SurvivalSetupView(tree: tree, onStart: { prefs in
+        settings = false
+        start(prefs)
+      }, onExit: { settings = false }, startLabel: "Restart")
+      .presentationBackground(Theme.background)
+    }
+    .task {
+      debugOpen()
+      if straight && !opened && model == nil { start(store.state.settings.survival) }
+      opened = true
+    }
   }
 
   /// A run on these options, in the selection taken for it: "Any favorite" lands on one favorite per run.

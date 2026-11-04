@@ -141,7 +141,7 @@ extension AppState {
     logEvent(u.event)
   }
 
-  /// Star or unstar an opening. "Any favorite" with none left is Any opening.
+  /// Star or unstar an opening. "Any favorite" with none left is My Playbook.
   public mutating func toggleStar(_ openingId: String) {
     if settings.favoriteOpenings.contains(openingId) {
       settings.favoriteOpenings.removeAll { $0 == openingId }

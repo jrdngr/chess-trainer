@@ -3,23 +3,43 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// Play: the setup, then a game against the engine.
+/// Play: a game against the engine on your saved settings (the setup first
+/// when `straight` is off). The game's settings button opens the setup over it.
 struct PlayView: View {
   @Environment(AppStore.self) private var store
   let tree: OpeningTree
   let index: ReferenceIndex
   let onExit: () -> Void
+  /// Start a game at once, without the setup screen.
+  var straight = false
   @State private var game: PlayGame?
+  @State private var settings = false
+  /// Whether the first game has been started: until then a straight start shows nothing.
+  @State private var opened = false
 
   var body: some View {
     Group {
       if let game {
         PlayGameView(game: game, tree: tree, onNew: { self.game = nil }, onClose: onExit).id(game.gameId)
+          .environment(\.openModeSettings) { settings = true }
+      } else if straight && !opened {
+        Theme.background.ignoresSafeArea()
       } else {
         PlaySetupView(onStart: start, onExit: onExit)
       }
     }
-    .task { debugOpen() }
+    .sheet(isPresented: $settings) {
+      PlaySetupView(onStart: { prefs in
+        settings = false
+        start(prefs)
+      }, onExit: { settings = false }, startLabel: "Restart")
+      .presentationBackground(Theme.background)
+    }
+    .task {
+      debugOpen()
+      if straight && !opened && game == nil { start(store.state.settings.play) }
+      opened = true
+    }
   }
 
   private func start(_ prefs: PlayPrefs) {
