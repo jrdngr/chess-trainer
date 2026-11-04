@@ -1,9 +1,12 @@
 import Book
 import ChessCore
 
-/// Extensions: the moves in your Playbook that are not book moves.
+/// Extensions: the moves in your Playbook that are not book moves. Any move
+/// the book has is a book move, however rarely it is played, unless the engine
+/// calls it a mistake: what Growth offers from the book is never an extension.
 
-/// The least share of strong players' games a book move has.
+/// The least share of strong players' games a common move has: what the
+/// opponent rolls and the book phase after your prep take.
 public let BOOK_SHARE = 0.05
 /// Centipawns given away past which a move is a mistake: the line a run ends at.
 public let BLUNDER_LIMIT: Double = 80
@@ -12,14 +15,13 @@ public enum MoveKind: String, Sendable {
   case book, rare, mistake, past
 }
 
-/// What a move is at its own position, with what the engine said when it has said it.
+/// What a move is at its own position, with what the engine said when it has said it:
+/// rare when the book knows the position but not the move.
 public func moveKind(_ index: ReferenceIndex, _ fenBefore: String, _ san: String, _ lost: Double? = nil) -> MoveKind {
   if let lost, lost > BLUNDER_LIMIT { return .mistake }
   let entry = lookup(index, fenBefore)
-  let total = totalGamesAt(entry)
-  guard let entry, total > 0 else { return .past }
-  guard let move = entry.moves.first(where: { $0.san == san }) else { return .rare }
-  return move.games / total >= BOOK_SHARE ? .book : .rare
+  guard let entry, totalGamesAt(entry) > 0 else { return .past }
+  return entry.moves.contains(where: { $0.san == san }) ? .book : .rare
 }
 
 /// Under an extension a move the book would play is still an extension, read as rare.
