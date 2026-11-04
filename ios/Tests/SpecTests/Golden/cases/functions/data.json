@@ -44,13 +44,6 @@
       {"args":[["e4 e5 Nf3 Nc6 Bb5","e4 e5 Nf3 Nc6 Bc4","e4 c5 Nf3"],"e4 e5"],"out":{"removed":["e4 e5 Nf3 Nc6 Bb5","e4 e5 Nf3 Nc6 Bc4"],"count":5}},
       {"args":[["e4 a6 Nf3","e4 a6 Nc3","e4 a6 d4","e4 a5 Nf3","e4 a5 Nc3","e4 a5 d4","e4 b6 Nf3","e4 b6 Nc3","e4 b6 d4","e4 b5 Nf3","e4 b5 Nc3","e4 b5 d4","e4 c6 Nf3","e4 c6 Nc3","e4 c6 d4","e4 c5 Nf3","e4 c5 Nc3","e4 c5 d4","e4 d6 Nf3","e4 d6 Nc3","e4 d6 d4","e4 d5 Nf3","e4 d5 Nc3","e4 d5 d4","e4 e6 Nf3","e4 e6 Nc3","e4 e6 d4"],"e4"],"out":{"removed":["e4 a6 Nf3","e4 a6 Nc3","e4 a6 d4","e4 a5 Nf3","e4 a5 Nc3","e4 a5 d4","e4 b6 Nf3","e4 b6 Nc3","e4 b6 d4","e4 b5 Nf3","e4 b5 Nc3","e4 b5 d4","e4 c6 Nf3","e4 c6 Nc3","e4 c6 d4","e4 c5 Nf3","e4 c5 Nc3","e4 c5 d4","e4 d6 Nf3","e4 d6 Nc3"],"count":37}}
       ]
-    },
-    {
-      "fn": "store.resetProgress",
-      "about": "Reset progress: what it clears and what it keeps.",
-      "cases": [
-      {"args":[],"out":{"cards":0,"lineCards":0,"log":0,"mistakes":1,"ratings":1,"playbookMoves":3,"events":1}}
-      ]
     }
   ]
 }

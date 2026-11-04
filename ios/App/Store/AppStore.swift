@@ -18,7 +18,14 @@ final class AppStore {
   /// The save exists but could not be read (locked, say): saving now would replace it with a fresh state.
   @ObservationIgnored private var saveBlocked = false
 
-  private let file = URL.applicationSupportDirectory.appending(path: "playbook.json")
+  /// The profiles on this device and the one in use.
+  private(set) var profiles = ProfileList()
+  /// Changes whenever the state is swapped out (a switch or a reset), so screens start over.
+  private(set) var session = UUID()
+
+  private let folder = URL.applicationSupportDirectory
+  private var profilesFile: URL { folder.appending(path: "profiles.json") }
+  private var file: URL { folder.appending(path: ProfileList.savePath(profiles.active)) }
 
   /// Load the book (and build the opening tree) off the main actor, then the saved state.
   func load() async {
@@ -29,18 +36,30 @@ final class AppStore {
       else { return nil }
       return (index, openingTree(index))
     }.value
-    if FileManager.default.fileExists(atPath: file.path(percentEncoded: false)) {
-      if let data = try? Data(contentsOf: file) {
-        decode(data)
-      } else {
-        print("load failed: playbook.json could not be read")
-        saveBlocked = true
-      }
+    if let data = try? Data(contentsOf: profilesFile), let list = try? JSONDecoder().decode(ProfileList.self, from: data) {
+      profiles = list
     }
+    readState()
     if let built {
       index = built.0
       tree = built.1
       catalog = pickerCatalog(built.1)
+    }
+  }
+
+  /// Read the active profile's save into `state`; none yet is a fresh start.
+  private func readState() {
+    state = AppState()
+    saveBlocked = false
+    lastFavorite = nil
+    ahead = nil
+    session = UUID()
+    guard FileManager.default.fileExists(atPath: file.path(percentEncoded: false)) else { return }
+    if let data = try? Data(contentsOf: file) {
+      decode(data)
+    } else {
+      print("load failed: \(file.lastPathComponent) could not be read")
+      saveBlocked = true
     }
   }
 
@@ -59,6 +78,60 @@ final class AppStore {
     let stamp = Int(Date().timeIntervalSince1970)
     let copy = file.deletingLastPathComponent().appending(path: "playbook-unreadable-\(stamp).json")
     try? data.write(to: copy, options: .atomic)
+  }
+
+  private func saveProfiles() {
+    do {
+      try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+      try JSONEncoder().encode(profiles).write(to: profilesFile, options: .atomic)
+    } catch {
+      print("save failed: \(error)")
+    }
+  }
+
+  /// Save this profile and open another.
+  func switchProfile(_ id: String) {
+    guard id != profiles.active else { return }
+    save()
+    profiles.activate(id)
+    saveProfiles()
+    readState()
+  }
+
+  /// A new profile, opened on a fresh start.
+  func createProfile(_ name: String) {
+    save()
+    profiles.add(name, id: UUID().uuidString.lowercased())
+    saveProfiles()
+    readState()
+  }
+
+  func renameProfile(_ id: String, _ name: String) {
+    profiles.rename(id, name)
+    saveProfiles()
+  }
+
+  /// Delete a profile and its save. Deleting the one in use opens the next.
+  func deleteProfile(_ id: String) {
+    let wasActive = id == profiles.active
+    if !wasActive { save() }
+    guard profiles.remove(id) else { return }
+    saveProfiles()
+    removeSave(id)
+    if wasActive { readState() }
+  }
+
+  /// Wipe the profile in use: a fresh start under the same name.
+  func resetProfile() {
+    removeSave(profiles.active)
+    readState()
+  }
+
+  private func removeSave(_ id: String) {
+    let save = folder.appending(path: ProfileList.savePath(id))
+    // The first profile's save sits in the shared folder, so only its file goes.
+    let target = id == ProfileList.mainId ? save : save.deletingLastPathComponent()
+    try? FileManager.default.removeItem(at: target)
   }
 
   func save() {

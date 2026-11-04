@@ -1,15 +1,18 @@
 import Model
 import SwiftUI
 
-/// Settings: the board, Autopilot's extras, the engine and data.
+/// Settings: the board, Autopilot's extras, the engine and profiles.
 struct SettingsSheet: View {
   @Environment(AppStore.self) private var store
   @Environment(\.dismiss) private var dismiss
-  /// The reset waiting to be confirmed, if either: one at a time.
-  @State private var armed: Reset?
   @State private var intro = false
+  /// The name prompt open: a new profile, or the profile being renamed.
+  @State private var naming: Naming?
+  @State private var typed = ""
+  /// The profile waiting on a delete (or, as the last one, a reset) to be confirmed.
+  @State private var removing: Profile?
 
-  enum Reset { case progress, all }
+  enum Naming: Equatable { case new, rename(Profile) }
 
   var body: some View {
     let settings = store.state.settings
@@ -58,16 +61,37 @@ struct SettingsSheet: View {
         }
         Text("How each mode plays is set on that mode's own screen.").font(.system(size: 12.5)).foregroundStyle(Theme.text3)
           .padding(.horizontal, 4).padding(.top, 8)
-        section("Data")
+        section("Profiles")
         ListCard {
-          resetRow(.progress, "Reset progress", color: Theme.text) { $0.resetProgress() }
-          resetRow(.all, "Reset everything", color: Theme.bad) { $0.resetAll() }
+          ForEach(store.profiles.profiles) { profile in profileRow(profile) }
+          Button {
+            typed = ""
+            naming = .new
+          } label: {
+            HStack(spacing: 10) {
+              Icon(name: "plus", size: 16).foregroundStyle(Theme.text2)
+              Text("New profile").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+              Spacer()
+            }
+            .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
         }
       }
       .padding(20)
     }
-    .onDisappear { armed = nil }
     .fullScreenCover(isPresented: $intro) { IntroPagesView { intro = false } }
+    .alert(naming == .new ? "New profile" : "Rename profile", isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
+      TextField("Name", text: $typed)
+      Button(naming == .new ? "Create" : "Rename") { finishNaming() }
+      Button("Cancel", role: .cancel) { naming = nil }
+    }
+    .alert(removeTitle, isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } })) {
+      Button(lastProfile ? "Reset" : "Delete", role: .destructive) { finishRemoving() }
+      Button("Cancel", role: .cancel) { removing = nil }
+    } message: {
+      Text("This can't be undone.")
+    }
   }
 
   private func section(_ title: String, first: Bool = false) -> some View {
@@ -75,20 +99,63 @@ struct SettingsSheet: View {
       .padding(.horizontal, 4).padding(.top, first ? 16 : 24).padding(.bottom, 8)
   }
 
-  private func resetRow(_ which: Reset, _ title: String, color: SwiftUI.Color, _ reset: @escaping (inout AppState) -> Void) -> some View {
-    Button {
-      if armed != which {
-        armed = which
-        return
-      }
-      store.update(reset)
-      armed = nil
-      if which == .all { dismiss() }
+  private var lastProfile: Bool { store.profiles.profiles.count == 1 }
+
+  private var removeTitle: String {
+    guard let removing else { return "" }
+    return "\(lastProfile ? "Reset" : "Delete") \(removing.name)?"
+  }
+
+  /// A profile: tap to switch to it, long-press to rename or delete it.
+  private func profileRow(_ profile: Profile) -> some View {
+    let active = profile.id == store.profiles.active
+    return Button {
+      guard !active else { return }
+      dismiss()
+      store.switchProfile(profile.id)
     } label: {
-      Text(armed == which ? "Tap again to confirm" : title).font(.system(size: 15, weight: .semibold)).foregroundStyle(color)
-        .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading).padding(.horizontal, 16).contentShape(Rectangle())
+      HStack {
+        Text(profile.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+        Spacer()
+        if active { Icon(name: "check", size: 16).foregroundStyle(Theme.good) }
+      }
+      .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .contextMenu {
+      Button("Rename") {
+        typed = profile.name
+        naming = .rename(profile)
+      }
+      Button(lastProfile ? "Reset" : "Delete", role: .destructive) { removing = profile }
+    }
+  }
+
+  private func finishNaming() {
+    switch naming {
+    case .new:
+      dismiss()
+      store.createProfile(typed)
+    case .rename(let profile):
+      store.renameProfile(profile.id, typed)
+    case nil:
+      break
+    }
+    naming = nil
+  }
+
+  private func finishRemoving() {
+    guard let profile = removing else { return }
+    removing = nil
+    if lastProfile {
+      dismiss()
+      store.resetProfile()
+    } else if profile.id == store.profiles.active {
+      dismiss()
+      store.deleteProfile(profile.id)
+    } else {
+      store.deleteProfile(profile.id)
+    }
   }
 }
 

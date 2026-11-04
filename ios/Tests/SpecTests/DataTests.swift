@@ -74,25 +74,5 @@ import Testing
       let r = removedBetween(before, after)
       return obj(["removed": r.removed, "count": r.count])
     },
-    "store.resetProgress": { _ in
-      var state = AppState()
-      Env.at(at) {
-        state.addLine(state.ensureRepertoire(.w), line("e4 e5 Nf3"), .fixed(.book))
-        let card = createCard("a", "rep", "k", START_FEN)
-        state.cards = ["a": card]
-        state.lineCards = ["b": createLineCard("rep", "tip")]
-        state.log = [ReviewLogEntry(cardId: "a", at: 0, grade: .good, correct: true, playedSan: nil, expectedSan: "", intervalBefore: 0, intervalAfter: 0)]
-        state.mistakes = [Mistake(source: .openingRun, repertoireId: "rep", key: "k", fen: START_FEN, played: "a3", expected: "e4")]
-        var stats = emptyNodeStats()
-        stats.rating = 300
-        state.score.nodes["e4"] = stats
-        state.resetProgress()
-      }
-      return obj([
-        "cards": state.cards.count, "lineCards": state.lineCards.count, "log": state.log.count,
-        "mistakes": state.mistakes.count, "ratings": state.score.nodes.count,
-        "playbookMoves": state.repertoireList.reduce(0) { $0 + $1.nodes.count }, "events": state.events.count,
-      ])
-    },
   ])
 }
