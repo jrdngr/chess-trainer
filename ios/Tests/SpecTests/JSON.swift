@@ -12,7 +12,7 @@ enum JSON: Equatable, CustomStringConvertible {
   init(any: Any?) {
     switch any {
     case nil, is NSNull: self = .null
-    case let n as NSNumber where CFGetTypeID(n) == CFBooleanGetTypeID(): self = .bool(n.boolValue)
+    case let n as NSNumber where String(cString: n.objCType) == "c": self = .bool(n.boolValue)
     case let n as NSNumber: self = .number(n.doubleValue)
     case let s as String: self = .string(s)
     case let a as [Any]: self = .array(a.map { JSON(any: $0) })

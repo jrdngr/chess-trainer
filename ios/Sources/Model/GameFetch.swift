@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 /// Live clients for the two public game APIs.
 /// Only a public username lookup is sent; nothing signs in.
