@@ -458,6 +458,7 @@ final class RunModel {
     let points = scoredInPoints ? f.ended.extras.points : f.ended.moves
     // An endgame result that slipped away is kept for Endgame mode, from the position before the move.
     let given = endgameGivenAway(f.how, fen: f.ended.run.fen, name: openingName(tree, f.ended.run.openingId), at: Env.now())
+    store.update { $0.recordGame(game(f)) }
     if let handoff {
       // Counted against the openings your own line went through. No prep was asked, so no rating or card moves.
       let yours = Array(handoff.line.prefix(handoff.prep))
@@ -480,6 +481,16 @@ final class RunModel {
     }
     offer = offerFor(store.state, tree, index, f, region: f.ended.run.openingId, growth: growth)
     settle(f)
+  }
+
+  /// The run as a game for the history.
+  private func game(_ f: Finish) -> GameRecord {
+    let run = f.ended.run
+    let outcome = runOutcome(f.how, color: run.color)
+    let mode: GameMode = handoff != nil ? .middlegame : round != nil ? .autopilot : .survival
+    return GameRecord(
+      id: run.id, mode: mode, at: Env.now(), color: run.color, picked: pickedFor(selection, saved: store.state.settings.selection),
+      opening: run.openingId, moves: run.played, opened: run.opened, result: outcome.result, termination: outcome.termination)
   }
 
   /// What floats over the board goes, and the blunder or the end screen comes up.

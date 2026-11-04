@@ -1,11 +1,12 @@
 import Model
 import SwiftUI
 
-/// Settings: the board, Autopilot's extras, the engine and profiles.
+/// Settings: the board, Autopilot's extras, the engine, profiles and Export.
 struct SettingsSheet: View {
   @Environment(AppStore.self) private var store
   @Environment(\.dismiss) private var dismiss
   @State private var intro = false
+  @State private var exporting = false
   /// The name prompt open: a new profile, or the profile being renamed.
   @State private var naming: Naming?
   @State private var typed = ""
@@ -77,9 +78,22 @@ struct SettingsSheet: View {
           }
           .buttonStyle(.plain)
         }
+        ListCard {
+          Button { exporting = true } label: {
+            HStack {
+              Text("Export").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+              Spacer()
+              Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3)
+            }
+            .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+        }
+        .padding(.top, 24)
       }
       .padding(20)
     }
+    .sheet(isPresented: $exporting) { ExportView().presentationBackground(Theme.background) }
     .fullScreenCover(isPresented: $intro) { IntroPagesView { intro = false } }
     .alert(naming == .new ? "New profile" : "Rename profile", isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
       TextField("Name", text: $typed)

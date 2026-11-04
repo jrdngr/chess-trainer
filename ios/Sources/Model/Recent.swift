@@ -1,10 +1,10 @@
 import Foundation
 
-/// Openings you picked and then played: the quick picker's Recent section and
-/// its full list. Newest first, one entry per opening.
+/// Openings you picked and then played, read from the game history: the quick
+/// picker's Recent section and its full list. Newest first, one entry per opening.
 
 /// One opening picked and played, with the side it was played as and when.
-public struct RecentPick: Equatable, Sendable, Codable {
+public struct RecentPick: Equatable, Sendable {
   public var opening: String
   public var color: ColorChoice
   public var at: Double
@@ -16,20 +16,20 @@ public struct RecentPick: Equatable, Sendable, Codable {
   }
 }
 
-/// How many picks the history keeps; the oldest go past this.
-public let RECENT_CAP = 100
-
 /// How many Recent tiles the quick picker shows.
 public let RECENT_SHOWN = 4
 
-/// The history after a round played on `selection`. Only a single opening
-/// counts: My Playbook and Any favorite are not picks of one. Playing an opening
-/// again moves it to the front.
-public func notePick(_ recent: [RecentPick], _ selection: Selection, at: Double) -> [RecentPick] {
-  let id = selection.opening
-  guard id != ANY_OPENING, id != ANY_FAVORITE else { return recent }
-  let rest = recent.filter { $0.opening != id }
-  return Array(([RecentPick(opening: id, color: selection.color, at: at)] + rest).prefix(RECENT_CAP))
+/// The openings picked in the game history, newest first, once each. Only a
+/// single opening counts: My Playbook and Any favorite are not picks of one.
+public func recentPicks(_ games: [GameRecord]) -> [RecentPick] {
+  var seen: Set<String> = []
+  var out: [RecentPick] = []
+  for game in games {
+    let id = game.picked.opening
+    guard id != ANY_OPENING, id != ANY_FAVORITE, seen.insert(id).inserted else { continue }
+    out.append(RecentPick(opening: id, color: game.picked.color, at: game.at))
+  }
+  return out
 }
 
 /// The quick picker's Recent tiles: the newest picks that aren't one tap
@@ -39,10 +39,8 @@ public func quickRecent(_ recent: [RecentPick], skipping: Set<String>, count: In
 }
 
 extension AppState {
-  /// A round has started on the saved selection.
-  public mutating func notePlayed(at: Double = Env.now()) {
-    recent = notePick(recent, settings.selection, at: at)
-  }
+  /// Openings you picked and played, newest first.
+  public var recent: [RecentPick] { recentPicks(games) }
 }
 
 /// One stretch of the full Recent list, under its heading.

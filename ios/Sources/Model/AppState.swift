@@ -85,13 +85,13 @@ public struct AppState: Equatable, Sendable, Codable {
   public var endgames = EndgameRecord()
   /// Middlegame mode's points, per opening and overall: a Survival record kept in points.
   public var middlegame = SurvivalRecord()
-  /// Openings you picked and played, newest first: `notePick`.
-  public var recent: [RecentPick] = []
+  /// The games you played here, newest first, at most GAMES_CAP.
+  public var games: [GameRecord] = []
   public init() {}
 
   enum CodingKeys: String, CodingKey {
     case repertoires, repertoireOrder, cards, score, survival, mistakes, lineCards, log, events, settings, importedGames, strength, endgames, middlegame
-    case recent
+    case games
   }
 
   /// A save from before a field existed takes its default.
@@ -112,7 +112,7 @@ public struct AppState: Equatable, Sendable, Codable {
     strength = try c.decodeIfPresent(PlayerStrength.self, forKey: .strength) ?? strength
     endgames = try c.decodeIfPresent(EndgameRecord.self, forKey: .endgames) ?? endgames
     middlegame = try c.decodeIfPresent(SurvivalRecord.self, forKey: .middlegame) ?? middlegame
-    recent = try c.decodeIfPresent([RecentPick].self, forKey: .recent) ?? recent
+    games = try c.decodeIfPresent([GameRecord].self, forKey: .games) ?? games
   }
 
   public var repertoireList: [Repertoire] { repertoireOrder.compactMap { repertoires[$0] } }
