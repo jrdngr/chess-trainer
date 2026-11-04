@@ -2,11 +2,11 @@ import Foundation
 import Model
 import Testing
 
-/// The first profile keeps the app's original save path, so an existing install opens on its own data.
-@Test func mainProfileKeepsOriginalSave() {
+/// A fresh list is one profile, Main, and every profile saves in its own folder.
+@Test func firstProfileIsMain() {
   let list = ProfileList()
   #expect(list.activeProfile == Profile(id: ProfileList.mainId, name: "Main"))
-  #expect(ProfileList.savePath(ProfileList.mainId) == "playbook.json")
+  #expect(ProfileList.savePath(ProfileList.mainId) == "profiles/main/playbook.json")
   #expect(ProfileList.savePath("abc") == "profiles/abc/playbook.json")
 }
 

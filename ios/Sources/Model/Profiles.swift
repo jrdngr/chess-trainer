@@ -13,7 +13,7 @@ public struct Profile: Equatable, Sendable, Codable, Identifiable {
 
 /// The profiles on this device, in the order they were made, and the one in use.
 public struct ProfileList: Equatable, Sendable, Codable {
-  /// The first profile. Its save is the app's original `playbook.json`, where it always was.
+  /// The first profile's id.
   public static let mainId = "main"
 
   public private(set) var profiles: [Profile] = [Profile(id: ProfileList.mainId, name: "Main")]
@@ -24,9 +24,10 @@ public struct ProfileList: Equatable, Sendable, Codable {
   public var activeProfile: Profile { profiles.first { $0.id == active } ?? profiles[0] }
 
   /// Where a profile's save lives, under the app's data folder.
-  public static func savePath(_ id: String) -> String {
-    id == mainId ? "playbook.json" : "profiles/\(id)/playbook.json"
-  }
+  public static func savePath(_ id: String) -> String { "profiles/\(id)/playbook.json" }
+
+  /// Where the app kept its one save before profiles; `AppStore` moves it into the first profile.
+  public static let legacySavePath = "playbook.json"
 
   /// A typed name, trimmed; blank takes "Profile N" for the next free N.
   public func cleanName(_ typed: String) -> String {
