@@ -19,11 +19,12 @@ struct TierPop: ViewModifier {
   var on: Bool
   var color: Color
   @Environment(\.accessibilityReduceMotion) private var reduce
+  @State private var played = false
 
   func body(content: Content) -> some View {
     if on && !reduce {
       content.shadow(color: color, radius: 6)
-        .keyframeAnimator(initialValue: (scale: 2.4, opacity: 0.0)) { view, v in
+        .keyframeAnimator(initialValue: (scale: 2.4, opacity: 0.0), trigger: played) { view, v in
           view.scaleEffect(v.scale, anchor: .leading).opacity(v.opacity)
         } keyframes: { _ in
           KeyframeTrack(\.scale) {
@@ -34,6 +35,7 @@ struct TierPop: ViewModifier {
             LinearKeyframe(1, duration: 0.42)
           }
         }
+        .onAppear { played = true }
     } else {
       content
     }
@@ -45,15 +47,17 @@ struct NumberGlow: ViewModifier {
   var color: Color
   var on: Bool
   @Environment(\.accessibilityReduceMotion) private var reduce
+  @State private var played = false
 
   func body(content: Content) -> some View {
     if on && !reduce {
-      content.keyframeAnimator(initialValue: 0.0) { view, k in
+      content.keyframeAnimator(initialValue: 0.0, trigger: played) { view, k in
         view.foregroundStyle(Theme.text.mix(with: color, by: k)).shadow(color: color.opacity(k), radius: 7)
       } keyframes: { _ in
         LinearKeyframe(1, duration: 0.4, timingCurve: .easeOut)
         LinearKeyframe(0, duration: 1.2, timingCurve: .easeOut)
       }
+      .onAppear { played = true }
     } else {
       content
     }
@@ -65,6 +69,7 @@ struct PromotionRing: ViewModifier {
   var on: Bool
   var color: Color
   @Environment(\.accessibilityReduceMotion) private var reduce
+  @State private var played = false
 
   func body(content: Content) -> some View {
     if on {
@@ -72,7 +77,7 @@ struct PromotionRing: ViewModifier {
         if reduce {
           RoundedRectangle(cornerRadius: 18).strokeBorder(color.opacity(0.45), lineWidth: 1)
         } else {
-          Color.clear.keyframeAnimator(initialValue: (ring: 0.0, glow: 0.0)) { view, v in
+          Color.clear.keyframeAnimator(initialValue: (ring: 0.0, glow: 0.0), trigger: played) { view, v in
             view.overlay {
               RoundedRectangle(cornerRadius: 18).strokeBorder(color.opacity(max(v.ring, 0.45 * min(1, v.glow * 10))), lineWidth: v.ring > 0.5 ? 2 : 1)
                 .shadow(color: color.opacity(v.glow), radius: 22)
@@ -87,6 +92,7 @@ struct PromotionRing: ViewModifier {
               LinearKeyframe(0, duration: 1.48, timingCurve: .easeOut)
             }
           }
+          .onAppear { played = true }
           .allowsHitTesting(false)
         }
       }
@@ -120,16 +126,18 @@ struct PromotionShine: View {
 struct StretchGlow: View {
   var gain: Bool
   @Environment(\.accessibilityReduceMotion) private var reduce
+  @State private var played = false
 
   var body: some View {
     let color: Color = gain ? .white : Theme.bad
     if !reduce {
       RoundedRectangle(cornerRadius: 5).fill(color).padding(.vertical, -1)
         .shadow(color: gain ? .white.opacity(0.6) : Theme.bad, radius: 6)
-        .keyframeAnimator(initialValue: 0.0) { view, o in view.opacity(o) } keyframes: { _ in
+        .keyframeAnimator(initialValue: 0.0, trigger: played) { view, o in view.opacity(o) } keyframes: { _ in
           LinearKeyframe(0.9, duration: 0.2, timingCurve: .easeOut)
           LinearKeyframe(0, duration: 1.1, timingCurve: .easeOut)
         }
+        .onAppear { played = true }
         .allowsHitTesting(false)
     }
   }
@@ -139,11 +147,12 @@ struct StretchGlow: View {
 struct RatingFlash: View {
   var color: Color
   @Environment(\.accessibilityReduceMotion) private var reduce
+  @State private var played = false
 
   var body: some View {
     RoundedRectangle(cornerRadius: 5).fill(color).padding(.vertical, -2)
       .shadow(color: color, radius: 11)
-      .keyframeAnimator(initialValue: (bright: 1.0, opacity: 1.0)) { view, v in
+      .keyframeAnimator(initialValue: (bright: 1.0, opacity: 1.0), trigger: played) { view, v in
         view.brightness(reduce ? 0 : (v.bright - 1) * 0.5).opacity(reduce ? 1 : v.opacity)
       } keyframes: { _ in
         KeyframeTrack(\.bright) {
@@ -159,6 +168,7 @@ struct RatingFlash: View {
           LinearKeyframe(1, duration: 0.19)
         }
       }
+      .onAppear { played = true }
       .allowsHitTesting(false)
   }
 }

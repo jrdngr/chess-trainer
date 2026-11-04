@@ -15,18 +15,20 @@ enum Motion {
 struct BoardFlashFade: ViewModifier {
   var duration: Double = 2
   @Environment(\.accessibilityReduceMotion) private var reduce
+  @State private var played = false
 
   func body(content: Content) -> some View {
     if reduce {
       content
     } else {
-      content.keyframeAnimator(initialValue: 0.0) { view, opacity in
+      content.keyframeAnimator(initialValue: 0.0, trigger: played) { view, opacity in
         view.opacity(opacity)
       } keyframes: { _ in
         LinearKeyframe(1, duration: duration * 0.08, timingCurve: .easeInOut)
         LinearKeyframe(1, duration: duration * 0.72)
         LinearKeyframe(0, duration: duration * 0.2, timingCurve: .easeInOut)
       }
+      .onAppear { played = true }
     }
   }
 }
