@@ -458,7 +458,9 @@ final class RunModel {
     let points = scoredInPoints ? f.ended.extras.points : f.ended.moves
     // An endgame result that slipped away is kept for Endgame mode, from the position before the move.
     let given = endgameGivenAway(f.how, fen: f.ended.run.fen, name: openingName(tree, f.ended.run.openingId), at: Env.now())
-    store.update { $0.recordGame(game(f)) }
+    // Built before the update: reading the store inside its own update is an exclusivity crash.
+    let record = game(f)
+    store.update { $0.recordGame(record) }
     if let handoff {
       // Counted against the openings your own line went through. No prep was asked, so no rating or card moves.
       let yours = Array(handoff.line.prefix(handoff.prep))
