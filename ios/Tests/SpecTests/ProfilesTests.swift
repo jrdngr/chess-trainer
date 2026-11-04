@@ -45,13 +45,16 @@ import Testing
 /// The last profile can't be removed; removing the active one moves to its neighbor.
 @Test func removingProfiles() {
   var list = ProfileList()
-  #expect(!list.remove(ProfileList.mainId))
+  let removedLast = list.remove(ProfileList.mainId)
+  #expect(!removedLast)
   list.add("B", id: "b")
   list.add("C", id: "c")
   list.activate("b")
-  #expect(list.remove("b"))
+  let removedB = list.remove("b")
+  #expect(removedB)
   #expect(list.active == "c")
-  #expect(list.remove("c"))
+  let removedC = list.remove("c")
+  #expect(removedC)
   #expect(list.active == ProfileList.mainId)
   #expect(list.profiles.map(\.id) == [ProfileList.mainId])
 }
@@ -59,6 +62,7 @@ import Testing
 @Test func removingOtherKeepsActive() {
   var list = ProfileList()
   list.add("B", id: "b")
-  #expect(list.remove(ProfileList.mainId))
+  let removedMain = list.remove(ProfileList.mainId)
+  #expect(removedMain)
   #expect(list.active == "b")
 }

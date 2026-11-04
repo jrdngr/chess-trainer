@@ -52,7 +52,7 @@ struct ProfileNode {
 
 /// A repertoire from the point of view of a move being added: every move in
 /// it, the opening each belongs to, and every position it reaches.
-struct Profile {
+struct NudgeProfile {
   var color: Color
   var rootFen: String
   var nodes: [ProfileNode]
@@ -60,7 +60,7 @@ struct Profile {
   var positions: [String: [String]]
 }
 
-func profileOf(_ rep: Repertoire, _ index: ReferenceIndex) -> Profile {
+func profileOf(_ rep: Repertoire, _ index: ReferenceIndex) -> NudgeProfile {
   var nodes: [ProfileNode] = []
   var positions: [String: [String]] = [positionKey(rep.rootFen): []]
   // The deepest name so far is carried down rather than looked up per line.
@@ -78,7 +78,7 @@ func profileOf(_ rep: Repertoire, _ index: ReferenceIndex) -> Profile {
     }
   }
   walk(nil, [], nil)
-  return Profile(color: rep.color, rootFen: rep.rootFen, nodes: nodes, positions: positions)
+  return NudgeProfile(color: rep.color, rootFen: rep.rootFen, nodes: nodes, positions: positions)
 }
 
 /// `openingOf`, for a line already given as its positions.
@@ -132,7 +132,7 @@ private struct Chosen {
   var ply: Int
 }
 
-func contextOf(_ profile: Profile, _ index: ReferenceIndex, _ fam: String?, _ minShare: Double) -> NudgeContext {
+func contextOf(_ profile: NudgeProfile, _ index: ReferenceIndex, _ fam: String?, _ minShare: Double) -> NudgeContext {
   // The opening and its kin: a new Catalan already knows your English's g3.
   let kin = fam.map(kinOf)
   var context = NudgeContext(scope: profile.nodes.filter { kin == nil || ($0.family != nil && kin!.contains($0.family!)) })
