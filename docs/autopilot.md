@@ -39,8 +39,9 @@ Every change should pass these tests:
   that you configure yourself.
 - It is not a Playbook editor. Its only way to add moves is the end
   screen's Grow this line, one button that looks the same wherever it shows,
-  which grows the line where your prep ran out. That plays one batch of
-  Growth and then goes on to the next run.
+  which grows the line where your prep ran out. That opens Growth there, the
+  same Growth as from Home: Save Line keeps the moves and goes Home, X drops
+  them.
 - It is not where you choose an exact line, side, steer or clock. Standalone
   Survival does that.
 

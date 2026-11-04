@@ -9,9 +9,8 @@ import SwiftUI
 struct AutopilotView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
-  /// One opening to hold the session to, in place of the saved selection: what
-  /// Growth sends you to practice. Nothing is saved.
-  var scope: Selection? = nil
+  /// Analysis on a line grown here, seen from a side, opened over the mode.
+  let onAnalyze: ([String], ChessCore.Color) -> Void
   let onExit: () -> Void
 
   @Environment(AppStore.self) private var store
@@ -27,7 +26,7 @@ struct AutopilotView: View {
       if analyzing, let model {
         AnalysisTab(tree: tree, index: index, line: model.run.played, orientation: model.run.color) { analyzing = false }
       } else if let growth {
-        GrowthView(model: growth, onClose: exit, onNext: next)
+        GrowthSitting(model: growth, onAnalyze: onAnalyze, onExit: exit)
       } else if let model {
         if model.phase == .over, let finish = model.finish {
           EndView(model: model, finish: finish, onNext: next, onGrow: grow, onAnalyze: { analyzing = true }, onExit: exit)
@@ -49,7 +48,7 @@ struct AutopilotView: View {
 
   /// The next round, picked when it starts: what the last one changed is in the store by then.
   private func begin() {
-    let selection = scope ?? store.takeRoundSelection()
+    let selection = store.takeRoundSelection()
     guard let round = nextRound(store.state, tree, selection, history),
       let run = RunModel(round: round, selection: selection, store: store, tree: tree, index: index, engine: Self.engine)
     else {
@@ -65,7 +64,6 @@ struct AutopilotView: View {
   }
 
   private func next() {
-    growth = nil
     if let model, let round = model.round { history = afterRound(history, round, model.selection) }
     model?.stop()
     model = nil

@@ -13,8 +13,6 @@ struct SurvivalView: View {
   let onExit: () -> Void
   /// Leave for the Analysis tab on this line, seen from this side.
   let onAnalyze: (_ sans: [String], _ side: ChessCore.Color) -> Void
-  /// Growth's way back, when it was opened from here: Autopilot on what was grown.
-  let onPractice: (Selection) -> Void
 
   @Environment(AppStore.self) private var store
   @State private var model: RunModel?
@@ -24,10 +22,8 @@ struct SurvivalView: View {
 
   var body: some View {
     Group {
-      if let growth, let model {
-        GrowthView(model: growth, nextLabel: "Practice these lines", onClose: exit) {
-          onPractice(Selection(color: model.run.color == .w ? .w : .b, opening: growth.launch.opening.id))
-        }
+      if let growth {
+        GrowthSitting(model: growth, onAnalyze: onAnalyze, onExit: exit)
       } else if let model {
         if model.phase == .over, let finish = model.finish {
           EndView(
