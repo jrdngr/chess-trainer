@@ -6,20 +6,13 @@ import SwiftUI
 
 /// One sitting of Growth: the reply you have no answer to, the answers on
 /// offer with who recommends them, and the reveal once the batch is done.
-/// Autopilot's batch ends in Next round;
-/// Growth from Home in New run, with the rest of the reveal.
+/// Save Line writes the sitting and goes Home; X goes Home without it.
 struct GrowthView: View {
   /// Where the reveal leads.
   struct Exits {
-    /// Autopilot's next round, in place of New run.
-    var nextRound: (() -> Void)?
-    /// What the next-round button says: Autopilot's "Next round", or Survival's "Practice these lines".
-    var nextLabel = "Next round"
-    var again: (() -> Void)?
     var analyze: (() -> Void)?
     var playFrom: ((String) -> Void)?
-    /// Back to the lobby.
-    var back: (() -> Void)?
+    /// Home.
     var close: () -> Void
   }
 
@@ -27,17 +20,7 @@ struct GrowthView: View {
   let exits: Exits
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
-
-  /// Autopilot's batch, as it opens from the end of a run. Close leaves the
-  /// mode; the next round is its own button.
-  init(model: GrowthModel, onClose: @escaping () -> Void, onNext: @escaping () -> Void) {
-    self.init(model: model, exits: Exits(nextRound: onNext, close: onClose))
-  }
-
-  /// Survival's batch: the same, its way out named for where it goes.
-  init(model: GrowthModel, nextLabel: String, onClose: @escaping () -> Void, onNext: @escaping () -> Void) {
-    self.init(model: model, exits: Exits(nextRound: onNext, nextLabel: nextLabel, close: onClose))
-  }
+  @State private var discarding = false
 
   init(model: GrowthModel, exits: Exits) {
     self.model = model
@@ -62,7 +45,7 @@ struct GrowthView: View {
 
   private var screen: some View {
     VStack(spacing: 0) {
-      PlayAppBar(title: "Growth", subtitle: subtitle, onClose: exits.close) {
+      PlayAppBar(title: "Growth", subtitle: subtitle, onClose: close) {
         Text("\(model.live?.nodes.count ?? 0)").font(.system(size: 13).monospacedDigit()).foregroundStyle(Theme.text2)
           .frame(maxWidth: .infinity, alignment: .trailing)
       }
@@ -80,7 +63,18 @@ struct GrowthView: View {
       }
       .defaultScrollAnchor(Self.debugAnchor)
     }
+    .confirmationDialog(discardTitle, isPresented: $discarding, titleVisibility: .visible) {
+      Button("Discard", role: .destructive, action: exits.close)
+      Button("Keep playing", role: .cancel) {}
+    }
   }
+
+  /// X: Home without saving, asked first when there are moves to lose.
+  private func close() {
+    if model.unsaved > 0 { discarding = true } else { exits.close() }
+  }
+
+  private var discardTitle: String { model.unsaved == 1 ? "Discard 1 move?" : "Discard \(model.unsaved) moves?" }
 
   /// Debug builds hold the page to its bottom with `GROWTH_SCROLL=1`, for screenshots.
   private static var debugAnchor: UnitPoint? {
@@ -147,16 +141,13 @@ struct GrowthView: View {
         }
         .buttonStyle(PlayButtonStyle(height: 52))
       }
-      if let go = exits.nextRound ?? exits.again {
-        Button(action: go) {
-          HStack(spacing: 8) {
-            Text(exits.nextRound != nil ? exits.nextLabel : "New run")
-            Icon(name: "next", size: 18)
-          }
-          .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(PlayButtonStyle(kind: .primary, height: 52))
+      Button {
+        model.save()
+        exits.close()
+      } label: {
+        Text("Save Line").frame(maxWidth: .infinity)
       }
+      .buttonStyle(PlayButtonStyle(kind: .primary, height: 52))
     }
   }
 

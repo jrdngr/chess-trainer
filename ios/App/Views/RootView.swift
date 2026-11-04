@@ -24,8 +24,6 @@ struct RootView: View {
   @State private var explore: (sans: [String], side: ChessCore.Color)?
   /// A line a mode sent to Analysis, opened over it: the mode stays underneath, and Back returns to it.
   @State private var analyzing: (sans: [String], side: ChessCore.Color)?
-  /// The one opening Growth's way back holds Autopilot to, in place of the saved selection.
-  @State private var scope: Selection?
   /// A find handed over from the end of a round, for Tidy to open on.
   @State private var tidyFocus: TidyFind?
   /// A line from the opening sheet for Middlegame mode to play out.
@@ -69,7 +67,6 @@ struct RootView: View {
             tidyFocus = find
             analyzing = nil
             self.mode = nil
-            scope = nil
             tab = .playbook
           }
         if let analyzing {
@@ -106,8 +103,7 @@ struct RootView: View {
   @ViewBuilder private func modeView(_ mode: Mode, _ tree: OpeningTree, _ index: ReferenceIndex) -> some View {
     switch mode {
     case .autopilot:
-      AutopilotView(tree: tree, index: index, scope: scope) { leave() }
-        .id(scope.map { "\($0.color.rawValue):\($0.opening)" } ?? "autopilot")
+      AutopilotView(tree: tree, index: index, onAnalyze: { analyzing = ($0, $1) }) { leave() }
     case .play: PlayView(tree: tree, index: index) { leave() }
     case .endgame: EndgameView { leave() }
     case .middlegame:
@@ -119,11 +115,7 @@ struct RootView: View {
         onAnalyze: { analyzing = ($0, $1) })
     case .survival:
       SurvivalView(
-        tree: tree, index: index, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) },
-        onPractice: { selection in
-          scope = selection
-          self.mode = .autopilot
-        })
+        tree: tree, index: index, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) })
     }
   }
 
@@ -131,7 +123,6 @@ struct RootView: View {
   private func leave() {
     analyzing = nil
     mode = nil
-    scope = nil
     middlegameLine = nil
     tab = .home
   }

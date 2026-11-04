@@ -79,7 +79,7 @@ struct GrowthPhaseView: View {
       HStack {
         GrowthVerdict(tone: .no, text: "Not your prep")
         Spacer()
-        Button { (exits.back ?? exits.close)() } label: {
+        Button(action: exits.close) {
           HStack(spacing: 6) { Text("Back"); Icon(name: "next", size: 16) }
         }
         .buttonStyle(PlayButtonStyle(kind: .primary, height: 38, radius: 11, font: 14))

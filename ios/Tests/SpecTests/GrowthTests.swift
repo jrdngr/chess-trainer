@@ -136,3 +136,18 @@ func rowJSON(_ r: GrowthRow) -> JSON {
   #expect(found?.hole.san == "dxc3")
   #expect(found.flatMap { firstHole($0.row) }?.path.count == 3)
 }
+
+/// A sitting's moves stay off the tree it started from until Save Line,
+/// which writes the kept opening line and every answer still standing.
+@Test func growthDraftSavesOnlyWhatIsLeft() {
+  var draft = GrowthDraft(rep(.w, ["e4"]), keep: line("e4 c5 d4 cxd4 c3"))
+  draft.add(line("e4 c5 d4 cxd4 c3 dxc3 Nxc3"), .fixed(.growth))
+  draft.add(line("e4 c5 d4 cxd4 c3 Nf6 e5"), .fixed(.growth))
+  draft.remove(nodeAtLine(draft.rep, line("e4 c5 d4 cxd4 c3 Nf6"))!.id)
+  var state = AppState()
+  let id = state.ensureRepertoire(.w)
+  state.saveGrowth(id, draft)
+  let saved = state.repertoires[id]!
+  #expect(leafLines(saved).map { $0.sans.joined(separator: " ") } == ["e4 c5 d4 cxd4 c3 dxc3 Nxc3"])
+  #expect(nodeAtLine(saved, line("e4 c5 d4 cxd4 c3"))?.source == .picker)
+}
