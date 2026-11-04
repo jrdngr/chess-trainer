@@ -49,7 +49,6 @@ struct GrowthModeView: View {
   func start(_ row: GrowthRow, _ launch: GrowthLobby.Launch) {
     let prefs = store.state.settings.growth
     let selection = store.state.settings.selection
-    store.update { $0.notePlayed() }
     sitting = GrowthModel(
       launch: GrowthModel.Launch(
         row: row, hole: launch.hole, opening: regionOf(tree, selection),

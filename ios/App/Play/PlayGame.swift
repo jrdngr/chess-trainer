@@ -153,6 +153,11 @@ final class PlayGame {
     if let game = playedGame(id: gameId, color: color, moves: moves, result: result, level: level, at: Env.now()) {
       store.update { $0.recordPlayGame(game) }
     }
+    let score = result == .draw ? "1/2-1/2" : pgnResult(won: result == .win, color: color)
+    let record = GameRecord(
+      id: gameId, mode: .play, at: Env.now(), color: color, picked: pickedFor(selection, saved: store.state.settings.selection),
+      opening: region.id, moves: moves, result: score, termination: reason == "the rules" ? "draw" : reason)
+    store.update { $0.recordGame(record) }
   }
 
   /// The engine's move: the selected opening's move order while the game is

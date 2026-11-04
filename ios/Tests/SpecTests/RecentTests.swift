@@ -2,24 +2,25 @@ import Foundation
 import Model
 import Testing
 
-private func pick(_ id: String, _ color: ColorChoice = .w) -> Selection { Selection(color: color, opening: id) }
+private func game(_ picked: String, _ color: ColorChoice = .w, at: Double) -> GameRecord {
+  GameRecord(
+    id: "g\(at)", mode: .survival, at: at, color: .w, picked: Selection(color: color, opening: picked),
+    opening: picked, moves: ["e4"], result: "*", termination: "blunder")
+}
 
-/// Recent keeps single openings only, newest first, once each, and at most RECENT_CAP of them.
-@Test func recentKeepsPicksNewestFirst() {
-  var recent: [RecentPick] = []
-  recent = notePick(recent, pick("sicilian", .b), at: 1)
-  recent = notePick(recent, pick("alapin"), at: 2)
-  recent = notePick(recent, pick(ANY_OPENING), at: 3)
-  recent = notePick(recent, pick(ANY_FAVORITE), at: 4)
-  recent = notePick(recent, pick("sicilian", .b), at: 5)
-  #expect(recent.map(\.opening) == ["sicilian", "alapin"])
-  #expect(recent[0].at == 5)
-  #expect(recent[0].color == .b)
-
-  for i in 0..<(RECENT_CAP + 5) { recent = notePick(recent, pick("o\(i)"), at: Double(10 + i)) }
-  #expect(recent.count == RECENT_CAP)
-  #expect(recent.first?.opening == "o\(RECENT_CAP + 4)")
-  #expect(!recent.contains { $0.opening == "sicilian" || $0.opening == "o0" })
+/// Recent reads single openings from the game history, newest first, once each.
+@Test func recentReadsPicksFromGames() {
+  let games = [
+    game("sicilian", .b, at: 5),
+    game(ANY_FAVORITE, at: 4),
+    game(ANY_OPENING, at: 3),
+    game("alapin", at: 2),
+    game("sicilian", .w, at: 1),
+  ]
+  #expect(recentPicks(games) == [
+    RecentPick(opening: "sicilian", color: .b, at: 5),
+    RecentPick(opening: "alapin", color: .w, at: 2),
+  ])
 }
 
 /// The quick tiles skip a favorite by its own id: the lines under it still show.
@@ -49,16 +50,4 @@ private func pick(_ id: String, _ color: ColorChoice = .w) -> Selection { Select
   let groups = recentGroups(recent, now: now, calendar: calendar)
   #expect(groups.map(\.label) == ["Today", "Yesterday", "This week", "October", "October 2025"])
   #expect(groups[3].picks.map(\.opening) == ["d", "e"])
-}
-
-/// A save from before Recent loads with none, and Recent survives a save.
-@Test func recentLoadsAndSaves() throws {
-  let old = try JSONDecoder().decode(AppState.self, from: Data(#"{"settings":{"onboarded":true}}"#.utf8))
-  #expect(old.recent.isEmpty)
-  var state = AppState()
-  state.settings.selection = Selection(color: .b, opening: "caro")
-  state.notePlayed(at: 7)
-  #expect(state.recent == [RecentPick(opening: "caro", color: .b, at: 7)])
-  let data = try JSONEncoder().encode(state)
-  #expect(try JSONDecoder().decode(AppState.self, from: data) == state)
 }
