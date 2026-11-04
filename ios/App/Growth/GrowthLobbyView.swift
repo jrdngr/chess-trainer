@@ -9,7 +9,7 @@ import SwiftUI
 struct GrowthLobbyView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
-  let onStart: (GrowthRow) -> Void
+  let onStart: (GrowthRow, Hole?) -> Void
   let onExit: () -> Void
 
   @Environment(AppStore.self) private var store
@@ -44,12 +44,12 @@ struct GrowthLobbyView: View {
   }
 
   @ViewBuilder private func starts(_ lobby: GrowthLobby) -> some View {
-    if let pick = lobby.pick {
+    if let opening = lobby.opening {
+      bigButton("Start \(opening.node.name)") { startOpening(opening) }
+    } else if let pick = lobby.pick {
       bigButton("Start") { start(lobby, pick, "Start button") }
-    } else if let first = lobby.unstarted.first {
-      bigButton("Start \(first.node.name)") { startOpening(first) }
     }
-    let rest = Array(lobby.unstarted.dropFirst(lobby.pick == nil ? 1 : 0))
+    let rest = lobby.opening == nil ? lobby.unstarted : Array(lobby.unstarted.dropFirst())
     if !rest.isEmpty {
       PlaySection(title: "Not in your Playbook yet")
       ListCard {
@@ -114,18 +114,32 @@ struct GrowthLobbyView: View {
       $0.logEvent(AppEvent(
         kind: "growth-start", via: .growth, rows: lobby.rows.map { "\($0.name) (\($0.holes.count) replies)" }, picked: row.name, start: how))
     }
-    guard row.repertoireId.hasPrefix(GrowthLobby.standIn) else { return onStart(row) }
+    guard row.repertoireId.hasPrefix(GrowthLobby.standIn) else { return onStart(row, nil) }
     var real = row
     store.update { real.repertoireId = $0.ensureRepertoire(row.color) }
-    onStart(real)
+    onStart(real, nil)
   }
 
+  /// Keeps the opening's own moves, then starts on the replies at its end.
   private func startOpening(_ region: SideRegion) {
+    let line = openingLine(index, region.node, region.side)
+    var id = ""
     store.update { state in
-      let id = state.ensureRepertoire(region.side)
-      state.addLine(id, region.node.sans, .fixed(.picker), via: .growth)
+      id = state.ensureRepertoire(region.side)
+      state.addLine(id, line, .fixed(.picker), via: .growth)
     }
-    toasts.show("\(region.node.name) kept \u{00b7} now answer the replies")
+    let lobby = GrowthLobby(store.state, tree, index)
+    guard let found = holeAtTip(lobby.rows.filter { $0.repertoireId == id }, line) else {
+      toasts.show("\(region.node.name) kept \u{00b7} now answer the replies")
+      return
+    }
+    let row = found.row
+    store.update {
+      $0.logEvent(AppEvent(
+        kind: "growth-start", via: .growth, rows: lobby.rows.map { "\($0.name) (\($0.holes.count) replies)" }, picked: row.name,
+        start: "Start \(region.node.name)"))
+    }
+    onStart(row, found.hole)
   }
 
   private func keepFirstMove(_ san: String) {

@@ -101,7 +101,11 @@ public func growthRows(_ reps: [Repertoire], _ index: ReferenceIndex, _ opts: Gr
     rows[i].urgency = rowUrgency(rows[i].depth, share, rows[i].holes.count + rows[i].ends.count)
     rows[i].score = min(1, rows[i].urgency * (rows[i].starred ? STAR_BOOST : 1))
   }
+  // Inside a chosen opening, its own replies come before the ones on the way in.
+  let inside = Set(scoped.map { region in rows.filter { rowReaches(region.tree, region.node, $0) }.map(\.id) } ?? [])
   return rows.jsSorted { a, b in
+    let first = (inside.contains(b.id) ? 1 : 0) - (inside.contains(a.id) ? 1 : 0)
+    if first != 0 { return Double(first) }
     if b.score != a.score { return b.score - a.score }
     if a.depth != b.depth { return Double(a.depth - b.depth) }
     return Double(JS.localeCompare(a.name, b.name))
@@ -110,6 +114,39 @@ public func growthRows(_ reps: [Repertoire], _ index: ReferenceIndex, _ opts: Gr
 
 /// The row Start would begin.
 public func recommended(_ rows: [GrowthRow]) -> GrowthRow? { rows.first }
+
+/// Whether any of a row's holes lies inside an opening.
+public func rowReaches(_ tree: OpeningTree, _ node: OpeningNode, _ row: GrowthRow) -> Bool {
+  row.holes.contains { lineStatus(tree, node, $0.path + [$0.san]) == .reached }
+}
+
+/// An opening's own moves as Growth keeps them for a side. Where the
+/// opponent is to move at the end and the book carries the same name one
+/// reply and one move of yours further (2.d4, then 2...cxd4 3.c3 for the
+/// Smith-Morra Gambit), those two moves are part of it.
+public func openingLine(_ index: ReferenceIndex, _ node: OpeningNode, _ side: Color) -> [String] {
+  let sans = node.sans
+  let fens = walkSan(sans).fens
+  guard !sans.isEmpty, fens.count == sans.count + 1, let fen = fens.last, fenTurn(fen) != side,
+    let reply = popularReplies(index, fen, 0).first, let after = applySan(fen, reply.san)?.after
+  else { return sans }
+  for move in popularReplies(index, after, 0) {
+    guard let next = applySan(after, move.san)?.after else { continue }
+    if nameAt(index, next)?.name == node.name { return sans + [reply.san, move.san] }
+  }
+  return sans
+}
+
+/// The hole most worth answering at the very end of a line, and its row.
+public func holeAtTip(_ rows: [GrowthRow], _ line: [String]) -> (row: GrowthRow, hole: Hole)? {
+  var best: (row: GrowthRow, hole: Hole)?
+  for row in rows {
+    for hole in row.holes where hole.path == line {
+      if best == nil || holeWorth(hole) > holeWorth(best!.hole) { best = (row, hole) }
+    }
+  }
+  return best
+}
 
 /// A move the book has no name for, called after itself: "vs 1.g3".
 private func holeLabel(_ hole: Hole) -> String {

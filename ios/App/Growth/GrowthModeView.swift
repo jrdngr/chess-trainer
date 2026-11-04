@@ -28,7 +28,7 @@ struct GrowthModeView: View {
             .background(Theme.background)
         }
       } else {
-        GrowthLobbyView(tree: tree, index: index, onStart: start, onExit: onExit)
+        GrowthLobbyView(tree: tree, index: index, onStart: { start($0, $1) }, onExit: onExit)
       }
     }
     .task { debugStart() }
@@ -43,12 +43,12 @@ struct GrowthModeView: View {
       close: onExit)
   }
 
-  /// A sitting on a row, as the lobby's settings find holes.
-  func start(_ row: GrowthRow) {
+  /// A sitting on a row, as the lobby's settings find holes; on `hole` when given.
+  func start(_ row: GrowthRow, _ hole: Hole? = nil) {
     let prefs = store.state.settings.growth
     let selection = store.state.settings.selection
     let launch = GrowthModel.Launch(
-      row: row, hole: nil, opening: regionOf(tree, selection),
+      row: row, hole: hole, opening: regionOf(tree, selection),
       find: GrowthOptions(minShare: prefs.minShare, maxPly: prefs.maxPly), maxPly: prefs.maxPly, paced: true,
       regionId: selection.opening)
     playFrom = nil

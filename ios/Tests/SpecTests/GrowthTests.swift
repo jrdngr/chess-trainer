@@ -105,3 +105,34 @@ func rowJSON(_ r: GrowthRow) -> JSON {
   #expect(hole?.path == line("e4 e5 Nf3 Nc6 Bb5"))
   #expect(hole?.san == "Nf6")
 }
+
+/// The Smith-Morra Gambit is named at 2.d4 and again at 3.c3: Start keeps
+/// White's 3.c3, and Black's side stops where the opening is named.
+@Test func openingLineCarriesItsOwnName() {
+  let tree = openingTree(bookIndex)
+  let morra = tree.byId["e4 c5 d4"]!
+  #expect(openingLine(bookIndex, morra, .w) == line("e4 c5 d4 cxd4 c3"))
+  #expect(openingLine(bookIndex, morra, .b) == line("e4 c5 d4"))
+}
+
+/// With only 1.e4 kept and the Smith-Morra chosen, the work Growth finds is
+/// 1...c5 on the way in, none of it inside: the lobby's Start keeps the opening.
+@Test func wayInWorkIsNotInsideTheOpening() {
+  let tree = openingTree(bookIndex)
+  let morra = tree.byId["e4 c5 d4"]!
+  let rows = growthRows([rep(.w, ["e4"])], bookIndex, GrowthOptions(minShare: 1, maxPly: 18, region: (tree, morra)))
+  #expect(rows.first?.holes.contains { $0.path == ["e4"] && $0.san == "c5" } == true)
+  #expect(!rows.contains { rowReaches(tree, morra, $0) })
+}
+
+/// Started from its own line, the Smith-Morra begins at Black's most played
+/// answer to 3.c3, not at the shallower 2...d6.
+@Test func openingStartsAtItsTip() {
+  let tree = openingTree(bookIndex)
+  let morra = tree.byId["e4 c5 d4"]!
+  let kept = line("e4 c5 d4 cxd4 c3")
+  let rows = growthRows([rep(.w, ["e4 c5 d4 cxd4 c3"])], bookIndex, GrowthOptions(minShare: 1, maxPly: 18, region: (tree, morra)))
+  let found = holeAtTip(rows, kept)
+  #expect(found?.hole.san == "dxc3")
+  #expect(found.flatMap { firstHole($0.row) }?.path.count == 3)
+}
