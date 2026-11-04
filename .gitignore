@@ -3,3 +3,5 @@
 .swiftpm/
 ios/ChessPlaybook.xcodeproj/
 ios/build/
+*.tar.gz
+*.whl
