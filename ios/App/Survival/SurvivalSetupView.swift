@@ -8,6 +8,8 @@ struct SurvivalSetupView: View {
   let tree: OpeningTree
   let onStart: (SurvivalPrefs) -> Void
   let onExit: () -> Void
+  /// The top button: Start from Home, Restart over a run in play.
+  var startLabel = "Start"
 
   var body: some View {
     let prefs = store.state.settings.survival
@@ -17,7 +19,7 @@ struct SurvivalSetupView: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
           SelectionBar().padding(.bottom, 12)
-          Button { onStart(prefs) } label: { Text("Start").frame(maxWidth: .infinity) }
+          Button { onStart(prefs) } label: { Text(startLabel).frame(maxWidth: .infinity) }
             .buttonStyle(PlayButtonStyle(kind: .primary, height: 56, radius: 16, font: 17))
           PlaySection(title: "Opponent steers toward")
           SegmentedControl(

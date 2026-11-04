@@ -13,6 +13,8 @@ struct RootView: View {
   @Environment(AppStore.self) private var store
   @State private var tab: Tab = Self.debugTab ?? .home
   @State private var mode: Mode? = Self.debugMode
+  /// The mode opens on its setup screen instead of starting at once. Debug opens keep the setup, for screenshots.
+  @State private var setupFirst = Self.debugMode != nil
   /// Play on the board, opened from the Playbook tab.
   @State private var building = false
   /// A Drill sitting opened from the Playbook: its positions and title.
@@ -76,7 +78,13 @@ struct RootView: View {
       }
     } else {
       TabView(selection: $tab) {
-        HomeView(tree: tree) { mode = $0 }
+        HomeView(tree: tree, onOpen: { next in
+          setupFirst = false
+          mode = next
+        }, onSetup: { next in
+          setupFirst = true
+          mode = next
+        })
           .tabItem { Label(Tab.home.label, systemImage: Tab.home.symbol) }.tag(Tab.home)
         PlaybookView(tree: tree, index: index, tidyFocus: tidyFocus, onConsumedTidyFocus: { tidyFocus = nil }, onExplore: { sans, side in
           explore = (sans, side)
@@ -104,18 +112,20 @@ struct RootView: View {
     switch mode {
     case .autopilot:
       AutopilotView(tree: tree, index: index, onAnalyze: { analyzing = ($0, $1) }) { leave() }
-    case .play: PlayView(tree: tree, index: index) { leave() }
+    case .play: PlayView(tree: tree, index: index, onExit: { leave() }, straight: !setupFirst)
     case .endgame: EndgameView { leave() }
     case .middlegame:
-      MiddlegameView(tree: tree, index: index, exact: middlegameLine, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) })
+      MiddlegameView(
+        tree: tree, index: index, exact: middlegameLine, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) },
+        straight: !setupFirst)
     case .drill: DrillView(tree: tree, index: index) { leave() }
     case .growth:
       GrowthModeView(
         tree: tree, index: index, onExit: { leave() },
-        onAnalyze: { analyzing = ($0, $1) })
+        onAnalyze: { analyzing = ($0, $1) }, straight: !setupFirst)
     case .survival:
       SurvivalView(
-        tree: tree, index: index, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) })
+        tree: tree, index: index, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) }, straight: !setupFirst)
     }
   }
 

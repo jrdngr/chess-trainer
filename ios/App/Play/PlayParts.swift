@@ -23,6 +23,7 @@ struct PlayAppBar<Trailing: View>: View {
       .lineLimit(1).frame(maxWidth: .infinity)
       // Holds its width even when empty, so the title stays centred.
       Color.clear.frame(width: 38, height: 1).overlay { trailing }
+      ModeSettingsButton()
     }
     .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 10).frame(minHeight: 56)
   }

@@ -3,10 +3,13 @@ import Model
 import SwiftUI
 
 /// Home: the selection, Autopilot's next round on its button, the modes,
-/// and Favorites and Milestones.
+/// and Favorites and Milestones. A mode tile starts the mode on your saved
+/// settings; press and hold for Start or Settings (its setup screen first).
 struct HomeView: View {
   let tree: OpeningTree
   let onOpen: (Mode) -> Void
+  /// Open a mode on its setup screen.
+  let onSetup: (Mode) -> Void
   @Environment(AppStore.self) private var store
   @State private var settings = false
 
@@ -25,12 +28,12 @@ struct HomeView: View {
         ScoreStrip().padding(.bottom, 12)
         autopilot.padding(.bottom, 10)
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 10) {
-          tile("Survival", "flame", .survival)
+          tile("Survival", "flame", .survival, held: true)
           tile("Drill", "cards", .drill)
-          tile("Middlegame", "middlegame", .middlegame)
+          tile("Middlegame", "middlegame", .middlegame, held: true)
           tile("Endgames", "flag", .endgame)
-          tile("Growth", "sprout", .growth)
-          tile("Play", "play", .play)
+          tile("Growth", "sprout", .growth, held: true)
+          tile("Play", "play", .play, held: true)
         }
         VStack(spacing: 10) {
           FavoritesLadder()
@@ -77,8 +80,9 @@ struct HomeView: View {
     }
   }
 
-  private func tile(_ name: String, _ icon: String, _ mode: Mode) -> some View {
-    Button { onOpen(mode) } label: {
+  /// A mode's tile. `held`: press and hold offers Start and Settings.
+  @ViewBuilder private func tile(_ name: String, _ icon: String, _ mode: Mode, held: Bool = false) -> some View {
+    let button = Button { onOpen(mode) } label: {
       HStack(spacing: 10) {
         Icon(name: icon, size: 20).foregroundStyle(Theme.accent)
         Text(name).font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.text)
@@ -86,8 +90,17 @@ struct HomeView: View {
       }
       .padding(.horizontal, 12).frame(minHeight: 56)
       .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface))
+      .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 20))
     }
     .buttonStyle(.plain)
+    if held {
+      button.contextMenu {
+        Button { onOpen(mode) } label: { Label("Start", systemImage: "play.fill") }
+        Button { onSetup(mode) } label: { Label("Settings", systemImage: "slider.horizontal.3") }
+      }
+    } else {
+      button
+    }
   }
 }
 

@@ -394,7 +394,7 @@ public func entryTrail(_ entry: PickerEntry) -> [PickerEntry] {
   return out
 }
 
-/// The side picking a tree node sets: its entry's, or none for "any opening".
+/// The side picking a tree node sets: its entry's, or none for "My Playbook".
 public func sideForPick(_ catalog: PickerCatalog, _ node: OpeningNode) -> Color? {
   if node.depth == 0 { return nil }
   return entryForNode(catalog, node)?.side ?? playerOf(node.sans)

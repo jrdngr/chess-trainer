@@ -86,6 +86,7 @@ struct SurvivalRunBar: View {
         SurvivalClock(budget: budget, since: model.turnStarted).id(model.turnStarted)
       }
       SurvivalCountChip(value: model.scoredInPoints ? state.extras.points : state.moves)
+      ModeSettingsButton()
     }
   }
 }

@@ -25,6 +25,8 @@ struct MiddlegameView: View {
   let onExit: () -> Void
   /// Leave for the Analysis tab on this line, seen from this side.
   let onAnalyze: (_ sans: [String], _ side: ChessCore.Color) -> Void
+  /// From Home, start a run at once, without the setup screen.
+  var straight = false
 
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
@@ -34,6 +36,9 @@ struct MiddlegameView: View {
   @State private var job: Task<Void, Never>?
   /// The line the last run played out, for Same line.
   @State private var last: MiddlegameLine?
+  /// Whether the first run has been tried: until then a straight start shows nothing.
+  @State private var opened = false
+  @State private var settings = false
   /// The game engine, and a second one for the handoff's checks so a build never waits on a judge.
   private static let engine = BasicEngine()
   private static let builder = BasicEngine()
@@ -59,15 +64,28 @@ struct MiddlegameView: View {
             onSameLine: last == nil ? nil : { if let last { start(store.state.settings.middlegame, line: last) } })
         } else {
           RunView(model: model, onExit: exit)
+            .environment(\.openModeSettings) { settings = true }
         }
-      } else if exact != nil {
-        Color.clear
+      } else if exact != nil || (straight && !opened) {
+        Theme.background.ignoresSafeArea()
       } else {
         MiddlegameSetupView(tree: tree, onStart: { start($0) }, onExit: onExit)
       }
     }
+    .sheet(isPresented: $settings) {
+      MiddlegameSetupView(tree: tree, onStart: { prefs in
+        settings = false
+        start(prefs, line: exact)
+      }, onExit: { settings = false }, startLabel: "Restart")
+      .presentationBackground(Theme.background)
+    }
     .task {
-      if let exact, model == nil, building == nil { start(store.state.settings.middlegame, line: exact) }
+      if let exact, model == nil, building == nil {
+        start(store.state.settings.middlegame, line: exact)
+      } else if straight && !opened && model == nil && building == nil {
+        start(store.state.settings.middlegame)
+      }
+      opened = true
     }
   }
 

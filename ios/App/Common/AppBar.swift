@@ -117,3 +117,19 @@ struct EmptyNote: View {
     .frame(maxWidth: .infinity).padding(.vertical, 40).padding(.horizontal, 20)
   }
 }
+
+/// Opens the settings of the mode in play, from its top bar.
+extension EnvironmentValues {
+  @Entry var openModeSettings: (() -> Void)? = nil
+}
+
+/// The mode's settings button, shown where a mode has set `openModeSettings`.
+struct ModeSettingsButton: View {
+  @Environment(\.openModeSettings) private var open
+
+  var body: some View {
+    if let open {
+      IconButton(icon: "tune", action: open).accessibilityLabel("Settings")
+    }
+  }
+}

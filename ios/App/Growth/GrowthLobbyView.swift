@@ -11,10 +11,14 @@ struct GrowthLobbyView: View {
   let index: ReferenceIndex
   let onStart: (GrowthRow, GrowthLobby.Launch) -> Void
   let onExit: () -> Void
+  /// Press the big Start once the lobby has worked out where to start, as the Home tile does.
+  var autoStart = false
 
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
   @State private var memo = Memo<GrowthLobby>()
+  /// The automatic start has happened, or found nothing to start.
+  @State private var fired = false
 
   var body: some View {
     let lobby = current
@@ -31,8 +35,21 @@ struct GrowthLobbyView: View {
         }
         .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 20)
       }
+      .overlay { if autoStart && !fired { ProgressView().tint(Theme.text2).frame(maxWidth: .infinity, maxHeight: .infinity).background(Theme.background) } }
     }
     .task(id: lobby.asking) { if !lobby.asking.isEmpty { GrowthEngine.shared.ask(lobby.asking) } }
+    .task(id: "\(lobby.rows.count)|\(lobby.opening?.node.id ?? "")|\(GrowthEngine.shared.pending(lobby.asking))") { startAtOnce(lobby) }
+  }
+
+  /// The big Start, pressed for you once the engine has weighed the rows. With nothing to start, the lobby shows.
+  private func startAtOnce(_ lobby: GrowthLobby) {
+    guard autoStart, !fired, GrowthEngine.shared.pending(lobby.asking) == 0 else { return }
+    fired = true
+    if let opening = lobby.opening {
+      startOpening(opening)
+    } else if let pick = lobby.pick {
+      start(lobby, pick, "Home tile")
+    }
   }
 
   /// The lobby, worked out again only when what it reads changes.

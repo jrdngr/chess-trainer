@@ -5,7 +5,7 @@ import Model
 func openingName(_ tree: OpeningTree, _ id: String) -> String {
   if id == ANY_FAVORITE { return "Any favorite" }
   let node = nodeById(tree, id)
-  if node.depth == 0 { return "Any opening" }
+  if node.depth == 0 { return "My Playbook" }
   return entryForNode(pickerCatalog(tree), node)?.label ?? node.name
 }
 

@@ -24,7 +24,7 @@ struct GrowthLobby {
   let reps: [Repertoire]
   let regions: [SideRegion]
   let rows: [GrowthRow]
-  /// The chosen opening's own line, per side: none for Any opening or Any favorite.
+  /// The chosen opening's own line, per side: none for My Playbook or Any favorite.
   let keeps: [Color: [String]]
   /// Sides whose saved tree lacks some of that line.
   let fresh: Set<Color>
