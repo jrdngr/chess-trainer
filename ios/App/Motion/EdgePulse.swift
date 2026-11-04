@@ -4,12 +4,13 @@ import SwiftUI
 struct EdgePulse: View {
   var color: Color
   @Environment(\.accessibilityReduceMotion) private var reduce
+  @State private var played = false
 
   var body: some View {
     if reduce {
       RoundedRectangle(cornerRadius: 4).strokeBorder(color.opacity(0.8), lineWidth: 3).allowsHitTesting(false)
     } else {
-      Color.clear.keyframeAnimator(initialValue: (glow: 0.0, spread: 0.0)) { view, v in
+      Color.clear.keyframeAnimator(initialValue: (glow: 0.0, spread: 0.0), trigger: played) { view, v in
         view.overlay {
           RoundedRectangle(cornerRadius: 4)
             .stroke(color.opacity(v.glow), lineWidth: 3)
@@ -25,6 +26,7 @@ struct EdgePulse: View {
           LinearKeyframe(1, duration: 1.45, timingCurve: .easeOut)
         }
       }
+      .onAppear { played = true }
       .allowsHitTesting(false)
     }
   }

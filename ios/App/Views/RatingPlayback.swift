@@ -171,12 +171,13 @@ struct RatingStamp: View {
   let text: String
   let color: Color
   @Environment(\.accessibilityReduceMotion) private var reduce
+  @State private var played = false
 
   var body: some View {
     Text(text).font(.system(size: 54, weight: .black)).tracking(-1.08).foregroundStyle(color)
       .shadow(color: color, radius: 14).shadow(color: .black.opacity(0.45), radius: 0, y: 2)
       .lineLimit(1).minimumScaleFactor(0.5)
-      .keyframeAnimator(initialValue: (scale: reduce ? 1.0 : 2.8, opacity: reduce ? 1.0 : 0.0)) { view, v in
+      .keyframeAnimator(initialValue: (scale: reduce ? 1.0 : 2.8, opacity: reduce ? 1.0 : 0.0), trigger: played) { view, v in
         view.scaleEffect(v.scale).opacity(v.opacity)
       } keyframes: { _ in
         KeyframeTrack(\.scale) {
@@ -185,6 +186,7 @@ struct RatingStamp: View {
         }
         KeyframeTrack(\.opacity) { LinearKeyframe(1, duration: reduce ? 0 : 0.4) }
       }
+      .onAppear { played = true }
   }
 }
 
@@ -192,13 +194,14 @@ struct RatingStamp: View {
 struct RatingRays: View {
   let color: Color
   @Environment(\.accessibilityReduceMotion) private var reduce
+  @State private var played = false
 
   var body: some View {
     if !reduce {
       AngularGradient(stops: Self.stripes(color), center: .center)
         .frame(width: 460, height: 460)
         .mask(RadialGradient(colors: [.black, .clear], center: .center, startRadius: 0, endRadius: 230 * 0.62))
-        .keyframeAnimator(initialValue: (turn: 0.0, scale: 0.3, opacity: 0.0)) { view, v in
+        .keyframeAnimator(initialValue: (turn: 0.0, scale: 0.3, opacity: 0.0), trigger: played) { view, v in
           view.rotationEffect(.degrees(v.turn)).scaleEffect(v.scale).opacity(v.opacity)
         } keyframes: { _ in
           KeyframeTrack(\.turn) { LinearKeyframe(50, duration: 2.4, timingCurve: .easeOut) }
@@ -208,6 +211,7 @@ struct RatingRays: View {
             LinearKeyframe(0, duration: 1.92, timingCurve: .easeOut)
           }
         }
+        .onAppear { played = true }
     }
   }
 

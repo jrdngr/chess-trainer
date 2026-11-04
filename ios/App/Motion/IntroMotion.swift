@@ -46,6 +46,7 @@ struct IntroPillIn: ViewModifier {
 struct IntroPulse: View {
   var cornerRadius: CGFloat = 14
   @Environment(\.accessibilityReduceMotion) private var reduce
+  @State private var played = false
 
   struct Ring {
     var inner: CGFloat = 3
@@ -55,7 +56,7 @@ struct IntroPulse: View {
 
   var body: some View {
     if !reduce {
-      Color.clear.keyframeAnimator(initialValue: Ring()) { view, ring in
+      Color.clear.keyframeAnimator(initialValue: Ring(), trigger: played) { view, ring in
         view.overlay {
           RoundedRectangle(cornerRadius: cornerRadius).strokeBorder(Theme.accent.opacity(ring.inner > 0 ? 1 : 0), lineWidth: max(ring.inner, 0.01))
           RoundedRectangle(cornerRadius: cornerRadius + ring.outer)
@@ -76,6 +77,7 @@ struct IntroPulse: View {
           LinearKeyframe(0, duration: 0.54, timingCurve: .easeOut)
         }
       }
+      .onAppear { played = true }
       .allowsHitTesting(false)
     }
   }

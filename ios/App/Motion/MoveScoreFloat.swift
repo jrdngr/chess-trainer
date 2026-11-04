@@ -5,6 +5,7 @@ import SwiftUI
 /// another 8pt as it fades.
 struct MoveScoreFloat: ViewModifier {
   @Environment(\.accessibilityReduceMotion) private var reduce
+  @State private var played = false
 
   struct Frame {
     var opacity = 0.0
@@ -15,7 +16,7 @@ struct MoveScoreFloat: ViewModifier {
     if reduce {
       content
     } else {
-      content.keyframeAnimator(initialValue: Frame()) { view, f in
+      content.keyframeAnimator(initialValue: Frame(), trigger: played) { view, f in
         view.opacity(f.opacity).offset(y: f.y)
       } keyframes: { _ in
         KeyframeTrack(\.opacity) {
@@ -29,6 +30,7 @@ struct MoveScoreFloat: ViewModifier {
           LinearKeyframe(-18, duration: 0.42, timingCurve: .easeOut)
         }
       }
+      .onAppear { played = true }
     }
   }
 }
