@@ -13,7 +13,7 @@ struct GrowthLobby {
   let reps: [Repertoire]
   let regions: [SideRegion]
   let rows: [GrowthRow]
-  /// Selected openings a side has no line into and no work on the way to.
+  /// Selected openings a side has no line into yet.
   let unstarted: [SideRegion]
   /// White with nothing yet: the book's first moves to pick from.
   let firstMoves: [Reply]
@@ -26,7 +26,8 @@ struct GrowthLobby {
     let prefs = state.settings.growth
     let selection = state.settings.selection
     let starred = state.settings.favoriteOpenings
-    regions = regionsBySide(tree, selection, starred)
+    let selected = regionsBySide(tree, selection, starred)
+    regions = selected
     let have = repertoiresIn(state.repertoireList, selection.color)
     let reps = colorsOf(selection.color).map { color in
       have.first { $0.color == color } ?? createRepertoire(color == .w ? "White" : "Black", color, "\(Self.standIn)\(color.rawValue)")
@@ -37,22 +38,34 @@ struct GrowthLobby {
     firstMoves = whiteEmpty ? optionsAt(index, START_FEN, 5) : []
     asking = prefs.pastBook
       ? reps.flatMap { enginePositions($0, index, GrowthOptions(minShare: prefs.minShare, maxPly: prefs.maxPly)) } : []
-    rows = acrossRegions(regions, reps, { rep, node in
+    let found = acrossRegions(selected, reps, { rep, node in
       growthRows([rep], index, GrowthOptions(
         minShare: prefs.minShare, maxPly: prefs.maxPly, starred: starred, region: (tree, node), pastBook: prefs.pastBook))
-    }, \.id).jsSorted { a, b in
+    }, \.id)
+    // Replies inside a selected opening come before the ones on the way in.
+    let inside = Set(found.filter { row in selected.contains { $0.side == row.color && rowReaches(tree, $0.node, row) } }.map(\.id))
+    rows = found.jsSorted { a, b in
+      let first = (inside.contains(b.id) ? 1 : 0) - (inside.contains(a.id) ? 1 : 0)
+      if first != 0 { return Double(first) }
       if b.score != a.score { return b.score - a.score }
       if a.depth != b.depth { return Double(a.depth - b.depth) }
       return Double(JS.localeCompare(a.name, b.name))
     }
-    unstarted = regions.filter { region in
-      guard let rep = reps.first(where: { $0.color == region.side }), !reachesOpening(rep, tree, region.node) else { return false }
-      let opts = GrowthOptions(minShare: prefs.minShare, maxPly: prefs.maxPly, region: (tree, region.node), pastBook: prefs.pastBook)
-      return growthRows([rep], index, opts).isEmpty
+    unstarted = selected.filter { region in
+      guard let rep = reps.first(where: { $0.color == region.side }) else { return false }
+      return !reachesOpening(rep, tree, region.node)
     }
+    pickInside = rows.first.map { inside.contains($0.id) } ?? false
   }
 
+  /// The top row has replies inside a selected opening, not only on the way in.
+  let pickInside: Bool
+
   var pick: GrowthRow? { recommended(rows) }
+
+  /// The opening Start keeps and begins, ahead of the rows: one the
+  /// Playbook does not reach yet, unless the top row already works inside one.
+  var opening: SideRegion? { pickInside ? nil : unstarted.first }
 
   var subtitle: String { rows.count == 1 ? "1 opening to extend" : "\(rows.count) openings to extend" }
 
