@@ -62,17 +62,6 @@ struct FavoritesLadder: View {
               .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            if let s = row.stats, s.extRated > 0 {
-              HStack(spacing: 8) {
-                Text("Extensions").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.ext).padding(.leading, 16)
-                  .frame(maxWidth: .infinity, alignment: .leading)
-                TierBar(rating: s.extRating, rated: s.extRated).frame(width: 96)
-                Text("\(Int(JSRound(s.extRating)))").font(.system(size: 13, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text2)
-                  .frame(width: 30, alignment: .trailing)
-                Spacer().frame(width: 38)
-              }
-              .padding(.horizontal, 6).frame(minHeight: 28)
-            }
           }
         }
         .padding(.horizontal, -6)
