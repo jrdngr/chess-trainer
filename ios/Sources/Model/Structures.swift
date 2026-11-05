@@ -17,10 +17,18 @@ public struct PlanStep: Equatable, Sendable, Codable {
   public var text: String
   /// The pushes or piece squares the step names; reaching any completes it.
   public var goals: [Goal]?
-  init(text: String, goals: [Goal]? = nil) {
+  /// What the board must hold for the step to be offered, and to stay open.
+  public var needs: [Need] = []
+  /// How the step is known done or gone, beyond reaching a goal.
+  public var check: StepCheck? = nil
+  public init(text: String, goals: [Goal]? = nil, needs: [Need] = [], check: StepCheck? = nil) {
     self.text = text
     self.goals = goals
+    self.needs = needs
+    self.check = check
   }
+
+  enum CodingKeys: String, CodingKey { case text, goals }
 }
 
 public struct StructureTemplate: Equatable, Sendable, Codable {

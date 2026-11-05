@@ -99,7 +99,7 @@ struct AnalysisTab: View {
   }
 
   @ViewBuilder private var below: some View {
-    PlanCard(fen: fen, me: orientation)
+    PlanCard(fens: fens, me: orientation)
     Spacer().frame(height: 8)
     strip
     let status = positionStatus(fen)

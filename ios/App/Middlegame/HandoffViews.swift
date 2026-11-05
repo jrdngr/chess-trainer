@@ -46,12 +46,14 @@ struct HandoffMoves: View {
 
 /// The plan for the structure you are handed, over the dock until you press Play.
 struct HandoffPlanCard: View {
-  let fen: String
+  /// The game's positions, the handoff last.
+  let fens: [String]
   let me: ChessCore.Color
 
   var body: some View {
-    if let structure = structureOf(fen) {
-      PlanCardBody(fen: fen, me: me, structure: structure)
+    let trail = PlanTrails.of(fens, me)
+    if trail.current != nil {
+      PlanCardBody(trail: trail, fen: fens.last!, me: me)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16).padding(.vertical, 14)
         .planCardFrame()

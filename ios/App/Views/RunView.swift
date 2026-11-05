@@ -5,7 +5,7 @@ import SwiftUI
 
 /// A run in play: the board, what floats over it, and the dock under it.
 /// The board takes the screen's width first; the dock (goal card, status,
-/// lenses, End round) has what is left, so nothing in it can shrink the board.
+/// lenses) has what is left, so nothing in it can shrink the board.
 /// A Survival run you set up (no Autopilot round) adds its own app bar with the clock.
 struct RunView: View {
   @Bindable var model: RunModel
@@ -13,6 +13,9 @@ struct RunView: View {
   @Environment(AppStore.self) var store
   @State private var lens: LensKind? = Self.pinnedLens
   @State private var planHeld = false
+  /// The plan the player last saw: the Plan button pulses once the plan is another.
+  @State private var planSeen: String?
+  @State private var planSeeded = false
   @State private var breaks: (fen: String, found: PawnBreaks.Breaks)?
 
   /// Survival opened from Home, not Autopilot's round.
@@ -35,11 +38,13 @@ struct RunView: View {
     }
     .contentShape(Rectangle())
     .onTapGesture { if model.intro == .announce { model.toBoard() } }
+    // The lenses sit near the home bar; the screen's own swipe there waits, so a press lands at once.
+    .defersSystemGestures(on: .bottom)
   }
 
   private var board: some View {
     VStack(spacing: 0) {
-      if survival { SurvivalRunBar(model: model, onExit: onExit) } else { header }
+      if survival { SurvivalRunBar(model: model, onExit: close) } else { header }
       // The Eval lens's bar takes the captured row's place, so the board never moves.
       CapturedRow(fen: model.shownFen, orientation: model.run.color)
         .opacity(evalHeld ? 0 : 1)
@@ -126,7 +131,7 @@ struct RunView: View {
       }
       .padding(.horizontal, 60)
       HStack {
-        Button(action: onExit) {
+        Button(action: close) {
           Image(systemName: "xmark").font(.headline).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
         }
         .foregroundStyle(Theme.text).buttonStyle(.plain)
@@ -142,20 +147,21 @@ struct RunView: View {
     .padding(.horizontal).padding(.vertical, 10)
   }
 
-  /// Under the board: the lenses, then what a held lens shows, or the goal and the status; End round at the bottom.
+  /// Under the board: what a held lens shows, or the goal and the status; the lenses at the bottom,
+  /// under the thumb and clear of the key.
   private var dock: some View {
-    VStack(spacing: 0) {
-      LensBar(held: $lens, lenses: LENSES, enabled: lensEnabled, plan: $planHeld, planEnabled: lensEnabled && structureOf(model.shownFen) != nil)
-        .opacity(model.held ? 0 : 1).allowsHitTesting(!model.held)
+    let fens = planFens
+    let plan = PlanTrails.of(fens, model.run.color).current?.plan.key
+    return VStack(spacing: 0) {
       VStack(spacing: 0) {
         if lens == .eval {
           EvalRunCard(trail: model.session.evalTrail, last: model.session.lastJudged, color: model.run.color)
         } else if let lens {
           LensLegend(kind: lens, endgame: isEndgame(model.shownFen))
         } else if planHeld {
-          PlanLegend(fen: model.shownFen, me: model.run.color)
+          PlanLegend(fens: fens, me: model.run.color)
         } else if model.intro == .plan {
-          HandoffPlanCard(fen: model.run.fen, me: model.run.color)
+          HandoffPlanCard(fens: fens, me: model.run.color)
         } else if model.blunder != nil {
           ending
         } else {
@@ -165,7 +171,41 @@ struct RunView: View {
       }
       // Gives way before the board does: what doesn't fit is cut, never pushed up, and can't take a touch outside it.
       .frame(minHeight: 0, maxHeight: .infinity, alignment: .top).clipped().contentShape(Rectangle())
-      footer.padding(.top, 10).padding(.bottom, 8).opacity(model.blunder == nil ? 1 : 0)
+      footer.padding(.top, 10).opacity(model.blunder == nil ? 1 : 0)
+      LensBar(
+        held: $lens, lenses: LENSES, enabled: lensEnabled, plan: $planHeld, planEnabled: lensEnabled && plan != nil,
+        planPulse: planSeeded && plan != nil && plan != planSeen
+      )
+      .opacity(model.held ? 0 : 1).allowsHitTesting(!model.held)
+      .padding(.bottom, 12)
+    }
+    // The plan when the lenses wake is the one the player starts with; a tap on Plan sees the one up now.
+    .onChange(of: lensEnabled, initial: true) {
+      if lensEnabled && !planSeeded {
+        planSeen = plan
+        planSeeded = true
+      }
+    }
+    .onChange(of: planHeld) { if planHeld { planSeen = plan } }
+  }
+
+  /// The game's positions up to the board as shown.
+  private var planFens: [String] {
+    let fens = walkSan(model.run.played).fens
+    let shown = model.shownFen
+    if fens.last == shown { return fens }
+    if let i = fens.lastIndex(of: shown) { return Array(fens.prefix(i + 1)) }
+    return fens + [shown]
+  }
+
+  /// The X: once play is under way it ends the round and goes to the end screen; before that it leaves.
+  private func close() {
+    if model.blunder != nil {
+      model.continueToEnd()
+    } else if model.live && model.intro == .done {
+      model.endRound()
+    } else {
+      onExit()
     }
   }
 
@@ -235,10 +275,6 @@ struct RunView: View {
       if model.handoff != nil && model.intro == .replay {
         Button { model.skipIntro() } label: { Text("Skip").foregroundStyle(Theme.text) }
           .buttonStyle(PlayButtonStyle(kind: .soft, height: 34, radius: 17, font: 13.5))
-      } else {
-        Button { model.endRound() } label: { Text(survival ? "End run" : "End round").foregroundStyle(Theme.text2) }
-          .buttonStyle(PlayButtonStyle(kind: .soft, height: 34, radius: 17, font: 13.5))
-          .disabled(model.blunder != nil)
       }
     }
   }

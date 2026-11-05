@@ -11,17 +11,22 @@ struct LensBar: View {
   /// The structure's plan, held like a lens, where the screen offers it.
   var plan: Binding<Bool>? = nil
   var planEnabled = false
+  /// The plan changed since the player last held Plan.
+  var planPulse = false
 
   var body: some View {
     HStack(spacing: 6) {
       ForEach(lenses, id: \.kind) { lens in
         let on = held == lens.kind
-        button(lens.label, on: on, ink: Theme.text2, fill: Theme.accent, onInk: Theme.accentInk, enabled: enabled) {
+        button(lens.label, on: on, ink: Theme.text2, fill: Theme.accent, onInk: Theme.accentInk, enabled: enabled, pulse: false) {
           if held != lens.kind { held = lens.kind }
         } release: { held = nil }
       }
       if let plan {
-        button("Plan", on: plan.wrappedValue, ink: PlanColors.plan, fill: PlanColors.plan, onInk: PlanColors.ink, enabled: enabled && planEnabled) {
+        button(
+          "Plan", on: plan.wrappedValue, ink: PlanColors.plan, fill: PlanColors.plan, onInk: PlanColors.ink, enabled: enabled && planEnabled,
+          pulse: planPulse && enabled && planEnabled
+        ) {
           if !plan.wrappedValue { plan.wrappedValue = true }
         } release: { plan.wrappedValue = false }
       }
@@ -36,14 +41,17 @@ struct LensBar: View {
   }
 
   private func button(
-    _ label: String, on: Bool, ink: SwiftUI.Color, fill: SwiftUI.Color, onInk: SwiftUI.Color, enabled: Bool,
+    _ label: String, on: Bool, ink: SwiftUI.Color, fill: SwiftUI.Color, onInk: SwiftUI.Color, enabled: Bool, pulse: Bool,
     press: @escaping () -> Void, release: @escaping () -> Void
   ) -> some View {
     Text(label)
       .font(.system(size: 12.5, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
       .foregroundStyle(on ? onInk : ink)
       .frame(maxWidth: .infinity).padding(.vertical, 8)
-      .background(RoundedRectangle(cornerRadius: 10).fill(on ? fill : Theme.surface2))
+      .background {
+        RoundedRectangle(cornerRadius: 10).fill(on ? fill : Theme.surface2)
+        if pulse && !on { PlanPulse() }
+      }
       .opacity(enabled ? 1 : 0.5)
       // High priority, so a tap gesture further up the screen never holds the press back.
       .highPriorityGesture(
@@ -190,4 +198,19 @@ struct LensLegend: View {
       Row(swatch: shield(LensColors.red), label: "Under attack"),
     ],
   ]
+}
+
+/// The Plan button's fill breathing toward its held cyan and back, every four seconds.
+private struct PlanPulse: View {
+  static let period = 4.0
+  static let depth = 0.22
+
+  var body: some View {
+    TimelineView(.animation) { context in
+      let t = context.date.timeIntervalSinceReferenceDate
+      let k = (1 - cos(2 * .pi * t / Self.period)) / 2
+      RoundedRectangle(cornerRadius: 10).fill(PlanColors.plan.opacity(Self.depth * k))
+    }
+    .allowsHitTesting(false)
+  }
 }
