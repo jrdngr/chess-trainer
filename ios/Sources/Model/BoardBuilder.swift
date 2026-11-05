@@ -169,3 +169,22 @@ public func goals(_ fen: String, _ color: Color) -> [BoardGoal] {
 public func turnAfter(_ sans: [String]) -> Color {
   fenTurn(walkSan(sans).fens.last!)
 }
+
+/// How a judged move reads on the board editor: past `SCORE_SLIGHT` given away it is dubious,
+/// past `BLUNDER_LIMIT` a blunder.
+public enum MoveQuality: Sendable { case dubious, blunder }
+
+public func moveQuality(_ lost: Double) -> MoveQuality? {
+  lost > BLUNDER_LIMIT ? .blunder : lost > SCORE_SLIGHT ? .dubious : nil
+}
+
+/// How many moves at the start of a line a tree already holds.
+public func savedPlies(_ rep: Repertoire?, _ sans: [String]) -> Int {
+  guard let rep else { return 0 }
+  var parent: String?
+  for (i, san) in sans.enumerated() {
+    guard let node = findChildBySan(rep, parent, san) else { return i }
+    parent = node.id
+  }
+  return sans.count
+}

@@ -70,7 +70,7 @@ struct RootView: View {
         tab = .analysis
       }, onExit: { self.growing = nil })
     } else if building {
-      BoardBuildView(onBack: { _ in building = false }, onDone: { _ in building = false })
+      BoardBuildView(onBack: { _ in building = false })
     } else if let mode {
       ZStack {
         modeView(mode, tree, index)

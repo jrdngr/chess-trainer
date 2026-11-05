@@ -43,9 +43,7 @@ struct OnboardingView: View {
         BoardBuildView(onBack: { saved in
           hold(boardHeld(saved))
           step = .path
-        }, onDone: { saved in
-          if saved.isEmpty { step = .path } else { ready(boardHeld(saved)) }
-        }, doneLabel: "Done", hold: true)
+        }, onSaved: { saved in ready(boardHeld(saved)) }, hold: true)
       case .ready:
         ReadyView(tree: tree, rows: pending, onMore: { step = .pick }, onDone: confirm)
       case .browse:

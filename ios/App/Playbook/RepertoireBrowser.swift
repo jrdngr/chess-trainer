@@ -4,13 +4,16 @@ import Model
 import SwiftUI
 
 /// One side's tree, from a node: the board, the line, the moves here, the
-/// book's moves to add, and Explore and Drill. `RepertoireBrowser`.
+/// book's moves to add, and Explore and Drill. A new move played on the board
+/// opens the board editor there. `RepertoireBrowser`.
 struct RepertoireBrowser: View {
   let repId: String
   let startNodeId: String?
   let title: String
   let onBack: () -> Void
   let onExplore: ([String], ChessCore.Color) -> Void
+  /// Open the board editor on this line.
+  let onEdit: ([String]) -> Void
   let onDrill: (String, String, String) -> Void
 
   @Environment(AppStore.self) private var store
@@ -19,7 +22,6 @@ struct RepertoireBrowser: View {
   /// The line you came in on stays on the strip while you step back along it.
   @State private var lineTip: String?
   @State private var started = false
-  @State private var pending: LegalMove?
   @State private var menuFor: String?
   @State private var cutting: String?
   /// A branch chosen for deletion in the node menu; its confirm sheet opens once the menu is gone.
@@ -73,18 +75,6 @@ struct RepertoireBrowser: View {
             if let next { IconButton(icon: "trash", size: 18) { cutting = next.id }.padding(.trailing, 44) }
           }
           .padding(.top, 10)
-          if let pending {
-            HStack {
-              VStack(alignment: .leading, spacing: 2) {
-                Text("Add \(pending.san)?").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text)
-                Text(ourTurn ? "Your move" : "Opponent reply").font(.system(size: 12)).foregroundStyle(Theme.text3)
-              }
-              Spacer()
-              Button("Cancel") { self.pending = nil }.buttonStyle(PlayButtonStyle(height: 38, radius: 11, font: 14))
-              Button("Add") { commit(rep, pathSans, pending) }.buttonStyle(PlayButtonStyle(kind: .primary, height: 38, radius: 11, font: 14))
-            }
-            .padding(14).background(RoundedRectangle(cornerRadius: 18).fill(Theme.accent.opacity(0.14))).padding(.top, 8)
-          }
           SectionHead(title: ourTurn ? "Your move" : "Replies", aside: kids.isEmpty ? nil : "\(kids.count)")
           if kids.isEmpty {
             EmptyNote(title: ourTurn ? "No move here" : "No replies", hint: "Play a move to add it")
@@ -118,8 +108,6 @@ struct RepertoireBrowser: View {
         lineTip = startNodeId
       }
     }
-    // A move waiting to be added belongs to the position it was played on.
-    .onChange(of: nodeId) { pending = nil }
     .sheet(isPresented: $sideMenu) {
       SideMenu(repId: rep.id, onDeleted: onBack) { sideMenu = false }.presentationDetents([.medium]).presentationBackground(Theme.background)
     }
@@ -176,12 +164,7 @@ struct RepertoireBrowser: View {
       if lineTip.map({ pathTo(rep, $0).contains { $0.id == existing.id } }) != true { lineTip = existing.id }
       return
     }
-    if leavesBook(rep, index, pathSans + [move.san]) {
-      savingSource = .manual
-      saving = pathSans + [move.san]
-      return
-    }
-    pending = move
+    onEdit(pathSans + [move.san])
   }
 
   private func addFromBook(_ rep: Repertoire, _ index: ReferenceIndex, _ pathSans: [String], _ san: String, _ at: String?) {
@@ -193,13 +176,6 @@ struct RepertoireBrowser: View {
     store.update { $0.addLine(repId, pathSans + [san], .fixed(.book)) }
     descend(san, at: at)
     toasts.show("\(san) added")
-  }
-
-  private func commit(_ rep: Repertoire, _ pathSans: [String], _ move: LegalMove) {
-    store.update { $0.addLine(repId, pathSans + [move.san], .fixed(.manual)) }
-    pending = nil
-    descend(move.san, at: nodeId)
-    toasts.show("\(move.san) added")
   }
 
   private func descend(_ san: String, at: String?) {

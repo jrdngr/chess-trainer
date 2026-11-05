@@ -15,6 +15,8 @@ struct SaveSheet: View {
   /// Let the line be cut short by tapping a move.
   var trim = false
   var title = "Save line"
+  /// Save the whole line in one button, with no leaving the extension out: the board editor's.
+  var whole = false
   var source: MoveSource
   /// A note for the line's last move.
   var note: String? = nil
@@ -79,7 +81,7 @@ struct SaveSheet: View {
           .padding(.top, 14)
         }
         Spacer().frame(height: 24)
-        if hasExt && book > 0 {
+        if hasExt && book > 0 && !whole {
           HStack(spacing: 8) {
             SheetButton("Leave out \(plyLabel(slice, book))", style: .plain) { save(slice, book, side, lost) }.disabled(!legal)
             SheetButton("Save both", style: .accent) { save(slice, slice.count, side, lost) }.disabled(!legal)

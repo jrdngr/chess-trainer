@@ -16,6 +16,8 @@ final class EngineChecks {
     var lost: Double
     /// Centipawns from White's side.
     var after: Double
+    /// The engine's own move here, in UCI.
+    var best: String?
   }
 
   private(set) var checks: [String: MoveCheck?] = [:]
@@ -72,10 +74,10 @@ final class EngineChecks {
     let engine = HintEngine.shared
     let full = await engine.analyse(fen, EngineLimits(depth: 14, movetime: 700, multiPv: 1))
     guard let best = full.lines.first, let before = score(best) else { return nil }
-    if best.pv.first == move.uci { return MoveCheck(lost: 0, after: before) }
+    if best.pv.first == move.uci { return MoveCheck(lost: 0, after: before, best: move.uci) }
     let held = await engine.analyse(fen, EngineLimits(depth: 14, movetime: 700, multiPv: 1, searchmoves: [move.uci]))
     guard let after = score(held.lines.first) else { return nil }
-    return MoveCheck(lost: max(0, evalLoss(fenTurn(fen), before, after)), after: after)
+    return MoveCheck(lost: max(0, evalLoss(fenTurn(fen), before, after)), after: after, best: best.pv.first)
   }
 
   private static func runSound(_ fen: String, _ san: String) async -> Bool {

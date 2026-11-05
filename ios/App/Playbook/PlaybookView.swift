@@ -34,6 +34,8 @@ struct PlaybookView: View {
     case tidy, extensions
     case opening(repId: String, name: String)
     case browse(repId: String, nodeId: String?, title: String)
+    /// The board editor on a line of one side's tree, back to the browser after.
+    case board(repId: String, sans: [String], title: String)
   }
 
   var body: some View {
@@ -53,9 +55,23 @@ struct PlaybookView: View {
           })
       case .browse(let repId, let nodeId, let title):
         if state.repertoires[repId] != nil {
-          RepertoireBrowser(repId: repId, startNodeId: nodeId, title: title, onBack: { page = nil }, onExplore: onExplore) { repId, nodeId, title in
+          RepertoireBrowser(
+            repId: repId, startNodeId: nodeId, title: title, onBack: { page = nil }, onExplore: onExplore,
+            onEdit: { sans in page = .board(repId: repId, sans: sans, title: title) }
+          ) { repId, nodeId, title in
             onDrill(repId, [nodeId], title)
           }
+        } else {
+          Color.clear.onAppear { page = nil }
+        }
+      case .board(let repId, let sans, let title):
+        if let rep = state.repertoires[repId] {
+          BoardBuildView(start: sans, side: rep.color, onBack: { _ in
+            // Back to the browser where the line's saved moves end.
+            let fresh = store.state.repertoires[repId] ?? rep
+            let held = Array(sans.prefix(savedPlies(fresh, sans)))
+            page = .browse(repId: repId, nodeId: held.isEmpty ? nil : nodeAtLine(fresh, held)?.id, title: title)
+          })
         } else {
           Color.clear.onAppear { page = nil }
         }

@@ -17,6 +17,8 @@ enum Theme {
   /// The book's blue and the extension's purple.
   static let book = Color(hex: 0x4fb3ff)
   static let ext = Color(hex: 0x8a8cff)
+  /// Text on an extension's outline, and on a book move's tint.
+  static let extText = Color(hex: 0xc4c5ff)
 }
 
 extension Color {
