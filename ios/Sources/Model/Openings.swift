@@ -320,3 +320,33 @@ private func splitPly(_ rep: Repertoire, _ tipId: String) -> Int {
   }
   return ply
 }
+
+/// A row of the Playbook tab: every family row of one name, however many move orders reach it.
+public struct PlaybookRow: Equatable, Sendable {
+  public var name: String
+  public var color: Color
+  public var repertoireId: String
+  /// The family's rows from `familiesIn`, biggest first.
+  public var parts: [DerivedOpening]
+
+  public var id: String { "\(repertoireId)#\(name)" }
+  public var lines: Int { parts.reduce(0) { $0 + $1.lines } }
+}
+
+/// The Playbook tab's rows for one side: `familiesIn`, with rows of the same name merged.
+public func playbookRows(_ rep: Repertoire, _ index: ReferenceIndex) -> [PlaybookRow] {
+  var rows: [PlaybookRow] = []
+  for opening in familiesIn(rep, index) {
+    if let at = rows.firstIndex(where: { $0.name == opening.name }) {
+      rows[at].parts.append(opening)
+    } else {
+      rows.append(PlaybookRow(name: opening.name, color: rep.color, repertoireId: rep.id, parts: [opening]))
+    }
+  }
+  return rows
+}
+
+/// Every line of a Playbook row, part by part.
+public func linesOf(_ rep: Repertoire, _ row: PlaybookRow, _ index: ReferenceIndex) -> [OpeningLine] {
+  row.parts.flatMap { linesOf(rep, $0, index) }
+}

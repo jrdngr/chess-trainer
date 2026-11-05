@@ -135,6 +135,13 @@ public struct GrowOffer: Sendable {
   public var launch: GrowLaunch
   /// Growing starts on the line just played, so the button says "Grow this line".
   public var onLine: Bool = false
+
+  public init(kind: String, text: String?, launch: GrowLaunch, onLine: Bool = false) {
+    self.kind = kind
+    self.text = text
+    self.launch = launch
+    self.onLine = onLine
+  }
 }
 
 /// What a clean end of prep earns, read after the round is logged.

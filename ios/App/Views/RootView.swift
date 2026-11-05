@@ -28,6 +28,8 @@ struct RootView: View {
   @State private var analyzing: (sans: [String], side: ChessCore.Color)?
   /// A find handed over from the end of a round, for Tidy to open on.
   @State private var tidyFocus: TidyFind?
+  /// An opening the Playbook sent to Growth.
+  @State private var growing: GrowthModel?
   /// A line from the opening sheet for Middlegame mode to play out.
   @State private var middlegameLine: MiddlegameLine?
 
@@ -61,6 +63,12 @@ struct RootView: View {
       ImportView(onBack: { importing = false })
     } else if let drilling {
       DrillSessionView(tree: tree, index: index, store: store, items: drilling.items, title: drilling.title) { self.drilling = nil }
+    } else if let growing {
+      GrowthSitting(model: growing, onAnalyze: { sans, side in
+        explore = (sans, side)
+        self.growing = nil
+        tab = .analysis
+      }, onExit: { self.growing = nil })
     } else if building {
       BoardBuildView(onBack: { _ in building = false }, onDone: { _ in building = false })
     } else if let mode {
@@ -92,10 +100,12 @@ struct RootView: View {
         PlaybookView(tree: tree, index: index, tidyFocus: tidyFocus, onConsumedTidyFocus: { tidyFocus = nil }, onExplore: { sans, side in
           explore = (sans, side)
           tab = .analysis
-        }, onDrill: { repId, nodeId, title in
+        }, onDrill: { repId, nodeIds, title in
           guard let rep = store.state.repertoires[repId] else { return }
-          let items = Array(branchItems(rep, nodeId).prefix(40))
+          let items = Array(nodeIds.flatMap { branchItems(rep, $0) }.prefix(40))
           if items.isEmpty { toasts.show("Nothing to drill") } else { drilling = (items, title) }
+        }, onGrow: { offer in
+          growing = GrowthModel(offer: offer, store: store, tree: tree, index: index)
         }, onMiddlegame: { side, sans in
           middlegameLine = MiddlegameLine(color: side, sans: sans)
           mode = .middlegame
