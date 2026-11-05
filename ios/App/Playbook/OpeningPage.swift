@@ -3,8 +3,8 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// One opening of the Playbook: its board and rating, Drill, Grow and
-/// Middlegame, and its lines, each opening in the tree. Its menu deletes it.
+/// One opening of the Playbook: its board and rating, Select, Drill,
+/// Middlegame and Grow, and its lines, each opening in the tree. Its menu deletes it.
 struct OpeningPage: View {
   let tree: OpeningTree
   let index: ReferenceIndex
@@ -16,6 +16,8 @@ struct OpeningPage: View {
   let onDrill: (String, [String], String) -> Void
   let onGrow: (GrowOffer) -> Void
   let onMiddlegame: (ChessCore.Color, [String]) -> Void
+  /// The opening is now the global selection.
+  let onSelected: () -> Void
 
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
@@ -46,11 +48,19 @@ struct OpeningPage: View {
       ScrollView {
         VStack(spacing: 0) {
           hero(row, stats)
-          HStack(spacing: 8) {
-            SheetButton("Drill", icon: "play", style: .primary) { onDrill(rep.id, row.parts.map(\.rootId), row.name) }
-            SheetButton("Grow", icon: "sprout", style: .plain) { grow(rep, node) }
-            if let main = lines.first {
-              SheetButton("Middlegame", icon: "middlegame", style: .plain) { onMiddlegame(rep.color, main.path) }
+          VStack(spacing: 8) {
+            HStack(spacing: 8) {
+              SheetButton("Select", icon: "check", style: .accent) { select(rep, node) }
+                .disabled(node == nil)
+              SheetButton("Drill", icon: "play", style: .plain) { onDrill(rep.id, row.parts.map(\.rootId), row.name) }
+                .disabled(lines.isEmpty)
+            }
+            HStack(spacing: 8) {
+              SheetButton("Middlegame", icon: "middlegame", style: .plain) {
+                if let main = lines.first { onMiddlegame(rep.color, main.path) }
+              }
+              .disabled(lines.isEmpty)
+              SheetButton("Grow", icon: "sprout", style: .plain) { grow(rep, node) }
             }
           }
           .padding(.top, 12)
@@ -121,6 +131,16 @@ struct OpeningPage: View {
     if let undo {
       toasts.show("Deleted \(line.removes) move\(line.removes == 1 ? "" : "s")", action: ("Undo", { store.update { $0.undo(undo) } }))
     }
+  }
+
+  /// Make this opening and its side the global selection, as the opening picker does.
+  private func select(_ rep: Repertoire, _ node: OpeningNode?) {
+    guard let node else { return }
+    store.update {
+      $0.settings.selection.opening = node.id
+      $0.settings.selection.color = rep.color == .w ? .w : .b
+    }
+    onSelected()
   }
 
   /// Growth's own pick for this opening, past Growth's settings when there is none within.

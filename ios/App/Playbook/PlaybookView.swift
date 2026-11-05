@@ -20,6 +20,8 @@ struct PlaybookView: View {
   var onMiddlegame: (ChessCore.Color, [String]) -> Void = { _, _ in }
   var onImport: () -> Void = {}
   var onBuild: () -> Void = {}
+  /// Go to Home, after an opening page selected its opening.
+  var onHome: () -> Void = {}
 
   @Environment(AppStore.self) private var store
   @State private var scan = TidyScan()
@@ -44,7 +46,11 @@ struct PlaybookView: View {
         OpeningPage(
           tree: tree, index: index, repId: repId, name: name, onBack: { page = nil },
           onOpenLine: { tipId, title in page = .browse(repId: repId, nodeId: tipId, title: title) },
-          onDrill: onDrill, onGrow: onGrow, onMiddlegame: onMiddlegame)
+          onDrill: onDrill, onGrow: onGrow, onMiddlegame: onMiddlegame,
+          onSelected: {
+            page = nil
+            onHome()
+          })
       case .browse(let repId, let nodeId, let title):
         if state.repertoires[repId] != nil {
           RepertoireBrowser(repId: repId, startNodeId: nodeId, title: title, onBack: { page = nil }, onExplore: onExplore) { repId, nodeId, title in

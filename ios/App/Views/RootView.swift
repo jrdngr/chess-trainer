@@ -109,7 +109,7 @@ struct RootView: View {
         }, onMiddlegame: { side, sans in
           middlegameLine = MiddlegameLine(color: side, sans: sans)
           mode = .middlegame
-        }, onImport: { importing = true }, onBuild: { building = true })
+        }, onImport: { importing = true }, onBuild: { building = true }, onHome: { tab = .home })
           .tabItem { Label(Tab.playbook.label, systemImage: Tab.playbook.symbol) }.tag(Tab.playbook)
         StatsView(tree: tree, index: index)
           .tabItem { Label(Tab.stats.label, systemImage: Tab.stats.symbol) }.tag(Tab.stats)
