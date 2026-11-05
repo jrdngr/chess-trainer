@@ -193,7 +193,7 @@ struct PlanCardBody: View {
         PlanSteps(shown: current, notYet: waiting(current))
         if !trail.earlier.isEmpty {
           VStack(spacing: 6) {
-            ForEach(trail.earlier, id: \.plan.key) { before($0) }
+            ForEach(trail.earlier.prefix(2), id: \.plan.key) { before($0) }
           }
           .padding(.top, 2)
         }

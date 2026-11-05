@@ -2,7 +2,7 @@ import Model
 import SwiftUI
 
 /// The lens bar under a board: hold a lens to see it over the position;
-/// let go and the board is clean again.
+/// let go and the board is clean again. Plan is a toggle.
 struct LensBar: View {
   @Binding var held: LensKind?
   /// Eval only where the screen has the engine's word on the game.
@@ -11,8 +11,10 @@ struct LensBar: View {
   /// The structure's plan, held like a lens, where the screen offers it.
   var plan: Binding<Bool>? = nil
   var planEnabled = false
-  /// The plan changed since the player last held Plan.
+  /// The plan changed since the player last opened Plan.
   var planPulse = false
+  /// A touch on Plan has toggled it and not yet lifted.
+  @State private var planTouched = false
 
   var body: some View {
     HStack(spacing: 6) {
@@ -27,8 +29,11 @@ struct LensBar: View {
           "Plan", on: plan.wrappedValue, ink: PlanColors.plan, fill: PlanColors.plan, onInk: PlanColors.ink, enabled: enabled && planEnabled,
           pulse: planPulse && enabled && planEnabled
         ) {
-          if !plan.wrappedValue { plan.wrappedValue = true }
-        } release: { plan.wrappedValue = false }
+          // Plan toggles, so its card stays open to scroll and tap.
+          guard !planTouched else { return }
+          planTouched = true
+          plan.wrappedValue.toggle()
+        } release: { planTouched = false }
       }
     }
     .padding(.top, 8)

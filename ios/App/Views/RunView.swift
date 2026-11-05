@@ -12,7 +12,7 @@ struct RunView: View {
   let onExit: () -> Void
   @Environment(AppStore.self) var store
   @State private var lens: LensKind? = Self.pinnedLens
-  @State private var planHeld = false
+  @State private var planOpen = false
   /// The plan the player last saw: the Plan button pulses once the plan is another.
   @State private var planSeen: String?
   @State private var planSeeded = false
@@ -151,7 +151,7 @@ struct RunView: View {
     let plan = PlanTrails.of(fens, model.run.color).current?.plan.key
     return VStack(spacing: 0) {
       LensBar(
-        held: $lens, lenses: LENSES, enabled: lensEnabled, plan: $planHeld, planEnabled: lensEnabled && plan != nil,
+        held: $lens, lenses: LENSES, enabled: lensEnabled, plan: $planOpen, planEnabled: lensEnabled && plan != nil,
         planPulse: planSeeded && plan != nil && plan != planSeen
       )
       .opacity(model.held ? 0 : 1).allowsHitTesting(!model.held)
@@ -160,7 +160,7 @@ struct RunView: View {
           EvalRunCard(trail: model.session.evalTrail, last: model.session.lastJudged, color: model.run.color)
         } else if let lens {
           LensLegend(kind: lens, endgame: isEndgame(model.shownFen))
-        } else if planHeld {
+        } else if planOpen {
           // A long plan card scrolls rather than run off the dock.
           ScrollView { PlanLegend(fens: fens, me: model.run.color) }.scrollIndicators(.hidden).scrollBounceBehavior(.basedOnSize)
         } else if model.intro == .plan {
@@ -183,7 +183,7 @@ struct RunView: View {
         planSeeded = true
       }
     }
-    .onChange(of: planHeld) { if planHeld { planSeen = plan } }
+    .onChange(of: planOpen) { if planOpen { planSeen = plan } }
   }
 
   /// The game's positions up to the board as shown.
