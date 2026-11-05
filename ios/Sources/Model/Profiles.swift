@@ -45,6 +45,13 @@ public struct ProfileList: Equatable, Sendable, Codable {
     return profile
   }
 
+  /// A whole new list, on its first profile.
+  mutating func replace(_ list: [Profile]) {
+    guard !list.isEmpty else { return }
+    profiles = list
+    active = list[0].id
+  }
+
   public mutating func activate(_ id: String) {
     if profiles.contains(where: { $0.id == id }) { active = id }
   }

@@ -4,6 +4,7 @@ import SwiftUI
 struct ChessPlaybookApp: App {
   @State private var store = AppStore()
   @State private var toasts = Toasts()
+  @Environment(\.scenePhase) private var scenePhase
 
   var body: some Scene {
     WindowGroup {
@@ -13,6 +14,9 @@ struct ChessPlaybookApp: App {
         .environment(toasts)
         .preferredColorScheme(.dark)
         .task { await store.load() }
+        .onChange(of: scenePhase) { _, phase in
+          if phase == .background { store.backUpNow() }
+        }
     }
   }
 }

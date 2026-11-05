@@ -1,12 +1,13 @@
 import Model
 import SwiftUI
 
-/// Settings: the board, Autopilot's extras, the engine, profiles and Export.
+/// Settings: the board, Autopilot's extras, the engine, profiles, iCloud backup and Export.
 struct SettingsSheet: View {
   @Environment(AppStore.self) private var store
   @Environment(\.dismiss) private var dismiss
   @State private var intro = false
   @State private var exporting = false
+  @State private var restoring = false
   /// The name prompt open: a new profile, or the profile being renamed.
   @State private var naming: Naming?
   @State private var typed = ""
@@ -78,6 +79,24 @@ struct SettingsSheet: View {
           }
           .buttonStyle(.plain)
         }
+        section("iCloud")
+        ListCard {
+          HStack {
+            Text("Last backup").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+            Spacer()
+            Text(lastBackup).font(.system(size: 14)).foregroundStyle(store.iCloudOff ? Theme.warn : Theme.text3)
+          }
+          .padding(.horizontal, 16).frame(minHeight: 54)
+          Button { restoring = true } label: {
+            HStack {
+              Text("Restore from iCloud").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+              Spacer()
+              Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3)
+            }
+            .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+        }
         ListCard {
           Button { exporting = true } label: {
             HStack {
@@ -94,6 +113,7 @@ struct SettingsSheet: View {
       .padding(20)
     }
     .sheet(isPresented: $exporting) { ExportView().presentationBackground(Theme.background) }
+    .sheet(isPresented: $restoring) { RestoreView().presentationBackground(Theme.background) }
     .fullScreenCover(isPresented: $intro) { IntroPagesView { intro = false } }
     .alert(naming == .new ? "New profile" : "Rename profile", isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
       TextField("Name", text: $typed)
@@ -111,6 +131,13 @@ struct SettingsSheet: View {
   private func section(_ title: String, first: Bool = false) -> some View {
     Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
       .padding(.horizontal, 4).padding(.top, first ? 16 : 24).padding(.bottom, 8)
+  }
+
+  private var lastBackup: String {
+    if store.iCloudOff { return "iCloud off" }
+    let at = store.device.manifest.savedAt
+    guard at > 0 else { return "None yet" }
+    return Date(timeIntervalSince1970: at / 1000).formatted(.dateTime.month(.abbreviated).day().hour().minute())
   }
 
   private var lastProfile: Bool { store.profiles.profiles.count == 1 }
