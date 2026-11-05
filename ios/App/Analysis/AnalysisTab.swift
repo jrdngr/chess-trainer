@@ -120,13 +120,8 @@ struct AnalysisTab: View {
       ExplorerPanel(index: index, fen: fen, path: visible, onPlay: play) { sheet = .game($0) }
     }
     if !visible.isEmpty {
-      HStack(spacing: 8) {
-        WideButton(title: "PGN", kind: .soft) { exportPgn() }
-        WideButton(title: "Add to Playbook", icon: "plus", kind: .primary) {
-          sheet = .save(SaveRequest(sans: visible, title: "Save line"))
-        }
-      }
-      .padding(.top, 16)
+      WideButton(title: "PGN", kind: .soft) { exportPgn() }
+        .padding(.top, 16)
     }
     NamedLines(lines: bookLinesFrom(visible)) { sheet = .bookLine($0) }.id(AnalysisAnchor.named)
   }
