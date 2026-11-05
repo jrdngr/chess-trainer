@@ -366,7 +366,6 @@ private func knightRoute(_ grid: Grid, _ color: Color, _ target: String) -> [Str
 }
 
 public func piecesLens(_ fen: String, _ me: Color) -> LensMarks {
-  let grid = Grid(fen)
   let acts = activity(fen)
   var marks = LensMarks()
   marks.tints = controlTints(fen, me)
@@ -382,18 +381,9 @@ public func piecesLens(_ fen: String, _ me: Color) -> LensMarks {
   for color in [Color.w, .b] {
     for square in outposts(fen, color) { stars.append(Star(square: square, side: color == me ? .mine : .theirs)) }
   }
-  // Routes for your own knights only, to the two nearest outposts.
-  let routes = outposts(fen, me)
-    .compactMap { knightRoute(grid, me, $0) }
-    .filter { $0.count > 1 }
-    .jsSorted { cmp($0.count, $1.count) }
-    .prefix(2)
-  var arrows: [LensArrow] = []
-  for path in routes { for i in 1..<path.count { arrows.append(LensArrow(from: path[i - 1], to: path[i], tone: "route")) } }
   marks.rings = rings
   marks.badges = badges
   marks.stars = stars
-  marks.arrows = arrows
   return marks
 }
 

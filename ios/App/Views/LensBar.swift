@@ -178,7 +178,6 @@ struct LensLegend: View {
       Row(swatch: tint(.purple), label: "Contested"),
       Row(swatch: star(LensColors.lightBlue), label: "Your outpost"),
       Row(swatch: star(LensColors.lightRed), label: "Their outpost"),
-      Row(swatch: arrow(LensColors.lightBlue.opacity(0.55), faint: true), label: "Knight route"),
     ],
     .kings: [
       Row(swatch: zone, label: "King zone"),
