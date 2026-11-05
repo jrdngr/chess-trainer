@@ -22,53 +22,6 @@ import SwiftUI
   }
 }
 
-/// The plan for the board: a row that opens on a tap, and a × that puts it away
-/// until the plan changes. `usePlanCard`.
-struct PlanCard: View {
-  /// The game's positions, the board last.
-  let fens: [String]
-  let me: ChessCore.Color
-  @State private var open = false
-  /// The plan whose card was put away.
-  @State private var dismissed: String?
-
-  var body: some View {
-    let trail = PlanTrails.of(fens, me)
-    if let current = trail.current, dismissed != current.plan.key {
-      card(trail, current.plan)
-    }
-  }
-
-  private func card(_ trail: PlanTrail, _ plan: Plan) -> some View {
-    VStack(alignment: .leading, spacing: 0) {
-      HStack(alignment: .top, spacing: 4) {
-        Button { open.toggle() } label: {
-          HStack(alignment: .center, spacing: 8) {
-            PlanTitle(plan: plan)
-            Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3).rotationEffect(.degrees(open ? -90 : 90)).animation(.easeInOut(duration: 0.15), value: open)
-            Spacer(minLength: 0)
-          }
-          .padding(.vertical, 8).contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        Button {
-          dismissed = plan.key
-          open = false
-        } label: {
-          Icon(name: "close", size: 16).foregroundStyle(Theme.text2).frame(width: 32, height: 32)
-        }
-        .buttonStyle(.plain).accessibilityLabel("Hide plan")
-      }
-      if open {
-        PlanCardBody(trail: trail, fen: fens.last!, me: me, title: false).padding(.trailing, 10).padding(.bottom, 10)
-      }
-    }
-    .padding(.leading, 14).padding([.trailing, .vertical], 4)
-    .planCardFrame()
-    .padding(.top, 8)
-  }
-}
-
 /// The plan's cyan, on its label and the Plan lens.
 enum PlanColors {
   static let plan = SwiftUI.Color(hex: 0x22c3e6)
