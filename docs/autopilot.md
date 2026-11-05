@@ -53,6 +53,10 @@ Every change should pass these tests:
 | Inside start | The moves to one position deeper inside the opening are played for you: the one most overdue, or, with nothing due while your prep keeps missing, the one you answer worst | When it needs it more than a cold start does, never two runs in a row |
 | Cold start | Nothing is played for you. The run starts from move one and the opponent steers toward the opening | When the way in has gone unplayed long enough, never two runs in a row, and at least every 3rd run |
 
+With My Playbook selected, every run is a cold start: nothing is played for
+you, and the opponent steers toward what needs work. That sets it apart from
+picking an opening or Any favorite.
+
 The first run of any opening is always a position start, whatever is owed,
 so you see how the opening is reached before you are asked to reach it
 yourself. Inside starts go to any position you have a card for, so one only Drill has shown counts once it is due.
@@ -118,7 +122,8 @@ segments along the bottom edge shows how far into your prep the run starts:
 one segment a ply, lit up to where you take over. Home's button, the round
 intro and the end screen all use this. During the run, the app bar shows the
 opening, the same segments counting up as you play, and the rating the run has
-gained so far.
+gained so far. With My Playbook, where every run starts from move one, Home's
+button, the round intro and the app bar show no segments.
 
 ## Free and paid
 

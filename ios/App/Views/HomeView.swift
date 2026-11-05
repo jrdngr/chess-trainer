@@ -51,7 +51,8 @@ struct HomeView: View {
     let selection = store.peekRoundSelection()
     if let round = nextRound(store.state, tree, selection, AutoHistory()) {
       let rep = store.state.repertoireList.first { $0.color == round.pick.color }
-      let span = roundSpan(rep, round.pick, round.at)
+      // My Playbook always starts from move one, so its button shows no segments.
+      let span = selection.opening == ANY_OPENING ? nil : roundSpan(rep, round.pick, round.at)
       Button { onOpen(.autopilot) } label: {
         AutopilotPlate(
           name: store.catalog.map { selectionTrail(tree, $0, round.pick.opening.id).last ?? "" } ?? "",

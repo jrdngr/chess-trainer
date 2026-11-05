@@ -141,7 +141,9 @@ final class RunModel {
   }
 
   /// How far into your prep the run stands, out of how far it goes along this line. Held once off prep.
+  /// None for an Autopilot run on My Playbook, which always starts from move one.
   var span: PrepSpan? {
+    if round != nil && selection.opening == ANY_OPENING { return nil }
     if session.prepStatus == .off { return spanHeld }
     let line = run.played + continuation(session.source, run)
     let total = prepDepth(line, run.color, session.source.prepAt, run.opened)

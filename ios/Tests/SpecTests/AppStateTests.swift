@@ -21,3 +21,18 @@ import Testing
   let data = try JSONEncoder().encode(state)
   #expect(try JSONDecoder().decode(AppState.self, from: data) == state)
 }
+
+/// My Playbook starts from move one even when all your prep sits deep inside one opening.
+@Test func myPlaybookStartsFromMoveOne() throws {
+  let tree = openingTree(bookIndex)
+  var state = AppState()
+  let id = state.ensureRepertoire(.b)
+  state.addLine(id, line("e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5"), .fixed(.book))
+  // Recent Tests brake the Playbook-wide Test, so a Review narrowed into the Najdorf wins.
+  var history = AutoHistory()
+  history.focuses = [.test, .test, .test]
+  let round = try #require(nextRound(state, tree, Selection(color: .b, opening: ANY_OPENING), history))
+  #expect(startsInside(round.pick.opening))
+  #expect(round.pick.start == .first)
+  #expect(round.at == nil)
+}

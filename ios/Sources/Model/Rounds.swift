@@ -57,7 +57,9 @@ public func roundsIn(_ score: ScoreState, _ openingId: String) -> Int {
 
 /// Autopilot's next run, or nil with nothing prepared inside the selection.
 public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _ history: AutoHistory) -> AutoRound? {
-  guard let recommended = recommend(recommendInput(state, tree, selection, history)) else { return nil }
+  guard var recommended = recommend(recommendInput(state, tree, selection, history)) else { return nil }
+  // My Playbook always starts from move one; the opponent still steers toward the pick.
+  if selection.opening == ANY_OPENING { recommended.start = .first }
   if recommended.start == .first { return AutoRound(pick: recommended, at: nil) }
   let rep = state.repertoireList.first { $0.color == recommended.color }
   let items = rep.map { itemsInRegion(tree, recommended.opening, allItems([$0])) } ?? []
