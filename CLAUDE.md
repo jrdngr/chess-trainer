@@ -6,8 +6,9 @@ generated from it were removed on 2026-11-02; their final state is on the
 
 ## Branches
 
-- Commit straight to `dev` and push there once the tests below pass. No fix
-  branches and no held pushes.
+- Commit straight to `dev` once the tests below pass. No fix branches. Hold
+  the commits locally and push to `dev` only when the owner says to; changes
+  are collected into one push.
 - Merge `dev` into `main` only when the owner says the next release is
   settled. Every push to `main` starts an Xcode Cloud build.
 
