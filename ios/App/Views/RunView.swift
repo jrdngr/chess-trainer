@@ -38,8 +38,6 @@ struct RunView: View {
     }
     .contentShape(Rectangle())
     .onTapGesture { if model.intro == .announce { model.toBoard() } }
-    // The lenses sit near the home bar; the screen's own swipe there waits, so a press lands at once.
-    .defersSystemGestures(on: .bottom)
   }
 
   private var board: some View {
@@ -147,19 +145,24 @@ struct RunView: View {
     .padding(.horizontal).padding(.vertical, 10)
   }
 
-  /// Under the board: what a held lens shows, or the goal and the status; the lenses at the bottom,
-  /// under the thumb and clear of the key.
+  /// Under the board: the lenses, then what a held lens shows, or the goal and the status.
   private var dock: some View {
     let fens = planFens
     let plan = PlanTrails.of(fens, model.run.color).current?.plan.key
     return VStack(spacing: 0) {
+      LensBar(
+        held: $lens, lenses: LENSES, enabled: lensEnabled, plan: $planHeld, planEnabled: lensEnabled && plan != nil,
+        planPulse: planSeeded && plan != nil && plan != planSeen
+      )
+      .opacity(model.held ? 0 : 1).allowsHitTesting(!model.held)
       VStack(spacing: 0) {
         if lens == .eval {
           EvalRunCard(trail: model.session.evalTrail, last: model.session.lastJudged, color: model.run.color)
         } else if let lens {
           LensLegend(kind: lens, endgame: isEndgame(model.shownFen))
         } else if planHeld {
-          PlanLegend(fens: fens, me: model.run.color)
+          // A long plan card scrolls rather than run off the dock.
+          ScrollView { PlanLegend(fens: fens, me: model.run.color) }.scrollIndicators(.hidden).scrollBounceBehavior(.basedOnSize)
         } else if model.intro == .plan {
           HandoffPlanCard(fens: fens, me: model.run.color)
         } else if model.blunder != nil {
@@ -171,13 +174,7 @@ struct RunView: View {
       }
       // Gives way before the board does: what doesn't fit is cut, never pushed up, and can't take a touch outside it.
       .frame(minHeight: 0, maxHeight: .infinity, alignment: .top).clipped().contentShape(Rectangle())
-      footer.padding(.top, 10).opacity(model.blunder == nil ? 1 : 0)
-      LensBar(
-        held: $lens, lenses: LENSES, enabled: lensEnabled, plan: $planHeld, planEnabled: lensEnabled && plan != nil,
-        planPulse: planSeeded && plan != nil && plan != planSeen
-      )
-      .opacity(model.held ? 0 : 1).allowsHitTesting(!model.held)
-      .padding(.bottom, 12)
+      footer.padding(.top, 10).padding(.bottom, 8).opacity(model.blunder == nil ? 1 : 0)
     }
     // The plan when the lenses wake is the one the player starts with; a tap on Plan sees the one up now.
     .onChange(of: lensEnabled, initial: true) {
