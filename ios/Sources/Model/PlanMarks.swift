@@ -69,7 +69,7 @@ func remark(_ shown: inout ShownPlan, _ fen: String, _ facts: PlanFacts, _ me: C
   }
 }
 
-/// The trail one move on: the current plan's marks first, then the plan for the new board.
+/// The trail one move on: the current plan's marks first, then, on your turn, the plan for the new board.
 /// A plan that leaves goes to the front of the earlier ones; one that comes back keeps its marks.
 public func advanceTrail(_ trail: PlanTrail, _ fen: String, _ me: Color) -> PlanTrail {
   var out = trail
@@ -78,6 +78,8 @@ public func advanceTrail(_ trail: PlanTrail, _ fen: String, _ me: Color) -> Plan
     remark(&current, fen, facts, me)
     out.current = current
   }
+  // A new plan waits for your turn: one that fits only while they are to move is never yours to follow.
+  guard fenTurn(fen) == me else { return out }
   let next = planOf(fen, me, kept: out.current?.plan.key)
   if next?.key == out.current?.plan.key { return out }
   if let current = out.current {

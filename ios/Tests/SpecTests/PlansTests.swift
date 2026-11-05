@@ -91,7 +91,7 @@ func variantFollowsTheKings(moves: String, me: ChessCore.Color, key: String) {
 
 /// Castling short ends the Yugoslav plan with its castle-long step crossed, and the Classical plan takes over.
 @Test func trailKeepsTheMarksOfAPlanThatLeft() {
-  let trail = planTrail(walk("e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be2 Bg7 O-O"), .w)
+  let trail = planTrail(walk("e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be2 Bg7 O-O O-O"), .w)
   #expect(trail.current?.plan.key == "dragon:w:classical")
   let yugoslav = trail.earlier.first { $0.plan.key == "dragon:w:yugoslav" }
   #expect(yugoslav?.marks == [nil, .gone, nil])
@@ -125,4 +125,18 @@ func variantFollowsTheKings(moves: String, me: ChessCore.Color, key: String) {
   #expect(firstMove(PlanStep(text: "", goals: [Goal(piece: .p, to: "d5")]), fen, .w) == "d2d3")
   #expect(firstMove(PlanStep(text: "", goals: [Goal(piece: .n, to: "d5")]), fen, .w) == "b1c3")
   #expect(firstMove(PlanStep(text: "", goals: [Goal(piece: .n, to: "d5")]), fen, .b) == nil)
+}
+
+/// A plan only takes over on your turn: one that fits only while they are to move never shows.
+@Test func planChangesOnlyOnYourTurn() {
+  let fens = walk("e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be2 Nc6 O-O e6")
+  #expect(planOf(fens[fens.count - 2], .w)?.key.hasPrefix("generic:") == true)
+  let trail = planTrail(fens, .w)
+  #expect(trail.current?.plan.key == "scheveningen:w:classical")
+  #expect(trail.earlier.first?.plan.key == "generic:castle")
+  #expect(trail.earlier.first?.marks.first == .done)
+  // Their turn: the plan stays, its marks move on.
+  let waiting = planTrail(Array(fens.dropLast()), .w)
+  #expect(waiting.current?.plan.key == "generic:castle")
+  #expect(waiting.current?.marks.first == .done)
 }
