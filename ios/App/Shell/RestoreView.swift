@@ -1,11 +1,12 @@
 import Model
 import SwiftUI
 
-/// Restore from iCloud: other devices' backups, a profile at a time, or a whole device
-/// when a fresh install first opens.
+/// Restore from iCloud: a profile at a time from any device's backup, its latest save or an
+/// older day's, or a whole device when a fresh install first opens.
 struct RestoreView: View {
   @Environment(AppStore.self) private var store
   @Environment(\.dismiss) private var dismiss
+  @Environment(Toasts.self) private var toasts
   /// The first-launch offer: backups already found, and Start fresh to skip them.
   var offered: [DeviceBackup]?
 
@@ -13,18 +14,10 @@ struct RestoreView: View {
   @State private var looked = false
   @State private var working = false
   @State private var failed = false
-  @State private var asking: Ask?
-
-  enum Ask: Identifiable {
-    case one(BackedUpProfile, DeviceBackup)
-    case all(DeviceBackup)
-    var id: String {
-      switch self {
-      case .one(let profile, let device): "\(device.folder)/\(profile.id)"
-      case .all(let device): device.folder
-      }
-    }
-  }
+  /// A profile waiting on which copy to restore.
+  @State private var picking: (profile: BackedUpProfile, device: DeviceBackup)?
+  /// A whole device waiting on Restore all to be confirmed.
+  @State private var restoringAll: DeviceBackup?
 
   var body: some View {
     ScrollView {
@@ -41,9 +34,7 @@ struct RestoreView: View {
           }
         }
         if let backups {
-          if backups.isEmpty {
-            note(store.iCloudOff ? "iCloud is off on this device." : "No backups from other devices.")
-          }
+          if backups.isEmpty { note("No backups yet.") }
           ForEach(backups) { device in deviceCard(device) }
         } else if looked {
           note("iCloud is off on this device.")
@@ -66,29 +57,47 @@ struct RestoreView: View {
       }
       looked = true
     }
-    .alert(askTitle, isPresented: Binding(get: { asking != nil }, set: { if !$0 { asking = nil } }), presenting: asking) { ask in
-      Button("Restore", role: .destructive) { run(ask) }
-      Button("Cancel", role: .cancel) { asking = nil }
-    } message: { ask in
-      Text(askMessage(ask))
+    .confirmationDialog(
+      picking.map { "Restore \($0.profile.name)?" } ?? "",
+      isPresented: Binding(get: { picking != nil }, set: { if !$0 { picking = nil } }),
+      titleVisibility: .visible, presenting: picking
+    ) { pick in
+      Button("Latest, \(when(pick.profile.savedAt))") { restoreOne(pick.profile, pick.device, day: nil) }
+      ForEach(pick.profile.olderDays, id: \.self) { day in
+        Button(dayLabel(day)) { restoreOne(pick.profile, pick.device, day: day) }
+      }
+      Button("Cancel", role: .cancel) { picking = nil }
+    } message: { pick in
+      Text(
+        store.profiles.profiles.contains { $0.id == pick.profile.id }
+          ? "This replaces \(pick.profile.name) on this device."
+          : "It's added as a new profile.")
+    }
+    .alert("Restore all profiles?", isPresented: Binding(get: { restoringAll != nil }, set: { if !$0 { restoringAll = nil } }), presenting: restoringAll) { device in
+      Button("Restore", role: .destructive) { run { await store.restoreAll(device) } }
+      Button("Cancel", role: .cancel) { restoringAll = nil }
+    } message: { _ in
+      Text("This replaces every profile on this device.")
     }
     .alert("Couldn't restore", isPresented: $failed) {
       Button("OK", role: .cancel) {}
     } message: {
-      Text("The backup couldn't be read. Try again once iCloud has finished downloading it.")
+      Text("No copy in the backup could be read. Try again once iCloud has finished downloading it.")
     }
   }
 
   private func deviceCard(_ device: DeviceBackup) -> some View {
-    VStack(alignment: .leading, spacing: 0) {
-      Text("\(device.manifest.device) · \(when(device.manifest.savedAt))").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
+    let own = device.folder == store.device.folder
+    return VStack(alignment: .leading, spacing: 0) {
+      Text("\(own ? "This \(device.manifest.device)" : device.manifest.device) · \(when(device.manifest.savedAt))")
+        .font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
         .padding(.horizontal, 4).padding(.top, 24).padding(.bottom, 8)
       ListCard {
         if offered != nil {
-          row("Restore all", detail: nil) { asking = .all(device) }
+          row("Restore all", detail: nil) { restoringAll = device }
         }
         ForEach(device.manifest.profiles) { profile in
-          row(profile.name, detail: when(profile.savedAt)) { asking = .one(profile, device) }
+          row(profile.name, detail: when(profile.savedAt)) { picking = (profile, device) }
         }
       }
     }
@@ -115,39 +124,32 @@ struct RestoreView: View {
     Date(timeIntervalSince1970: ms / 1000).formatted(.dateTime.month(.abbreviated).day().hour().minute())
   }
 
-  private var askTitle: String {
-    switch asking {
-    case .one(let profile, _): "Restore \(profile.name)?"
-    case .all: "Restore all profiles?"
-    case nil: ""
-    }
+  /// "Nov 4" for a snapshot's `yyyy-MM-dd`.
+  private func dayLabel(_ day: String) -> String {
+    let parse = DateFormatter()
+    parse.locale = Locale(identifier: "en_US_POSIX")
+    parse.dateFormat = "yyyy-MM-dd"
+    guard let date = parse.date(from: day) else { return day }
+    return "End of \(date.formatted(.dateTime.month(.abbreviated).day()))"
   }
 
-  private func askMessage(_ ask: Ask) -> String {
-    switch ask {
-    case .one(let profile, _):
-      store.profiles.profiles.contains { $0.id == profile.id }
-        ? "This replaces \(profile.name) on this device with the backup."
-        : "It's added as a new profile."
-    case .all:
-      "This replaces every profile on this device."
-    }
+  private func restoreOne(_ profile: BackedUpProfile, _ device: DeviceBackup, day: String?) {
+    picking = nil
+    run { await store.restore(profile, from: device, day: day) }
   }
 
-  private func run(_ ask: Ask) {
-    asking = nil
+  private func run(_ restore: @escaping @MainActor () async -> RestoreOutcome) {
+    restoringAll = nil
     working = true
     Task {
-      let done: Bool
-      switch ask {
-      case .one(let profile, let device): done = await store.restore(profile, from: device)
-      case .all(let device): done = await store.restoreAll(device)
-      }
+      let outcome = await restore()
       working = false
-      if done {
+      switch outcome {
+      case .failed: failed = true
+      case .restored(let older):
+        // A restore opens the profile and starts every screen over, so the note goes in a toast.
+        if let older { toasts.show("Newer copy unreadable. \(dayLabel(older)) restored") }
         dismiss()
-      } else {
-        failed = true
       }
     }
   }

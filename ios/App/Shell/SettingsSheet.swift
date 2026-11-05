@@ -84,7 +84,7 @@ struct SettingsSheet: View {
           HStack {
             Text("Last backup").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
             Spacer()
-            Text(lastBackup).font(.system(size: 14)).foregroundStyle(store.iCloudOff ? Theme.warn : Theme.text3)
+            Text(lastBackup).font(.system(size: 14)).foregroundStyle(store.iCloudOff || store.backupHeld ? Theme.warn : Theme.text3)
           }
           .padding(.horizontal, 16).frame(minHeight: 54)
           Button { restoring = true } label: {
@@ -134,6 +134,7 @@ struct SettingsSheet: View {
   }
 
   private var lastBackup: String {
+    if store.backupHeld { return "Paused" }
     if store.iCloudOff { return "iCloud off" }
     let at = store.device.manifest.savedAt
     guard at > 0 else { return "None yet" }

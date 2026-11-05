@@ -88,6 +88,7 @@ final class AppStore {
       // The next save would overwrite it with a fresh state: keep the unreadable one beside it.
       print("load failed: \(error)")
       keepUnreadable(data)
+      hold(profiles.active)
     }
   }
 
@@ -139,12 +140,14 @@ final class AppStore {
     guard profiles.remove(id) else { return }
     saveProfiles()
     removeSave(id)
-    send(profileId: nil, save: nil, removing: id)
+    release(id)
+    send(profileId: nil, save: nil)
     if wasActive { readState() }
   }
 
   /// Wipe the profile in use: a fresh start under the same name.
   func resetProfile() {
+    release(profiles.active)
     removeSave(profiles.active)
     readState()
   }
@@ -191,34 +194,49 @@ final class AppStore {
   }
 
   /// Back up the profile in use now: on leaving the app, and before opening another profile.
+  /// A profile whose save failed to load stays held.
   func backUpNow() {
     pendingBackup?.cancel()
     pendingBackup = nil
-    guard !saveBlocked, let data = try? JSONEncoder().encode(state) else { return }
+    guard !saveBlocked, !backupHeld, let data = try? JSONEncoder().encode(state) else { return }
     send(profileId: profiles.active, save: data)
   }
 
-  /// Write a save (or just the profile list, or a deletion) to this device's backup, after any write still going.
-  private func send(profileId: String?, save: Data?, removing removed: String? = nil) {
-    device.manifest = device.manifest.updated(profiles, saved: profileId, at: Env.now())
+  /// The profile in use isn't being backed up: its save failed to load, so it opened on a fresh start.
+  var backupHeld: Bool { device.held.contains(profiles.active) }
+
+  private func hold(_ id: String) {
+    guard !device.held.contains(id) else { return }
+    device.held.append(id)
+    saveDevice()
+  }
+
+  private func release(_ id: String) {
+    device.held.removeAll { $0 == id }
+    saveDevice()
+  }
+
+  /// Write a save (or just the profile list after a rename or delete) to this device's backup,
+  /// after any write still going.
+  private func send(profileId: String?, save: Data?) {
+    let now = Env.now()
+    let day = backupDay(now)
+    let old = device.manifest
+    device.manifest = old.updated(profiles, saved: profileId, at: now, day: day)
     saveDevice()
     let drive = backup
     let folder = device.folder
     let manifest = device.manifest
+    let gone = old.files.subtracting(manifest.files)
     let previous = lastWrite
     lastWrite = Task { [weak self] in
       await previous?.value
-      let written: Bool
-      if let removed {
-        written = await drive.remove(folder: folder, profileId: removed, manifest: manifest)
-      } else {
-        written = await drive.write(folder: folder, profileId: profileId, save: save, manifest: manifest)
-      }
+      let written = await drive.write(folder: folder, profileId: profileId, save: save, day: day, manifest: manifest, removing: gone)
       self?.iCloudOff = !written
     }
   }
 
-  /// Other devices' backups, newest first; nil when iCloud is off.
+  /// Backups to restore from, this device's own first; nil when iCloud is off.
   func deviceBackups() async -> [DeviceBackup]? {
     guard let urls = await findBackupManifests() else {
       iCloudOff = true
@@ -227,12 +245,10 @@ final class AppStore {
     return restoreChoices(await backup.manifests(urls), own: device.folder)
   }
 
-  /// A backed-up save this version can read.
-  private func readBackup(_ source: DeviceBackup, _ profileId: String) async -> Data? {
-    guard let data = await backup.read(folder: source.folder, profileId: profileId),
-      (try? JSONDecoder().decode(AppState.self, from: data)) != nil
-    else { return nil }
-    return data
+  /// The day a restored file was filed under, when it isn't the copy asked for.
+  private func olderDay(_ file: String, _ backed: BackedUpProfile, asked day: String?) -> String? {
+    guard let first = backed.restoreFiles(from: day).first, file != first else { return nil }
+    return backed.days.first { BackupManifest.snapshotFile(backed.id, $0) == file }
   }
 
   private func writeSave(_ data: Data, _ profileId: String) {
@@ -241,29 +257,32 @@ final class AppStore {
     try? data.write(to: url, options: .atomic)
   }
 
-  /// One profile from another device's backup, replacing the one with its id or added, and opened.
-  /// False when its save couldn't be read.
-  func restore(_ backed: BackedUpProfile, from source: DeviceBackup) async -> Bool {
-    guard let data = await readBackup(source, backed.id) else { return false }
+  /// One profile from a backup, its latest save or `day`'s snapshot, falling back to older copies
+  /// when that one can't be read. It replaces the profile with its id, or is added, and opens.
+  func restore(_ backed: BackedUpProfile, from source: DeviceBackup, day: String?) async -> RestoreOutcome {
+    guard let found = await backup.read(folder: source.folder, files: backed.restoreFiles(from: day)) else { return .failed }
     restoreOffer = []
     save()
     backUpNow()
     profiles.restore(backed)
-    writeSave(data, backed.id)
+    release(backed.id)
+    writeSave(found.data, backed.id)
     saveProfiles()
     readState()
-    send(profileId: backed.id, save: data)
-    return true
+    send(profileId: backed.id, save: found.data)
+    return .restored(olderDay: olderDay(found.file, backed, asked: day))
   }
 
-  /// Every profile in another device's backup, in place of this device's.
-  /// False when none of its saves could be read.
-  func restoreAll(_ source: DeviceBackup) async -> Bool {
+  /// Every profile in a device's backup, each its newest readable copy, in place of this device's.
+  func restoreAll(_ source: DeviceBackup) async -> RestoreOutcome {
     var saves: [(id: String, data: Data)] = []
+    var fellBack: String?
     for profile in source.manifest.profiles {
-      if let data = await readBackup(source, profile.id) { saves.append((profile.id, data)) }
+      guard let found = await backup.read(folder: source.folder, files: profile.restoreFiles(from: nil)) else { continue }
+      saves.append((profile.id, found.data))
+      fellBack = fellBack ?? olderDay(found.file, profile, asked: nil)
     }
-    guard !saves.isEmpty else { return false }
+    guard !saves.isEmpty else { return .failed }
     restoreOffer = []
     let read = Set(saves.map(\.id))
     let restored = BackupManifest(device: source.manifest.device, profiles: source.manifest.profiles.filter { read.contains($0.id) })
@@ -271,13 +290,14 @@ final class AppStore {
     pendingBackup = nil
     for profile in profiles.profiles { removeSave(profile.id) }
     profiles = ProfileList(restoring: restored)
+    device.held = []
     saveProfiles()
     for item in saves {
       writeSave(item.data, item.id)
       send(profileId: item.id, save: item.data)
     }
     readState()
-    return true
+    return .restored(olderDay: fellBack)
   }
 
   /// The next round's selection, without taking it: `peekRoundSelection`.

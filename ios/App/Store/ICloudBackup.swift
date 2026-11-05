@@ -16,30 +16,29 @@ actor ICloudBackup {
     return documents
   }
 
-  /// Write one profile's save (if given) and the device's manifest. False when iCloud is off or the write failed.
-  func write(folder: String, profileId: String?, save: Data?, manifest: BackupManifest) -> Bool {
+  /// Write one profile's save (if given) as its latest and as `day`'s snapshot, then the device's
+  /// manifest, then remove the files it no longer lists. False when iCloud is off or a write failed.
+  func write(folder: String, profileId: String?, save: Data?, day: String, manifest: BackupManifest, removing gone: Set<String>) -> Bool {
     guard let root = root() else { return false }
     let dir = root.appending(path: folder)
     do {
       try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-      if let profileId, let save { try coordinatedWrite(save, to: dir.appending(path: BackupManifest.saveFile(profileId))) }
+      if let profileId, let save {
+        try coordinatedWrite(save, to: dir.appending(path: BackupManifest.saveFile(profileId)))
+        try coordinatedWrite(save, to: dir.appending(path: BackupManifest.snapshotFile(profileId, day)))
+      }
       try coordinatedWrite(JSONEncoder().encode(manifest), to: dir.appending(path: BackupManifest.file))
-      return true
     } catch {
       print("backup failed: \(error)")
       return false
     }
-  }
-
-  /// Remove a deleted profile's save and write the manifest without it.
-  func remove(folder: String, profileId: String, manifest: BackupManifest) -> Bool {
-    guard let root = root() else { return false }
-    let file = root.appending(path: folder).appending(path: BackupManifest.saveFile(profileId))
-    var failure: NSError?
-    NSFileCoordinator().coordinate(writingItemAt: file, options: .forDeleting, error: &failure) { url in
-      try? FileManager.default.removeItem(at: url)
+    for name in gone {
+      var failure: NSError?
+      NSFileCoordinator().coordinate(writingItemAt: dir.appending(path: name), options: .forDeleting, error: &failure) { url in
+        try? FileManager.default.removeItem(at: url)
+      }
     }
-    return write(folder: folder, profileId: nil, save: nil, manifest: manifest)
+    return true
   }
 
   /// Every device's manifest, given the manifest files a metadata query found.
@@ -50,10 +49,18 @@ actor ICloudBackup {
     }
   }
 
-  /// One profile's save from a device's folder, downloaded first if need be.
-  func read(folder: String, profileId: String) -> Data? {
+  /// The first of `files` in a device's folder that this version can read, downloaded first if
+  /// need be, and its name.
+  func read(folder: String, files: [String]) -> (file: String, data: Data)? {
     guard let root = root() else { return nil }
-    return coordinatedRead(root.appending(path: folder).appending(path: BackupManifest.saveFile(profileId)))
+    for file in files {
+      if let data = coordinatedRead(root.appending(path: folder).appending(path: file)),
+        (try? JSONDecoder().decode(AppState.self, from: data)) != nil
+      {
+        return (file, data)
+      }
+    }
+    return nil
   }
 
   private func coordinatedWrite(_ data: Data, to file: URL) throws {
@@ -99,4 +106,36 @@ func findBackupManifests() async -> [URL]? {
 struct BackupDevice: Codable, Equatable {
   var folder: String
   var manifest: BackupManifest
+  /// Profiles whose save failed to load here: not backed up until restored or reset, so the
+  /// fresh start they opened on doesn't replace their backup.
+  var held: [String] = []
+
+  init(folder: String, manifest: BackupManifest) {
+    self.folder = folder
+    self.manifest = manifest
+  }
+
+  enum CodingKeys: String, CodingKey { case folder, manifest, held }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    folder = try c.decode(String.self, forKey: .folder)
+    manifest = try c.decode(BackupManifest.self, forKey: .manifest)
+    held = try c.decodeIfPresent([String].self, forKey: .held) ?? []
+  }
+}
+
+/// How a restore went: nothing readable, or restored, from an older copy than the one asked for
+/// when that one couldn't be read.
+enum RestoreOutcome: Equatable {
+  case failed
+  case restored(olderDay: String?)
+}
+
+/// Today, `yyyy-MM-dd` on this device's calendar: the day a snapshot is filed under.
+func backupDay(_ ms: Double) -> String {
+  let formatter = DateFormatter()
+  formatter.locale = Locale(identifier: "en_US_POSIX")
+  formatter.dateFormat = "yyyy-MM-dd"
+  return formatter.string(from: Date(timeIntervalSince1970: ms / 1000))
 }
