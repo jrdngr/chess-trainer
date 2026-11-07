@@ -204,6 +204,13 @@ struct RunView: View {
       }
     }
     .onChange(of: planOpen) { if planOpen { planSeen = plan } }
+    // A run that ends closes the plan and any lens, so its ending shows.
+    .onChange(of: model.live) {
+      if !model.live {
+        planOpen = false
+        lens = nil
+      }
+    }
   }
 
   /// The game's positions up to the board as shown.
