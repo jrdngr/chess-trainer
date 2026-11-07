@@ -43,6 +43,9 @@ public struct Gap: Equatable, Sendable {
 
 /// The least share a reply needs to be a gap, in percent.
 public let GAP_SHARE = BOOK_SHARE * 100
+/// The least importance a gap needs: met in at least this share of your
+/// games, after the depth discount. Rarer replies are not worth recommending.
+public let GAP_MIN_IMPORTANCE = 0.02
 /// Each full move of depth makes a gap this much less important.
 public let GAP_DEPTH_BIAS = 0.85
 /// How deep gaps are looked for, in plies.
@@ -93,10 +96,11 @@ public func gaps(_ reps: [Repertoire], _ index: ReferenceIndex, tree: OpeningTre
       let kind: GapKind = hole.path.isEmpty || answered ? .noAnswer : .tooShort
       // A line that just stops is one gap, at its most played reply.
       if kind == .tooShort && !shortAt.insert(positionKey(hole.fen)).inserted { continue }
+      let importance = gapImportance(reach: hole.reach, share: hole.share, plies: hole.path.count)
+      guard importance >= GAP_MIN_IMPORTANCE else { continue }
       let name = deepestName(index, line)?.name ?? end.name
       out.append(Gap(
-        kind: kind, repertoireId: rep.id, color: rep.color, hole: hole,
-        importance: gapImportance(reach: hole.reach, share: hole.share, plies: hole.path.count),
+        kind: kind, repertoireId: rep.id, color: rep.color, hole: hole, importance: importance,
         name: name, missing: max(1, (end.ply - line.count + 1) / 2)))
     }
   }
@@ -120,17 +124,24 @@ public func rankGaps(_ list: [Gap], tree: OpeningTree?, favorites: [OpeningNode]
   }
 }
 
-/// The few gaps Home shows: the top one of each kind there is, then the most
-/// important of the rest, grouped by kind in rank order.
-public func topGaps(_ ranked: [Gap], limit: Int = 3) -> [Gap] {
+/// A short list of gaps: `quota` of each kind first, as many as there are,
+/// then the most important of the rest up to `limit`, grouped by kind in
+/// rank order. Home asks for 3 with one of each kind; More for 10 with 5
+/// "Too short".
+public func topGaps(_ ranked: [Gap], limit: Int = 3, quota: [GapKind: Int] = [.noAnswer: 1, .tooShort: 1]) -> [Gap] {
   var picked: [Gap] = []
   for kind in [GapKind.noAnswer, .tooShort] {
-    if let first = ranked.first(where: { $0.kind == kind }), picked.count < limit { picked.append(first) }
+    for gap in ranked.filter({ $0.kind == kind }).prefix(quota[kind] ?? 0) where picked.count < limit { picked.append(gap) }
   }
   for gap in ranked where picked.count < limit && !picked.contains(where: { $0.id == gap.id }) { picked.append(gap) }
   return [GapKind.noAnswer, .tooShort].flatMap { kind in
     ranked.filter { gap in gap.kind == kind && picked.contains { $0.id == gap.id } }
   }
+}
+
+/// The longer list behind Home's More.
+public func moreGaps(_ ranked: [Gap]) -> [Gap] {
+  topGaps(ranked, limit: 10, quota: [.tooShort: 5])
 }
 
 /* ── filling a gap ── */

@@ -21,6 +21,8 @@ import Testing
   #expect(morra.first.map { $0.missing >= 1 } == true)
   // Every gap is common enough at its position.
   #expect(found.allSatisfy { $0.share >= GAP_SHARE })
+  // And met often enough to be worth recommending.
+  #expect(found.allSatisfy { $0.importance >= GAP_MIN_IMPORTANCE })
   #expect(zip(found, found.dropFirst()).allSatisfy { $0.importance >= $1.importance })
 }
 
@@ -47,6 +49,24 @@ import Testing
   // Only depth gaps: all three slots go to them.
   let deep = gaps([rep(.b, ["e4 e5", "d4 d5", "Nf3 d5", "c4 e5"])], bookIndex, tree: tree)
   #expect(topGaps(deep).count == min(3, deep.count))
+}
+
+/// More shows ten: five "Too short" when there are five, the rest by importance.
+@Test func moreShowsTenWithFiveTooShort() {
+  let tree = openingTree(bookIndex)
+  var state = AppState()
+  for set in STARTER_SETS { state.seed(tree, set) }
+  let all = playbookGaps(state, tree)
+  let short = all.filter { $0.kind == .tooShort }
+  #expect(all.count > 10 && short.count >= 5)
+  let more = moreGaps(all)
+  #expect(more.count == 10)
+  #expect(more.filter { $0.kind == .tooShort }.count >= 5)
+  // Every "No answer yet" shown outranks every one left out.
+  let shownAnswers = more.filter { $0.kind == .noAnswer }
+  let leftAnswers = all.filter { g in g.kind == .noAnswer && !more.contains { $0.id == g.id } }
+  #expect(shownAnswers.allSatisfy { a in leftAnswers.allSatisfy { a.importance >= $0.importance } })
+  #expect(more.map(\.kind) == more.map(\.kind).sorted { a, _ in a == .noAnswer })
 }
 
 /// A fill stops at its size, or where the book stops naming the line.

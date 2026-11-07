@@ -7,7 +7,7 @@ import SwiftUI
 /// Home's Recommendations: what the Playbook needs next, grouped by why.
 /// "No answer yet" rows are common replies with no answer; "Too short" rows
 /// are lines that stop before their named opening does. Up to three show,
-/// one of each kind when there is one; All opens the whole list. A tap fills
+/// one of each kind when there is one; More opens up to ten. A tap fills
 /// that gap in Growth.
 struct RecommendationsCard: View {
   let tree: OpeningTree
@@ -24,7 +24,7 @@ struct RecommendationsCard: View {
           Text("Recommendations").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text)
           Spacer()
           if all.count > 3 {
-            Button("All \(all.count)") { showingAll = true }
+            Button("More") { showingAll = true }
               .font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.accent).buttonStyle(.plain)
           }
         }
@@ -35,7 +35,7 @@ struct RecommendationsCard: View {
       .frame(maxWidth: .infinity, alignment: .leading)
       .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface))
       .sheet(isPresented: $showingAll) {
-        RecommendationsSheet(gaps: all) { gap in
+        RecommendationsSheet(gaps: moreGaps(all)) { gap in
           showingAll = false
           onPick(gap)
         } onClose: { showingAll = false }
@@ -53,7 +53,7 @@ struct RecommendationsCard: View {
   }
 }
 
-/// Every recommendation, grouped the same way as on Home.
+/// More recommendations, grouped the same way as on Home.
 struct RecommendationsSheet: View {
   let gaps: [Gap]
   let onPick: (Gap) -> Void

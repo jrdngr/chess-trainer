@@ -102,7 +102,8 @@ whenever chance allows.
 
 A gap is a common opponent reply in your Playbook that you have no answer
 to: at least 5% of strong players' games at that position, inside the
-opening the book names. A run reaches at most one hole, the first reply you
+opening the book names, and met in at least 2% of your games once deeper
+moves are discounted. A run reaches at most one hole, the first reply you
 have no answer to. At that hole the engine answers one question: does this
 line need a new move now? Yes when
 
