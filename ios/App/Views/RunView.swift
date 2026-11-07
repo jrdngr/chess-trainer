@@ -322,18 +322,14 @@ struct RunView: View {
         .padding(.horizontal, 14).padding(.vertical, 6)
         .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.45), radius: 10, y: 6)
         .padding(.top, 8)
-    } else if let fill = model.fill {
+    } else if model.fill != nil {
       // Up the whole time moves are being added, so the board reads as different.
-      HStack(spacing: 8) {
-        Text("Adding new moves").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.background)
-          .padding(.horizontal, 10).padding(.vertical, 4).background(Capsule().fill(Theme.accent))
-        Text(fill.gap.name).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text).lineLimit(1)
-      }
-      .padding(.leading, 8).padding(.trailing, 16).padding(.vertical, 8)
-      .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
-      .allowsHitTesting(false)
-      .offset(y: -42)
-      .introPillIn().id("adding")
+      Text("Adding new moves").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.background)
+        .padding(.horizontal, 16).padding(.vertical, 8)
+        .background(Capsule().fill(Theme.accent)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
+        .allowsHitTesting(false)
+        .offset(y: -42)
+        .introPillIn().id("adding")
     } else if model.intro == .replay || (model.intro == .done && model.introPath.isEmpty && model.session.state.moves == 0 && model.miss == nil) {
       // While the way in plays, and over a round from move one until your first move.
       HStack(spacing: 8) {
