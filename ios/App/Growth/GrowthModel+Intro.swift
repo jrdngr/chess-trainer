@@ -3,7 +3,8 @@ import Foundation
 import Model
 
 /// How a sitting begins, as `useRoundIntro` has it: "Growth" and the opening
-/// full screen, then the way in played out on a locked board.
+/// full screen, then the way in played out on a locked board. A Home
+/// recommendation skips both.
 extension GrowthModel {
   /// How long the announcement holds, unless tapped away: `ANNOUNCE_MS`.
   static let announceMs = 2500
@@ -15,6 +16,13 @@ extension GrowthModel {
     let id = deepestNodeWithin(catalogue, launch.opening, run.path).id
     introOpening = id
     introName = catalogue.root.id == id ? launch.row.name : nil
+    // A recommendation from Home goes straight to the board at its gap.
+    if launch.gap != nil {
+      introPath = []
+      intro = .done
+      settle()
+      return
+    }
     introPath = store.state.settings.autoplay ? Array(run.path.prefix(startLength)) : []
     intro = .announce
     let key = run.fen

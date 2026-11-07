@@ -96,7 +96,7 @@ public func nudgeArrows(
   if let red = pickAway(onBoard, prefs.priority, share), let at = out.firstIndex(where: { $0.san == red.signal.san }) {
     out[at].tone = .away
     out[at].reason = awayReason(red.signal, red.kind, fam)
-    out[at].pill = red.kind == .closes ? "Closes off" : "Breaks a habit"
+    out[at].pill = red.kind == .closes ? "Closes off your habit" : "Breaks a habit"
   }
   return out
 }
