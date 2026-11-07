@@ -91,11 +91,18 @@ final class GrowthModel {
       store: store, tree: tree, index: index)
   }
 
-  /// Filling a recommendation from Home: the sitting starts at its reply.
+  /// Filling a recommendation from Home: the sitting starts at its reply, or
+  /// at move one for a side's first move. A side with no tree yet gets one.
   convenience init?(gap: Gap, store: AppStore, tree: OpeningTree, index: ReferenceIndex) {
+    var gap = gap
+    if store.state.repertoires[gap.repertoireId] == nil {
+      var repId = ""
+      store.update { repId = $0.ensureRepertoire(gap.color) }
+      gap.repertoireId = repId
+    }
     self.init(
       launch: Launch(
-        row: gapRow(gap), hole: gap.hole, opening: deepestNodeWithin(tree, tree.root, gap.line),
+        row: gapRow(gap), hole: gap.hole.san.isEmpty ? nil : gap.hole, opening: deepestNodeWithin(tree, tree.root, gap.line),
         find: GrowthOptions(minShare: GAP_SHARE, maxPly: DEFAULT_MAX_PLY), maxPly: DEFAULT_MAX_PLY, gap: gap),
       store: store, tree: tree, index: index)
   }

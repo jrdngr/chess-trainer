@@ -101,7 +101,7 @@ struct GapRow: View {
   let action: () -> Void
 
   var body: some View {
-    let label = gapLabel(gap.name)
+    let label = gapLabel(gap.name.isEmpty ? "First move" : gap.name)
     Button(action: action) {
       HStack(spacing: 10) {
         SideSquare(color: gap.color, size: 15)
@@ -135,7 +135,7 @@ struct GapRow: View {
           .padding(.horizontal, 8).padding(.vertical, 5).background(Theme.surface3)
       }
       if gap.kind == .noAnswer {
-        Text(mine == nil ? moveLabel(gap.hole.san, ply: gap.path.count) : gap.hole.san)
+        Text(mine == nil ? moveLabel(gap.hole.san.isEmpty ? "?" : gap.hole.san, ply: gap.path.count) : gap.hole.san)
           .font(.system(size: 13, weight: .heavy, design: .monospaced)).foregroundStyle(SwiftUI.Color(hex: 0xd6d7ff))
           .padding(.horizontal, 8).padding(.vertical, 5).background(Theme.ext.opacity(0.28))
       } else {

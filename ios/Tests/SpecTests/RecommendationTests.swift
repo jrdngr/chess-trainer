@@ -51,6 +51,32 @@ import Testing
   #expect(topGaps(deep).count == min(3, deep.count))
 }
 
+/// The basics come first: with only a White Ruy Lopez, Home's three are
+/// Black's answers to 1.e4 and 1.d4, then the top White gap.
+@Test func basicsLeadHome() throws {
+  let tree = openingTree(bookIndex)
+  var state = AppState()
+  state.addLine(state.ensureRepertoire(.w), line("e4 e5 Nf3 Nc6 Bb5"), .fixed(.book))
+  let top = topGaps(playbookGaps(state, tree))
+  #expect(top.map(\.line) == [line("e4"), line("d4"), try #require(gaps(state.repertoireList, bookIndex, tree: tree).first).line])
+  #expect(top.prefix(2).allSatisfy { $0.color == .b && $0.basic && $0.repertoireId == "" })
+  // Answering 1.e4 leaves 1.d4 as the only basic.
+  state.addLine(state.ensureRepertoire(.b), line("e4 e5"), .fixed(.book))
+  #expect(playbookGaps(state, tree).filter(\.basic).map(\.line) == [line("d4")])
+}
+
+/// With only Black lines, White's first move leads; a reply kept with no answer is still missing.
+@Test func whiteFirstMoveIsABasic() {
+  let tree = openingTree(bookIndex)
+  var state = AppState()
+  let black = rep(.b, ["e4 c5", "d4"])
+  state.repertoires[black.id] = black
+  state.repertoireOrder = [black.id]
+  let found = playbookGaps(state, tree)
+  #expect(found.filter(\.basic).map(\.line) == [[], line("d4")])
+  #expect(found.first?.color == .w)
+}
+
 /// More shows ten: five "Too short" when there are five, the rest by importance.
 @Test func moreShowsTenWithFiveTooShort() {
   let tree = openingTree(bookIndex)

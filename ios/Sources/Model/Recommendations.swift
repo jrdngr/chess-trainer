@@ -34,6 +34,9 @@ public struct Gap: Equatable, Sendable {
   public var name: String
   /// Your moves still missing to the end of the named opening, at least 1.
   public var missing: Int
+  /// One of the Playbook's three basics: a White first move, and Black answers
+  /// to 1.e4 and 1.d4. These come before every other gap.
+  public var basic = false
   /// The moves to the reply, the reply included.
   /// The first move of a game with nothing saved has no reply: its line is the path alone.
   public var line: [String] { hole.san.isEmpty ? hole.path : hole.path + [hole.san] }
@@ -108,10 +111,43 @@ public func gaps(_ reps: [Repertoire], _ index: ReferenceIndex, tree: OpeningTre
   return rankGaps(out)
 }
 
-/// Gaps by importance; ties go shallower first, then White before Black,
-/// then by the line's moves.
+/// White's first moves Black needs an answer to before anything else.
+public let BASIC_FIRST_MOVES = ["e4", "d4"]
+
+/// The Playbook's basics still missing: a White first move, then Black
+/// answers to 1.e4 and 1.d4. A side with no tree yet has an empty
+/// `repertoireId`; whoever fills the gap makes the tree.
+public func basicGaps(_ reps: [Repertoire], _ index: ReferenceIndex) -> [Gap] {
+  var out: [Gap] = []
+  let white = reps.first { $0.color == .w }
+  if white.map({ $0.rootChildren.isEmpty }) ?? true {
+    let hole = Hole(path: [], fen: START_FEN, san: "", share: 100, games: 0, after: START_FEN, nodeId: nil, reach: 1)
+    out.append(Gap(kind: .noAnswer, repertoireId: white?.id ?? "", color: .w, hole: hole, importance: 1, name: "", missing: 1, basic: true))
+  }
+  let black = reps.first { $0.color == .b }
+  let shares = popularReplies(index, START_FEN, 0)
+  for san in BASIC_FIRST_MOVES {
+    let answered = black.map { rep in childrenOf(rep, nil).contains { $0.san == san && !childrenOf(rep, $0.id).isEmpty } } ?? false
+    guard !answered, let after = applySan(START_FEN, san)?.after else { continue }
+    let share = shares.first { $0.san == san }
+    let hole = Hole(
+      path: [], fen: START_FEN, san: san, share: share?.share ?? 0, games: share?.games ?? 0, after: after,
+      nodeId: nil, reach: 1)
+    let end = namedEnd(index, [san])
+    out.append(Gap(
+      kind: .noAnswer, repertoireId: black?.id ?? "", color: .b, hole: hole,
+      importance: gapImportance(reach: 1, share: hole.share, plies: 0),
+      name: deepestName(index, [san])?.name ?? end?.name ?? "", missing: max(1, (end?.ply ?? 1) / 2), basic: true))
+  }
+  return out
+}
+
+/// Gaps with the basics first, in their own order, then by importance; ties
+/// go shallower first, then White before Black, then by the line's moves.
 public func rankGaps(_ list: [Gap]) -> [Gap] {
   list.jsSorted { a, b in
+    if a.basic != b.basic { return a.basic ? -1 : 1 }
+    if a.basic { return Double(basicOrder(a) - basicOrder(b)) }
     if a.importance != b.importance { return b.importance - a.importance }
     if a.line.count != b.line.count { return Double(a.line.count - b.line.count) }
     if a.color != b.color { return a.color == .w ? -1 : 1 }
@@ -119,14 +155,21 @@ public func rankGaps(_ list: [Gap]) -> [Gap] {
   }
 }
 
-/// A short list of gaps: `quota` of each kind first, as many as there are,
+/// Where a basic gap sits among the basics: White's first move, then 1.e4, then 1.d4.
+private func basicOrder(_ gap: Gap) -> Int {
+  gap.color == .w ? 0 : 1 + (BASIC_FIRST_MOVES.firstIndex(of: gap.hole.san) ?? BASIC_FIRST_MOVES.count)
+}
+
+/// A short list of gaps: the basics first, then `quota` of each kind, as many as there are,
 /// then the most important of the rest up to `limit`, grouped by kind in
 /// rank order. Home asks for 3 with one of each kind; More for 10 with 5
 /// "Too short".
 public func topGaps(_ ranked: [Gap], limit: Int = 3, quota: [GapKind: Int] = [.noAnswer: 1, .tooShort: 1]) -> [Gap] {
-  var picked: [Gap] = []
+  var picked = Array(ranked.filter(\.basic).prefix(limit))
   for kind in [GapKind.noAnswer, .tooShort] {
-    for gap in ranked.filter({ $0.kind == kind }).prefix(quota[kind] ?? 0) where picked.count < limit { picked.append(gap) }
+    for gap in ranked.filter({ $0.kind == kind && !$0.basic }).prefix(quota[kind] ?? 0) where picked.count < limit {
+      picked.append(gap)
+    }
   }
   for gap in ranked where picked.count < limit && !picked.contains(where: { $0.id == gap.id }) { picked.append(gap) }
   return [GapKind.noAnswer, .tooShort].flatMap { kind in
@@ -230,9 +273,12 @@ public func selectionGaps(_ state: AppState, _ tree: OpeningTree, _ selection: S
   return rankGaps(out.filter { seen.insert($0.id).inserted })
 }
 
-/// Every gap in the Playbook, for Home: the selection plays no part.
+/// Every gap in the Playbook, for Home, the basics first: the selection plays no part.
 public func playbookGaps(_ state: AppState, _ tree: OpeningTree) -> [Gap] {
-  gaps(state.repertoireList, tree.index, tree: tree)
+  let reps = state.repertoireList
+  let basics = basicGaps(reps, tree.index)
+  let rest = gaps(reps, tree.index, tree: tree).filter { gap in !basics.contains { $0.id == gap.id } }
+  return rankGaps(basics + rest)
 }
 
 /// The answer at a hole in a run: whether the line needs a new move now.
@@ -264,5 +310,5 @@ public func steerGap(_ state: AppState, _ tree: OpeningTree, _ selection: Select
 public func gapRow(_ gap: Gap) -> GrowthRow {
   GrowthRow(
     id: gap.id, repertoireId: gap.repertoireId, color: gap.color, name: gap.name, eco: nil, depth: gap.path.count,
-    topShare: gap.share, urgency: 0, score: 0, holes: [gap.hole], ends: [])
+    topShare: gap.share, urgency: 0, score: 0, holes: gap.hole.san.isEmpty ? [] : [gap.hole], ends: [])
 }
