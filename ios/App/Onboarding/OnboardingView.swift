@@ -8,8 +8,10 @@ enum OnboardingNext: Equatable { case home, autopilot }
 
 /// The first screens a new profile sees: building the first Playbook.
 ///
-/// Three ways in: a starter set, picked by style; the openings you already
-/// play, picked one at a time; or lines played in on the board. Nothing goes
+/// Four ways in: a starter set, picked by style; the openings you already
+/// play, picked one at a time; lines played in on the board; or the openings
+/// found in your Lichess or Chess.com games, which go in as soon as they are
+/// added and start the first Autopilot run. Otherwise nothing goes
 /// in until the ready screen is left, so "Add more openings" can still list
 /// and drop them. Lines saved on the board are held the same way, Back
 /// included. Skipping is a real answer: nothing goes in, and it is never
@@ -46,6 +48,8 @@ struct OnboardingView: View {
         }, onSaved: { saved in ready(boardHeld(saved)) }, hold: true)
       case .ready:
         ReadyView(tree: tree, rows: pending, onMore: { step = .pick }, onDone: confirm)
+      case .importGames:
+        ImportView(onBack: { step = .path }, onAdded: { confirm(.autopilot) })
       case .browse:
         BrowsePicker(onClose: { step = .path })
       }
@@ -106,12 +110,12 @@ struct OnboardingView: View {
 }
 
 enum OnboardingStep: Equatable {
-  case path, sets, set(String), pick, board, ready
+  case path, sets, set(String), pick, board, importGames, ready
   /// Debug only: the opening browser on its own.
   case browse
 }
 
-/// The welcome: three ways to build a Playbook, and Skip.
+/// The welcome: four ways to build a Playbook, and Skip.
 struct PathsView: View {
   let onStep: (OnboardingStep) -> Void
   let onSkip: () -> Void
@@ -124,6 +128,7 @@ struct PathsView: View {
           path("Suggest a set", "star", main: true) { onStep(.sets) }
           path("Pick openings", "tree") { onStep(.pick) }
           path("Play on the board", "play") { onStep(.board) }
+          path("Import my games", "download") { onStep(.importGames) }
           SkipButton(label: "Skip for now", action: onSkip).padding(.top, 8)
         }
         .padding(.horizontal, 16).padding(.top, 16)

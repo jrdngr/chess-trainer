@@ -6,6 +6,8 @@ import SwiftUI
 /// never kept, turned into openings to add to your Playbook.
 struct ImportView: View {
   let onBack: () -> Void
+  /// After openings are added. Without it, adding goes back.
+  var onAdded: (() -> Void)? = nil
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
   @State private var site = GameSite.lichess
@@ -82,7 +84,7 @@ struct ImportView: View {
         BigButton(label: chosen.isEmpty ? "Add openings" : "Add \(plural(chosen.count, "opening"))", disabled: chosen.isEmpty) {
           store.update { _ = $0.addSeedRows(chosen, lost: lost) }
           toasts.show("\(plural(chosen.count, "opening")) added")
-          onBack()
+          (onAdded ?? onBack)()
         }
         .padding(.horizontal, 16).padding(.bottom, 12)
       }
