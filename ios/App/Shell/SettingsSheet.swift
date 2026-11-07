@@ -5,7 +5,6 @@ import SwiftUI
 struct SettingsSheet: View {
   @Environment(AppStore.self) private var store
   @Environment(\.dismiss) private var dismiss
-  @State private var intro = false
   @State private var exporting = false
   @State private var restoring = false
   /// The name prompt open: a new profile, or the profile being renamed.
@@ -28,19 +27,7 @@ struct SettingsSheet: View {
           }
           .buttonStyle(.plain)
         }
-        ListCard {
-          Button { intro = true } label: {
-            HStack {
-              Text("How it works").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-              Spacer()
-              Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3)
-            }
-            .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
-          }
-          .buttonStyle(.plain)
-        }
-        .padding(.top, 16)
-        section("Board")
+        section("Board", first: true)
         ListCard {
           SegmentedControl(
             value: Binding(get: { settings.boardTheme }, set: { t in store.update { $0.settings.boardTheme = t } }),
@@ -115,7 +102,6 @@ struct SettingsSheet: View {
     }
     .sheet(isPresented: $exporting) { ExportView().presentationBackground(Theme.background) }
     .sheet(isPresented: $restoring) { RestoreView().presentationBackground(Theme.background) }
-    .fullScreenCover(isPresented: $intro) { TutorialView { intro = false } }
     .alert(naming == .new ? "New profile" : "Rename profile", isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
       TextField("Name", text: $typed)
       Button(naming == .new ? "Create" : "Rename") { finishNaming() }

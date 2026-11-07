@@ -26,6 +26,8 @@ public struct Settings: Equatable, Sendable, Codable {
   public var movesPerFill = DEFAULT_MOVES_PER_FILL
   /// Whether the note on autoplay has been shown.
   public var seenAutoplayNote = false
+  /// The first game's tips still to show, from the first one on; empty once seen or skipped.
+  public var tips: [FirstGameTip] = []
   public var play = DEFAULT_PLAY
   /// Survival's own setup, as its setup screen leaves it.
   public var survival = DEFAULT_SURVIVAL
@@ -37,7 +39,7 @@ public struct Settings: Equatable, Sendable, Codable {
   enum CodingKeys: String, CodingKey {
     case selection, favoriteOpenings, autopilot, hapticFeedback, showCoordinates, onboarded, seenIntro, autoplay
     case engineEnabled, boardTheme, lichessUsername, chesscomUsername, growth, play
-    case movesPerFill, seenAutoplayNote
+    case movesPerFill, seenAutoplayNote, tips
     case survival
     case middlegame
     case drill
@@ -66,6 +68,7 @@ public struct Settings: Equatable, Sendable, Codable {
     play = try c.decodeIfPresent(PlayPrefs.self, forKey: .play) ?? play
     movesPerFill = try c.decodeIfPresent(Int.self, forKey: .movesPerFill) ?? movesPerFill
     seenAutoplayNote = try c.decodeIfPresent(Bool.self, forKey: .seenAutoplayNote) ?? seenAutoplayNote
+    tips = try c.decodeIfPresent([FirstGameTip].self, forKey: .tips) ?? tips
     survival = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .survival) ?? survival
     middlegame = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .middlegame) ?? middlegame
     drill = try c.decodeIfPresent(SavedDrillPrefs.self, forKey: .drill)?.prefs ?? drill

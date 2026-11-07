@@ -20,6 +20,8 @@ struct PlaybookView: View {
   var onBuild: () -> Void = {}
   /// Go to Home, after an opening page selected its opening.
   var onHome: () -> Void = {}
+  /// Start a run, after openings were added from +.
+  var onPlay: () -> Void = {}
 
   @Environment(AppStore.self) private var store
   @State private var scan = TidyScan()
@@ -154,9 +156,11 @@ struct PlaybookView: View {
         .padding(.horizontal, 16).padding(.bottom, 28)
       }
     }
-    .sheet(isPresented: $adding) {
-      NewOpeningSheet { repId, color in page = .browse(repId: repId, nodeId: nil, title: repertoireName(color)) }
-        .presentationDetents([.height(300)]).presentationBackground(Theme.background)
+    .fullScreenCover(isPresented: $adding) {
+      OnboardingView(tree: tree, index: index, onClose: { adding = false }) { next in
+        adding = false
+        if next == .autopilot { onPlay() } else { onHome() }
+      }
     }
   }
 

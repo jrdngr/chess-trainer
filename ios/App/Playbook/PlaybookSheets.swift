@@ -27,31 +27,6 @@ struct SheetNote: View {
   }
 }
 
-/// Start an opening by hand: pick a side and play the moves in. `NewOpeningSheet`.
-struct NewOpeningSheet: View {
-  let onReady: (String, ChessCore.Color) -> Void
-  @Environment(AppStore.self) private var store
-  @Environment(\.dismiss) private var dismiss
-  @State private var color = ChessCore.Color.w
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      SheetHead(title: "Add an opening")
-      SegmentedControl(value: $color, options: [(.w, "As White"), (.b, "As Black")])
-      SheetNote(text: "Play the moves in and the book names the opening for you. It joins whatever you already have for that side.")
-      Spacer().frame(height: 24)
-      SheetButton("Start playing moves", style: .primary) {
-        var repId = ""
-        store.update { repId = $0.ensureRepertoire(color) }
-        dismiss()
-        onReady(repId, color)
-      }
-      Spacer()
-    }
-    .padding(20)
-  }
-}
-
 /// What can be done to a whole side's tree. `SideMenu`.
 struct SideMenu: View {
   let repId: String

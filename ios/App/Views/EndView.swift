@@ -179,6 +179,9 @@ struct EndView: View {
       .lineLimit(1)
       .minimumScaleFactor(0.8)
       MoveStrip(items: strip, cursor: cursor, max: last, onSeek: seek)
+      if model.tip == .end, let tip = model.tip {
+        TipBubble(text: tip.text, arrow: .down, onDismiss: model.dismissTip)
+      }
       ratingCard
       RatingsList(items: moved).padding(.top, 10)
       if survival {

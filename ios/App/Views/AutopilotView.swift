@@ -44,7 +44,17 @@ struct AutopilotView: View {
   }
 
   /// The next round, picked when it starts: what the last one changed is in the store by then.
+  /// An empty Playbook starts a first game as White, adding moves from move 1.
   private func begin() {
+    if store.state.repertoires.values.allSatisfy({ $0.nodes.isEmpty }) {
+      guard let run = RunModel(firstGame: store, tree: tree, index: index, engine: Self.engine) else {
+        nothing = true
+        return
+      }
+      model = run
+      run.start()
+      return
+    }
     let selection = store.takeRoundSelection()
     guard let round = nextRound(store.state, tree, selection, history),
       let run = RunModel(round: round, selection: selection, store: store, tree: tree, index: index, engine: Self.engine)

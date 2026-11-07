@@ -35,7 +35,8 @@ public struct Gap: Equatable, Sendable {
   /// Your moves still missing to the end of the named opening, at least 1.
   public var missing: Int
   /// The moves to the reply, the reply included.
-  public var line: [String] { hole.path + [hole.san] }
+  /// The first move of a game with nothing saved has no reply: its line is the path alone.
+  public var line: [String] { hole.san.isEmpty ? hole.path : hole.path + [hole.san] }
   /// Plies of the line that are yours and already in the Playbook.
   public var path: [String] { hole.path }
   public var id: String { "\(repertoireId)#\(line.joined(separator: " "))" }

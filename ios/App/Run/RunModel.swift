@@ -75,6 +75,12 @@ final class RunModel {
   private(set) var holeGap: Gap?
   /// The run has reached its one hole and asked about it.
   private var holeAsked = false
+  /// A new player's first game: nothing saved, adding moves from move one, with tips.
+  private(set) var firstGame = false
+  /// The first game's tip on screen.
+  private(set) var tip: FirstGameTip?
+  /// The side's Playbook that moves were added to this run.
+  private var filledRep: String?
   private(set) var intro = Intro.announce
   /// How many of the way in's moves the replay has played.
   private(set) var introPly = 0
@@ -101,6 +107,19 @@ final class RunModel {
       begun: begun, round: round, prefs: autoSurvival(store.state.settings.autopilot), growth: AUTO_GROWTH,
       selection: selection, store: store, tree: tree, index: index, engine: engine)
     store.update { $0.noteStart(startKind(start: round.pick.start, at: round.at)) }
+  }
+
+  /// A new player's first game: White, nothing saved, adding moves from move one.
+  convenience init?(firstGame store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
+    var repId = ""
+    store.update { repId = $0.ensureRepertoire(.w) }
+    guard let rep = store.state.repertoires[repId] else { return nil }
+    self.init(
+      round: firstGameRound(tree), selection: Selection(color: .w, opening: ANY_OPENING), store: store, tree: tree, index: index,
+      engine: engine)
+    firstGame = true
+    holeAsked = true
+    fill = Fill(gap: firstMoveGap(rep, index), size: store.state.settings.movesPerFill)
   }
 
   /// A run set up on Survival's screen, on those options: `start` with no plan.
@@ -160,10 +179,13 @@ final class RunModel {
   /// How far into your prep the run stands, out of how far it goes along this line. Held once off prep.
   /// None for an Autopilot run on My Playbook, which always starts from move one.
   var span: PrepSpan? {
-    if round != nil && selection.opening == ANY_OPENING { return nil }
+    if round != nil && selection.opening == ANY_OPENING && !firstGame { return nil }
     if session.prepStatus == .off { return spanHeld }
     let line = run.played + continuation(session.source, run)
-    let total = prepDepth(line, run.color, session.source.prepAt, run.opened)
+    // Moves added this run are prep too, though the run's source was read before them.
+    let added = filledRep.map { prepIndex(store.state.repertoires[$0]) } ?? [:]
+    let prepAt = filledRep != nil ? { (fen: String) in added[positionKey(fen)] ?? [] } : session.source.prepAt
+    let total = prepDepth(line, run.color, prepAt, run.opened)
     let book = session.prepStatus == .complete && session.bookTo != nil ? max(0, session.bookTo! - total) : 0
     let losses = lossesIn(store.state.repertoireList)
     let ext = bookLength(playedKinds(index, Array(line.prefix(total)), run.color, losses))
@@ -185,6 +207,11 @@ final class RunModel {
   var label: PrepLabel? { prepLabel(session) }
   /// The opening the run is named for.
   var openingId: String { run.enteredIn ?? round?.pick.opening.id ?? run.openingId }
+  /// The header's name: a first game is named by the book as it goes.
+  var headerName: String {
+    if firstGame { return openingNameForPath(index, run.played)?.name ?? "My Playbook" }
+    return openingName(tree, openingId)
+  }
   var momentHere: Bool {
     prefs.moments && live && myTurn && pending == nil && prepNow.isEmpty && baseline?.fen == run.fen && baseline?.isMomentFor(run.color) == true
   }
@@ -214,7 +241,7 @@ final class RunModel {
 
   /// A Middlegame run was announced while its handoff was built, so it goes straight to the board.
   func start() {
-    if handoff != nil { toBoard() } else { later(Self.announceMs) { $0.toBoard() } }
+    if handoff != nil || firstGame { toBoard() } else { later(Self.announceMs) { $0.toBoard() } }
   }
 
   /// The announcement gives way to the board: the way in plays out, or the round begins.
@@ -342,10 +369,14 @@ final class RunModel {
   private func beginTurn() {
     turnStarted = Date()
     // Adding moves: the player picks the next one, nothing is weighed.
-    if fill != nil { return }
+    if fill != nil {
+      showTip()
+      return
+    }
     if prepNow.isEmpty { update(prepRanOut(session, index)) }
     update(closeBook(session, index))
     askAtHole()
+    showTip()
     if fill != nil { return }
     // Past your prep the engine is sure to be asked: weigh the position now.
     if prepNow.isEmpty { weigh(run.fen) }
@@ -369,6 +400,7 @@ final class RunModel {
   /// that leaves a piece loose is held a moment first, to take back.
   func play(_ move: LegalMove) {
     guard live, !held, myTurn, pending == nil, flash == nil else { return }
+    if tip != nil { dismissTip() }
     if fill != nil {
       if fillChoices.contains(where: { $0.san == move.san }) { addMove(move.san) }
       return
@@ -473,6 +505,7 @@ final class RunModel {
     let rep = store.state.repertoires[rid]
     let fresh = (1...line.count).first { k in rep.flatMap { nodeAtLine($0, Array(line.prefix(k))) } == nil } ?? line.count
     current.steps.append((session, Array(line.prefix(fresh))))
+    filledRep = rid
     store.update { state in
       state.addGrowthLine(rid, line, index)
       state.logEvent(AppEvent(
@@ -514,6 +547,39 @@ final class RunModel {
     session = last.session
     justAdded = nil
     fill = current
+  }
+
+  /* ── the first game's tips ── */
+
+  /// The tip for where the first game stands, if one is still to show there.
+  private func showTip() {
+    guard firstGame, tip == nil, live, myTurn else { return }
+    let pending = store.state.settings.tips
+    let moment: FirstGameMoment? =
+      if fill != nil { .adding(ply: run.played.count) }
+      else if filledRep != nil && pending.contains(.lineIn) { .lineIn }
+      else if label == .book { .book }
+      else if label == .out { .outOfBook }
+      else { nil }
+    guard let moment, let found = tipAt(pending, moment) else { return }
+    tip = found.tip
+    store.update { $0.settings.tips = found.rest }
+  }
+
+  /// A tap on the tip, or your next move: out of the book, the lenses' tip follows.
+  func dismissTip() {
+    let next = store.state.settings.tips.first
+    if tip == .outOfBook && next == .lens {
+      tip = .lens
+      store.update { _ = $0.settings.tips.removeFirst() }
+    } else {
+      tip = nil
+    }
+  }
+
+  /// The goal card waits until the first game's tips in play are done.
+  var tipsInPlay: Bool {
+    firstGame && (tip?.inGame == true || store.state.settings.tips.contains { $0.inGame })
   }
 
   /// Done: no more moves added, and the game goes on from here.
@@ -580,6 +646,12 @@ final class RunModel {
   private func finished(_ f: Finish) {
     stop()
     finish = f
+    if firstGame, let found = tipAt(store.state.settings.tips, .end) {
+      tip = found.tip
+      store.update { $0.settings.tips = found.rest }
+    } else if firstGame {
+      tip = nil
+    }
     before = handoff != nil ? store.state.middlegame : store.state.survival
     let line = f.ended.run.played
     let points = scoredInPoints ? f.ended.extras.points : f.ended.moves

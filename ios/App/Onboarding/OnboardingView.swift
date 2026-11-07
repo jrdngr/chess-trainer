@@ -6,19 +6,17 @@ import SwiftUI
 /// Where onboarding hands over to.
 enum OnboardingNext: Equatable { case home, autopilot }
 
-/// The first screens a new profile sees: building the first Playbook.
-///
-/// Use recommended puts in the Classical set and starts the first Autopilot
-/// run. Four other ways in: a starter set, picked by style; the openings you
-/// already play, picked one at a time; lines played in on the board; or the
-/// openings found in your Lichess or Chess.com games, which go in as soon as
-/// they are added and start the first Autopilot run. Otherwise nothing goes
-/// in until the ready screen is left, so "Add more openings" can still list
-/// and drop them. Lines saved on the board are held the same way, Back
-/// included.
+/// Adding openings, from the Playbook tab's +: four ways in. A starter set,
+/// picked by style; the openings you already play, picked one at a time;
+/// lines played in on the board; or the openings found in your Lichess or
+/// Chess.com games, which go in as soon as they are added and start a run.
+/// Otherwise nothing goes in until the ready screen is left, so "Add more
+/// openings" can still list and drop them. Lines saved on the board are held
+/// the same way, Back included. Close leaves without adding what is held.
 struct OnboardingView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
+  let onClose: () -> Void
   let onDone: (OnboardingNext) -> Void
 
   @Environment(AppStore.self) private var store
@@ -31,7 +29,7 @@ struct OnboardingView: View {
   var body: some View {
     Group {
       switch step {
-      case .path: PathsView(onRecommended: useRecommended, onStep: { step = $0 })
+      case .path: PathsView(onClose: onClose, onStep: { step = $0 })
       case .sets: SetListView(tree: tree, onBack: { step = .path }, onOpen: { step = .set($0) })
       case .set(let id):
         let set = STARTER_SETS.first { $0.id == id } ?? STARTER_SETS[0]
@@ -82,13 +80,6 @@ struct OnboardingView: View {
     onDone(next)
   }
 
-  /// The Classical set, Any favorite selected, and straight into the first run.
-  private func useRecommended() {
-    let set = STARTER_SETS.first { $0.id == "classical" } ?? STARTER_SETS[0]
-    store.update { $0.seed(tree, set) }
-    onDone(.autopilot)
-  }
-
   /// Debug builds open on a step with `ONB_STEP=sets|set:classical|pick|board|ready|browse`, for screenshots.
   /// `ready` and `pick` start with the Classical set held.
   private static var debugStep: OnboardingStep? {
@@ -117,25 +108,24 @@ enum OnboardingStep: Equatable {
   case browse
 }
 
-/// Choosing your openings: Use recommended starts the first run on the
-/// Classical set; under it, four other ways to build a Playbook.
+/// Choosing your openings: four ways to add to the Playbook.
 struct PathsView: View {
-  let onRecommended: () -> Void
+  let onClose: () -> Void
   let onStep: (OnboardingStep) -> Void
 
   var body: some View {
     VStack(spacing: 0) {
-      OnbAppBar(title: "Choose your openings", large: true)
+      OnbAppBar(title: "Choose your openings", large: true) {
+        RoundIconButton(icon: "close", action: onClose)
+      }
       ScrollView {
         VStack(spacing: 12) {
-          BigButton(label: "Use recommended", action: onRecommended)
           LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
             path("Suggest a set", "star") { onStep(.sets) }
             path("Pick openings", "tree") { onStep(.pick) }
             path("Play on the board", "play") { onStep(.board) }
             path("Import my games", "download") { onStep(.importGames) }
           }
-          .padding(.top, 4)
         }
         .padding(.horizontal, 16).padding(.top, 16)
       }

@@ -31,6 +31,9 @@ struct InlineFillPanel: View {
           HoleAnswerList(source: model) { model.addMove($0) }
         }
         .scrollIndicators(.hidden).scrollBounceBehavior(.basedOnSize)
+        .tip(
+          model.tip, when: model.tip == .firstMove || model.tip == .reply, arrow: .down, arrowAt: 0.12,
+          onDismiss: model.dismissTip)
       }
     }
   }

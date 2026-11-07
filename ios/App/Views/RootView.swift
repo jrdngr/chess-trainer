@@ -29,8 +29,6 @@ struct RootView: View {
   @State private var growing: GrowthModel?
   /// A line from the opening sheet for Middlegame mode to play out.
   @State private var middlegameLine: MiddlegameLine?
-  /// The welcome's Play the tutorial.
-  @State private var tutorial = false
 
   var body: some View {
     ZStack {
@@ -51,18 +49,23 @@ struct RootView: View {
   }
 
   @ViewBuilder private func content(_ tree: OpeningTree, _ index: ReferenceIndex) -> some View {
-    if !store.state.settings.seenIntro {
-      // The welcome, then the tutorial or Skip; both lead to choosing openings.
-      if tutorial {
-        TutorialView { store.update { $0.settings.seenIntro = true } }
-      } else {
-        WelcomeView(onTutorial: { tutorial = true }, onSkip: { store.update { $0.settings.seenIntro = true } })
-      }
-    } else if !store.state.settings.onboarded {
-      OnboardingView(tree: tree, index: index) { next in
+    if !store.state.settings.seenIntro || !store.state.settings.onboarded {
+      // The welcome, then a first game with tips, or Skip to Home.
+      WelcomeView(onTutorial: {
+        store.update {
+          $0.settings.seenIntro = true
+          $0.settings.onboarded = true
+          $0.settings.tips = FirstGameTip.allCases
+        }
         tab = .home
-        mode = next == .autopilot ? .autopilot : nil
-      }
+        mode = .autopilot
+      }, onSkip: {
+        store.update {
+          $0.settings.seenIntro = true
+          $0.settings.onboarded = true
+        }
+        tab = .home
+      })
     } else if importing {
       ImportView(onBack: { importing = false })
     } else if let growing {
@@ -109,7 +112,10 @@ struct RootView: View {
         }, onMiddlegame: { side, sans in
           middlegameLine = MiddlegameLine(color: side, sans: sans)
           mode = .middlegame
-        }, onImport: { importing = true }, onBuild: { building = true }, onHome: { tab = .home })
+        }, onImport: { importing = true }, onBuild: { building = true }, onHome: { tab = .home }, onPlay: {
+          setupFirst = false
+          mode = .autopilot
+        })
           .tabItem { Label(Tab.playbook.label, systemImage: Tab.playbook.symbol) }.tag(Tab.playbook)
         StatsView(tree: tree, index: index)
           .tabItem { Label(Tab.stats.label, systemImage: Tab.stats.symbol) }.tag(Tab.stats)

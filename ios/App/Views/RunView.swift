@@ -42,7 +42,11 @@ struct RunView: View {
 
   private var board: some View {
     VStack(spacing: 0) {
-      if survival { SurvivalRunBar(model: model, onExit: close) } else { header }
+      if survival {
+        SurvivalRunBar(model: model, onExit: close)
+      } else {
+        header.tip(model.tip, when: model.tip == .lineIn, onDismiss: model.dismissTip)
+      }
       // The Eval lens's bar takes the captured row's place, so the board never moves.
       // While adding moves Growth's eval bar takes the row, with the engine's word on the answers.
       CapturedRow(fen: model.shownFen, orientation: model.run.color)
@@ -135,7 +139,7 @@ struct RunView: View {
   private var header: some View {
     ZStack {
       VStack(spacing: 6) {
-        Text(openingName(model.tree, model.openingId)).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
+        Text(model.headerName).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
         if model.endgameOn {
           // Endgame rules, on for the rest of the game once it reaches an endgame: moves are judged by the result they keep.
           Text("ENDGAME").font(.system(size: 11, weight: .bold)).tracking(0.7).foregroundStyle(Theme.text2)
@@ -168,9 +172,10 @@ struct RunView: View {
     return VStack(spacing: 0) {
       LensBar(
         held: $lens, lenses: LENSES, enabled: lensEnabled, plan: $planOpen, planEnabled: lensEnabled && plan != nil,
-        planPulse: planSeeded && plan != nil && plan != planSeen
+        planPulse: planSeeded && plan != nil && plan != planSeen, spotlight: model.tip == .lens ? .pawns : nil
       )
       .opacity(model.held ? 0 : 1).allowsHitTesting(!model.held)
+      .tip(model.tip, when: model.tip == .lens && lens == nil, arrowAt: 0.1, onDismiss: model.dismissTip)
       VStack(spacing: 0) {
         if lens == .eval {
           EvalRunCard(trail: model.session.evalTrail, last: model.session.lastJudged, color: model.run.color)
@@ -188,6 +193,7 @@ struct RunView: View {
         } else {
           goalSlot.padding(.top, 12)
           status.padding(.top, 14)
+            .tip(model.tip, when: model.tip == .book || model.tip == .outOfBook, arrowAt: 0.6, onDismiss: model.dismissTip)
         }
       }
       // Gives way before the board does: what doesn't fit is cut, never pushed up, and can't take a touch outside it.
@@ -233,7 +239,7 @@ struct RunView: View {
         movesLine(sansToMoveText(Array(model.introPath.prefix(model.introPly))))
       } else if !model.held && model.autoplayNote {
         movesLine("The moves up to your \(openingName(model.tree, model.introOpening)) were played for you.")
-      } else if !model.held, model.prefs.missions, let mission = model.session.state.extras.mission {
+      } else if !model.held, model.prefs.missions, !model.tipsInPlay, let mission = model.session.state.extras.mission {
         GoalCard(mission: mission)
       } else if model.run.opened > 0 {
         movesLine("From \(sansToMoveText(Array(model.run.played.prefix(model.run.opened))))")
@@ -330,21 +336,15 @@ struct RunView: View {
         .allowsHitTesting(false)
         .offset(y: -42)
         .introPillIn().id("adding")
-    } else if model.intro == .replay || (model.intro == .done && model.introPath.isEmpty && model.session.state.moves == 0 && model.miss == nil) {
-      // While the way in plays, and over a round from move one until your first move.
-      HStack(spacing: 8) {
-        if model.intro == .replay {
-          Text("Autoplay").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.background)
-            .padding(.horizontal, 10).padding(.vertical, 4).background(Capsule().fill(Theme.accent))
-        }
-        Text(openingName(model.tree, model.introOpening)).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text).lineLimit(1)
-      }
-      .padding(.leading, model.intro == .replay ? 8 : 16).padding(.trailing, 16).padding(.vertical, 8)
-      .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
-      .allowsHitTesting(false)
-      // Over the gap above the board, not on the back rank's pieces.
-      .offset(y: -42)
-      .introPillIn().id(model.intro == .replay ? "replay" : "wait")
+    } else if model.intro == .replay {
+      // While the way in plays; the opening's name is in the header already.
+      Text("Autoplay").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.background)
+        .padding(.horizontal, 16).padding(.vertical, 8)
+        .background(Capsule().fill(Theme.accent)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
+        .allowsHitTesting(false)
+        // Over the gap above the board, not on the back rank's pieces.
+        .offset(y: -42)
+        .introPillIn().id("replay")
     } else if let miss = model.miss {
       pill("Off your prep", Theme.accent).id("miss-\(miss.from)\(miss.to)")
     } else if let note = model.note {
