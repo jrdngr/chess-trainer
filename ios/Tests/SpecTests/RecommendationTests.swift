@@ -83,6 +83,18 @@ import Testing
   let tree = openingTree(bookIndex)
   var state = AppState()
   state.addLine(state.ensureRepertoire(.w), line("e4 e5 Nf3 Nc6 Bb5"), .fixed(.book))
+  func play() {
+    let at = Env.now() + Double(state.games.count + 1)
+    state.games.append(GameRecord(
+      id: "g\(at)", mode: .autopilot, at: at, color: .w, picked: DEFAULT_SELECTION, opening: "", moves: [],
+      result: "*", termination: "ended"))
+  }
+  let random = Selection(color: .random, opening: ANY_OPENING)
+  // The game that added the moves, then one that only plays them: no two fills in a row.
+  play()
+  #expect(basicRunGap(state, tree, random) == nil)
+  #expect(basicRunGap(state, tree, random, asked: true)?.line == line("e4"))
+  play()
   #expect(basicRunGap(state, tree, Selection(color: .w, opening: ANY_OPENING)) == nil)
   #expect(basicRunGap(state, tree, Selection(color: .random, opening: ANY_OPENING))?.line == line("e4"))
   let qgd = try #require(tree.byId["d4 d5 c4 e6"])

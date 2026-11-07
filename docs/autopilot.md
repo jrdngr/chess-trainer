@@ -100,7 +100,9 @@ data gives the same run.
 
 Black's basics come first. With Black or Random picked and no Black answer
 to 1.e4 or 1.d4, the next run is Black from move one: the opponent opens
-with that move and you add your answer before the game goes on. After five
+with that move and you add your answer before the game goes on. It waits
+until the last game added nothing, so two fills never come back to back:
+after the first game, the next one plays the White opening it grew. After five
 Play games as White with no Black lines, Home asks whether to add a Black
 opening; "Play as Black" starts that run whatever is picked, and "Not now"
 waits five more games.

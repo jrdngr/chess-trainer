@@ -261,11 +261,17 @@ public func growScore(_ gap: Gap, top: Gap?, pace p: Double, reps: [Repertoire],
 
 /* ── the questions, on the app's state ── */
 
+/// Play games since anything was added before a basics run: the game that
+/// added moves, then one that only plays them, so two fills never come back to back.
+public let BASIC_RUN_AFTER = 2
+
 /// The Black basic a Play run fills before anything else, when the selection
 /// plays Black or either side: the answer to 1.e4 or 1.d4 still missing, the
-/// selected opening's own first move first. Nil once both are answered.
-public func basicRunGap(_ state: AppState, _ tree: OpeningTree, _ selection: Selection) -> Gap? {
+/// selected opening's own first move first. Waits until the last game added
+/// nothing, unless the player `asked` for it. Nil once both are answered.
+public func basicRunGap(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, asked: Bool = false) -> Gap? {
   guard colorsOf(selection.color).contains(.b) else { return nil }
+  guard asked || runsSinceAdded(state.games, state.repertoireList) >= BASIC_RUN_AFTER else { return nil }
   let missing = basicGaps(state.repertoireList, tree.index).filter { $0.color == .b }
   let first = nodeById(tree, selection.opening).sans.first
   return missing.first { $0.hole.san == first } ?? missing.first
