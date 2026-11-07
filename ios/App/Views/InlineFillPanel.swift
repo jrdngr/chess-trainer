@@ -15,6 +15,7 @@ struct InlineFillPanel: View {
 
   /// Answers listed before More: as many as fit under the board.
   static let shown = 3
+  private static let listEnd = "answers-end"
 
   var body: some View {
     let fill = model.fill
@@ -46,10 +47,17 @@ struct InlineFillPanel: View {
         }
         .font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
         .padding(.horizontal, 4).padding(.top, 14).padding(.bottom, 8)
-        ScrollView {
-          HoleAnswerList(source: model, limit: showAll ? nil : Self.shown) { model.addMove($0) }
+        // Only three rows fit under the board: More scrolls the rest into view.
+        ScrollViewReader { scroller in
+          ScrollView {
+            HoleAnswerList(source: model, limit: showAll ? nil : Self.shown) { model.addMove($0) }
+            Color.clear.frame(height: 1).id(Self.listEnd)
+          }
+          .scrollIndicators(.hidden).scrollBounceBehavior(.basedOnSize)
+          .onChange(of: showAll) {
+            if showAll { withAnimation(.easeOut(duration: 0.3)) { scroller.scrollTo(Self.listEnd, anchor: .bottom) } }
+          }
         }
-        .scrollIndicators(.hidden).scrollBounceBehavior(.basedOnSize)
         .tip(
           model.tip, when: model.tip == .firstMove || model.tip == .reply, arrow: .down, arrowAt: 0.12,
           onDismiss: model.dismissTip)
