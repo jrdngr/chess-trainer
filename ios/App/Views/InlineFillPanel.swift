@@ -4,15 +4,22 @@ import Model
 import Shared
 import SwiftUI
 
-/// Under the board while a run adds moves to the Playbook, laid out as Growth's
-/// hole: the reply you had no answer to, the answers with who recommends them,
-/// Undo and Done. Each pick is saved and played, the book's most played reply
-/// comes back, and Done goes back to the game.
+/// Under the board while a run adds moves to the Playbook: Undo, the
+/// "Adding new moves" pill and Done, then Growth's answers with who recommends
+/// them. Each pick is saved and played, the book's most played reply comes
+/// back, and Done goes back to the game.
 struct InlineFillPanel: View {
   @Bindable var model: RunModel
+  /// The answers past the first few are shown.
+  @State private var showAll = false
+
+  /// Answers listed before More: as many as fit under the board.
+  static let shown = 3
 
   var body: some View {
     let fill = model.fill
+    let ranked = model.atHole && !model.thinking ? model.ranked : []
+    let hidden = showAll ? 0 : max(ranked.count - Self.shown, 0)
     VStack(spacing: 0) {
       HStack(alignment: .center, spacing: 4) {
         Button { model.undoAdded() } label: {
@@ -20,15 +27,27 @@ struct InlineFillPanel: View {
         }
         .buttonStyle(.plain).disabled(fill?.steps.isEmpty ?? true).opacity(fill?.steps.isEmpty ?? true ? 0.35 : 1)
         .frame(maxWidth: .infinity, alignment: .leading)
-        GrowthPrompt(side: model.run.color, who: theyPlayed, ctx: context).layoutPriority(1)
+        Text("Adding new moves").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.background).lineLimit(1)
+          .padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(Theme.accent))
+          .fixedSize().layoutPriority(1)
         Button("Done") { model.doneAdding() }
           .buttonStyle(PlayButtonStyle(height: 38, radius: 11, font: 14)).fixedSize()
           .frame(maxWidth: .infinity, alignment: .trailing)
       }
-      if model.atHole && !model.thinking {
-        PlaySection(title: "Answer it", aside: fill.map { answerAside(added: $0.added, of: $0.size) })
+      if !ranked.isEmpty {
+        HStack(spacing: 10) {
+          Text("Answer it")
+          if hidden > 0 {
+            Button("\(hidden) more") { showAll = true }
+              .font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.accent).buttonStyle(.plain)
+          }
+          Spacer()
+          if let fill { Text(answerAside(added: fill.added, of: fill.size)).foregroundStyle(Theme.text3) }
+        }
+        .font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
+        .padding(.horizontal, 4).padding(.top, 14).padding(.bottom, 8)
         ScrollView {
-          HoleAnswerList(source: model) { model.addMove($0) }
+          HoleAnswerList(source: model, limit: showAll ? nil : Self.shown) { model.addMove($0) }
         }
         .scrollIndicators(.hidden).scrollBounceBehavior(.basedOnSize)
         .tip(
@@ -36,18 +55,7 @@ struct InlineFillPanel: View {
           onDismiss: model.dismissTip)
       }
     }
-  }
-
-  /// "They played Nf3", the reply you are answering.
-  private var theyPlayed: String {
-    model.myTurn ? model.run.played.last.map { "They played \($0)" } ?? "Your move" : "Thinking\u{2026}"
-  }
-
-  private var context: String? {
-    guard model.myTurn, !model.thinking, let fen = walkSan(Array(model.run.played.dropLast())).fens.last,
-      let last = model.run.played.last,
-      let reply = popularReplies(model.index, fen, 0).first(where: { $0.san == last })
-    else { return nil }
-    return "\(JS.string(reply.share))% of strong players' games \u{00b7} \(formatGameCount(reply.games))"
+    // Each hole starts with the first few answers.
+    .onChange(of: model.run.fen) { showAll = false }
   }
 }

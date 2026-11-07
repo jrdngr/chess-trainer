@@ -78,24 +78,22 @@ struct AnswerRow: View {
         Text(option.san).font(.system(size: 17, weight: .bold).monospacedDigit())
           .foregroundStyle(roleColor(role) ?? Theme.text).frame(minWidth: 56, alignment: .leading)
         VStack(alignment: .leading, spacing: 4) {
-          Text(meta).font(.system(size: 12.5)).foregroundStyle(Theme.text3).multilineTextAlignment(.leading)
+          Text(meta).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.text2).lineLimit(1)
           if let nudge, let pill = nudge.pill { NudgePill(text: pill, tone: nudge.tone) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         DeltaTag(cp: delta)
         Icon(name: "plus", size: 18).foregroundStyle(Theme.text)
       }
-      .padding(.horizontal, 16).padding(.vertical, 10).frame(minHeight: 54)
+      .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 50)
       .background(roleTint(role)).contentShape(Rectangle())
     }
     .buttonStyle(.plain)
   }
 
   private var meta: String {
-    if option.games > 0 {
-      return "\(JS.string(option.share))% of strong players' replies \u{00b7} \(formatGameCount(option.games)) games"
-    }
-    return option.engine ? "Engine's pick \u{00b7} past the book" : "Not in the book \u{00b7} passed by the engine"
+    if option.games > 0 { return "\(Int(JSRound(option.share)))% of games" }
+    return option.engine ? "Engine's pick" : "Not in the book"
   }
 }
 
@@ -178,6 +176,8 @@ func answerAside(added: Int, of size: Int) -> String {
 /// The answers on offer at a hole, ranked, each in its arrow's color with its pattern pill and eval change.
 struct HoleAnswerList<Source: HoleAnswers>: View {
   let source: Source
+  /// How many answers to list, best first; nil lists them all.
+  var limit: Int? = nil
   let onPick: (String) -> Void
 
   var body: some View {
@@ -185,7 +185,7 @@ struct HoleAnswerList<Source: HoleAnswers>: View {
     let roles = source.roles
     let toned = source.toned
     ListCard {
-      ForEach(source.ranked, id: \.san) { option in
+      ForEach(limit.map { Array(source.ranked.prefix($0)) } ?? source.ranked, id: \.san) { option in
         AnswerRow(
           option: option, role: roles.first { $0.san == option.san }?.role,
           nudge: toned.first { $0.san == option.san && $0.tone != nil }, delta: source.delta(option.san, evals)

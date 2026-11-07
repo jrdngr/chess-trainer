@@ -154,12 +154,6 @@ struct RunView: View {
         }
         .foregroundStyle(Theme.text).buttonStyle(.plain)
         Spacer()
-        let n = Int(JSRound(model.ratingGained))
-        Text(n < 0 ? "\u{2212}\(-n)" : "+\(n)")
-          .font(.subheadline.monospacedDigit().bold())
-          .foregroundStyle(n > 0 ? Theme.good : n < 0 ? Theme.bad : Theme.text2)
-          .padding(.horizontal, 10).padding(.vertical, 4)
-          .background(Capsule().fill(Theme.surface2))
       }
     }
     .padding(.horizontal).padding(.vertical, 10)
@@ -328,14 +322,6 @@ struct RunView: View {
         .padding(.horizontal, 14).padding(.vertical, 6)
         .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.45), radius: 10, y: 6)
         .padding(.top, 8)
-    } else if model.fill != nil {
-      // Up the whole time moves are being added, so the board reads as different.
-      Text("Adding new moves").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.background)
-        .padding(.horizontal, 16).padding(.vertical, 8)
-        .background(Capsule().fill(Theme.accent)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
-        .allowsHitTesting(false)
-        .offset(y: -42)
-        .introPillIn().id("adding")
     } else if model.intro == .replay {
       // While the way in plays; the opening's name is in the header already.
       Text("Autoplay").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.background)
@@ -392,8 +378,10 @@ struct RunView: View {
 private struct AddingBorder: View {
   var body: some View {
     GeometryReader { geo in
-      RoundedRectangle(cornerRadius: geo.size.width * 0.03)
+      // Just outside the board, clear of the coordinates on its edge squares.
+      RoundedRectangle(cornerRadius: geo.size.width * 0.03 + 4)
         .strokeBorder(Theme.accent, lineWidth: 3)
+        .padding(-4)
         .shadow(color: Theme.accent.opacity(0.6), radius: 10)
     }
     .allowsHitTesting(false)

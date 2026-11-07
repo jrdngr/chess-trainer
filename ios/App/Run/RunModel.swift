@@ -233,12 +233,6 @@ final class RunModel {
     return (move, reply.flatMap { applyUci(move.after, $0) })
   }
 
-  /// What this run has done to the opening's own rating.
-  var ratingGained: Double {
-    guard let r = ratings.byKey[openingId] else { return 0 }
-    return r.after - r.before
-  }
-
   /// A Middlegame run was announced while its handoff was built, so it goes straight to the board.
   func start() {
     if handoff != nil || firstGame { toBoard() } else { later(Self.announceMs) { $0.toBoard() } }
