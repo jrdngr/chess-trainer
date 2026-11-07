@@ -44,11 +44,6 @@ struct SettingsSheet: View {
                     on: settings.autopilot.moveScores) { store.update { $0.settings.autopilot.moveScores.toggle() } }
           FillSizeRow(value: settings.movesPerFill) { n in store.update { $0.settings.movesPerFill = n } }
         }
-        section("Engine")
-        ListCard {
-          ToggleRow(label: "Engine", hint: "Analysis's lines",
-                    on: settings.engineEnabled) { store.update { $0.settings.engineEnabled.toggle() } }
-        }
         section("Profiles")
         ListCard {
           ForEach(store.profiles.profiles) { profile in profileRow(profile) }

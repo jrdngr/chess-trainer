@@ -18,7 +18,6 @@ public struct Settings: Equatable, Sendable, Codable {
   public var seenIntro = false
   /// Rounds that start inside an opening play the moves into it for you first.
   public var autoplay = true
-  public var engineEnabled = true
   public var boardTheme = BoardTheme.slate
   public var lichessUsername = ""
   public var chesscomUsername = ""
@@ -41,7 +40,7 @@ public struct Settings: Equatable, Sendable, Codable {
 
   enum CodingKeys: String, CodingKey {
     case selection, favoriteOpenings, autopilot, hapticFeedback, showCoordinates, onboarded, seenIntro, autoplay
-    case engineEnabled, boardTheme, lichessUsername, chesscomUsername, growth, play
+    case boardTheme, lichessUsername, chesscomUsername, growth, play
     case movesPerFill, seenAutoplayNote, tips
     case survival
     case middlegame
@@ -62,7 +61,6 @@ public struct Settings: Equatable, Sendable, Codable {
     onboarded = try c.decodeIfPresent(Bool.self, forKey: .onboarded) ?? onboarded
     seenIntro = try c.decodeIfPresent(Bool.self, forKey: .seenIntro) ?? seenIntro
     autoplay = try c.decodeIfPresent(Bool.self, forKey: .autoplay) ?? autoplay
-    engineEnabled = try c.decodeIfPresent(Bool.self, forKey: .engineEnabled) ?? engineEnabled
     boardTheme = try c.decodeIfPresent(BoardTheme.self, forKey: .boardTheme) ?? boardTheme
     lichessUsername = try c.decodeIfPresent(String.self, forKey: .lichessUsername) ?? lichessUsername
     chesscomUsername = try c.decodeIfPresent(String.self, forKey: .chesscomUsername) ?? chesscomUsername

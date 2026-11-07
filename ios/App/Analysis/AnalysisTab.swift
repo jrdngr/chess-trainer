@@ -44,7 +44,6 @@ struct AnalysisTab: View {
   var visible: [String] { Array(sans.prefix(cursor)) }
   private var fens: [String] { walkSan(visible).fens }
   var fen: String { fens.last! }
-  private var settings: Settings { store.state.settings }
   /// The engine's last word, once it is about the position shown.
   private var current: EngineSnapshot? { engine.snapshot.flatMap { $0.fen == fen ? $0 : nil } }
   private var lines: [SanLine] { current == nil ? [] : engine.sanLines }
@@ -66,7 +65,7 @@ struct AnalysisTab: View {
     }
     .background(Theme.background)
     .overlay(alignment: .bottom) { toastView }
-    .task(id: settings.engineEnabled ? fen : nil) { await engine.run(settings.engineEnabled ? fen : nil) }
+    .task(id: fen) { await engine.run(fen) }
     .task(id: lens == .pawns ? fen : nil) {
       guard lens == .pawns else { return }
       let at = fen
@@ -78,9 +77,7 @@ struct AnalysisTab: View {
 
   @ViewBuilder private var content: some View {
     VStack(spacing: 0) {
-      if settings.engineEnabled {
-        EvalRow(best: best, depth: current?.depth ?? 0).padding(.bottom, 10)
-      }
+      EvalRow(best: best, depth: current?.depth ?? 0).padding(.bottom, 10)
       if let caption = marks?.caption {
         Text(caption).font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.text).frame(minHeight: 22).padding(.bottom, 6)
       } else {
@@ -108,9 +105,7 @@ struct AnalysisTab: View {
         .frame(maxWidth: .infinity).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface)).padding(.top, 8)
     }
     EngineSection(
-      label: "Basic evaluator", enabled: settings.engineEnabled, started: engine.started,
-      thinking: current?.thinking ?? true, fen: fen, lines: lines,
-      onToggle: { store.update { $0.settings.engineEnabled.toggle() } }, onPlay: play)
+      started: engine.started, thinking: current?.thinking ?? true, fen: fen, lines: lines, onPlay: play)
     AnalysisSectionHead(title: "Reference") {
       Button { showReference.toggle() } label: { AnalysisChip(text: showReference ? "Hide" : "Show") }.buttonStyle(.plain)
     }
@@ -153,7 +148,7 @@ struct AnalysisTab: View {
   }
 
   private var bestArrow: [BoardArrow] {
-    guard settings.engineEnabled, let uci = best?.pv.first, let move = applyUci(fen, uci) else { return [] }
+    guard let uci = best?.pv.first, let move = applyUci(fen, uci) else { return [] }
     return [BoardArrow(from: move.from, to: move.to, color: Theme.accent)]
   }
 

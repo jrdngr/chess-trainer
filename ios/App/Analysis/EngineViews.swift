@@ -28,36 +28,29 @@ struct EvalRow: View {
   }
 }
 
-/// The engine's section: its name and switch, then its lines, each a tap to play its first move.
+/// The engine's lines, each a tap to play its first move.
 struct EngineSection: View {
-  let label: String
-  let enabled: Bool
   let started: Bool
   let thinking: Bool
   let fen: String
   let lines: [SanLine]
-  let onToggle: () -> Void
   let onPlay: (String) -> Void
 
   var body: some View {
-    AnalysisSectionHead(title: label) {
-      Button(action: onToggle) { AnalysisChip(text: enabled ? "On" : "Off", tone: enabled ? .on : .plain) }.buttonStyle(.plain)
-    }
-    if enabled {
-      VStack(spacing: 0) {
-        if lines.isEmpty {
-          Text(!started ? "Starting\u{2026}" : thinking ? "Thinking\u{2026}" : "No lines")
-            .font(.system(size: 13)).foregroundStyle(Theme.text3)
-            .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading).padding(.horizontal, 16)
-        }
-        ForEach(Array(lines.enumerated()), id: \.element.id) { i, line in
-          if i > 0 { Rectangle().fill(.white.opacity(0.07)).frame(height: 1) }
-          row(line)
-        }
+    VStack(spacing: 0) {
+      if lines.isEmpty {
+        Text(!started ? "Starting\u{2026}" : thinking ? "Thinking\u{2026}" : "No lines")
+          .font(.system(size: 13)).foregroundStyle(Theme.text3)
+          .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading).padding(.horizontal, 16)
       }
-      .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
-      .clipShape(RoundedRectangle(cornerRadius: 16))
+      ForEach(Array(lines.enumerated()), id: \.element.id) { i, line in
+        if i > 0 { Rectangle().fill(.white.opacity(0.07)).frame(height: 1) }
+        row(line)
+      }
     }
+    .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
+    .clipShape(RoundedRectangle(cornerRadius: 16))
+    .padding(.top, 16)
   }
 
   private func row(_ line: SanLine) -> some View {
