@@ -1,3 +1,4 @@
+import Foundation
 import ChessCore
 import Model
 import Testing
@@ -13,9 +14,9 @@ import Testing
   // A game that never stays in the book goes from the line straight out of it.
   let out = try #require(tipAt(reply.rest, .outOfBook))
   #expect(out.tip == .outOfBook)
-  #expect(out.rest == [.lens, .end])
+  #expect(out.rest == [.lens] + FirstGameTip.home)
   #expect(tipAt(out.rest, .book) == nil)
-  #expect(tipAt([], .end) == nil)
+  #expect(tipAt([], .outOfBook) == nil)
 }
 
 /// The first game starts at move one as White with nothing saved, at the
@@ -45,13 +46,24 @@ import Testing
   #expect(firstGameReply(line("e4 e5 Nf3")) == nil)
 }
 
-/// When the first game ends, only Home's card is left to show, even if the
-/// game ended before its later tips; Home shows it until it is dismissed.
-@Test func firstGameEndLeavesOnlyHomeCard() {
-  let early = tipsAfterFirstGame([.lineIn, .book, .outOfBook, .lens, .end])
-  #expect(early == [.end])
-  #expect(homeCardPending(early))
+/// When the first game ends, Home's tips are left to show, even if the game
+/// ended before its later tips; Home shows none while the game's are pending.
+@Test func firstGameEndLeavesHomeTips() {
+  let early = tipsAfterFirstGame([.lineIn, .book, .outOfBook, .lens] + FirstGameTip.home)
+  #expect(early == FirstGameTip.home)
+  #expect(homeTip(early) == .freeform)
+  #expect(homeTip(Array(early.dropFirst(4))) == .play)
   #expect(tipsAfterFirstGame([]) == [])
-  #expect(!homeCardPending([]))
-  #expect(!homeCardPending(FirstGameTip.allCases))
+  #expect(homeTip([]) == nil)
+  #expect(homeTip(FirstGameTip.allCases) == nil)
+}
+
+/// A save from before Home's tips, still owing the page on how Play works,
+/// gets Home's tips instead; unknown names are dropped.
+@Test func oldSaveOwingHowPlayWorksGetsHomeTips() throws {
+  #expect(FirstGameTip.decoded(["end"]) == FirstGameTip.home)
+  #expect(FirstGameTip.decoded(["lens", "nope"]) == [.lens])
+  let json = #"{"tips":["end"]}"#.data(using: .utf8)!
+  let settings = try JSONDecoder().decode(Settings.self, from: json)
+  #expect(homeTip(settings.tips) == .freeform)
 }

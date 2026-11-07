@@ -5,7 +5,8 @@ import SwiftUI
 /// Home: Play's next run on its button with the selection under it, Middlegame and
 /// Endgames, Recommendations and Milestones. A mode tile starts the mode on
 /// your saved settings; press and hold Middlegame for Start or Settings (its
-/// setup screen first).
+/// setup screen first). After the first game, tips on the controls under Play
+/// and then on Play itself, one per tap.
 struct HomeView: View {
   let tree: OpeningTree
   let onOpen: (Mode) -> Void
@@ -34,10 +35,12 @@ struct HomeView: View {
         .padding(.top, 2).padding(.bottom, 12)
         VStack(spacing: 0) {
           autopilot
+            .tip(tip, when: tip?.playStep != nil, inset: 8) { nextHomeTip(store) }
           PlayFooter()
         }
-        .background(Theme.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface))
+        // Over the tiles below, so a tip hanging past the card stays on top.
+        .zIndex(1)
         .padding(.bottom, 10)
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 10) {
           tile("Middlegame", "middlegame", .middlegame, held: true)
@@ -51,13 +54,15 @@ struct HomeView: View {
       }
       .padding(.horizontal, 16).padding(.bottom, 24)
     }
-    .sheet(isPresented: $settings) { SettingsSheet().presentationBackground(Theme.background) }
-    .fullScreenCover(isPresented: Binding(
-      get: { homeCardPending(store.state.settings.tips) },
-      set: { shown in if !shown { store.update { $0.settings.tips = [] } } }
-    )) {
-      PlayHowPage { store.update { $0.settings.tips = [] } }
+    // While a tip shows, a tap anywhere goes to the next one.
+    .overlay {
+      if tip != nil {
+        SwiftUI.Color.black.opacity(0.001).contentShape(Rectangle())
+          .onTapGesture { nextHomeTip(store) }
+          .accessibilityHidden(true)
+      }
     }
+    .sheet(isPresented: $settings) { SettingsSheet().presentationBackground(Theme.background) }
     .onAppear {
       guard store.takeSettingsHeld() else { return }
       var still = Transaction()
@@ -66,10 +71,12 @@ struct HomeView: View {
     }
   }
 
+  private var tip: FirstGameTip? { homeTip(store.state.settings.tips) }
+
   /// What Play would start with, said on its button, or that there is nothing to play yet.
   @ViewBuilder private var autopilot: some View {
     let selection = store.peekRoundSelection()
-    if let round = nextRound(store.state, tree, selection, AutoHistory()) {
+    if let round = nextRound(store.state, tree, selection, store.autoHistory) {
       let rep = store.state.repertoireList.first { $0.color == round.pick.color }
       // Freeform always starts from move one, so its button shows no segments.
       let span = store.state.settings.start == .freeform ? nil : roundSpan(rep, round.pick, round.at)
@@ -96,6 +103,7 @@ struct HomeView: View {
         .padding(.horizontal, 15).padding(.vertical, 14)
         .background(LinearGradient(
           colors: [Theme.accent.opacity(0.22), Theme.accent.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
+        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 20, topTrailingRadius: 20))
       }
       .buttonStyle(.plain)
     }
@@ -172,13 +180,24 @@ struct AutopilotPlate: View {
   }
 }
 
+/// The next of Home's tips.
+@MainActor private func nextHomeTip(_ store: AppStore) {
+  withAnimation(.easeOut(duration: 0.15)) {
+    store.update { if !$0.settings.tips.isEmpty { $0.settings.tips.removeFirst() } }
+  }
+}
+
 /// Under Play's button on Home: the side, how runs start, and the opening.
 private struct PlayFooter: View {
   @Environment(AppStore.self) private var store
   @State private var picking: SelectionPicking?
+  /// The side button's width and its row's, to point a tip at the side or a half of the switch.
+  @State private var sideWidth: CGFloat = 62
+  @State private var rowWidth: CGFloat = 327
 
   var body: some View {
     let settings = store.state.settings
+    let tip = homeTip(settings.tips)
     VStack(spacing: 8) {
       HStack(spacing: 8) {
         Button { picking = .color } label: {
@@ -191,10 +210,13 @@ private struct PlayFooter: View {
           .contentShape(RoundedRectangle(cornerRadius: 12))
         }
         .accessibilityLabel("Side")
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { sideWidth = $0 }
         SegmentedControl(
           value: Binding(get: { settings.start }, set: { start in store.update { $0.settings.start = start } }),
           options: [(RunStart.freeform, "Freeform"), (RunStart.drill, "Drill")], track: Theme.background)
       }
+      .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { rowWidth = $0 }
+      .tip(tip, when: tip.map { [.freeform, .drill, .side].contains($0) } ?? false, arrowAt: arrowAt(tip)) { nextHomeTip(store) }
       Button { picking = .quick } label: {
         HStack(spacing: 8) {
           SelectionTrail(opening: settings.selection.opening).frame(maxWidth: .infinity, alignment: .leading)
@@ -204,48 +226,23 @@ private struct PlayFooter: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface2))
         .contentShape(RoundedRectangle(cornerRadius: 12))
       }
+      .tip(tip, when: tip == .opening) { nextHomeTip(store) }
     }
     .padding(8)
     .buttonStyle(.plain)
     .selectionSheets($picking)
   }
-}
 
-/// After the first game, in the welcome's style: how a game goes from here, until Got it.
-private struct PlayHowPage: View {
-  let onDone: () -> Void
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      ZStack {
-        card(["e4", "c5"], .b).rotationEffect(.degrees(-11)).offset(x: -78, y: 14).opacity(0.75)
-        card(["d4", "d5", "c4", "e6"], .b).rotationEffect(.degrees(11)).offset(x: 78, y: 14).opacity(0.75)
-        card(["e4", "e5", "Nf3", "Nc6", "Bc4"], .w)
-          .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.accent, lineWidth: 1.5))
-      }
-      .frame(maxWidth: .infinity).frame(height: 190).padding(.top, 40)
-      Text(FirstGameTip.end.text).font(.system(size: 30, weight: .heavy)).tracking(-0.9).foregroundStyle(Theme.text)
-        .padding(.top, 24)
-      VStack(alignment: .leading, spacing: 16) {
-        WelcomePoint(glyph: "\u{265E}", text: "Each game plays a line from your Playbook.")
-        WelcomePoint(glyph: "\u{265F}\u{FE0E}", text: "Once you know a line, the game pauses to let you add new moves.")
-        WelcomePoint(glyph: "\u{265A}", text: "See how far you get before you blunder!")
-      }
-      .padding(.top, 22)
-      Spacer(minLength: 0)
-      BigButton(label: "Got it", action: onDone).padding(.bottom, 8)
+  /// Where along the side-and-switch row a tip points: the side button, or a half of the switch.
+  private func arrowAt(_ tip: FirstGameTip?) -> CGFloat {
+    guard rowWidth > 0 else { return 0.5 }
+    let switchStart = sideWidth + 8
+    let switchWidth = rowWidth - switchStart
+    let x: CGFloat = switch tip {
+    case .side: sideWidth / 2
+    case .freeform: switchStart + switchWidth / 4
+    default: switchStart + switchWidth * 3 / 4
     }
-    .padding(.horizontal, 20)
-    .background(Theme.background.ignoresSafeArea())
-  }
-
-  private func card(_ sans: [String], _ color: ChessCore.Color) -> some View {
-    VStack(alignment: .leading, spacing: 9) {
-      MiniBoard(sans: sans, orientation: color, size: 116, lastMove: true).clipShape(RoundedRectangle(cornerRadius: 6))
-      Capsule().fill(Theme.surface3).frame(width: 80, height: 6)
-    }
-    .padding(8)
-    .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface))
-    .shadow(color: .black.opacity(0.55), radius: 15, y: 14)
+    return x / rowWidth
   }
 }

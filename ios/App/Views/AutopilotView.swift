@@ -4,8 +4,8 @@ import Engine
 import Model
 import SwiftUI
 
-/// Autopilot: one Survival run after another, each decided for you. Stop is
-/// the close button, and stopping goes Home.
+/// Autopilot: a Survival run decided for you. Its end screen goes back Home,
+/// where the next run waits on Play's button; the close button stops it early.
 struct AutopilotView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
@@ -14,7 +14,6 @@ struct AutopilotView: View {
   let onExit: () -> Void
 
   @Environment(AppStore.self) private var store
-  @State private var history = AutoHistory()
   @State private var model: RunModel?
   @State private var nothing = false
   @State private var analyzing = false
@@ -26,7 +25,7 @@ struct AutopilotView: View {
         AnalysisTab(tree: tree, index: index, line: model.run.played, orientation: model.run.color) { analyzing = false }
       } else if let model {
         if model.phase == .over, let finish = model.finish {
-          EndView(model: model, finish: finish, onNext: next, onAnalyze: { analyzing = true }, onExit: exit)
+          EndView(model: model, finish: finish, onNext: home, onAnalyze: { analyzing = true }, onExit: home)
         } else {
           RunView(model: model, onExit: exit)
         }
@@ -56,7 +55,7 @@ struct AutopilotView: View {
       return
     }
     let selection = store.takeRoundSelection()
-    guard let round = nextRound(store.state, tree, selection, history),
+    guard let round = nextRound(store.state, tree, selection, store.autoHistory),
       let run = RunModel(round: round, selection: selection, store: store, tree: tree, index: index, engine: Self.engine)
     else {
       nothing = true
@@ -66,11 +65,10 @@ struct AutopilotView: View {
     run.start()
   }
 
-  private func next() {
-    if let model, let round = model.round { history = afterRound(history, round, model.selection) }
-    model?.stop()
-    model = nil
-    begin()
+  /// Home after a finished round, its start counted for the next one.
+  private func home() {
+    if let model, let round = model.round { store.autoHistory = afterRound(store.autoHistory, round, model.selection) }
+    exit()
   }
 
   private func exit() {

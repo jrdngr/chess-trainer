@@ -173,7 +173,8 @@ you care which moves you grow.
 
 The end screen opens on the final position, with "End of prep" and "Final
 position" to switch between where your prep ran out and where the run
-finished.
+finished. Its main button is Back Home: the next run waits on Home's Play
+button, named by its opening.
 
 ## How a run is shown
 

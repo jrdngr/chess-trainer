@@ -14,6 +14,8 @@ final class AppStore {
   var state = AppState()
   /// The favorite the last round landed on, so the next one is another.
   var lastFavorite: String?
+  /// Play's recent rounds this session, kept across trips Home so the next round's start follows them.
+  var autoHistory = AutoHistory()
   /// Any favorite resolved ahead of time, so Home's button and the round it starts agree.
   @ObservationIgnored private var ahead: (key: String, selection: Selection)?
   /// The save exists but could not be read (locked, say): saving now would replace it with a fresh state.
@@ -72,6 +74,7 @@ final class AppStore {
     state = AppState()
     saveBlocked = false
     lastFavorite = nil
+    autoHistory = AutoHistory()
     ahead = nil
     session = UUID()
     guard FileManager.default.fileExists(atPath: file.path(percentEncoded: false)) else { return }

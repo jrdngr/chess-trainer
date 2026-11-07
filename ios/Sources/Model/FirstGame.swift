@@ -2,7 +2,7 @@ import Book
 import ChessCore
 
 /// A new player's first game: White, nothing saved, adding moves from move
-/// one. Tips explain the game as it goes, each once.
+/// one. Tips explain the game as it goes, each once, then Home's controls.
 
 /// The first game's tips, in the order they show.
 public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
@@ -18,8 +18,18 @@ public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
   case outOfBook
   /// The lenses, once out of the book.
   case lens
-  /// After the first game: Home's card on how a game goes from here.
-  case end
+  /// After the first game, on Home: the Freeform half of the start switch.
+  case freeform
+  /// Home: the Drill half of the start switch.
+  case drill
+  /// Home: the side button.
+  case side
+  /// Home: the opening row.
+  case opening
+  /// Home: the Play button, in three tips.
+  case play
+  case playSteers
+  case playGrows
 
   public var text: String {
     switch self {
@@ -29,22 +39,42 @@ public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
     case .book: "Book moves played after your saved lines aren\u{2019}t graded."
     case .outOfBook: "Once you\u{2019}re out of the book, the game runs until you blunder."
     case .lens: "Hold a lens for hints."
-    case .end: "How Play works"
+    case .freeform: "Freeform: every game starts from move 1."
+    case .drill: "Drill: games start at the spots in your lines that need practice."
+    case .side: "Pick your side: White, Black, or random."
+    case .opening: "Pick the openings your opponent steers toward."
+    case .play: "Play a game until you blunder."
+    case .playSteers: "Your opponent steers toward your openings."
+    case .playGrows: "As you get better, the game offers new moves to add to your lines."
     }
   }
 
   /// Shown during the game, before its end: the goal card waits until these are done.
-  public var inGame: Bool { self != .end }
+  public var inGame: Bool { !FirstGameTip.home.contains(self) }
+
+  /// Home's tips, in the order they show after the first game.
+  public static let home: [FirstGameTip] = [.freeform, .drill, .side, .opening, .play, .playSteers, .playGrows]
+
+  /// Which of the Play button's tips this is, from 0, of `playTips`.
+  public var playStep: Int? { FirstGameTip.playTips.firstIndex(of: self) }
+  public static let playTips: [FirstGameTip] = [.play, .playSteers, .playGrows]
+
+  /// Saved tips, by name. "end" was Home's page on how Play works, now Home's
+  /// tips; names this version doesn't know are dropped.
+  public static func decoded(_ names: [String]) -> [FirstGameTip] {
+    names.flatMap { name in name == "end" ? home : FirstGameTip(rawValue: name).map { [$0] } ?? [] }
+  }
 }
 
-/// The tips left once the first game ends: only Home's card, if it was still to show.
+/// The tips left once the first game ends: Home's, those still to show.
 public func tipsAfterFirstGame(_ pending: [FirstGameTip]) -> [FirstGameTip] {
-  pending.contains(.end) ? [.end] : []
+  pending.filter { !$0.inGame }
 }
 
-/// Whether Home opens its page on how Play works: the first game is over and the page not yet dismissed.
-public func homeCardPending(_ pending: [FirstGameTip]) -> Bool {
-  pending == [.end]
+/// Home's tip to show now: the first game is over and Home's tips not all seen.
+public func homeTip(_ pending: [FirstGameTip]) -> FirstGameTip? {
+  guard let first = pending.first, !first.inGame else { return nil }
+  return first
 }
 
 /// Where the first game stands, as far as its tips care.
@@ -55,21 +85,19 @@ public enum FirstGameMoment: Sendable, Equatable {
   case lineIn
   case book
   case outOfBook
-  case end
 }
 
 /// The tip to show at a moment, if one is still to show there. A tip whose
 /// moment the game went past without stopping is dropped, so `pending`
 /// loses everything before the one returned.
 public func tipAt(_ pending: [FirstGameTip], _ moment: FirstGameMoment) -> (tip: FirstGameTip, rest: [FirstGameTip])? {
-  let wanted: FirstGameTip? = switch moment {
+  let wanted: FirstGameTip = switch moment {
   case .adding(let ply): ply == 0 ? .firstMove : .reply
   case .lineIn: .lineIn
   case .book: .book
   case .outOfBook: .outOfBook
-  case .end: .end
   }
-  guard let wanted, let at = pending.firstIndex(of: wanted) else { return nil }
+  guard let at = pending.firstIndex(of: wanted) else { return nil }
   return (wanted, Array(pending[(at + 1)...]))
 }
 

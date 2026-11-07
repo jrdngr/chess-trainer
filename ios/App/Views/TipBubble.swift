@@ -2,32 +2,44 @@ import Model
 import SwiftUI
 
 /// One of the first game's tips: white, with an arrow at what it explains.
-/// A tap puts it away.
+/// A tap puts it away. A tip in a run of tips shows dots for where it is in the run.
 struct TipBubble: View {
   enum Arrow { case up, down }
   let text: String
   var arrow: Arrow = .up
   /// Where along the bubble's width the arrow sits, 0...1.
   var arrowAt: CGFloat = 0.5
+  /// Which tip of how many in a run, from 0.
+  var step: (at: Int, of: Int)?
   let onDismiss: () -> Void
 
   var body: some View {
-    Text(text).font(.system(size: 14, weight: .semibold)).foregroundStyle(.black)
-      .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
-      .padding(.horizontal, 14).padding(.vertical, 10)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .background(RoundedRectangle(cornerRadius: 14).fill(.white))
-      .overlay(alignment: arrow == .up ? .topLeading : .bottomLeading) {
-        GeometryReader { geo in
-          TipArrow(up: arrow == .up).fill(.white).frame(width: 16, height: 8)
-            .offset(x: geo.size.width * arrowAt - 8, y: arrow == .up ? -8 : geo.size.height)
+    VStack(alignment: .leading, spacing: 8) {
+      Text(text).font(.system(size: 14, weight: .semibold)).foregroundStyle(.black)
+        .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
+      if let step {
+        HStack(spacing: 4) {
+          ForEach(0..<step.of, id: \.self) { i in
+            Circle().fill(i == step.at ? SwiftUI.Color.black : SwiftUI.Color(hex: 0xd4d4da)).frame(width: 6, height: 6)
+          }
         }
+        .accessibilityHidden(true)
       }
-      .shadow(color: .black.opacity(0.5), radius: 14, y: 8)
-      .contentShape(Rectangle())
-      .onTapGesture(perform: onDismiss)
-      .accessibilityAddTraits(.isButton)
-      .transition(.opacity)
+    }
+    .padding(.horizontal, 14).padding(.vertical, 10)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(RoundedRectangle(cornerRadius: 14).fill(.white))
+    .overlay(alignment: arrow == .up ? .topLeading : .bottomLeading) {
+      GeometryReader { geo in
+        TipArrow(up: arrow == .up).fill(.white).frame(width: 16, height: 8)
+          .offset(x: geo.size.width * arrowAt - 8, y: arrow == .up ? -8 : geo.size.height)
+      }
+    }
+    .shadow(color: .black.opacity(0.5), radius: 14, y: 8)
+    .contentShape(Rectangle())
+    .onTapGesture(perform: onDismiss)
+    .accessibilityAddTraits(.isButton)
+    .transition(.opacity)
   }
 }
 
@@ -57,7 +69,9 @@ extension View {
     overlay(alignment: arrow == .up ? .bottom : .top) {
       if shown, let tip {
         Color.clear.frame(height: 0).overlay(alignment: arrow == .up ? .top : .bottom) {
-          TipBubble(text: tip.text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
+          TipBubble(
+            text: tip.text, arrow: arrow, arrowAt: arrowAt,
+            step: tip.playStep.map { ($0, FirstGameTip.playTips.count) }, onDismiss: onDismiss)
             .fixedSize(horizontal: false, vertical: true)
             .padding(arrow == .up ? .top : .bottom, 12).padding(.horizontal, inset)
         }

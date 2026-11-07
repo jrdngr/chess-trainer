@@ -5,7 +5,8 @@ import Shared
 import SwiftUI
 
 /// The end of a run. Final position and End of prep to switch
-/// between, the board, Grow this line, Analyze and Next round, then what
+/// between, the board, Grow this line, Analyze and Back Home (Next run in
+/// Survival and Middlegame), then what
 /// the run came to and the rating it moved. A Survival run you set up
 /// (no Autopilot round) adds its own parts: `SurvivalEndParts`. A Middlegame
 /// run names its start Handoff, scores in points and offers Same line.
@@ -153,7 +154,7 @@ struct EndView: View {
     }
   }
 
-  /// Analyze and Next round, the moves, and what the run came to.
+  /// Analyze and Back Home (Next run outside Play), the moves, and what the run came to.
   private var below: some View {
     VStack(spacing: 14) {
       HStack(spacing: 8) {
@@ -170,7 +171,11 @@ struct EndView: View {
           .buttonStyle(PlayButtonStyle(height: 52, block: true, inset: 8))
         }
         Button(action: onNext) {
-          HStack(spacing: 6) { Text(survival ? "Next run" : "Next round"); Icon(name: "next", size: 18) }
+          if survival {
+            HStack(spacing: 6) { Text("Next run"); Icon(name: "next", size: 18) }
+          } else {
+            HStack(spacing: 6) { Icon(name: "home", size: 18); Text("Back Home") }
+          }
         }
         .buttonStyle(PlayButtonStyle(kind: .primary, height: 52, block: true, inset: 8))
       }
