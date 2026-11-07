@@ -67,6 +67,9 @@ final class RunModel {
     var added: Int { steps.count }
   }
   private(set) var fill: Fill?
+  /// The move just added while adding moves, green on the board until their reply.
+  private(set) var justAdded: (from: String, to: String)?
+  @ObservationIgnored let tonedMemo = Memo<[NudgedMove]>()
   /// The gap the run reached when the engine said no new move: the player can
   /// still add one while it is their move there.
   private(set) var holeGap: Gap?
@@ -443,8 +446,8 @@ final class RunModel {
     round != nil && !store.state.settings.seenAutoplayNote && !introPath.isEmpty && session.state.moves == 0
   }
 
-  /// The book's answers on offer while adding moves.
-  var fillChoices: [Reply] { fill == nil ? [] : optionsAt(index, run.fen, 4) }
+  /// The answers on offer while adding moves, the same as Growth's.
+  var fillChoices: [Reply] { fill == nil ? [] : ranked }
 
   /// Add moves here, at the engine's word or the player's.
   func growHere() {
@@ -455,6 +458,7 @@ final class RunModel {
   private func startFill(_ gap: Gap) {
     holeGap = nil
     fill = Fill(gap: gap, size: store.state.settings.movesPerFill)
+    pulseEdge()
     store.update { $0.logEvent(AppEvent(kind: "inline-grow", via: .autopilot, color: gap.color, line: gap.line.joined(separator: " "))) }
   }
 
@@ -464,6 +468,7 @@ final class RunModel {
     let rid = current.gap.repertoireId
     let line = run.played + [san]
     let offered = fillChoices.map(\.san)
+    let move = applySan(run.fen, san)
     // Undo removes from the first move this line added.
     let rep = store.state.repertoires[rid]
     let fresh = (1...line.count).first { k in rep.flatMap { nodeAtLine($0, Array(line.prefix(k))) } == nil } ?? line.count
@@ -476,6 +481,7 @@ final class RunModel {
     Haptics.buzz(10, on: store.state.settings.hapticFeedback)
     fill = fillEnds(index, line, added: current.added, size: current.size) ? nil : current
     if fill == nil { holeGap = nil }
+    justAdded = fill == nil ? nil : move.map { ($0.from, $0.to) }
     apply(playAdded(session, san))
   }
 
@@ -485,6 +491,7 @@ final class RunModel {
     later(Self.replyMs) { model in
       model.thinking = false
       guard model.live, !model.myTurn, model.fill != nil else { return }
+      model.justAdded = nil
       guard let san = popularReplies(model.index, model.run.fen, GAP_SHARE).first?.san else {
         model.fill = nil
         model.advance()
@@ -505,6 +512,7 @@ final class RunModel {
       if let rep = state.repertoires[rid], let node = nodeAtLine(rep, last.remove) { _ = state.removeNode(rid, node.id, via: .autopilot) }
     }
     session = last.session
+    justAdded = nil
     fill = current
   }
 
@@ -512,6 +520,7 @@ final class RunModel {
   func doneAdding() {
     guard fill != nil else { return }
     fill = nil
+    justAdded = nil
     advance()
   }
 
@@ -707,4 +716,18 @@ struct OrderedRatings {
       }
     }
   }
+}
+
+extension RunModel: HoleAnswers {
+  var atHole: Bool { fill != nil && live && myTurn }
+  var holeFen: String { run.fen }
+  var holePath: [String] { run.played }
+  var answerColor: ChessCore.Color { run.color }
+  var answerTree: Repertoire? { fill.flatMap { store.state.repertoires[$0.gap.repertoireId] } }
+  var nudgePrefs: NudgePrefs {
+    let prefs = store.state.settings.growth
+    return NudgePrefs(priority: prefs.nudgePriority, pawns: prefs.nudgePawns)
+  }
+  /// A fill answers gaps, so it offers what a gap's Growth sitting would.
+  var minShare: Double { GAP_SHARE }
 }

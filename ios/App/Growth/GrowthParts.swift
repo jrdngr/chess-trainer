@@ -169,3 +169,39 @@ func growthStrip(_ path: [String], _ added: [Int], _ color: ChessCore.Color) -> 
       current: i == path.count - 1)
   }
 }
+
+/// "up to 3", then "1 of 3 added": the Answer it section's aside.
+func answerAside(added: Int, of size: Int) -> String {
+  added > 0 ? "\(added) of \(size) added" : "up to \(size)"
+}
+
+/// The answers on offer at a hole, ranked, each in its arrow's color with its pattern pill and eval change.
+struct HoleAnswerList<Source: HoleAnswers>: View {
+  let source: Source
+  let onPick: (String) -> Void
+
+  var body: some View {
+    let evals = source.evals
+    let roles = source.roles
+    let toned = source.toned
+    ListCard {
+      ForEach(source.ranked, id: \.san) { option in
+        AnswerRow(
+          option: option, role: roles.first { $0.san == option.san }?.role,
+          nudge: toned.first { $0.san == option.san && $0.tone != nil }, delta: source.delta(option.san, evals)
+        ) { onPick(option.san) }
+      }
+    }
+  }
+}
+
+/// The role arrows at a hole, glowing where a move matches or breaks your patterns,
+/// and a familiar move nobody recommends in gray: least important first.
+@MainActor func holeArrows(_ source: some HoleAnswers) -> [BoardArrow] {
+  let roles = source.roles
+  let toned = source.toned
+  let glow = { (san: String) in toned.first { $0.san == san && $0.tone != nil }.map { nudgeColor($0.tone) } }
+  let familiar = toned.filter { move in (move.tone == .toward || move.tone == .towardFar) && !roles.contains { $0.san == move.san } }
+    .map { BoardArrow(from: $0.from, to: $0.to, color: Theme.text2, glow: nudgeColor($0.tone)) }
+  return familiar + roles.reversed().map { BoardArrow(from: $0.from, to: $0.to, color: roleColor($0.role) ?? Theme.accent, glow: glow($0.san)) }
+}

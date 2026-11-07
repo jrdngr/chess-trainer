@@ -6,7 +6,7 @@ import Observation
 
 /// One sitting of Growth, driven through GrowthController: opened from Home,
 /// or grown from the end of an Autopilot or Survival run. Its moves stay in a
-/// draft until Save Line. The answers on offer are `GrowthModel+Answers.swift`,
+/// draft until Save Line. The answers on offer are `HoleAnswers.swift`,
 /// the announcement `GrowthModel+Intro.swift`.
 @MainActor @Observable
 final class GrowthModel {
@@ -114,6 +114,7 @@ final class GrowthModel {
   /// Answers that X would throw away.
   var unsaved: Int { session.history.count }
   var minShare: Double { launch.find.minShare ?? DEFAULT_MIN_SHARE }
+  var nudgePrefs: NudgePrefs { NudgePrefs(priority: prefs.nudgePriority, pawns: prefs.nudgePawns) }
   /// The moves this sitting added, in order.
   var addedSans: [String] { session.added.compactMap { $0 < run.path.count ? run.path[$0] : nil } }
 
@@ -284,4 +285,12 @@ final class GrowthModel {
       self?.flash = false
     }
   }
+}
+
+extension GrowthModel: HoleAnswers {
+  var atHole: Bool { phase == .hole }
+  var holeFen: String { run.fen }
+  var holePath: [String] { run.path }
+  var answerColor: ChessCore.Color { run.color }
+  var answerTree: Repertoire? { live }
 }

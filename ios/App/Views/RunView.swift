@@ -44,9 +44,16 @@ struct RunView: View {
     VStack(spacing: 0) {
       if survival { SurvivalRunBar(model: model, onExit: close) } else { header }
       // The Eval lens's bar takes the captured row's place, so the board never moves.
+      // While adding moves Growth's eval bar takes the row, with the engine's word on the answers.
       CapturedRow(fen: model.shownFen, orientation: model.run.color)
-        .opacity(evalHeld ? 0 : 1)
-        .overlay { if evalHeld { EvalLensBar(cp: model.session.evalCp, result: endgameResult) } }
+        .opacity(evalHeld || adding ? 0 : 1)
+        .overlay {
+          if adding {
+            EvalLensBar(cp: model.evals.position)
+          } else if evalHeld {
+            EvalLensBar(cp: model.session.evalCp, result: endgameResult)
+          }
+        }
         .padding(.horizontal).padding(.top, 12)
       BoardView(
         fen: model.shownFen, orientation: model.run.color,
@@ -58,6 +65,7 @@ struct RunView: View {
       .overlay { if let pulse = model.edgePulse { EdgePulse(color: pulse.found ? Theme.good : Theme.bad).id(pulse.id) } }
       .overlay(alignment: .top) { flash }
       .overlay { if model.pulse { IntroPulse() } }
+      .overlay { if adding { AddingBorder() } }
       .overlay {
         if let held = model.flash {
           FlashRings(loose: held.loose, orientation: model.run.color, onTakeBack: model.takeBack)
@@ -70,6 +78,11 @@ struct RunView: View {
     }
     // Any touch clears a miss or a note over the board.
     .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in model.clearOverlays() })
+    .task(id: adding ? "\(model.run.fen)|\(model.atHole)|\(model.listed.map(\.san))" : nil) {
+      guard adding else { return }
+      model.askEvals()
+      model.askSoundness()
+    }
     .task(id: lens == .pawns ? model.shownFen : nil) {
       guard lens == .pawns else { return }
       let fen = model.shownFen
@@ -95,6 +108,9 @@ struct RunView: View {
     let me = model.run.color
     return exactResult(fen, for: me) ?? model.session.evalCp.map { resultOf(me, $0) }
   }
+
+  /// Moves are being added to the Playbook.
+  private var adding: Bool { model.fill != nil }
 
   private var lensEnabled: Bool { model.live && model.intro == .done }
   private var evalHeld: Bool { lens == .eval && lensEnabled }
@@ -306,6 +322,18 @@ struct RunView: View {
         .padding(.horizontal, 14).padding(.vertical, 6)
         .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.45), radius: 10, y: 6)
         .padding(.top, 8)
+    } else if let fill = model.fill {
+      // Up the whole time moves are being added, so the board reads as different.
+      HStack(spacing: 8) {
+        Text("Adding new moves").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.background)
+          .padding(.horizontal, 10).padding(.vertical, 4).background(Capsule().fill(Theme.accent))
+        Text(fill.gap.name).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text).lineLimit(1)
+      }
+      .padding(.leading, 8).padding(.trailing, 16).padding(.vertical, 8)
+      .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
+      .allowsHitTesting(false)
+      .offset(y: -42)
+      .introPillIn().id("adding")
     } else if model.intro == .replay || (model.intro == .done && model.introPath.isEmpty && model.session.state.moves == 0 && model.miss == nil) {
       // While the way in plays, and over a round from move one until your first move.
       HStack(spacing: 8) {
@@ -340,12 +368,15 @@ struct RunView: View {
 
   private var lastMove: (from: String, to: String)? {
     if model.blunder != nil { return nil }
+    // The green on the move just added takes the last move's tint, as in Growth.
+    if adding && model.justAdded != nil { return nil }
     if let held = model.flash { return (held.move.from, held.move.to) }
     if let pending = model.pending { return (pending.from, pending.to) }
     return lastMoveOf(model.run.played)
   }
 
   private var highlights: [String: SwiftUI.Color] {
+    if adding, let added = model.justAdded { return [added.from: Theme.good, added.to: Theme.good] }
     if let b = model.blunder { return [b.move.from: Theme.bad, b.move.to: Theme.bad] }
     if let best = model.missedBest { return [best.from: Theme.bad, best.to: Theme.bad] }
     return [:]
@@ -356,7 +387,20 @@ struct RunView: View {
       return b.threat.map { [BoardArrow(from: $0.from, to: $0.to, color: Theme.bad)] } ?? []
     }
     if let miss = model.miss { return [BoardArrow(from: miss.from, to: miss.to, color: Theme.good)] }
+    if model.atHole && !model.thinking { return holeArrows(model) }
     return []
+  }
+}
+
+/// The board's steady accent edge while moves are being added.
+private struct AddingBorder: View {
+  var body: some View {
+    GeometryReader { geo in
+      RoundedRectangle(cornerRadius: geo.size.width * 0.03)
+        .strokeBorder(Theme.accent, lineWidth: 3)
+        .shadow(color: Theme.accent.opacity(0.6), radius: 10)
+    }
+    .allowsHitTesting(false)
   }
 }
 

@@ -47,10 +47,7 @@ struct GrowthPhaseView: View {
 
   /// Undo and Done flank the prompt, where a new player sees them from the first reply.
   private var hole: some View {
-    let evals = model.evals
-    let roles = model.roles
-    let toned = model.toned
-    return VStack(spacing: 0) {
+    VStack(spacing: 0) {
       HStack(alignment: .center, spacing: 4) {
         Button { model.undoLast() } label: {
           Icon(name: "undo", size: 18).foregroundStyle(Theme.text2).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
@@ -62,15 +59,8 @@ struct GrowthPhaseView: View {
           .buttonStyle(PlayButtonStyle(height: 38, radius: 11, font: 14)).fixedSize()
           .frame(maxWidth: .infinity, alignment: .trailing)
       }
-      PlaySection(title: "Answer it", aside: model.added > 0 ? "\(model.added) of \(model.allowance) added" : "up to \(model.allowance)")
-      ListCard {
-        ForEach(model.ranked, id: \.san) { option in
-          AnswerRow(
-            option: option, role: roles.first { $0.san == option.san }?.role,
-            nudge: toned.first { $0.san == option.san && $0.tone != nil }, delta: model.delta(option.san, evals)
-          ) { model.pick(option.san) }
-        }
-      }
+      PlaySection(title: "Answer it", aside: answerAside(added: model.added, of: model.allowance))
+      HoleAnswerList(source: model) { model.pick($0) }
     }
   }
 

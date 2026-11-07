@@ -96,7 +96,7 @@ struct GrowthView: View {
       fen: model.introFen ?? model.fen, orientation: model.run.color,
       interactive: !model.held && ((model.phase == .walking && isUsersTurn(model.run)) || model.phase == .hole),
       lastMove: model.held ? model.introLastMove : model.session.answer == nil ? lastMoveOf(model.run.path) : nil,
-      highlights: answerHighlights, arrows: hole ? arrows : [], allowed: model.phase == .hole ? model.listed.map(\.san) : nil,
+      highlights: answerHighlights, arrows: hole ? holeArrows(model) : [], allowed: model.phase == .hole ? model.listed.map(\.san) : nil,
       onMove: model.play
     )
     .opacity(model.phase == .lost ? 0.55 : 1)
@@ -120,17 +120,6 @@ struct GrowthView: View {
   private var answerHighlights: [String: SwiftUI.Color] {
     guard let answer = model.session.answer else { return [:] }
     return [answer.from: Theme.good, answer.to: Theme.good]
-  }
-
-  /// The role arrows, glowing where a move matches or breaks your patterns,
-  /// and a familiar move nobody recommends in gray: least important first.
-  private var arrows: [BoardArrow] {
-    let roles = model.roles
-    let toned = model.toned
-    let glow = { (san: String) in toned.first { $0.san == san && $0.tone != nil }.map { nudgeColor($0.tone) } }
-    let familiar = toned.filter { move in (move.tone == .toward || move.tone == .towardFar) && !roles.contains { $0.san == move.san } }
-      .map { BoardArrow(from: $0.from, to: $0.to, color: Theme.text2, glow: nudgeColor($0.tone)) }
-    return familiar + roles.reversed().map { BoardArrow(from: $0.from, to: $0.to, color: roleColor($0.role) ?? Theme.accent, glow: glow($0.san)) }
   }
 
   @ViewBuilder private var nextRow: some View {
