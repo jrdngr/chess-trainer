@@ -154,3 +154,34 @@ struct SurvivalEndActions: View {
     }
   }
 }
+
+/// One opening's best and recent form, and this run's count beside it.
+struct ScoreRow: View {
+  var name: String
+  var score: SurvivalScore
+  var now: Int?
+
+  var body: some View {
+    HStack(spacing: 12) {
+      VStack(alignment: .leading, spacing: 2) {
+        Text(name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+        Text(meta).font(.system(size: 12.5)).foregroundStyle(Theme.text3)
+      }
+      .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+      if let now { Text("\(now)").foregroundStyle(Theme.text2) }
+      Text("best \(score.best)").foregroundStyle(Theme.text2)
+    }
+    .font(.system(size: 14).monospacedDigit())
+    .padding(.horizontal, 16).padding(.vertical, 10).frame(minHeight: 54)
+  }
+
+  private var meta: String {
+    if score.runs == 0 && score.ended == 0 { return "No runs yet" }
+    let form = recentForm(score)
+    return [
+      "\(score.runs) run\(score.runs == 1 ? "" : "s")",
+      score.ended > 0 ? "\(score.ended) ended" : nil,
+      form.map { "recent form \(Int($0))" },
+    ].compactMap { $0 }.joined(separator: " \u{00b7} ")
+  }
+}

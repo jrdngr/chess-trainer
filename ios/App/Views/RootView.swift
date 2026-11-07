@@ -5,7 +5,7 @@ import SwiftUI
 
 /// A mode open over the tabs.
 enum Mode: Equatable {
-  case autopilot, survival, drill, growth, play, endgame, middlegame
+  case autopilot, endgame, middlegame
 }
 
 /// The app: onboarding ahead of everything, a mode over the tabs, or the tabs.
@@ -17,9 +17,6 @@ struct RootView: View {
   @State private var setupFirst = Self.debugMode != nil
   /// Play on the board, opened from the Playbook tab.
   @State private var building = false
-  /// A Drill sitting opened from the Playbook: its positions and title.
-  @State private var drilling: (items: [TrainingItem], title: String)?
-  @Environment(Toasts.self) private var toasts
   /// Import my games, opened from the Playbook tab.
   @State private var importing = false
   /// A line the Playbook sent to the Analysis tab, and the side it was sent from.
@@ -28,7 +25,7 @@ struct RootView: View {
   @State private var analyzing: (sans: [String], side: ChessCore.Color)?
   /// A find handed over from the end of a round, for Tidy to open on.
   @State private var tidyFocus: TidyFind?
-  /// An opening the Playbook sent to Growth.
+  /// A Growth sitting, from a recommendation or an opening's Grow.
   @State private var growing: GrowthModel?
   /// A line from the opening sheet for Middlegame mode to play out.
   @State private var middlegameLine: MiddlegameLine?
@@ -68,8 +65,6 @@ struct RootView: View {
       }
     } else if importing {
       ImportView(onBack: { importing = false })
-    } else if let drilling {
-      DrillSessionView(tree: tree, index: index, store: store, items: drilling.items, title: drilling.title) { self.drilling = nil }
     } else if let growing {
       GrowthSitting(model: growing, onAnalyze: { sans, side in
         explore = (sans, side)
@@ -104,15 +99,11 @@ struct RootView: View {
           mode = next
         }, onGap: { gap in
           growing = GrowthModel(gap: gap, store: store, tree: tree, index: index)
-        })
+        }, onPlaybook: { tab = .playbook })
           .tabItem { Label(Tab.home.label, systemImage: Tab.home.symbol) }.tag(Tab.home)
         PlaybookView(tree: tree, index: index, tidyFocus: tidyFocus, onConsumedTidyFocus: { tidyFocus = nil }, onExplore: { sans, side in
           explore = (sans, side)
           tab = .analysis
-        }, onDrill: { repId, nodeIds, title in
-          guard let rep = store.state.repertoires[repId] else { return }
-          let items = Array(nodeIds.flatMap { branchItems(rep, $0) }.prefix(40))
-          if items.isEmpty { toasts.show("Nothing to drill") } else { drilling = (items, title) }
         }, onGrow: { offer in
           growing = GrowthModel(offer: offer, store: store, tree: tree, index: index)
         }, onMiddlegame: { side, sans in
@@ -134,20 +125,11 @@ struct RootView: View {
     switch mode {
     case .autopilot:
       AutopilotView(tree: tree, index: index, onAnalyze: { analyzing = ($0, $1) }) { leave() }
-    case .play: PlayView(tree: tree, index: index, onExit: { leave() }, straight: !setupFirst)
     case .endgame: EndgameView { leave() }
     case .middlegame:
       MiddlegameView(
         tree: tree, index: index, exact: middlegameLine, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) },
         straight: !setupFirst)
-    case .drill: DrillView(tree: tree, index: index) { leave() }
-    case .growth:
-      GrowthModeView(
-        tree: tree, index: index, onExit: { leave() },
-        onAnalyze: { analyzing = ($0, $1) }, straight: !setupFirst)
-    case .survival:
-      SurvivalView(
-        tree: tree, index: index, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) }, straight: !setupFirst)
     }
   }
 

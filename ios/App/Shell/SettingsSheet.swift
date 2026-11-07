@@ -59,7 +59,7 @@ struct SettingsSheet: View {
         }
         section("Engine")
         ListCard {
-          ToggleRow(label: "Engine", hint: "Analysis's lines and Play's eval bar",
+          ToggleRow(label: "Engine", hint: "Analysis's lines",
                     on: settings.engineEnabled) { store.update { $0.settings.engineEnabled.toggle() } }
         }
         Text("How each mode plays is set on that mode's own screen.").font(.system(size: 12.5)).foregroundStyle(Theme.text3)

@@ -3,7 +3,7 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// One opening of the Playbook: its board and rating, Select, Drill,
+/// One opening of the Playbook: its board and rating, Select,
 /// Middlegame and Grow, and its lines, each opening in the tree. Its menu deletes it.
 struct OpeningPage: View {
   let tree: OpeningTree
@@ -13,7 +13,6 @@ struct OpeningPage: View {
   let onBack: () -> Void
   /// Open the tree at a line's last move, under a title.
   let onOpenLine: (String, String) -> Void
-  let onDrill: (String, [String], String) -> Void
   let onGrow: (GrowOffer) -> Void
   let onMiddlegame: (ChessCore.Color, [String]) -> Void
   /// The opening is now the global selection.
@@ -49,12 +48,8 @@ struct OpeningPage: View {
         VStack(spacing: 0) {
           hero(row, stats)
           VStack(spacing: 8) {
-            HStack(spacing: 8) {
-              SheetButton("Select", icon: "check", style: .accent) { select(rep, node) }
-                .disabled(node == nil)
-              SheetButton("Drill", icon: "play", style: .plain) { onDrill(rep.id, row.parts.map(\.rootId), row.name) }
-                .disabled(lines.isEmpty)
-            }
+            SheetButton("Select", icon: "check", style: .accent) { select(rep, node) }
+              .disabled(node == nil)
             HStack(spacing: 8) {
               SheetButton("Middlegame", icon: "middlegame", style: .plain) {
                 if let main = lines.first { onMiddlegame(rep.color, main.path) }

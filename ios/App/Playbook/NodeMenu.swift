@@ -52,14 +52,13 @@ struct TreeRow: View {
   }
 }
 
-/// What can be done to one move: go there, drill its branch, make it main,
+/// What can be done to one move: go there, make it main,
 /// note it, reorder it, or delete it and everything after it. `NodeMenu`.
 struct NodeMenu: View {
   let rep: Repertoire
   let nodeId: String
   let onNavigate: (String) -> Void
   let onDelete: (String) -> Void
-  let onDrill: (String, String) -> Void
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
   @State private var note = ""
@@ -70,7 +69,6 @@ struct NodeMenu: View {
     if let node = rep.nodes[nodeId] {
       let ourMove = fenTurn(node.fenBefore) == rep.color
       let siblings = childrenOf(rep, node.parentId)
-      let below = subtreeIds(rep, node.id).count
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
           SheetHead(title: node.san, moves: sansToMoveText(pathTo(rep, node.id).map(\.san)))
@@ -93,7 +91,6 @@ struct NodeMenu: View {
             }
             ListCard {
               row("Go here", trailing: "chevron") { onNavigate(node.id) }
-              row("Drill branch", meta: "\(below) moves", trailing: "chevron") { onDrill(node.id, node.san) }
               if ourMove && siblings.count > 1 && !node.preferred {
                 row("Set as main", trailing: "star") {
                   store.update { $0.preferMove(rep.id, node.id) }

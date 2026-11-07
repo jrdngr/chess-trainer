@@ -101,20 +101,6 @@ struct PlayIntroCover: View {
   var body: some View { IntroCover(mode: mode, trail: trail) }
 }
 
-/// The opening, on a pill over the board until your first move: `intro-pill`.
-struct IntroPill: View {
-  var name: String
-  var body: some View {
-    Text(name).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text).lineLimit(1)
-      .padding(.horizontal, 16).padding(.vertical, 6)
-      .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
-      .allowsHitTesting(false)
-      // Over the empty captured row above the board, not on the back rank's pieces.
-      .offset(y: -36)
-      .introPillIn()
-  }
-}
-
 /// The evaluation over the board: `.evalbar` and its score.
 struct PlayEvalBar: View {
   var line: EngineLine?
@@ -132,45 +118,5 @@ struct PlayEvalBar: View {
       Text(line.map(formatScore) ?? "\u{2014}").font(.system(size: 13).monospacedDigit()).foregroundStyle(Theme.text2)
         .frame(minWidth: 48, alignment: .trailing)
     }
-  }
-}
-
-/// How the game ended: `.verdict`.
-struct PlayVerdict: View {
-  var over: PlayGame.Over
-
-  var body: some View {
-    let tone = over.result == .win ? Theme.good : over.result == .loss ? Theme.bad : Theme.warn
-    HStack(spacing: 8) {
-      Icon(name: over.result == .win ? "check" : "cross", size: over.result == .win ? 16 : 14)
-        .frame(width: 26, height: 26).background(Circle().fill(tone.opacity(0.14)))
-      Text(text).font(.system(size: 19, weight: .heavy)).tracking(-0.2).lineLimit(1).minimumScaleFactor(0.8)
-    }
-    .foregroundStyle(tone)
-  }
-
-  private var text: String {
-    switch over.result {
-    case .win: "Won by \(over.reason)"
-    case .loss: "Lost by \(over.reason)"
-    default: "Drawn by \(over.reason)"
-    }
-  }
-}
-
-/// Leaving your prep, said at once: `.banner`.
-struct OffBookBanner: View {
-  var detail: String
-  var body: some View {
-    HStack(spacing: 12) {
-      Icon(name: "warn", size: 20).foregroundStyle(Theme.warn)
-      VStack(alignment: .leading, spacing: 1) {
-        Text("Out of your prep").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text)
-        Text(detail).font(.system(size: 13)).foregroundStyle(Theme.text2)
-      }
-      Spacer(minLength: 0)
-    }
-    .padding(.horizontal, 14).padding(.vertical, 12)
-    .background(RoundedRectangle(cornerRadius: 16).fill(Theme.warn.opacity(0.14)))
   }
 }

@@ -83,7 +83,7 @@ struct EndView: View {
     VStack(spacing: 0) {
       if survival {
         SurvivalBar(
-          title: middlegame ? "Middlegame" : "Survival", subtitle: runSubtitle(store, run.color, run.enteredIn ?? run.openingId),
+          title: "Middlegame", subtitle: runSubtitle(store, run.color, run.enteredIn ?? run.openingId),
           onClose: onExit
         ) {
           SurvivalCountChip(value: middlegame ? finish.ended.extras.points : finish.ended.moves)

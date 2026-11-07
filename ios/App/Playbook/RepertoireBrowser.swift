@@ -4,7 +4,7 @@ import Model
 import SwiftUI
 
 /// One side's tree, from a node: the board, the line, the moves here, the
-/// book's moves to add, and Explore and Drill. A new move played on the board
+/// book's moves to add, and Explore. A new move played on the board
 /// opens the board editor there. `RepertoireBrowser`.
 struct RepertoireBrowser: View {
   let repId: String
@@ -14,7 +14,6 @@ struct RepertoireBrowser: View {
   let onExplore: ([String], ChessCore.Color) -> Void
   /// Open the board editor on this line.
   let onEdit: ([String]) -> Void
-  let onDrill: (String, String, String) -> Void
 
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
@@ -90,13 +89,8 @@ struct RepertoireBrowser: View {
             SectionHead(title: "The book", aside: "Tap to add")
             BookMoves(entry: book, inRepertoire: Set(kids.map(\.san))) { san in addFromBook(rep, index, pathSans, san, at) }
           }
-          HStack(spacing: 8) {
-            SheetButton("Explore", style: .soft) { onExplore(pathSans, rep.color) }
-            SheetButton("Drill", icon: "home", style: .primary) {
-              onDrill(rep.id, at ?? childrenOf(rep, nil).first?.id ?? "", opening?.name ?? title)
-            }
-          }
-          .padding(.top, 24)
+          SheetButton("Explore", style: .soft) { onExplore(pathSans, rep.color) }
+            .padding(.top, 24)
         }
         .padding(.horizontal, 16).padding(.bottom, 28)
       }
@@ -114,8 +108,7 @@ struct RepertoireBrowser: View {
     .sheet(item: Binding(get: { menuFor.map(RepRef.init) }, set: { menuFor = $0?.id }), onDismiss: {
       if let id = cutNext { cutNext = nil; cutting = id }
     }) { ref in
-      NodeMenu(rep: rep, nodeId: ref.id, onNavigate: { menuFor = nil; goTo($0, line) }, onDelete: { cutNext = $0; menuFor = nil },
-               onDrill: { menuFor = nil; onDrill(rep.id, $0, $1) })
+      NodeMenu(rep: rep, nodeId: ref.id, onNavigate: { menuFor = nil; goTo($0, line) }, onDelete: { cutNext = $0; menuFor = nil })
         .presentationDetents([.medium, .large]).presentationBackground(Theme.background)
     }
     .sheet(item: Binding(get: { cutting.map(RepRef.init) }, set: { cutting = $0?.id })) { ref in

@@ -12,8 +12,6 @@ struct PlaybookView: View {
   /// The focus is taken: Tidy holds it from here.
   var onConsumedTidyFocus: () -> Void = {}
   var onExplore: ([String], ChessCore.Color) -> Void = { _, _ in }
-  /// Drill these nodes' branches of one side's tree, under a title.
-  var onDrill: (String, [String], String) -> Void = { _, _, _ in }
   /// Grow an opening, from Growth's own pick for it.
   var onGrow: (GrowOffer) -> Void = { _ in }
   /// Play a line out to a middlegame, as this side.
@@ -48,7 +46,7 @@ struct PlaybookView: View {
         OpeningPage(
           tree: tree, index: index, repId: repId, name: name, onBack: { page = nil },
           onOpenLine: { tipId, title in page = .browse(repId: repId, nodeId: tipId, title: title) },
-          onDrill: onDrill, onGrow: onGrow, onMiddlegame: onMiddlegame,
+          onGrow: onGrow, onMiddlegame: onMiddlegame,
           onSelected: {
             page = nil
             onHome()
@@ -57,10 +55,7 @@ struct PlaybookView: View {
         if state.repertoires[repId] != nil {
           RepertoireBrowser(
             repId: repId, startNodeId: nodeId, title: title, onBack: { page = nil }, onExplore: onExplore,
-            onEdit: { sans in page = .board(repId: repId, sans: sans, title: title) }
-          ) { repId, nodeId, title in
-            onDrill(repId, [nodeId], title)
-          }
+            onEdit: { sans in page = .board(repId: repId, sans: sans, title: title) })
         } else {
           Color.clear.onAppear { page = nil }
         }

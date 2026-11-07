@@ -2,9 +2,10 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// Home: the selection, Autopilot's next round on its button, the modes,
-/// Recommendations and Milestones. A mode tile starts the mode on your saved
-/// settings; press and hold for Start or Settings (its setup screen first).
+/// Home: the selection, Play's next run on its button, Middlegame and
+/// Endgames, Recommendations and Milestones. A mode tile starts the mode on
+/// your saved settings; press and hold Middlegame for Start or Settings (its
+/// setup screen first).
 struct HomeView: View {
   let tree: OpeningTree
   let onOpen: (Mode) -> Void
@@ -12,6 +13,8 @@ struct HomeView: View {
   let onSetup: (Mode) -> Void
   /// Fill a recommendation in Growth.
   let onGap: (Gap) -> Void
+  /// Go to the Playbook tab, when there is nothing to play yet.
+  let onPlaybook: () -> Void
   @Environment(AppStore.self) private var store
   @State private var settings = false
 
@@ -30,12 +33,8 @@ struct HomeView: View {
         ScoreStrip().padding(.bottom, 12)
         autopilot.padding(.bottom, 10)
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 10) {
-          tile("Survival", "flame", .survival, held: true)
-          tile("Drill", "cards", .drill)
           tile("Middlegame", "middlegame", .middlegame, held: true)
           tile("Endgames", "flag", .endgame)
-          tile("Growth", "sprout", .growth, held: true)
-          tile("Play", "play", .play, held: true)
         }
         VStack(spacing: 10) {
           RecommendationsCard(tree: tree, onPick: onGap)
@@ -48,7 +47,7 @@ struct HomeView: View {
     .sheet(isPresented: $settings) { SettingsSheet().presentationBackground(Theme.background) }
   }
 
-  /// What Autopilot would start with, said on its button, or that there is nothing to drill.
+  /// What Play would start with, said on its button, or that there is nothing to play yet.
   @ViewBuilder private var autopilot: some View {
     let selection = store.peekRoundSelection()
     if let round = nextRound(store.state, tree, selection, AutoHistory()) {
@@ -63,14 +62,14 @@ struct HomeView: View {
       }
       .buttonStyle(.plain)
     } else {
-      Button { onOpen(.growth) } label: {
+      Button { onPlaybook() } label: {
         HStack(spacing: 13) {
           Icon(name: "bolt", size: 22).foregroundStyle(Theme.accentInk).frame(width: 42, height: 42)
             .background(RoundedRectangle(cornerRadius: 14).fill(Theme.accent))
           VStack(alignment: .leading, spacing: 1) {
-            Text("AUTOPILOT").font(.system(size: 10.5, weight: .heavy)).tracking(0.9).foregroundStyle(Theme.accent)
+            Text("PLAY").font(.system(size: 10.5, weight: .heavy)).tracking(0.9).foregroundStyle(Theme.accent)
             Text("Build").font(.system(size: 18, weight: .heavy)).foregroundStyle(Theme.text)
-            Text("Nothing to practice yet \u{00b7} open Growth").font(.system(size: 12.5)).foregroundStyle(Theme.text2).lineLimit(1)
+            Text("Nothing to play yet \u{00b7} add an opening").font(.system(size: 12.5)).foregroundStyle(Theme.text2).lineLimit(1)
           }
           Spacer()
           Icon(name: "chevron", size: 20).foregroundStyle(Theme.text3)
@@ -107,7 +106,7 @@ struct HomeView: View {
   }
 }
 
-/// Autopilot's next run on Home's button: the opening's position faded in
+/// Play's next run on Home's button: the opening's position faded in
 /// behind its name, how far into your prep it starts along the bottom edge.
 struct AutopilotPlate: View {
   let name: String

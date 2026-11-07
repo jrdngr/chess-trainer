@@ -366,3 +366,10 @@ struct EndgameIntroCard: View {
     }
   }
 }
+
+extension View {
+  /// The board dimmed once a game is over: `dimmed`.
+  func dimmed(_ on: Bool) -> some View {
+    colorMultiply(on ? SwiftUI.Color(white: 0.8) : .white).saturation(on ? 0.8 : 1).animation(.easeInOut(duration: 0.2), value: on)
+  }
+}
