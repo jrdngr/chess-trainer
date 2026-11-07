@@ -80,3 +80,11 @@ extension View {
     .zIndex(shown && tip != nil ? 2 : 0)
   }
 }
+
+/// A tip after the first game put away for good, so the next one shows.
+@MainActor func dismissTip(_ store: AppStore, _ tip: FirstGameTip?) {
+  guard let tip else { return }
+  withAnimation(.easeOut(duration: 0.15)) {
+    store.update { $0.settings.tips.removeAll { $0 == tip } }
+  }
+}

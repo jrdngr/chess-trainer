@@ -2,7 +2,9 @@ import Book
 import ChessCore
 
 /// A new player's first game: White, nothing saved, adding moves from move
-/// one. Tips explain the game as it goes, each once, then Home's controls.
+/// one. Tips explain the game as it goes, each once, then Home's controls,
+/// then the Playbook tab's the first time it opens. Skipping the first game
+/// skips only its own tips.
 
 /// The first game's tips, in the order they show.
 public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
@@ -30,6 +32,16 @@ public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
   case play
   case playSteers
   case playGrows
+  /// Home: the Playbook tab, last.
+  case playbookTab
+  /// The Playbook tab, the first time it opens: its + button.
+  case playbookAdd
+  /// The Playbook tab: its more menu.
+  case playbookMore
+  /// The Playbook tab: the White/Black switch.
+  case playbookSide
+  /// The Playbook tab: an opening's row, once there is one.
+  case playbookRow
 
   public var text: String {
     switch self {
@@ -46,14 +58,25 @@ public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
     case .play: "Play a game until you blunder."
     case .playSteers: "Your opponent steers toward your openings."
     case .playGrows: "As you get better, the game offers new moves to add to your lines."
+    case .playbookTab: "Your openings live in the Playbook. Know what you want to play? Add it there yourself."
+    case .playbookAdd: "Tap + to add openings you already know."
+    case .playbookMore: "Import your games, or play a line on the board."
+    case .playbookSide: "Switch between your White and Black openings."
+    case .playbookRow: "Tap an opening to see its lines and grow it."
     }
   }
 
   /// Shown during the game, before its end: the goal card waits until these are done.
-  public var inGame: Bool { !FirstGameTip.home.contains(self) }
+  public var inGame: Bool { !FirstGameTip.home.contains(self) && !FirstGameTip.playbook.contains(self) }
 
   /// Home's tips, in the order they show after the first game.
-  public static let home: [FirstGameTip] = [.freeform, .drill, .side, .opening, .play, .playSteers, .playGrows]
+  public static let home: [FirstGameTip] = [.freeform, .drill, .side, .opening, .play, .playSteers, .playGrows, .playbookTab]
+
+  /// The Playbook tab's tips, in the order they show.
+  public static let playbook: [FirstGameTip] = [.playbookAdd, .playbookMore, .playbookSide, .playbookRow]
+
+  /// Every tip after the first game's: a profile that skips the first game still gets these.
+  public static let afterFirstGame: [FirstGameTip] = home + playbook
 
   /// Which of the Play button's tips this is, from 0, of `playTips`.
   public var playStep: Int? { FirstGameTip.playTips.firstIndex(of: self) }
@@ -62,19 +85,26 @@ public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
   /// Saved tips, by name. "end" was Home's page on how Play works, now Home's
   /// tips; names this version doesn't know are dropped.
   public static func decoded(_ names: [String]) -> [FirstGameTip] {
-    names.flatMap { name in name == "end" ? home : FirstGameTip(rawValue: name).map { [$0] } ?? [] }
+    names.flatMap { name in name == "end" ? afterFirstGame : FirstGameTip(rawValue: name).map { [$0] } ?? [] }
   }
 }
 
-/// The tips left once the first game ends: Home's, those still to show.
+/// The tips left once the first game ends: Home's and the Playbook tab's, those still to show.
 public func tipsAfterFirstGame(_ pending: [FirstGameTip]) -> [FirstGameTip] {
   pending.filter { !$0.inGame }
 }
 
 /// Home's tip to show now: the first game is over and Home's tips not all seen.
 public func homeTip(_ pending: [FirstGameTip]) -> FirstGameTip? {
-  guard let first = pending.first, !first.inGame else { return nil }
-  return first
+  guard !pending.contains(where: \.inGame) else { return nil }
+  return pending.first { FirstGameTip.home.contains($0) }
+}
+
+/// The Playbook tab's tip to show now, once the first game is over. The
+/// opening row's tip waits until there is a row to point at.
+public func playbookTip(_ pending: [FirstGameTip], hasRows: Bool) -> FirstGameTip? {
+  guard !pending.contains(where: \.inGame) else { return nil }
+  return pending.first { FirstGameTip.playbook.contains($0) && ($0 != .playbookRow || hasRows) }
 }
 
 /// Where the first game stands, as far as its tips care.

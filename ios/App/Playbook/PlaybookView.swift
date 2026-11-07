@@ -29,6 +29,8 @@ struct PlaybookView: View {
   @State private var focus: TidyFind?
   @State private var adding = false
   @State private var side = ChessCore.Color.w
+  /// The app bar's width, to point a tip at its + or more button.
+  @State private var barWidth: CGFloat = 393
 
   enum Page: Equatable {
     case tidy, extensions
@@ -100,6 +102,8 @@ struct PlaybookView: View {
     let rows = rep.map { playbookRows($0, index) } ?? []
     let extensions = extensionOpenings(reps, index)
     let extCount = rep.map { Self.extensionCounts($0, rows, extensions) } ?? [:]
+    let tip = playbookTip(store.state.settings.tips, hasRows: !rows.isEmpty)
+    let putAway = { dismissTip(store, tip) }
     return VStack(spacing: 0) {
       AppBar(title: "Playbook", large: true) {
         Menu {
@@ -114,9 +118,12 @@ struct PlaybookView: View {
         .accessibilityLabel("More")
         IconButton(icon: "plus") { adding = true }
       }
+      .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { barWidth = $0 }
+      .tip(tip, when: tip == .playbookAdd || tip == .playbookMore, arrowAt: barArrowAt(tip), inset: 16, onDismiss: putAway)
       ScrollView {
         VStack(spacing: 0) {
           SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")])
+            .tip(tip, when: tip == .playbookSide, onDismiss: putAway)
           PlaybookPills(count: scan.count, extensions: extensions, onTidy: { page = .tidy }, onExtensions: { page = .extensions })
             .padding(.top, 12)
           if let rep, !rows.isEmpty {
@@ -134,6 +141,8 @@ struct PlaybookView: View {
                 }
               }
             }
+            // Over the card, pointing down at its first row: the card clips what hangs inside it.
+            .tip(tip, when: tip == .playbookRow, arrow: .down, arrowAt: 0.3, inset: 8, onDismiss: putAway)
             ListCard {
               Button { page = .browse(repId: rep.id, nodeId: nil, title: repertoireName(rep.color)) } label: {
                 HStack(spacing: 12) {
@@ -156,12 +165,28 @@ struct PlaybookView: View {
         .padding(.horizontal, 16).padding(.bottom, 28)
       }
     }
+    // While a tip shows, a tap anywhere goes to the next one.
+    .overlay {
+      if tip != nil {
+        SwiftUI.Color.black.opacity(0.001).contentShape(Rectangle())
+          .onTapGesture(perform: putAway)
+          .accessibilityHidden(true)
+      }
+    }
     .fullScreenCover(isPresented: $adding) {
       OnboardingView(tree: tree, index: index, onClose: { adding = false }) { next in
         adding = false
         if next == .autopilot { onPlay() } else { onHome() }
       }
     }
+  }
+
+  /// Where along the app bar a tip points: its + button, or the more menu left of it.
+  private func barArrowAt(_ tip: FirstGameTip?) -> CGFloat {
+    // The bar's 20pt sides, 38pt buttons 8pt apart; the tip spans the bar less 16pt each side.
+    let plus = barWidth - 20 - 19
+    let x = tip == .playbookMore ? plus - 46 : plus
+    return (x - 16) / max(barWidth - 32, 1)
   }
 
   /// Extensions per row, counted once however many of its parts and variations they sit in.

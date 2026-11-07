@@ -5,8 +5,8 @@ import SwiftUI
 /// Home: Play's next run on its button with the selection under it, Middlegame and
 /// Endgames, Recommendations and Milestones. A mode tile starts the mode on
 /// your saved settings; press and hold Middlegame for Start or Settings (its
-/// setup screen first). After the first game, tips on the controls under Play
-/// and then on Play itself, one per tap.
+/// setup screen first). After the first game, tips on the controls under Play,
+/// on Play itself, then on the Playbook tab below, one per tap.
 struct HomeView: View {
   let tree: OpeningTree
   let onOpen: (Mode) -> Void
@@ -62,6 +62,15 @@ struct HomeView: View {
           .accessibilityHidden(true)
       }
     }
+    // The Playbook tab is the system tab bar's second of four, just under Home.
+    .overlay(alignment: .bottom) {
+      if tip == .playbookTab {
+        TipBubble(text: FirstGameTip.playbookTab.text, arrow: .down, arrowAt: 0.38) { nextHomeTip(store) }
+          .padding(.horizontal, 16).padding(.bottom, 12)
+      }
+    }
+    // Leaving Home by the tab its last tip points at puts that tip away.
+    .onDisappear { if tip == .playbookTab { nextHomeTip(store) } }
     .sheet(isPresented: $settings) { SettingsSheet().presentationBackground(Theme.background) }
     .onAppear {
       guard store.takeSettingsHeld() else { return }
@@ -180,11 +189,9 @@ struct AutopilotPlate: View {
   }
 }
 
-/// The next of Home's tips.
+/// Home's tip put away, for the next one.
 @MainActor private func nextHomeTip(_ store: AppStore) {
-  withAnimation(.easeOut(duration: 0.15)) {
-    store.update { if !$0.settings.tips.isEmpty { $0.settings.tips.removeFirst() } }
-  }
+  dismissTip(store, homeTip(store.state.settings.tips))
 }
 
 /// Under Play's button on Home: the side, how runs start, and the opening.

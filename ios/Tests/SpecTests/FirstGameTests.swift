@@ -14,7 +14,7 @@ import Testing
   // A game that never stays in the book goes from the line straight out of it.
   let out = try #require(tipAt(reply.rest, .outOfBook))
   #expect(out.tip == .outOfBook)
-  #expect(out.rest == [.lens] + FirstGameTip.home)
+  #expect(out.rest == [.lens] + FirstGameTip.afterFirstGame)
   #expect(tipAt(out.rest, .book) == nil)
   #expect(tipAt([], .outOfBook) == nil)
 }
@@ -49,10 +49,11 @@ import Testing
 /// When the first game ends, Home's tips are left to show, even if the game
 /// ended before its later tips; Home shows none while the game's are pending.
 @Test func firstGameEndLeavesHomeTips() {
-  let early = tipsAfterFirstGame([.lineIn, .book, .outOfBook, .lens] + FirstGameTip.home)
-  #expect(early == FirstGameTip.home)
+  let early = tipsAfterFirstGame([.lineIn, .book, .outOfBook, .lens] + FirstGameTip.afterFirstGame)
+  #expect(early == FirstGameTip.afterFirstGame)
   #expect(homeTip(early) == .freeform)
   #expect(homeTip(Array(early.dropFirst(4))) == .play)
+  #expect(homeTip(FirstGameTip.playbook) == nil)
   #expect(tipsAfterFirstGame([]) == [])
   #expect(homeTip([]) == nil)
   #expect(homeTip(FirstGameTip.allCases) == nil)
@@ -61,9 +62,19 @@ import Testing
 /// A save from before Home's tips, still owing the page on how Play works,
 /// gets Home's tips instead; unknown names are dropped.
 @Test func oldSaveOwingHowPlayWorksGetsHomeTips() throws {
-  #expect(FirstGameTip.decoded(["end"]) == FirstGameTip.home)
+  #expect(FirstGameTip.decoded(["end"]) == FirstGameTip.afterFirstGame)
   #expect(FirstGameTip.decoded(["lens", "nope"]) == [.lens])
   let json = #"{"tips":["end"]}"#.data(using: .utf8)!
   let settings = try JSONDecoder().decode(Settings.self, from: json)
   #expect(homeTip(settings.tips) == .freeform)
+}
+
+/// The Playbook tab's tips show the first time it opens, Home's tips seen or
+/// not, in order; the opening row's waits for a row.
+@Test func playbookTipsWaitForTheirTarget() {
+  let pending = FirstGameTip.afterFirstGame
+  #expect(playbookTip(pending, hasRows: false) == .playbookAdd)
+  #expect(playbookTip([.lens] + pending, hasRows: true) == nil)
+  #expect(playbookTip([.playbookRow], hasRows: false) == nil)
+  #expect(playbookTip([.playbookRow], hasRows: true) == .playbookRow)
 }

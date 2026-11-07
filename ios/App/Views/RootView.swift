@@ -63,6 +63,7 @@ struct RootView: View {
         store.update {
           $0.settings.seenIntro = true
           $0.settings.onboarded = true
+          $0.settings.tips = FirstGameTip.afterFirstGame
         }
         tab = .home
       })

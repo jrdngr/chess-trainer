@@ -2,6 +2,8 @@
 
 extension Icon {
   static let specs: [String: IconSpec] = [
+    "house": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.path("M3.5 10.5 12 3.5l8.5 7V20.5h-5.5v-6h-6v6H3.5z"), fill: .whenFilled, stroke: .current, opacity: (1, 1))]),
     "home": IconSpec(strokeWidth: 2, parts: [
       IconPart(.path("M13 2 4.5 13.5H11L10 22l8.5-11.5H13z"), fill: .whenFilled, stroke: .current, opacity: (1, 1))]),
     "tree": IconSpec(strokeWidth: 2, parts: [

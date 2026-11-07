@@ -174,7 +174,7 @@ struct EndView: View {
           if survival {
             HStack(spacing: 6) { Text("Next run"); Icon(name: "next", size: 18) }
           } else {
-            HStack(spacing: 6) { Icon(name: "home", size: 18); Text("Back Home") }
+            HStack(spacing: 6) { Icon(name: "house", size: 18); Text("Back Home") }
           }
         }
         .buttonStyle(PlayButtonStyle(kind: .primary, height: 52, block: true, inset: 8))
