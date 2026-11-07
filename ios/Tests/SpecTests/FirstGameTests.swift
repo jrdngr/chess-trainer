@@ -34,3 +34,13 @@ import Testing
   #expect(gap.repertoireId == id)
   #expect(!fillEnds(bookIndex, line("e4"), added: 1, size: 3))
 }
+
+/// The first game answers 1.e4 with e5 and 1.d4 with d5, where the book's
+/// most played reply is something else; other moves are left to the book.
+@Test func firstGameMeetsE4AndD4Symmetrically() {
+  #expect(firstGameReply(line("e4")) == "e5")
+  #expect(firstGameReply(line("d4")) == "d5")
+  #expect(popularReplies(bookIndex, walkSan(line("e4")).fens.last!, GAP_SHARE).first?.san != "e5")
+  #expect(firstGameReply(line("c4")) == nil)
+  #expect(firstGameReply(line("e4 e5 Nf3")) == nil)
+}

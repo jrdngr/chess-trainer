@@ -45,6 +45,12 @@ struct HomeView: View {
       .padding(.horizontal, 16).padding(.bottom, 24)
     }
     .sheet(isPresented: $settings) { SettingsSheet().presentationBackground(Theme.background) }
+    .onAppear {
+      guard store.takeSettingsHeld() else { return }
+      var still = Transaction()
+      still.disablesAnimations = true
+      withTransaction(still) { settings = true }
+    }
   }
 
   /// What Play would start with, said on its button, or that there is nothing to play yet.

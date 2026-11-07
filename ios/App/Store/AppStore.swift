@@ -23,6 +23,8 @@ final class AppStore {
   private(set) var profiles = ProfileList()
   /// Changes whenever the state is swapped out (a switch or a reset), so screens start over.
   private(set) var session = UUID()
+  /// Settings was open when the session changed under it: Home opens it again.
+  @ObservationIgnored private var settingsHeld = false
 
   /// This device's iCloud backup: its folder there and what it holds.
   private(set) var device = BackupDevice(folder: "", manifest: BackupManifest(device: ""))
@@ -133,7 +135,8 @@ final class AppStore {
     send(profileId: nil, save: nil)
   }
 
-  /// Delete a profile and its save. Deleting the one in use opens the next.
+  /// Delete a profile and its save. Deleting the one in use opens the next,
+  /// and Settings opens again over its Home.
   func deleteProfile(_ id: String) {
     let wasActive = id == profiles.active
     if !wasActive { save() }
@@ -142,7 +145,16 @@ final class AppStore {
     removeSave(id)
     release(id)
     send(profileId: nil, save: nil)
-    if wasActive { readState() }
+    guard wasActive else { return }
+    readState()
+    // Home opens Settings again; a profile still on its welcome has no Home yet.
+    settingsHeld = state.settings.seenIntro && state.settings.onboarded
+  }
+
+  /// Whether Settings should open again on the new session, asked once.
+  func takeSettingsHeld() -> Bool {
+    defer { settingsHeld = false }
+    return settingsHeld
   }
 
   /// Wipe the profile in use: a fresh start under the same name.

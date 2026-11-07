@@ -77,6 +77,8 @@ final class RunModel {
   private var holeAsked = false
   /// A new player's first game: nothing saved, adding moves from move one, with tips.
   private(set) var firstGame = false
+  /// A first game picked from the welcome's tutorial, not reached after Skip.
+  private(set) var tutorial = false
   /// The first game's tip on screen.
   private(set) var tip: FirstGameTip?
   /// The side's Playbook that moves were added to this run.
@@ -118,6 +120,7 @@ final class RunModel {
       round: firstGameRound(tree), selection: Selection(color: .w, opening: ANY_OPENING), store: store, tree: tree, index: index,
       engine: engine)
     firstGame = true
+    tutorial = !store.state.settings.tips.isEmpty
     holeAsked = true
     fill = Fill(gap: firstMoveGap(rep, index), size: store.state.settings.movesPerFill)
   }
@@ -334,6 +337,11 @@ final class RunModel {
     spawn { [weak self] in
       try? await Task.sleep(for: .seconds(Self.replyMs))
       guard let self, !Task.isCancelled, self.live, !self.myTurn else { return }
+      if self.tutorial, let san = firstGameReply(self.run.played) {
+        self.thinking = false
+        self.apply(engineMove(self.session, san))
+        return
+      }
       if let step = bookTurn(self.session, self.index, self.picker) {
         self.thinking = false
         self.apply(step)
@@ -513,14 +521,16 @@ final class RunModel {
     apply(playAdded(session, san))
   }
 
-  /// The opponent's reply while adding moves: the book's most played.
+  /// The opponent's reply while adding moves: the book's most played, or the
+  /// tutorial's set answer to move one.
   private func fillReply() {
     thinking = true
     later(Self.replyMs) { model in
       model.thinking = false
       guard model.live, !model.myTurn, model.fill != nil else { return }
       model.justAdded = nil
-      guard let san = popularReplies(model.index, model.run.fen, GAP_SHARE).first?.san else {
+      let first = model.tutorial ? firstGameReply(model.run.played) : nil
+      guard let san = first ?? popularReplies(model.index, model.run.fen, GAP_SHARE).first?.san else {
         model.fill = nil
         model.advance()
         return

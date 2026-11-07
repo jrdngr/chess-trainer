@@ -74,3 +74,14 @@ public func firstMoveGap(_ rep: Repertoire, _ index: ReferenceIndex) -> Gap {
   let hole = Hole(path: [], fen: START_FEN, san: "", share: 100, games: 0, after: START_FEN, nodeId: nil, reach: 1)
   return Gap(kind: .noAnswer, repertoireId: rep.id, color: rep.color, hole: hole, importance: 1, name: "", missing: 1)
 }
+
+/// Black's reply to White's first move in the tutorial's first game: the symmetric
+/// answer to 1.e4 and 1.d4, so a new player starts in a calm opening. Nil
+/// after any other move, and past move one.
+public func firstGameReply(_ played: [String]) -> String? {
+  switch played {
+  case ["e4"]: "e5"
+  case ["d4"]: "d5"
+  default: nil
+  }
+}

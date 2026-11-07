@@ -179,9 +179,6 @@ struct SettingsSheet: View {
     if lastProfile {
       dismiss()
       store.resetProfile()
-    } else if profile.id == store.profiles.active {
-      dismiss()
-      store.deleteProfile(profile.id)
     } else {
       store.deleteProfile(profile.id)
     }
