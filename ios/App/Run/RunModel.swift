@@ -75,6 +75,8 @@ final class RunModel {
   private var holeAsked = false
   /// A new player's first game: nothing saved, adding moves from move one, with tips.
   private(set) var firstGame = false
+  /// A Play run filling a Black basic from move one.
+  private(set) var basicRun = false
   /// A first game picked from the welcome's tutorial, not reached after Skip.
   private(set) var tutorial = false
   /// The first game's tip on screen.
@@ -121,6 +123,21 @@ final class RunModel {
     tutorial = store.state.settings.tips.contains(.firstMove)
     holeAsked = true
     fill = Fill(gap: firstMoveGap(rep, index), size: store.state.settings.movesPerFill)
+  }
+
+  /// A Play run that fills a Black basic: Black from move one, the opponent
+  /// opens with the basic's move, and you add your answer before the game goes on.
+  convenience init?(basic gap: Gap, store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
+    var repId = ""
+    store.update { repId = $0.ensureRepertoire(gap.color) }
+    var gap = gap
+    gap.repertoireId = repId
+    self.init(
+      round: basicRound(tree, gap), selection: Selection(color: gap.color, opening: ANY_OPENING), store: store, tree: tree, index: index,
+      engine: engine)
+    basicRun = true
+    holeAsked = true
+    fill = Fill(gap: gap, size: store.state.settings.movesPerFill)
   }
 
   /// A run set up on Survival's screen, on those options: `start` with no plan.
@@ -211,7 +228,7 @@ final class RunModel {
   var openingId: String { run.enteredIn ?? round?.pick.opening.id ?? run.openingId }
   /// The header's name: a first game is named by the book as it goes.
   var headerName: String {
-    if firstGame { return openingNameForPath(index, run.played)?.name ?? "Any Opening" }
+    if firstGame || basicRun { return openingNameForPath(index, run.played)?.name ?? "Any Opening" }
     return openingName(tree, openingId)
   }
   var momentHere: Bool {
@@ -520,16 +537,19 @@ final class RunModel {
     apply(playAdded(session, san))
   }
 
-  /// The opponent's reply while adding moves: the book's most played, or the
-  /// tutorial's set answer to move one.
+  /// The opponent's reply while adding moves: the gap's own move on the way
+  /// to it, the tutorial's set answer to move one, or the book's most played.
   private func fillReply() {
     thinking = true
     later(Self.replyMs) { model in
       model.thinking = false
       guard model.live, !model.myTurn, model.fill != nil else { return }
       model.justAdded = nil
-      let first = model.tutorial ? firstGameReply(model.run.played) : nil
-      guard let san = first ?? popularReplies(model.index, model.run.fen, GAP_SHARE).first?.san else {
+      let played = model.run.played
+      let line = model.fill?.gap.line ?? []
+      let toGap = line.count > played.count && Array(line.prefix(played.count)) == played ? line[played.count] : nil
+      let first = model.tutorial ? firstGameReply(played) : nil
+      guard let san = toGap ?? first ?? popularReplies(model.index, model.run.fen, GAP_SHARE).first?.san else {
         model.fill = nil
         model.advance()
         return

@@ -77,6 +77,21 @@ import Testing
   #expect(found.first?.color == .w)
 }
 
+/// Play fills a missing Black basic only when the side can be Black, the
+/// selected opening's own first move first.
+@Test func basicRunOnlyWhenBlackCanPlay() throws {
+  let tree = openingTree(bookIndex)
+  var state = AppState()
+  state.addLine(state.ensureRepertoire(.w), line("e4 e5 Nf3 Nc6 Bb5"), .fixed(.book))
+  #expect(basicRunGap(state, tree, Selection(color: .w, opening: ANY_OPENING)) == nil)
+  #expect(basicRunGap(state, tree, Selection(color: .random, opening: ANY_OPENING))?.line == line("e4"))
+  let qgd = try #require(tree.byId["d4 d5 c4 e6"])
+  #expect(basicRunGap(state, tree, Selection(color: .b, opening: qgd.id))?.line == line("d4"))
+  state.addLine(state.ensureRepertoire(.b), line("e4 e5"), .fixed(.book))
+  state.addLine(state.ensureRepertoire(.b), line("d4 d5"), .fixed(.book))
+  #expect(basicRunGap(state, tree, Selection(color: .b, opening: ANY_OPENING)) == nil)
+}
+
 /// More shows ten: five "Too short" when there are five, the rest by importance.
 @Test func moreShowsTenWithFiveTooShort() {
   let tree = openingTree(bookIndex)

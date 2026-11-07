@@ -261,6 +261,21 @@ public func growScore(_ gap: Gap, top: Gap?, pace p: Double, reps: [Repertoire],
 
 /* ── the questions, on the app's state ── */
 
+/// The Black basic a Play run fills before anything else, when the selection
+/// plays Black or either side: the answer to 1.e4 or 1.d4 still missing, the
+/// selected opening's own first move first. Nil once both are answered.
+public func basicRunGap(_ state: AppState, _ tree: OpeningTree, _ selection: Selection) -> Gap? {
+  guard colorsOf(selection.color).contains(.b) else { return nil }
+  let missing = basicGaps(state.repertoireList, tree.index).filter { $0.color == .b }
+  let first = nodeById(tree, selection.opening).sans.first
+  return missing.first { $0.hole.san == first } ?? missing.first
+}
+
+/// The run that fills a basic: from move one, steered along the gap's line.
+public func basicRound(_ tree: OpeningTree, _ gap: Gap) -> AutoRound {
+  AutoRound(pick: Recommendation(focus: .test, opening: tree.root, color: gap.color, start: .first), at: nil, aim: gap.line)
+}
+
 /// The gaps inside a selection, every side it covers.
 public func selectionGaps(_ state: AppState, _ tree: OpeningTree, _ selection: Selection) -> [Gap] {
   let reps = state.repertoireList
