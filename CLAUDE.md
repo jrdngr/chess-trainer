@@ -6,11 +6,11 @@ generated from it were removed on 2026-11-02; their final state is on the
 
 ## Branches
 
-- Commit straight to `dev` once the tests below pass. No fix branches. Hold
-  the commits locally and push to `dev` only when the owner says to; changes
-  are collected into one push.
-- Merge `dev` into `main` only when the owner says the next release is
-  settled. Every push to `main` starts an Xcode Cloud build.
+- Commit straight to `main` once the tests below pass. No fix branches. Hold
+  the commits locally and push to `main` only when the owner says to; changes
+  are collected into one push. Every push to `main` starts an Xcode Cloud
+  build with the same checks as `dev`.
+- `dev` is no longer pushed to.
 
 ## Checks
 
@@ -32,9 +32,8 @@ rm -rf .build  # root-owned build output from the container
 Linux builds the package only (ChessCore, Book, Model, Engine and their
 tests), not the SwiftUI app in `ios/App`. Keep package code portable: guard
 Apple-only APIs with `#if canImport(...)`, and import `FoundationNetworking`
-where URLSession is used. Xcode Cloud's dev workflow builds the whole app on
-every push to `dev` and then runs the tests
-(`ios/ci_scripts/ci_post_xcodebuild.sh`); it publishes nothing from `dev`.
+where URLSession is used. Xcode Cloud builds the whole app on every push to
+`main` and then runs the tests (`ios/ci_scripts/ci_post_xcodebuild.sh`).
 
 `ios/Tests/SpecTests/Golden/` holds recorded answers the model must keep
 giving. When a change to the app's behavior is intended, update the affected
