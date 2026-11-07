@@ -162,7 +162,6 @@ public struct StartOptions {
   public var color: ColorChoice
   public var weakness: Weakness?
   public var growth: GrowthOptions?
-  public var holeWeight: ((Hole) -> Double)?
   public var seen: Seen?
   public var seed: Double?
   /// What My lines tilts toward. Autopilot chooses; the setup screen leans weak.
@@ -190,7 +189,6 @@ public func startSurvival(_ opts: StartOptions) -> SurvivalStart? {
   begin.at = opts.at
   begin.weakness = opts.weakness
   begin.growth = opts.growth
-  begin.holeWeight = opts.holeWeight
   begin.seen = opts.seen
   begin.seed = opts.seed
   guard var begun = beginRun(begin) else { return nil }

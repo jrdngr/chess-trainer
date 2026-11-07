@@ -1,7 +1,7 @@
 import ChessCore
 
 /// Autopilot's rounds: what the next run is, and where it starts.
-/// What your games say (`evidenceIn`) steers
+/// Your logged mistakes (`evidenceIn`) steer
 /// both the pick and the run.
 
 /// What Autopilot's next run is: the recommendation, and for a run started at a position, the moves to it.
@@ -93,10 +93,9 @@ public func survivalOptions(_ round: AutoRound, _ state: AppState, _ tree: Openi
   opts.toward = round.pick.opening
   opts.enter = round.pick.start == .inside
   opts.at = round.at
-  // The saved selection's evidence.
+  // The saved selection's mistakes.
   let evidence = evidenceIn(state, tree, state.settings.selection)
   opts.weakness = weaknessFromCards(state.cards, slips(evidence))
-  opts.holeWeight = evidenceFor(evidence)
   opts.growth = GrowthOptions(minShare: AUTO_GROWTH.minShare, maxPly: AUTO_GROWTH.maxPly)
   opts.seen = Seen(at: state.score.seen, round: state.score.lineRounds)
   opts.seed = seed

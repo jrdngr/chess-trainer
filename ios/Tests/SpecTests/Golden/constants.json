@@ -1133,7 +1133,6 @@
       }
     ],
     "OPENING_PLIES": 16,
-    "PLAY_GAMES_CAP": 200,
     "PLAY_GAME_PLIES": 40
   },
   "src/model/prepFloor.ts": {

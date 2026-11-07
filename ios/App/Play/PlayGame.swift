@@ -144,15 +144,12 @@ final class PlayGame {
     if fenTurn(fen) == color { weigh() } else if !held { engineTurn() }
   }
 
-  /// A finished game is kept with the imports; the repertoire is only written by Save.
+  /// A finished game is kept in the game history; the repertoire is only written by Save.
   private func end(_ result: GameResult, _ reason: String) {
     turnTask?.cancel()
     evalTask?.cancel()
     thinking = false
     over = Over(result: result, reason: reason)
-    if let game = playedGame(id: gameId, color: color, moves: moves, result: result, level: level, at: Env.now()) {
-      store.update { $0.recordPlayGame(game) }
-    }
     let score = result == .draw ? "1/2-1/2" : pgnResult(won: result == .win, color: color)
     let record = GameRecord(
       id: gameId, mode: .play, at: Env.now(), color: color, picked: pickedFor(selection, saved: store.state.settings.selection),

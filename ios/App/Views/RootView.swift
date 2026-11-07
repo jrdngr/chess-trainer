@@ -20,8 +20,8 @@ struct RootView: View {
   /// A Drill sitting opened from the Playbook: its positions and title.
   @State private var drilling: (items: [TrainingItem], title: String)?
   @Environment(Toasts.self) private var toasts
-  /// Import games, opened from the Playbook tab.
-  @State private var importing = ImportDebug.open
+  /// Import my games, opened from the Playbook tab.
+  @State private var importing = false
   /// A line the Playbook sent to the Analysis tab, and the side it was sent from.
   @State private var explore: (sans: [String], side: ChessCore.Color)?
   /// A line a mode sent to Analysis, opened over it: the mode stays underneath, and Back returns to it.

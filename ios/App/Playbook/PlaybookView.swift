@@ -106,7 +106,7 @@ struct PlaybookView: View {
     return VStack(spacing: 0) {
       AppBar(title: "Playbook", large: true) {
         Menu {
-          Button { onImport() } label: { Label("Import games", systemImage: "square.and.arrow.down") }
+          Button { onImport() } label: { Label("Import my games", systemImage: "square.and.arrow.down") }
           Button { onBuild() } label: { Label("Play on the board", systemImage: "checkerboard.rectangle") }
           if !reps.isEmpty {
             ShareLink(item: exportFile(reps)) { Label("Export", systemImage: "square.and.arrow.up") }

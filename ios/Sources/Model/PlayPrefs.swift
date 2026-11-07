@@ -34,11 +34,6 @@ public struct PlayPrefs: Equatable, Sendable, Codable {
 public let DEFAULT_PLAY = PlayPrefs(level: DEFAULT_LEVEL, save: true, warnOffBook: true, showEval: false, takeBacks: true)
 
 extension AppState {
-  /// Keep a game finished in Play: `useStore.recordPlayGame`.
-  public mutating func recordPlayGame(_ game: ImportedGame) {
-    importedGames = withPlayGame(importedGames, game)
-  }
-
   /// A move off your prep in Play, logged for practice: `useStore.logMistake`.
   public mutating func logMistake(_ mistake: Mistake) {
     mistakes = addMistake(mistakes, mistake)

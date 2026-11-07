@@ -3,9 +3,8 @@ import Foundation
 import Model
 import Testing
 
-/// Import: reading PGN, the two sites' responses, the sample archive, and the
-/// evidence Autopilot takes from your games. The prototype has no golden cases
-/// for these; these follow `pgn.test.ts`, `gameAnalysis.test.ts` and `gameSources.ts`.
+/// Import: reading PGN, the two sites' responses, and the openings your games
+/// seed the Playbook with.
 
 @Test func pgnHeadersAndMainline() throws {
   let pgn = "[Event \"Test\"]\n[White \"A\"]\n[Black \"B\"]\n[Result \"1-0\"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 1-0"
@@ -63,9 +62,6 @@ private let twoGames = """
   #expect(games[0].url == "https://lichess.org/abc")
   #expect(games[0].date == "2026.10.01")
   #expect(games[1].url == nil)
-  // A pasted PGN guesses from a name inside a player's.
-  #expect(pastedGames(twoGames, "tester").map(\.userColor) == [.w, .b])
-  #expect(pastedGames("", "tester").isEmpty)
 }
 
 /// Saved responses stand in for the network.
@@ -82,7 +78,7 @@ private func stub(_ routes: [String: (Int, String)]) -> HTTPGet {
     Issue.record("expected games")
     return
   }
-  #expect(games.count == 2 && games[0].source == .lichess)
+  #expect(games.count == 2 && games[0].site == .lichess)
   guard case .failed(.notFound, let message) = await fetchGames(.lichess, "nobody", get: stub([:])) else {
     Issue.record("expected not found")
     return
@@ -118,44 +114,3 @@ private func stub(_ routes: [String: (Int, String)]) -> HTTPGet {
   #expect(all.map(\.moves) == [["d4", "d5"], ["e4", "e5"]])
 }
 
-@Test func sampleArchive() {
-  let games = generateSampleArchive(bookIndex, username: "tester", count: 30, seed: 7)
-  let again = generateSampleArchive(bookIndex, username: "tester", count: 30, seed: 7)
-  #expect(games.map(\.moves) == again.map(\.moves))
-  for g in games {
-    var fen = START_FEN
-    for san in g.moves { fen = applySan(fen, san)?.after ?? "" }
-    #expect(!fen.isEmpty)
-    #expect([g.white, g.black].contains("tester"))
-    #expect(g.userColor == (g.white == "tester" ? .w : .b))
-  }
-  let asWhite = games.filter { $0.userColor == .w }
-  #expect(Double(asWhite.filter { $0.moves.first == "e4" }.count) / Double(asWhite.count) > 0.6)
-  #expect(zip(games, games.dropFirst()).allSatisfy { $0.date! >= $1.date! })
-}
-
-@Test func importKeepsPlayGames() {
-  var state = AppState()
-  let played = playedGame(id: "p1", color: .w, moves: ["e4", "e5"], result: .win, level: levelById("club"), at: 0)!
-  state.importedGames = [played]
-  state.setImportedGames(gamesFromPgn(twoGames, "tester") + [played])
-  #expect(state.importedGames.map(\.id) == ["p1", "pgn_https://lichess.org/abc_0", "pgn__1"])
-}
-
-@Test func evidenceSteersAutopilot() throws {
-  let tree = openingTree(bookIndex)
-  var state = AppState()
-  state.seed(tree, STARTER_SETS[0])
-  let selection = Selection(color: .random, opening: "")
-  #expect(evidenceIn(state, tree, selection).isEmpty)
-  state.setImportedGames(generateSampleArchive(bookIndex, username: "tester", count: 60))
-  let evidence = evidenceIn(state, tree, selection)
-  #expect(!evidence.isEmpty)
-  let input = recommendInput(state, tree, selection, AutoHistory())
-  #expect(input.repairs.map(\.fen) == evidence.map(\.fen))
-  // Holes your games kept reaching weigh more.
-  let unprepared = try #require(evidence.first { $0.kind == .unprepared })
-  let weight = evidenceFor(evidence)
-  let hole = Hole(path: [], fen: START_FEN, san: "", share: 0, games: 0, after: unprepared.fen, nodeId: nil, reach: 0)
-  #expect(weight(hole) == 1 + Double(evidence.filter { $0.kind == .unprepared && positionKey($0.fen) == positionKey(unprepared.fen) }.reduce(0) { $0 + $1.games }))
-}

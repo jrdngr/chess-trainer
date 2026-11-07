@@ -11,7 +11,7 @@ func liveImports() async throws {
     case .ok(let games):
       #expect(!games.isEmpty, "\(site.name): no games")
       let first = try #require(games.first)
-      #expect(first.source == site.source)
+      #expect(first.site == site)
       #expect(!first.moves.isEmpty)
       #expect(first.userColor != nil, "\(site.name): which side the user played")
       print("\(site.name) \(user): \(games.count) games, first \(first.white) v \(first.black), \(first.moves.count) plies, \(first.date ?? "?")")

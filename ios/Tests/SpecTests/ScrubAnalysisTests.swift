@@ -17,15 +17,15 @@ import Testing
 
 @Test func importLeavesOutGamesSetUpFromAPosition() {
   let setUp = "[White \"tester\"]\n[Black \"x\"]\n[SetUp \"1\"]\n[FEN \"4k3/8/8/8/8/8/4P3/4K3 w - - 0 1\"]\n\n1. e4 Kd7 *"
-  #expect(gamesFromPgn(setUp, "tester").isEmpty)
+  #expect(gamesFromPgn(setUp, "tester", .lichess).isEmpty)
   let standard = "[White \"tester\"]\n[Black \"x\"]\n[FEN \"\(START_FEN)\"]\n\n1. e4 e5 *"
-  #expect(gamesFromPgn(standard, "tester").map(\.moves) == [["e4", "e5"]])
+  #expect(gamesFromPgn(standard, "tester", .lichess).map(\.moves) == [["e4", "e5"]])
 }
 
 @Test func unfinishedGameScoresAsDrawForEitherSide() throws {
   for color in [Color.w, .b] {
     let game = ImportedGame(
-      id: "g", source: .pgn, white: "a", black: "b", result: "*", userColor: color, moves: ["e4", "e5"])
+      id: "g", site: .lichess, white: "a", black: "b", result: "*", userColor: color, moves: ["e4", "e5"])
     let tree = buildPlayerTree([game], color)
     let root = try #require(tree.nodes[positionKey(START_FEN)])
     #expect([root.wins, root.draws, root.losses] == [0, 1, 0])

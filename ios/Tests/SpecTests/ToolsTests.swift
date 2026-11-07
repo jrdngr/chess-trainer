@@ -18,7 +18,7 @@ private enum Tools {
 
   static func game(_ id: String, _ moves: String, _ result: String, _ userColor: Color) -> ImportedGame {
     ImportedGame(
-      id: id, source: .lichess, white: userColor == .w ? "me" : "them", black: userColor == .b ? "me" : "them",
+      id: id, site: .lichess, white: userColor == .w ? "me" : "them", black: userColor == .b ? "me" : "them",
       result: result, userColor: userColor, date: "2026-09-01", moves: line(moves))
   }
 
@@ -104,9 +104,8 @@ private func noon(_ key: String) -> Double {
       ? [T.mistake("d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3", "c5", "O-O", T.AT),
          T.mistake("e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3", "e6", "e5", T.AT + 1)]
       : []
-    return buildRepairs(T.GAMES, [T.BLACK], RepairOptions(mistakes: mistakes)).map { r in
-      let played = r.played.map(\.san).joined(separator: ",")
-      return "\(r.kind.rawValue) \(r.source.name) \(r.path.joined(separator: " ")) games \(r.games) played \(played) expected \(r.expected.joined(separator: ",")) weight \(JS.toFixed(r.weight, 2))"
+    return buildRepairs([T.BLACK], mistakes).map { r in
+      "\(r.source.rawValue) \(r.path.joined(separator: " ")) played \(r.played) expected \(r.expected)"
     }.json
   }
 
@@ -161,17 +160,6 @@ private func noon(_ key: String) -> Double {
         return "\(n.path.joined(separator: " ")) \(n.games)g \(n.wins)/\(n.draws)/\(n.losses)\(choices)"
       }
       return obj(["games": t.games, "positions": positions])
-    },
-    "gameAnalysis.analyseAgainstRepertoire": { a in
-      analyseAgainstRepertoire(buildPlayerTree(T.GAMES, .b), T.BLACK, minGames: a[0].int).map { f in
-        let played = f.played.map { "\($0.san):\($0.count)" }.joined(separator: ",")
-        return "\(f.kind.rawValue) \(f.path.joined(separator: " ")) games \(f.games) played \(played) expected \(f.expected.joined(separator: ","))"
-      }.json
-    },
-    "gameAnalysis.measureCoverage": { a in
-      let c = color(a[0])
-      let cov = measureCoverage(T.GAMES.filter { $0.userColor == c }, c == .b ? T.BLACK : T.rep(.w, ["e4 e5 Nf3 Nc6 Bc4"]))
-      return obj(["inPrep": cov.inPrep, "outOfPrep": cov.outOfPrep, "averageExitPly": cov.averageExitPly, "games": cov.games])
     },
     "repair.buildRepairs": { repairs($0[0].bool) },
     "stats.series": { series($0[0].int, $0[1].string) },

@@ -80,6 +80,18 @@ final class EngineChecks {
     return MoveCheck(lost: max(0, evalLoss(fenTurn(fen), before, after)), after: after, best: best.pv.first)
   }
 
+  /// What a move gives away, from a short search: the import list's mistake check, asked of many moves in a row.
+  static func quickLoss(_ fen: String, _ san: String) async -> Double? {
+    guard let move = applySan(fen, san) else { return nil }
+    let engine = HintEngine.shared
+    let full = await engine.analyse(fen, EngineLimits(depth: 10, movetime: 250, multiPv: 1))
+    guard let best = full.lines.first, let before = score(best) else { return nil }
+    if best.pv.first == move.uci { return 0 }
+    let held = await engine.analyse(fen, EngineLimits(depth: 10, movetime: 250, multiPv: 1, searchmoves: [move.uci]))
+    guard let after = score(held.lines.first) else { return nil }
+    return max(0, evalLoss(fenTurn(fen), before, after))
+  }
+
   private static func runSound(_ fen: String, _ san: String) async -> Bool {
     guard let move = applySan(fen, san) else { return false }
     let engine = HintEngine.shared

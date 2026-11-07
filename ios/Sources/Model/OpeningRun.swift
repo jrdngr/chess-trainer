@@ -246,7 +246,6 @@ public struct BeginOptions {
   public var minDecisions = 4
   public var weakness: Weakness?
   public var growth: GrowthOptions?
-  public var holeWeight: ((Hole) -> Double)?
   public var seen: Seen?
   /// Start inside the opening walked toward.
   public var enter = false
@@ -387,14 +386,13 @@ private func drawHole(_ rep: Repertoire, _ tree: OpeningTree, _ aim: OpeningNode
   if found.isEmpty { return nil }
   let inside = found.filter { lineStatus(tree, aim, $0.hole.path + [$0.hole.san]) == .reached }
   let holes = inside.isEmpty ? found : inside
-  let evidence = opts.holeWeight ?? { _ in 1 }
   let seen = opts.seen ?? NOTHING_SEEN
   func fresh(_ hole: Hole) -> Double {
     let walk = keysAlong(hole.path).map { staleness(seen, $0) }
     let added = Double(2 * movesToFit(hole.path.count, opts.growth?.maxPly ?? 18))
     return pow((walk.reduce(0, +) + added) / (Double(walk.count) + added), 2)
   }
-  let met = { (h: (hole: Hole, rest: [String])) in h.hole.reach * holeShare(h.hole) * evidence(h.hole) * fresh(h.hole) }
+  let met = { (h: (hole: Hole, rest: [String])) in h.hole.reach * holeShare(h.hole) * fresh(h.hole) }
   let best = holes.map(met).max()!
   let field = holes.filter { met($0) * DRAW_WINDOW >= best }
   return pickWeighted(field.isEmpty ? holes : field, met, rand)

@@ -77,8 +77,6 @@ public struct AppState: Equatable, Sendable, Codable {
   public var log: [ReviewLogEntry] = []
   public var events: [AppEvent] = []
   public var settings = Settings()
-  /// Games imported, and the games played in Play (newest first, ahead of the imports).
-  public var importedGames: [ImportedGame] = []
   /// Your playing strength, from the moves the judge weighed.
   public var strength = PlayerStrength()
   /// Endgame mode: its cards, family ratings and saved positions.
@@ -90,7 +88,7 @@ public struct AppState: Equatable, Sendable, Codable {
   public init() {}
 
   enum CodingKeys: String, CodingKey {
-    case repertoires, repertoireOrder, cards, score, survival, mistakes, lineCards, log, events, settings, importedGames, strength, endgames, middlegame
+    case repertoires, repertoireOrder, cards, score, survival, mistakes, lineCards, log, events, settings, strength, endgames, middlegame
     case games
   }
 
@@ -108,7 +106,6 @@ public struct AppState: Equatable, Sendable, Codable {
     log = try c.decodeIfPresent([ReviewLogEntry].self, forKey: .log) ?? log
     events = normalizeEvents(try c.decodeIfPresent([AppEvent].self, forKey: .events))
     settings = try c.decodeIfPresent(Settings.self, forKey: .settings) ?? settings
-    importedGames = try c.decodeIfPresent([ImportedGame].self, forKey: .importedGames) ?? importedGames
     strength = try c.decodeIfPresent(PlayerStrength.self, forKey: .strength) ?? strength
     endgames = try c.decodeIfPresent(EndgameRecord.self, forKey: .endgames) ?? endgames
     middlegame = try c.decodeIfPresent(SurvivalRecord.self, forKey: .middlegame) ?? middlegame

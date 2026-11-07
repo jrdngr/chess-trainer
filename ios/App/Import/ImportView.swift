@@ -1,114 +1,141 @@
+import ChessCore
 import Model
 import SwiftUI
 
-/// Import games: from Lichess or Chess.com, a pasted PGN, or a sample
-/// archive; then what they say against your Playbook.
+/// Import my games: your recent Lichess or Chess.com games, read once and
+/// never kept, turned into openings to add to your Playbook.
 struct ImportView: View {
   let onBack: () -> Void
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
-  @State private var reviewing: Bool?
   @State private var site = GameSite.lichess
   @State private var username: String?
-  @State private var loading = false
-  @State var error: (message: String, blocked: Bool)?
-  @State var pgnOpen = false
-  @State private var pgnText = ""
+  @State private var step: Step?
+  @State private var error: (message: String, blocked: Bool)?
+  /// The list, with what the engine said of each of your moves in it.
+  @State private var found: (rows: [SeedRow], lost: [String: Double])?
+  @State private var picked: Set<String> = []
 
-  var games: [ImportedGame] { importedOnly(store.state.importedGames) }
+  private enum Step { case fetching, checking }
+
   private var name: String {
-    username ?? (store.state.settings.lichessUsername.isEmpty ? store.state.settings.chesscomUsername : store.state.settings.lichessUsername)
+    username ?? (site == .lichess ? store.state.settings.lichessUsername : store.state.settings.chesscomUsername)
   }
   private var nameBinding: Binding<String> { Binding(get: { name }, set: { username = $0 }) }
-  var trimmed: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
+  private var trimmed: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
 
   var body: some View {
-    Group {
-      if reviewing ?? !games.isEmpty, !games.isEmpty {
-        GameReviewView(games: games, onBack: { reviewing = false }, onExit: onBack)
-      } else {
-        source
-      }
+    if let found {
+      results(found.rows, found.lost)
+    } else {
+      source
     }
-    .task { debugOpen() }
   }
 
   private var source: some View {
     VStack(spacing: 0) {
-      AppBar(title: "Import games", onBack: onBack)
+      AppBar(title: "Import my games", onBack: onBack)
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
           SegmentedControl(value: $site, options: [(.lichess, "Lichess"), (.chesscom, "Chess.com")])
-          FieldInput(placeholder: "Username", text: nameBinding).padding(.top, 8)
-          SheetButton(loading ? "Importing…" : "Import recent games", style: .primary) { Task { await run() } }
-            .unavailable(trimmed.isEmpty || loading).padding(.top, 8)
+          FieldInput(placeholder: "Your \(site.name) username", text: nameBinding).padding(.top, 12)
           if let error {
             BadBanner(
               title: error.blocked ? "Can't reach \(site.name) from here" : "Couldn't import",
-              sub: error.blocked ? "Paste a PGN or try the sample instead." : error.message
+              sub: error.blocked ? "Check your connection and try again." : error.message
             ).padding(.top, 12)
-          }
-          SectionHead(title: "Or")
-          ListCard {
-            ChevronRow(title: "Paste PGN") { pgnOpen = true }
-            ChevronRow(title: "Try sample games", meta: "60 generated games", action: loadSample)
           }
         }
         .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 20)
       }
       .scrollDismissesKeyboard(.interactively)
+      BigButton(label: stepLabel, disabled: trimmed.isEmpty || step != nil) { Task { await find() } }
+        .padding(.horizontal, 16).padding(.bottom, 12)
     }
-    .sheet(isPresented: $pgnOpen) { pgnSheet }
   }
 
-  private var pgnSheet: some View {
-    SheetFrame(title: "Paste PGN", detents: [.medium, .large], onClose: { pgnOpen = false }) {
-      FieldInput(placeholder: "Your username in the PGN", text: nameBinding, raised: true)
-      FieldArea(placeholder: "[Event \"Rated blitz game\"]…", text: $pgnText).padding(.top, 8)
-      SheetButton("Import", style: .primary, action: loadPgn)
-        .unavailable(pgnText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty).padding(.top, 8)
+  private var stepLabel: String {
+    switch step {
+    case .fetching: return "Reading your games…"
+    case .checking: return "Checking your moves…"
+    case nil: return "Find my openings"
     }
-    .overlay { ToastHost() }
   }
 
-  private func run() async {
+  private func results(_ rows: [SeedRow], _ lost: [String: Double]) -> some View {
+    let chosen = rows.filter { picked.contains($0.id) }
+    return VStack(spacing: 0) {
+      AppBar(title: "Your openings", onBack: { found = nil })
+      ScrollView {
+        VStack(alignment: .leading, spacing: 0) {
+          if rows.isEmpty {
+            EmptyNote(title: "No openings to add", hint: "Your Playbook already has the openings you play most").padding(.top, 8)
+          } else {
+            ListCard {
+              ForEach(rows) { row in seedRow(row) }
+            }
+          }
+        }
+        .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 20)
+      }
+      if !rows.isEmpty {
+        BigButton(label: chosen.isEmpty ? "Add openings" : "Add \(plural(chosen.count, "opening"))", disabled: chosen.isEmpty) {
+          store.update { _ = $0.addSeedRows(chosen, lost: lost) }
+          toasts.show("\(plural(chosen.count, "opening")) added")
+          onBack()
+        }
+        .padding(.horizontal, 16).padding(.bottom, 12)
+      }
+    }
+  }
+
+  private func seedRow(_ row: SeedRow) -> some View {
+    let on = picked.contains(row.id)
+    return Button {
+      if on { picked.remove(row.id) } else { picked.insert(row.id) }
+    } label: {
+      HStack(spacing: 12) {
+        RoundedRectangle(cornerRadius: 7)
+          .fill(on ? Theme.accent : SwiftUI.Color.clear)
+          .overlay { RoundedRectangle(cornerRadius: 7).stroke(on ? SwiftUI.Color.clear : Theme.surface3, lineWidth: 2) }
+          .overlay { if on { Icon(name: "check", size: 15).foregroundStyle(Theme.accentInk) } }
+          .frame(width: 24, height: 24)
+        SideSquare(color: row.color)
+        Text(row.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+          .frame(maxWidth: .infinity, alignment: .leading)
+        Text(row.slot.label).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.text2)
+      }
+      .padding(.horizontal, 14).padding(.vertical, 10).frame(minHeight: 52).contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+  }
+
+  /// Fetch the games, list their openings, ask the engine about your moves in them, and list them again without the mistakes.
+  private func find() async {
+    guard let index = store.index else { return }
     let name = trimmed
-    guard !name.isEmpty else { return }
     // The site asked, even if the picker moves while the fetch runs.
     let site = self.site
-    loading = true
+    step = .fetching
     error = nil
     let result = await fetchGames(site, name, max: 120)
-    loading = false
-    switch result {
-    case .failed(let reason, let message):
-      error = (message, reason == .blocked)
-    case .ok(let fetched):
-      store.update {
-        $0.setImportedGames(fetched)
-        if site == .lichess { $0.settings.lichessUsername = name } else { $0.settings.chesscomUsername = name }
-      }
-      reviewing = true
-      toasts.show("\(fetched.count) games imported")
-    }
-  }
-
-  func loadSample() {
-    guard let index = store.index else { return }
-    let sample = generateSampleArchive(index, username: trimmed.isEmpty ? "you" : trimmed, count: 60, source: site.source)
-    store.update { $0.setImportedGames(sample) }
-    reviewing = true
-  }
-
-  private func loadPgn() {
-    let tagged = pastedGames(pgnText, name)
-    guard !tagged.isEmpty else {
-      toasts.show("No games found")
+    guard case .ok(let games) = result else {
+      if case .failed(let reason, let message) = result { error = (message, reason == .blocked) }
+      step = nil
       return
     }
-    store.update { $0.setImportedGames(tagged) }
-    pgnOpen = false
-    reviewing = true
-    toasts.show("\(tagged.count) games imported")
+    store.update {
+      if site == .lichess { $0.settings.lichessUsername = name } else { $0.settings.chesscomUsername = name }
+    }
+    step = .checking
+    let reps = store.state.repertoireList
+    var lost: [String: Double] = [:]
+    for move in seedMoves(seedRows(games, index, reps)) {
+      if let cost = await EngineChecks.quickLoss(move.fen, move.san) { lost["\(positionKey(move.fen)) \(move.san)"] = cost }
+    }
+    let rows = seedRows(games, index, reps, lost: lost)
+    picked = Set(rows.filter(\.checked).map(\.id))
+    found = (rows, lost)
+    step = nil
   }
 }
