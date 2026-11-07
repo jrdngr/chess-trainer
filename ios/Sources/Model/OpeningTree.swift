@@ -114,7 +114,7 @@ public func moveLabel(_ sans: [String]) -> String {
 
 func buildOpeningTree(_ index: ReferenceIndex) -> OpeningTree {
   let root = OpeningNode(
-    id: ANY_OPENING, name: "My Playbook", eco: nil, sans: [], key: positionKey(START_FEN),
+    id: ANY_OPENING, name: "Any Playbook", eco: nil, sans: [], key: positionKey(START_FEN),
     pathKeys: [], games: index.totalGames, depth: 0, parentId: nil)
   var byId = OrderedMap<String, OpeningNode>()
   byId[root.id] = root

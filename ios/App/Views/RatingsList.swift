@@ -56,6 +56,8 @@ struct RatingsList: View {
 struct SegmentedControl<Value: Hashable>: View {
   @Binding var value: Value
   var options: [(value: Value, label: String)]
+  /// The color behind the options.
+  var track = Theme.surface
 
   var body: some View {
     HStack(spacing: 2) {
@@ -73,7 +75,7 @@ struct SegmentedControl<Value: Hashable>: View {
       }
     }
     .padding(3)
-    .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface))
+    .background(RoundedRectangle(cornerRadius: 12).fill(track))
     .animation(.easeOut(duration: 0.15), value: value)
   }
 }

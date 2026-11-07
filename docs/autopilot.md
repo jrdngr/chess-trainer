@@ -20,8 +20,8 @@ background. Now and then a run stops at a reply you have no answer to and
 asks you for one, so your Playbook grows at a steady pace without
 overwhelming you.
 
-The core loop: early on, Autopilot with Any favorite; once the Playbook is
-decent, Autopilot with My Playbook. Most runs still reach the end of your
+The core loop: Drill with Any Favorite or Any Playbook, and Freeform when you
+want whole games from move one. Most runs still reach the end of your
 prep, play book moves and go out of book. Growing is the exception, not every
 run.
 
@@ -43,15 +43,17 @@ Every change should pass these tests:
   at and steer toward. Speed and accuracy also decide when a line gets new
   moves: mastery is a weight, never a gate.
 - **No setup.** Autopilot's settings are matters of taste, such as turning
-  feedback on or off. They never change what you practice or how. The one
-  exception is Moves per fill, which sets how many moves a fill adds and so
-  how often new moves come.
+  feedback on or off. They never change what you practice or how. Two
+  exceptions: Moves per fill, which sets how many moves a fill adds and so
+  how often new moves come, and the Freeform/Drill switch under Home's Play
+  button (see How a run starts).
 - **It is the whole product.** If a player can't get somewhere without
   Middlegame or Endgames, Autopilot has a gap.
 
 ## What it is not
 
-- It is not a mode picker.
+- It is not a mode picker. Freeform and Drill are one kind of round that
+  only starts differently.
 - It is not a Playbook editor. It adds moves only at the one hole a run
   reaches (see Growing inside a run). Other growing is done from Home's
   Recommendations or an opening's Grow.
@@ -65,9 +67,11 @@ Every change should pass these tests:
 | Inside start | The moves to one position deeper inside the opening are played for you: the one most overdue, or, with nothing due while your prep keeps missing, the one you answer worst | When it needs it more than a cold start does, never two runs in a row |
 | Cold start | Nothing is played for you. The run starts from move one and the opponent steers toward the opening | When the way in has gone unplayed long enough, never two runs in a row, and at least every 3rd run |
 
-With My Playbook selected, every run is a cold start: nothing is played for
-you, and the opponent steers toward what needs work. That sets it apart from
-picking an opening or Any favorite.
+Under Home's Play button, a switch picks how runs start, for any selection:
+
+- **Drill** (the default): the starts in the table above.
+- **Freeform**: every run is a cold start. Nothing is played for you, and the
+  opponent steers toward what needs work.
 
 The first run of an opening added from a menu is always a position start,
 whatever is owed, so you see how the opening is reached before you are asked
@@ -92,7 +96,7 @@ play:
 The recommendation engine picks it: one stateless, deterministic set of
 functions, one per question, computed from the Playbook, the in-app game
 history (for staleness and how often things come up) and the book. The same
-data gives the same run. Any favorite lands on the favorite played longest
+data gives the same run. Any Favorite lands on the favorite played longest
 ago, skipping the last one while there is another.
 
 When a new move is due (see below), the next run steers toward the gap in the
@@ -179,8 +183,9 @@ segments along the bottom edge shows how far into your prep the run starts:
 one segment a ply, lit up to where you take over. Home's button, the round
 intro and the end screen all use this. During the run, the app bar shows the
 opening, the same segments counting up as you play, and the rating the run has
-gained so far. With My Playbook, where every run starts from move one, Home's
-button, the round intro and the app bar show no segments.
+gained so far. In Freeform, where every run starts from move one, Home's
+button, the round intro and the app bar show no segments. Home's button still
+names the opening the opponent steers toward.
 
 ## Free and paid
 

@@ -72,7 +72,7 @@ private func outcome(_ how: Ending, _ color: ChessCore.Color) -> [String] {
     [UTCTime "12:00:05"]
     [Termination "blunder"]
     [Mode "survival"]
-    [Picked "Any favorite"]
+    [Picked "Any Favorite"]
     [Opening "\(opening)"]
     [Opened "3"]
 
@@ -83,7 +83,7 @@ private func outcome(_ how: Ending, _ color: ChessCore.Color) -> [String] {
     id: "y", mode: .play, at: 0, color: .w, picked: Selection(color: .w, opening: ANY_OPENING),
     opening: "", moves: ["e4"], result: "1-0", termination: "resignation")
   let lines = gamePgn(mine, tree).split(separator: "\n")
-  #expect(lines.contains("[Picked \"My Playbook\"]"))
+  #expect(lines.contains("[Picked \"Any Playbook\"]"))
   #expect(!lines.contains { $0.hasPrefix("[Opened") })
   #expect(gamesPgn([record, mine], tree) == gamePgn(record, tree) + "\n" + gamePgn(mine, tree))
 }

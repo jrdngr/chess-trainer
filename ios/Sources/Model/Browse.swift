@@ -50,7 +50,7 @@ public func shortName(_ label: String) -> String {
 
 /// The name a line shows under: the book's deepest name along it, as the picker spells it.
 public func lineName(_ tree: OpeningTree, _ catalog: PickerCatalog, _ sans: [String]) -> String {
-  if sans.isEmpty { return "My Playbook" }
+  if sans.isEmpty { return "Any Playbook" }
   guard let node = tree.byId[sans.joined(separator: " ")] ?? deepestNodeAlong(tree, sans) else { return moveLabel(sans) }
   guard let entry = entryForNode(catalog, node) else { return node.name }
   return shortEntryLabel(entry)

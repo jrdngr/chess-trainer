@@ -102,7 +102,7 @@ public func gamesIn(_ games: [GameRecord], _ scope: GameScope, now: Double) -> [
 
 /// A selection's name for the PGN tags.
 private func pickedName(_ tree: OpeningTree, _ selection: Selection) -> String {
-  selection.opening == ANY_FAVORITE ? "Any favorite" : nodeById(tree, selection.opening).name
+  selection.opening == ANY_FAVORITE ? "Any Favorite" : nodeById(tree, selection.opening).name
 }
 
 /// One game as PGN: the standard tags, the app's own (Mode, Picked, Opening, Opened), then the moves.

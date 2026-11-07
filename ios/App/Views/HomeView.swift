@@ -2,7 +2,7 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// Home: the selection, Play's next run on its button, Middlegame and
+/// Home: Play's next run on its button with the selection under it, Middlegame and
 /// Endgames, Recommendations and Milestones. A mode tile starts the mode on
 /// your saved settings; press and hold Middlegame for Start or Settings (its
 /// setup screen first).
@@ -21,18 +21,24 @@ struct HomeView: View {
   var body: some View {
     ScrollView {
       VStack(spacing: 0) {
-        SelectionBar {
+        HStack {
+          Spacer()
           Button { settings = true } label: {
             Icon(name: "gear", size: 20).foregroundStyle(Theme.text2).padding(.horizontal, 11).frame(minWidth: 44, minHeight: 44)
               .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface))
               .contentShape(RoundedRectangle(cornerRadius: 14))
           }
           .buttonStyle(.plain)
+          .accessibilityLabel("Settings")
         }
         .padding(.top, 2).padding(.bottom, 12)
-        if homeCardPending(store.state.settings.tips) { PlayHowCard().padding(.bottom, 12) }
-        ScoreStrip().padding(.bottom, 12)
-        autopilot.padding(.bottom, 10)
+        VStack(spacing: 0) {
+          autopilot
+          PlayFooter()
+        }
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .padding(.bottom, 10)
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 10) {
           tile("Middlegame", "middlegame", .middlegame, held: true)
           tile("Endgames", "flag", .endgame)
@@ -46,6 +52,12 @@ struct HomeView: View {
       .padding(.horizontal, 16).padding(.bottom, 24)
     }
     .sheet(isPresented: $settings) { SettingsSheet().presentationBackground(Theme.background) }
+    .fullScreenCover(isPresented: Binding(
+      get: { homeCardPending(store.state.settings.tips) },
+      set: { shown in if !shown { store.update { $0.settings.tips = [] } } }
+    )) {
+      PlayHowPage { store.update { $0.settings.tips = [] } }
+    }
     .onAppear {
       guard store.takeSettingsHeld() else { return }
       var still = Transaction()
@@ -59,13 +71,13 @@ struct HomeView: View {
     let selection = store.peekRoundSelection()
     if let round = nextRound(store.state, tree, selection, AutoHistory()) {
       let rep = store.state.repertoireList.first { $0.color == round.pick.color }
-      // My Playbook always starts from move one, so its button shows no segments.
-      let span = selection.opening == ANY_OPENING ? nil : roundSpan(rep, round.pick, round.at)
+      // Freeform always starts from move one, so its button shows no segments.
+      let span = store.state.settings.start == .freeform ? nil : roundSpan(rep, round.pick, round.at)
       Button { onOpen(.autopilot) } label: {
         AutopilotPlate(
           name: store.catalog.map { selectionTrail(tree, $0, round.pick.opening.id).last ?? "" } ?? "",
-          sans: round.pick.opening.sans, color: round.pick.color, span: span)
-          .contentShape(RoundedRectangle(cornerRadius: 20))
+          sans: round.pick.opening.sans, color: round.pick.color, span: span, attached: true)
+          .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
     } else {
@@ -82,8 +94,8 @@ struct HomeView: View {
           Icon(name: "chevron", size: 20).foregroundStyle(Theme.text3)
         }
         .padding(.horizontal, 15).padding(.vertical, 14)
-        .background(RoundedRectangle(cornerRadius: 20).fill(LinearGradient(
-          colors: [Theme.accent.opacity(0.22), Theme.accent.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing)))
+        .background(LinearGradient(
+          colors: [Theme.accent.opacity(0.22), Theme.accent.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
       }
       .buttonStyle(.plain)
     }
@@ -120,10 +132,13 @@ struct AutopilotPlate: View {
   let sans: [String]
   let color: ChessCore.Color
   let span: PrepSpan?
+  /// On Home, the top of one block with the selection under it: no side square
+  /// (the side shows right below), square bottom corners.
+  var attached = false
 
   var body: some View {
     HStack(alignment: .center, spacing: 9) {
-      SideSquare(color: color)
+      if !attached { SideSquare(color: color) }
       Text(name).font(.system(size: 21, weight: .heavy)).foregroundStyle(Theme.text).shadow(color: .black.opacity(0.6), radius: 5, y: 2)
         .multilineTextAlignment(.leading)
       Spacer(minLength: 0)
@@ -150,25 +165,87 @@ struct AutopilotPlate: View {
       .padding(.top, 10).padding(.leading, 14)
     }
     .overlay(alignment: .bottom) {
-      PrepSegmentsView(span: span, height: 4).padding(.top, 0).background(Theme.background).padding(.horizontal, 18)
+      PrepSegmentsView(span: span, height: 4).padding(.top, 0).background(attached ? Theme.surface : Theme.background).padding(.horizontal, 18)
     }
-    .clipShape(RoundedRectangle(cornerRadius: 20))
+    .clipShape(UnevenRoundedRectangle(
+      topLeadingRadius: 20, bottomLeadingRadius: attached ? 0 : 20, bottomTrailingRadius: attached ? 0 : 20, topTrailingRadius: 20))
   }
 }
 
-/// After the first game: how a game goes from here, until Got it.
-private struct PlayHowCard: View {
+/// Under Play's button on Home: the side, how runs start, and the opening.
+private struct PlayFooter: View {
   @Environment(AppStore.self) private var store
+  @State private var picking: SelectionPicking?
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 14) {
-      Text(FirstGameTip.end.text).font(.system(size: 20, weight: .heavy)).foregroundStyle(Theme.text)
-      WelcomePoint(glyph: "\u{265E}", text: "Each game plays a line from your Playbook.")
-      WelcomePoint(glyph: "\u{265F}\u{FE0E}", text: "Once you know a line, the game pauses to let you add new moves.")
-      WelcomePoint(glyph: "\u{265A}", text: "See how far you get before you blunder!")
-      BigButton(label: "Got it", xl: false) { store.update { $0.settings.tips = [] } }.padding(.top, 4)
+    let settings = store.state.settings
+    VStack(spacing: 8) {
+      HStack(spacing: 8) {
+        Button { picking = .color } label: {
+          HStack(spacing: 6) {
+            ColorSquare(choice: settings.selection.color, size: 20)
+            Icon(name: "down", size: 14).foregroundStyle(Theme.text3)
+          }
+          .padding(.leading, 12).padding(.trailing, 10).frame(minHeight: 44)
+          .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface2))
+          .contentShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .accessibilityLabel("Side")
+        SegmentedControl(
+          value: Binding(get: { settings.start }, set: { start in store.update { $0.settings.start = start } }),
+          options: [(RunStart.freeform, "Freeform"), (RunStart.drill, "Drill")], track: Theme.background)
+      }
+      Button { picking = .quick } label: {
+        HStack(spacing: 8) {
+          SelectionTrail(opening: settings.selection.opening).frame(maxWidth: .infinity, alignment: .leading)
+          Icon(name: "down", size: 16).foregroundStyle(Theme.text3)
+        }
+        .padding(.horizontal, 14).frame(minHeight: 44)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface2))
+        .contentShape(RoundedRectangle(cornerRadius: 12))
+      }
     }
-    .padding(16)
-    .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
+    .padding(8)
+    .buttonStyle(.plain)
+    .selectionSheets($picking)
+  }
+}
+
+/// After the first game, in the welcome's style: how a game goes from here, until Got it.
+private struct PlayHowPage: View {
+  let onDone: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      ZStack {
+        card(["e4", "c5"], .b).rotationEffect(.degrees(-11)).offset(x: -78, y: 14).opacity(0.75)
+        card(["d4", "d5", "c4", "e6"], .b).rotationEffect(.degrees(11)).offset(x: 78, y: 14).opacity(0.75)
+        card(["e4", "e5", "Nf3", "Nc6", "Bc4"], .w)
+          .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.accent, lineWidth: 1.5))
+      }
+      .frame(maxWidth: .infinity).frame(height: 190).padding(.top, 40)
+      Text(FirstGameTip.end.text).font(.system(size: 30, weight: .heavy)).tracking(-0.9).foregroundStyle(Theme.text)
+        .padding(.top, 24)
+      VStack(alignment: .leading, spacing: 16) {
+        WelcomePoint(glyph: "\u{265E}", text: "Each game plays a line from your Playbook.")
+        WelcomePoint(glyph: "\u{265F}\u{FE0E}", text: "Once you know a line, the game pauses to let you add new moves.")
+        WelcomePoint(glyph: "\u{265A}", text: "See how far you get before you blunder!")
+      }
+      .padding(.top, 22)
+      Spacer(minLength: 0)
+      BigButton(label: "Got it", action: onDone).padding(.bottom, 8)
+    }
+    .padding(.horizontal, 20)
+    .background(Theme.background.ignoresSafeArea())
+  }
+
+  private func card(_ sans: [String], _ color: ChessCore.Color) -> some View {
+    VStack(alignment: .leading, spacing: 9) {
+      MiniBoard(sans: sans, orientation: color, size: 116, lastMove: true).clipShape(RoundedRectangle(cornerRadius: 6))
+      Capsule().fill(Theme.surface3).frame(width: 80, height: 6)
+    }
+    .padding(8)
+    .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface))
+    .shadow(color: .black.opacity(0.55), radius: 15, y: 14)
   }
 }

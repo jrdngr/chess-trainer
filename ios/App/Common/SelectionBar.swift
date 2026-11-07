@@ -8,17 +8,7 @@ import SwiftUI
 struct SelectionBar<Trailing: View>: View {
   @Environment(AppStore.self) private var store
   @ViewBuilder var trailing: Trailing
-  @State private var picking: Picking?
-  @State private var browsing = false
-  /// The presentation to open once the current one is dismissed.
-  @State private var next: Next?
-
-  enum Next { case browse, quick }
-
-  enum Picking: String, Identifiable {
-    case color, quick
-    var id: String { rawValue }
-  }
+  @State private var picking: SelectionPicking?
 
   var body: some View {
     let selection = store.state.settings.selection
@@ -28,7 +18,7 @@ struct SelectionBar<Trailing: View>: View {
       }
       Button { picking = .quick } label: {
         HStack(spacing: 8) {
-          trail(selection.opening).frame(maxWidth: .infinity, alignment: .leading)
+          SelectionTrail(opening: selection.opening).frame(maxWidth: .infinity, alignment: .leading)
           Icon(name: "down", size: 16).foregroundStyle(Theme.text3)
         }
         .padding(.horizontal, 14).frame(minHeight: 44).background(pill)
@@ -36,29 +26,60 @@ struct SelectionBar<Trailing: View>: View {
       trailing
     }
     .buttonStyle(.plain)
-    .sheet(item: $picking, onDismiss: {
-      if next == .browse { next = nil; browsing = true }
-    }) { which in
-      Group {
-        switch which {
-        case .color: ColorPickerSheet { picking = nil }
-        case .quick: QuickPicker(onClose: { picking = nil }, onBrowse: { next = .browse; picking = nil })
-        }
-      }
-      .presentationDetents(which == .color ? [.height(300)] : [.large])
-      .presentationBackground(Theme.background)
-    }
-    .fullScreenCover(isPresented: $browsing, onDismiss: {
-      if next == .quick { next = nil; picking = .quick }
-    }) {
-      BrowsePicker(onClose: { browsing = false }, onBack: { next = .quick; browsing = false })
-        .background(Theme.background)
-    }
+    .selectionSheets($picking)
   }
 
   private var pill: some View { RoundedRectangle(cornerRadius: 14).fill(Theme.surface) }
+}
 
-  @ViewBuilder private func trail(_ opening: String) -> some View {
+/// Which selection sheet is open: the side or the quick opening picker.
+enum SelectionPicking: String, Identifiable {
+  case color, quick
+  var id: String { rawValue }
+}
+
+/// The side sheet, the quick opening sheet and, from it, Browse all openings, for whatever opens them.
+struct SelectionSheets: ViewModifier {
+  @Binding var picking: SelectionPicking?
+  @State private var browsing = false
+  /// The presentation to open once the current one is dismissed.
+  @State private var next: Next?
+
+  enum Next { case browse, quick }
+
+  func body(content: Content) -> some View {
+    content
+      .sheet(item: $picking, onDismiss: {
+        if next == .browse { next = nil; browsing = true }
+      }) { which in
+        Group {
+          switch which {
+          case .color: ColorPickerSheet { picking = nil }
+          case .quick: QuickPicker(onClose: { picking = nil }, onBrowse: { next = .browse; picking = nil })
+          }
+        }
+        .presentationDetents(which == .color ? [.height(300)] : [.large])
+        .presentationBackground(Theme.background)
+      }
+      .fullScreenCover(isPresented: $browsing, onDismiss: {
+        if next == .quick { next = nil; picking = .quick }
+      }) {
+        BrowsePicker(onClose: { browsing = false }, onBack: { next = .quick; browsing = false })
+          .background(Theme.background)
+      }
+  }
+}
+
+extension View {
+  func selectionSheets(_ picking: Binding<SelectionPicking?>) -> some View { modifier(SelectionSheets(picking: picking)) }
+}
+
+/// The selected opening as short names from its family down, the last one brightest.
+struct SelectionTrail: View {
+  @Environment(AppStore.self) private var store
+  let opening: String
+
+  var body: some View {
     if let tree = store.tree, let catalog = store.catalog {
       let parts = selectionTrail(tree, catalog, opening)
       HStack(spacing: 0) {
@@ -124,7 +145,7 @@ struct ChoiceRow<Leading: View>: View {
   }
 }
 
-/// The few picks most sessions want, one tap each: My Playbook, your
+/// The few picks most sessions want, one tap each: Any Playbook and Any Favorite, your
 /// favorites (the ones played last first), openings you picked lately, and
 /// the common first moves. Recent's Show all opens the whole history in place. `QuickPicker`.
 struct QuickPicker: View {
@@ -157,9 +178,15 @@ struct QuickPicker: View {
         SegmentedControl(
           value: Binding(get: { selection.color }, set: { c in store.update { $0.settings.selection.color = c } }),
           options: [ColorChoice.w, .b, .random].map { ($0, colorLabel($0)) })
-        tile("My Playbook", chosen: selection.opening == "") { choose("", nil) }
+        HStack(spacing: 8) {
+          tile("Any Playbook", chosen: selection.opening == ANY_OPENING) { choose(ANY_OPENING, nil) }
+          if mine.isEmpty {
+            Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
+          } else {
+            tile("Any Favorite", chosen: selection.opening == ANY_FAVORITE) { choose(ANY_FAVORITE, nil) }
+          }
+        }
         if !mine.isEmpty {
-          tile("Any favorite", chosen: selection.opening == ANY_FAVORITE) { choose(ANY_FAVORITE, nil) }
           section("Favorites")
           LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible())], spacing: 8) {
             ForEach(showAll ? mine : Array(mine.prefix(Self.favoritesShown)), id: \.node.id) { fav in
@@ -265,8 +292,9 @@ struct QuickPicker: View {
 
   private func tile(_ name: String, chosen: Bool, action: @escaping () -> Void) -> some View {
     Button(action: action) {
-      Text(name).font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.text)
-        .frame(maxWidth: .infinity, alignment: .leading).padding(14).background(tileBackground(chosen))
+      Text(name).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text).lineLimit(1)
+        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 14).frame(minHeight: 50)
+        .background(tileBackground(chosen))
     }
     .buttonStyle(.plain)
   }

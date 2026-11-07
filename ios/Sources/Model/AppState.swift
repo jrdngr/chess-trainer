@@ -34,6 +34,8 @@ public struct Settings: Equatable, Sendable, Codable {
   /// Middlegame mode's setup.
   public var middlegame = DEFAULT_MIDDLEGAME
   public var drill = DEFAULT_DRILL
+  /// How Play's runs start: from move one, or wherever your prep needs work.
+  public var start = RunStart.drill
   public init() {}
 
   enum CodingKeys: String, CodingKey {
@@ -43,6 +45,7 @@ public struct Settings: Equatable, Sendable, Codable {
     case survival
     case middlegame
     case drill
+    case start
   }
 
   /// A save missing a setting takes its default.
@@ -72,8 +75,13 @@ public struct Settings: Equatable, Sendable, Codable {
     survival = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .survival) ?? survival
     middlegame = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .middlegame) ?? middlegame
     drill = try c.decodeIfPresent(SavedDrillPrefs.self, forKey: .drill)?.prefs ?? drill
+    start = try c.decodeIfPresent(RunStart.self, forKey: .start) ?? start
   }
 }
+
+/// How Play's runs start. Freeform: every run from move one, the opponent steering
+/// toward what needs work. Drill: at the opening's position, deeper inside, or cold, by need.
+public enum RunStart: String, Sendable, Codable, CaseIterable { case freeform, drill }
 
 /// The board's colours.
 public enum BoardTheme: String, Sendable, Codable, CaseIterable { case slate, walnut, ocean }

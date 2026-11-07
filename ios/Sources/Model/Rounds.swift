@@ -72,8 +72,8 @@ public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selec
     return AutoRound(pick: Recommendation(focus: .test, opening: opening, color: gap.color, start: .first), at: nil, aim: gap.line)
   }
   guard var recommended = recommend(recommendInput(state, tree, selection, history)) else { return nil }
-  // My Playbook always starts from move one; the opponent still steers toward the pick.
-  if selection.opening == ANY_OPENING { recommended.start = .first }
+  // Freeform always starts from move one; the opponent still steers toward the pick.
+  if state.settings.start == .freeform { recommended.start = .first }
   if recommended.start == .first { return AutoRound(pick: recommended, at: nil) }
   let rep = state.repertoireList.first { $0.color == recommended.color }
   let items = rep.map { itemsInRegion(tree, recommended.opening, allItems([$0])) } ?? []

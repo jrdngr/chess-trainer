@@ -42,7 +42,7 @@ public func tipsAfterFirstGame(_ pending: [FirstGameTip]) -> [FirstGameTip] {
   pending.contains(.end) ? [.end] : []
 }
 
-/// Whether Home shows its card on how Play works: the first game is over and the card not yet dismissed.
+/// Whether Home opens its page on how Play works: the first game is over and the page not yet dismissed.
 public func homeCardPending(_ pending: [FirstGameTip]) -> Bool {
   pending == [.end]
 }

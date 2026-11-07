@@ -70,7 +70,7 @@ struct ColorSquare: View {
 
   var body: some View {
     RoundedRectangle(cornerRadius: 5)
-      .fill(choice == .b ? SwiftUI.Color(hex: 0x26262c) : SwiftUI.Color(hex: 0xf2f2f4))
+      .fill(choice == .b ? SwiftUI.Color.black : SwiftUI.Color(hex: 0xf2f2f4))
       .overlay {
         if choice == .random {
           Path { p in
@@ -78,7 +78,7 @@ struct ColorSquare: View {
             p.addLine(to: CGPoint(x: size, y: size))
             p.addLine(to: CGPoint(x: 0, y: size))
           }
-          .fill(SwiftUI.Color(hex: 0x26262c))
+          .fill(SwiftUI.Color.black)
         }
       }
       .clipShape(RoundedRectangle(cornerRadius: 5))

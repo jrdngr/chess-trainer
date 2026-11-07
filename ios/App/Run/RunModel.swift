@@ -180,9 +180,9 @@ final class RunModel {
   }
 
   /// How far into your prep the run stands, out of how far it goes along this line. Held once off prep.
-  /// None for an Autopilot run on My Playbook, which always starts from move one.
+  /// None for a Freeform Autopilot run, which always starts from move one.
   var span: PrepSpan? {
-    if round != nil && selection.opening == ANY_OPENING && !firstGame { return nil }
+    if round != nil && store.state.settings.start == .freeform && !firstGame { return nil }
     if session.prepStatus == .off { return spanHeld }
     let line = run.played + continuation(session.source, run)
     // Moves added this run are prep too, though the run's source was read before them.
@@ -212,7 +212,7 @@ final class RunModel {
   var openingId: String { run.enteredIn ?? round?.pick.opening.id ?? run.openingId }
   /// The header's name: a first game is named by the book as it goes.
   var headerName: String {
-    if firstGame { return openingNameForPath(index, run.played)?.name ?? "My Playbook" }
+    if firstGame { return openingNameForPath(index, run.played)?.name ?? "Any Playbook" }
     return openingName(tree, openingId)
   }
   var momentHere: Bool {
