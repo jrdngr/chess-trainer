@@ -51,7 +51,7 @@ struct SettingsSheet: View {
           ToggleRow(label: "Haptics", on: settings.hapticFeedback) { store.update { $0.settings.hapticFeedback.toggle() } }
           ToggleRow(label: "Autoplay", on: settings.autoplay) { store.update { $0.settings.autoplay.toggle() } }
         }
-        section("Autopilot")
+        section("Play")
         ListCard {
           ToggleRow(label: "Move scores", hint: "What each move the engine judges cost you, in centipawns, over its square",
                     on: settings.autopilot.moveScores) { store.update { $0.settings.autopilot.moveScores.toggle() } }

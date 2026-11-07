@@ -8,7 +8,7 @@ let STATS_WINDOWS: [(value: Int, label: String)] = [(30, "30 days"), (90, "90 da
 /// Each mode's name in the tallies.
 func modeName(_ mode: ActivityMode) -> String {
   switch mode {
-  case .run: "Autopilot (old)"
+  case .run: "Play (old)"
   case .survival: "Survival"
   case .drill: "Drill"
   case .growth: "Growth"

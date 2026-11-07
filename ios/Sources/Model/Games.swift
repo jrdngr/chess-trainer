@@ -12,9 +12,9 @@ public enum GameMode: String, Sendable, Codable, CaseIterable {
   public var label: String {
     switch self {
     case .survival: "Survival"
-    case .autopilot: "Autopilot"
+    case .autopilot: "Play"
     case .middlegame: "Middlegame"
-    case .play: "Play"
+    case .play: "Free play"
     }
   }
 }

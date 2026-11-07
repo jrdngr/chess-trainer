@@ -137,7 +137,7 @@ struct AutopilotPlate: View {
     .overlay(alignment: .topLeading) {
       HStack(spacing: 4) {
         Icon(name: "bolt", size: 11, filled: true)
-        Text("AUTOPILOT").font(.system(size: 11, weight: .heavy)).tracking(0.66)
+        Text("PLAY").font(.system(size: 11, weight: .heavy)).tracking(0.66)
       }
       .foregroundStyle(SwiftUI.Color(hex: 0xc4c5ff)).padding(.leading, 6).padding(.trailing, 8).padding(.vertical, 3)
       .background(Capsule().fill(SwiftUI.Color(red: 139 / 255, green: 140 / 255, blue: 248 / 255).opacity(0.2)))

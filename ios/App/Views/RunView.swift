@@ -216,7 +216,7 @@ struct RunView: View {
       } else if model.intro == .replay {
         movesLine(sansToMoveText(Array(model.introPath.prefix(model.introPly))))
       } else if !model.held && model.autoplayNote {
-        movesLine("Autopilot played the moves up to your \(openingName(model.tree, model.introOpening)).")
+        movesLine("The moves up to your \(openingName(model.tree, model.introOpening)) were played for you.")
       } else if !model.held, model.prefs.missions, let mission = model.session.state.extras.mission {
         GoalCard(mission: mission)
       } else if model.run.opened > 0 {
