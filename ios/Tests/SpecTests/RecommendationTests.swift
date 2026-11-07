@@ -151,8 +151,8 @@ import Testing
   #expect(next.opening != first.opening)
 }
 
-/// The tutorial's script is legal, reaches the out-of-book step after three
-/// of your moves, and the move it ends on is a pawn break the Pawns lens
+/// The tutorial's script is legal, goes out of book after three of your
+/// moves, and the move it ends on is a pawn break the Pawns lens
 /// would point to.
 @Test func tutorialScriptPlays() throws {
   let sans = TUTORIAL_STEPS.flatMap { [$0.san] + ($0.reply.map { [$0] } ?? []) }
@@ -160,6 +160,7 @@ import Testing
   #expect(walked.moves.count == sans.count)
   #expect(Array(sans.prefix(5)) == line("e4 e5 Nf3 Nc6 Bc4"))
   #expect(TUTORIAL_STEPS.firstIndex { $0.phase == .out } == 3)
+  #expect(TUTORIAL_STEPS.last?.phase == .lens)
   let before = walked.fens[sans.count - 1]
   let last = try #require(walked.moves.last)
   #expect(breakCandidates(before, .w).contains(last.from + last.to))

@@ -55,8 +55,8 @@ struct WelcomeView: View {
 
 /// The playable tutorial, on rails: each move is shown by an arrow and only
 /// that move is accepted. Two moves of lent prep with their ticks and times,
-/// a book move, then out of book the Pawns lens, its button lit, shows the
-/// break to play, and End round finishes. Nothing it plays is kept. Each
+/// a book move, one move out of book, then the Pawns lens, its button lit,
+/// shows the break to play, and End round finishes. Nothing it plays is kept. Each
 /// step's line shows once the reply is in, so the tick comes first.
 struct TutorialView: View {
   let onDone: () -> Void
@@ -74,7 +74,10 @@ struct TutorialView: View {
   private var fen: String { walkSan(played).fens.last ?? START_FEN }
   private var finished: Bool { step >= TUTORIAL_STEPS.count }
   private var current: TutorialStep? { finished ? nil : TUTORIAL_STEPS[step] }
-  private var outOfBook: Bool { current?.phase == .out || (finished && TUTORIAL_STEPS.last?.phase == .out) }
+  private var outOfBook: Bool {
+    guard let phase = current?.phase ?? (finished ? TUTORIAL_STEPS.last?.phase : nil) else { return false }
+    return phase == .out || phase == .lens
+  }
 
   var body: some View {
     VStack(spacing: 0) {
@@ -103,24 +106,26 @@ struct TutorialView: View {
       }
       .padding(.horizontal).padding(.top, 6)
       if outOfBook {
-        LensBar(held: $lens, spotlight: sawPawns ? nil : .pawns).padding(.horizontal)
+        LensBar(held: $lens, spotlight: current?.phase == .lens && !sawPawns ? .pawns : nil).padding(.horizontal)
       }
       VStack(spacing: 10) {
         if finished {
           BigButton(label: "End round", action: onDone)
         } else if let current, !replying {
-          Text(tutorialInstruction(current, pawnsHeld: sawPawns))
-            .font(.system(size: 22, weight: .heavy)).foregroundStyle(Theme.text)
-          Text(current.phase == .out && sawPawns ? TUTORIAL_LENS_NOTE : current.note)
-            .font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text2).multilineTextAlignment(.center)
-            .fixedSize(horizontal: false, vertical: true)
+          let text = tutorialText(current, pawnsHeld: sawPawns)
+          Text(text.title).font(.system(size: 22, weight: .heavy)).foregroundStyle(Theme.text)
+          if let note = text.note {
+            Text(note)
+              .font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text2).multilineTextAlignment(.center)
+              .fixedSize(horizontal: false, vertical: true)
+          }
         }
       }
       .padding(.horizontal, 20).padding(.top, 18)
       Spacer(minLength: 0)
     }
     .background(Theme.background.ignoresSafeArea())
-    .onChange(of: lens) { if lens == .pawns && current?.phase == .out { sawPawns = true } }
+    .onChange(of: lens) { if lens == .pawns && current?.phase == .lens { sawPawns = true } }
   }
 
   /// The prep's segments, then the book's, lit as far as the game has got.
@@ -133,7 +138,7 @@ struct TutorialView: View {
 
   /// The move to play, as an arrow, until out of book, where the lens shows it.
   private var arrows: [BoardArrow] {
-    guard let current, !replying, current.phase != .out, let move = applySan(fen, current.san) else { return [] }
+    guard let current, !replying, current.phase != .lens, let move = applySan(fen, current.san) else { return [] }
     return [BoardArrow(from: move.from, to: move.to, color: Theme.accent)]
   }
 
@@ -141,7 +146,7 @@ struct TutorialView: View {
   private var marks: LensMarks? {
     guard let lens, outOfBook else { return nil }
     var marks = heldLens(lens, fen, .w, played.count >= 2 ? walkSan(Array(played.dropLast())).fens.last : nil)
-    if lens == .pawns, let current, current.phase == .out, let move = applySan(fen, current.san) {
+    if lens == .pawns, let current, current.phase == .lens, let move = applySan(fen, current.san) {
       marks.arrows = [LensArrow(from: move.from, to: move.to, tone: "mine")]
     }
     return marks
@@ -152,7 +157,7 @@ struct TutorialView: View {
     let seconds = Date().timeIntervalSince(turnStarted)
     played.append(move.san)
     Haptics.buzz(10, on: store.state.settings.hapticFeedback)
-    if current.phase != .out {
+    if current.phase == .prep || current.phase == .book {
       pop = tutorialPop(square: move.to, seconds: seconds, book: current.phase == .book)
     }
     lens = nil
