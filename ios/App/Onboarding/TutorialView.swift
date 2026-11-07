@@ -54,9 +54,10 @@ struct WelcomeView: View {
 }
 
 /// The playable tutorial, on rails: each move is shown by an arrow and only
-/// that move is accepted. Three moves of lent prep with their ticks and
-/// times, a book move, then out of book the Pawns lens shows a push to play,
-/// and End round finishes. Nothing it plays is kept.
+/// that move is accepted. Two moves of lent prep with their ticks and times,
+/// a book move, then out of book the Pawns lens, its button lit, shows the
+/// break to play, and End round finishes. Nothing it plays is kept. Each
+/// step's line shows once the reply is in, so the tick comes first.
 struct TutorialView: View {
   let onDone: () -> Void
 
@@ -66,6 +67,8 @@ struct TutorialView: View {
   @State private var pop: Pop?
   @State private var lens: LensKind?
   @State private var replying = false
+  /// Pawns has been held on the out-of-book step, so its instruction moves on.
+  @State private var sawPawns = false
   @State private var turnStarted = Date()
 
   private var fen: String { walkSan(played).fens.last ?? START_FEN }
@@ -100,16 +103,15 @@ struct TutorialView: View {
       }
       .padding(.horizontal).padding(.top, 6)
       if outOfBook {
-        LensBar(held: $lens).padding(.horizontal)
+        LensBar(held: $lens, spotlight: sawPawns ? nil : .pawns).padding(.horizontal)
       }
       VStack(spacing: 10) {
         if finished {
           BigButton(label: "End round", action: onDone)
-        } else if let current {
-          Text(instruction(current)).font(.system(size: 22, weight: .heavy)).foregroundStyle(Theme.text)
-          Text(current.phase == .out
-            ? "Lenses show you what's important and give you hints for what to do next."
-            : "Chess Playbook tracks how well you know your saved openings.")
+        } else if let current, !replying {
+          Text(tutorialInstruction(current, pawnsHeld: sawPawns))
+            .font(.system(size: 22, weight: .heavy)).foregroundStyle(Theme.text)
+          Text(current.phase == .out && sawPawns ? TUTORIAL_LENS_NOTE : current.note)
             .font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text2).multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -118,10 +120,7 @@ struct TutorialView: View {
       Spacer(minLength: 0)
     }
     .background(Theme.background.ignoresSafeArea())
-  }
-
-  private func instruction(_ step: TutorialStep) -> String {
-    step.phase == .out ? "Hold Pawns, then play \(step.san)." : "Play \(step.san)."
+    .onChange(of: lens) { if lens == .pawns && current?.phase == .out { sawPawns = true } }
   }
 
   /// The prep's segments, then the book's, lit as far as the game has got.
@@ -132,16 +131,20 @@ struct TutorialView: View {
     return PrepSpan(played: min(mine, prep) * 2, total: prep * 2, book: max(0, min(mine - prep, book)) * 2)
   }
 
-  /// The move to play, as an arrow; out of book only once Pawns is held.
+  /// The move to play, as an arrow, until out of book, where the lens shows it.
   private var arrows: [BoardArrow] {
-    guard let current, !replying, let move = applySan(fen, current.san) else { return [] }
-    if current.phase == .out && lens != .pawns { return [] }
+    guard let current, !replying, current.phase != .out, let move = applySan(fen, current.san) else { return [] }
     return [BoardArrow(from: move.from, to: move.to, color: Theme.accent)]
   }
 
+  /// The held lens as a run draws it; Pawns adds the break to play, as a run's Pawns lens does.
   private var marks: LensMarks? {
     guard let lens, outOfBook else { return nil }
-    return heldLens(lens, fen, .w, played.count >= 2 ? walkSan(Array(played.dropLast())).fens.last : nil)
+    var marks = heldLens(lens, fen, .w, played.count >= 2 ? walkSan(Array(played.dropLast())).fens.last : nil)
+    if lens == .pawns, let current, current.phase == .out, let move = applySan(fen, current.san) {
+      marks.arrows = [LensArrow(from: move.from, to: move.to, tone: "mine")]
+    }
+    return marks
   }
 
   private func play(_ move: LegalMove) {

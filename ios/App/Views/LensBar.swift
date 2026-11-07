@@ -13,6 +13,8 @@ struct LensBar: View {
   var planEnabled = false
   /// The plan changed since the player last opened Plan.
   var planPulse = false
+  /// A lens to draw the eye to until it is held: the tutorial's.
+  var spotlight: LensKind? = nil
   /// A touch on Plan has toggled it and not yet lifted.
   @State private var planTouched = false
 
@@ -20,7 +22,10 @@ struct LensBar: View {
     HStack(spacing: 6) {
       ForEach(lenses, id: \.kind) { lens in
         let on = held == lens.kind
-        button(lens.label, on: on, ink: Theme.text2, fill: Theme.accent, onInk: Theme.accentInk, enabled: enabled, pulse: false) {
+        button(
+          lens.label, on: on, ink: spotlight == lens.kind ? Theme.accent : Theme.text2, fill: Theme.accent, onInk: Theme.accentInk,
+          enabled: enabled, pulse: spotlight == lens.kind, pulseColor: Theme.accent, outlined: spotlight == lens.kind
+        ) {
           if held != lens.kind { held = lens.kind }
         } release: { held = nil }
       }
@@ -47,7 +52,7 @@ struct LensBar: View {
 
   private func button(
     _ label: String, on: Bool, ink: SwiftUI.Color, fill: SwiftUI.Color, onInk: SwiftUI.Color, enabled: Bool, pulse: Bool,
-    press: @escaping () -> Void, release: @escaping () -> Void
+    pulseColor: SwiftUI.Color = PlanColors.plan, outlined: Bool = false, press: @escaping () -> Void, release: @escaping () -> Void
   ) -> some View {
     Text(label)
       .font(.system(size: 12.5, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
@@ -55,7 +60,8 @@ struct LensBar: View {
       .frame(maxWidth: .infinity).padding(.vertical, 8)
       .background {
         RoundedRectangle(cornerRadius: 10).fill(on ? fill : Theme.surface2)
-        if pulse && !on { PlanPulse() }
+        if pulse && !on { PlanPulse(color: pulseColor) }
+        if outlined && !on { RoundedRectangle(cornerRadius: 10).strokeBorder(pulseColor, lineWidth: 1.5) }
       }
       .opacity(enabled ? 1 : 0.5)
       // High priority, so a tap gesture further up the screen never holds the press back.
@@ -209,12 +215,13 @@ struct LensLegend: View {
 private struct PlanPulse: View {
   static let period = 4.0
   static let depth = 0.22
+  var color = PlanColors.plan
 
   var body: some View {
     TimelineView(.animation) { context in
       let t = context.date.timeIntervalSinceReferenceDate
       let k = (1 - cos(2 * .pi * t / Self.period)) / 2
-      RoundedRectangle(cornerRadius: 10).fill(PlanColors.plan.opacity(Self.depth * k))
+      RoundedRectangle(cornerRadius: 10).fill(color.opacity(Self.depth * k))
     }
     .allowsHitTesting(false)
   }
