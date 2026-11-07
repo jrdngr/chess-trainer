@@ -5,6 +5,13 @@ import UIKit
 enum Haptics {
   private static let light = UIImpactFeedbackGenerator(style: .light)
   private static let heavy = UIImpactFeedbackGenerator(style: .heavy)
+  private static let notify = UINotificationFeedbackGenerator()
+
+  /// A find: the system's success pattern, unlike any move's buzz.
+  static func success(on: Bool) {
+    guard on else { return }
+    notify.notificationOccurred(.success)
+  }
 
   /// A pattern's first pulse, in milliseconds: longer reads heavier.
   static func buzz(_ ms: Int, on: Bool) {

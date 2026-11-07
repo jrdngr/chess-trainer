@@ -33,7 +33,7 @@ private func effectJSON(_ effect: Effect, _ tree: OpeningTree) -> JSON {
   case .pop(let p):
     return obj(["kind": "pop", "pop": obj([
       "square": p.square, "text": p.text, "tone": p.tone.rawValue,
-      "found": p.found ? true : nil, "book": p.book ? true : nil, "ext": p.ext ? true : nil,
+      "found": p.found ? true : nil, "book": p.book ? true : nil, "ext": p.ext ? true : nil, "moment": p.moment ? true : nil,
     ])])
   case .note(let note):
     return obj(["kind": "note", "note": note.map { obj(["text": $0.text, "tone": $0.tone]) } ?? .null])

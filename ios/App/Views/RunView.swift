@@ -246,6 +246,8 @@ struct RunView: View {
         .font(.headline).foregroundStyle(Theme.text)
       if model.momentHere {
         Text("There's something here").font(.subheadline.bold()).foregroundStyle(Theme.accent)
+      } else if model.foundIt {
+        Text("Found it").font(.subheadline.bold()).foregroundStyle(Theme.good)
       } else if let label = model.label {
         let prep = prepStatusText(label)
         Text(prep.text).font(.subheadline.bold()).foregroundStyle(prep.color)

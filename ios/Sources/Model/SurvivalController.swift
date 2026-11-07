@@ -43,6 +43,8 @@ public struct Pop: Equatable, Sendable {
   public var book = false
   /// A prepared move that is an extension.
   public var ext = false
+  /// A moment found: the text is its bonus, shown on a filled pill.
+  public var moment = false
 }
 
 /// A miss being shown: the prepared move, drawn as a green arrow.
@@ -315,7 +317,12 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     let score = prefs.moveScores && swing != nil ? moveScore(swing!) : nil
     let landed = applySan(run.fen, judged.san)
     if let landed { s.lastJudged = JudgedMark(ply: run.played.count, san: judged.san, from: landed.from, to: landed.to, swing: swing) }
-    if book && ctx.autopilot, let landed {
+    // Moments are a thing past your prep; a book move keeps the combo going.
+    let scored = judgedExtras(s.state.extras, ExtrasPrefs(prefs), run.color, JudgedMove(
+      lost: book ? 0 : judged.lost, after: judged.after, moment: judged.moment && expected.isEmpty, found: judged.found, fen: landed?.after))
+    if let moment = scored.earned.moment, moment.found, let landed {
+      effects.append(.pop(Pop(square: landed.to, text: "+\(moment.bonus)", tone: .up, found: true, moment: true)))
+    } else if book && ctx.autopilot, let landed {
       effects.append(.pop(Pop(square: landed.to, text: secondsText(seconds), tone: speedTone(seconds), found: true, book: true)))
     } else if let score, let landed {
       effects.append(.pop(Pop(square: landed.to, text: score.cp > 0 ? "+\(JSNum(score.cp))" : "\u{2212}\(JSNum(-score.cp))", tone: score.tone)))
@@ -323,9 +330,6 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     if let first = expected.first, let right = applySan(run.fen, first) {
       effects.append(.miss(MissFlash(expected: first, from: right.from, to: right.to)))
     }
-    // Moments are a thing past your prep; a book move keeps the combo going.
-    let scored = judgedExtras(s.state.extras, ExtrasPrefs(prefs), run.color, JudgedMove(
-      lost: book ? 0 : judged.lost, after: judged.after, moment: judged.moment && expected.isEmpty, found: judged.found, fen: landed?.after))
     // A mate missed in a won ending: the run goes on, marked like a missed moment.
     let mateMissed = judged.missedMate && scored.earned.moment == nil
     effects.append(.note(mateMissed ? Note(text: "Missed mate", tone: "bad") : noteFor(scored.earned)))
@@ -455,7 +459,7 @@ public func prepLabel(_ session: RunSession) -> PrepLabel? {
 
 /// What a judged move earned, said over the board, one thing at a time: a missed moment first
 /// (its move is shown on the board), then the mission, then a broken combo. A found moment says
-/// nothing: the board pulses and its score pops.
+/// nothing here: the board pulses, its bonus pops and the status line says Found it.
 public func noteFor(_ earned: Earned) -> Note? {
   if let moment = earned.moment, !moment.found { return Note(text: "Missed it", tone: "bad") }
   if let mission = earned.mission {

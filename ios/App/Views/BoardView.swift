@@ -105,6 +105,8 @@ struct BoardView: View {
         .blur(radius: 2)
         .allowsHitTesting(false)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.8), value: glow)
+        // Gone at once, so a moment's found pulse never lands on its fading glow.
+        .transition(.asymmetric(insertion: .opacity, removal: .identity))
     }
   }
 
@@ -299,12 +301,29 @@ struct ArrowsView: View {
   }
 }
 
-/// A move's popup over its square: a prepared move's tick and time, or what a move cost.
+/// A move's popup over its square: a prepared move's tick and time, what a move cost, or a found moment's bonus.
 struct PopView: View {
   var pop: Pop
 
   var body: some View {
     let tone: SwiftUI.Color = pop.tone == .up ? Theme.good : pop.tone == .slight ? Theme.warn : Theme.bad
+    if pop.moment {
+      HStack(spacing: 4) {
+        Text("\u{2713}")
+        Text(pop.text)
+      }
+      .font(.system(size: 17, weight: .heavy).monospacedDigit())
+      .foregroundStyle(.white)
+      .padding(.horizontal, 10)
+      .padding(.vertical, 4)
+      .background(Capsule().fill(Theme.good))
+      .shadow(color: Theme.good.opacity(0.6), radius: 6)
+    } else {
+      plain(tone)
+    }
+  }
+
+  private func plain(_ tone: SwiftUI.Color) -> some View {
     HStack(spacing: 3) {
       if pop.found { Text("\u{2713}").foregroundStyle(pop.book ? Theme.book : pop.ext ? Theme.ext : tone) }
       if pop.book { Text("Book").foregroundStyle(Theme.book) }
