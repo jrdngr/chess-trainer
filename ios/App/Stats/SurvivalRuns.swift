@@ -13,7 +13,7 @@ struct SurvivalRuns: View {
     let selection = store.state.settings.selection
     let score = survivalFor(store.state.survival, selection.opening == ANY_FAVORITE ? "" : selection.opening)
     let runs = score.history
-    StatsSection(title: "Survival", aside: "last \(HISTORY_RUNS) runs")
+    StatsSection(title: "Play", aside: "last \(HISTORY_RUNS) runs")
     StatsCard {
       VStack(alignment: .leading, spacing: 12) {
         if let last = runs.last {

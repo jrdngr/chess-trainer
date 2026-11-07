@@ -6,6 +6,10 @@ chasing two goals at once: drilling your prep and being the fun game. This
 note settles which goal wins. It was agreed on 2026-10-22, and widened on
 2026-11-07 so that Autopilot also grows your Playbook at a steady pace.
 
+The app calls Autopilot **Play**. The code and this note keep the name
+Autopilot. Play is the app's one game mode; Middlegame and Endgames are the
+only other modes.
+
 ## Intent
 
 **Autopilot is the free game.** One tap, and you play real chess from your
@@ -42,18 +46,16 @@ Every change should pass these tests:
   feedback on or off. They never change what you practice or how. The one
   exception is Moves per fill, which sets how many moves a fill adds and so
   how often new moves come.
-- **It is the whole product for a free user.** If a free user can't get
-  somewhere without a paid mode, Autopilot has a gap.
+- **It is the whole product.** If a player can't get somewhere without
+  Middlegame or Endgames, Autopilot has a gap.
 
 ## What it is not
 
-- It is not a mode picker. The paid modes are deeper versions of its parts
-  that you configure yourself.
+- It is not a mode picker.
 - It is not a Playbook editor. It adds moves only at the one hole a run
   reaches (see Growing inside a run). Other growing is done from Home's
-  Recommendations or Growth mode.
-- It is not where you choose an exact line, side, steer or clock. Standalone
-  Survival does that.
+  Recommendations or an opening's Grow.
+- It is not where you choose an exact line, side, steer or clock.
 
 ## How a run starts
 
@@ -70,8 +72,8 @@ picking an opening or Any favorite.
 The first run of an opening added from a menu is always a position start,
 whatever is owed, so you see how the opening is reached before you are asked
 to reach it yourself. An opening grown by playing moves needs no such start.
-The first time any run autoplays, a one-time note says that Autopilot played
-the moves up to the opening. Inside starts go to any position you have a card for, so one only Drill has shown counts once it is due.
+The first time any run autoplays, a one-time note says that the moves up to
+the opening were played for you. Inside starts go to any position you have a card for.
 
 Need is counted in runs, not days. Someone who plays thirty runs a day and
 someone who plays one a week both get repetition that fits how much they
@@ -182,8 +184,4 @@ button, the round intro and the app bar show no segments.
 
 ## Free and paid
 
-| Free | Paid |
-| --- | --- |
-| Autopilot, Growth, Play, Analysis, the Playbook tab with editing and Tidy, ratings, Home, Stats, Milestones | Survival, Drill (positions and lines), game import |
-
-Standalone Survival and the other paid modes get improved after Autopilot.
+Not decided. Nothing is paid until a paywall is built.

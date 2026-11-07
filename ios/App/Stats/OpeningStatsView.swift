@@ -43,7 +43,7 @@ struct OpeningStatsView: View {
           children(score, starred)
           if stats.lastAt != nil {
             StatsNote(
-              text: Text("\(colorSquare) Rounds and accuracy here count every game played through this position, in any mode. Only Survival moves the rating."),
+              text: Text("\(colorSquare) Rounds and accuracy here count every game played through this position, in any mode. Only Play moves the rating."),
               center: true
             )
             .padding(.top, 12)

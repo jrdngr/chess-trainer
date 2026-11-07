@@ -28,7 +28,6 @@ struct YourOpeningsView: View {
           ActivityHero(stats: stats, days: days).padding(.top, 16)
           SegmentedControl(value: $days, options: STATS_WINDOWS).padding(.top, 16)
           SurvivalRuns()
-          ModeShare(stats: stats)
           AccuracySection(stats: stats, days: days)
           if !others.isEmpty { rated(others) }
         }

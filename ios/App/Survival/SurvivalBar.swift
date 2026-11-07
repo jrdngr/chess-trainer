@@ -81,7 +81,7 @@ struct SurvivalRunBar: View {
 
   var body: some View {
     let state = model.session.state
-    SurvivalBar(title: model.handoff != nil ? "Middlegame" : "Survival", subtitle: runSubtitle(store, model.run.color, model.openingId), onClose: onExit) {
+    SurvivalBar(title: "Middlegame", subtitle: runSubtitle(store, model.run.color, model.openingId), onClose: onExit) {
       if let budget = clockSeconds(model.prefs.clock), model.live, !model.held, model.myTurn {
         SurvivalClock(budget: budget, since: model.turnStarted).id(model.turnStarted)
       }

@@ -32,7 +32,7 @@ struct TidyView: View {
           Text("Places where another move is closer to the rest of your lines. Switching keeps that move and drops yours, with everything under it.")
             .font(.system(size: 13.5)).foregroundStyle(Theme.text2).lineSpacing(3).padding(.horizontal, 2).padding(.top, 12).padding(.bottom, 14)
           if reps.isEmpty {
-            EmptyNote(title: "No lines yet", hint: "Build some in Growth first. Tidy looks for lines that could converge.")
+            EmptyNote(title: "No lines yet", hint: "Add some first. Tidy looks for lines that could converge.")
           } else if shown.isEmpty && scan.looking == nil {
             EmptyNote(title: "Nothing to tidy in \(whereText)", hint: "Your moves here are as close to your other lines as any.")
           }

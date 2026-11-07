@@ -18,7 +18,7 @@ struct RunView: View {
   @State private var planSeeded = false
   @State private var breaks: (fen: String, found: PawnBreaks.Breaks)?
 
-  /// Survival opened from Home, not Autopilot's round.
+  /// A Middlegame run, not Play's round.
   var survival: Bool { model.round == nil }
 
   var body: some View {
@@ -26,7 +26,7 @@ struct RunView: View {
       board
       if model.intro == .announce {
         if survival {
-          PlayIntroCover(trail: introTrail, mode: "Survival")
+          PlayIntroCover(trail: introTrail, mode: "Middlegame")
         } else {
           PlateIntroCover {
             IntroPlate(
