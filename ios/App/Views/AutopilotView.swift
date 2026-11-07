@@ -27,7 +27,7 @@ struct AutopilotView: View {
         if model.phase == .over, let finish = model.finish {
           EndView(model: model, finish: finish, onNext: home, onAnalyze: { analyzing = true }, onExit: home)
         } else {
-          RunView(model: model, onExit: exit)
+          RunView(model: model, onExit: exit, onAnalyze: { analyzing = true })
         }
       } else if nothing {
         VStack(spacing: 12) {

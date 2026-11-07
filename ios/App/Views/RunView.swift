@@ -10,6 +10,8 @@ import SwiftUI
 struct RunView: View {
   @Bindable var model: RunModel
   let onExit: () -> Void
+  /// Analysis on the run, over its end screen.
+  var onAnalyze: (() -> Void)?
   @Environment(AppStore.self) var store
   @State private var lens: LensKind? = Self.pinnedLens
   @State private var planOpen = false
@@ -302,7 +304,8 @@ struct RunView: View {
     }
   }
 
-  /// A blunder ends the run: its name, and on to the end screen.
+  /// A blunder ends the run: its name, then Analyze or on to the end screen.
+  /// Analyze passes the end screen on the way, so leaving Analysis lands there.
   private var ending: some View {
     VStack(spacing: 12) {
       HStack(spacing: 8) {
@@ -310,8 +313,19 @@ struct RunView: View {
         Text(endingTitle(model.session.ending!, model.run.played.count)).font(.system(size: 19, weight: .heavy)).tracking(-0.19)
       }
       .foregroundStyle(Theme.bad).padding(.vertical, 6)
-      Button { model.continueToEnd() } label: { HStack(spacing: 8) { Text("Continue"); Icon(name: "next", size: 18) } }
-        .buttonStyle(PlayButtonStyle(kind: .primary, block: true))
+      HStack(spacing: 8) {
+        if let onAnalyze {
+          Button {
+            model.continueToEnd()
+            onAnalyze()
+          } label: {
+            Label("Analyze", systemImage: "magnifyingglass")
+          }
+          .buttonStyle(PlayButtonStyle(block: true))
+        }
+        Button { model.continueToEnd() } label: { HStack(spacing: 8) { Text("Continue"); Icon(name: "next", size: 18) } }
+          .buttonStyle(PlayButtonStyle(kind: .primary, block: true))
+      }
     }
     .padding(.top, 16)
   }

@@ -63,7 +63,7 @@ struct MiddlegameView: View {
             onChangeOptions: exact == nil ? { setup() } : nil,
             onSameLine: last == nil ? nil : { if let last { start(store.state.settings.middlegame, line: last) } })
         } else {
-          RunView(model: model, onExit: exit)
+          RunView(model: model, onExit: exit, onAnalyze: { onAnalyze(model.run.played, model.run.color) })
             .environment(\.openModeSettings) { settings = true }
         }
       } else if exact != nil || (straight && !opened) {
