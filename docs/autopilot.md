@@ -180,7 +180,7 @@ button, named by its opening.
 Autopilot never names a mode. A run is called by its opening, with the side as
 a small square, and the opening's position faded in behind the name. A row of
 segments along the bottom edge shows how far into your prep the run starts:
-one segment a ply, lit up to where you take over. Home's button, the round
+one segment for each of your own moves, lit up to where you take over. Home's button, the round
 intro and the end screen all use this. During the run, the app bar shows the
 opening, the same segments counting up as you play, and the rating the run has
 gained so far. In Freeform, where every run starts from move one, Home's

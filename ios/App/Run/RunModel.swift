@@ -177,7 +177,7 @@ final class RunModel {
       ?? deepestNodeWithin(tree, nodeById(tree, run.openingId), Array(run.played.prefix(run.opened))).id
   }
 
-  /// How far into your prep the run stands, out of how far it goes along this line. Held once off prep.
+  /// How far into your prep the run stands, out of how far it goes along this line, in your own moves. Held once off prep.
   /// None for a Freeform Autopilot run, which always starts from move one.
   var span: PrepSpan? {
     if round != nil && store.state.settings.start == .freeform && !firstGame { return nil }
@@ -191,6 +191,7 @@ final class RunModel {
     let losses = lossesIn(store.state.repertoireList)
     let ext = bookLength(playedKinds(index, Array(line.prefix(total)), run.color, losses))
     return PrepSpan(played: min(run.played.count, total), total: total, book: book > 0 ? book : nil, ext: ext < total ? ext : nil)
+      .ownMoves(run.color)
   }
   var run: Run { session.state.run }
 

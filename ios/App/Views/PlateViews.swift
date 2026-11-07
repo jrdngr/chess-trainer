@@ -2,7 +2,7 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// How far into your prep a run is, a segment a ply.
+/// How far into your prep a run is, a segment for each of your moves.
 struct PrepSegmentsView: View {
   let span: PrepSpan?
   var height: CGFloat = 5

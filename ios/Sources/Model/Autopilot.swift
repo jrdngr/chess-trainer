@@ -74,6 +74,11 @@ public func prepDepth(_ line: [String], _ color: Color, _ prepAt: (String) -> [S
   return depth
 }
 
+/// How many of the first `plies` plies of a game are `color`'s moves.
+public func movesBy(_ color: Color, in plies: Int) -> Int {
+  color == .w ? (plies + 1) / 2 : plies / 2
+}
+
 /// Where a run stands in your prep, for Autopilot's segments.
 public struct PrepSpan: Equatable, Sendable {
   public var played: Int
@@ -88,9 +93,17 @@ public struct PrepSpan: Equatable, Sendable {
     self.book = book
     self.ext = ext
   }
+
+  /// The same span counted in `color`'s own moves rather than plies, so moves played for you don't take up segments.
+  public func ownMoves(_ color: Color) -> PrepSpan {
+    let book = book.map { movesBy(color, in: total + $0) - movesBy(color, in: total) }
+    return PrepSpan(
+      played: movesBy(color, in: played), total: movesBy(color, in: total),
+      book: book == 0 ? nil : book, ext: ext.map { movesBy(color, in: $0) })
+  }
 }
 
-/// Where the next run would start in your prep, for its button.
+/// Where the next run would start in your prep, for its button, in your own moves.
 public func roundSpan(_ rep: Repertoire?, _ pick: Recommendation, _ at: [String]?, _ limit: Int = 60) -> PrepSpan {
   guard let rep else { return PrepSpan(played: 0, total: 0) }
   let index = prepIndex(rep)
@@ -106,7 +119,7 @@ public func roundSpan(_ rep: Repertoire?, _ pick: Recommendation, _ at: [String]
     fen = move.after
   }
   let total = prepDepth(line, pick.color, prepAt, way.count)
-  return PrepSpan(played: min(way.count, total), total: total)
+  return PrepSpan(played: min(way.count, total), total: total).ownMoves(pick.color)
 }
 
 /// How badly a position has gone: lapses count double.
