@@ -21,7 +21,7 @@ final class GrowthModel {
     var find: GrowthOptions
     /// What a batch is sized by.
     var maxPly: Int
-    /// The selection's opening as the subtitle names it, when not `opening`'s: "Any favorite".
+    /// The selection's opening as the subtitle names it, when not `opening`'s.
     var regionId: String? = nil
     /// A line kept with the sitting's moves from the start: the chosen opening's own.
     var keep: (sans: [String], source: MoveSource)? = nil

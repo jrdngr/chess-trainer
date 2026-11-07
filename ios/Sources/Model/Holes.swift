@@ -32,14 +32,12 @@ public func addsToFit(_ depth: Int, _ maxPly: Int = DEFAULT_MAX_PLY) -> Int {
 public struct GrowthOptions {
   public var minShare: Double?
   public var maxPly: Int?
-  public var starred: [String]?
   /// Only holes that lead into this region, or toward it.
   public var region: (tree: OpeningTree, node: OpeningNode)?
   public var pastBook: Bool?
-  public init(minShare: Double? = nil, maxPly: Int? = nil, starred: [String]? = nil, region: (tree: OpeningTree, node: OpeningNode)? = nil, pastBook: Bool? = nil) {
+  public init(minShare: Double? = nil, maxPly: Int? = nil, region: (tree: OpeningTree, node: OpeningNode)? = nil, pastBook: Bool? = nil) {
     self.minShare = minShare
     self.maxPly = maxPly
-    self.starred = starred
     self.region = region
     self.pastBook = pastBook
   }

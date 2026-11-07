@@ -93,7 +93,7 @@ struct PlaybookView: View {
     let state = store.state
     return TidyScan.Input(
       repertoires: state.repertoires, order: state.repertoireOrder, selection: state.settings.selection,
-      favorites: state.settings.favoriteOpenings, growth: state.settings.growth)
+      growth: state.settings.growth)
   }
 
   private var list: some View {
@@ -221,29 +221,10 @@ struct PlaybookView: View {
 
 struct RepRef: Identifiable { var id: String }
 
-/// The book's opening a Playbook row stands for, where its rating and its
-/// favorite star are kept: the shallowest node of that name, else the node at
-/// the row's first move order.
+/// The book's opening a Playbook row stands for, where its rating is kept:
+/// the shallowest node of that name, else the node at the row's first move order.
 @MainActor func openingNode(_ tree: OpeningTree, _ row: PlaybookRow) -> OpeningNode? {
-  if let named = OpeningNames.shallowest(tree)[row.name] { return named }
-  guard let path = row.parts.first?.path else { return nil }
-  let node = nodeById(tree, path.joined(separator: " "))
-  return node.depth > 0 ? node : nil
-}
-
-@MainActor private enum OpeningNames {
-  private static var made: (tree: ObjectIdentifier, byName: [String: OpeningNode])?
-
-  static func shallowest(_ tree: OpeningTree) -> [String: OpeningNode] {
-    if let made, made.tree == ObjectIdentifier(tree) { return made.byName }
-    var byName: [String: OpeningNode] = [:]
-    for node in tree.byId.values where node.depth > 0 {
-      if let held = byName[node.name], held.depth <= node.depth { continue }
-      byName[node.name] = node
-    }
-    made = (ObjectIdentifier(tree), byName)
-    return byName
-  }
+  row.parts.first.flatMap { familyNode(tree, row.name, path: $0.path) }
 }
 
 /// One opening on the tab: its tier dot, name and tier bar, its extensions, and its line count.
@@ -258,14 +239,12 @@ struct PlaybookRowView: View {
     let node = openingNode(tree, row)
     let stats = node.map { nodeStats(store.state.score, $0.id) } ?? NodeStats()
     let rank = rankOf(stats.rating, stats.rated)
-    let starred = node.map { store.state.settings.favoriteOpenings.contains($0.id) } ?? false
     Button(action: onOpen) {
       HStack(spacing: 10) {
         Circle().fill(SwiftUI.Color(hexString: (rank.held ?? UNRATED).color)).frame(width: 10, height: 10)
         VStack(alignment: .leading, spacing: 0) {
           HStack(spacing: 6) {
             Text(row.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
-            if starred { Icon(name: "star", size: 13, filled: true).foregroundStyle(Theme.warn) }
           }
           TierBar(rating: stats.rating, rated: stats.rated)
         }

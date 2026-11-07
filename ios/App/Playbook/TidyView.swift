@@ -64,9 +64,8 @@ struct TidyView: View {
 
   private var whereText: String {
     let selection = store.state.settings.selection
-    if isAnyFavorite(selection) { return "your favorites" }
     guard let tree = store.tree else { return "your Playbook" }
-    let region = regionsBySide(tree, selection, store.state.settings.favoriteOpenings).first?.node ?? tree.root
+    let region = regionsBySide(tree, selection).first?.node ?? tree.root
     return region.depth == 0 ? "your Playbook" : "the \(region.name)"
   }
 

@@ -23,7 +23,6 @@ import Testing
     Env.at(at) { state.onboarded(tree, openings, board) }
     return obj([
       "playbook": state.repertoireList.map(written).json,
-      "favorites": state.settings.favoriteOpenings,
       "selection": encoded(state.settings.selection),
       "onboarded": state.settings.onboarded,
       "events": state.events.map(eventJSON).json,

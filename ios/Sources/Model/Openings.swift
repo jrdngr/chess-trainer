@@ -104,27 +104,31 @@ private final class FamilyRow {
 }
 
 /// The Playbook's rows: one per opening family, a family nested in another on a row of its own.
-public func familiesIn(_ rep: Repertoire, _ index: ReferenceIndex) -> [DerivedOpening] {
+/// Lines that stop where only a first-move name covers them (see `openingFamily`) have no row,
+/// unless `firstMoves` keeps them, as imports do: under that name, or for Black after its first move.
+public func familiesIn(_ rep: Repertoire, _ index: ReferenceIndex, firstMoves: Bool = false) -> [DerivedOpening] {
   var rows: [FamilyRow] = []
   func visit(_ region: NamedRegion, _ row: FamilyRow?) {
-    let family = familyName(index, region.name)
     var here = row
-    if here == nil || family != here!.name {
+    let named = openingFamily(index, region.name) ?? (firstMoves ? familyName(index, region.name) : nil)
+    if let family = named, family != row?.name {
       let made = FamilyRow(name: family, rootId: region.rootId, path: region.path)
       row?.nested.append(region.rootId)
       rows.append(made)
       here = made
     }
-    // The ECO of the family's own position, where the tree passes through it.
-    if region.name == family || here!.eco == nil { here!.eco = region.eco ?? here!.eco }
-    here!.ownLines += region.ownLines
+    if let here {
+      // The ECO of the family's own position, where the tree passes through it.
+      if region.name == here.name || here.eco == nil { here.eco = region.eco ?? here.eco }
+      here.ownLines += region.ownLines
+    }
     for child in region.children { visit(child, here) }
   }
   for region in namedRegions(rep, index) { visit(region, nil) }
 
   let listed = rows.filter { $0.ownLines > 0 }
   var names = listed.map(\.name)
-  if rep.color == .b { names = blackNames(listed.map { ($0.name, $0.path) }, index) }
+  if firstMoves && rep.color == .b { names = blackNames(listed.map { ($0.name, $0.path) }, index) }
   return sorted(listed.enumerated().map { i, row in
     let stats = subtreeStats(rep, row.rootId, row.path.count, Set(row.nested))
     return DerivedOpening(
@@ -334,9 +338,9 @@ public struct PlaybookRow: Equatable, Sendable {
 }
 
 /// The Playbook tab's rows for one side: `familiesIn`, with rows of the same name merged.
-public func playbookRows(_ rep: Repertoire, _ index: ReferenceIndex) -> [PlaybookRow] {
+public func playbookRows(_ rep: Repertoire, _ index: ReferenceIndex, firstMoves: Bool = false) -> [PlaybookRow] {
   var rows: [PlaybookRow] = []
-  for opening in familiesIn(rep, index) {
+  for opening in familiesIn(rep, index, firstMoves: firstMoves) {
     if let at = rows.firstIndex(where: { $0.name == opening.name }) {
       rows[at].parts.append(opening)
     } else {

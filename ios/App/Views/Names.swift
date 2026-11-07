@@ -3,9 +3,8 @@ import Model
 /// An opening as the app names it: the last of its picker trail, "Berlin Defence".
 @MainActor
 func openingName(_ tree: OpeningTree, _ id: String) -> String {
-  if id == ANY_FAVORITE { return "Any Favorite" }
   let node = nodeById(tree, id)
-  if node.depth == 0 { return "Any Playbook" }
+  if node.depth == 0 { return "Any Opening" }
   return entryForNode(pickerCatalog(tree), node)?.label ?? node.name
 }
 

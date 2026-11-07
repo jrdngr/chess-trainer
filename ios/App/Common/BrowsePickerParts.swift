@@ -55,11 +55,10 @@ struct SideSwitch<Square: View>: View {
   }
 }
 
-/// What is on the board, by name and moves, with its tier, its star and Choose. `.bp-bar`.
+/// What is on the board, by name and moves, with its tier and Choose. `.bp-bar`.
 struct BrowseNameBar: View {
   let ctx: BrowseContext
   let moves: [String]
-  let onStar: (String) -> Void
   let onChoose: () -> Void
 
   var body: some View {
@@ -77,13 +76,6 @@ struct BrowseNameBar: View {
       if let held, let stats {
         Text("\(held.name) \(Int(JSRound(stats.rating)))").font(.system(size: 13, weight: .semibold))
           .foregroundStyle(SwiftUI.Color(hexString: held.color)).lineLimit(1)
-      }
-      if let exact {
-        let starred = ctx.state.settings.favoriteOpenings.contains(exact.id)
-        Button { onStar(exact.id) } label: {
-          Icon(name: "star", size: 20, filled: starred).foregroundStyle(Theme.text2).frame(width: 40, height: 44)
-        }
-        .buttonStyle(.plain)
       }
       Button(action: onChoose) {
         Text("Choose").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.accentInk)

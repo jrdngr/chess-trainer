@@ -6,7 +6,8 @@ import ChessCore
 
 public struct Settings: Equatable, Sendable, Codable {
   public var selection = DEFAULT_SELECTION
-  /// Starred openings, by tree node id.
+  /// Starred openings from older saves, by tree node id. Nothing reads them;
+  /// they are kept so a save round-trips.
   public var favoriteOpenings: [String] = []
   public var autopilot = DEFAULT_AUTOPILOT
   public var hapticFeedback = true
@@ -53,6 +54,7 @@ public struct Settings: Equatable, Sendable, Codable {
     let c = try decoder.container(keyedBy: CodingKeys.self)
     self.init()
     selection = try c.decodeIfPresent(Selection.self, forKey: .selection) ?? selection
+    if selection.opening == LEGACY_ANY_FAVORITE { selection.opening = ANY_OPENING }
     favoriteOpenings = try c.decodeIfPresent([String].self, forKey: .favoriteOpenings) ?? favoriteOpenings
     autopilot = try c.decodeIfPresent(AutopilotPrefs.self, forKey: .autopilot) ?? autopilot
     hapticFeedback = try c.decodeIfPresent(Bool.self, forKey: .hapticFeedback) ?? hapticFeedback
@@ -206,9 +208,8 @@ extension AppState {
   }
 
   /// Finishing onboarding: `useStore.onboarded`. Picked openings go in as
-  /// their own moves and are starred; lines played on the board go in whole,
-  /// marked as played on the board, and starred only through a picked
-  /// opening. A move order that is not legal is not an opening, and is left
+  /// their own moves; lines played on the board go in whole, marked as
+  /// played on the board. A move order that is not legal is not an opening, and is left
   /// out. Skipping puts nothing in but is still an answer.
   public mutating func onboarded(_ tree: OpeningTree, _ openings: [SeedOpening], _ board: [OnboardingLine] = []) {
     let legal = { (sans: [String]) in walkSan(sans).fens.count == sans.count + 1 }
@@ -219,12 +220,11 @@ extension AppState {
       let repId = ensureRepertoire(line.color)
       addLine(repId, line.sans, .fixed(source), via: .onboarding, lost: line.lost)
     }
-    // Starred where the book names them, so they lead the quick picker and Home's ladder.
+    // The selection follows the picks the book names.
     let picks = openings.compactMap { opening -> (id: String, color: Color)? in
       guard let node = tree.byId[opening.sans.joined(separator: " ")], node.depth > 0 else { return nil }
       return (node.id, opening.color)
     }
-    for pick in picks where !settings.favoriteOpenings.contains(pick.id) { settings.favoriteOpenings.append(pick.id) }
     // Nothing picked says nothing about which side they play.
     if !picks.isEmpty { settings.selection = selectionFor(picks) }
     settings.onboarded = true
@@ -263,5 +263,5 @@ public func selectionFor(_ picks: [(id: String, color: Color)]) -> Selection {
   guard let first = picks.first else { return DEFAULT_SELECTION }
   let colors = Set(picks.map(\.color))
   let color: ColorChoice = colors.count == 1 ? (first.color == .w ? .w : .b) : .random
-  return Selection(color: color, opening: picks.count == 1 ? first.id : ANY_FAVORITE)
+  return Selection(color: color, opening: picks.count == 1 ? first.id : ANY_OPENING)
 }

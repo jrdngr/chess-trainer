@@ -12,12 +12,8 @@ final class AppStore {
   /// The opening picker's catalogue, built once from the tree.
   private(set) var catalog: PickerCatalog?
   var state = AppState()
-  /// The favorite the last round landed on, so the next one is another.
-  var lastFavorite: String?
   /// Play's recent rounds this session, kept across trips Home so the next round's start follows them.
   var autoHistory = AutoHistory()
-  /// Any favorite resolved ahead of time, so Home's button and the round it starts agree.
-  @ObservationIgnored private var ahead: (key: String, selection: Selection)?
   /// The save exists but could not be read (locked, say): saving now would replace it with a fresh state.
   @ObservationIgnored private var saveBlocked = false
 
@@ -73,9 +69,7 @@ final class AppStore {
   private func readState() {
     state = AppState()
     saveBlocked = false
-    lastFavorite = nil
     autoHistory = AutoHistory()
-    ahead = nil
     session = UUID()
     guard FileManager.default.fileExists(atPath: file.path(percentEncoded: false)) else { return }
     if let data = try? Data(contentsOf: file) {
@@ -316,26 +310,18 @@ final class AppStore {
   }
 
   /// The next round's selection, without taking it: `peekRoundSelection`.
-  func peekRoundSelection() -> Selection { peekRoundSelection(state) }
+  func peekRoundSelection() -> Selection { state.settings.selection }
 
-  /// The same, for a state not saved yet, such as onboarding's Playbook before it goes in:
-  /// the answer is kept for the state it becomes.
-  func peekRoundSelection(_ state: AppState) -> Selection {
-    let selection = state.settings.selection
-    guard isAnyFavorite(selection), let tree else { return selection }
-    let key = "\(selection.color.rawValue) \(state.settings.favoriteOpenings.joined(separator: ",")) \(lastFavorite ?? "")"
-    if ahead?.key != key { ahead = (key, roundSelection(state, tree, last: lastFavorite)) }
-    return ahead!.selection
-  }
+  /// The same, for a state not saved yet, such as onboarding's Playbook before it goes in.
+  func peekRoundSelection(_ state: AppState) -> Selection { state.settings.selection }
 
-  /// The next round's selection, taken: the one after lands on another favorite.
-  func takeRoundSelection() -> Selection {
-    let taken = peekRoundSelection()
-    if isAnyFavorite(state.settings.selection) {
-      if !taken.opening.isEmpty { lastFavorite = taken.opening }
-      ahead = nil
-    }
-    return taken
+  /// The next round's selection, taken.
+  func takeRoundSelection() -> Selection { state.settings.selection }
+
+  /// Your openings, most worth focusing on first: `yourOpenings`.
+  func yourOpenings() -> [YourOpening] {
+    guard let tree else { return [] }
+    return Model.yourOpenings(state.repertoireList, tree, state.score, now: Env.now())
   }
 
   /// Change the state and save it.

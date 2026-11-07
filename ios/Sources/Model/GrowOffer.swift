@@ -100,20 +100,20 @@ public struct GrowLaunch: Sendable {
 private func singleRow(_ rep: Repertoire, _ opening: OpeningNode, depth: Int, topShare: Double, holes: [Hole], ends: [LineEnd]) -> GrowthRow {
   GrowthRow(
     id: "\(rep.id)#\(opening.name)", repertoireId: rep.id, color: rep.color, name: opening.name, eco: nil, depth: depth,
-    topShare: topShare, starred: false, urgency: 0, score: 0, holes: holes, ends: ends)
+    topShare: topShare, urgency: 0, score: 0, holes: holes, ends: ends)
 }
 
 /// Where growing an opening starts: Growth's own pick for the opening, the
 /// same one its lobby would start, past Growth's settings when there is none
 /// within. Where the round ended plays no part, so a one-line opening widens
 /// at its early, common replies before any line gets longer (owner, 11-01).
-public func growLaunch(_ rep: Repertoire, _ index: ReferenceIndex, _ tree: OpeningTree, _ opening: OpeningNode, minShare: Double, maxPly: Int, starred: [String]) -> GrowLaunch? {
+public func growLaunch(_ rep: Repertoire, _ index: ReferenceIndex, _ tree: OpeningTree, _ opening: OpeningNode, minShare: Double, maxPly: Int) -> GrowLaunch? {
   let region = (tree: tree, node: opening)
-  if let within = recommended(growthRows([rep], index, GrowthOptions(minShare: minShare, maxPly: maxPly, starred: starred, region: region))) {
+  if let within = recommended(growthRows([rep], index, GrowthOptions(minShare: minShare, maxPly: maxPly, region: region))) {
     return GrowLaunch(opening: opening, row: within, hole: nil, widened: nil)
   }
   for widened in [Widened(why: "rarer", minShare: 0, maxPly: maxPly), Widened(why: "deeper", minShare: 0, maxPly: .max)] {
-    let opts = GrowthOptions(minShare: widened.minShare, maxPly: widened.maxPly, starred: starred, region: region)
+    let opts = GrowthOptions(minShare: widened.minShare, maxPly: widened.maxPly, region: region)
     if let row = recommended(growthRows([rep], index, opts)) { return GrowLaunch(opening: opening, row: row, hole: nil, widened: widened) }
   }
   return nil
@@ -145,8 +145,8 @@ public struct GrowOffer: Sendable {
 }
 
 /// What a clean end of prep earns, read after the round is logged.
-public func growOfferAt(rep: Repertoire, index: ReferenceIndex, tree: OpeningTree, opening: OpeningNode, played: [String], rounds: [RoundRecord], minShare: Double, maxPly: Int, starred: [String], stub: Bool = false) -> GrowOffer? {
-  func launch() -> GrowLaunch? { growLaunch(rep, index, tree, opening, minShare: minShare, maxPly: maxPly, starred: starred) }
+public func growOfferAt(rep: Repertoire, index: ReferenceIndex, tree: OpeningTree, opening: OpeningNode, played: [String], rounds: [RoundRecord], minShare: Double, maxPly: Int, stub: Bool = false) -> GrowOffer? {
+  func launch() -> GrowLaunch? { growLaunch(rep, index, tree, opening, minShare: minShare, maxPly: maxPly) }
   if stub, let launch = launch() {
     return GrowOffer(kind: "opening", text: nil, launch: launch)
   }

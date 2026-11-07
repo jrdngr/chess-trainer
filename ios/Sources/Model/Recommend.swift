@@ -27,11 +27,6 @@ public func narrowingBar(_ level: Int) -> Double {
   return at / (at + 1)
 }
 
-/// A star is worth one level.
-public func effectiveLevel(_ level: Int, _ starred: Bool) -> Int {
-  max(0, level - (starred ? 1 : 0))
-}
-
 /// Whether a round on this opening starts in its position rather than from move one.
 public func startsInside(_ opening: OpeningNode) -> Bool {
   opening.depth >= 2
@@ -68,20 +63,18 @@ public struct Candidate: Equatable, Sendable {
   /// Pieces of work strictly inside this opening.
   public var work: Int
   public var lastAt: Double?
-  public var starred: Bool
   /// Levels below the selection.
   public var level: Int
   /// need × staleness × depth × brake.
   public var score: Double = 0
 
-  public init(focus: Focus, openingId: String, color: Color, need: Double, work: Int, lastAt: Double?, starred: Bool, level: Int) {
+  public init(focus: Focus, openingId: String, color: Color, need: Double, work: Int, lastAt: Double?, level: Int) {
     self.focus = focus
     self.openingId = openingId
     self.color = color
     self.need = need
     self.work = work
     self.lastAt = lastAt
-    self.starred = starred
     self.level = level
   }
 }
@@ -105,7 +98,6 @@ public struct RecommendInput {
   public var cards: [String: Card]
   public var repairs: [RepairRef]
   public var score: ScoreState
-  public var starred: [String]
   public var newPerSession: Int
   /// The focuses of the session's rounds so far, oldest first.
   public var recentFocuses: [Focus]
@@ -113,14 +105,13 @@ public struct RecommendInput {
   public var seen: Seen?
   public var now: Double?
 
-  public init(tree: OpeningTree, selection: Selection, reps: [Repertoire], cards: [String: Card], repairs: [RepairRef] = [], score: ScoreState, starred: [String], newPerSession: Int, recentFocuses: [Focus]) {
+  public init(tree: OpeningTree, selection: Selection, reps: [Repertoire], cards: [String: Card], repairs: [RepairRef] = [], score: ScoreState, newPerSession: Int, recentFocuses: [Focus]) {
     self.tree = tree
     self.selection = selection
     self.reps = reps
     self.cards = cards
     self.repairs = repairs
     self.score = score
-    self.starred = starred
     self.newPerSession = newPerSession
     self.recentFocuses = recentFocuses
   }
@@ -163,7 +154,7 @@ public func rank(_ list: [Candidate], _ recentFocuses: [Focus]) -> [Candidate] {
     let staler = list.filter { when($0) < when(cand) }.count
     let freshness = list.count < 2 ? 1 : 1 - Double(staler) / Double(list.count - 1)
     let brake = pow(BRAKE, Double(recentCount(recentFocuses, cand.focus)))
-    let depth = pow(DEPTH, Double(effectiveLevel(cand.level, cand.starred)))
+    let depth = pow(DEPTH, Double(cand.level))
     var out = cand
     out.score = cand.need * (1 + STALENESS * freshness) * depth * brake
     return out
@@ -223,7 +214,7 @@ public func candidates(_ input: RecommendInput) -> [Candidate] {
     if need <= 0 { return }
     out.append(Candidate(
       focus: focus, openingId: node.id, color: color, need: need, work: work, lastAt: lastAt(node.id),
-      starred: starredWithin(tree, node.id, input.starred), level: node.depth - region.depth))
+      level: node.depth - region.depth))
   }
 
   for color in colorsOf(input.selection.color) {
@@ -281,7 +272,7 @@ public func recommend(_ input: RecommendInput) -> Recommendation? {
     let child = ranked
       .filter { c in
         c.focus == parent.focus && c.color == parent.color && node.children.contains { $0.id == c.openingId } && open(c.openingId)
-          && Double(c.work) > Double(parent.work) * narrowingBar(effectiveLevel(c.level, c.starred))
+          && Double(c.work) > Double(parent.work) * narrowingBar(c.level)
       }
       .jsSorted { cmp($1.work, $0.work) }
       .first

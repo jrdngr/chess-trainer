@@ -50,7 +50,7 @@ struct BrowsePicker: View {
         // The board gives way on short screens so the lists keep some room: `min(100%, 46dvh)`.
         .frame(maxWidth: min(UIScreen.main.bounds.height * 0.46, 600))
         .layoutPriority(1)
-      BrowseNameBar(ctx: ctx, moves: line, onStar: { id in store.update { $0.toggleStar(id) } }, onChoose: { choose(ctx, line, side) })
+      BrowseNameBar(ctx: ctx, moves: line, onChoose: { choose(ctx, line, side) })
       if searching {
         BrowseSearchField(query: $query)
       } else {
@@ -118,9 +118,6 @@ struct BrowsePicker: View {
     return Button { tapRow(row) } label: {
       HStack(spacing: 12) {
         BrowseRowLabel(row: row)
-        if let at, ctx.state.settings.favoriteOpenings.contains(at.id) {
-          Icon(name: "star", size: 14, filled: true).foregroundStyle(Theme.warn)
-        }
         if let held { Text(held.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(SwiftUI.Color(hexString: held.color)) }
       }
       .padding(.horizontal, 14).padding(.vertical, 8).frame(minHeight: 56).contentShape(Rectangle())
@@ -130,11 +127,10 @@ struct BrowsePicker: View {
   }
 
   private func rootItems(_ ctx: BrowseContext, _ chip: BrowseChipId) -> [BrowseItem] {
-    let favorites = ctx.state.settings.favoriteOpenings
-    let key = "\(chip) \(favorites.joined(separator: ",")) \(ctx.reps.map { "\($0.id):\($0.nodes.count)" }.joined(separator: ","))"
+    let key = "\(chip) \(ctx.reps.map { "\($0.id):\($0.nodes.count)" }.joined(separator: ","))"
     return memo.get(key) {
       switch chip {
-      case .mine: return myLines(ctx.reps, ctx.index, ctx.tree, favorites)
+      case .mine: return myLines(ctx.reps, ctx.index, ctx.tree)
       case .suggest: return suggestions(ctx.reps, ctx.index, ctx.tree, ctx.catalog).map { .row($0) }
       case .recent: return recentItems(ctx.tree, ctx.catalog, ctx.state.score)
       case .book: return bookItems(ctx.catalog)
@@ -147,7 +143,7 @@ struct BrowsePicker: View {
 
   private func initialMoves(_ ctx: BrowseContext) -> [String] {
     let opening = store.state.settings.selection.opening
-    return opening == ANY_FAVORITE ? [] : nodeById(ctx.tree, opening).sans
+    return nodeById(ctx.tree, opening).sans
   }
 
   private func play(_ line: [String], _ san: String) {
@@ -180,7 +176,7 @@ struct BrowsePicker: View {
   }
 
   private func choose(_ ctx: BrowseContext, _ line: [String], _ side: ChessCore.Color) {
-    // The book's own move order where it has one for this position, so ratings and favorites line up.
+    // The book's own move order where it has one for this position, so ratings line up.
     let id = line.isEmpty ? "" : nodeAt(ctx.tree, line)?.id ?? line.joined(separator: " ")
     let chosenSide: ChessCore.Color? = line.isEmpty ? nil : side
     if let onChoose {

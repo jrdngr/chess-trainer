@@ -29,30 +29,3 @@ struct RankBar<Centre: View>: View {
     }
   }
 }
-
-/// The rating of the opening you have selected: its tier, its rating and how
-/// far it is from the next. Nothing for My Playbook or Any favorite. `ScoreStrip`.
-struct ScoreStrip: View {
-  @Environment(AppStore.self) private var store
-
-  var body: some View {
-    let selection = store.state.settings.selection
-    if let tree = store.tree, selection.opening != "", selection.opening != ANY_FAVORITE {
-      let node = nodeById(tree, selection.opening)
-      let stats = nodeStats(store.state.score, node.id)
-      let favorite = store.state.settings.favoriteOpenings.contains(node.id)
-      VStack(alignment: .leading, spacing: 8) {
-        HStack(spacing: 4) {
-          if !favorite { Icon(name: "star", size: 11) }
-          Text(node.name).lineLimit(1)
-        }
-        .font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.text3)
-        RankBar(rank: rankOf(stats.rating, stats.rated)) {
-          Text(stats.rated == 0 ? NEW_LABEL : "\(Int(JSRound(stats.rating)))").font(.system(size: 16, weight: .heavy).monospacedDigit())
-        }
-      }
-      .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 13)
-      .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface))
-    }
-  }
-}

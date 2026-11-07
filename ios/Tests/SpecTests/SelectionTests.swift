@@ -10,22 +10,7 @@ import Testing
     "selection.colorsOf": { colorsOf(choice($0[0])).map(\.rawValue).json },
     "selection.colorLabel": { colorLabel(choice($0[0])).json },
     "selection.lineInRegion": { a in lineInRegion(tree, nodeById(tree, a[0].string), line(a[1].string)).json },
-    "anyFavorite.favoritesIn": { a in
-      .array(favoritesIn(tree, a[0].strings, choice(a[1])).map { obj(["id": $0.node.id, "side": $0.side.rawValue]) })
-    },
-    "anyFavorite.pickFavorite": { a in
-      let ids = a[0].strings
-      let favorites = favoritesIn(tree, ids, .random)
-      let roll = a[2].number
-      return pickFavorite(favorites, { Double(ids.firstIndex(of: $0) ?? -1) * 1000 }, a[1].stringOrNil, { roll })?.node.id.json ?? .null
-    },
-    "anyFavorite.resolveFavorite": { a in
-      let ids = a[1].strings
-      let rand = mulberry32(UInt32(a[2].int))
-      let picked = resolveFavorite(tree, Selection(color: choice(a[0]), opening: ANY_FAVORITE), ids, { Double(ids.firstIndex(of: $0) ?? -1) }, nil, rand)
-      return obj(["color": picked.color.rawValue, "opening": picked.opening])
-    },
-  ], only: ["selection.colorsOf", "selection.colorLabel", "selection.lineInRegion", "anyFavorite.favoritesIn", "anyFavorite.pickFavorite", "anyFavorite.resolveFavorite"])
+  ], only: ["selection.colorsOf", "selection.colorLabel", "selection.lineInRegion"])
 }
 
 /// The picker functions in Golden/cases/functions/picker.json.

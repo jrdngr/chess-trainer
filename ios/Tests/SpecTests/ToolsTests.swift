@@ -163,16 +163,8 @@ private func noon(_ key: String) -> Double {
     },
     "repair.buildRepairs": { repairs($0[0].bool) },
     "stats.series": { series($0[0].int, $0[1].string) },
-    "stats.favouriteness": { a in
-      guard let f = favouriteness(tree, T.SCORE, a[0].string, 30, noon("2026-10-31")) else { return .null }
-      return obj(["rank": f.rank, "of": f.of, "parent": f.parent?.id, "siblings": f.siblings.map { "\($0.node.id):\($0.rounds)" }])
-    },
     "stats.ladders": { a in
-      let starred = a[0].strings
-      return obj([
-        "favorites": starredOpenings(tree, T.SCORE, starred).map(\.node.id),
-        "rated": ratedOpenings(tree, T.SCORE, starred).map(\.node.id),
-      ])
+      obj(["rated": ratedOpenings(tree, T.SCORE, a[0].strings).map(\.node.id)])
     },
     "stats.niceTicks": { niceTicks($0[0].number).json },
     "extensionGraph.layoutGraph": { layout($0[0].bool) },

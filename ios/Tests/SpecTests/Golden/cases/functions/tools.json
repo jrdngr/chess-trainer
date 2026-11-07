@@ -27,21 +27,11 @@
       ]
     },
     {
-      "fn": "stats.favouriteness",
-      "about": "How an opening ranks among its siblings by rounds in the last 30 days, \"your second favorite Sicilian\"; siblings never played are left out.",
-      "cases": [
-      {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"],"out":{"rank":1,"of":2,"parent":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6","siblings":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6:3","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6:1"]}},
-      {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6"],"out":{"rank":2,"of":2,"parent":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6","siblings":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6:3","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6:1"]}},
-      {"args":["e4 c5"],"out":{"rank":1,"of":1,"parent":"e4","siblings":["e4 c5:5"]}},
-      {"args":["e4 e5"],"out":null}
-      ]
-    },
-    {
       "fn": "stats.ladders",
-      "about": "Stats' two ladders: your favorites, best rated first, unrated ones kept at the bottom; and every other opening Survival has rated, best first.",
+      "about": "Stats' Rated list: every rated opening not among your openings (the args), best first.",
       "cases": [
-      {"args":[[]],"out":{"favorites":[],"rated":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","e4 c5","d4 Nf6 c4 g6 Nc3","e4 c5 Nf3 Nc6","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6"]}},
-      {"args":[["e4 c5","e4 e5 Nf3 Nc6 Bb5","d4 Nf6 c4 g6 Nc3"]],"out":{"favorites":["e4 c5","d4 Nf6 c4 g6 Nc3","e4 e5 Nf3 Nc6 Bb5"],"rated":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","e4 c5 Nf3 Nc6","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6"]}}
+      {"args":[[]],"out":{"rated":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","e4 c5","d4 Nf6 c4 g6 Nc3","e4 c5 Nf3 Nc6","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6"]}},
+      {"args":[["e4 c5","e4 e5 Nf3 Nc6 Bb5","d4 Nf6 c4 g6 Nc3"]],"out":{"rated":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","e4 c5 Nf3 Nc6","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6"]}}
       ]
     },
     {

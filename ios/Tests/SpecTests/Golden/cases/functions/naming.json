@@ -265,20 +265,20 @@
       "fn": "openingTree.nodeById",
       "about": "A selection by its moves: a catalogue opening; a legal line the catalogue lacks, as a custom opening under the deepest one it passes; anything else, My Playbook.",
       "cases": [
-      {"args":[""],"out":{"id":"","name":"Any Playbook","parentId":null,"depth":0,"custom":false}},
+      {"args":[""],"out":{"custom":false,"depth":0,"id":"","name":"Any Opening"}},
       {"args":["e4 c5"],"out":{"id":"e4 c5","name":"Sicilian Defence","parentId":"e4","depth":2,"custom":false}},
       {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 h3"],"out":{"id":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 h3","name":"Sicilian Defence: Najdorf Variation, Adams Attack","parentId":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","depth":6,"custom":false}},
       {"args":["d4 d5 c4 c6 Nf3 Nf6 Nc3"],"out":{"id":"d4 d5 c4 c6 Nf3 Nf6 Nc3","name":"Slav Defence: Three Knights Variation","parentId":"d4 d5 c4 c6 Nf3","depth":6,"custom":false}},
       {"args":["a3 a6 b3"],"out":{"id":"a3 a6 b3","name":"Anderssen's Opening","parentId":"a3","depth":2,"custom":true}},
-      {"args":["e4 e4"],"out":{"id":"","name":"Any Playbook","parentId":null,"depth":0,"custom":false}},
-      {"args":["not a line"],"out":{"id":"","name":"Any Playbook","parentId":null,"depth":0,"custom":false}}
+      {"args":["e4 e4"],"out":{"custom":false,"depth":0,"id":"","name":"Any Opening"}},
+      {"args":["not a line"],"out":{"custom":false,"depth":0,"id":"","name":"Any Opening"}}
       ]
     },
     {
       "fn": "openingTree.node",
       "about": "Every opening in the catalogue, built from the book: its name, ECO, parent, depth, games and how many openings sit directly under it.",
       "cases": [
-      {"args":[""],"out":{"name":"Any Playbook","eco":null,"parentId":null,"depth":0,"games":280246,"children":18}},
+      {"args":[""],"out":{"children":18,"depth":0,"games":280246,"name":"Any Opening"}},
       {"args":["Nc3"],"out":{"name":"Van Geet Opening","eco":"A00","parentId":"","depth":1,"games":785,"children":1}},
       {"args":["Nc3 e5"],"out":{"name":"Van Geet Opening: Reversed Nimzowitsch","eco":"A00","parentId":"Nc3","depth":2,"games":54,"children":0}},
       {"args":["Nf3"],"out":{"name":"Zukertort Opening","eco":"A04","parentId":"","depth":1,"games":28641,"children":3}},

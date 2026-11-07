@@ -139,14 +139,3 @@ import Testing
   #expect(hole.yes)
   #expect(hole.gap.kind == .tooShort)
 }
-
-/// Any favorite is the favorite played longest ago, the last one skipped.
-@Test func anyFavoriteIsDeterministic() {
-  let tree = openingTree(bookIndex)
-  var state = AppState()
-  state.seed(tree, STARTER_SETS[0])
-  let first = roundSelection(state, tree, last: nil)
-  #expect(roundSelection(state, tree, last: nil) == first)
-  let next = roundSelection(state, tree, last: first.opening)
-  #expect(next.opening != first.opening)
-}

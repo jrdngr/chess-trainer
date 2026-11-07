@@ -12,7 +12,7 @@ private func game(_ picked: String, _ color: ColorChoice = .w, at: Double) -> Ga
 @Test func recentReadsPicksFromGames() {
   let games = [
     game("sicilian", .b, at: 5),
-    game(ANY_FAVORITE, at: 4),
+    game(LEGACY_ANY_FAVORITE, at: 4),
     game(ANY_OPENING, at: 3),
     game("alapin", at: 2),
     game("sicilian", .w, at: 1),

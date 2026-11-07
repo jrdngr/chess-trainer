@@ -143,7 +143,7 @@ struct OpeningPage: View {
     let prefs = store.state.settings.growth
     guard let node,
       let launch = growLaunch(
-        rep, index, tree, node, minShare: prefs.minShare, maxPly: prefs.maxPly, starred: store.state.settings.favoriteOpenings)
+        rep, index, tree, node, minShare: prefs.minShare, maxPly: prefs.maxPly)
     else {
       toasts.show("Nothing to grow here")
       return

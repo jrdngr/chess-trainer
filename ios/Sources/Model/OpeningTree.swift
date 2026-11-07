@@ -114,7 +114,7 @@ public func moveLabel(_ sans: [String]) -> String {
 
 func buildOpeningTree(_ index: ReferenceIndex) -> OpeningTree {
   let root = OpeningNode(
-    id: ANY_OPENING, name: "Any Playbook", eco: nil, sans: [], key: positionKey(START_FEN),
+    id: ANY_OPENING, name: "Any Opening", eco: nil, sans: [], key: positionKey(START_FEN),
     pathKeys: [], games: index.totalGames, depth: 0, parentId: nil)
   var byId = OrderedMap<String, OpeningNode>()
   byId[root.id] = root
@@ -218,12 +218,9 @@ public func ancestorsOf(_ tree: OpeningTree, _ id: String) -> [OpeningNode] {
   return out
 }
 
-/// Starred first, then most played: the order at every level of the picker.
-public func orderedChildren(_ node: OpeningNode, _ starred: [String]) -> [OpeningNode] {
-  let stars = Set(starred)
-  return node.children.jsSorted { a, b in
-    let star = Double((stars.contains(b.id) ? 1 : 0) - (stars.contains(a.id) ? 1 : 0))
-    if star != 0 { return star }
+/// Most played first: the order at every level of the picker.
+public func orderedChildren(_ node: OpeningNode) -> [OpeningNode] {
+  node.children.jsSorted { a, b in
     let games = b.games - a.games
     return games != 0 ? games : Double(JS.localeCompare(a.name, b.name))
   }
@@ -240,10 +237,4 @@ public func descendantsOf(_ node: OpeningNode) -> [OpeningNode] {
   }
   visit(node)
   return out
-}
-
-/// Is this node, or any opening it sits inside, starred?
-public func starredWithin(_ tree: OpeningTree, _ id: String, _ starred: [String]) -> Bool {
-  let stars = Set(starred)
-  return ancestorsOf(tree, id).contains { stars.contains($0.id) }
 }

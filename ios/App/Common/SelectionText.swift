@@ -12,9 +12,8 @@ func shortLabel(_ label: String) -> String {
 
 /// Where a node sits, as short names from its family down.
 func selectionTrail(_ tree: OpeningTree, _ catalog: PickerCatalog, _ openingId: String) -> [String] {
-  if openingId == ANY_FAVORITE { return ["Any Favorite"] }
   let node = nodeById(tree, openingId)
-  if node.depth == 0 { return ["Any Playbook"] }
+  if node.depth == 0 { return ["Any Opening"] }
   let trail = entryForNode(catalog, node).map { entryTrail($0).map { shortLabel($0.label) } } ?? [node.name]
   guard node.custom else { return trail }
   // A line played past its name: the name, then the moves it goes on with.

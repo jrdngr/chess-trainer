@@ -27,7 +27,7 @@ public struct GameRecord: Equatable, Sendable, Codable {
   public var at: Double
   /// The side you played.
   public var color: Color
-  /// The selection saved when the game was played: an opening id, "" for My Playbook, or Any favorite.
+  /// The selection saved when the game was played: an opening id, or "" for Any Opening (older saves may hold Any favorite).
   public var picked: Selection
   /// The opening the game was played in.
   public var opening: String
@@ -102,7 +102,7 @@ public func gamesIn(_ games: [GameRecord], _ scope: GameScope, now: Double) -> [
 
 /// A selection's name for the PGN tags.
 private func pickedName(_ tree: OpeningTree, _ selection: Selection) -> String {
-  selection.opening == ANY_FAVORITE ? "Any Favorite" : nodeById(tree, selection.opening).name
+  selection.opening == ANY_OPENING || selection.opening == LEGACY_ANY_FAVORITE ? "Any Opening" : nodeById(tree, selection.opening).name
 }
 
 /// One game as PGN: the standard tags, the app's own (Mode, Picked, Opening, Opened), then the moves.
@@ -134,12 +134,6 @@ public func gamePgn(_ game: GameRecord, _ tree: OpeningTree) -> String {
 /// Games as one PGN file, newest first.
 public func gamesPgn(_ games: [GameRecord], _ tree: OpeningTree) -> String {
   games.map { gamePgn($0, tree) }.joined(separator: "\n")
-}
-
-/// What a game was picked on: the saved selection when that is Any favorite,
-/// otherwise the selection the game was played on.
-public func pickedFor(_ played: Selection, saved: Selection) -> Selection {
-  isAnyFavorite(saved) ? saved : played
 }
 
 extension AppState {

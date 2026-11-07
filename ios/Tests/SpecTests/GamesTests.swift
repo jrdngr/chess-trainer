@@ -57,7 +57,7 @@ private func outcome(_ how: Ending, _ color: ChessCore.Color) -> [String] {
   let tree = openingTree(bookIndex)
   // 2026-11-04 12:00:05 UTC.
   let record = GameRecord(
-    id: "x", mode: .survival, at: 1_793_793_605_000, color: .b, picked: Selection(color: .b, opening: ANY_FAVORITE),
+    id: "x", mode: .survival, at: 1_793_793_605_000, color: .b, picked: Selection(color: .b, opening: LEGACY_ANY_FAVORITE),
     opening: "e4 c5 d4", moves: ["e4", "c5", "d4", "cxd4"], opened: 3, result: "*", termination: "blunder")
   let pgn = gamePgn(record, tree)
   let opening = nodeById(tree, "e4 c5 d4").name
@@ -72,7 +72,7 @@ private func outcome(_ how: Ending, _ color: ChessCore.Color) -> [String] {
     [UTCTime "12:00:05"]
     [Termination "blunder"]
     [Mode "survival"]
-    [Picked "Any Favorite"]
+    [Picked "Any Opening"]
     [Opening "\(opening)"]
     [Opened "3"]
 
@@ -83,7 +83,7 @@ private func outcome(_ how: Ending, _ color: ChessCore.Color) -> [String] {
     id: "y", mode: .play, at: 0, color: .w, picked: Selection(color: .w, opening: ANY_OPENING),
     opening: "", moves: ["e4"], result: "1-0", termination: "resignation")
   let lines = gamePgn(mine, tree).split(separator: "\n")
-  #expect(lines.contains("[Picked \"Any Playbook\"]"))
+  #expect(lines.contains("[Picked \"Any Opening\"]"))
   #expect(!lines.contains { $0.hasPrefix("[Opened") })
   #expect(gamesPgn([record, mine], tree) == gamePgn(record, tree) + "\n" + gamePgn(mine, tree))
 }
@@ -100,13 +100,4 @@ private func outcome(_ how: Ending, _ color: ChessCore.Color) -> [String] {
   #expect(state.recent == [RecentPick(opening: "caro", color: .b, at: 7)])
   let data = try JSONEncoder().encode(state)
   #expect(try JSONDecoder().decode(AppState.self, from: data) == state)
-}
-
-/// A game played on Any favorite is kept as picked on Any favorite, not on the
-/// favorite it landed on; any other game keeps the opening it was played on.
-@Test func pickedKeepsAnyFavorite() {
-  let favorite = Selection(color: .w, opening: ANY_FAVORITE)
-  let landed = Selection(color: .b, opening: "e4 c5")
-  #expect(pickedFor(landed, saved: favorite) == favorite)
-  #expect(pickedFor(landed, saved: Selection(color: .w, opening: "e4")) == landed)
 }

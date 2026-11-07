@@ -55,12 +55,12 @@ import Testing
   func candidate(_ j: JSON) -> Candidate {
     Candidate(
       focus: Focus(rawValue: j["focus"].string)!, openingId: j["openingId"].string, color: color(j["color"]),
-      need: j["need"].number, work: j["work"].int, lastAt: j["lastAt"].numberOrNil, starred: j.object["starred"]?.bool ?? false,
+      need: j["need"].number, work: j["work"].int, lastAt: j["lastAt"].numberOrNil,
       level: j["level"].int)
   }
   func cand(_ c: Candidate) -> JSON {
     obj(["focus": c.focus.rawValue, "openingId": c.openingId, "color": c.color.rawValue, "need": c.need, "work": c.work,
-         "lastAt": c.lastAt, "starred": c.starred, "level": c.level, "score": c.score])
+         "lastAt": c.lastAt, "level": c.level, "score": c.score])
   }
   func repOf(_ c: Color, _ lines: [String]) -> Repertoire {
     var out = rep(c, [])
@@ -95,7 +95,7 @@ import Testing
     }
     var input = RecommendInput(
       tree: tree, selection: selection, reps: reps, cards: cards, repairs: repairs, score: score,
-      starred: s["starred"].strings, newPerSession: 8, recentFocuses: focuses(s["recentFocuses"]))
+      newPerSession: 8, recentFocuses: focuses(s["recentFocuses"]))
     input.recentSteered = s["recentSteered"].array.map(\.bool)
     input.seen = Seen(at: score.seen, round: score.lineRounds)
     input.now = t
@@ -108,7 +108,6 @@ import Testing
     "recommend.reviewNeed": { reviewNeed($0[0].int, $0[1].int, $0[2].int).json },
     "recommend.testNeed": { testNeed($0[0].int, $0[1].bool, $0[2].number).json },
     "recommend.narrowingBar": { narrowingBar($0[0].int).json },
-    "recommend.effectiveLevel": { effectiveLevel($0[0].int, $0[1].bool).json },
     "recommend.recentCount": { recentCount(focuses($0[0]), Focus(rawValue: $0[1].string)!).json },
     "recommend.steeredRecently": { steeredRecently($0[0].array.map(\.bool)).json },
     "recommend.rank": { a in .array(rank(a[0].array.map(candidate), focuses(a[1])).map(cand)) },

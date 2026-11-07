@@ -33,8 +33,6 @@ final class RunModel {
   let tree: OpeningTree
   let index: ReferenceIndex
   private let store: AppStore
-  /// Your favorite openings, for the end screen's ratings list.
-  var favorites: [String] { store.state.settings.favoriteOpenings }
   private let engine: ChessEngine
   private let ctx: RunContext
 
@@ -212,7 +210,7 @@ final class RunModel {
   var openingId: String { run.enteredIn ?? round?.pick.opening.id ?? run.openingId }
   /// The header's name: a first game is named by the book as it goes.
   var headerName: String {
-    if firstGame { return openingNameForPath(index, run.played)?.name ?? "Any Playbook" }
+    if firstGame { return openingNameForPath(index, run.played)?.name ?? "Any Opening" }
     return openingName(tree, openingId)
   }
   var momentHere: Bool {
@@ -692,7 +690,7 @@ final class RunModel {
     let outcome = runOutcome(f.how, color: run.color)
     let mode: GameMode = handoff != nil ? .middlegame : round != nil ? .autopilot : .survival
     return GameRecord(
-      id: run.id, mode: mode, at: Env.now(), color: run.color, picked: pickedFor(selection, saved: store.state.settings.selection),
+      id: run.id, mode: mode, at: Env.now(), color: run.color, picked: selection,
       opening: run.openingId, moves: run.played, opened: run.opened, result: outcome.result, termination: outcome.termination)
   }
 

@@ -15,7 +15,7 @@ func replyJSON(_ r: Reply) -> JSON {
 func rowJSON(_ r: GrowthRow) -> JSON {
   obj([
     "id": r.id, "repertoireId": r.repertoireId, "color": r.color.rawValue, "name": r.name, "eco": r.eco, "depth": r.depth,
-    "topShare": r.topShare, "starred": r.starred, "urgency": r.urgency, "score": r.score,
+    "topShare": r.topShare, "urgency": r.urgency, "score": r.score,
     "holes": JSON.array(r.holes.map(holeJSON)),
     "ends": JSON.array(r.ends.map { obj(["path": $0.path, "fen": $0.fen, "reach": $0.reach]) }),
   ])
@@ -25,7 +25,7 @@ func rowJSON(_ r: GrowthRow) -> JSON {
 @Test func growth() throws {
   let index = bookIndex
   func options(_ j: JSON) -> GrowthOptions {
-    GrowthOptions(minShare: j["minShare"].numberOrNil, maxPly: j["maxPly"].numberOrNil.map(Int.init), starred: j.object["starred"]?.strings)
+    GrowthOptions(minShare: j["minShare"].numberOrNil, maxPly: j["maxPly"].numberOrNil.map(Int.init))
   }
   try check("growth", [
     "growth.holeShare": { holeShare(share: $0[0]["share"].number, kept: $0[0]["kept"].bool).json },
@@ -75,7 +75,7 @@ func rowJSON(_ r: GrowthRow) -> JSON {
   let opening = deepestNodeWithin(tree, tree.root, Array(played.prefix(3)))
   let offer = growOfferAt(
     rep: rep(.w, ["d4 d5 c4 e6 Nc3"]), index: bookIndex, tree: tree, opening: opening, played: played,
-    rounds: [], minShare: 1, maxPly: 18, starred: [])
+    rounds: [], minShare: 1, maxPly: 18)
   #expect(offer?.kind == "line")
   #expect(offer?.onLine == false)
   let hole = offer.flatMap { firstHole($0.launch.row) }
@@ -89,7 +89,7 @@ func rowJSON(_ r: GrowthRow) -> JSON {
   let played = line("d4 d5 c4 c6")
   let opening = deepestNodeWithin(tree, tree.root, Array(played.prefix(3)))
   let r = rep(.w, ["d4 d5 c4 e6 Nc3", "d4 d5 c4 dxc4 e3", "d4 d5 c4 Nf6 cxd5", "d4 d5 c4 Bf5 Nc3"])
-  let offer = growOfferAt(rep: r, index: bookIndex, tree: tree, opening: opening, played: played, rounds: [], minShare: 1, maxPly: 18, starred: [])
+  let offer = growOfferAt(rep: r, index: bookIndex, tree: tree, opening: opening, played: played, rounds: [], minShare: 1, maxPly: 18)
   #expect(offer?.kind == "line")
   #expect(offer?.onLine == true)
 }
@@ -100,7 +100,7 @@ func rowJSON(_ r: GrowthRow) -> JSON {
   let tree = openingTree(bookIndex)
   let main = "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O h3"
   let opening = deepestNodeWithin(tree, tree.root, line("e4 e5 Nf3 Nc6 Bb5"))
-  let launch = growLaunch(rep(.w, [main]), bookIndex, tree, opening, minShare: 1, maxPly: 18, starred: [])
+  let launch = growLaunch(rep(.w, [main]), bookIndex, tree, opening, minShare: 1, maxPly: 18)
   let hole = launch.flatMap { firstHole($0.row) }
   #expect(hole?.path == line("e4 e5 Nf3 Nc6 Bb5"))
   #expect(hole?.san == "Nf6")

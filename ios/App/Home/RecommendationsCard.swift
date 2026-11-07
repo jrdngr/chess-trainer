@@ -48,7 +48,7 @@ struct RecommendationsCard: View {
   private var ranked: [Gap] {
     let state = store.state
     let key = state.repertoireList.map { "\($0.id):\($0.nodes.count)" }.joined(separator: ",")
-      + "|\(lastAddedAt(state.repertoireList))|\(state.settings.favoriteOpenings.joined(separator: ","))"
+      + "|\(lastAddedAt(state.repertoireList))"
     return memo.get(key) { playbookGaps(state, tree) }
   }
 }

@@ -146,22 +146,6 @@
       ]
     },
     {
-      "fn": "recommend.effectiveLevel",
-      "about": "A star is worth one level.",
-      "cases": [
-      {"args":[0,false],"out":0},
-      {"args":[0,true],"out":0},
-      {"args":[1,false],"out":1},
-      {"args":[1,true],"out":0},
-      {"args":[2,false],"out":2},
-      {"args":[2,true],"out":1},
-      {"args":[3,false],"out":3},
-      {"args":[3,true],"out":2},
-      {"args":[4,false],"out":4},
-      {"args":[4,true],"out":3}
-      ]
-    },
-    {
       "fn": "recommend.recentCount",
       "about": "How many of the last few rounds were this focus.",
       "cases": [
@@ -190,11 +174,11 @@
       "fn": "recommend.rank",
       "about": "Candidates scored and sorted: need, staleness against the others, depth and the brake.",
       "cases": [
-      {"args":[[{"focus":"test","openingId":"a","color":"w","need":0.6,"work":4,"lastAt":null,"starred":false,"level":0},{"focus":"review","openingId":"b","color":"w","need":0.6,"work":4,"lastAt":null,"starred":false,"level":0}],[]],"out":[{"focus":"test","openingId":"a","color":"w","need":0.6,"work":4,"lastAt":null,"starred":false,"level":0,"score":1.7999999999999998},{"focus":"review","openingId":"b","color":"w","need":0.6,"work":4,"lastAt":null,"starred":false,"level":0,"score":1.7999999999999998}]},
-      {"args":[[{"focus":"test","openingId":"a","color":"w","need":0.6,"work":4,"lastAt":1790845200000,"starred":false,"level":0},{"focus":"review","openingId":"b","color":"w","need":0.5,"work":4,"lastAt":1790758800000,"starred":false,"level":0}],[]],"out":[{"focus":"review","openingId":"b","color":"w","need":0.5,"work":4,"lastAt":1790758800000,"starred":false,"level":0,"score":1.5},{"focus":"test","openingId":"a","color":"w","need":0.6,"work":4,"lastAt":1790845200000,"starred":false,"level":0,"score":0.6}]},
-      {"args":[[{"focus":"test","openingId":"a","color":"w","need":0.6,"work":4,"lastAt":1790845200000,"starred":false,"level":0},{"focus":"review","openingId":"b","color":"w","need":0.5,"work":4,"lastAt":1790758800000,"starred":false,"level":0}],["review","review"]],"out":[{"focus":"test","openingId":"a","color":"w","need":0.6,"work":4,"lastAt":1790845200000,"starred":false,"level":0,"score":0.6},{"focus":"review","openingId":"b","color":"w","need":0.5,"work":4,"lastAt":1790758800000,"starred":false,"level":0,"score":0.375}]},
-      {"args":[[{"focus":"review","openingId":"a","color":"w","need":0.6,"work":4,"lastAt":null,"starred":false,"level":0},{"focus":"review","openingId":"b","color":"w","need":0.6,"work":4,"lastAt":null,"starred":false,"level":2},{"focus":"review","openingId":"c","color":"w","need":0.6,"work":4,"lastAt":null,"starred":true,"level":2}],["test"]],"out":[{"focus":"review","openingId":"a","color":"w","need":0.6,"work":4,"lastAt":null,"starred":false,"level":0,"score":1.7999999999999998},{"focus":"review","openingId":"c","color":"w","need":0.6,"work":4,"lastAt":null,"starred":true,"level":2,"score":1.0799999999999998},{"focus":"review","openingId":"b","color":"w","need":0.6,"work":4,"lastAt":null,"starred":false,"level":2,"score":0.6479999999999999}]},
-      {"args":[[{"focus":"review","openingId":"a","color":"w","need":0.3,"work":4,"lastAt":1790586000000,"starred":false,"level":0},{"focus":"review","openingId":"b","color":"w","need":0.3,"work":4,"lastAt":1790672400000,"starred":false,"level":0},{"focus":"review","openingId":"c","color":"w","need":0.3,"work":4,"lastAt":1790758800000,"starred":false,"level":0}],[]],"out":[{"focus":"review","openingId":"a","color":"w","need":0.3,"work":4,"lastAt":1790586000000,"starred":false,"level":0,"score":0.8999999999999999},{"focus":"review","openingId":"b","color":"w","need":0.3,"work":4,"lastAt":1790672400000,"starred":false,"level":0,"score":0.6},{"focus":"review","openingId":"c","color":"w","need":0.3,"work":4,"lastAt":1790758800000,"starred":false,"level":0,"score":0.3}]}
+      {"args":[[{"focus":"test","openingId":"a","color":"w","need":0.6,"work":4,"lastAt":null,"level":0},{"focus":"review","openingId":"b","color":"w","need":0.6,"work":4,"lastAt":null,"level":0}],[]],"out":[{"focus":"test","openingId":"a","color":"w","need":0.6,"work":4,"lastAt":null,"level":0,"score":1.7999999999999998},{"focus":"review","openingId":"b","color":"w","need":0.6,"work":4,"lastAt":null,"level":0,"score":1.7999999999999998}]},
+      {"args":[[{"focus":"test","openingId":"a","color":"w","need":0.6,"work":4,"lastAt":1790845200000,"level":0},{"focus":"review","openingId":"b","color":"w","need":0.5,"work":4,"lastAt":1790758800000,"level":0}],[]],"out":[{"focus":"review","openingId":"b","color":"w","need":0.5,"work":4,"lastAt":1790758800000,"level":0,"score":1.5},{"focus":"test","openingId":"a","color":"w","need":0.6,"work":4,"lastAt":1790845200000,"level":0,"score":0.6}]},
+      {"args":[[{"focus":"test","openingId":"a","color":"w","need":0.6,"work":4,"lastAt":1790845200000,"level":0},{"focus":"review","openingId":"b","color":"w","need":0.5,"work":4,"lastAt":1790758800000,"level":0}],["review","review"]],"out":[{"focus":"test","openingId":"a","color":"w","need":0.6,"work":4,"lastAt":1790845200000,"level":0,"score":0.6},{"focus":"review","openingId":"b","color":"w","need":0.5,"work":4,"lastAt":1790758800000,"level":0,"score":0.375}]},
+      {"args":[[{"focus":"review","openingId":"a","color":"w","need":0.6,"work":4,"lastAt":null,"level":0},{"focus":"review","openingId":"b","color":"w","need":0.6,"work":4,"lastAt":null,"level":2},{"focus":"review","openingId":"c","color":"w","need":0.6,"work":4,"lastAt":null,"level":2}],["test"]],"out":[{"color":"w","focus":"review","level":0,"need":0.6,"openingId":"a","score":1.7999999999999998,"work":4},{"color":"w","focus":"review","level":2,"need":0.6,"openingId":"b","score":0.6479999999999999,"work":4},{"color":"w","focus":"review","level":2,"need":0.6,"openingId":"c","score":0.6479999999999999,"work":4}]},
+      {"args":[[{"focus":"review","openingId":"a","color":"w","need":0.3,"work":4,"lastAt":1790586000000,"level":0},{"focus":"review","openingId":"b","color":"w","need":0.3,"work":4,"lastAt":1790672400000,"level":0},{"focus":"review","openingId":"c","color":"w","need":0.3,"work":4,"lastAt":1790758800000,"level":0}],[]],"out":[{"focus":"review","openingId":"a","color":"w","need":0.3,"work":4,"lastAt":1790586000000,"level":0,"score":0.8999999999999999},{"focus":"review","openingId":"b","color":"w","need":0.3,"work":4,"lastAt":1790672400000,"level":0,"score":0.6},{"focus":"review","openingId":"c","color":"w","need":0.3,"work":4,"lastAt":1790758800000,"level":0,"score":0.3}]}
       ]
     },
     {

@@ -3,7 +3,7 @@ import Model
 import Shared
 import SwiftUI
 
-/// Stats: your favorite openings, the others you have played, and the
+/// Stats: your openings, the others you have played, and the
 /// activity of the whole game; every row opens that opening's own page over
 /// it.
 struct StatsView: View {

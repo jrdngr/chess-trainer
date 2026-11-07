@@ -20,7 +20,7 @@ background. Now and then a run stops at a reply you have no answer to and
 asks you for one, so your Playbook grows at a steady pace without
 overwhelming you.
 
-The core loop: Drill with Any Favorite or Any Playbook, and Freeform when you
+The core loop: Drill with Any Opening or one of your openings, and Freeform when you
 want whole games from move one. Most runs still reach the end of your
 prep, play book moves and go out of book. Growing is the exception, not every
 run.
@@ -96,8 +96,7 @@ play:
 The recommendation engine picks it: one stateless, deterministic set of
 functions, one per question, computed from the Playbook, the in-app game
 history (for staleness and how often things come up) and the book. The same
-data gives the same run. Any Favorite lands on the favorite played longest
-ago, skipping the last one while there is another.
+data gives the same run.
 
 When a new move is due (see below), the next run steers toward the gap in the
 selection with the highest p × m² × g: the opponent follows that gap's line

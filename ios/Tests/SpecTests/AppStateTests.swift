@@ -9,8 +9,8 @@ import Testing
   var state = AppState()
   state.seed(tree, STARTER_SETS[0])
   #expect(state.repertoireList.count == 2)
-  #expect(state.settings.selection.opening == ANY_FAVORITE)
-  let selection = roundSelection(state, tree, last: nil)
+  #expect(state.settings.selection.opening == ANY_OPENING)
+  let selection = state.settings.selection
   let round = try #require(nextRound(state, tree, selection, AutoHistory()))
   // The first run of an opening is always a position start.
   #expect(round.at == nil)

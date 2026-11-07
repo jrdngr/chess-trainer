@@ -51,10 +51,10 @@ struct MiddlegameSetupView: View {
     }
   }
 
-  /// The one opening selected, not Any favorite.
+  /// The one opening selected, not Any Opening.
   private var opening: OpeningNode? {
     let id = store.state.settings.selection.opening
-    return id.isEmpty || id == ANY_FAVORITE ? nil : nodeById(tree, id)
+    return id.isEmpty ? nil : nodeById(tree, id)
   }
 
   private func set(_ change: (inout SurvivalPrefs) -> Void) {

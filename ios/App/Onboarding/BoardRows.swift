@@ -22,7 +22,7 @@ func boardRows(_ state: AppState, _ tree: OpeningTree, _ index: ReferenceIndex, 
       if mine.isEmpty { continue }
       // Your moves on the way to each line, the moves before the name included.
       let own = Set(mine.flatMap { pathTo(rep, $0.tip.id) }.filter { fenTurn($0.fenBefore) == rep.color }.map(\.id))
-      // An opening called by Black's first move ("1...e5") is starred at that move, as a starter set stars it.
+      // An opening called by Black's first move ("1...e5") goes in as that move, as a starter set's does.
       let sans = opening.name.first?.isNumber == true ? Array(opening.path.prefix(2)) : opening.path
       if rows[opening.id] == nil { order.append(opening.id) }
       rows[opening.id] = PendingOpening(

@@ -253,15 +253,15 @@ struct EndView: View {
     return items
   }
 
-  /// The ratings this run moved that the end screen names: favorites and the
-  /// opening it was played in, not every opening above it. The run's own
-  /// opening plays on its own card instead.
+  /// The ratings this run moved that the end screen names: the opening it was
+  /// played in and that opening's family, not every opening above it. The
+  /// run's own opening plays on its own card instead.
   private var moved: [RatingsList.Item] {
-    let playedIn = deepestNodeWithin(model.tree, nodeById(model.tree, run.openingId), run.played).id
-    let favorites = model.favorites
+    let node = deepestNodeWithin(model.tree, nodeById(model.tree, run.openingId), run.played)
+    let named = Set([node.id] + (familyOf(model.tree, node).map { [$0.id] } ?? []))
     return model.ratings.changes
       .filter { JSRound($0.delta) != 0 }
-      .filter { ($0.id == playedIn || favorites.contains($0.id)) && !(moment != nil && $0.id == model.openingId && !$0.ext) }
+      .filter { named.contains($0.id) && !(moment != nil && $0.id == model.openingId && !$0.ext) }
       .map { RatingsList.Item(id: $0.id, ext: $0.ext, name: nodeById(model.tree, $0.id).name, delta: $0.delta, after: $0.after) }
   }
 

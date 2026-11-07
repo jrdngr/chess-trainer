@@ -4,7 +4,7 @@ import SwiftUI
 /// Rated openings shown before "Show all": the ones played last.
 private let RATED_SHOWN = 6
 
-/// The tab's own page: your favorites with this week's rating change on top,
+/// The tab's own page: your openings with this week's rating change on top,
 /// then the graphs (the activity hero, the window, Survival's last runs,
 /// rounds by mode and accuracy), and under them the other rated openings,
 /// each with the rung it holds.
@@ -17,14 +17,14 @@ struct YourOpeningsView: View {
 
   var body: some View {
     let score = store.state.score
-    let starred = store.state.settings.favoriteOpenings
+    let mine = store.yourOpenings().map(\.node.id)
     let stats = score.global
-    let others = ratedOpenings(tree, score, starred)
+    let others = ratedOpenings(tree, score, mine)
     VStack(spacing: 0) {
       LargeTitleBar(title: "Stats")
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
-          FavoritesLadder().padding(.top, 8)
+          OpeningsLadder().padding(.top, 8)
           ActivityHero(stats: stats, days: days).padding(.top, 16)
           SegmentedControl(value: $days, options: STATS_WINDOWS).padding(.top, 16)
           SurvivalRuns()

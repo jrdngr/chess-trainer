@@ -19,31 +19,11 @@ public struct AutoHistory: Sendable {
   public init() {}
 }
 
-/// The selection a round plays in, with Any favorite resolved to one
-/// favorite: the one played longest ago, skipping the last one while there is
-/// another. The same data always gives the same favorite.
-public func roundSelection(_ state: AppState, _ tree: OpeningTree, last: String?) -> Selection {
-  let selection = state.settings.selection
-  guard isAnyFavorite(selection) else { return selection }
-  let reps = state.repertoireList
-  let all = favoritesIn(tree, state.settings.favoriteOpenings, selection.color)
-  // Favorites you have something prepared in come first.
-  let prepared = all.filter { fav in reps.contains { $0.color == fav.side && !itemsInRegion(tree, fav.node, allItems([$0])).isEmpty } }
-  let pool = prepared.isEmpty ? all : prepared
-  let field = pool.count > 1 ? pool.filter { $0.node.id != last } : pool
-  let lastAt = { (id: String) in state.score.nodes[id]?.lastAt ?? 0 }
-  guard let pick = Array(field.enumerated()).jsSorted({ a, b in
-    let t = lastAt(a.element.node.id) - lastAt(b.element.node.id)
-    return t != 0 ? t : Double(a.offset - b.offset)
-  }).first?.element else { return Selection(color: selection.color, opening: "") }
-  return Selection(color: pick.side == .w ? .w : .b, opening: pick.node.id)
-}
-
 /// Everything the recommendation needs, read off the state.
 public func recommendInput(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _ history: AutoHistory) -> RecommendInput {
   var input = RecommendInput(
     tree: tree, selection: selection, reps: repertoiresIn(state.repertoireList, selection.color), cards: state.cards,
-    repairs: repairRefs(evidenceIn(state, tree, selection)), score: state.score, starred: state.settings.favoriteOpenings, newPerSession: AUTO_DRILL.newPerSession,
+    repairs: repairRefs(evidenceIn(state, tree, selection)), score: state.score, newPerSession: AUTO_DRILL.newPerSession,
     recentFocuses: history.focuses)
   input.recentSteered = history.steered
   input.seen = Seen(at: state.score.seen, round: state.score.lineRounds)

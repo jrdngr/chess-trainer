@@ -16,7 +16,6 @@ final class TidyScan {
     var repertoires: [String: Repertoire]
     var order: [String]
     var selection: Selection
-    var favorites: [String]
     var growth: GrowthPrefs
   }
 
@@ -24,7 +23,7 @@ final class TidyScan {
   static let checkAhead = 12
 
   func run(_ input: Input, _ tree: OpeningTree, _ index: ReferenceIndex) async {
-    let regions = regionsBySide(tree, input.selection, input.favorites)
+    let regions = regionsBySide(tree, input.selection)
     let reps = repertoiresIn(input.order.compactMap { input.repertoires[$0] }, input.selection.color)
     let opts = TidyOptions(prefs: NudgePrefs(priority: input.growth.nudgePriority, pawns: input.growth.nudgePawns), minShare: input.growth.minShare)
     let todo = acrossRegions(regions, reps, { rep, node in tidyPositions([rep], tree, node) }, { "\($0.rep.id):\($0.node.id)" })

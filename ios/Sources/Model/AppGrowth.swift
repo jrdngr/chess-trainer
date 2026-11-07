@@ -19,5 +19,5 @@ public func offerFor(
   let opening = offerOpening(tree, nodeById(tree, region), entered, clean)
   return growOfferAt(
     rep: rep, index: index, tree: tree, opening: opening, played: clean, rounds: state.score.rounds,
-    minShare: growth.minShare, maxPly: growth.maxPly, starred: state.settings.favoriteOpenings, stub: finish.stub)
+    minShare: growth.minShare, maxPly: growth.maxPly, stub: finish.stub)
 }

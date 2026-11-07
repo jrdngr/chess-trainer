@@ -20,20 +20,20 @@ public struct RecentPick: Equatable, Sendable {
 public let RECENT_SHOWN = 4
 
 /// The openings picked in the game history, newest first, once each. Only a
-/// single opening counts: My Playbook and Any favorite are not picks of one.
+/// single opening counts: Any opening is not a pick of one.
 public func recentPicks(_ games: [GameRecord]) -> [RecentPick] {
   var seen: Set<String> = []
   var out: [RecentPick] = []
   for game in games {
     let id = game.picked.opening
-    guard id != ANY_OPENING, id != ANY_FAVORITE, seen.insert(id).inserted else { continue }
+    guard id != ANY_OPENING, id != LEGACY_ANY_FAVORITE, seen.insert(id).inserted else { continue }
     out.append(RecentPick(opening: id, color: game.picked.color, at: game.at))
   }
   return out
 }
 
 /// The quick picker's Recent tiles: the newest picks that aren't one tap
-/// away already. A favorite is skipped by its own id only, so the lines under it still show.
+/// away already. One of your openings is skipped by its own id only, so the lines under it still show.
 public func quickRecent(_ recent: [RecentPick], skipping: Set<String>, count: Int = RECENT_SHOWN) -> [RecentPick] {
   Array(recent.filter { !skipping.contains($0.opening) }.prefix(count))
 }

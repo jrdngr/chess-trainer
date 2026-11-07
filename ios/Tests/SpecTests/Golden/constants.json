@@ -2,9 +2,6 @@
   "src/model/answerArrows.ts": {
     "ROLE_ARROWS": 3
   },
-  "src/model/anyFavorite.ts": {
-    "ANY_FAVORITE": "*favorites"
-  },
   "src/model/autopilot.ts": {
     "COLD_EVERY": 3,
     "COLD_GAP": 6,
@@ -281,8 +278,7 @@
   "src/model/growth.ts": {
     "DEFAULT_MAX_PLY": 18,
     "DEFAULT_MIN_SHARE": 1,
-    "MAX_ADDS": 8,
-    "STAR_BOOST": 1.6
+    "MAX_ADDS": 8
   },
   "src/model/kin.ts": {
     "KIN_SETS": [

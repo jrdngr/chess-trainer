@@ -7,7 +7,7 @@ struct PendingOpening: Equatable {
   var name: String
   var color: ChessCore.Color
   var moves: Int
-  /// Its own moves: starred once it goes in.
+  /// Its own moves: what goes in.
   var sans: [String]
   /// The lines played on the board that put it in, for an opening from the board.
   var lines: [OnboardingLine]?

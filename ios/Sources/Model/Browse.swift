@@ -50,7 +50,7 @@ public func shortName(_ label: String) -> String {
 
 /// The name a line shows under: the book's deepest name along it, as the picker spells it.
 public func lineName(_ tree: OpeningTree, _ catalog: PickerCatalog, _ sans: [String]) -> String {
-  if sans.isEmpty { return "Any Playbook" }
+  if sans.isEmpty { return "Any Opening" }
   guard let node = tree.byId[sans.joined(separator: " ")] ?? deepestNodeAlong(tree, sans) else { return moveLabel(sans) }
   guard let entry = entryForNode(catalog, node) else { return node.name }
   return shortEntryLabel(entry)
@@ -116,7 +116,7 @@ private func underName(_ name: String, _ parent: String?) -> String {
   return name
 }
 
-/// The tree node standing at a line's last position, for ratings and favorites.
+/// The tree node standing at a line's last position, for ratings.
 public func nodeAt(_ tree: OpeningTree, _ sans: [String]) -> OpeningNode? {
   if let exact = tree.byId[sans.joined(separator: " ")] { return exact }
   let fens = walkSan(sans).fens
@@ -125,10 +125,8 @@ public func nodeAt(_ tree: OpeningTree, _ sans: [String]) -> OpeningNode? {
 }
 
 /// Your own repertoire as names: each side, then its openings, their
-/// variations, and the lines of an opening with none. Favorites first.
-public func myLines(_ reps: [Repertoire], _ index: ReferenceIndex, _ tree: OpeningTree, _ favorites: [String]) -> [BrowseItem] {
-  let stars = Set(favorites)
-  let starred = { (sans: [String]) in nodeAt(tree, sans).map { stars.contains($0.id) } ?? false }
+/// variations, and the lines of an opening with none.
+public func myLines(_ reps: [Repertoire], _ index: ReferenceIndex, _ tree: OpeningTree) -> [BrowseItem] {
   var out: [BrowseItem] = []
   for color in [Color.w, .b] {
     var rows: [BrowseRow] = []
@@ -137,7 +135,7 @@ public func myLines(_ reps: [Repertoire], _ index: ReferenceIndex, _ tree: Openi
         let lines = opening.variations.isEmpty ? linesOf(rep, opening, index) : []
         var open: (() -> [BrowseItem])?
         if !opening.variations.isEmpty {
-          open = { favoritesFirst(opening.variations.map { openingRow($0, opening.name) }, starred).map { .row($0) } }
+          open = { opening.variations.map { .row(openingRow($0, opening.name)) } }
         } else if lines.count > 1 {
           open = {
             lines.map { line in
@@ -153,15 +151,9 @@ public func myLines(_ reps: [Repertoire], _ index: ReferenceIndex, _ tree: Openi
     }
     if rows.isEmpty { continue }
     out.append(.head(color == .w ? "White" : "Black"))
-    out += favoritesFirst(rows, starred).map { .row($0) }
+    out += rows.map { .row($0) }
   }
   return out
-}
-
-private func favoritesFirst(_ rows: [BrowseRow], _ starred: ([String]) -> Bool) -> [BrowseRow] {
-  rows.map { (row: $0, star: starred($0.sans)) }
-    .jsSorted { Double(($1.star ? 1 : 0) - ($0.star ? 1 : 0)) }
-    .map(\.row)
 }
 
 /* ── recent ── */

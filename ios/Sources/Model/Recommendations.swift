@@ -83,8 +83,8 @@ public func gapImportance(reach: Double, share: Double, plies: Int) -> Double {
 }
 
 /// Every gap in some sides' Playbooks, most important first. `scope` keeps
-/// only replies inside an opening; `favorites` breaks ties.
-public func gaps(_ reps: [Repertoire], _ index: ReferenceIndex, tree: OpeningTree? = nil, scope: OpeningNode? = nil, favorites: [OpeningNode] = []) -> [Gap] {
+/// only replies inside an opening.
+public func gaps(_ reps: [Repertoire], _ index: ReferenceIndex, tree: OpeningTree? = nil, scope: OpeningNode? = nil) -> [Gap] {
   var out: [Gap] = []
   for rep in reps where !rep.nodes.isEmpty {
     let region = tree.flatMap { t in scope.flatMap { $0.depth > 0 ? (tree: t, node: $0) : nil } }
@@ -105,21 +105,15 @@ public func gaps(_ reps: [Repertoire], _ index: ReferenceIndex, tree: OpeningTre
         name: name, missing: max(1, (end.ply - line.count + 1) / 2)))
     }
   }
-  return rankGaps(out, tree: tree, favorites: favorites)
+  return rankGaps(out)
 }
 
-/// Gaps by importance; ties go shallower first, then inside a favorite,
-/// then White before Black, then by the line's moves.
-public func rankGaps(_ list: [Gap], tree: OpeningTree?, favorites: [OpeningNode]) -> [Gap] {
-  func favored(_ gap: Gap) -> Bool {
-    guard let tree else { return false }
-    return favorites.contains { lineStatus(tree, $0, gap.line) == .reached }
-  }
-  return list.jsSorted { a, b in
+/// Gaps by importance; ties go shallower first, then White before Black,
+/// then by the line's moves.
+public func rankGaps(_ list: [Gap]) -> [Gap] {
+  list.jsSorted { a, b in
     if a.importance != b.importance { return b.importance - a.importance }
     if a.line.count != b.line.count { return Double(a.line.count - b.line.count) }
-    let fa = favored(a), fb = favored(b)
-    if fa != fb { return fa ? -1 : 1 }
     if a.color != b.color { return a.color == .w ? -1 : 1 }
     return Double(JS.localeCompare(a.line.joined(separator: " "), b.line.joined(separator: " ")))
   }
@@ -227,20 +221,18 @@ public func growScore(_ gap: Gap, top: Gap?, pace p: Double, reps: [Repertoire],
 /// The gaps inside a selection, every side it covers.
 public func selectionGaps(_ state: AppState, _ tree: OpeningTree, _ selection: Selection) -> [Gap] {
   let reps = state.repertoireList
-  let favs = favoritesIn(tree, state.settings.favoriteOpenings, .random).map(\.node)
   var out: [Gap] = []
-  for region in regionsBySide(tree, selection, state.settings.favoriteOpenings) {
+  for region in regionsBySide(tree, selection) {
     let side = reps.filter { $0.color == region.side }
-    out += gaps(side, tree.index, tree: tree, scope: region.node, favorites: favs)
+    out += gaps(side, tree.index, tree: tree, scope: region.node)
   }
   var seen = Set<String>()
-  return rankGaps(out.filter { seen.insert($0.id).inserted }, tree: tree, favorites: favs)
+  return rankGaps(out.filter { seen.insert($0.id).inserted })
 }
 
 /// Every gap in the Playbook, for Home: the selection plays no part.
 public func playbookGaps(_ state: AppState, _ tree: OpeningTree) -> [Gap] {
-  let favs = favoritesIn(tree, state.settings.favoriteOpenings, .random).map(\.node)
-  return gaps(state.repertoireList, tree.index, tree: tree, favorites: favs)
+  gaps(state.repertoireList, tree.index, tree: tree)
 }
 
 /// The answer at a hole in a run: whether the line needs a new move now.
@@ -272,5 +264,5 @@ public func steerGap(_ state: AppState, _ tree: OpeningTree, _ selection: Select
 public func gapRow(_ gap: Gap) -> GrowthRow {
   GrowthRow(
     id: gap.id, repertoireId: gap.repertoireId, color: gap.color, name: gap.name, eco: nil, depth: gap.path.count,
-    topShare: gap.share, starred: false, urgency: 0, score: 0, holes: [gap.hole], ends: [])
+    topShare: gap.share, urgency: 0, score: 0, holes: [gap.hole], ends: [])
 }

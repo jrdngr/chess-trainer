@@ -37,7 +37,6 @@ import Testing
   expect("prepFloor", "PREPARED_FLOOR", PREPARED_FLOOR.json)
   expect("mistakes", "MISTAKE_LIMIT", MISTAKE_LIMIT.json)
   expect("moveSource", "SOURCE_LABELS", Dictionary(uniqueKeysWithValues: SOURCE_LABELS.map { ($0.key.rawValue, $0.value) }).json)
-  expect("anyFavorite", "ANY_FAVORITE", ANY_FAVORITE.json)
   expect("openingTree", "ANY_OPENING", ANY_OPENING.json)
   expect("selection", "DEFAULT_SELECTION", encoded(DEFAULT_SELECTION))
   expect("onboarding", "NAMED_LATE", NAMED_LATE.mapValues(\.rawValue).json)

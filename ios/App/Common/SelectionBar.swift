@@ -145,8 +145,8 @@ struct ChoiceRow<Leading: View>: View {
   }
 }
 
-/// The few picks most sessions want, one tap each: Any Playbook and Any Favorite, your
-/// favorites (the ones played last first), openings you picked lately, and
+/// The few picks most sessions want, one tap each: Any Opening, your
+/// openings (most worth focusing on first), openings you picked lately, and
 /// the common first moves. Recent's Show all opens the whole history in place. `QuickPicker`.
 struct QuickPicker: View {
   @Environment(AppStore.self) private var store
@@ -157,7 +157,7 @@ struct QuickPicker: View {
   @State private var history = false
 
   static let firstMoves = ["e4", "d4", "c4", "Nf3"]
-  static let favoritesShown = 6
+  static let openingsShown = 6
 
   var body: some View {
     if history {
@@ -170,7 +170,7 @@ struct QuickPicker: View {
   private var quick: some View {
     let state = store.state
     let selection = state.settings.selection
-    let mine = favorites
+    let mine = store.yourOpenings()
     let recent = recentTiles
     return ScrollView {
       VStack(alignment: .leading, spacing: 14) {
@@ -178,22 +178,17 @@ struct QuickPicker: View {
         SegmentedControl(
           value: Binding(get: { selection.color }, set: { c in store.update { $0.settings.selection.color = c } }),
           options: [ColorChoice.w, .b, .random].map { ($0, colorLabel($0)) })
-        HStack(spacing: 8) {
-          tile("Any Playbook", chosen: selection.opening == ANY_OPENING) { choose(ANY_OPENING, nil) }
-          if mine.isEmpty {
-            Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
-          } else {
-            tile("Any Favorite", chosen: selection.opening == ANY_FAVORITE) { choose(ANY_FAVORITE, nil) }
-          }
-        }
+        tile("Any Opening", chosen: selection.opening == ANY_OPENING) { choose(ANY_OPENING, nil) }
         if !mine.isEmpty {
-          section("Favorites")
+          section("Your openings")
           LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible())], spacing: 8) {
-            ForEach(showAll ? mine : Array(mine.prefix(Self.favoritesShown)), id: \.node.id) { fav in
-              openingTile(fav.node.id, fav.side, fav.label, chosen: selection.opening == fav.node.id) { choose(fav.node.id, fav.side) }
+            ForEach(showAll ? mine : Array(mine.prefix(Self.openingsShown)), id: \.key) { opening in
+              openingTile(opening.node.id, opening.side, shortLabel(opening.name), chosen: chosen(opening, selection)) {
+                choose(opening.node.id, opening.side)
+              }
             }
           }
-          if mine.count > Self.favoritesShown {
+          if mine.count > Self.openingsShown {
             Button { showAll.toggle() } label: {
               Text(showAll ? "Show fewer" : "Show all \(mine.count)")
                 .font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text2).frame(maxWidth: .infinity).padding(10)
@@ -245,22 +240,18 @@ struct QuickPicker: View {
     }
   }
 
-  /// Your favorites, played last first, each with the side it is played from and its short name.
-  private var favorites: [(node: OpeningNode, side: ChessCore.Color, label: String)] {
-    guard let tree = store.tree, let catalog = store.catalog else { return [] }
-    let lastAt = { (id: String) in store.state.score.nodes[id]?.lastAt ?? 0 }
-    return store.state.settings.favoriteOpenings.compactMap { tree.byId[$0] }.filter { $0.depth > 0 }
-      .jsSorted { cmp(lastAt($1.id), lastAt($0.id)) }
-      .map { ($0, sideForPick(catalog, $0) ?? .w, favoriteLabel(catalog, $0)) }
+  /// One of your openings is chosen when the selection is its node, from its side.
+  private func chosen(_ opening: YourOpening, _ selection: Selection) -> Bool {
+    selection.opening == opening.node.id && selection.color == (opening.side == .w ? .w : .b)
   }
 
-  /// The Recent tiles: your newest picks, less your favorites and the first moves, which have tiles of their own.
+  /// The Recent tiles: your newest picks, less your openings and the first moves, which have tiles of their own.
   private var recentTiles: [(pick: RecentPick, side: ChessCore.Color, label: String)] {
     guard let tree = store.tree, let catalog = store.catalog else { return [] }
-    let skip = Set(store.state.settings.favoriteOpenings + Self.firstMoves)
+    let skip = Set(store.yourOpenings().map(\.node.id) + Self.firstMoves)
     return quickRecent(store.state.recent.filter { tree.byId[$0.opening] != nil }, skipping: skip).map { pick in
       let node = tree.byId[pick.opening]!
-      return (pick, recentSide(pick, catalog, node), favoriteLabel(catalog, node))
+      return (pick, recentSide(pick, catalog, node), openingLabel(catalog, node))
     }
   }
 
@@ -309,8 +300,8 @@ struct QuickPicker: View {
   }
 }
 
-/// A favorite's name as the picker shows it, short where the book's is long.
-func favoriteLabel(_ catalog: PickerCatalog, _ node: OpeningNode) -> String {
+/// An opening's name as the picker shows it, short where the book's is long.
+func openingLabel(_ catalog: PickerCatalog, _ node: OpeningNode) -> String {
   shortLabel(entryForNode(catalog, node)?.label ?? node.name)
 }
 
@@ -332,7 +323,7 @@ func recentSide(_ pick: RecentPick, _ catalog: PickerCatalog, _ node: OpeningNod
 }
 
 /// Every opening you picked and played, newest first, under Today, Yesterday,
-/// This week and then the month. Favorites carry a star. Tap one to select it.
+/// This week and then the month. Tap one to select it.
 struct RecentHistory: View {
   @Environment(AppStore.self) private var store
   let onBack: () -> Void
@@ -370,14 +361,12 @@ struct RecentHistory: View {
 
   private func row(_ pick: RecentPick, _ node: OpeningNode, _ catalog: PickerCatalog, chosen: Bool) -> some View {
     let stats = store.state.score.nodes[pick.opening]
-    let favorite = store.state.settings.favoriteOpenings.contains(pick.opening)
     return Button { onPick(pick) } label: {
       HStack(spacing: 10) {
         SideDot(side: recentSide(pick, catalog, node))
-        Text(favoriteLabel(catalog, node)).font(.system(size: 15, weight: .semibold))
+        Text(openingLabel(catalog, node)).font(.system(size: 15, weight: .semibold))
           .foregroundStyle(chosen ? Theme.accent : Theme.text).lineLimit(1)
         Spacer(minLength: 4)
-        if favorite { Icon(name: "star", size: 13, filled: true).foregroundStyle(Theme.text2).accessibilityLabel("Favorite") }
         TierBar(rating: stats?.rating ?? 0, rated: stats?.rated ?? 0).frame(width: 96)
       }
       .padding(.horizontal, 14).frame(minHeight: 50).contentShape(Rectangle())

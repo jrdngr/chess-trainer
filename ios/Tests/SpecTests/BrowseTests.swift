@@ -15,7 +15,7 @@ import Testing
     "browse.lineName": { lineName(tree, catalog, line($0[0].string)).json },
     "browse.bookItems": { _ in written(bookItems(catalog)).json },
     "browse.shelfRows": { a in written(shelfRows(catalog, SHELVES.first { $0.id == a[0].string }!).map { .row($0) }, 0).json },
-    "browse.myLines": { a in written(myLines(books[a[0].string]!, bookIndex, tree, a[1].strings), 2).json },
+    "browse.myLines": { a in written(myLines(books[a[0].string]!, bookIndex, tree), 2).json },
     "browse.recentItems": { a in
       let now = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 31, hour: 18))!.timeIntervalSince1970 * 1000
       var score = EMPTY_SCORE

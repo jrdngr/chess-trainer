@@ -25,15 +25,11 @@ public struct GrowthRow: Equatable, Sendable {
   public var depth: Int
   /// The share of the most played hole here.
   public var topShare: Double
-  public var starred: Bool
   public var urgency: Double
   public var score: Double
   public var holes: [Hole]
   public var ends: [LineEnd]
 }
-
-/// How much a star is worth against raw urgency.
-public let STAR_BOOST = 1.6
 
 /// How badly one row wants doing, 0...1: depth first, then how often, then breadth.
 public func rowUrgency(_ depth: Int, _ topShare: Double, _ holes: Int) -> Double {
@@ -51,10 +47,6 @@ public func family(_ index: ReferenceIndex, _ sans: [String]) -> NamedLine? {
   return found
 }
 
-private func isStarred(_ starred: [[String]], _ sans: [String]) -> Bool {
-  starred.contains { fav in !fav.isEmpty && fav.count <= sans.count && fav.indices.allSatisfy { sans[$0] == fav[$0] } }
-}
-
 /// The openings a selection puts on the lobby, by name.
 private func openingsInSelection(_ tree: OpeningTree, _ node: OpeningNode) -> Set<String> {
   Set(ancestorsOf(tree, node.id).map(\.name) + descendantsOf(node).map(\.name))
@@ -65,7 +57,6 @@ private let UNWEIGHED_SHARE = 0.5
 
 /// Growth's rows for some trees, ranked by urgency.
 public func growthRows(_ reps: [Repertoire], _ index: ReferenceIndex, _ opts: GrowthOptions = GrowthOptions()) -> [GrowthRow] {
-  let starredLines = (opts.starred ?? []).map { $0.split(separator: " ").map(String.init) }
   let scoped = opts.region.flatMap { $0.node.depth > 0 ? $0 : nil }
   let offered = scoped.map { openingsInSelection($0.tree, $0.node) }
   let above = scoped.map { Set(ancestorsOf($0.tree, $0.node.id).map(\.name)) }
@@ -87,9 +78,8 @@ public func growthRows(_ reps: [Repertoire], _ index: ReferenceIndex, _ opts: Gr
       let id = "\(rep.id)#\(name)"
       var row = byName[id] ?? GrowthRow(
         id: id, repertoireId: rep.id, color: rep.color, name: name, eco: eco, depth: hole.path.count, topShare: 0,
-        starred: false, urgency: 0, score: 0, holes: [], ends: [])
+        urgency: 0, score: 0, holes: [], ends: [])
       row.depth = min(row.depth, hole.path.count)
-      row.starred = row.starred || isStarred(starredLines, line)
       row.holes.append(hole)
       row.topShare = max(row.topShare, holeShare(hole))
       byName[id] = row
@@ -99,7 +89,7 @@ public func growthRows(_ reps: [Repertoire], _ index: ReferenceIndex, _ opts: Gr
   for i in rows.indices {
     let share = rows[i].topShare > 0 ? rows[i].topShare : UNWEIGHED_SHARE
     rows[i].urgency = rowUrgency(rows[i].depth, share, rows[i].holes.count + rows[i].ends.count)
-    rows[i].score = min(1, rows[i].urgency * (rows[i].starred ? STAR_BOOST : 1))
+    rows[i].score = rows[i].urgency
   }
   // Inside a chosen opening, its own replies come before the ones on the way in.
   let inside = Set(scoped.map { region in rows.filter { rowReaches(region.tree, region.node, $0) }.map(\.id) } ?? [])

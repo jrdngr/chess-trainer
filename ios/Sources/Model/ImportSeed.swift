@@ -140,7 +140,7 @@ private func slotOpen(_ slot: SeedSlot, _ reps: [Repertoire], _ index: Reference
 private func rowsFor(_ lines: [[String]], _ color: Color, _ trie: GameTrie, _ index: ReferenceIndex) -> [SeedRow] {
   var rep = createRepertoire(repertoireName(color), color, "seed_\(color.rawValue)")
   for line in lines { rep = addLine(rep, line, .fixed(.import)).rep }
-  return playbookRows(rep, index).compactMap { row in
+  return playbookRows(rep, index, firstMoves: true).compactMap { row in
     guard let first = row.parts.first else { return nil }
     let held = row.parts.flatMap { part in tipsOf(rep, part).map { pathTo(rep, $0).map(\.san) } }
     let games = row.parts.reduce(0) { $0 + trie.reach($1.path) }
@@ -160,7 +160,7 @@ public func seedRows(_ games: [ImportedGame], _ index: ReferenceIndex, _ reps: [
   for color in [Color.w, .b] {
     let trie = GameTrie(games, color)
     if trie.total == 0 { continue }
-    let have = Set(reps.filter { $0.color == color }.flatMap { playbookRows($0, index).map(\.name) })
+    let have = Set(reps.filter { $0.color == color }.flatMap { playbookRows($0, index, firstMoves: true).map(\.name) })
     let fresh = { (row: SeedRow) in !have.contains(row.name) }
     full += rowsFor(seedLines(trie, color, index, lost, scale: 1), color, trie, index).filter(fresh)
     loose += rowsFor(seedLines(trie, color, index, lost, scale: SEED_LOOSE), color, trie, index).filter(fresh)

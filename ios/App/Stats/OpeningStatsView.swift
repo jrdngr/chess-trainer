@@ -2,8 +2,8 @@ import Model
 import Shared
 import SwiftUI
 
-/// One opening's page: its rating and ladder, how much a favorite it is among
-/// its siblings, its charts, its modes and its played variations.
+/// One opening's page: its rating and ladder, its charts, its modes and its
+/// played variations.
 struct OpeningStatsView: View {
   let tree: OpeningTree
   let node: OpeningNode
@@ -14,22 +14,14 @@ struct OpeningStatsView: View {
 
   var body: some View {
     let score = store.state.score
-    let starred = store.state.settings.favoriteOpenings
     let stats = nodeStats(score, node.id)
     let trail = ancestorsOf(tree, node.id).dropLast().filter { $0.name != node.name }
-    let isStarred = starred.contains(node.id)
     VStack(spacing: 0) {
-      PageBar(title: node.name, subtitle: trail.isEmpty ? bookMoveText(node.sans) : trail.map(\.name).joined(separator: " \u{203a} "), onBack: onBack) {
-        Button { store.update { $0.toggleStar(node.id) } } label: {
-          Icon(name: "star", size: 20, filled: isStarred).foregroundStyle(Theme.text2).frame(width: 38, height: 38).contentShape(Rectangle())
-        }
-        .buttonStyle(.plain).accessibilityLabel(isStarred ? "Remove from favorites" : "Add to favorites")
-      }
+      PageBar(title: node.name, subtitle: trail.isEmpty ? bookMoveText(node.sans) : trail.map(\.name).joined(separator: " \u{203a} "), onBack: onBack) { EmptyView() }
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
           hero(stats)
           selectButton.padding(.top, 12)
-          favoriteness(score)
           StatsSection(title: "Window")
           SegmentedControl(value: $days, options: STATS_WINDOWS)
           let climb = ratingOverTime(stats, days)
@@ -40,7 +32,7 @@ struct OpeningStatsView: View {
           AccuracySection(stats: stats, days: days)
           StatsSection(title: "By mode", aside: "rounds")
           ListCard { ForEach(ACTIVITY_MODES, id: \.self) { modeRow($0, stats.byMode[$0]) } }
-          children(score, starred)
+          children(score)
           if stats.lastAt != nil {
             StatsNote(
               text: Text("\(colorSquare) Rounds and accuracy here count every game played through this position, in any mode. Only Play moves the rating."),
@@ -91,19 +83,6 @@ struct OpeningStatsView: View {
     .buttonStyle(.plain).disabled(selected)
   }
 
-  @ViewBuilder private func favoriteness(_ score: ScoreState) -> some View {
-    if let fav = Model.favouriteness(tree, score, node.id) {
-      let place = fav.parent.flatMap { $0.depth > 0 ? " in \($0.name)" : nil } ?? " first move"
-      StatsSection(title: "Favoriteness", aside: "your \(ordinal(fav.rank)) favorite\(place)")
-      StatsCard {
-        BarList(
-          rows: fav.siblings.prefix(6).map { .init(label: $0.node.name, value: $0.rounds, highlight: $0.node.id == node.id) },
-          color: Theme.warn)
-        StatsNote(text: Text("Rounds in the last 30 days, among the openings you have played here.")).padding(.top, 6)
-      }
-    }
-  }
-
   private func modeRow(_ mode: ActivityMode, _ tally: ModeTally?) -> some View {
     let (rounds, answered, correct) = (tally?.rounds ?? 0, tally?.answered ?? 0, tally?.correct ?? 0)
     let share = answered > 0 ? " \u{00b7} \(percentText(Double(correct) / Double(answered)))" : ""
@@ -114,8 +93,8 @@ struct OpeningStatsView: View {
     .padding(.horizontal, 16).padding(.vertical, 10).frame(minHeight: 44)
   }
 
-  @ViewBuilder private func children(_ score: ScoreState, _ starred: [String]) -> some View {
-    let kids = orderedChildren(node, starred).filter { nodeStats(score, $0.id).answered > 0 }
+  @ViewBuilder private func children(_ score: ScoreState) -> some View {
+    let kids = orderedChildren(node).filter { nodeStats(score, $0.id).answered > 0 }
       .jsSorted { a, b in Double(roundsOf(nodeStats(score, b.id)) - roundsOf(nodeStats(score, a.id))) }
     if !kids.isEmpty {
       StatsSection(title: node.depth == 1 ? "Openings" : "Variations", aside: "by rounds")
