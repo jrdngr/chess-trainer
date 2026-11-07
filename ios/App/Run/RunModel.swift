@@ -497,6 +497,7 @@ final class RunModel {
   /// A move picked while adding: saved to the Playbook, then played.
   func addMove(_ san: String) {
     guard var current = fill, live, myTurn, pending == nil else { return }
+    if tip != nil { dismissTip() }
     let rid = current.gap.repertoireId
     let line = run.played + [san]
     let offered = fillChoices.map(\.san)

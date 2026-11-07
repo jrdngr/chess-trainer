@@ -45,7 +45,7 @@ struct RunView: View {
       if survival {
         SurvivalRunBar(model: model, onExit: close)
       } else {
-        header.tip(model.tip, when: model.tip == .lineIn, onDismiss: model.dismissTip)
+        header.tip(model.tip, when: model.tip == .lineIn, inset: 16, onDismiss: model.dismissTip)
       }
       // The Eval lens's bar takes the captured row's place, so the board never moves.
       // While adding moves Growth's eval bar takes the row, with the engine's word on the answers.
