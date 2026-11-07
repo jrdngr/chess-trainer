@@ -18,7 +18,7 @@ public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
   case outOfBook
   /// The lenses, once out of the book.
   case lens
-  /// The end of the first game.
+  /// After the first game: Home's card on how a game goes from here.
   case end
 
   public var text: String {
@@ -29,12 +29,22 @@ public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
     case .book: "Book moves played after your saved lines aren\u{2019}t graded."
     case .outOfBook: "Once you\u{2019}re out of the book, the game runs until you blunder."
     case .lens: "Hold a lens for hints."
-    case .end: "Once you know your moves, a game will stop where your line ends so you can add more."
+    case .end: "How Play works"
     }
   }
 
   /// Shown during the game, before its end: the goal card waits until these are done.
   public var inGame: Bool { self != .end }
+}
+
+/// The tips left once the first game ends: only Home's card, if it was still to show.
+public func tipsAfterFirstGame(_ pending: [FirstGameTip]) -> [FirstGameTip] {
+  pending.contains(.end) ? [.end] : []
+}
+
+/// Whether Home shows its card on how Play works: the first game is over and the card not yet dismissed.
+public func homeCardPending(_ pending: [FirstGameTip]) -> Bool {
+  pending == [.end]
 }
 
 /// Where the first game stands, as far as its tips care.

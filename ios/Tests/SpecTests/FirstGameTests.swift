@@ -44,3 +44,14 @@ import Testing
   #expect(firstGameReply(line("c4")) == nil)
   #expect(firstGameReply(line("e4 e5 Nf3")) == nil)
 }
+
+/// When the first game ends, only Home's card is left to show, even if the
+/// game ended before its later tips; Home shows it until it is dismissed.
+@Test func firstGameEndLeavesOnlyHomeCard() {
+  let early = tipsAfterFirstGame([.lineIn, .book, .outOfBook, .lens, .end])
+  #expect(early == [.end])
+  #expect(homeCardPending(early))
+  #expect(tipsAfterFirstGame([]) == [])
+  #expect(!homeCardPending([]))
+  #expect(!homeCardPending(FirstGameTip.allCases))
+}

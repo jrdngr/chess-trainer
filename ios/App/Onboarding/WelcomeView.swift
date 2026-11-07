@@ -19,9 +19,9 @@ struct WelcomeView: View {
       Text("Flash cards you play").font(.system(size: 30, weight: .heavy)).tracking(-0.9).foregroundStyle(Theme.text)
         .padding(.top, 24)
       VStack(alignment: .leading, spacing: 16) {
-        point("\u{265E}", "A game for learning chess openings.")
-        point("\u{265F}\u{FE0E}", "Your openings are the cards.")
-        point("\u{265A}", "Each one is a real game until you blunder.")
+        WelcomePoint(glyph: "\u{265E}", text: "A game for learning chess openings.")
+        WelcomePoint(glyph: "\u{265F}\u{FE0E}", text: "Your openings are the cards.")
+        WelcomePoint(glyph: "\u{265A}", text: "Each one is a real game until you blunder.")
       }
       .padding(.top, 22)
       Spacer(minLength: 0)
@@ -41,9 +41,15 @@ struct WelcomeView: View {
     .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface))
     .shadow(color: .black.opacity(0.55), radius: 15, y: 14)
   }
+}
 
-  /// The pawn has an emoji form, so its glyph carries the text-style selector to take the accent like the others.
-  private func point(_ glyph: String, _ text: String) -> some View {
+/// A line with a piece beside it, as on the welcome.
+/// The pawn has an emoji form, so its glyph carries the text-style selector to take the accent like the others.
+struct WelcomePoint: View {
+  let glyph: String
+  let text: String
+
+  var body: some View {
     HStack(alignment: .top, spacing: 12) {
       Text(glyph).font(.system(size: 21)).foregroundStyle(Theme.accent)
         .frame(width: 32, height: 32).background(RoundedRectangle(cornerRadius: 10).fill(Theme.surface2))

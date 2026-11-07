@@ -30,6 +30,7 @@ struct HomeView: View {
           .buttonStyle(.plain)
         }
         .padding(.top, 2).padding(.bottom, 12)
+        if homeCardPending(store.state.settings.tips) { PlayHowCard().padding(.bottom, 12) }
         ScoreStrip().padding(.bottom, 12)
         autopilot.padding(.bottom, 10)
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 10) {
@@ -152,5 +153,22 @@ struct AutopilotPlate: View {
       PrepSegmentsView(span: span, height: 4).padding(.top, 0).background(Theme.background).padding(.horizontal, 18)
     }
     .clipShape(RoundedRectangle(cornerRadius: 20))
+  }
+}
+
+/// After the first game: how a game goes from here, until Got it.
+private struct PlayHowCard: View {
+  @Environment(AppStore.self) private var store
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      Text(FirstGameTip.end.text).font(.system(size: 20, weight: .heavy)).foregroundStyle(Theme.text)
+      WelcomePoint(glyph: "\u{265E}", text: "Each game plays a line from your Playbook.")
+      WelcomePoint(glyph: "\u{265F}\u{FE0E}", text: "Once you know a line, the game pauses to let you add new moves.")
+      WelcomePoint(glyph: "\u{265A}", text: "See how far you get before you blunder!")
+      BigButton(label: "Got it", xl: false) { store.update { $0.settings.tips = [] } }.padding(.top, 4)
+    }
+    .padding(16)
+    .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
   }
 }

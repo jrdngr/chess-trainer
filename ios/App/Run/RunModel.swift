@@ -120,7 +120,7 @@ final class RunModel {
       round: firstGameRound(tree), selection: Selection(color: .w, opening: ANY_OPENING), store: store, tree: tree, index: index,
       engine: engine)
     firstGame = true
-    tutorial = !store.state.settings.tips.isEmpty
+    tutorial = store.state.settings.tips.contains(.firstMove)
     holeAsked = true
     fill = Fill(gap: firstMoveGap(rep, index), size: store.state.settings.movesPerFill)
   }
@@ -651,11 +651,9 @@ final class RunModel {
   private func finished(_ f: Finish) {
     stop()
     finish = f
-    if firstGame, let found = tipAt(store.state.settings.tips, .end) {
-      tip = found.tip
-      store.update { $0.settings.tips = found.rest }
-    } else if firstGame {
+    if firstGame {
       tip = nil
+      store.update { $0.settings.tips = tipsAfterFirstGame($0.settings.tips) }
     }
     before = handoff != nil ? store.state.middlegame : store.state.survival
     let line = f.ended.run.played
