@@ -38,8 +38,6 @@ public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
   case playbookAdd
   /// The Playbook tab: its more menu.
   case playbookMore
-  /// The Playbook tab: the White/Black switch.
-  case playbookSide
   /// The Playbook tab: an opening's row, once there is one.
   case playbookRow
 
@@ -61,7 +59,6 @@ public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
     case .playbookTab: "Your openings live in the Playbook. Know what you want to play? Add it there yourself."
     case .playbookAdd: "Tap + to add openings you already know."
     case .playbookMore: "Import your games, or play a line on the board."
-    case .playbookSide: "Switch between your White and Black openings."
     case .playbookRow: "Tap an opening to see its lines and grow it."
     }
   }
@@ -73,7 +70,7 @@ public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
   public static let home: [FirstGameTip] = [.freeform, .drill, .side, .opening, .play, .playSteers, .playGrows, .playbookTab]
 
   /// The Playbook tab's tips, in the order they show.
-  public static let playbook: [FirstGameTip] = [.playbookAdd, .playbookMore, .playbookSide, .playbookRow]
+  public static let playbook: [FirstGameTip] = [.playbookAdd, .playbookMore, .playbookRow]
 
   /// Every tip after the first game's: a profile that skips the first game still gets these.
   public static let afterFirstGame: [FirstGameTip] = home + playbook

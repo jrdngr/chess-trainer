@@ -123,7 +123,6 @@ struct PlaybookView: View {
       ScrollView {
         VStack(spacing: 0) {
           SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")])
-            .tip(tip, when: tip == .playbookSide, onDismiss: putAway)
           PlaybookPills(count: scan.count, extensions: extensions, onTidy: { page = .tidy }, onExtensions: { page = .extensions })
             .padding(.top, 12)
           if let rep, !rows.isEmpty {
