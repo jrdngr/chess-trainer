@@ -47,9 +47,10 @@ public let TUTORIAL_STEPS: [TutorialStep] = [
 /// The lens step's instruction once Pawns has been held.
 public let TUTORIAL_LENS_PLAY = "Play the suggested move."
 
-/// The instruction and note for a step; the lens step moves on once Pawns is held.
+/// The instruction and note for a step; the lens step's instruction moves on
+/// once Pawns is held, and its note stays.
 public func tutorialText(_ step: TutorialStep, pawnsHeld: Bool) -> (title: String, note: String?) {
-  step.phase == .lens && pawnsHeld ? (TUTORIAL_LENS_PLAY, nil) : (step.title, step.note)
+  (step.phase == .lens && pawnsHeld ? TUTORIAL_LENS_PLAY : step.title, step.note)
 }
 
 /// The moves the tutorial lends you as your Playbook.
