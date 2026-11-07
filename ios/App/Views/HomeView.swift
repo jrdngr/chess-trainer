@@ -18,6 +18,8 @@ struct HomeView: View {
   let onPlaybook: () -> Void
   @Environment(AppStore.self) private var store
   @State private var settings = false
+  /// "Add a Black opening?" is up.
+  @State private var askBlack = false
 
   var body: some View {
     ScrollView {
@@ -53,6 +55,14 @@ struct HomeView: View {
         .padding(.top, 10)
       }
       .padding(.horizontal, 16).padding(.bottom, 24)
+    }
+    .onAppear { askBlack = asksForBlack(store.state) }
+    .alert("Add a Black opening?", isPresented: $askBlack) {
+      Button("Play as Black") {
+        store.blackNext = true
+        onOpen(.autopilot)
+      }
+      Button("Not now", role: .cancel) { store.update { $0.settings.blackAskedAt = Env.now() } }
     }
     // While a tip shows, a tap anywhere goes to the next one.
     .overlay {

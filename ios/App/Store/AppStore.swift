@@ -14,6 +14,8 @@ final class AppStore {
   var state = AppState()
   /// Play's recent rounds this session, kept across trips Home so the next round's start follows them.
   var autoHistory = AutoHistory()
+  /// The next Play run fills a Black basic whatever the selection: set by "Add a Black opening?".
+  var blackNext = false
   /// The save exists but could not be read (locked, say): saving now would replace it with a fresh state.
   @ObservationIgnored private var saveBlocked = false
 

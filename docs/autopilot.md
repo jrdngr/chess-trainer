@@ -98,6 +98,13 @@ functions, one per question, computed from the Playbook, the in-app game
 history (for staleness and how often things come up) and the book. The same
 data gives the same run.
 
+Black's basics come first. With Black or Random picked and no Black answer
+to 1.e4 or 1.d4, the next run is Black from move one: the opponent opens
+with that move and you add your answer before the game goes on. After five
+Play games as White with no Black lines, Home asks whether to add a Black
+opening; "Play as Black" starts that run whatever is picked, and "Not now"
+waits five more games.
+
 When a new move is due (see below), the next run steers toward the gap in the
 selection with the highest p × m² × g: the opponent follows that gap's line
 to its reply, so new moves land on strong lines at a steady pace instead of

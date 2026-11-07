@@ -178,7 +178,7 @@ struct QuickPicker: View {
         SegmentedControl(
           value: Binding(get: { selection.color }, set: { c in store.update { $0.settings.selection.color = c } }),
           options: [ColorChoice.w, .b, .random].map { ($0, colorLabel($0)) })
-        tile("Any Opening", chosen: selection.opening == ANY_OPENING) { choose(ANY_OPENING, nil) }
+        tile("Any Opening", chosen: selection.opening == ANY_OPENING) { choose(ANY_OPENING, nil, color: .random) }
         if !mine.isEmpty {
           section("Your openings")
           LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible())], spacing: 8) {

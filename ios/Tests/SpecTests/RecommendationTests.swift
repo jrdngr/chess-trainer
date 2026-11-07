@@ -92,6 +92,29 @@ import Testing
   #expect(basicRunGap(state, tree, Selection(color: .b, opening: ANY_OPENING)) == nil)
 }
 
+/// Five Play games as White with no Black lines bring the question; turning
+/// it down waits for five more, and any Black line ends it.
+@Test func asksForBlackAfterFiveWhiteGames() {
+  var state = AppState()
+  state.addLine(state.ensureRepertoire(.w), line("e4 e5 Nf3"), .fixed(.book))
+  func play(_ color: Color, at: Double) {
+    state.games.append(GameRecord(
+      id: "g\(at)", mode: .autopilot, at: at, color: color, picked: DEFAULT_SELECTION, opening: "", moves: [], opened: 0,
+      result: "*", termination: "ended"))
+  }
+  for t in 1...4 { play(.w, at: Double(t)) }
+  play(.b, at: 5)
+  #expect(!asksForBlack(state))
+  play(.w, at: 6)
+  #expect(asksForBlack(state))
+  state.settings.blackAskedAt = 6
+  #expect(!asksForBlack(state))
+  for t in 7...11 { play(.w, at: Double(t)) }
+  #expect(asksForBlack(state))
+  state.addLine(state.ensureRepertoire(.b), line("e4 c5"), .fixed(.book))
+  #expect(!asksForBlack(state))
+}
+
 /// More shows ten: five "Too short" when there are five, the rest by importance.
 @Test func moreShowsTenWithFiveTooShort() {
   let tree = openingTree(bookIndex)
