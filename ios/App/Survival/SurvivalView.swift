@@ -33,7 +33,7 @@ struct SurvivalView: View {
       } else if let model {
         if model.phase == .over, let finish = model.finish {
           EndView(
-            model: model, finish: finish, onNext: { _ = start(model.prefs) }, onGrow: grow,
+            model: model, finish: finish, onNext: { _ = start(model.prefs) },
             onAnalyze: { onAnalyze(model.run.played, model.run.color) }, onExit: exit,
             onChangeOptions: { setup() })
         } else {
@@ -75,10 +75,6 @@ struct SurvivalView: View {
     model = run
     run.start()
     return run
-  }
-
-  private func grow(_ offer: GrowOffer) {
-    growth = GrowthModel(offer: offer, store: store, tree: tree, index: index)
   }
 
   /// Change options: back to the setup screen.

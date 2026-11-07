@@ -3,7 +3,8 @@
 Check every change to Autopilot against this note. Autopilot was reshaped
 seven times between September 13 and October 22, 2026, because it kept
 chasing two goals at once: drilling your prep and being the fun game. This
-note settles which goal wins. It was agreed on 2026-10-22.
+note settles which goal wins. It was agreed on 2026-10-22, and widened on
+2026-11-07 so that Autopilot also grows your Playbook at a steady pace.
 
 ## Intent
 
@@ -11,15 +12,23 @@ note settles which goal wins. It was agreed on 2026-10-22.
 openings until you blunder. Every prepared move tells you whether it was
 right and how fast you played it. Autopilot decides what you practice, so you
 never configure anything, and it keeps your Playbook sharp in the
-background.
+background. Now and then a run stops at a reply you have no answer to and
+asks you for one, so your Playbook grows at a steady pace without
+overwhelming you.
+
+The core loop: early on, Autopilot with Any favorite; once the Playbook is
+decent, Autopilot with My Playbook. Most runs still reach the end of your
+prep, play book moves and go out of book. Growing is the exception, not every
+run.
 
 Every change should pass these tests:
 
 - **One kind of round.** Every round is a Survival run against an opponent.
-  No round asks you to answer positions out of context or to build lines.
+  No round asks you to answer positions out of context.
 - **Fun first, drilling underneath.** What you need to practice is handled by
   where the run starts and what the opponent steers into. Autopilot never
-  switches to a different mode to do it.
+  ends a run to send you to another mode. Adding moves at a hole happens
+  inside the run, on its board, and the same game goes on after.
 - **Instant, visible feedback.** On every prepared move you see whether it
   was right and how fast it was. Past your prep, a book move gets the same
   tick and time in the book's color, and after the book you see the engine's
@@ -27,9 +36,12 @@ Every change should pass these tests:
   pulses green or red once you've found or missed it.
 - **Speed decides what you drill.** It never costs points or ends a run. It
   grades the position's card, and the cards decide which positions runs start
-  at and steer toward.
+  at and steer toward. Speed and accuracy also decide when a line gets new
+  moves: mastery is a weight, never a gate.
 - **No setup.** Autopilot's settings are matters of taste, such as turning
-  feedback on or off. They never change what you practice or how.
+  feedback on or off. They never change what you practice or how. The one
+  exception is Moves per fill, which sets how many moves a fill adds and so
+  how often new moves come.
 - **It is the whole product for a free user.** If a free user can't get
   somewhere without a paid mode, Autopilot has a gap.
 
@@ -37,11 +49,9 @@ Every change should pass these tests:
 
 - It is not a mode picker. The paid modes are deeper versions of its parts
   that you configure yourself.
-- It is not a Playbook editor. Its only way to add moves is the end
-  screen's Grow this line, one button that looks the same wherever it shows,
-  which grows the line where your prep ran out. That opens Growth there, the
-  same Growth as from Home: Save Line keeps the moves and goes Home, X drops
-  them.
+- It is not a Playbook editor. It adds moves only at the one hole a run
+  reaches (see Growing inside a run). Other growing is done from Home's
+  Recommendations or Growth mode.
 - It is not where you choose an exact line, side, steer or clock. Standalone
   Survival does that.
 
@@ -57,9 +67,11 @@ With My Playbook selected, every run is a cold start: nothing is played for
 you, and the opponent steers toward what needs work. That sets it apart from
 picking an opening or Any favorite.
 
-The first run of any opening is always a position start, whatever is owed,
-so you see how the opening is reached before you are asked to reach it
-yourself. Inside starts go to any position you have a card for, so one only Drill has shown counts once it is due.
+The first run of an opening added from a menu is always a position start,
+whatever is owed, so you see how the opening is reached before you are asked
+to reach it yourself. An opening grown by playing moves needs no such start.
+The first time any run autoplays, a one-time note says that Autopilot played
+the moves up to the opening. Inside starts go to any position you have a card for, so one only Drill has shown counts once it is due.
 
 Need is counted in runs, not days. Someone who plays thirty runs a day and
 someone who plays one a week both get repetition that fits how much they
@@ -73,10 +85,52 @@ play:
 - Where runs started is saved, so the every-3rd-run cold start counts across
   sessions.
 
+## What the next run is
+
+The recommendation engine picks it: one stateless, deterministic set of
+functions, one per question, computed from the Playbook, the in-app game
+history (for staleness and how often things come up) and the book. The same
+data gives the same run. Any favorite lands on the favorite played longest
+ago, skipping the last one while there is another.
+
+When a new move is due (see below), the next run steers toward the gap in the
+selection with the highest p × m² × g: the opponent follows that gap's line
+to its reply, so new moves land on strong lines at a steady pace instead of
+whenever chance allows.
+
+## Growing inside a run
+
+A gap is a common opponent reply in your Playbook that you have no answer
+to: at least 5% of strong players' games at that position, inside the
+opening the book names. A run reaches at most one hole, the first reply you
+have no answer to. At that hole the engine answers one question: does this
+line need a new move now? Yes when
+
+p × m² × g ≥ 1
+
+- p (pace) is the Autopilot runs since anything was added to the Playbook,
+  from any source, over Moves per fill (default 3), so a well known line gets
+  about one new move per run.
+- m (mastery, 0 to 1) is how well you know your moves along the line, from
+  move one to the hole. Right, fast answers count most; moves never asked
+  count as weak.
+- g (gap, 0 to 1) is the hole's importance next to the top gap in the
+  selection.
+
+On a yes, the run's board turns into New move: the book's answers, Undo and
+Done. Each pick is saved as it is made, the book's most played reply comes
+back, and it stops after Moves per fill of your moves, at the end of the
+named opening, or when no reply is common enough. Done stops it at any time,
+even with nothing added. The same game then goes on from there; the new
+moves are not graded this run, and later runs drill them.
+
+On a no, a Grow here button shows while it is your move at the hole, the
+only growth button in a run. The end screen has no growth button.
+
 ## Past your prep: the book phase
 
-Your Playbook ends where the book does, and Growth never adds a move past it,
-so most lines are short. A run doesn't get shorter for it. Once a clean prep
+Your Playbook ends where the book does, and the engine's gaps never go past
+it (manual Growth can, with Past the book on), so most lines are short. A run doesn't get shorter for it. Once a clean prep
 runs out, the run stays in the book phase for as long as the position is in
 the book:
 
@@ -105,8 +159,8 @@ an endgame: endgames are drilled in Endgame mode.
 ## Ending a round
 
 A small, quiet End round button is under the board from the first move of
-every run. Ending a round still gets the normal end screen, with Analyze and
-Grow this line, so you can drill just your openings when you want to. It is
+every run. Ending a round still gets the normal end screen, with Analyze, so
+you can drill just your openings when you want to. It is
 quiet on purpose: playing on past your prep is the game, and it is what makes
 you care which moves you grow.
 
@@ -129,6 +183,6 @@ button, the round intro and the app bar show no segments.
 
 | Free | Paid |
 | --- | --- |
-| Autopilot, Play, Analysis, the Playbook tab with editing and Tidy, ratings, Home, Stats, Milestones | Survival, Drill (positions and lines), full Growth, game import |
+| Autopilot, Growth, Play, Analysis, the Playbook tab with editing and Tidy, ratings, Home, Stats, Milestones | Survival, Drill (positions and lines), game import |
 
 Standalone Survival and the other paid modes get improved after Autopilot.

@@ -8,14 +8,14 @@ enum OnboardingNext: Equatable { case home, autopilot }
 
 /// The first screens a new profile sees: building the first Playbook.
 ///
-/// Four ways in: a starter set, picked by style; the openings you already
-/// play, picked one at a time; lines played in on the board; or the openings
-/// found in your Lichess or Chess.com games, which go in as soon as they are
-/// added and start the first Autopilot run. Otherwise nothing goes
+/// Use recommended puts in the Classical set and starts the first Autopilot
+/// run. Four other ways in: a starter set, picked by style; the openings you
+/// already play, picked one at a time; lines played in on the board; or the
+/// openings found in your Lichess or Chess.com games, which go in as soon as
+/// they are added and start the first Autopilot run. Otherwise nothing goes
 /// in until the ready screen is left, so "Add more openings" can still list
 /// and drop them. Lines saved on the board are held the same way, Back
-/// included. Skipping is a real answer: nothing goes in, and it is never
-/// asked again.
+/// included.
 struct OnboardingView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
@@ -31,7 +31,7 @@ struct OnboardingView: View {
   var body: some View {
     Group {
       switch step {
-      case .path: PathsView(onStep: { step = $0 }, onSkip: skip)
+      case .path: PathsView(onRecommended: useRecommended, onStep: { step = $0 })
       case .sets: SetListView(tree: tree, onBack: { step = .path }, onOpen: { step = .set($0) })
       case .set(let id):
         let set = STARTER_SETS.first { $0.id == id } ?? STARTER_SETS[0]
@@ -82,9 +82,11 @@ struct OnboardingView: View {
     onDone(next)
   }
 
-  private func skip() {
-    store.update { $0.onboarded(tree, []) }
-    onDone(.home)
+  /// The Classical set, Any favorite selected, and straight into the first run.
+  private func useRecommended() {
+    let set = STARTER_SETS.first { $0.id == "classical" } ?? STARTER_SETS[0]
+    store.update { $0.seed(tree, set) }
+    onDone(.autopilot)
   }
 
   /// Debug builds open on a step with `ONB_STEP=sets|set:classical|pick|board|ready|browse`, for screenshots.
@@ -115,39 +117,43 @@ enum OnboardingStep: Equatable {
   case browse
 }
 
-/// The welcome: four ways to build a Playbook, and Skip.
+/// Choosing your openings: Use recommended starts the first run on the
+/// Classical set; under it, four other ways to build a Playbook.
 struct PathsView: View {
+  let onRecommended: () -> Void
   let onStep: (OnboardingStep) -> Void
-  let onSkip: () -> Void
 
   var body: some View {
     VStack(spacing: 0) {
-      OnbAppBar(title: "Build your Playbook", large: true)
+      OnbAppBar(title: "Choose your openings", large: true)
       ScrollView {
         VStack(spacing: 12) {
-          path("Suggest a set", "star", main: true) { onStep(.sets) }
-          path("Pick openings", "tree") { onStep(.pick) }
-          path("Play on the board", "play") { onStep(.board) }
-          path("Import my games", "download") { onStep(.importGames) }
-          SkipButton(label: "Skip for now", action: onSkip).padding(.top, 8)
+          BigButton(label: "Use recommended", action: onRecommended)
+          LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
+            path("Suggest a set", "star") { onStep(.sets) }
+            path("Pick openings", "tree") { onStep(.pick) }
+            path("Play on the board", "play") { onStep(.board) }
+            path("Import my games", "download") { onStep(.importGames) }
+          }
+          .padding(.top, 4)
         }
         .padding(.horizontal, 16).padding(.top, 16)
       }
     }
   }
 
-  private func path(_ name: String, _ icon: String, main: Bool = false, action: @escaping () -> Void) -> some View {
+  private func path(_ name: String, _ icon: String, action: @escaping () -> Void) -> some View {
     Button(action: action) {
-      HStack(spacing: 14) {
-        Icon(name: icon, size: 22).foregroundStyle(main ? Theme.accent : Theme.text)
+      VStack(alignment: .leading, spacing: 14) {
+        Icon(name: icon, size: 22).foregroundStyle(Theme.accent)
           .frame(width: 44, height: 44)
-          .background(RoundedRectangle(cornerRadius: 12).fill(main ? Theme.accent.opacity(0.16) : Theme.surface2))
-        Text(name).font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.text).frame(maxWidth: .infinity, alignment: .leading)
-        Icon(name: "chevron", size: 18).foregroundStyle(Theme.text3)
+          .background(RoundedRectangle(cornerRadius: 12).fill(Theme.accent.opacity(0.16)))
+        Text(name).font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.text)
+          .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
+        Spacer(minLength: 0)
       }
-      .padding(18)
+      .padding(16).frame(maxWidth: .infinity, minHeight: 128, alignment: .topLeading)
       .background(RoundedRectangle(cornerRadius: 22).fill(Theme.surface))
-      .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(main ? Theme.accent : .white.opacity(0.07), lineWidth: 1.5))
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)

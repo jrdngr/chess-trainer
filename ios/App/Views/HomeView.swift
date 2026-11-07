@@ -3,13 +3,15 @@ import Model
 import SwiftUI
 
 /// Home: the selection, Autopilot's next round on its button, the modes,
-/// and Favorites and Milestones. A mode tile starts the mode on your saved
+/// Recommendations and Milestones. A mode tile starts the mode on your saved
 /// settings; press and hold for Start or Settings (its setup screen first).
 struct HomeView: View {
   let tree: OpeningTree
   let onOpen: (Mode) -> Void
   /// Open a mode on its setup screen.
   let onSetup: (Mode) -> Void
+  /// Fill a recommendation in Growth.
+  let onGap: (Gap) -> Void
   @Environment(AppStore.self) private var store
   @State private var settings = false
 
@@ -36,7 +38,7 @@ struct HomeView: View {
           tile("Play", "play", .play, held: true)
         }
         VStack(spacing: 10) {
-          FavoritesLadder()
+          RecommendationsCard(tree: tree, onPick: onGap)
           MilestonesCard()
         }
         .padding(.top, 10)

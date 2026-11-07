@@ -32,6 +32,8 @@ struct RootView: View {
   @State private var growing: GrowthModel?
   /// A line from the opening sheet for Middlegame mode to play out.
   @State private var middlegameLine: MiddlegameLine?
+  /// The welcome's Play the tutorial.
+  @State private var tutorial = false
 
   var body: some View {
     ZStack {
@@ -53,7 +55,12 @@ struct RootView: View {
 
   @ViewBuilder private func content(_ tree: OpeningTree, _ index: ReferenceIndex) -> some View {
     if !store.state.settings.seenIntro {
-      IntroPagesView { store.update { $0.settings.seenIntro = true } }
+      // The welcome, then the tutorial or Skip; both lead to choosing openings.
+      if tutorial {
+        TutorialView { store.update { $0.settings.seenIntro = true } }
+      } else {
+        WelcomeView(onTutorial: { tutorial = true }, onSkip: { store.update { $0.settings.seenIntro = true } })
+      }
     } else if !store.state.settings.onboarded {
       OnboardingView(tree: tree, index: index) { next in
         tab = .home
@@ -95,6 +102,8 @@ struct RootView: View {
         }, onSetup: { next in
           setupFirst = true
           mode = next
+        }, onGap: { gap in
+          growing = GrowthModel(gap: gap, store: store, tree: tree, index: index)
         })
           .tabItem { Label(Tab.home.label, systemImage: Tab.home.symbol) }.tag(Tab.home)
         PlaybookView(tree: tree, index: index, tidyFocus: tidyFocus, onConsumedTidyFocus: { tidyFocus = nil }, onExplore: { sans, side in

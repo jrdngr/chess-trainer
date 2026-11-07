@@ -25,6 +25,8 @@ final class GrowthModel {
     var regionId: String? = nil
     /// A line kept with the sitting's moves from the start: the chosen opening's own.
     var keep: (sans: [String], source: MoveSource)? = nil
+    /// The recommendation being filled: the sitting also stops where its named opening ends.
+    var gap: Gap? = nil
   }
 
   enum Intro { case announce, replay, done }
@@ -89,9 +91,19 @@ final class GrowthModel {
       store: store, tree: tree, index: index)
   }
 
+  /// Filling a recommendation from Home: the sitting starts at its reply.
+  convenience init?(gap: Gap, store: AppStore, tree: OpeningTree, index: ReferenceIndex) {
+    self.init(
+      launch: Launch(
+        row: gapRow(gap), hole: gap.hole, opening: deepestNodeWithin(tree, tree.root, gap.line),
+        find: GrowthOptions(minShare: GAP_SHARE, maxPly: DEFAULT_MAX_PLY), maxPly: DEFAULT_MAX_PLY, gap: gap),
+      store: store, tree: tree, index: index)
+  }
+
   var run: GrowthRun { session.run }
   var phase: GrowthPhase { session.phase }
-  var allowance: Int { allowanceOf(session, launch.maxPly) }
+  /// One fill's size, the same everywhere: the Moves per fill setting.
+  var allowance: Int { store.state.settings.movesPerFill }
   var added: Int { inBatch(session) }
   var done: Bool { phase == .done || phase == .lost }
   var fen: String { run.fen }
@@ -204,6 +216,10 @@ final class GrowthModel {
       }
       if (phase == .hole || phase == .answered) && !prefs.pastBook && pastTheBook(index, run.fen) {
         apply(reachedEdge(session), settling: false)
+      }
+      // A recommendation is filled once its named opening ends or no reply is common enough.
+      if phase == .answered, launch.gap != nil, fillEnds(index, run.path, added: added, size: allowance) {
+        session = stop(session)
       }
       if phase == .hole {
         if let offered = choicesAt(index, run.fen, 4), offered.isEmpty { session = stop(session) }

@@ -59,7 +59,7 @@ struct MiddlegameView: View {
         if model.phase == .over, let finish = model.finish {
           EndView(
             model: model, finish: finish, onNext: { start(store.state.settings.middlegame) },
-            onGrow: { _ in }, onAnalyze: { onAnalyze(model.run.played, model.run.color) }, onExit: exit,
+            onAnalyze: { onAnalyze(model.run.played, model.run.color) }, onExit: exit,
             onChangeOptions: exact == nil ? { setup() } : nil,
             onSameLine: last == nil ? nil : { if let last { start(store.state.settings.middlegame, line: last) } })
         } else {

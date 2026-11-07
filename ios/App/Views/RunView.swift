@@ -52,7 +52,7 @@ struct RunView: View {
         fen: model.shownFen, orientation: model.run.color,
         interactive: model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil && model.flash == nil,
         lastMove: model.held ? lastMoveOf(Array(model.introPath.prefix(model.introPly))) : lastMove, highlights: highlights, arrows: arrows, glow: model.glow, pop: model.pop,
-        marks: marks,
+        marks: marks, allowed: model.fill == nil ? nil : model.fillChoices.map(\.san),
         onMove: model.play
       )
       .overlay { if let pulse = model.edgePulse { EdgePulse(color: pulse.found ? Theme.good : Theme.bad).id(pulse.id) } }
@@ -167,6 +167,8 @@ struct RunView: View {
           HandoffPlanCard(fens: fens, me: model.run.color)
         } else if model.blunder != nil {
           ending
+        } else if model.fill != nil {
+          InlineFillPanel(model: model).padding(.top, 10)
         } else {
           goalSlot.padding(.top, 12)
           status.padding(.top, 14)
@@ -213,6 +215,8 @@ struct RunView: View {
         HandoffMoves(handoff: handoff, played: model.introPly)
       } else if model.intro == .replay {
         movesLine(sansToMoveText(Array(model.introPath.prefix(model.introPly))))
+      } else if !model.held && model.autoplayNote {
+        movesLine("Autopilot played the moves up to your \(openingName(model.tree, model.introOpening)).")
       } else if !model.held, model.prefs.missions, let mission = model.session.state.extras.mission {
         GoalCard(mission: mission)
       } else if model.run.opened > 0 {
@@ -269,6 +273,10 @@ struct RunView: View {
       let misses = model.session.state.misses.count
       Text(misses > 0 ? "\(misses) miss\(misses == 1 ? "" : "es") so far" : "").font(.footnote).foregroundStyle(Theme.text2)
       Spacer()
+      if model.holeGap != nil && model.myTurn && model.live && model.pending == nil {
+        Button { model.growHere() } label: { Label("Grow here", systemImage: "plus") }
+          .buttonStyle(PlayButtonStyle(kind: .soft, height: 34, radius: 17, font: 13.5))
+      }
       if model.handoff != nil && model.intro == .replay {
         Button { model.skipIntro() } label: { Text("Skip").foregroundStyle(Theme.text) }
           .buttonStyle(PlayButtonStyle(kind: .soft, height: 34, radius: 17, font: 13.5))

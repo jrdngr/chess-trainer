@@ -309,7 +309,7 @@ final class AppStore {
     let selection = state.settings.selection
     guard isAnyFavorite(selection), let tree else { return selection }
     let key = "\(selection.color.rawValue) \(state.settings.favoriteOpenings.joined(separator: ",")) \(lastFavorite ?? "")"
-    if ahead?.key != key { ahead = (key, roundSelection(state, tree, last: lastFavorite, Env.random)) }
+    if ahead?.key != key { ahead = (key, roundSelection(state, tree, last: lastFavorite)) }
     return ahead!.selection
   }
 

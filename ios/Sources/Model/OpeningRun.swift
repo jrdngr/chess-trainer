@@ -251,6 +251,8 @@ public struct BeginOptions {
   public var enter = false
   /// Start at the position these moves reach.
   public var at: [String]?
+  /// A line to follow while the run is on it: a gap to reach.
+  public var aim: [String]?
 
   public init(tree: OpeningTree, reps: [Repertoire], node: OpeningNode, color: ColorChoice) {
     self.tree = tree
@@ -290,6 +292,9 @@ public func beginRun(_ opts: BeginOptions) -> Begun? {
   let steer = opts.steer
 
   func draw(_ at: At) -> Drawn {
+    if let aim = opts.aim, aim.count > at.played.count, at.played.indices.allSatisfy({ aim[$0] == at.played[$0] }) {
+      return Drawn(target: aim, gap: nil, firstLine: false)
+    }
     let atStart = at.played.isEmpty
     let onWay = aim.sans.count > at.played.count && at.played.indices.allSatisfy { aim.sans[$0] == at.played[$0] }
     let fallback = onWay ? aim.sans : []

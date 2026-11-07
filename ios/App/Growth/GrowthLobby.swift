@@ -133,7 +133,7 @@ struct GrowthLobby {
     let scope = isAnyFavorite(selection)
       ? " in your favorites" : regions.first.map { $0.node.depth > 0 ? " in \($0.node.name)" : "" } ?? ""
     return "Your Playbook meets every reply strong players choose in \(JS.string(prefs.minShare))% of games or more\(scope), "
-      + "down to \(Int((Double(prefs.maxPly) / 2).rounded(.up))) moves. Lower the threshold below, or widen the opening, to keep going."
+      + "down to \(Int((Double(prefs.maxPly) / 2).rounded(.up))) moves. Widen the opening, or turn on Past the book, to keep going."
   }
 }
 

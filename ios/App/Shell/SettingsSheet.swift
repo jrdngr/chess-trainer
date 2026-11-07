@@ -55,6 +55,7 @@ struct SettingsSheet: View {
         ListCard {
           ToggleRow(label: "Move scores", hint: "What each move the engine judges cost you, in centipawns, over its square",
                     on: settings.autopilot.moveScores) { store.update { $0.settings.autopilot.moveScores.toggle() } }
+          FillSizeRow(value: settings.movesPerFill) { n in store.update { $0.settings.movesPerFill = n } }
         }
         section("Engine")
         ListCard {
@@ -114,7 +115,7 @@ struct SettingsSheet: View {
     }
     .sheet(isPresented: $exporting) { ExportView().presentationBackground(Theme.background) }
     .sheet(isPresented: $restoring) { RestoreView().presentationBackground(Theme.background) }
-    .fullScreenCover(isPresented: $intro) { IntroPagesView { intro = false } }
+    .fullScreenCover(isPresented: $intro) { TutorialView { intro = false } }
     .alert(naming == .new ? "New profile" : "Rename profile", isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
       TextField("Name", text: $typed)
       Button(naming == .new ? "Create" : "Rename") { finishNaming() }
@@ -220,6 +221,29 @@ struct ListCard<Content: View>: View {
 }
 
 /// A setting that is on or off.
+/// Moves per fill: how many of your moves a run or a recommendation adds at
+/// once, and so how many runs go by between new moves.
+struct FillSizeRow: View {
+  var value: Int
+  var onChange: (Int) -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      HStack {
+        Text("Moves per fill").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+        Spacer()
+        Text("\(value)").font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text2)
+      }
+      Slider(
+        value: Binding(get: { Double(value) }, set: { onChange(Int($0.rounded())) }),
+        in: Double(MOVES_PER_FILL_RANGE.lowerBound)...Double(MOVES_PER_FILL_RANGE.upperBound), step: 1
+      )
+      .tint(Theme.accent)
+    }
+    .padding(.horizontal, 16).padding(.vertical, 12)
+  }
+}
+
 struct ToggleRow: View {
   var label: String
   var hint: String?

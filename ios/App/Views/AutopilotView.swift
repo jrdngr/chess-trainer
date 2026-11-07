@@ -17,7 +17,6 @@ struct AutopilotView: View {
   @State private var history = AutoHistory()
   @State private var model: RunModel?
   @State private var nothing = false
-  @State private var growth: GrowthModel?
   @State private var analyzing = false
   private static let engine = BasicEngine()
 
@@ -25,11 +24,9 @@ struct AutopilotView: View {
     Group {
       if analyzing, let model {
         AnalysisTab(tree: tree, index: index, line: model.run.played, orientation: model.run.color) { analyzing = false }
-      } else if let growth {
-        GrowthSitting(model: growth, onAnalyze: onAnalyze, onExit: exit)
       } else if let model {
         if model.phase == .over, let finish = model.finish {
-          EndView(model: model, finish: finish, onNext: next, onGrow: grow, onAnalyze: { analyzing = true }, onExit: exit)
+          EndView(model: model, finish: finish, onNext: next, onAnalyze: { analyzing = true }, onExit: exit)
         } else {
           RunView(model: model, onExit: exit)
         }
@@ -57,10 +54,6 @@ struct AutopilotView: View {
     }
     model = run
     run.start()
-  }
-
-  private func grow(_ offer: GrowOffer) {
-    growth = GrowthModel(offer: offer, store: store, tree: tree, index: index)
   }
 
   private func next() {

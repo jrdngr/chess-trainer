@@ -128,6 +128,10 @@ public let AUTO_DRILL = DrillPrefs(
 /// Growth's own defaults.
 public let DEFAULT_GROWTH = GrowthPrefs(minShare: 1, maxPly: 18, nudgePriority: .transposition, nudgePawns: false, pastBook: false)
 
+/// One fill's size, in your moves; the settings slider runs 1...5.
+public let DEFAULT_MOVES_PER_FILL = 3
+public let MOVES_PER_FILL_RANGE = 1...5
+
 public let AUTO_GROWTH = GrowthPrefs(minShare: 1, maxPly: 18, nudgePriority: .transposition, nudgePawns: false, pastBook: false)
 
 /// Survival rounds: Autopilot steers, there is no clock, the feedback is yours.

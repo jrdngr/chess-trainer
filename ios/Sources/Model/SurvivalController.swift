@@ -338,6 +338,21 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
   }
 }
 
+/// A move added to your Playbook mid-run, played as yours: never graded,
+/// and counted in the book's color.
+public func playAdded(_ session: RunSession, _ san: String) -> Step {
+  if session.ending != nil { return unchanged(session) }
+  var next = session
+  next.bookTo = session.state.run.played.count + 1
+  return afterMove(next, playYours(session.state, san))
+}
+
+/// The opponent's reply while moves are being added: the book's most played.
+public func playFillReply(_ session: RunSession, _ san: String) -> Step {
+  if session.ending != nil { return unchanged(session) }
+  return theirMove(session, playTheirs(session.state, san))
+}
+
 /// The opponent's turn from the book while it has a move. Nil where the book has nothing.
 public func bookTurn(_ session: RunSession, _ index: ReferenceIndex, _ rng: () -> Double) -> Step? {
   if session.ending != nil { return unchanged(session) }

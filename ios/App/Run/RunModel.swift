@@ -56,8 +56,20 @@ final class RunModel {
   private(set) var finish: Finish?
   /// The end screen has opened once: its verdict and rating change have played, and stay at rest after.
   var endSeen = false
-  /// The way into Growth a clean end of prep earns.
-  private(set) var offer: GrowOffer?
+  /// Moves being added to the Playbook mid-run, at the gap the run reached.
+  struct Fill {
+    var gap: Gap
+    var size: Int
+    /// Each move added: the run before it, and the line whose node Undo removes.
+    var steps: [(session: RunSession, remove: [String])] = []
+    var added: Int { steps.count }
+  }
+  private(set) var fill: Fill?
+  /// The gap the run reached when the engine said no new move: the player can
+  /// still add one while it is their move there.
+  private(set) var holeGap: Gap?
+  /// The run has reached its one hole and asked about it.
+  private var holeAsked = false
   private(set) var intro = Intro.announce
   /// How many of the way in's moves the replay has played.
   private(set) var introPly = 0
@@ -273,7 +285,7 @@ final class RunModel {
     if myTurn {
       beginTurn()
     } else if miss == nil {
-      opponent()
+      if fill != nil { fillReply() } else { opponent() }
     }
   }
 
@@ -324,8 +336,12 @@ final class RunModel {
   /// Your turn begins: what the screen settles before you move.
   private func beginTurn() {
     turnStarted = Date()
+    // Adding moves: the player picks the next one, nothing is weighed.
+    if fill != nil { return }
     if prepNow.isEmpty { update(prepRanOut(session, index)) }
     update(closeBook(session, index))
+    askAtHole()
+    if fill != nil { return }
     // Past your prep the engine is sure to be asked: weigh the position now.
     if prepNow.isEmpty { weigh(run.fen) }
   }
@@ -348,6 +364,10 @@ final class RunModel {
   /// that leaves a piece loose is held a moment first, to take back.
   func play(_ move: LegalMove) {
     guard live, !held, myTurn, pending == nil, flash == nil else { return }
+    if fill != nil {
+      if fillChoices.contains(where: { $0.san == move.san }) { addMove(move.san) }
+      return
+    }
     // Your time stops when you move, not when a held move lands.
     let seconds = Date().timeIntervalSince(turnStarted)
     if prefs.undefendedFlash {
@@ -376,6 +396,8 @@ final class RunModel {
     miss = nil
     note = nil
     missedBest = nil
+    holeGap = nil
+    if autoplayNote { store.update { $0.settings.seenAutoplayNote = true } }
     let now = Env.now()
     if prepNow.contains(move.san) {
       apply(playPrepared(session, ctx, move, seconds, now))
@@ -399,6 +421,95 @@ final class RunModel {
       self.store.update { $0.judgedMove(lost: judged.lost) }
       self.apply(judgedMove(self.session, self.ctx, judged, seconds, now))
     }
+  }
+
+  /* ── adding moves mid-run ── */
+
+  /// At the run's one hole, ask the engine whether the line needs a new move now.
+  private func askAtHole() {
+    guard round != nil, !holeAsked, session.prepStatus == .complete, prepNow.isEmpty, session.state.misses.isEmpty,
+      run.played.count > run.opened
+    else { return }
+    holeAsked = true
+    guard let found = growAtHole(store.state, tree, selection, color: run.color, line: run.played) else { return }
+    if found.yes { startFill(found.gap) } else { holeGap = found.gap }
+  }
+
+  /// The one-time note on autoplay: up while the first run that autoplays waits for your first move.
+  var autoplayNote: Bool {
+    round != nil && !store.state.settings.seenAutoplayNote && !introPath.isEmpty && session.state.moves == 0
+  }
+
+  /// The book's answers on offer while adding moves.
+  var fillChoices: [Reply] { fill == nil ? [] : optionsAt(index, run.fen, 4) }
+
+  /// Add moves here, at the engine's word or the player's.
+  func growHere() {
+    guard let gap = holeGap, live, myTurn, pending == nil else { return }
+    startFill(gap)
+  }
+
+  private func startFill(_ gap: Gap) {
+    holeGap = nil
+    fill = Fill(gap: gap, size: store.state.settings.movesPerFill)
+    store.update { $0.logEvent(AppEvent(kind: "inline-grow", via: .autopilot, color: gap.color, line: gap.line.joined(separator: " "))) }
+  }
+
+  /// A move picked while adding: saved to the Playbook, then played.
+  func addMove(_ san: String) {
+    guard var current = fill, live, myTurn, pending == nil else { return }
+    let rid = current.gap.repertoireId
+    let line = run.played + [san]
+    let offered = fillChoices.map(\.san)
+    // Undo removes from the first move this line added.
+    let rep = store.state.repertoires[rid]
+    let fresh = (1...line.count).first { k in rep.flatMap { nodeAtLine($0, Array(line.prefix(k))) } == nil } ?? line.count
+    current.steps.append((session, Array(line.prefix(fresh))))
+    store.update { state in
+      state.addGrowthLine(rid, line, index)
+      state.logEvent(AppEvent(
+        kind: "growth-pick", via: .autopilot, color: run.color, line: run.played.joined(separator: " "), picked: san, offered: offered))
+    }
+    Haptics.buzz(10, on: store.state.settings.hapticFeedback)
+    fill = fillEnds(index, line, added: current.added, size: current.size) ? nil : current
+    if fill == nil { holeGap = nil }
+    apply(playAdded(session, san))
+  }
+
+  /// The opponent's reply while adding moves: the book's most played.
+  private func fillReply() {
+    thinking = true
+    later(Self.replyMs) { model in
+      model.thinking = false
+      guard model.live, !model.myTurn, model.fill != nil else { return }
+      guard let san = popularReplies(model.index, model.run.fen, GAP_SHARE).first?.san else {
+        model.fill = nil
+        model.advance()
+        return
+      }
+      model.apply(playFillReply(model.session, san))
+    }
+  }
+
+  /// Undo while adding: the last move added comes out of the Playbook and off the board.
+  func undoAdded() {
+    guard var current = fill, !current.steps.isEmpty else { return }
+    let last = current.steps.removeLast()
+    let rid = current.gap.repertoireId
+    stop()
+    thinking = false
+    store.update { state in
+      if let rep = state.repertoires[rid], let node = nodeAtLine(rep, last.remove) { _ = state.removeNode(rid, node.id, via: .autopilot) }
+    }
+    session = last.session
+    fill = current
+  }
+
+  /// Done: no more moves added, and the game goes on from here.
+  func doneAdding() {
+    guard fill != nil else { return }
+    fill = nil
+    advance()
   }
 
   /// You ended the round.
@@ -483,7 +594,6 @@ final class RunModel {
       state.endRound(tree, runRound(f, tree, at: Env.now()))
       if let given { state.endgames.save(given) }
     }
-    offer = offerFor(store.state, tree, index, f, region: f.ended.run.openingId, growth: growth)
     settle(f)
   }
 

@@ -169,6 +169,8 @@ public struct StartOptions {
   public var toward: OpeningNode?
   public var enter = false
   public var at: [String]?
+  /// A line the opponent follows while it can: a gap to reach.
+  public var aim: [String]?
 
   public init(steer: SurvivalSteer, tree: OpeningTree, reps: [Repertoire], node: OpeningNode, color: ColorChoice) {
     self.steer = steer
@@ -187,6 +189,7 @@ public func startSurvival(_ opts: StartOptions) -> SurvivalStart? {
   begin.toward = opts.toward
   begin.enter = opts.enter
   begin.at = opts.at
+  begin.aim = opts.aim
   begin.weakness = opts.weakness
   begin.growth = opts.growth
   begin.seen = opts.seen

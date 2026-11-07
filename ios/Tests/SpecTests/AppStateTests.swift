@@ -10,8 +10,7 @@ import Testing
   state.seed(tree, STARTER_SETS[0])
   #expect(state.repertoireList.count == 2)
   #expect(state.settings.selection.opening == ANY_FAVORITE)
-  let rand = mulberry32(1)
-  let selection = roundSelection(state, tree, last: nil, rand)
+  let selection = roundSelection(state, tree, last: nil)
   let round = try #require(nextRound(state, tree, selection, AutoHistory()))
   // The first run of an opening is always a position start.
   #expect(round.at == nil)

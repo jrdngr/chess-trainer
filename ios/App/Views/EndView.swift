@@ -13,7 +13,6 @@ struct EndView: View {
   let model: RunModel
   let finish: Finish
   let onNext: () -> Void
-  let onGrow: (GrowOffer) -> Void
   let onAnalyze: () -> Void
   let onExit: () -> Void
   /// Back to Survival's setup; nil when Autopilot set the run up.
@@ -32,13 +31,12 @@ struct EndView: View {
   /// The verdict over the board as the screen opens; a blunder was shown on the board already.
   @State private var flashing: Bool
 
-  init(model: RunModel, finish: Finish, onNext: @escaping () -> Void, onGrow: @escaping (GrowOffer) -> Void,
+  init(model: RunModel, finish: Finish, onNext: @escaping () -> Void,
        onAnalyze: @escaping () -> Void, onExit: @escaping () -> Void, onChangeOptions: (() -> Void)? = nil,
        onSameLine: (() -> Void)? = nil) {
     self.model = model
     self.finish = finish
     self.onNext = onNext
-    self.onGrow = onGrow
     self.onAnalyze = onAnalyze
     self.onExit = onExit
     self.onChangeOptions = onChangeOptions
@@ -155,18 +153,9 @@ struct EndView: View {
     }
   }
 
-  /// Grow, Analyze and Next round, the moves, and what the run came to.
+  /// Analyze and Next round, the moves, and what the run came to.
   private var below: some View {
     VStack(spacing: 14) {
-      if let offer = model.offer {
-        if offer.kind == "opening", let text = offer.text {
-          Text(text).font(.subheadline).foregroundStyle(Theme.text).frame(maxWidth: .infinity, alignment: .leading)
-        }
-        Button { onGrow(offer) } label: {
-          Label(offer.kind == "line" && offer.onLine ? "Grow this line" : "Grow this opening", systemImage: "plus")
-        }
-        .buttonStyle(PlayButtonStyle(kind: .accent, block: true))
-      }
       HStack(spacing: 8) {
         if blunder != nil || isEnded || middlegame {
           Button(action: onAnalyze) {

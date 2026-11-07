@@ -8,6 +8,8 @@ import ChessCore
 public struct AutoRound: Sendable {
   public var pick: Recommendation
   public var at: [String]?
+  /// A gap's line the run steers to, when a new move is due.
+  public var aim: [String]? = nil
 }
 
 /// What a session remembers of its runs so far, oldest first.
@@ -17,18 +19,24 @@ public struct AutoHistory: Sendable {
   public init() {}
 }
 
-/// The selection a round plays in, with Any favorite resolved to one favorite.
-public func roundSelection(_ state: AppState, _ tree: OpeningTree, last: String?, _ rand: () -> Double) -> Selection {
+/// The selection a round plays in, with Any favorite resolved to one
+/// favorite: the one played longest ago, skipping the last one while there is
+/// another. The same data always gives the same favorite.
+public func roundSelection(_ state: AppState, _ tree: OpeningTree, last: String?) -> Selection {
   let selection = state.settings.selection
   guard isAnyFavorite(selection) else { return selection }
   let reps = state.repertoireList
+  let all = favoritesIn(tree, state.settings.favoriteOpenings, selection.color)
   // Favorites you have something prepared in come first.
-  let prepared = favoritesIn(tree, state.settings.favoriteOpenings, selection.color)
-    .filter { fav in reps.contains { $0.color == fav.side && !itemsInRegion(tree, fav.node, allItems([$0])).isEmpty } }
-    .map(\.node.id)
-  return resolveFavorite(
-    tree, selection, prepared.isEmpty ? state.settings.favoriteOpenings : prepared,
-    { state.score.nodes[$0]?.lastAt ?? 0 }, last, rand)
+  let prepared = all.filter { fav in reps.contains { $0.color == fav.side && !itemsInRegion(tree, fav.node, allItems([$0])).isEmpty } }
+  let pool = prepared.isEmpty ? all : prepared
+  let field = pool.count > 1 ? pool.filter { $0.node.id != last } : pool
+  let lastAt = { (id: String) in state.score.nodes[id]?.lastAt ?? 0 }
+  guard let pick = Array(field.enumerated()).jsSorted({ a, b in
+    let t = lastAt(a.element.node.id) - lastAt(b.element.node.id)
+    return t != 0 ? t : Double(a.offset - b.offset)
+  }).first?.element else { return Selection(color: selection.color, opening: "") }
+  return Selection(color: pick.side == .w ? .w : .b, opening: pick.node.id)
 }
 
 /// Everything the recommendation needs, read off the state.
@@ -57,6 +65,12 @@ public func roundsIn(_ score: ScoreState, _ openingId: String) -> Int {
 
 /// Autopilot's next run, or nil with nothing prepared inside the selection.
 public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _ history: AutoHistory) -> AutoRound? {
+  // A new move is due: the run heads for the gap that most wants one.
+  if let gap = steerGap(state, tree, selection) {
+    let region = nodeById(tree, selection.opening)
+    let opening = deepestNodeWithin(tree, region, gap.path)
+    return AutoRound(pick: Recommendation(focus: .test, opening: opening, color: gap.color, start: .first), at: nil, aim: gap.line)
+  }
   guard var recommended = recommend(recommendInput(state, tree, selection, history)) else { return nil }
   // My Playbook always starts from move one; the opponent still steers toward the pick.
   if selection.opening == ANY_OPENING { recommended.start = .first }
@@ -93,6 +107,7 @@ public func survivalOptions(_ round: AutoRound, _ state: AppState, _ tree: Openi
   opts.toward = round.pick.opening
   opts.enter = round.pick.start == .inside
   opts.at = round.at
+  opts.aim = round.aim
   // The saved selection's mistakes.
   let evidence = evidenceIn(state, tree, state.settings.selection)
   opts.weakness = weaknessFromCards(state.cards, slips(evidence))

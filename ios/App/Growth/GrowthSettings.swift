@@ -1,20 +1,14 @@
 import Model
 import SwiftUI
 
-/// The lobby's settings: how common a reply must be, how deep, past the
-/// book, and what the green arrow nudges toward.
+/// The lobby's settings: past the book, and what the green arrow nudges toward.
+/// How many moves a sitting adds is the main Settings' Moves per fill.
 struct GrowthSettings: View {
   let prefs: GrowthPrefs
   let change: ((inout GrowthPrefs) -> Void) -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      PlaySection(title: "Worth answering")
-      SegmentedControl(
-        value: bind(\.minShare), options: SHARE_STEPS.map { ($0, shareLabel($0)) })
-      PlaySection(title: "How deep")
-      SegmentedControl(
-        value: bind(\.maxPly), options: GROWTH_DEPTHS.map { ($0, "\(Int((Double($0) / 2).rounded(.up))) moves") })
       PlaySection(title: "Past the book")
       SegmentedControl(value: bind(\.pastBook), options: [(false, "Off"), (true, "On")])
       PlaySection(title: "Nudge toward")
