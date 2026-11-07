@@ -133,7 +133,7 @@ final class RunModel {
     var gap = gap
     gap.repertoireId = repId
     self.init(
-      round: basicRound(tree, gap), selection: Selection(color: gap.color, opening: ANY_OPENING), store: store, tree: tree, index: index,
+      round: basicRound(tree, gap), selection: Selection(color: gap.color == .w ? .w : .b, opening: ANY_OPENING), store: store, tree: tree, index: index,
       engine: engine)
     basicRun = true
     holeAsked = true
