@@ -56,13 +56,20 @@ struct HomeView: View {
       }
       .padding(.horizontal, 16).padding(.bottom, 24)
     }
-    .onAppear { askBlack = asksForBlack(store.state) }
+    // Only back from a Play game, never on opening the app, and paced by `asksForBlack`.
+    .onAppear {
+      guard store.backFromPlay else { return }
+      store.backFromPlay = false
+      guard asksForBlack(store.state) else { return }
+      store.update { $0.askedForBlack(at: Env.now()) }
+      askBlack = true
+    }
     .alert("Add a Black opening?", isPresented: $askBlack) {
       Button("Play as Black") {
         store.blackNext = true
         onOpen(.autopilot)
       }
-      Button("Not now", role: .cancel) { store.update { $0.settings.blackAskedAt = Env.now() } }
+      Button("Not now", role: .cancel) {}
     }
     // While a tip shows, a tap anywhere goes to the next one.
     .overlay {

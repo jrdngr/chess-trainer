@@ -277,15 +277,25 @@ public func basicRunGap(_ state: AppState, _ tree: OpeningTree, _ selection: Sel
   return missing.first { $0.hole.san == first } ?? missing.first
 }
 
-/// Play games as White, with no Black lines, before Home asks about adding a Black opening.
+/// Play games as White, with no Black lines, before Home first asks about adding a Black opening.
 public let ASK_FOR_BLACK_AFTER = 5
 
-/// Whether Home asks to add a Black opening: no Black lines yet, and
-/// `ASK_FOR_BLACK_AFTER` Play games as White since it last asked.
+/// Whether Home asks to add a Black opening, back from a Play game: no Black
+/// lines yet, and enough Play games as White since it last showed. The wait
+/// doubles each time it shows: 5 games, then 10, 20, 40.
 public func asksForBlack(_ state: AppState) -> Bool {
   if state.repertoireList.contains(where: { $0.color == .b && !$0.nodes.isEmpty }) { return false }
   let since = state.settings.blackAskedAt
-  return state.games.filter { $0.mode == .autopilot && $0.color == .w && $0.at > since }.count >= ASK_FOR_BLACK_AFTER
+  let wait = ASK_FOR_BLACK_AFTER << min(state.settings.blackAskedCount, 10)
+  return state.games.filter { $0.mode == .autopilot && $0.color == .w && $0.at > since }.count >= wait
+}
+
+extension AppState {
+  /// "Add a Black opening?" has shown: the next one waits twice as long.
+  public mutating func askedForBlack(at now: Double) {
+    settings.blackAskedAt = now
+    settings.blackAskedCount += 1
+  }
 }
 
 /// The run that fills a basic: from move one, steered along the gap's line.

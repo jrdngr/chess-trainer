@@ -16,6 +16,8 @@ final class AppStore {
   var autoHistory = AutoHistory()
   /// The next Play run fills a Black basic whatever the selection: set by "Add a Black opening?".
   var blackNext = false
+  /// Home was just reached from a Play game: the only time it asks about a Black opening.
+  var backFromPlay = false
   /// The save exists but could not be read (locked, say): saving now would replace it with a fresh state.
   @ObservationIgnored private var saveBlocked = false
 
