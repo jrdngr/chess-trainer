@@ -92,7 +92,7 @@ struct HomeView: View {
       Button { onOpen(.autopilot) } label: {
         AutopilotPlate(
           name: store.catalog.map { selectionTrail(tree, $0, round.pick.opening.id).last ?? "" } ?? "",
-          sans: round.pick.opening.sans, color: round.pick.color, span: span, attached: true)
+          color: round.pick.color, span: span, attached: true)
           .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
@@ -142,50 +142,42 @@ struct HomeView: View {
   }
 }
 
-/// Play's next run on Home's button: the opening's position faded in
-/// behind its name, how far into your prep it starts along the bottom edge.
+/// Play's next run on Home's button: the opening, the move the game starts
+/// from, and how far into your prep that is along the bottom.
 struct AutopilotPlate: View {
   let name: String
-  let sans: [String]
   let color: ChessCore.Color
   let span: PrepSpan?
   /// On Home, the top of one block with the selection under it: no side square
   /// (the side shows right below), square bottom corners.
   var attached = false
 
+  /// Your move the game starts at: the first one not played for you.
+  private var from: Int { (span?.played ?? 0) + 1 }
+
   var body: some View {
-    HStack(alignment: .center, spacing: 9) {
-      if !attached { SideSquare(color: color) }
-      Text(name).font(.system(size: 21, weight: .heavy)).foregroundStyle(Theme.text).shadow(color: .black.opacity(0.6), radius: 5, y: 2)
-        .multilineTextAlignment(.leading)
-      Spacer(minLength: 0)
-    }
-    .padding(.horizontal, 20).padding(.top, 42).padding(.bottom, 16)
-    .frame(maxWidth: .infinity, minHeight: 96)
-    .background(alignment: .topTrailing) {
-      MiniBoard(sans: sans, orientation: color, size: 176, lastMove: true)
-        .opacity(0.85).rotationEffect(.degrees(-8))
-        .mask(LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: UnitPoint(x: 0.6, y: 0.5)))
-        // Gone before the plate's bottom edge, so no piece peeks past the prep bar.
-        .mask(LinearGradient(colors: [.black, .clear], startPoint: UnitPoint(x: 0.5, y: 0.6), endPoint: UnitPoint(x: 0.5, y: 0.72)))
-        .offset(x: 14, y: -40)
-        .allowsHitTesting(false)
-    }
-    .background(LinearGradient(colors: [Theme.accent.opacity(0.22), Theme.accent.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
-    .overlay(alignment: .topLeading) {
-      HStack(spacing: 4) {
-        Icon(name: "bolt", size: 11, filled: true)
-        Text("PLAY").font(.system(size: 11, weight: .heavy)).tracking(0.66)
+    VStack(spacing: 0) {
+      HStack(alignment: .center, spacing: 12) {
+        if !attached { SideSquare(color: color) }
+        VStack(alignment: .leading, spacing: 3) {
+          Text(name).font(.system(size: 21, weight: .heavy)).foregroundStyle(Theme.text)
+            .multilineTextAlignment(.leading)
+          Text("From move \(from)").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text2)
+        }
+        Spacer(minLength: 0)
+        Image(systemName: "play.fill").font(.system(size: 20, weight: .bold)).foregroundStyle(Theme.accentInk)
+          .frame(width: 48, height: 48)
+          .background(RoundedRectangle(cornerRadius: 12).fill(Theme.accent))
+          .accessibilityHidden(true)
       }
-      .foregroundStyle(SwiftUI.Color(hex: 0xc4c5ff)).padding(.leading, 6).padding(.trailing, 8).padding(.vertical, 3)
-      .background(Capsule().fill(SwiftUI.Color(red: 139 / 255, green: 140 / 255, blue: 248 / 255).opacity(0.2)))
-      .padding(.top, 10).padding(.leading, 14)
+      .padding(.leading, 18).padding(.trailing, 12).padding(.vertical, 12)
+      .background(LinearGradient(colors: [Theme.accent.opacity(0.22), Theme.accent.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
+      .clipShape(UnevenRoundedRectangle(
+        topLeadingRadius: 20, bottomLeadingRadius: attached ? 0 : 20, bottomTrailingRadius: attached ? 0 : 20, topTrailingRadius: 20))
+      PrepSegmentsView(span: span, height: 4).padding(.horizontal, 18).padding(.top, attached ? 0 : 8)
     }
-    .overlay(alignment: .bottom) {
-      PrepSegmentsView(span: span, height: 4).padding(.top, 0).background(attached ? Theme.surface : Theme.background).padding(.horizontal, 18)
-    }
-    .clipShape(UnevenRoundedRectangle(
-      topLeadingRadius: 20, bottomLeadingRadius: attached ? 0 : 20, bottomTrailingRadius: attached ? 0 : 20, topTrailingRadius: 20))
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel("Play \(name), from move \(from)")
   }
 }
 

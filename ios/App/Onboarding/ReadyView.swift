@@ -44,7 +44,7 @@ struct ReadyView: View {
         Button { onDone(.autopilot) } label: {
           AutopilotPlate(
             name: store.catalog.map { selectionTrail(tree, $0, first.pick.opening.id).last ?? "" } ?? "",
-            sans: first.pick.opening.sans, color: first.pick.color, span: roundSpan(rep, first.pick, first.at))
+            color: first.pick.color, span: roundSpan(rep, first.pick, first.at))
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 16).padding(.top, 24).padding(.bottom, 20)
