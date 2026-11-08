@@ -93,7 +93,6 @@ import Testing
   // The game that added the moves, then one that only plays them: no two fills in a row.
   play()
   #expect(basicRunGap(state, tree, random) == nil)
-  #expect(basicRunGap(state, tree, random, asked: true)?.line == line("e4"))
   play()
   #expect(basicRunGap(state, tree, Selection(color: .w, opening: ANY_OPENING)) == nil)
   #expect(basicRunGap(state, tree, Selection(color: .random, opening: ANY_OPENING))?.line == line("e4"))
@@ -102,30 +101,6 @@ import Testing
   state.addLine(state.ensureRepertoire(.b), line("e4 e5"), .fixed(.book))
   state.addLine(state.ensureRepertoire(.b), line("d4 d5"), .fixed(.book))
   #expect(basicRunGap(state, tree, Selection(color: .b, opening: ANY_OPENING)) == nil)
-}
-
-/// Five Play games as White with no Black lines bring the question; each
-/// time it shows, the next waits twice as long, and any Black line ends it.
-@Test func asksForBlackAfterFiveWhiteGames() {
-  var state = AppState()
-  state.addLine(state.ensureRepertoire(.w), line("e4 e5 Nf3"), .fixed(.book))
-  func play(_ color: Color, at: Double) {
-    state.games.append(GameRecord(
-      id: "g\(at)", mode: .autopilot, at: at, color: color, picked: DEFAULT_SELECTION, opening: "", moves: [], opened: 0,
-      result: "*", termination: "ended"))
-  }
-  for t in 1...4 { play(.w, at: Double(t)) }
-  play(.b, at: 5)
-  #expect(!asksForBlack(state))
-  play(.w, at: 6)
-  #expect(asksForBlack(state))
-  state.askedForBlack(at: 6)
-  for t in 7...15 { play(.w, at: Double(t)) }
-  #expect(!asksForBlack(state))
-  play(.w, at: 16)
-  #expect(asksForBlack(state))
-  state.addLine(state.ensureRepertoire(.b), line("e4 c5"), .fixed(.book))
-  #expect(!asksForBlack(state))
 }
 
 /// More shows ten: five "Too short" when there are five, the rest by importance.

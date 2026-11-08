@@ -581,6 +581,7 @@ final class RunModel {
     let pending = store.state.settings.tips
     let moment: FirstGameMoment? =
       if fill != nil { .adding(ply: run.played.count) }
+      else if filledRep != nil && pending.contains(.keepPlaying) { .grown }
       else if filledRep != nil && pending.contains(.lineIn) { .lineIn }
       else if label == .book { .book }
       else if label == .out { .outOfBook }
@@ -590,11 +591,12 @@ final class RunModel {
     store.update { $0.settings.tips = found.rest }
   }
 
-  /// A tap on the tip, or your next move: out of the book, the lenses' tip follows.
+  /// A tap on the tip, or your next move: after the board's tip the prep bar's
+  /// follows, and out of the book the lenses'.
   func dismissTip() {
     let next = store.state.settings.tips.first
-    if tip == .outOfBook && next == .lens {
-      tip = .lens
+    if (tip == .keepPlaying && next == .lineIn) || (tip == .outOfBook && next == .lens) {
+      tip = next
       store.update { _ = $0.settings.tips.removeFirst() }
     } else {
       tip = nil

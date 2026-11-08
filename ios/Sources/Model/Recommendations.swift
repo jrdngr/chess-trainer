@@ -268,35 +268,15 @@ public let BASIC_RUN_AFTER = 2
 /// The Black basic a Play run fills before anything else, when the selection
 /// plays Black or either side: the answer to 1.e4 or 1.d4 still missing, the
 /// selected opening's own first move first. Waits until the last game added
-/// nothing, unless the player `asked` for it. Nil once both are answered.
-public func basicRunGap(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, asked: Bool = false) -> Gap? {
+/// nothing. Nil once both are answered.
+public func basicRunGap(_ state: AppState, _ tree: OpeningTree, _ selection: Selection) -> Gap? {
   guard colorsOf(selection.color).contains(.b) else { return nil }
-  guard asked || runsSinceAdded(state.games, state.repertoireList) >= BASIC_RUN_AFTER else { return nil }
+  guard runsSinceAdded(state.games, state.repertoireList) >= BASIC_RUN_AFTER else { return nil }
   let missing = basicGaps(state.repertoireList, tree.index).filter { $0.color == .b }
   let first = nodeById(tree, selection.opening).sans.first
   return missing.first { $0.hole.san == first } ?? missing.first
 }
 
-/// Play games as White, with no Black lines, before Home first asks about adding a Black opening.
-public let ASK_FOR_BLACK_AFTER = 5
-
-/// Whether Home asks to add a Black opening, back from a Play game: no Black
-/// lines yet, and enough Play games as White since it last showed. The wait
-/// doubles each time it shows: 5 games, then 10, 20, 40.
-public func asksForBlack(_ state: AppState) -> Bool {
-  if state.repertoireList.contains(where: { $0.color == .b && !$0.nodes.isEmpty }) { return false }
-  let since = state.settings.blackAskedAt
-  let wait = ASK_FOR_BLACK_AFTER << min(state.settings.blackAskedCount, 10)
-  return state.games.filter { $0.mode == .autopilot && $0.color == .w && $0.at > since }.count >= wait
-}
-
-extension AppState {
-  /// "Add a Black opening?" has shown: the next one waits twice as long.
-  public mutating func askedForBlack(at now: Double) {
-    settings.blackAskedAt = now
-    settings.blackAskedCount += 1
-  }
-}
 
 /// The run that fills a basic: from move one, steered along the gap's line.
 public func basicRound(_ tree: OpeningTree, _ gap: Gap) -> AutoRound {

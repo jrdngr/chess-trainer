@@ -18,8 +18,6 @@ struct HomeView: View {
   let onPlaybook: () -> Void
   @Environment(AppStore.self) private var store
   @State private var settings = false
-  /// "Add a Black opening?" is up.
-  @State private var askBlack = false
 
   var body: some View {
     ScrollView {
@@ -37,7 +35,7 @@ struct HomeView: View {
         .padding(.top, 2).padding(.bottom, 12)
         VStack(spacing: 0) {
           autopilot
-            .tip(tip, when: tip?.playStep != nil, inset: 8) { nextHomeTip(store) }
+            .tip(tip, when: tip == .play, inset: 8) { nextHomeTip(store) }
           PlayFooter()
         }
         .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface))
@@ -55,21 +53,6 @@ struct HomeView: View {
         .padding(.top, 10)
       }
       .padding(.horizontal, 16).padding(.bottom, 24)
-    }
-    // Only back from a Play game, never on opening the app, and paced by `asksForBlack`.
-    .onAppear {
-      guard store.backFromPlay else { return }
-      store.backFromPlay = false
-      guard asksForBlack(store.state) else { return }
-      store.update { $0.askedForBlack(at: Env.now()) }
-      askBlack = true
-    }
-    .alert("Add a Black opening?", isPresented: $askBlack) {
-      Button("Play as Black") {
-        store.blackNext = true
-        onOpen(.autopilot)
-      }
-      Button("Not now", role: .cancel) {}
     }
     // While a tip shows, a tap anywhere goes to the next one.
     .overlay {
@@ -215,9 +198,6 @@ struct AutopilotPlate: View {
 private struct PlayFooter: View {
   @Environment(AppStore.self) private var store
   @State private var picking: SelectionPicking?
-  /// The side button's width and its row's, to point a tip at the side or a half of the switch.
-  @State private var sideWidth: CGFloat = 62
-  @State private var rowWidth: CGFloat = 327
 
   var body: some View {
     let settings = store.state.settings
@@ -234,13 +214,10 @@ private struct PlayFooter: View {
           .contentShape(RoundedRectangle(cornerRadius: 12))
         }
         .accessibilityLabel("Side")
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { sideWidth = $0 }
         SegmentedControl(
           value: Binding(get: { settings.start }, set: { start in store.update { $0.settings.start = start } }),
           options: [(RunStart.freeform, "Freeform"), (RunStart.drill, "Drill")], track: Theme.background)
       }
-      .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { rowWidth = $0 }
-      .tip(tip, when: tip.map { [.freeform, .drill, .side].contains($0) } ?? false, arrowAt: arrowAt(tip)) { nextHomeTip(store) }
       Button { picking = .quick } label: {
         HStack(spacing: 8) {
           SelectionTrail(opening: settings.selection.opening).frame(maxWidth: .infinity, alignment: .leading)
@@ -255,18 +232,5 @@ private struct PlayFooter: View {
     .padding(8)
     .buttonStyle(.plain)
     .selectionSheets($picking)
-  }
-
-  /// Where along the side-and-switch row a tip points: the side button, or a half of the switch.
-  private func arrowAt(_ tip: FirstGameTip?) -> CGFloat {
-    guard rowWidth > 0 else { return 0.5 }
-    let switchStart = sideWidth + 8
-    let switchWidth = rowWidth - switchStart
-    let x: CGFloat = switch tip {
-    case .side: sideWidth / 2
-    case .freeform: switchStart + switchWidth / 4
-    default: switchStart + switchWidth * 3 / 4
-    }
-    return x / rowWidth
   }
 }

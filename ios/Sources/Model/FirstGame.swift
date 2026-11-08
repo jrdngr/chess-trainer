@@ -12,6 +12,8 @@ public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
   case firstMove
   /// Adding moves after the opponent's first reply.
   case reply
+  /// Moves added, the game going on: the board takes moves again.
+  case keepPlaying
   /// The moves just added, on the prep bar.
   case lineIn
   /// Past your line, still in the book.
@@ -20,18 +22,10 @@ public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
   case outOfBook
   /// The lenses, once out of the book.
   case lens
-  /// After the first game, on Home: the Freeform half of the start switch.
-  case freeform
-  /// Home: the Drill half of the start switch.
-  case drill
-  /// Home: the side button.
-  case side
-  /// Home: the opening row.
+  /// After the first game, on Home: the opening row.
   case opening
-  /// Home: the Play button, in three tips.
+  /// Home: the Play button.
   case play
-  case playSteers
-  case playGrows
   /// Home: the Playbook tab, last.
   case playbookTab
   /// The Playbook tab, the first time it opens: its + button.
@@ -45,20 +39,16 @@ public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
     switch self {
     case .firstMove: "Pick your first move. It goes in your Playbook."
     case .reply: "Black played a common response. Pick your next move."
+    case .keepPlaying: "Keep playing moves on the board."
     case .lineIn: "Every move is a flash card you get quizzed on while you play a real game."
     case .book: "Book moves played after your saved lines aren\u{2019}t graded."
     case .outOfBook: "Once you\u{2019}re out of the book, the game runs until you blunder."
     case .lens: "Hold a lens for hints."
-    case .freeform: "Freeform: every game starts from move 1."
-    case .drill: "Drill: games start at the spots in your lines that need practice."
-    case .side: "Pick your side: White, Black, or random."
     case .opening: "Pick the openings your opponent steers toward."
     case .play: "Play a game until you blunder."
-    case .playSteers: "Your opponent steers toward your openings."
-    case .playGrows: "As you get better, the game offers new moves to add to your lines."
     case .playbookTab: "Your openings live in the Playbook. Know what you want to play? Add it there yourself."
     case .playbookAdd: "Tap + to add openings you already know."
-    case .playbookMore: "Import your games, or play a line on the board."
+    case .playbookMore: "Import your games."
     case .playbookRow: "Tap an opening to see its lines and grow it."
     }
   }
@@ -67,17 +57,13 @@ public enum FirstGameTip: String, Sendable, Codable, CaseIterable {
   public var inGame: Bool { !FirstGameTip.home.contains(self) && !FirstGameTip.playbook.contains(self) }
 
   /// Home's tips, in the order they show after the first game.
-  public static let home: [FirstGameTip] = [.freeform, .drill, .side, .opening, .play, .playSteers, .playGrows, .playbookTab]
+  public static let home: [FirstGameTip] = [.opening, .play, .playbookTab]
 
   /// The Playbook tab's tips, in the order they show.
   public static let playbook: [FirstGameTip] = [.playbookAdd, .playbookMore, .playbookRow]
 
   /// Every tip after the first game's: a profile that skips the first game still gets these.
   public static let afterFirstGame: [FirstGameTip] = home + playbook
-
-  /// Which of the Play button's tips this is, from 0, of `playTips`.
-  public var playStep: Int? { FirstGameTip.playTips.firstIndex(of: self) }
-  public static let playTips: [FirstGameTip] = [.play, .playSteers, .playGrows]
 
   /// Saved tips, by name. "end" was Home's page on how Play works, now Home's
   /// tips; names this version doesn't know are dropped.
@@ -108,6 +94,8 @@ public func playbookTip(_ pending: [FirstGameTip], hasRows: Bool) -> FirstGameTi
 public enum FirstGameMoment: Sendable, Equatable {
   /// Adding moves; `ply` is how many moves have been played.
   case adding(ply: Int)
+  /// Moves just added, the game going on, before the prep bar's tip.
+  case grown
   /// The moves just added, the game going on.
   case lineIn
   case book
@@ -120,6 +108,7 @@ public enum FirstGameMoment: Sendable, Equatable {
 public func tipAt(_ pending: [FirstGameTip], _ moment: FirstGameMoment) -> (tip: FirstGameTip, rest: [FirstGameTip])? {
   let wanted: FirstGameTip = switch moment {
   case .adding(let ply): ply == 0 ? .firstMove : .reply
+  case .grown: .keepPlaying
   case .lineIn: .lineIn
   case .book: .book
   case .outOfBook: .outOfBook

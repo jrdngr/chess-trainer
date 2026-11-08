@@ -11,6 +11,10 @@ import Testing
   #expect(tipAt(first.rest, .adding(ply: 0)) == nil)
   let reply = try #require(tipAt(first.rest, .adding(ply: 2)))
   #expect(reply.tip == .reply)
+  // Moves added: the board's tip first, then the prep bar's.
+  let grown = try #require(tipAt(reply.rest, .grown))
+  #expect(grown.tip == .keepPlaying)
+  #expect(tipAt(grown.rest, .lineIn)?.tip == .lineIn)
   // A game that never stays in the book goes from the line straight out of it.
   let out = try #require(tipAt(reply.rest, .outOfBook))
   #expect(out.tip == .outOfBook)
@@ -49,10 +53,10 @@ import Testing
 /// When the first game ends, Home's tips are left to show, even if the game
 /// ended before its later tips; Home shows none while the game's are pending.
 @Test func firstGameEndLeavesHomeTips() {
-  let early = tipsAfterFirstGame([.lineIn, .book, .outOfBook, .lens] + FirstGameTip.afterFirstGame)
+  let early = tipsAfterFirstGame([.keepPlaying, .lineIn, .book, .outOfBook, .lens] + FirstGameTip.afterFirstGame)
   #expect(early == FirstGameTip.afterFirstGame)
-  #expect(homeTip(early) == .freeform)
-  #expect(homeTip(Array(early.dropFirst(4))) == .play)
+  #expect(homeTip(early) == .opening)
+  #expect(homeTip(Array(early.dropFirst())) == .play)
   #expect(homeTip(FirstGameTip.playbook) == nil)
   #expect(tipsAfterFirstGame([]) == [])
   #expect(homeTip([]) == nil)
@@ -66,7 +70,7 @@ import Testing
   #expect(FirstGameTip.decoded(["lens", "nope"]) == [.lens])
   let json = #"{"tips":["end"]}"#.data(using: .utf8)!
   let settings = try JSONDecoder().decode(Settings.self, from: json)
-  #expect(homeTip(settings.tips) == .freeform)
+  #expect(homeTip(settings.tips) == .opening)
 }
 
 /// The Playbook tab's tips show the first time it opens, Home's tips seen or

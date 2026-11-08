@@ -102,11 +102,7 @@ Black's basics come first. With Black or Random picked and no Black answer
 to 1.e4 or 1.d4, the next run is Black from move one: the opponent opens
 with that move and you add your answer before the game goes on. It waits
 until the last game added nothing, so two fills never come back to back:
-after the first game, the next one plays the White opening it grew. Back from a Play
-game, never on opening the app, Home asks whether to add a Black opening
-once five Play games as White have gone by with no Black lines; "Play as
-Black" starts that run whatever is picked. Each time it asks, the next
-time waits twice as long: 5 games, then 10, 20, 40.
+after the first game, the next one plays the White opening it grew.
 
 When a new move is due (see below), the next run steers toward the gap in the
 selection with the highest p × m² × g: the opponent follows that gap's line

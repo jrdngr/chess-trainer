@@ -142,7 +142,6 @@ struct RootView: View {
 
   /// Leaving a mode, from anywhere inside it, lands on Home.
   private func leave() {
-    if mode == .autopilot { store.backFromPlay = true }
     analyzing = nil
     mode = nil
     middlegameLine = nil

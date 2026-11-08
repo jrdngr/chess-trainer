@@ -56,9 +56,7 @@ struct AutopilotView: View {
     }
     let selection = store.takeRoundSelection()
     // Black with no answer to 1.e4 or 1.d4: this run fills it first.
-    let asked = store.blackNext
-    store.blackNext = false
-    if let gap = basicRunGap(store.state, tree, asked ? Selection(color: .b, opening: ANY_OPENING) : selection, asked: asked),
+    if let gap = basicRunGap(store.state, tree, selection),
       let run = RunModel(basic: gap, store: store, tree: tree, index: index, engine: Self.engine) {
       model = run
       run.start()

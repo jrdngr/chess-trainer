@@ -36,10 +36,6 @@ public struct Settings: Equatable, Sendable, Codable {
   public var drill = DEFAULT_DRILL
   /// How Play's runs start: from move one, or wherever your prep needs work.
   public var start = RunStart.drill
-  /// When "Add a Black opening?" last showed: Play games as White count again from here.
-  public var blackAskedAt: Double = 0
-  /// How many times "Add a Black opening?" has shown: each time doubles the wait.
-  public var blackAskedCount = 0
   public init() {}
 
   enum CodingKeys: String, CodingKey {
@@ -50,7 +46,6 @@ public struct Settings: Equatable, Sendable, Codable {
     case middlegame
     case drill
     case start
-    case blackAskedAt, blackAskedCount
   }
 
   /// A save missing a setting takes its default.
@@ -81,8 +76,6 @@ public struct Settings: Equatable, Sendable, Codable {
     middlegame = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .middlegame) ?? middlegame
     drill = try c.decodeIfPresent(SavedDrillPrefs.self, forKey: .drill)?.prefs ?? drill
     start = try c.decodeIfPresent(RunStart.self, forKey: .start) ?? start
-    blackAskedAt = try c.decodeIfPresent(Double.self, forKey: .blackAskedAt) ?? blackAskedAt
-    blackAskedCount = try c.decodeIfPresent(Int.self, forKey: .blackAskedCount) ?? blackAskedCount
   }
 }
 

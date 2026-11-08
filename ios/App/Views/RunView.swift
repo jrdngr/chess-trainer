@@ -78,6 +78,7 @@ struct RunView: View {
         }
       }
       .padding(.horizontal).padding(.top, 6)
+      .tip(model.tip, when: model.tip == .keepPlaying, inset: 16, onDismiss: model.dismissTip)
       .layoutPriority(1)
       .onTapGesture { if model.intro == .replay { model.skipIntro() } }
       dock.padding(.horizontal).frame(maxHeight: .infinity, alignment: .top)
