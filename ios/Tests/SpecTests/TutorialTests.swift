@@ -198,3 +198,14 @@ private func playThrough(_ game: TutorialGame) -> (played: [String], line: [Stri
   #expect(old.tips == TutorialTip.afterGames + [.lens])
   #expect(old.tutorial == nil)
 }
+
+/// The first game says your line is done on your first move past it, and
+/// explains the ✓ only on the move after, once one has shown.
+@Test func lineDoneThenCheckMark() throws {
+  let tips = try #require(tutorialGame(1, RECOMMENDED_OPENINGS)).tips
+  let rest = Array(tips.drop { $0 != .lineDone })
+  #expect(tutorialTip(rest, [.pastLine]) == .lineDone)
+  let afterLineDone = Array(rest.dropFirst())
+  #expect(tutorialTip(afterLineDone, [.pastLine]) == nil)
+  #expect(tutorialTip(afterLineDone, [.pastCommon]) == .checkMark)
+}

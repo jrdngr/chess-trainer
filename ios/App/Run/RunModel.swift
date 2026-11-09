@@ -105,6 +105,10 @@ final class RunModel {
   private var picker: () -> Double
   /// When your turn began: the clock counts from here.
   private(set) var turnStarted = Date()
+  /// When the app left the screen; time away doesn't count against your move.
+  private var awaySince: Date?
+  /// Counts popups, so each one floats up once however the board changes under it.
+  private(set) var popCount = 0
   private var tasks: [Task<Void, Never>] = []
   /// What a clean end of prep grows with.
   private let growth: GrowthPrefs
@@ -637,7 +641,9 @@ final class RunModel {
       tutorialJustGrown = false
     }
     if tutorialScored > 0 { now.insert(.scored) }
-    if fill == nil && played.count >= tutorialLine.count && ownPast(game.color, played, tutorialLine) == 0 { now.insert(.pastLine) }
+    if fill == nil && played.count >= tutorialLine.count {
+      now.insert(ownPast(game.color, played, tutorialLine) == 0 ? .pastLine : .pastCommon)
+    }
     if played.count < tutorialLine.count {
       let own = played.indices.filter { ($0 % 2 == 0) == (game.color == .w) }.count
       now.insert(own == 0 ? .start : .moved)
@@ -668,6 +674,18 @@ final class RunModel {
     tutorialJustGrown = tutorialGame != nil
     justAdded = nil
     advance()
+  }
+
+  /// The app went to the background or the screen locked: the clock stops.
+  func appLeft() {
+    if awaySince == nil { awaySince = Date() }
+  }
+
+  /// Back on screen: the clock goes on from where it stopped.
+  func appReturned() {
+    guard let away = awaySince else { return }
+    awaySince = nil
+    turnStarted += Date().timeIntervalSince(away)
   }
 
   /// You ended the round.
@@ -796,6 +814,7 @@ final class RunModel {
 
   private func show(pop p: Pop) {
     pop = p
+    popCount += 1
     later(Self.scoreMs) { model in
       if model.pop == p { model.pop = nil }
     }

@@ -186,8 +186,9 @@ struct QuickPicker: View {
               openingTile(opening.node.id, opening.side, shortLabel(opening.name), chosen: chosen(opening, selection)) {
                 choose(opening.node.id, opening.side)
               }
-              // The tutorial's step after its fourth game: pick the answer to 1.d4.
-              .tip(text: d4Step && opening.side == .b && opening.node.sans.first == "d4" ? D4_ROW_TIP : nil)
+              // The tutorial's step after its fourth game: pick the answer to 1.d4. Above the
+              // row, pointing down, so the rows and sections after it can't cover it.
+              .tip(text: d4Step && opening.side == .b && opening.node.sans.first == "d4" ? D4_ROW_TIP : nil, arrow: .down)
             }
           }
           if mine.count > Self.openingsShown {

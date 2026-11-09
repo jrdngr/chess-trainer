@@ -22,6 +22,7 @@ struct RunView: View {
   /// Counts refused moves in a forced game: each one shakes the board.
   @State private var shakes = 0
   @Environment(Toasts.self) private var toasts
+  @Environment(\.scenePhase) private var scenePhase
 
   /// A Middlegame run, not Play's round.
   var survival: Bool { model.round == nil }
@@ -43,6 +44,10 @@ struct RunView: View {
     }
     .contentShape(Rectangle())
     .onTapGesture { if model.intro == .announce { model.toBoard() } }
+    // Your move's time stops while the app is in the background or the screen is locked.
+    .onChange(of: scenePhase) {
+      if scenePhase == .active { model.appReturned() } else { model.appLeft() }
+    }
   }
 
   private var board: some View {
@@ -51,8 +56,8 @@ struct RunView: View {
         SurvivalRunBar(model: model, onExit: close)
       } else {
         header
-          .tip(model.tip, when: model.tip == .prepBar, inset: 16, onDismiss: model.dismissTip)
-          .tip(model.tip, when: model.tip == .endFree || model.tip == .endRun, arrowAt: 0.08, inset: 16, onDismiss: model.dismissTip)
+          // One tip modifier per view: a second one's layering would lose to the first's.
+          .tip(model.tip, when: Self.headerTips.contains(model.tip), arrowAt: headerArrowAt, inset: 16, onDismiss: model.dismissTip)
       }
       // The Eval lens's bar takes the captured row's place, so the board never moves.
       // While adding moves Growth's eval bar takes the row, with the engine's word on the answers.
@@ -69,7 +74,7 @@ struct RunView: View {
       BoardView(
         fen: model.shownFen, orientation: model.run.color,
         interactive: model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil && model.flash == nil && !model.endCued,
-        lastMove: model.held ? lastMoveOf(Array(model.introPath.prefix(model.introPly))) : lastMove, highlights: highlights, arrows: arrows, glow: model.glow, pop: model.pop,
+        lastMove: model.held ? lastMoveOf(Array(model.introPath.prefix(model.introPly))) : lastMove, highlights: highlights, arrows: arrows, glow: model.glow, pop: model.pop, popId: model.popCount,
         marks: marks, allowed: model.fill == nil ? model.expected.map { [$0] } : model.fillChoices.map(\.san),
         onMove: model.play, onRefused: refused
       )
@@ -105,7 +110,12 @@ struct RunView: View {
   }
 
   /// The tutorial's tips hung from the board.
-  private static let boardTips: Set<TutorialTip?> = [.flashCards, .lineDone, .saved, .keepPlaying, .scores]
+  private static let boardTips: Set<TutorialTip?> = [.flashCards, .checkMark, .saved, .keepPlaying, .scores]
+
+  /// The tutorial's tips hung from the header: at the prep bar, or at the X for the end of a game.
+  private static let headerTips: Set<TutorialTip?> = [.prepBar, .lineDone, .endFree, .endRun]
+
+  private var headerArrowAt: CGFloat { model.tip == .endFree || model.tip == .endRun ? 0.08 : 0.5 }
 
   /// A move the board won't take in a tutorial game: growth says which it wants, a forced move shakes the board.
   private func refused() {
@@ -215,7 +225,9 @@ struct RunView: View {
         }
       }
       // Gives way before the board does: what doesn't fit is cut, never pushed up, and can't take a touch outside it.
-      .frame(minHeight: 0, maxHeight: .infinity, alignment: .top).clipped().contentShape(Rectangle())
+      // A blunder's tip hangs above its name, over the lenses, so nothing is cut then.
+      .frame(minHeight: 0, maxHeight: .infinity, alignment: .top)
+      .clipShape(Rectangle().inset(by: model.blunder != nil ? -200 : 0)).contentShape(Rectangle())
       footer.padding(.top, 10).padding(.bottom, 8).opacity(model.blunder == nil ? 1 : 0)
     }
     // The plan when the lenses wake is the one the player starts with; a tap on Plan sees the one up now.
@@ -344,7 +356,9 @@ struct RunView: View {
         Text(endingTitle(model.session.ending!, model.run.played.count)).font(.system(size: 19, weight: .heavy)).tracking(-0.19)
       }
       .foregroundStyle(Theme.bad).padding(.vertical, 6)
-      .tip(model.tip, when: model.tip == .blunder, inset: 16, onDismiss: model.dismissTip)
+      .frame(maxWidth: .infinity)
+      // Above the blunder's name, clear of the buttons under it.
+      .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
       HStack(spacing: 8) {
         if let onAnalyze {
           Button {

@@ -21,6 +21,8 @@ struct BoardView: View {
   var arrows: [BoardArrow] = []
   var glow: Glow?
   var pop: Pop?
+  /// Which popup `pop` is: a new one floats up, the same one doesn't start over when the board moves.
+  var popId = 0
   /// Nil follows the setting.
   var coordinates: Bool?
   @Environment(\.boardLook) private var look
@@ -86,7 +88,7 @@ struct BoardView: View {
         if let pop {
           PopView(pop: pop)
             .modifier(MoveScoreFloat())
-            .id("\(pop.square)\(pop.text)\(fen)")
+            .id(popId)
             .position(x: (CGFloat(position(pop.square).col) + 0.5) * cell, y: (CGFloat(position(pop.square).row) + 0.1) * cell)
             .allowsHitTesting(false)
         }

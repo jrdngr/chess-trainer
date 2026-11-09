@@ -58,13 +58,20 @@ extension View {
   }
 
   /// A tip with its own text, hung the same way; none while `text` is nil.
-  func tip(text: String?, arrow: TipBubble.Arrow = .up, arrowAt: CGFloat = 0.5, inset: CGFloat = 0, onDismiss: @escaping () -> Void = {}) -> some View {
+  /// On a view narrower than `minWidth` the tip keeps that width, running
+  /// right from the view's leading edge; `arrowAt` is then along the tip.
+  /// Use one per view: a second's `zIndex` loses to the first's.
+  func tip(
+    text: String?, arrow: TipBubble.Arrow = .up, arrowAt: CGFloat = 0.5, inset: CGFloat = 0, minWidth: CGFloat = 0,
+    onDismiss: @escaping () -> Void = {}
+  ) -> some View {
     overlay(alignment: arrow == .up ? .bottom : .top) {
       if let text {
-        Color.clear.frame(height: 0).overlay(alignment: arrow == .up ? .top : .bottom) {
+        Color.clear.frame(height: 0).overlay(alignment: arrow == .up ? .topLeading : .bottomLeading) {
           TipBubble(
             text: text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
             .fixedSize(horizontal: false, vertical: true)
+            .frame(minWidth: minWidth)
             .padding(arrow == .up ? .top : .bottom, 12).padding(.horizontal, inset)
         }
       }

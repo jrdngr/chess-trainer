@@ -36,8 +36,9 @@ struct InlineFillPanel: View {
           .frame(maxWidth: .infinity, alignment: .trailing)
       }
       .zIndex(1)
-      .tip(model.tip, when: model.tip == .extendLines, onDismiss: model.dismissTip)
-      .tip(model.tip, when: model.tip == .doneButton, arrowAt: 0.9, onDismiss: model.dismissTip)
+      .tip(
+        model.tip, when: model.tip == .extendLines || model.tip == .doneButton, arrowAt: model.tip == .doneButton ? 0.9 : 0.5,
+        onDismiss: model.dismissTip)
       if !ranked.isEmpty {
         HStack(spacing: 10) {
           Text("Answer it")

@@ -201,7 +201,7 @@ struct AutopilotPlate: View {
           .accessibilityHidden(true)
       }
       .padding(.leading, 18).padding(.trailing, 12).padding(.vertical, 12)
-      .background(LinearGradient(colors: [Theme.accent.opacity(0.22), Theme.accent.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
+      .background(LinearGradient(colors: [Theme.accent.opacity(0.36), Theme.accent.opacity(0.16)], startPoint: .topLeading, endPoint: .bottomTrailing))
       .clipShape(UnevenRoundedRectangle(
         topLeadingRadius: 20, bottomLeadingRadius: attached ? 0 : 20, bottomTrailingRadius: attached ? 0 : 20, topTrailingRadius: 20))
       PrepSegmentsView(span: span, height: 4).padding(.horizontal, 18).padding(.top, attached ? 0 : 8)
@@ -239,7 +239,8 @@ private struct PlayFooter: View {
         }
         .accessibilityLabel("Side")
         .disabled(locked && step?.step != .side).opacity(locked && step?.step != .side ? 0.35 : 1)
-        .tip(text: step?.step == .side ? step?.tip : nil, arrowAt: 0.1)
+        // The side button is narrow: the tip keeps a readable width, its arrow at the button.
+        .tip(text: step?.step == .side ? step?.tip : nil, arrowAt: 0.13, minWidth: 240)
         SegmentedControl(
           value: Binding(get: { settings.start }, set: { start in store.update { $0.settings.start = start } }),
           options: [(RunStart.freeform, "Freeform"), (RunStart.drill, "Drill")], track: Theme.background)

@@ -163,7 +163,7 @@ public func tutorialGame(_ n: Int, _ openings: TutorialOpenings) -> TutorialGame
   switch n {
   case 1:
     TutorialGame(number: 1, color: .w, opening: openings.white, forced: true, pastMoves: 3,
-                 tips: [.flashCards, .prepBar, .lineDone, .endFree])
+                 tips: [.flashCards, .prepBar, .lineDone, .checkMark, .endFree])
   case 2:
     TutorialGame(number: 2, color: .w, opening: openings.white, growth: 2, oneOption: true, forced: true, pastMoves: 3,
                  tips: [.extendLines, .answerRow, .doneButton, .saved, .endRun])
@@ -260,6 +260,8 @@ public enum TutorialMoment: Sendable, Hashable {
   case moved
   /// Your first move past your line.
   case pastLine
+  /// Your next move, once your first move past your line has shown its \u{2713}.
+  case pastCommon
   case growthOpen
   case growthEnded
   /// A move of yours was scored.
@@ -271,7 +273,7 @@ public enum TutorialMoment: Sendable, Hashable {
 
 /// The tutorial's tips: in its games, then the Playbook tab's at its end.
 public enum TutorialTip: String, Sendable, Codable, CaseIterable {
-  case flashCards, prepBar, lineDone, endFree
+  case flashCards, prepBar, lineDone, checkMark, endFree
   case extendLines, answerRow, doneButton, saved, endRun
   case scores, lens, blunder
   case pickAny, keepPlaying
@@ -282,13 +284,15 @@ public enum TutorialTip: String, Sendable, Codable, CaseIterable {
 
   public var text: String {
     switch self {
-    case .flashCards: "Your moves are flash cards. Play the move shown. You\u{2019}re graded on correctness and speed."
+    case .flashCards:
+      "Chess Playbook turns your openings into flashcards. You\u{2019}re graded on correctness and speed. We\u{2019}ll tell you which moves to play for this part of the tutorial."
     case .prepBar: "The prep bar fills as you play your line."
-    case .lineDone: "Your line is done. A \u{2713} means you\u{2019}re still playing common moves."
-    case .endFree: "Ending a game after your opening costs you nothing."
+    case .lineDone: "Your line is done."
+    case .checkMark: "A \u{2713} means you\u{2019}re still playing common moves."
+    case .endFree: "There\u{2019}s no penalty for ending a game after you\u{2019}ve finished your prepped moves."
     case .extendLines: "Extend the lines in your Playbook as you master them."
     case .answerRow: "Tap the answer or play it on the board."
-    case .doneButton: "We\u{2019}ll suggest a few moves at a time. Tap Done to stop adding new moves."
+    case .doneButton: "We\u{2019}ll suggest a few moves at a time. Tap Done to stop adding new moves early."
     case .saved: "Your new moves are saved. Keep playing on the board."
     case .endRun: "End the run."
     case .scores: "Outside of your lines, each move gets a score telling you how good (or bad) it was."
@@ -309,6 +313,7 @@ public enum TutorialTip: String, Sendable, Codable, CaseIterable {
     case .flashCards: .start
     case .prepBar: .moved
     case .lineDone: .pastLine
+    case .checkMark: .pastCommon
     case .endFree, .endRun: .endCue
     case .extendLines, .pickAny: .growthOpen
     case .saved, .keepPlaying: .growthEnded
