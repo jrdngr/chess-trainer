@@ -28,8 +28,8 @@ func prepStatusText(_ label: PrepLabel) -> (text: String, color: SwiftUIColor) {
   case .on: return ("On prep", Theme.warn)
   case .complete: return ("Prep complete", Theme.good)
   case .off: return ("Off prep", Theme.bad)
-  case .book: return ("In the book", Theme.book)
-  case .out: return ("Out of book", Theme.text2)
+  // Past your line the common moves aren't called out: the line is simply done.
+  case .book, .out: return ("Prep complete", Theme.good)
   case .middlegame: return ("Middlegame", PlanColors.plan)
   }
 }

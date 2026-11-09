@@ -135,8 +135,14 @@ struct PlaybookView: View {
             .padding(.horizontal, 16).padding(.top, 18).padding(.bottom, 6)
             ListCard {
               ForEach(rows, id: \.id) { row in
-                PlaybookRowView(tree: tree, row: row, extensions: extCount[row.id] ?? 0) {
-                  page = .opening(repId: rep.id, name: row.name)
+                SwipeToRemove {
+                  store.update { state in
+                    for part in row.parts { state.removeOpening(rep.id, part.rootId) }
+                  }
+                } content: {
+                  PlaybookRowView(tree: tree, row: row, extensions: extCount[row.id] ?? 0) {
+                    page = .opening(repId: rep.id, name: row.name)
+                  }
                 }
               }
             }
@@ -164,7 +170,7 @@ struct PlaybookView: View {
         .padding(.horizontal, 16).padding(.bottom, 28)
       }
     }
-    // While a tip shows, a tap anywhere goes to the next one.
+    // While a tip shows, a tap anywhere goes to the next one, and nothing else takes a touch.
     .overlay {
       if tip != nil {
         SwiftUI.Color.black.opacity(0.001).contentShape(Rectangle())
@@ -181,7 +187,7 @@ struct PlaybookView: View {
   }
 
   /// Where along the app bar a tip points: its + button, or the more menu left of it.
-  private func barArrowAt(_ tip: FirstGameTip?) -> CGFloat {
+  private func barArrowAt(_ tip: TutorialTip?) -> CGFloat {
     // The bar's 20pt sides, 38pt buttons 8pt apart; the tip spans the bar less 16pt each side.
     let plus = barWidth - 20 - 19
     let x = tip == .playbookMore ? plus - 46 : plus
@@ -282,5 +288,44 @@ struct PlaybookPills: View {
       }
       Spacer(minLength: 0)
     }
+  }
+}
+
+/// A row that swipes left to show Remove.
+struct SwipeToRemove<Content: View>: View {
+  let onRemove: () -> Void
+  @ViewBuilder var content: Content
+  @State private var offset: CGFloat = 0
+  @State private var start: CGFloat = 0
+  private let width: CGFloat = 92
+
+  var body: some View {
+    ZStack(alignment: .trailing) {
+      if offset < 0 {
+        Button {
+          withAnimation(.snappy) { offset = 0 }
+          onRemove()
+        } label: {
+          Text("Remove").font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
+            .frame(width: width).frame(maxHeight: .infinity).background(Theme.bad)
+        }
+        .buttonStyle(.plain)
+      }
+      content
+        .background(Theme.surface)
+        .offset(x: offset)
+        .simultaneousGesture(
+          DragGesture(minimumDistance: 16)
+            .onChanged { drag in
+              guard abs(drag.translation.width) > abs(drag.translation.height) else { return }
+              offset = min(0, max(-width * 1.3, start + drag.translation.width))
+            }
+            .onEnded { _ in
+              withAnimation(.snappy) { offset = offset < -width / 2 ? -width : 0 }
+              start = offset
+            })
+    }
+    .clipped()
+    .accessibilityAction(named: "Remove", onRemove)
   }
 }

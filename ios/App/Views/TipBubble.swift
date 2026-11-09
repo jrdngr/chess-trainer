@@ -1,7 +1,7 @@
 import Model
 import SwiftUI
 
-/// One of the first game's tips: white, with an arrow at what it explains.
+/// One of the tutorial's tips: white, with an arrow at what it explains.
 /// A tap puts it away.
 struct TipBubble: View {
   enum Arrow { case up, down }
@@ -53,25 +53,30 @@ extension View {
   /// A tip hung under this view (or over it, for an arrow pointing down), drawn
   /// over what follows without moving it. It hangs from a line of no height at
   /// the view's edge, so it clears the view whatever its own height.
-  func tip(_ tip: FirstGameTip?, when shown: Bool, arrow: TipBubble.Arrow = .up, arrowAt: CGFloat = 0.5, inset: CGFloat = 0, onDismiss: @escaping () -> Void) -> some View {
+  func tip(_ tip: TutorialTip?, when shown: Bool, arrow: TipBubble.Arrow = .up, arrowAt: CGFloat = 0.5, inset: CGFloat = 0, onDismiss: @escaping () -> Void) -> some View {
+    self.tip(text: shown ? tip?.text : nil, arrow: arrow, arrowAt: arrowAt, inset: inset, onDismiss: onDismiss)
+  }
+
+  /// A tip with its own text, hung the same way; none while `text` is nil.
+  func tip(text: String?, arrow: TipBubble.Arrow = .up, arrowAt: CGFloat = 0.5, inset: CGFloat = 0, onDismiss: @escaping () -> Void = {}) -> some View {
     overlay(alignment: arrow == .up ? .bottom : .top) {
-      if shown, let tip {
+      if let text {
         Color.clear.frame(height: 0).overlay(alignment: arrow == .up ? .top : .bottom) {
           TipBubble(
-            text: tip.text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
+            text: text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
             .fixedSize(horizontal: false, vertical: true)
             .padding(arrow == .up ? .top : .bottom, 12).padding(.horizontal, inset)
         }
       }
     }
-    .zIndex(shown && tip != nil ? 2 : 0)
+    .zIndex(text != nil ? 2 : 0)
   }
 }
 
-/// A tip after the first game put away for good, so the next one shows.
-@MainActor func dismissTip(_ store: AppStore, _ tip: FirstGameTip?) {
+/// A tip off the board put away for good, so the next one shows.
+@MainActor func dismissTip(_ store: AppStore, _ tip: TutorialTip?) {
   guard let tip else { return }
   withAnimation(.easeOut(duration: 0.15)) {
-    store.update { $0.settings.tips.removeAll { $0 == tip } }
+    store.update { $0.settings.putAway(tip) }
   }
 }

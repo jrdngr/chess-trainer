@@ -29,6 +29,9 @@ struct RootView: View {
   @State private var growing: GrowthModel?
   /// A line from the opening sheet for Middlegame mode to play out.
   @State private var middlegameLine: MiddlegameLine?
+  /// Onboarding: the tutorial skipped for adding openings, or its openings being chosen.
+  @State private var skippedTutorial = false
+  @State private var choosingOpenings = false
 
   var body: some View {
     ZStack {
@@ -49,24 +52,19 @@ struct RootView: View {
   }
 
   @ViewBuilder private func content(_ tree: OpeningTree, _ index: ReferenceIndex) -> some View {
-    if !store.state.settings.seenIntro || !store.state.settings.onboarded {
-      // The welcome, then a first game with tips, or Skip to Home.
-      WelcomeView(onTutorial: {
-        store.update {
-          $0.settings.seenIntro = true
-          $0.settings.onboarded = true
-          $0.settings.tips = FirstGameTip.allCases
-        }
-        tab = .home
-        mode = .autopilot
-      }, onSkip: {
-        store.update {
-          $0.settings.seenIntro = true
-          $0.settings.onboarded = true
-          $0.settings.tips = FirstGameTip.afterFirstGame
-        }
-        tab = .home
-      })
+    if !store.state.settings.seenIntro {
+      WelcomeView { store.update { $0.settings.seenIntro = true } }
+    } else if !store.state.settings.onboarded {
+      // Which openings the tutorial plays; Skip leaves it out for adding openings.
+      if skippedTutorial {
+        OnboardingView(tree: tree, index: index, onClose: { finishSkip(nil) }) { finishSkip($0) }
+      } else if choosingOpenings {
+        ChooseOpeningsView(onBack: { choosingOpenings = false }) { startTutorial(tree, $0) }
+      } else {
+        YourOpeningsView(
+          onRecommend: { startTutorial(tree, RECOMMENDED_OPENINGS) }, onChoose: { choosingOpenings = true },
+          onSkip: { skippedTutorial = true })
+      }
     } else if importing {
       ImportView(onBack: { importing = false })
     } else if let growing {
@@ -138,6 +136,28 @@ struct RootView: View {
         tree: tree, index: index, exact: middlegameLine, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) },
         straight: !setupFirst)
     }
+  }
+
+  /// The tutorial's openings go in, and its first game starts.
+  private func startTutorial(_ tree: OpeningTree, _ openings: TutorialOpenings) {
+    store.update {
+      $0.onboarded(tree, openings.seeds)
+      $0.settings.startTutorial(openings)
+    }
+    tab = .home
+    setupFirst = false
+    mode = .autopilot
+  }
+
+  /// The tutorial skipped from its first question: adding openings, then Home with the Playbook's tips.
+  private func finishSkip(_ next: OnboardingNext?) {
+    store.update {
+      $0.settings.onboarded = true
+      $0.settings.skipTutorial()
+    }
+    skippedTutorial = false
+    tab = .home
+    if next == .autopilot { mode = .autopilot }
   }
 
   /// Leaving a mode, from anywhere inside it, lands on Home.

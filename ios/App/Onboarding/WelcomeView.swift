@@ -2,10 +2,9 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// The first screen a new profile sees: what the app is, then a first game with tips, or Skip.
+/// The first screen a new profile sees: what the app is, then Get started.
 struct WelcomeView: View {
-  let onTutorial: () -> Void
-  let onSkip: () -> Void
+  let onStart: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
@@ -19,14 +18,13 @@ struct WelcomeView: View {
       Text("Flash cards you play").font(.system(size: 30, weight: .heavy)).tracking(-0.9).foregroundStyle(Theme.text)
         .padding(.top, 24)
       VStack(alignment: .leading, spacing: 16) {
-        WelcomePoint(glyph: "\u{265E}", text: "A game for learning chess openings.")
+        WelcomePoint(glyph: "\u{265E}", text: "Learn and drill chess openings.")
         WelcomePoint(glyph: "\u{265F}\u{FE0E}", text: "Your openings are the cards.")
-        WelcomePoint(glyph: "\u{265A}", text: "Each one is a real game until you blunder.")
+        WelcomePoint(glyph: "\u{265A}", text: "Play until you blunder.")
       }
       .padding(.top, 22)
       Spacer(minLength: 0)
-      BigButton(label: "Play the tutorial", action: onTutorial)
-      SkipButton(label: "Skip", action: onSkip).frame(maxWidth: .infinity).padding(.top, 6).padding(.bottom, 8)
+      BigButton(label: "Get started", action: onStart).padding(.bottom, 16)
     }
     .padding(.horizontal, 20)
     .background(Theme.background.ignoresSafeArea())

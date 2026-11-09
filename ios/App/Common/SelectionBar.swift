@@ -186,6 +186,8 @@ struct QuickPicker: View {
               openingTile(opening.node.id, opening.side, shortLabel(opening.name), chosen: chosen(opening, selection)) {
                 choose(opening.node.id, opening.side)
               }
+              // The tutorial's step after its fourth game: pick the answer to 1.d4.
+              .tip(text: d4Step && opening.side == .b && opening.node.sans.first == "d4" ? D4_ROW_TIP : nil)
             }
           }
           if mine.count > Self.openingsShown {
@@ -239,6 +241,9 @@ struct QuickPicker: View {
       .padding(20)
     }
   }
+
+  /// The tutorial's step after its fourth game.
+  private var d4Step: Bool { store.state.settings.tutorial?.played == 4 }
 
   /// One of your openings is chosen when the selection is its node, from its side.
   private func chosen(_ opening: YourOpening, _ selection: Selection) -> Bool {

@@ -239,12 +239,14 @@ struct EndView: View {
     let label = { (ply: Int) in ply % 2 == 0 ? "\(ply / 2 + 1)." : nil }
     let mine = { (ply: Int) in (ply % 2 == 0) == (run.color == .w) }
     let missed = Set(finish.ended.misses.map(\.ply))
+    // Common moves are marked from where your line ended.
+    let common = store.index.map { commonPlies($0, run.played, from: model.session.prepEnd?.count ?? finish.ended.misses.first?.ply ?? last) } ?? []
     var items = run.played.enumerated().map { ply, san in
       StripItem(
         san: san, label: label(ply),
         tone: ply < run.opened ? .ghost : missed.contains(ply) ? .bad : mine(ply) ? .mine : .theirs,
         current: missed.contains(ply) ? cursor == ply : cursor == ply + 1 && !missed.contains(cursor) && !onBlunder,
-        seek: missed.contains(ply) ? ply : ply + 1)
+        seek: missed.contains(ply) ? ply : ply + 1, common: common.contains(ply))
     }
     if let blunder {
       items.append(StripItem(san: blunder.played, label: label(last), tone: .bad, current: onBlunder, seek: last))
@@ -317,7 +319,7 @@ struct EndView: View {
       Text(endingTitle(finish.how, state.run.played.count)).font(.subheadline).foregroundStyle(isBad ? Theme.bad : Theme.text2)
       Text("\(state.extras.points) point\(state.extras.points == 1 ? "" : "s")").font(.largeTitle.bold()).foregroundStyle(Theme.text)
       Text("Survived \(state.moves) move\(state.moves == 1 ? "" : "s")").font(.subheadline).foregroundStyle(Theme.text)
-      if let prep = prepSummary(model.session.answers.filter(\.correct).count, model.session.answers.count, model.session.prepTimes, model.session.bookMoves) {
+      if let prep = prepSummary(model.session.answers.filter(\.correct).count, model.session.answers.count, model.session.prepTimes) {
         Text(prep).font(.footnote).foregroundStyle(Theme.text2)
       }
       if !state.misses.isEmpty {

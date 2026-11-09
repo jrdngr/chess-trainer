@@ -35,6 +35,9 @@ struct InlineFillPanel: View {
           .buttonStyle(PlayButtonStyle(height: 38, radius: 11, font: 14)).fixedSize()
           .frame(maxWidth: .infinity, alignment: .trailing)
       }
+      .zIndex(1)
+      .tip(model.tip, when: model.tip == .extendLines, onDismiss: model.dismissTip)
+      .tip(model.tip, when: model.tip == .doneButton, arrowAt: 0.9, onDismiss: model.dismissTip)
       if !ranked.isEmpty {
         HStack(spacing: 10) {
           Text("Answer it")
@@ -59,7 +62,7 @@ struct InlineFillPanel: View {
           }
         }
         .tip(
-          model.tip, when: model.tip == .firstMove || model.tip == .reply, arrow: .down, arrowAt: 0.12,
+          model.tip, when: model.tip == .answerRow || model.tip == .pickAny, arrow: .down, arrowAt: 0.12,
           onDismiss: model.dismissTip)
       }
     }

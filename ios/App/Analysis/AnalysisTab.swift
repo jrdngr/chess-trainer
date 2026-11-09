@@ -122,8 +122,11 @@ struct AnalysisTab: View {
 
   /// The line's moves, with a prompt before the first.
   private var strip: some View {
+    let common = commonPlies(index, sans)
     let items = sans.enumerated().map { i, san in
-      StripItem(san: san, label: i % 2 == 0 ? "\(i / 2 + 1)." : nil, tone: i >= cursor ? .ghost : nil, current: i == cursor - 1, seek: i + 1)
+      StripItem(
+        san: san, label: i % 2 == 0 ? "\(i / 2 + 1)." : nil, tone: i >= cursor ? .ghost : nil, current: i == cursor - 1, seek: i + 1,
+        common: common.contains(i))
     }
     return MoveStrip(items: items, cursor: cursor, max: sans.count) { cursor = max(0, min(sans.count, $0)) }
       .overlay(alignment: .leading) {

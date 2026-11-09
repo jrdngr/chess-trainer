@@ -18,12 +18,16 @@ import Model
   var nudgePrefs: NudgePrefs { get }
   var minShare: Double { get }
   var tonedMemo: Memo<[NudgedMove]> { get }
+  /// The one answer offered, where only one is: the tutorial's.
+  var onlyAnswer: String? { get }
 }
 
 /// The answers a hole offers: the book's
 /// (or the engine's past it), a familiar move pulled in from further down,
 /// coloured toward your patterns, ranked, and given the arrows' roles.
 extension HoleAnswers {
+  var onlyAnswer: String? { nil }
+
   /// The moves offered here; nil past the book while the engine works them out.
   func choices(at fen: String) -> [Reply]? {
     _ = GrowthEngine.shared.version
@@ -99,12 +103,16 @@ extension HoleAnswers {
   /// The answers as strong players rank them, the engine settling ties.
   var ranked: [Reply] {
     let evals = evals
-    return byShare(listed, san: \.san, share: { $0.share }, { delta($0, evals) })
+    let all = byShare(listed, san: \.san, share: { $0.share }, { delta($0, evals) })
+    guard let only = onlyAnswer else { return all }
+    let reply = all.first { $0.san == only } ?? popularReplies(index, holeFen, 0).first { $0.san == only }
+    return [reply ?? Reply(san: only, games: 0, white: 0, draw: 0, black: 0, share: 0)]
   }
 
   /// Who recommends what: strong players' top reply, the engine's best two.
   var roles: [RoleArrow] {
     let evals = evals
-    return roleArrows(holeFen, listed.map { ListedAnswer(san: $0.san, share: $0.share) }, { delta($0, evals) })
+    let shown = onlyAnswer.map { only in listed.filter { $0.san == only } } ?? listed
+    return roleArrows(holeFen, shown.map { ListedAnswer(san: $0.san, share: $0.share) }, { delta($0, evals) })
   }
 }

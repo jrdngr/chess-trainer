@@ -31,6 +31,8 @@ struct BoardView: View {
   /// Only these moves, by SAN, may be played: Growth's answers at a hole.
   var allowed: [String]? = nil
   var onMove: (LegalMove) -> Void
+  /// A legal move `allowed` held back.
+  var onRefused: (() -> Void)? = nil
 
   @State private var selected: String?
   @State private var tracker = PieceTracker()
@@ -153,6 +155,11 @@ struct BoardView: View {
       if let move = moves.first(where: { $0.promotion == nil || $0.promotion == .q }) {
         selected = nil
         onMove(move)
+        return
+      }
+      if allowed != nil, legalMoves(fen).contains(where: { $0.from == from && $0.to == square }) {
+        selected = nil
+        onRefused?()
         return
       }
     }
@@ -326,9 +333,11 @@ struct PopView: View {
   private func plain(_ tone: SwiftUI.Color) -> some View {
     HStack(spacing: 3) {
       if pop.found { Text("\u{2713}").foregroundStyle(pop.book ? Theme.book : pop.ext ? Theme.ext : tone) }
-      if pop.book { Text("Book").foregroundStyle(Theme.book) }
-      if pop.ext { Text("Ext").foregroundStyle(Theme.ext) }
-      Text(pop.text).foregroundStyle(tone)
+      // A common move past your line gets only its quiet tick: no time, no word.
+      if !pop.book {
+        if pop.ext { Text("Ext").foregroundStyle(Theme.ext) }
+        Text(pop.text).foregroundStyle(tone)
+      }
     }
     .font(.system(size: 13, weight: .bold).monospacedDigit())
     .padding(.horizontal, 6)

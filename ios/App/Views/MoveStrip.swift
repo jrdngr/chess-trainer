@@ -17,6 +17,8 @@ struct StripItem {
   var badge: String? = nil
   /// Cursor position this chip jumps to; nil makes it unclickable.
   var seek: Int?
+  /// A common move: the book plays it often. A small book follows it.
+  var common = false
 }
 
 /// A scrolling row of moves with a cursor and arrows.
@@ -72,6 +74,10 @@ struct MoveStrip: View {
       HStack(spacing: 2) {
         if let label = item.label { Text(label).fontWeight(.medium).foregroundStyle(numberColor(item)) }
         Text(item.san)
+        if item.common {
+          Image(systemName: "book.closed.fill").font(.system(size: 9.5, weight: .bold)).foregroundStyle(Theme.book).padding(.leading, 2)
+            .accessibilityLabel("Common move")
+        }
         if let badge = item.badge {
           Text(badge).font(.system(size: 11.5, weight: .heavy).monospacedDigit()).foregroundStyle(Theme.background)
             .padding(.horizontal, 5).padding(.vertical, 1).background(RoundedRectangle(cornerRadius: 5).fill(fg)).padding(.leading, 5)

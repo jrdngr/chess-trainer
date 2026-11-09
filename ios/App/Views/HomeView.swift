@@ -5,8 +5,8 @@ import SwiftUI
 /// Home: Play's next run on its button with the selection under it, Middlegame and
 /// Endgames, Recommendations and Milestones. A mode tile starts the mode on
 /// your saved settings; press and hold Middlegame for Start or Settings (its
-/// setup screen first). After the first game, tips on the controls under Play,
-/// on Play itself, then on the Playbook tab below, one per tap.
+/// setup screen first). During the tutorial, Home asks for one step between
+/// games and the rest is locked; after its last game, a tip on the Playbook tab.
 struct HomeView: View {
   let tree: OpeningTree
   let onOpen: (Mode) -> Void
@@ -18,11 +18,24 @@ struct HomeView: View {
   let onPlaybook: () -> Void
   @Environment(AppStore.self) private var store
   @State private var settings = false
+  @State private var confirmSkip = false
+
+  /// The tutorial's step on Home, while it runs.
+  private var tutorialHome: (step: TutorialStep, tip: String?)? {
+    guard let tutorial = store.state.settings.tutorial else { return nil }
+    let selection = store.state.settings.selection
+    return tutorialStep(tutorial, color: selection.color, selected: nodeById(tree, selection.opening).sans)
+  }
+  private var locked: Bool { store.state.settings.tutorial != nil }
 
   var body: some View {
+    let step = tutorialHome
     ScrollView {
       VStack(spacing: 0) {
         HStack {
+          if let tutorial = store.state.settings.tutorial {
+            TutorialStrip(played: tutorial.played) { confirmSkip = true }
+          }
           Spacer()
           Button { settings = true } label: {
             Icon(name: "gear", size: 20).foregroundStyle(Theme.text2).padding(.horizontal, 11).frame(minWidth: 44, minHeight: 44)
@@ -31,26 +44,31 @@ struct HomeView: View {
           }
           .buttonStyle(.plain)
           .accessibilityLabel("Settings")
+          .disabled(locked).opacity(locked ? 0.35 : 1)
         }
         .padding(.top, 2).padding(.bottom, 12)
         VStack(spacing: 0) {
           autopilot
-            .tip(tip, when: tip == .play, inset: 8) { nextHomeTip(store) }
-          PlayFooter()
+            .disabled(locked && step?.step != .play).opacity(locked && step?.step != .play ? 0.35 : 1)
+            .tip(text: step?.step == .play ? step?.tip : nil, inset: 8)
+          PlayFooter(step: step)
         }
         .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface))
         // Over the tiles below, so a tip hanging past the card stays on top.
         .zIndex(1)
         .padding(.bottom, 10)
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 10) {
-          tile("Middlegame", "middlegame", .middlegame, held: true)
-          tile("Endgames", "flag", .endgame)
+        Group {
+          LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 10) {
+            tile("Middlegame", "middlegame", .middlegame, held: true)
+            tile("Endgames", "flag", .endgame)
+          }
+          VStack(spacing: 10) {
+            RecommendationsCard(tree: tree, onPick: onGap)
+            MilestonesCard()
+          }
+          .padding(.top, 10)
         }
-        VStack(spacing: 10) {
-          RecommendationsCard(tree: tree, onPick: onGap)
-          MilestonesCard()
-        }
-        .padding(.top, 10)
+        .disabled(locked).opacity(locked ? 0.35 : 1)
       }
       .padding(.horizontal, 16).padding(.bottom, 24)
     }
@@ -58,20 +76,27 @@ struct HomeView: View {
     .overlay {
       if tip != nil {
         SwiftUI.Color.black.opacity(0.001).contentShape(Rectangle())
-          .onTapGesture { nextHomeTip(store) }
+          .onTapGesture { if !locked { nextHomeTip(store) } }
           .accessibilityHidden(true)
       }
     }
     // The Playbook tab is the system tab bar's second of four, just under Home.
     .overlay(alignment: .bottom) {
       if tip == .playbookTab {
-        TipBubble(text: FirstGameTip.playbookTab.text, arrow: .down, arrowAt: 0.38) { nextHomeTip(store) }
+        TipBubble(text: TutorialTip.playbookTab.text, arrow: .down, arrowAt: 0.38) { if !locked { nextHomeTip(store) } }
           .padding(.horizontal, 16).padding(.bottom, 12)
       }
     }
-    // Leaving Home by the tab its last tip points at puts that tip away.
+    // Leaving Home by the tab its last tip points at puts that tip away; in the tutorial, only that does.
     .onDisappear { if tip == .playbookTab { nextHomeTip(store) } }
     .sheet(isPresented: $settings) { SettingsSheet().presentationBackground(Theme.background) }
+    // The tab bar waits for the tutorial's last game.
+    .toolbar((store.state.settings.tutorial?.played ?? TUTORIAL_GAMES) < TUTORIAL_GAMES ? .hidden : .visible, for: .tabBar)
+    .confirmationDialog("Skip the tutorial?", isPresented: $confirmSkip, titleVisibility: .visible) {
+      Button("Skip tutorial", role: .destructive) { store.update { $0.settings.skipTutorial() } }
+    } message: {
+      Text("Your openings stay in your Playbook.")
+    }
     .onAppear {
       guard store.takeSettingsHeld() else { return }
       var still = Transaction()
@@ -80,12 +105,17 @@ struct HomeView: View {
     }
   }
 
-  private var tip: FirstGameTip? { homeTip(store.state.settings.tips) }
+  private var tip: TutorialTip? { homeTip(store.state.settings.tips) }
 
   /// What Play would start with, said on its button, or that there is nothing to play yet.
   @ViewBuilder private var autopilot: some View {
     let selection = store.peekRoundSelection()
-    if let round = nextRound(store.state, tree, selection, store.autoHistory) {
+    if let game = store.state.settings.tutorial?.next {
+      Button { onOpen(.autopilot) } label: {
+        AutopilotPlate(name: game.opening.name, color: game.color, span: nil, attached: true).contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+    } else if let round = nextRound(store.state, tree, selection, store.autoHistory) {
       let rep = store.state.repertoireList.first { $0.color == round.pick.color }
       // Freeform always starts from move one, so its button shows no segments.
       let span = store.state.settings.start == .freeform ? nil : roundSpan(rep, round.pick, round.at)
@@ -187,13 +217,15 @@ struct AutopilotPlate: View {
 }
 
 /// Under Play's button on Home: the side, how runs start, and the opening.
+/// During the tutorial only its step's control takes a tap.
 private struct PlayFooter: View {
+  let step: (step: TutorialStep, tip: String?)?
   @Environment(AppStore.self) private var store
   @State private var picking: SelectionPicking?
 
   var body: some View {
     let settings = store.state.settings
-    let tip = homeTip(settings.tips)
+    let locked = step != nil
     VStack(spacing: 8) {
       HStack(spacing: 8) {
         Button { picking = .color } label: {
@@ -206,10 +238,14 @@ private struct PlayFooter: View {
           .contentShape(RoundedRectangle(cornerRadius: 12))
         }
         .accessibilityLabel("Side")
+        .disabled(locked && step?.step != .side).opacity(locked && step?.step != .side ? 0.35 : 1)
+        .tip(text: step?.step == .side ? step?.tip : nil, arrowAt: 0.1)
         SegmentedControl(
           value: Binding(get: { settings.start }, set: { start in store.update { $0.settings.start = start } }),
           options: [(RunStart.freeform, "Freeform"), (RunStart.drill, "Drill")], track: Theme.background)
+          .disabled(locked).opacity(locked ? 0.35 : 1)
       }
+      .zIndex(1)
       Button { picking = .quick } label: {
         HStack(spacing: 8) {
           SelectionTrail(opening: settings.selection.opening).frame(maxWidth: .infinity, alignment: .leading)
@@ -219,10 +255,31 @@ private struct PlayFooter: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface2))
         .contentShape(RoundedRectangle(cornerRadius: 12))
       }
-      .tip(tip, when: tip == .opening) { nextHomeTip(store) }
+      .disabled(locked && step?.step != .opening).opacity(locked && step?.step != .opening ? 0.35 : 1)
+      .tip(text: step?.step == .opening ? step?.tip : nil)
     }
     .padding(8)
     .buttonStyle(.plain)
     .selectionSheets($picking)
+  }
+}
+
+/// The tutorial's progress on Home: a mark per game, and Skip.
+private struct TutorialStrip: View {
+  let played: Int
+  let onSkip: () -> Void
+
+  var body: some View {
+    HStack(spacing: 10) {
+      Text("Tutorial").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.text2)
+      HStack(spacing: 4) {
+        ForEach(0..<TUTORIAL_GAMES, id: \.self) { game in
+          RoundedRectangle(cornerRadius: 2).fill(game < played ? Theme.accent : Theme.surface3).frame(width: 18, height: 5)
+        }
+      }
+      .accessibilityElement().accessibilityLabel("\(min(played, TUTORIAL_GAMES)) of \(TUTORIAL_GAMES) games played")
+      Button("Skip", action: onSkip).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text2)
+        .buttonStyle(.plain).frame(minHeight: 44)
+    }
   }
 }

@@ -19,6 +19,9 @@ struct RunView: View {
   @State private var planSeen: String?
   @State private var planSeeded = false
   @State private var breaks: (fen: String, found: PawnBreaks.Breaks)?
+  /// Counts refused moves in a forced game: each one shakes the board.
+  @State private var shakes = 0
+  @Environment(Toasts.self) private var toasts
 
   /// A Middlegame run, not Play's round.
   var survival: Bool { model.round == nil }
@@ -47,7 +50,9 @@ struct RunView: View {
       if survival {
         SurvivalRunBar(model: model, onExit: close)
       } else {
-        header.tip(model.tip, when: model.tip == .lineIn, inset: 16, onDismiss: model.dismissTip)
+        header
+          .tip(model.tip, when: model.tip == .prepBar, inset: 16, onDismiss: model.dismissTip)
+          .tip(model.tip, when: model.tip == .endFree || model.tip == .endRun, arrowAt: 0.08, inset: 16, onDismiss: model.dismissTip)
       }
       // The Eval lens's bar takes the captured row's place, so the board never moves.
       // While adding moves Growth's eval bar takes the row, with the engine's word on the answers.
@@ -63,11 +68,12 @@ struct RunView: View {
         .padding(.horizontal).padding(.top, 12)
       BoardView(
         fen: model.shownFen, orientation: model.run.color,
-        interactive: model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil && model.flash == nil,
+        interactive: model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil && model.flash == nil && !model.endCued,
         lastMove: model.held ? lastMoveOf(Array(model.introPath.prefix(model.introPly))) : lastMove, highlights: highlights, arrows: arrows, glow: model.glow, pop: model.pop,
-        marks: marks, allowed: model.fill == nil ? nil : model.fillChoices.map(\.san),
-        onMove: model.play
+        marks: marks, allowed: model.fill == nil ? model.expected.map { [$0] } : model.fillChoices.map(\.san),
+        onMove: model.play, onRefused: refused
       )
+      .modifier(Shake(count: shakes))
       .overlay { if let pulse = model.edgePulse { EdgePulse(color: pulse.found ? Theme.good : Theme.bad).id(pulse.id) } }
       .overlay(alignment: .top) { flash }
       .overlay { if model.pulse { IntroPulse() } }
@@ -78,7 +84,7 @@ struct RunView: View {
         }
       }
       .padding(.horizontal).padding(.top, 6)
-      .tip(model.tip, when: model.tip == .keepPlaying, inset: 16, onDismiss: model.dismissTip)
+      .tip(model.tip, when: Self.boardTips.contains(model.tip), inset: 16, onDismiss: model.dismissTip)
       .layoutPriority(1)
       .onTapGesture { if model.intro == .replay { model.skipIntro() } }
       dock.padding(.horizontal).frame(maxHeight: .infinity, alignment: .top)
@@ -95,6 +101,20 @@ struct RunView: View {
       let fen = model.shownFen
       let found = await PawnBreaks.find(HintEngine.shared, fen)
       if !Task.isCancelled { breaks = (fen, found) }
+    }
+  }
+
+  /// The tutorial's tips hung from the board.
+  private static let boardTips: Set<TutorialTip?> = [.flashCards, .lineDone, .saved, .keepPlaying, .scores]
+
+  /// A move the board won't take in a tutorial game: growth says which it wants, a forced move shakes the board.
+  private func refused() {
+    guard let game = model.tutorialGame else { return }
+    if model.fill != nil {
+      toasts.show(game.oneOption ? "Add the move shown." : "Pick one of the moves listed.")
+    } else if model.expected != nil {
+      withAnimation(.linear(duration: 0.3)) { shakes += 1 }
+      Haptics.buzz(12, on: store.state.settings.hapticFeedback)
     }
   }
 
@@ -154,6 +174,8 @@ struct RunView: View {
       HStack {
         Button(action: close) {
           Image(systemName: "xmark").font(.headline).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
+            // The tutorial asks for the X once its game is done.
+            .overlay { if model.endCued { Circle().strokeBorder(Theme.accent, lineWidth: 2) } }
         }
         .foregroundStyle(Theme.text).buttonStyle(.plain)
         Spacer()
@@ -190,7 +212,6 @@ struct RunView: View {
         } else {
           goalSlot.padding(.top, 12)
           status.padding(.top, 14)
-            .tip(model.tip, when: model.tip == .book || model.tip == .outOfBook, arrowAt: 0.6, onDismiss: model.dismissTip)
         }
       }
       // Gives way before the board does: what doesn't fit is cut, never pushed up, and can't take a touch outside it.
@@ -268,9 +289,11 @@ struct RunView: View {
         Circle().fill(model.run.color == .w ? SwiftUI.Color.white : SwiftUI.Color.black).frame(width: 12, height: 12)
           .overlay(Circle().stroke(Theme.text3))
       }
-      Text(model.pending != nil ? "Judging" : model.myTurn && !model.thinking ? "Your move" : "Reply")
+      Text(model.endCued ? "Round over" : model.pending != nil ? "Judging" : model.myTurn && !model.thinking ? "Your move" : "Reply")
         .font(.headline).foregroundStyle(Theme.text)
-      if model.momentHere {
+      if model.endCued {
+        EmptyView()
+      } else if model.momentHere {
         Text("There's something here").font(.subheadline.bold()).foregroundStyle(Theme.accent)
       } else if model.foundIt {
         Text("Found it").font(.subheadline.bold()).foregroundStyle(Theme.good)
@@ -321,6 +344,7 @@ struct RunView: View {
         Text(endingTitle(model.session.ending!, model.run.played.count)).font(.system(size: 19, weight: .heavy)).tracking(-0.19)
       }
       .foregroundStyle(Theme.bad).padding(.vertical, 6)
+      .tip(model.tip, when: model.tip == .blunder, inset: 16, onDismiss: model.dismissTip)
       HStack(spacing: 8) {
         if let onAnalyze {
           Button {
@@ -391,8 +415,29 @@ struct RunView: View {
       return b.threat.map { [BoardArrow(from: $0.from, to: $0.to, color: Theme.bad)] } ?? []
     }
     if let miss = model.miss { return [BoardArrow(from: miss.from, to: miss.to, color: Theme.good)] }
-    if model.atHole && !model.thinking { return holeArrows(model) }
+    if model.atHole && !model.thinking {
+      if let only = model.onlyAnswer {
+        return applySan(model.run.fen, only).map { [BoardArrow(from: $0.from, to: $0.to, color: Theme.accent)] } ?? []
+      }
+      return holeArrows(model)
+    }
+    if let expected = model.expected, !model.thinking, let move = applySan(model.run.fen, expected) {
+      return [BoardArrow(from: move.from, to: move.to, color: Theme.accent)]
+    }
     return []
+  }
+}
+
+/// The board shaken side to side once per refused move.
+private struct Shake: GeometryEffect {
+  var count: Int
+  var animatableData: CGFloat
+  init(count: Int) {
+    self.count = count
+    animatableData = CGFloat(count)
+  }
+  func effectValue(size: CGSize) -> ProjectionTransform {
+    ProjectionTransform(CGAffineTransform(translationX: 8 * sin(animatableData * .pi * 4), y: 0))
   }
 }
 

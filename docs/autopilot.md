@@ -34,8 +34,8 @@ Every change should pass these tests:
   ends a run to send you to another mode. Adding moves at a hole happens
   inside the run, on its board, and the same game goes on after.
 - **Instant, visible feedback.** On every prepared move you see whether it
-  was right and how fast it was. Past your prep, a book move gets the same
-  tick and time in the book's color, and after the book you see the engine's
+  was right and how fast it was. Past your prep, a common move gets a quiet
+  tick in the book's color, with no time or word, and any other move the engine's
   move scores. When there's a strong move to find, the board glows green, and it
   pulses green or red once you've found or missed it.
 - **Speed decides what you drill.** It never costs points or ends a run. It
@@ -139,7 +139,7 @@ moves are not graded this run, and later runs drill them.
 On a no, a Grow here button shows while it is your move at the hole, the
 only growth button in a run. The end screen has no growth button.
 
-## Past your prep: the book phase
+## Past your prep: common moves
 
 Your Playbook ends where the book does, and the engine's gaps never go past
 it (manual Growth can, with Past the book on), so most lines are short. A run doesn't get shorter for it. Once a clean prep
@@ -147,18 +147,19 @@ runs out, the run stays in the book phase for as long as the position is in
 the book:
 
 - A move counts as a book move when at least 5% of strong players' games play
-  it there and the engine doesn't call it a mistake. It gets a tick, "Book"
-  and your time, in the book's color.
+  it there and the engine doesn't call it a mistake. It gets only a quiet
+  tick in the book's color: no time, no word, and nothing on the status line,
+  which says Prep complete.
 - Book moves count for the run's points and keep the combo going. They never
   move a rating or a card: those measure what you chose to learn.
 - A move that isn't a book move costs nothing. The engine judges it as usual,
   and the book phase is over. It's also over where the book has nothing more
   to say.
-- The prep segments keep counting through the book phase, in the book's
-  color, so a short opening still fills out the bar.
+- The prep bar counts only your line: common moves past it aren't added.
+- The end screen and Analysis mark common moves with a small book.
 
 Moments and missions start as soon as your prep runs out, book phase
-included. After the book comes **Out of book**, and the rest of the
+included. After the book the rest of the
 middlegame extras take over: the combo, plan cards and lenses.
 
 Once little material is left (queens 4, rooks 2, minor pieces 1, 8 or less
@@ -167,6 +168,16 @@ result: a win slipping to a draw, or a draw to a loss. A slower win costs
 points, never the run, and a missed mate gets a note instead of ending it.
 The lenses switch to their endgame forms. Autopilot never starts a round in
 an endgame: endgames are drilled in Endgame mode.
+
+## The tutorial
+
+A new profile's first five runs are the tutorial's games, on the three
+openings it starts with (one for White, Black's answers to 1.e4 and 1.d4).
+They bend the rules above on purpose: the first games force your moves and
+the opponent's, two of them grow your line with a fixed number of moves, and
+three ask you to end the run with the X so ending early is learned as free.
+Everything else (prep grading, common moves, scores, blunders) works as in
+any run. `Sources/Model/Tutorial.swift` holds each game's setup.
 
 ## Ending a round
 
