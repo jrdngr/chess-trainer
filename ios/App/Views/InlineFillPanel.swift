@@ -28,9 +28,6 @@ struct InlineFillPanel: View {
         }
         .buttonStyle(.plain).disabled(fill?.steps.isEmpty ?? true).opacity(fill?.steps.isEmpty ?? true ? 0.35 : 1)
         .frame(maxWidth: .infinity, alignment: .leading)
-        Text("Adding new moves").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.background).lineLimit(1)
-          .padding(.horizontal, 16).padding(.vertical, 8).background(Capsule().fill(Theme.accent))
-          .fixedSize().layoutPriority(1)
         Button("Done") { model.doneAdding() }
           .buttonStyle(PlayButtonStyle(height: 38, radius: 11, font: 14)).fixedSize()
           .frame(maxWidth: .infinity, alignment: .trailing)

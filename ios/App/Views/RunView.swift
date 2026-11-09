@@ -58,7 +58,10 @@ struct RunView: View {
   private var board: some View {
     VStack(spacing: 0) {
       if survival {
-        SurvivalRunBar(model: model, onExit: close)
+        VStack(spacing: 0) {
+          SurvivalRunBar(model: model, onExit: close)
+          headerStatus.padding(.bottom, 4)
+        }
       } else {
         header
           // One tip modifier per view: a second one's layering would lose to the first's.
@@ -79,7 +82,7 @@ struct RunView: View {
       BoardView(
         fen: model.shownFen, orientation: model.run.color,
         interactive: model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil && model.flash == nil && !model.endCued,
-        lastMove: model.held ? lastMoveOf(Array(model.introPath.prefix(model.introPly))) : lastMove, highlights: highlights, arrows: arrows, glow: model.glow, pop: model.pop, popId: model.popCount,
+        lastMove: model.held ? lastMoveOf(Array(model.introPath.prefix(model.introPly))) : lastMove, highlights: highlights, arrows: arrows, pop: model.pop, popId: model.popCount,
         marks: marks, allowed: model.fill == nil ? model.expected.map { [$0] } : model.fillChoices.map(\.san),
         onMove: model.play, onRefused: refused
       )
@@ -87,7 +90,6 @@ struct RunView: View {
       .overlay { if let pulse = model.edgePulse { EdgePulse(color: pulse.found ? Theme.good : Theme.bad).id(pulse.id) } }
       .overlay(alignment: .top) { flash }
       .overlay { if model.pulse { IntroPulse() } }
-      .overlay { if adding { AddingBorder() } }
       .overlay { if let rim { BoardRim(color: rim.color, label: rim.label).animation(.easeOut(duration: 0.2), value: rim.label) } }
       .overlay { calloutLayer.animation(.easeOut(duration: 0.25), value: model.shownCallout?.id) }
       .overlay {
@@ -130,12 +132,13 @@ struct RunView: View {
   private var headerArrowAt: CGFloat { model.tip == .endRun ? 0.08 : 0.5 }
 
   /// The board's rim and the label hung from it. A callout's color while one is up;
-  /// then autoplay, a moment to find (Play's), your prep.
+  /// then autoplay, adding moves, a moment to find, your prep.
   private var rim: (color: SwiftUI.Color, label: String?)? {
     if let callout = model.shownCallout { return (callout.good ? Theme.good : Theme.bad, nil) }
     if model.intro == .replay { return (Theme.accent, "Autoplay") }
-    if adding || model.blunder != nil { return nil }
-    if !survival && model.momentHere { return (Theme.warn, "There\u{2019}s something here") }
+    if adding { return (Theme.accent, "Adding new moves") }
+    if model.blunder != nil { return nil }
+    if model.momentHere { return (Theme.warn, "There\u{2019}s something here") }
     if model.inPrep { return (Theme.good, "Your prep") }
     return nil
   }
@@ -278,8 +281,6 @@ struct RunView: View {
           InlineFillPanel(model: model).padding(.top, 10)
         } else {
           goalSlot.padding(.top, 12)
-          // Play's status sits in the header, under the prep bar.
-          if survival { status.padding(.top, 14) }
         }
       }
       // Gives way before the board does: what doesn't fit is cut, never pushed up, and can't take a touch outside it.
@@ -355,37 +356,6 @@ struct RunView: View {
   private func movesLine(_ text: String) -> some View {
     Text(text).font(.footnote).foregroundStyle(Theme.text2).multilineTextAlignment(.center).lineLimit(2)
       .frame(maxWidth: .infinity, maxHeight: .infinity)
-  }
-
-  /// Whose move, where you stand against your prep, and the combo, on one line.
-  private var status: some View {
-    HStack(spacing: 9) {
-      if model.thinking || model.pending != nil {
-        ProgressView().controlSize(.small)
-      } else {
-        Circle().fill(model.run.color == .w ? SwiftUI.Color.white : SwiftUI.Color.black).frame(width: 12, height: 12)
-          .overlay(Circle().stroke(Theme.text3))
-      }
-      Text(model.endCued ? "Round over" : model.pending != nil ? "Judging" : model.myTurn && !model.thinking ? "Your move" : "Reply")
-        .font(.headline).foregroundStyle(Theme.text)
-      if model.endCued {
-        EmptyView()
-      } else if model.momentHere {
-        Text("There's something here").font(.subheadline.bold()).foregroundStyle(Theme.accent)
-      } else if model.foundIt {
-        Text("Found it").font(.subheadline.bold()).foregroundStyle(Theme.good)
-      } else if let label = model.label {
-        let prep = prepStatusText(label)
-        Text(prep.text).font(.subheadline.bold()).foregroundStyle(prep.color)
-      }
-      let multiplier = comboMultiplier(model.session.state.extras.combo)
-      if model.prefs.combo && multiplier > 1 {
-        Text("\u{00d7}\(multiplier)").font(.system(size: 12.5, weight: .heavy).monospacedDigit()).foregroundStyle(Theme.good)
-          .padding(.horizontal, 9).padding(.vertical, 3).background(Capsule().fill(Theme.good.opacity(0.12)))
-      }
-    }
-    .lineLimit(1).minimumScaleFactor(0.85)
-    .frame(height: 28)
   }
 
   @ViewBuilder private var footer: some View {
@@ -534,20 +504,6 @@ private struct BoardShake: GeometryEffect {
   }
   func effectValue(size: CGSize) -> ProjectionTransform {
     ProjectionTransform(CGAffineTransform(translationX: 8 * sin(animatableData * .pi * 4), y: 0))
-  }
-}
-
-/// The board's steady accent edge while moves are being added.
-private struct AddingBorder: View {
-  var body: some View {
-    GeometryReader { geo in
-      // Just outside the board, clear of the coordinates on its edge squares.
-      RoundedRectangle(cornerRadius: geo.size.width * 0.03 + 4)
-        .strokeBorder(Theme.accent, lineWidth: 3)
-        .padding(-4)
-        .shadow(color: Theme.accent.opacity(0.6), radius: 10)
-    }
-    .allowsHitTesting(false)
   }
 }
 

@@ -45,8 +45,6 @@ final class RunModel {
   private(set) var missedBest: (from: String, to: String)?
   /// The board's edge pulsing for a moment settled: green found, red missed. `id` restarts it.
   private(set) var edgePulse: (found: Bool, id: Int)?
-  /// The moment just settled was found: the status line says so until your next move.
-  private(set) var foundIt = false
   /// Your move, on the board while the engine judges it.
   private(set) var pending: LegalMove?
   private(set) var thinking = false
@@ -259,8 +257,6 @@ final class RunModel {
   var momentHere: Bool {
     prefs.moments && live && myTurn && pending == nil && prepNow.isEmpty && baseline?.fen == run.fen && baseline?.isMomentFor(run.color) == true
   }
-  /// Middlegame's board glows only while a moment is up; Play's board says so on its rim.
-  var glow: Glow? { round == nil && momentHere ? MOMENT_GLOW : nil }
 
   /// On your prep in a Play run: your line's moves are still to play.
   var inPrep: Bool { round != nil && live && intro == .done && fill == nil && prepLabel(session) == .on }
@@ -504,7 +500,6 @@ final class RunModel {
       self.baseline = base
       self.update(sawEval(self.session, base.cp))
       if self.live && self.myTurn { self.update(missionFrom(self.session, self.prefs, base.cp)) }
-      if self.momentHere && self.round == nil { self.show(note: Note(text: "There's something here", tone: "accent")) }
     }
   }
 
@@ -546,7 +541,6 @@ final class RunModel {
     miss = nil
     note = nil
     missedBest = nil
-    foundIt = false
     holeGap = nil
     if autoplayNote { store.update { $0.settings.seenAutoplayNote = true } }
     let now = Env.now()
@@ -791,8 +785,7 @@ final class RunModel {
       case .miss(let m):
         show(miss: m)
       case .moment(let found):
-        foundIt = found
-        if found && round != nil { show(callout: "Found it", good: true) }
+        if found { show(callout: "Found it", good: true) }
         if found { Haptics.success(on: store.state.settings.hapticFeedback) }
         pulse(found: found)
       case .missedBest(let move):

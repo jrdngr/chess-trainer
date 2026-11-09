@@ -22,17 +22,5 @@ func endingTitle(_ ending: Ending, _ plies: Int) -> String {
   }
 }
 
-/// What the prompt says of your prep, and its color.
-func prepStatusText(_ label: PrepLabel) -> (text: String, color: SwiftUIColor) {
-  switch label {
-  case .on: return ("On prep", Theme.warn)
-  case .complete: return ("Prep complete", Theme.good)
-  case .off: return ("Off prep", Theme.bad)
-  // Past your line the common moves aren't called out: the line is simply done.
-  case .book, .out: return ("Prep complete", Theme.good)
-  case .middlegame: return ("Middlegame", PlanColors.plan)
-  }
-}
-
 import SwiftUI
 typealias SwiftUIColor = SwiftUI.Color
