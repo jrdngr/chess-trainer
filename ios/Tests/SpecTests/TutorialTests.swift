@@ -93,7 +93,9 @@ private func playThrough(_ game: TutorialGame) -> (played: [String], line: [Stri
   let five = try #require(tutorialGame(5, RECOMMENDED_OPENINGS))
   #expect(tutorialReply(five, played: [], line: five.opening.sans, bookIndex) == "d4")
   #expect(tutorialExpected(five, played: line("d4"), line: five.opening.sans, bookIndex) == nil)
-  #expect(five.tips.isEmpty)
+  #expect(five.tips == [.playOn])
+  #expect(tutorialTip(five.tips, [.pastLine]) == nil)
+  #expect(tutorialTip(five.tips, [.leftPrep]) == .playOn)
 }
 
 /// Every opening on offer fits its slot and leaves the book something to play

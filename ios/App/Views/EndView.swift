@@ -337,18 +337,7 @@ struct EndView: View {
   }
 
   /// The opening's own rating, as this run moved it.
-  private var moment: RatingMoment? {
-    #if DEBUG
-      // `RATING_MOMENT=240,262` plays that change, for checking the playback.
-      if let raw = ProcessInfo.processInfo.environment["RATING_MOMENT"]?.split(separator: ",").compactMap({ Double($0) }), raw.count == 2 {
-        return RatingMoment(name: openingName(model.tree, model.openingId), before: raw[0], after: raw[1])
-      }
-    #endif
-    guard let r = model.ratings.byKey[model.openingId], JSRound(r.after - r.before) != 0,
-      nodeById(model.tree, model.openingId).depth > 0
-    else { return nil }
-    return RatingMoment(name: openingName(model.tree, model.openingId), before: r.before, after: r.after)
-  }
+  private var moment: RatingMoment? { model.ratingMoment }
 
   @ViewBuilder private var ratingCard: some View {
     if let moment, case .placed(let arriving) = card {

@@ -6,11 +6,11 @@ import ChessCore
 /// the game on them. Between games Home asks for one step at a time; after
 /// the fifth, the Playbook tab's tips, and then everything is unlocked.
 ///
-/// 1. White, your line played through, then a few common moves; you end it.
+/// 1. White, your line played through, then a few common moves; Next run ends it.
 /// 2. White again, with growth: one answer offered at each step.
 /// 3. Black against 1.e4: your line, a few common moves, then scored moves; you end it.
 /// 4. Black again, with growth: any answer; played until you blunder.
-/// 5. Black against 1.d4, with no help.
+/// 5. Black against 1.d4, told only that the game goes on past your prep.
 
 /// One of the three openings the tutorial needs.
 public enum TutorialSlot: String, Sendable, Codable, CaseIterable, Identifiable {
@@ -163,7 +163,7 @@ public func tutorialGame(_ n: Int, _ openings: TutorialOpenings) -> TutorialGame
   switch n {
   case 1:
     TutorialGame(number: 1, color: .w, opening: openings.white, forced: true, pastMoves: 3,
-                 tips: [.flashCards, .prepBar, .lineDone, .checkMark, .endFree])
+                 tips: [.flashCards, .prepBar, .lineDone, .checkMark, .nextRun])
   case 2:
     TutorialGame(number: 2, color: .w, opening: openings.white, growth: 2, oneOption: true, forced: true, pastMoves: 3,
                  tips: [.extendLines, .answerRow, .doneButton, .saved, .endRun])
@@ -173,7 +173,7 @@ public func tutorialGame(_ n: Int, _ openings: TutorialOpenings) -> TutorialGame
   case 4:
     TutorialGame(number: 4, color: .b, opening: openings.e4, growth: 2, forced: true, tips: [.pickAny, .keepPlaying])
   case 5:
-    TutorialGame(number: 5, color: .b, opening: openings.d4)
+    TutorialGame(number: 5, color: .b, opening: openings.d4, tips: [.playOn])
   default:
     nil
   }
@@ -269,14 +269,17 @@ public enum TutorialMoment: Sendable, Hashable {
   case blunder
   /// The game asks you to end it.
   case endCue
+  /// Your prep just ended, and the board says so.
+  case leftPrep
 }
 
 /// The tutorial's tips: in its games, then the Playbook tab's at its end.
 public enum TutorialTip: String, Sendable, Codable, CaseIterable {
-  case flashCards, prepBar, lineDone, checkMark, endFree
+  case flashCards, prepBar, lineDone, checkMark, nextRun
   case extendLines, answerRow, doneButton, saved, endRun
   case scores, lens, blunder
   case pickAny, keepPlaying
+  case playOn
   /// Home, after the last game: the Playbook tab.
   case playbookTab
   /// The Playbook tab, the first time it opens: its + button, its more menu, an opening's row.
@@ -289,7 +292,7 @@ public enum TutorialTip: String, Sendable, Codable, CaseIterable {
     case .prepBar: "The prep bar fills as you play your line."
     case .lineDone: "Your line is done."
     case .checkMark: "A \u{2713} means you\u{2019}re still playing common moves."
-    case .endFree: "There\u{2019}s no penalty for ending a game after you\u{2019}ve finished your prepped moves."
+    case .nextRun: "Once your prep is done, tap Next run to start a new game."
     case .extendLines: "Extend the lines in your Playbook as you master them."
     case .answerRow: "Tap the answer or play it on the board."
     case .doneButton: "We\u{2019}ll suggest a few moves at a time. Tap Done to stop adding new moves early."
@@ -300,6 +303,7 @@ public enum TutorialTip: String, Sendable, Codable, CaseIterable {
     case .blunder: "A blunder ends the game."
     case .pickAny: "Pick any answer you like. The list shows how often each is played."
     case .keepPlaying: "Keep playing on the board."
+    case .playOn: "Your prep is done, but the game isn\u{2019}t. Keep playing until you blunder, or tap Next run."
     case .playbookTab: "Your openings live in the Playbook."
     case .playbookAdd: "Tap + to add openings you already know."
     case .playbookMore: "Import your games."
@@ -314,7 +318,8 @@ public enum TutorialTip: String, Sendable, Codable, CaseIterable {
     case .prepBar: .moved
     case .lineDone: .pastLine
     case .checkMark: .pastCommon
-    case .endFree, .endRun: .endCue
+    case .nextRun, .endRun: .endCue
+    case .playOn: .leftPrep
     case .extendLines, .pickAny: .growthOpen
     case .saved, .keepPlaying: .growthEnded
     case .scores: .scored

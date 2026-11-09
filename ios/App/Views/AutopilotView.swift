@@ -24,10 +24,12 @@ struct AutopilotView: View {
       if analyzing, let model {
         AnalysisTab(tree: tree, index: index, line: model.run.played, orientation: model.run.color) { analyzing = false }
       } else if let model {
-        if model.phase == .over, let finish = model.finish {
+        if model.phase == .over, let finish = model.finish, !model.advancing {
           EndView(model: model, finish: finish, onNext: home, onAnalyze: { analyzing = true }, onExit: home)
         } else {
-          RunView(model: model, onExit: exit, onAnalyze: { analyzing = true })
+          RunView(model: model, onExit: exit, onAnalyze: { analyzing = true }, onNextRun: next)
+            // A fresh screen for each round: nothing carries over from the last.
+            .id(ObjectIdentifier(model))
         }
       } else if nothing {
         VStack(spacing: 12) {
@@ -86,6 +88,14 @@ struct AutopilotView: View {
   private func home() {
     if let model, let round = model.round { store.autoHistory = afterRound(store.autoHistory, round, model.selection) }
     exit()
+  }
+
+  /// Next run: straight on to the next round, its start counted like a finished one's.
+  private func next() {
+    if let model, let round = model.round { store.autoHistory = afterRound(store.autoHistory, round, model.selection) }
+    model?.stop()
+    model = nil
+    begin()
   }
 
   private func exit() {

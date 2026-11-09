@@ -259,8 +259,65 @@ final class RunModel {
   var momentHere: Bool {
     prefs.moments && live && myTurn && pending == nil && prepNow.isEmpty && baseline?.fen == run.fen && baseline?.isMomentFor(run.color) == true
   }
-  /// The board glows only while a moment is up.
-  var glow: Glow? { momentHere ? MOMENT_GLOW : nil }
+  /// Middlegame's board glows only while a moment is up; Play's board says so on its rim.
+  var glow: Glow? { round == nil && momentHere ? MOMENT_GLOW : nil }
+
+  /// On your prep in a Play run: your line's moves are still to play.
+  var inPrep: Bool { round != nil && live && intro == .done && fill == nil && prepLabel(session) == .on }
+
+  /// Next run was tapped: the round ends on the board, and the next one follows without the end screen.
+  var advancing = false
+
+  /// Next run: past your prep in a Play run. In the tutorial, once its game asks you to end it, or in its last game.
+  var nextRunShown: Bool {
+    guard round != nil, live, intro == .done, fill == nil, session.prepStatus != .on else { return false }
+    if let tutorialGame { return tutorialGame.number >= TUTORIAL_GAMES || (endCued && tutorialGame.tips.contains(.nextRun)) }
+    return true
+  }
+
+  /// The opening's own rating, as this run moved it.
+  var ratingMoment: RatingMoment? {
+    #if DEBUG
+      // `RATING_MOMENT=240,262` plays that change, for checking the playback.
+      if let raw = ProcessInfo.processInfo.environment["RATING_MOMENT"]?.split(separator: ",").compactMap({ Double($0) }), raw.count == 2 {
+        return RatingMoment(name: openingName(tree, openingId), before: raw[0], after: raw[1])
+      }
+    #endif
+    guard let r = ratings.byKey[openingId], JSRound(r.after - r.before) != 0, nodeById(tree, openingId).depth > 0 else { return nil }
+    return RatingMoment(name: openingName(tree, openingId), before: r.before, after: r.after)
+  }
+
+  /// A word over the board for a moment: leaving your prep, or a find.
+  struct Callout: Equatable {
+    var text: String
+    var good: Bool
+    var id: Int
+  }
+  private(set) var callout: Callout?
+  /// The last callout for leaving your prep.
+  private var prepCallout: Callout?
+  private var calloutCount = 0
+  /// How long a callout stays.
+  static let calloutMs = 1.5
+
+  /// The callout on the board: a tip about leaving your prep keeps its callout up.
+  var shownCallout: Callout? { callout ?? (tip == .playOn ? prepCallout : nil) }
+
+  private func show(callout text: String, good: Bool, prep: Bool = false) {
+    calloutCount += 1
+    let shown = Callout(text: text, good: good, id: calloutCount)
+    callout = shown
+    if prep { prepCallout = shown }
+    later(Self.calloutMs) { model in
+      if model.callout == shown { model.callout = nil }
+    }
+  }
+
+  /// Your prep just ended, finished or missed: a Play run says so over the board.
+  private func noteLeft(_ was: PrepLabel?) {
+    guard round != nil, was == .on, session.prepStatus != .on else { return }
+    show(callout: session.prepStatus == .off ? "Off prep" : "Prep complete", good: session.prepStatus != .off, prep: true)
+  }
 
   /// The board as shown: your move stands while it is judged, a blunder stays until Continue.
   var shownFen: String {
@@ -447,7 +504,7 @@ final class RunModel {
       self.baseline = base
       self.update(sawEval(self.session, base.cp))
       if self.live && self.myTurn { self.update(missionFrom(self.session, self.prefs, base.cp)) }
-      if self.momentHere { self.show(note: Note(text: "There's something here", tone: "accent")) }
+      if self.momentHere && self.round == nil { self.show(note: Note(text: "There's something here", tone: "accent")) }
     }
   }
 
@@ -641,6 +698,7 @@ final class RunModel {
       tutorialJustGrown = false
     }
     if tutorialScored > 0 { now.insert(.scored) }
+    if prepCallout != nil { now.insert(.leftPrep) }
     if fill == nil && played.count >= tutorialLine.count {
       now.insert(ownPast(game.color, played, tutorialLine) == 0 ? .pastLine : .pastCommon)
     }
@@ -703,13 +761,17 @@ final class RunModel {
   /* ── the controller's steps ── */
 
   private func update(_ next: RunSession) {
+    let was = prepLabel(session)
     session = next
+    noteLeft(was)
     if session.prepStatus != .off { spanHeld = span }
   }
 
   private func apply(_ step: Step) {
     if step.session.prepStatus == .off && session.prepStatus != .off { spanHeld = span }
+    let was = prepLabel(session)
     session = step.session
+    noteLeft(was)
     for effect in step.effects {
       switch effect {
       case .rate(let result, let earlier):
@@ -730,6 +792,7 @@ final class RunModel {
         show(miss: m)
       case .moment(let found):
         foundIt = found
+        if found && round != nil { show(callout: "Found it", good: true) }
         if found { Haptics.success(on: store.state.settings.hapticFeedback) }
         pulse(found: found)
       case .missedBest(let move):

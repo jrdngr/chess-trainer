@@ -12,6 +12,8 @@ struct RunView: View {
   let onExit: () -> Void
   /// Analysis on the run, over its end screen.
   var onAnalyze: (() -> Void)?
+  /// Next run: Play's next round, without the end screen.
+  var onNextRun: (() -> Void)?
   @Environment(AppStore.self) var store
   @State private var lens: LensKind? = Self.pinnedLens
   @State private var planOpen = false
@@ -21,6 +23,9 @@ struct RunView: View {
   @State private var breaks: (fen: String, found: PawnBreaks.Breaks)?
   /// Counts refused moves in a forced game: each one shakes the board.
   @State private var shakes = 0
+  /// The rating change played over the board on the way to the next run, and its leaving.
+  @State private var nextMoment: RatingMoment?
+  @State private var nextLeaving = false
   @Environment(Toasts.self) private var toasts
   @Environment(\.scenePhase) private var scenePhase
 
@@ -83,6 +88,13 @@ struct RunView: View {
       .overlay(alignment: .top) { flash }
       .overlay { if model.pulse { IntroPulse() } }
       .overlay { if adding { AddingBorder() } }
+      .overlay { if let rim { BoardRim(color: rim.color, label: rim.label).animation(.easeOut(duration: 0.2), value: rim.label) } }
+      .overlay { calloutLayer.animation(.easeOut(duration: 0.25), value: model.shownCallout?.id) }
+      .overlay {
+        if let moment = nextMoment {
+          RatingOverBoard(moment: moment, leaving: nextLeaving) { leaveForNext() }
+        }
+      }
       .overlay {
         if let held = model.flash {
           FlashRings(loose: held.loose, orientation: model.run.color, onTakeBack: model.takeBack)
@@ -113,9 +125,53 @@ struct RunView: View {
   private static let boardTips: Set<TutorialTip?> = [.flashCards, .checkMark, .saved, .keepPlaying, .scores]
 
   /// The tutorial's tips hung from the header: at the prep bar, or at the X for the end of a game.
-  private static let headerTips: Set<TutorialTip?> = [.prepBar, .lineDone, .endFree, .endRun]
+  private static let headerTips: Set<TutorialTip?> = [.prepBar, .lineDone, .endRun]
 
-  private var headerArrowAt: CGFloat { model.tip == .endFree || model.tip == .endRun ? 0.08 : 0.5 }
+  private var headerArrowAt: CGFloat { model.tip == .endRun ? 0.08 : 0.5 }
+
+  /// The board's rim and the label hung from it. A callout's color while one is up;
+  /// then autoplay, a moment to find (Play's), your prep.
+  private var rim: (color: SwiftUI.Color, label: String?)? {
+    if let callout = model.shownCallout { return (callout.good ? Theme.good : Theme.bad, nil) }
+    if model.intro == .replay { return (Theme.accent, "Autoplay") }
+    if adding || model.blunder != nil { return nil }
+    if !survival && model.momentHere { return (Theme.warn, "There\u{2019}s something here") }
+    if model.inPrep { return (Theme.good, "Your prep") }
+    return nil
+  }
+
+  /// A labeled rim is up: the lenses make way for its label.
+  private var labeled: Bool { rim?.label != nil }
+
+  /// Prep complete, Off prep or Found it, over the board for a moment. The last game's tip hangs from it.
+  @ViewBuilder private var calloutLayer: some View {
+    if let callout = model.shownCallout {
+      BoardCallout(text: callout.text, good: callout.good)
+        .tip(model.tip, when: model.tip == .playOn, onDismiss: model.dismissTip)
+        .transition(.opacity.combined(with: .scale(scale: 0.92)))
+        .id(callout.id)
+    }
+  }
+
+  /// Next run: the round ends where it stands, its rating change plays over the board, then the next round.
+  private func nextRun() {
+    model.advancing = true
+    model.endRound()
+    if let moment = model.ratingMoment {
+      nextMoment = moment
+    } else {
+      onNextRun?()
+    }
+  }
+
+  private func leaveForNext() {
+    guard !nextLeaving else { return }
+    nextLeaving = true
+    Task {
+      try? await Task.sleep(for: .seconds(0.32))
+      onNextRun?()
+    }
+  }
 
   /// A move the board won't take in a tutorial game: growth says which it wants, a forced move shakes the board.
   private func refused() {
@@ -179,13 +235,14 @@ struct RunView: View {
         } else {
           PrepSegmentsView(span: model.span, height: 4).frame(maxWidth: 150)
         }
+        headerStatus
       }
       .padding(.horizontal, 60)
       HStack {
         Button(action: close) {
           Image(systemName: "xmark").font(.headline).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
-            // The tutorial asks for the X once its game is done.
-            .overlay { if model.endCued { Circle().strokeBorder(Theme.accent, lineWidth: 2) } }
+            // The tutorial asks for the X once its game is done, where Next run doesn't take its place.
+            .overlay { if model.endCued && !model.nextRunShown { Circle().strokeBorder(Theme.accent, lineWidth: 2) } }
         }
         .foregroundStyle(Theme.text).buttonStyle(.plain)
         Spacer()
@@ -203,7 +260,7 @@ struct RunView: View {
         held: $lens, lenses: LENSES, enabled: lensEnabled, plan: $planOpen, planEnabled: lensEnabled && plan != nil,
         planPulse: planSeeded && plan != nil && plan != planSeen, spotlight: model.tip == .lens ? .pawns : nil
       )
-      .opacity(model.held ? 0 : 1).allowsHitTesting(!model.held)
+      .opacity(model.held || labeled ? 0 : 1).allowsHitTesting(!(model.held || labeled))
       .tip(model.tip, when: model.tip == .lens && lens == nil, arrowAt: 0.1, onDismiss: model.dismissTip)
       VStack(spacing: 0) {
         if lens == .eval {
@@ -221,7 +278,8 @@ struct RunView: View {
           InlineFillPanel(model: model).padding(.top, 10)
         } else {
           goalSlot.padding(.top, 12)
-          status.padding(.top, 14)
+          // Play's status sits in the header, under the prep bar.
+          if survival { status.padding(.top, 14) }
         }
       }
       // Gives way before the board does: what doesn't fit is cut, never pushed up, and can't take a touch outside it.
@@ -238,6 +296,13 @@ struct RunView: View {
       }
     }
     .onChange(of: planOpen) { if planOpen { planSeen = plan } }
+    // A labeled rim takes the lenses away, and any lens held with them.
+    .onChange(of: labeled) {
+      if labeled {
+        lens = nil
+        planOpen = false
+      }
+    }
     // A run that ends closes the plan and any lens, so its ending shows.
     .onChange(of: model.live) {
       if !model.live {
@@ -344,7 +409,33 @@ struct RunView: View {
         Button { model.skipIntro() } label: { Text("Skip").foregroundStyle(Theme.text) }
           .buttonStyle(PlayButtonStyle(kind: .soft, height: 34, radius: 17, font: 13.5))
       }
+      if model.nextRunShown && onNextRun != nil {
+        Button(action: nextRun) { HStack(spacing: 8) { Text("Next run"); Icon(name: "next", size: 16) } }
+          .buttonStyle(PlayButtonStyle(kind: .soft, height: 44, radius: 12, font: 15))
+          .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.accent, lineWidth: model.endCued ? 2 : 1.5) }
+      }
     }
+    .tip(model.tip, when: model.tip == .nextRun, arrow: .down, arrowAt: 0.85, onDismiss: model.dismissTip)
+  }
+
+  /// Under the prep bar: whose move, and the combo.
+  private var headerStatus: some View {
+    HStack(spacing: 6) {
+      if model.thinking || model.pending != nil {
+        ProgressView().controlSize(.mini)
+      } else {
+        Circle().fill(model.run.color == .w ? SwiftUI.Color.white : SwiftUI.Color.black).frame(width: 9, height: 9)
+          .overlay(Circle().stroke(Theme.text3))
+      }
+      Text(model.endCued ? "Round over" : model.pending != nil ? "Judging" : model.myTurn && !model.thinking ? "Your move" : "Reply")
+        .font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
+      let multiplier = comboMultiplier(model.session.state.extras.combo)
+      if model.prefs.combo && multiplier > 1 {
+        Text("\u{00d7}\(multiplier)").font(.system(size: 13, weight: .heavy).monospacedDigit()).foregroundStyle(Theme.good)
+      }
+    }
+    .lineLimit(1)
+    .frame(height: 16)
   }
 
   /// A blunder ends the run: its name, then Analyze or on to the end screen.
@@ -382,16 +473,7 @@ struct RunView: View {
         .padding(.horizontal, 14).padding(.vertical, 6)
         .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.45), radius: 10, y: 6)
         .padding(.top, 8)
-    } else if model.intro == .replay {
-      // While the way in plays; the opening's name is in the header already.
-      Text("Autoplay").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.background)
-        .padding(.horizontal, 16).padding(.vertical, 8)
-        .background(Capsule().fill(Theme.accent)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
-        .allowsHitTesting(false)
-        // Over the gap above the board, not on the back rank's pieces.
-        .offset(y: -42)
-        .introPillIn().id("replay")
-    } else if let miss = model.miss {
+    } else if let miss = model.miss, survival {
       pill("Off your prep", Theme.accent).id("miss-\(miss.from)\(miss.to)")
     } else if let note = model.note {
       pill(note.text, note.tone == "good" ? Theme.good : note.tone == "bad" ? Theme.bad : Theme.accent).id("note-\(note.text)")
