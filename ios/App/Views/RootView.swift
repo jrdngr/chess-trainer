@@ -61,7 +61,7 @@ struct RootView: View {
       } else if choosingOpenings {
         ChooseOpeningsView(onBack: { choosingOpenings = false }) { startTutorial(tree, $0) }
       } else {
-        YourOpeningsView(
+        OpeningChoiceView(
           onRecommend: { startTutorial(tree, RECOMMENDED_OPENINGS) }, onChoose: { choosingOpenings = true },
           onSkip: { skippedTutorial = true })
       }

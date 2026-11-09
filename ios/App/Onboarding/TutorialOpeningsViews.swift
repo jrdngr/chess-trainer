@@ -6,7 +6,7 @@ import SwiftUI
 /// The second screen: the openings the tutorial plays. Recommend some
 /// openings starts the tutorial on a set we pick; Choose my own fills three
 /// slots first; Skip leaves the tutorial out and goes to adding openings.
-struct YourOpeningsView: View {
+struct OpeningChoiceView: View {
   let onRecommend: () -> Void
   let onChoose: () -> Void
   let onSkip: () -> Void

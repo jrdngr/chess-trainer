@@ -73,7 +73,7 @@ struct RunView: View {
         marks: marks, allowed: model.fill == nil ? model.expected.map { [$0] } : model.fillChoices.map(\.san),
         onMove: model.play, onRefused: refused
       )
-      .modifier(Shake(count: shakes))
+      .modifier(BoardShake(count: shakes))
       .overlay { if let pulse = model.edgePulse { EdgePulse(color: pulse.found ? Theme.good : Theme.bad).id(pulse.id) } }
       .overlay(alignment: .top) { flash }
       .overlay { if model.pulse { IntroPulse() } }
@@ -429,7 +429,7 @@ struct RunView: View {
 }
 
 /// The board shaken side to side once per refused move.
-private struct Shake: GeometryEffect {
+private struct BoardShake: GeometryEffect {
   var count: Int
   var animatableData: CGFloat
   init(count: Int) {
