@@ -30,18 +30,6 @@ struct IntroModeIn: ViewModifier {
   }
 }
 
-/// The opening pill over the board: `introPill`, dropping 6pt into place over 0.3s.
-struct IntroPillIn: ViewModifier {
-  @Environment(\.accessibilityReduceMotion) private var reduce
-  @State private var shown = false
-
-  func body(content: Content) -> some View {
-    content
-      .offset(y: shown || reduce ? 0 : -6).opacity(shown || reduce ? 1 : 0)
-      .onAppear { withAnimation(.easeInOut(duration: 0.3)) { shown = true } }
-  }
-}
-
 /// The board's edge pulsing once the replay hands you the move: `introPulse`, 0.9s.
 struct IntroPulse: View {
   var cornerRadius: CGFloat = 14
@@ -86,7 +74,6 @@ struct IntroPulse: View {
 extension View {
   func introCoverFade() -> some View { modifier(IntroCoverFade()) }
   func introModeIn() -> some View { modifier(IntroModeIn()) }
-  func introPillIn() -> some View { modifier(IntroPillIn()) }
 }
 
 /// A round announced full screen: the mode's name arriving, then the opening

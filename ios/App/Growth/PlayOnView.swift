@@ -28,6 +28,9 @@ struct PlayOnView: View {
         Text(best.map(formatScore) ?? "\u{2014}").font(.system(size: 12, weight: .semibold).monospacedDigit()).foregroundStyle(Theme.text2)
           .padding(.horizontal, 9).padding(.vertical, 3).frame(minWidth: 56).background(Capsule().fill(Theme.surface2))
       }
+      if !status.gameOver {
+        StatusLine(white: color == .w, text: engineTurn ? "Reply" : "Your move", busy: engineTurn).padding(.bottom, 4)
+      }
       ScrollView {
         VStack(spacing: 0) {
           CapturedRow(fen: fen, orientation: color).padding(.bottom, 6)
@@ -42,8 +45,6 @@ struct PlayOnView: View {
           Spacer().frame(height: 16)
           if status.gameOver {
             GrowthVerdict(tone: won ? .ok : .no, text: result(status, won))
-          } else {
-            GrowthPrompt(side: engineTurn ? color.other : color, who: engineTurn ? "Thinking" : "Your move")
           }
           if !sans.isEmpty {
             PlaySection(title: "From the end of the line").frame(maxWidth: .infinity)

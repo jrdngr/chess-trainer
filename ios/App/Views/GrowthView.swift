@@ -49,6 +49,7 @@ struct GrowthView: View {
         Text("\(model.live?.nodes.count ?? 0)").font(.system(size: 13).monospacedDigit()).foregroundStyle(Theme.text2)
           .frame(maxWidth: .infinity, alignment: .trailing)
       }
+      if let status { StatusLine(white: model.run.color == .w, text: status.text, busy: status.busy).padding(.bottom, 4) }
       ScrollView {
         VStack(spacing: 0) {
           PlayEvalBar(line: model.evals.position.map { EngineLine(multipv: 1, depth: 0, cp: $0, mate: nil, pv: []) })
@@ -100,11 +101,16 @@ struct GrowthView: View {
       onMove: model.play
     )
     .opacity(model.phase == .lost ? 0.55 : 1)
-    .overlay(alignment: .top) {
-      if let name = model.introPill { GrowthIntroPill(name: name, autoplay: model.intro == .replay) }
-    }
+    .overlay { if let rim { BoardRim(color: Theme.accent, label: rim) } }
     .overlay {
-      if model.flash { BoardFlash(text: "End of the book").onTapGesture { model.clearFlash() } }
+      if model.flash {
+        ZStack {
+          SwiftUI.Color.black.opacity(0.35)
+          BoardCallout(text: "End of the book", good: true)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 14)).boardFlash(1.5)
+        .onTapGesture { model.clearFlash() }
+      }
       if model.intro == .replay { Color.clear.contentShape(Rectangle()).onTapGesture { model.skipIntro() } }
     }
     .overlay(alignment: .top) {
@@ -113,6 +119,26 @@ struct GrowthView: View {
           .padding(.horizontal, 12).padding(.vertical, 6)
           .background(Capsule().fill(Theme.background.opacity(0.9))).padding(.top, 10)
       }
+    }
+  }
+
+  /// The board's rim and its label, as in Play: the way in playing out, then adding moves at the hole.
+  private var rim: String? {
+    if model.intro == .replay { return "Autoplay" }
+    if model.phase == .hole && !model.held { return "Adding new moves" }
+    return nil
+  }
+
+  /// Whose move, as in Play: none once the sitting is over.
+  private var status: (text: String, busy: Bool)? {
+    guard !model.held else { return nil }
+    switch model.phase {
+    case .walking:
+      let mine = isUsersTurn(model.run)
+      return (mine && !model.thinking ? "Your move" : "Reply", model.thinking)
+    case .answered: return ("Reply", true)
+    case .hole: return model.waitingForEngine ? ("Reply", true) : ("Your move", false)
+    default: return nil
     }
   }
 

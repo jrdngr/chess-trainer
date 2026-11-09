@@ -61,18 +61,29 @@ struct RimTab: Shape {
   }
 }
 
-/// A big word over the board for a moment: Prep complete, Off prep, Found it.
+/// A big word over the board for a moment: Prep complete, Off prep, Found it,
+/// Missed it, how a game ended.
 struct BoardCallout: View {
   var text: String
-  var good: Bool
+  var tone: Color
+  var symbol: String
+
+  init(text: String, good: Bool) {
+    self.init(text: text, tone: good ? Theme.good : Theme.bad, symbol: good ? "checkmark" : "xmark")
+  }
+
+  init(text: String, tone: Color, symbol: String) {
+    self.text = text
+    self.tone = tone
+    self.symbol = symbol
+  }
 
   var body: some View {
-    let tone = good ? Theme.good : Theme.bad
     VStack(spacing: 12) {
-      Image(systemName: good ? "checkmark" : "xmark")
+      Image(systemName: symbol)
         .font(.system(size: 26, weight: .heavy)).foregroundStyle(Theme.background)
         .frame(width: 56, height: 56).background(Circle().fill(tone))
-      Text(text).font(.system(size: 28, weight: .heavy)).tracking(-0.4).foregroundStyle(tone).lineLimit(1)
+      Text(text).font(.system(size: 28, weight: .heavy)).tracking(-0.4).foregroundStyle(tone).lineLimit(1).minimumScaleFactor(0.6)
     }
     .padding(.vertical, 22).padding(.horizontal, 34)
     .background(RoundedRectangle(cornerRadius: 22).fill(Theme.surface.opacity(0.94)))
@@ -80,5 +91,31 @@ struct BoardCallout: View {
     .shadow(color: .black.opacity(0.55), radius: 20, y: 16)
     .shadow(color: tone.opacity(0.33), radius: 15)
     .allowsHitTesting(false)
+  }
+}
+
+/// Whose move, under a screen's title: the side's dot (a spinner while the
+/// engine works), the words, and the combo when there is one.
+struct StatusLine: View {
+  /// White's dot when true, Black's when false.
+  var white: Bool
+  var text: String
+  var busy = false
+  var combo: Int?
+
+  var body: some View {
+    HStack(spacing: 6) {
+      if busy {
+        ProgressView().controlSize(.mini)
+      } else {
+        Circle().fill(white ? Color.white : Color.black).frame(width: 9, height: 9).overlay(Circle().stroke(Theme.text3))
+      }
+      Text(text).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
+      if let combo, combo > 1 {
+        Text("\u{00d7}\(combo)").font(.system(size: 13, weight: .heavy).monospacedDigit()).foregroundStyle(Theme.good)
+      }
+    }
+    .lineLimit(1)
+    .frame(height: 16)
   }
 }

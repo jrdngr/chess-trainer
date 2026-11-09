@@ -2,27 +2,21 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// How the run ended, on a pill over the dimmed board as the end screen opens: `.board-flash` and `.verdict`.
+/// How the run ended, as a callout over the dimmed board as the end screen opens.
 struct EndVerdict: View {
   let how: Ending
   let plies: Int
 
   var body: some View {
-    let (icon, tone): (String, SwiftUI.Color) = switch how {
-    case .blunder, .lost: ("cross", Theme.bad)
-    case .won: ("check", Theme.good)
-    case .ended: ("close", Theme.warn)
-    case .draw: ("check", Theme.warn)
+    let (symbol, tone): (String, SwiftUI.Color) = switch how {
+    case .blunder, .lost: ("xmark", Theme.bad)
+    case .won: ("checkmark", Theme.good)
+    case .ended: ("flag.fill", Theme.warn)
+    case .draw: ("equal", Theme.warn)
     }
     ZStack {
       SwiftUI.Color.black.opacity(0.35)
-      HStack(spacing: 8) {
-        Icon(name: icon, size: 18).frame(width: 26, height: 26).background(Circle().fill(tone.opacity(0.14)))
-        Text(endingTitle(how, plies)).font(.system(size: 19, weight: .heavy)).tracking(-0.2).lineLimit(1)
-      }
-      .foregroundStyle(tone)
-      .padding(.leading, 14).padding(.trailing, 22).padding(.vertical, 12)
-      .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
+      BoardCallout(text: endingTitle(how, plies), tone: tone, symbol: symbol).padding(.horizontal, 16)
     }
     .clipShape(RoundedRectangle(cornerRadius: 14))
   }

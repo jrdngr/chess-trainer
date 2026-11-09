@@ -4,28 +4,7 @@ import Model
 import Shared
 import SwiftUI
 
-/// The pieces of Growth's sitting: `.prompt`, `.verdict`, the answer rows
-/// and their eval tags, the pills over the board.
-
-/// Who is to move and what it means: `.prompt`.
-struct GrowthPrompt: View {
-  var side: ChessCore.Color
-  var who: String
-  var ctx: String?
-
-  var body: some View {
-    VStack(spacing: 3) {
-      HStack(spacing: 8) {
-        SideDot(side: side)
-        Text(who).font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.text).lineLimit(1).minimumScaleFactor(0.8)
-      }
-      if let ctx {
-        Text(ctx).font(.system(size: 13)).foregroundStyle(Theme.text3).multilineTextAlignment(.center)
-      }
-    }
-    .frame(maxWidth: .infinity).padding(.top, 6).padding(.bottom, 2)
-  }
-}
+// The pieces of Growth's sitting: `.verdict`, the answer rows and their eval tags.
 
 /// A verdict line: `.verdict` and its tone.
 struct GrowthVerdict: View {
@@ -119,42 +98,6 @@ struct DeltaTag: View {
     Text(cp.map(formatDelta) ?? "\u{2026}").font(.system(size: 14).monospacedDigit())
       .foregroundStyle(tone == .good ? Theme.good : tone == .bad ? Theme.bad : Theme.text3)
       .frame(minWidth: 40, alignment: .trailing).padding(.trailing, 8)
-  }
-}
-
-/// The opening on a pill over the board while the way in plays: `intro-pill`.
-struct GrowthIntroPill: View {
-  var name: String
-  var autoplay: Bool
-
-  var body: some View {
-    HStack(spacing: 8) {
-      if autoplay {
-        Text("Autoplay").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.background)
-          .padding(.horizontal, 9).padding(.vertical, 3).background(Capsule().fill(Theme.accent))
-      }
-      Text(name).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text).lineLimit(1)
-    }
-    .padding(.leading, autoplay ? 8 : 16).padding(.trailing, 16).padding(.vertical, 8)
-    .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
-    .allowsHitTesting(false)
-    // Over the gap above the board, not on the back rank's pieces.
-    .offset(y: -42)
-  }
-}
-
-/// A verdict lifted onto the board: `.board-flash`.
-struct BoardFlash: View {
-  var text: String
-
-  var body: some View {
-    ZStack {
-      RoundedRectangle(cornerRadius: 14).fill(.black.opacity(0.35))
-      Text(text).font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.text)
-        .padding(.leading, 22).padding(.trailing, 22).padding(.vertical, 12)
-        .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
-    }
-    .boardFlash()
   }
 }
 

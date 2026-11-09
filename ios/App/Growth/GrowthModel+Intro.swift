@@ -41,14 +41,6 @@ extension GrowthModel {
     lastMoveOf(Array(introPath.prefix(introPly)))
   }
 
-  /// The opening's name on the pill: while the way in plays, or until your first move from move one.
-  var introPill: String? {
-    let replaying = intro == .replay
-    let waiting = intro == .done && introPath.isEmpty && run.path.count <= startLength
-    guard replaying || waiting else { return nil }
-    return introName ?? introTrail.last
-  }
-
   /// What the announcement says under "Growth".
   var introTrail: [String] {
     if let introName { return [introName] }

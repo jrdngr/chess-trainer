@@ -18,8 +18,8 @@ final class RunModel {
   /// How long the announcement holds, and the beat between replayed moves (a Middlegame run's is quicker).
   static let announceMs = 2.5, replayMs = 0.4, handoffReplayMs = 0.12, pulseMs = 0.9
 
-  /// How long a miss, a score popup and a note stay over the board (a touch clears a miss or a note sooner); the opponent's beat.
-  static let missMs = 2.0, scoreMs = 1.4, noteMs = 2.0, replyMs = 0.42
+  /// How long a miss and a score popup stay over the board (a touch clears a miss sooner); the opponent's beat.
+  static let missMs = 2.0, scoreMs = 1.4, replyMs = 0.42
   /// How long the board's edge pulses when a moment is settled.
   static let edgePulseMs = 1.5
   /// How long the Undefended flash holds your move before it lands.
@@ -39,7 +39,6 @@ final class RunModel {
   private(set) var session: RunSession
   private(set) var phase = Phase.playing
   private(set) var pop: Pop?
-  private(set) var note: Note?
   private(set) var miss: MissFlash?
   /// The moment's move you missed: its squares stay red until your next move.
   private(set) var missedBest: (from: String, to: String)?
@@ -539,7 +538,6 @@ final class RunModel {
   private func commit(_ move: LegalMove, seconds: Double) {
     guard live, !held, myTurn, pending == nil else { return }
     miss = nil
-    note = nil
     missedBest = nil
     holeGap = nil
     if autoplayNote { store.update { $0.settings.seenAutoplayNote = true } }
@@ -781,7 +779,8 @@ final class RunModel {
       case .pop(let p):
         show(pop: p)
       case .note(let n):
-        if let n { show(note: n) } else { note = nil }
+        // A word on what the move earned: a callout, like a find.
+        if let n { show(callout: n.text, good: n.tone == "good") }
       case .miss(let m):
         show(miss: m)
       case .moment(let found):
@@ -854,7 +853,6 @@ final class RunModel {
   /// What floats over the board goes, and the blunder or the end screen comes up.
   private func settle(_ f: Finish) {
     pop = nil
-    note = nil
     miss = nil
     flash = nil
     thinking = false
@@ -876,13 +874,6 @@ final class RunModel {
     }
   }
 
-  private func show(note n: Note) {
-    note = n
-    later(Self.noteMs) { model in
-      if model.note == n { model.note = nil }
-    }
-  }
-
   private func pulse(found: Bool) {
     let id = (edgePulse?.id ?? 0) + 1
     edgePulse = (found, id)
@@ -900,9 +891,8 @@ final class RunModel {
     }
   }
 
-  /// A touch anywhere clears a miss or a note sooner. The missed moment's squares stay.
+  /// A touch anywhere clears a miss sooner. The missed moment's squares stay.
   func clearOverlays() {
-    note = nil
     guard miss != nil else { return }
     miss = nil
     advance()

@@ -108,7 +108,7 @@ struct RunView: View {
       .onTapGesture { if model.intro == .replay { model.skipIntro() } }
       dock.padding(.horizontal).frame(maxHeight: .infinity, alignment: .top)
     }
-    // Any touch clears a miss or a note over the board.
+    // Any touch clears a miss over the board.
     .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in model.clearOverlays() })
     .task(id: adding ? "\(model.run.fen)|\(model.atHole)|\(model.listed.map(\.san))" : nil) {
       guard adding else { return }
@@ -373,11 +373,11 @@ struct RunView: View {
       Spacer()
       if model.holeGap != nil && model.myTurn && model.live && model.pending == nil {
         Button { model.growHere() } label: { Label("Grow here", systemImage: "plus") }
-          .buttonStyle(PlayButtonStyle(kind: .soft, height: 34, radius: 17, font: 13.5))
+          .buttonStyle(PlayButtonStyle(kind: .soft, height: 44, radius: 12, font: 15))
       }
       if model.handoff != nil && model.intro == .replay {
         Button { model.skipIntro() } label: { Text("Skip").foregroundStyle(Theme.text) }
-          .buttonStyle(PlayButtonStyle(kind: .soft, height: 34, radius: 17, font: 13.5))
+          .buttonStyle(PlayButtonStyle(kind: .soft, height: 44, radius: 12, font: 15))
       }
       if model.nextRunShown && onNextRun != nil {
         Button(action: nextRun) { HStack(spacing: 8) { Text("Next run"); Icon(name: "next", size: 16) } }
@@ -390,22 +390,11 @@ struct RunView: View {
 
   /// Under the prep bar: whose move, and the combo.
   private var headerStatus: some View {
-    HStack(spacing: 6) {
-      if model.thinking || model.pending != nil {
-        ProgressView().controlSize(.mini)
-      } else {
-        Circle().fill(model.run.color == .w ? SwiftUI.Color.white : SwiftUI.Color.black).frame(width: 9, height: 9)
-          .overlay(Circle().stroke(Theme.text3))
-      }
-      Text(model.endCued ? "Round over" : model.pending != nil ? "Judging" : model.myTurn && !model.thinking ? "Your move" : "Reply")
-        .font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
-      let multiplier = comboMultiplier(model.session.state.extras.combo)
-      if model.prefs.combo && multiplier > 1 {
-        Text("\u{00d7}\(multiplier)").font(.system(size: 13, weight: .heavy).monospacedDigit()).foregroundStyle(Theme.good)
-      }
-    }
-    .lineLimit(1)
-    .frame(height: 16)
+    StatusLine(
+      white: model.run.color == .w,
+      text: model.endCued ? "Round over" : model.pending != nil ? "Judging" : model.myTurn && !model.thinking ? "Your move" : "Reply",
+      busy: model.thinking || model.pending != nil,
+      combo: model.prefs.combo ? comboMultiplier(model.session.state.extras.combo) : nil)
   }
 
   /// A blunder ends the run: its name, then Analyze or on to the end screen.
@@ -443,22 +432,8 @@ struct RunView: View {
         .padding(.horizontal, 14).padding(.vertical, 6)
         .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.45), radius: 10, y: 6)
         .padding(.top, 8)
-    } else if let miss = model.miss, survival {
-      pill("Off your prep", Theme.accent).id("miss-\(miss.from)\(miss.to)")
-    } else if let note = model.note {
-      pill(note.text, note.tone == "good" ? Theme.good : note.tone == "bad" ? Theme.bad : Theme.accent).id("note-\(note.text)")
     }
   }
-
-  /// A verdict over the top of the board: `.board-flash.top` with its `.flash-pill`, fading in, held and out.
-  private func pill(_ text: String, _ color: SwiftUI.Color) -> some View {
-    Text(text).font(.system(size: 19, weight: .heavy)).foregroundStyle(color).multilineTextAlignment(.center)
-      .padding(.leading, 14).padding(.trailing, 22).padding(.vertical, 12)
-      .background(Capsule().fill(Theme.surface)).shadow(color: .black.opacity(0.5), radius: 15, y: 10)
-      .padding(.top, 10).padding(.horizontal, 20)
-      .boardFlash()
-  }
-
 
   private var lastMove: (from: String, to: String)? {
     if model.blunder != nil { return nil }

@@ -139,10 +139,16 @@ struct EndgameRoundView: View {
             .buttonStyle(.plain)
         }
       }
+      // As in Play: ENDGAME, then whose move, under the title.
+      VStack(spacing: 6) {
+        Text("ENDGAME").font(.system(size: 11, weight: .bold)).tracking(0.7).foregroundStyle(Theme.text2)
+        if game.phase == .playing {
+          StatusLine(white: game.color == .w, text: game.myTurn && !game.thinking ? "Your move" : "Reply", busy: game.thinking)
+        }
+      }
+      .padding(.bottom, 6)
       ScrollView {
         VStack(spacing: 0) {
-          Text("ENDGAME").font(.system(size: 11, weight: .bold)).tracking(0.8).foregroundStyle(Theme.text2)
-            .frame(maxWidth: .infinity, alignment: .leading).padding(.bottom, 6)
           CapturedRow(fen: game.fen, orientation: game.color)
             .opacity(lens == .eval ? 0 : 1)
             .overlay { if lens == .eval { EvalLensBar(cp: game.evalCp, result: result) } }
@@ -151,12 +157,8 @@ struct EndgameRoundView: View {
             fen: game.fen, orientation: game.color, interactive: game.myTurn, lastMove: game.lastMove,
             highlights: highlights, marks: marks, onMove: game.play)
             .dimmed(game.phase == .over)
-            .overlay(alignment: .top) {
-              if let note = game.note {
-                Text(note).font(.system(size: 14, weight: .bold)).foregroundStyle(Theme.bad)
-                  .padding(.horizontal, 14).padding(.vertical, 7).background(Capsule().fill(Theme.surface))
-                  .padding(.top, 10)
-              }
+            .overlay {
+              if let note = game.note { BoardCallout(text: note, good: false).boardFlash(1.5).id(note) }
             }
           LensBar(held: $lens, lenses: LENSES, enabled: game.phase == .playing, plan: $plan, planEnabled: livePlan != nil)
           if let lens, lens != .eval { LensLegend(kind: lens, endgame: true) }
@@ -215,8 +217,6 @@ struct EndgameRoundView: View {
         }
       }
       Text(game.entry.mission.text).font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.text)
-      Text(game.thinking ? "Thinking\u{2026}" : game.myTurn ? "Your move" : "Their move")
-        .font(.system(size: 13)).foregroundStyle(Theme.text2)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.horizontal, 14).padding(.vertical, 12)

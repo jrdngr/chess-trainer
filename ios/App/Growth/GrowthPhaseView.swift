@@ -4,29 +4,18 @@ import Model
 import Shared
 import SwiftUI
 
-/// What sits under the board as the sitting goes: whose move, the reply to
-/// answer and the answers, or the reveal.
+/// What sits under the board as the sitting goes: the answers to pick from,
+/// or the reveal.
 struct GrowthPhaseView: View {
   @Bindable var model: GrowthModel
   let exits: GrowthView.Exits
 
   var body: some View {
-    let run = model.run
     VStack(spacing: 0) {
+      // Whose move sits under the app bar; under the board only what there is to do.
       switch model.phase {
-      case .walking:
-        let mine = isUsersTurn(run)
-        GrowthPrompt(side: mine ? run.color : run.color.other, who: model.thinking ? "Thinking\u{2026}" : mine ? "Your move" : "Their move")
-      case .answered:
-        let past = pastTheBook(model.index, run.fen)
-        let notes = [past ? "Past the book" : nil, model.added > 0 ? "\(model.added) of \(model.allowance) added" : nil].compactMap { $0 }
-        GrowthPrompt(side: run.color.other, who: "Thinking\u{2026}", ctx: notes.isEmpty ? nil : notes.joined(separator: " \u{00b7} "))
-      case .hole where !model.held:
-        if model.waitingForEngine {
-          GrowthPrompt(side: run.color, who: theyPlayed, ctx: "Past the book \u{00b7} the engine is finding moves\u{2026}")
-        } else if !model.choices.isEmpty {
-          hole
-        }
+      case .hole where !model.held && !model.waitingForEngine && !model.choices.isEmpty:
+        hole
       case .lost: lost
       case .done: GrowthReveal(model: model, exits: exits)
       default: EmptyView()
@@ -34,18 +23,7 @@ struct GrowthPhaseView: View {
     }
   }
 
-  private var theyPlayed: String {
-    model.run.hole.map { "They played \($0.san)" } ?? "Your prep ends here"
-  }
-
-  private var holeContext: String? {
-    guard let hole = model.run.hole else { return nil }
-    if hole.kept { return "In your Playbook, with no answer yet" }
-    if hole.engine { return "Engine's pick \u{00b7} past the book" }
-    return "\(JS.string(hole.share))% of strong players' games \u{00b7} \(formatGameCount(hole.games))"
-  }
-
-  /// Undo and Done flank the prompt, where a new player sees them from the first reply.
+  /// Undo and Done over the answers, where a new player sees them from the first reply.
   private var hole: some View {
     VStack(spacing: 0) {
       HStack(alignment: .center, spacing: 4) {
@@ -54,7 +32,6 @@ struct GrowthPhaseView: View {
         }
         .buttonStyle(.plain).disabled(model.session.history.isEmpty).opacity(model.session.history.isEmpty ? 0.35 : 1)
         .frame(maxWidth: .infinity, alignment: .leading)
-        GrowthPrompt(side: model.run.color, who: theyPlayed, ctx: holeContext).layoutPriority(1)
         Button("Done") { model.finish() }
           .buttonStyle(PlayButtonStyle(height: 38, radius: 11, font: 14)).fixedSize()
           .frame(maxWidth: .infinity, alignment: .trailing)
