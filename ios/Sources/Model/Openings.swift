@@ -350,6 +350,87 @@ public func playbookRows(_ rep: Repertoire, _ index: ReferenceIndex, firstMoves:
   return rows
 }
 
+/// One first move's rows on the Playbook tab, for the heading "1.e4".
+public struct PlaybookGroup: Equatable, Sendable {
+  public var move: String
+  public var entries: [PlaybookEntry]
+}
+
+/// A row on its own, or the rows that answer one opening of yours, under that opening's name.
+public enum PlaybookEntry: Equatable, Sendable {
+  case row(PlaybookRow)
+  /// `node` is the book position the family is named for, where its rating is kept.
+  case family(name: String, node: String, rows: [PlaybookRow])
+
+  public var lines: Int {
+    switch self {
+    case .row(let row): row.lines
+    case .family(_, _, let rows): rows.reduce(0) { $0 + $1.lines }
+    }
+  }
+}
+
+/// The Playbook's rows under a heading for each first move, and rows that
+/// answer the same opening of yours under that opening's name: the replies to
+/// 1.d4 d5 2.c4 sit under "Queen's Gambit". The family is the shortest
+/// position after one of your own moves, past the first, that two rows go
+/// through and the book names. Rows keep their order.
+public func playbookGroups(_ rows: [PlaybookRow], _ tree: OpeningTree) -> [PlaybookGroup] {
+  func path(_ row: PlaybookRow) -> [String] { row.parts.first?.path ?? [] }
+  var groups: [PlaybookGroup] = []
+  var order: [String] = []
+  var byMove: [String: [PlaybookRow]] = [:]
+  for row in rows {
+    guard let first = path(row).first else { continue }
+    if byMove[first] == nil { order.append(first) }
+    byMove[first, default: []].append(row)
+  }
+  for first in order {
+    let members = byMove[first]!
+    // Your own moves end at odd lengths as White, even as Black.
+    let start = members[0].color == .w ? 3 : 2
+    func prefixes(_ row: PlaybookRow) -> [[String]] {
+      let p = path(row)
+      return Swift.stride(from: start, to: p.count, by: 2).map { Array(p.prefix($0)) }
+    }
+    var familyOf: [String: (name: String, node: String)] = [:]
+    for row in members {
+      for prefix in prefixes(row) {
+        let id = prefix.joined(separator: " ")
+        let sharing = members.filter { path($0).count > prefix.count && Array(path($0).prefix(prefix.count)) == prefix }
+        let node = nodeById(tree, id)
+        guard sharing.count >= 2, node.depth == prefix.count, let name = openingFamily(tree.index, node.name) else { continue }
+        familyOf[row.id] = (name, id)
+        break
+      }
+    }
+    var entries: [PlaybookEntry] = []
+    for row in members {
+      guard let family = familyOf[row.id] else {
+        entries.append(.row(row))
+        continue
+      }
+      if let at = entries.firstIndex(where: { if case .family(_, family.node, _) = $0 { true } else { false } }),
+        case .family(let name, let node, var held) = entries[at]
+      {
+        held.append(row)
+        entries[at] = .family(name: name, node: node, rows: held)
+      } else {
+        entries.append(.family(name: family.name, node: family.node, rows: [row]))
+      }
+    }
+    groups.append(PlaybookGroup(move: "1.\(first)", entries: entries))
+  }
+  return groups
+}
+
+/// A row's name under its family's: "Declined" under "Queen's Gambit" for Queen's Gambit Declined.
+public func nameUnder(_ family: String, _ name: String) -> String {
+  guard name.hasPrefix(family + " ") else { return name }
+  let rest = name.dropFirst(family.count + 1)
+  return rest.prefix(1).uppercased() + rest.dropFirst()
+}
+
 /// Every line of a Playbook row, part by part.
 public func linesOf(_ rep: Repertoire, _ row: PlaybookRow, _ index: ReferenceIndex) -> [OpeningLine] {
   row.parts.flatMap { linesOf(rep, $0, index) }

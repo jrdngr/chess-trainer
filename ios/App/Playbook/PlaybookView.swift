@@ -3,7 +3,8 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// The Playbook tab: one side at a time, each opening a row with its tier and
+/// The Playbook tab: one side at a time, its openings under their first move,
+/// replies to one opening of yours under its name, each row with its tier and
 /// its line count. Tidy and the Extensions review are in the more menu when they have something.
 struct PlaybookView: View {
   let tree: OpeningTree
@@ -134,28 +135,32 @@ struct PlaybookView: View {
         VStack(spacing: 0) {
           SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")])
           if let rep, !rows.isEmpty {
-            HStack {
-              Spacer()
-              Text("LINES").font(.system(size: 11.5, weight: .semibold)).tracking(0.6).foregroundStyle(Theme.text3)
-                .frame(width: 40, alignment: .trailing)
-              Spacer().frame(width: 18)
-            }
-            .padding(.horizontal, 16).padding(.top, 18).padding(.bottom, 6)
-            ListCard {
-              ForEach(rows, id: \.id) { row in
-                SwipeToRemove {
-                  store.update { state in
-                    for part in row.parts { state.removeOpening(rep.id, part.rootId) }
-                  }
-                } content: {
-                  PlaybookRowView(tree: tree, row: row, extensions: extCount[row.id] ?? 0) {
-                    page = .opening(repId: rep.id, name: row.name)
+            let groups = playbookGroups(rows, tree)
+            ForEach(Array(groups.enumerated()), id: \.offset) { at, group in
+              HStack {
+                Text(group.move).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
+                Spacer()
+                if at == 0 {
+                  Text("LINES").font(.system(size: 11.5, weight: .semibold)).tracking(0.6).foregroundStyle(Theme.text3)
+                    .frame(width: 40, alignment: .trailing)
+                  Spacer().frame(width: 18)
+                }
+              }
+              .padding(.horizontal, 16).padding(.top, at == 0 ? 18 : 14).padding(.bottom, 6)
+              ListCard {
+                ForEach(Array(group.entries.enumerated()), id: \.offset) { _, entry in
+                  switch entry {
+                  case .row(let row):
+                    rowView(rep, row, extCount)
+                  case .family(let name, let node, let members):
+                    FamilyRowView(name: name, nodeId: node, lines: entry.lines)
+                    ForEach(members, id: \.id) { row in rowView(rep, row, extCount, name: nameUnder(name, row.name), indent: 18) }
                   }
                 }
               }
+              // Over the first card, pointing down at its first row.
+              .tip(tip, when: at == 0 && tip == .playbookRow, arrow: .down, arrowAt: 0.3, inset: 8, onDismiss: putAway)
             }
-            // Over the card, pointing down at its first row: the card clips what hangs inside it.
-            .tip(tip, when: tip == .playbookRow, arrow: .down, arrowAt: 0.3, inset: 8, onDismiss: putAway)
             ListCard {
               Button { page = .browse(repId: rep.id, nodeId: nil, title: repertoireName(rep.color)) } label: {
                 HStack(spacing: 12) {
@@ -190,6 +195,19 @@ struct PlaybookView: View {
       OnboardingView(tree: tree, index: index, onClose: { adding = false }) { next in
         adding = false
         if next == .autopilot { onPlay() } else { onHome() }
+      }
+    }
+  }
+
+  /// One opening's row, swiping left to remove it.
+  private func rowView(_ rep: Repertoire, _ row: PlaybookRow, _ extCount: [String: Int], name: String? = nil, indent: CGFloat = 0) -> some View {
+    SwipeToRemove {
+      store.update { state in
+        for part in row.parts { state.removeOpening(rep.id, part.rootId) }
+      }
+    } content: {
+      PlaybookRowView(tree: tree, row: row, extensions: extCount[row.id] ?? 0, name: name, indent: indent) {
+        page = .opening(repId: rep.id, name: row.name)
       }
     }
   }
@@ -246,6 +264,9 @@ struct PlaybookRowView: View {
   let tree: OpeningTree
   let row: PlaybookRow
   let extensions: Int
+  /// The name shown, shorter under a family's row.
+  var name: String? = nil
+  var indent: CGFloat = 0
   let onOpen: () -> Void
   @Environment(AppStore.self) private var store
 
@@ -256,7 +277,7 @@ struct PlaybookRowView: View {
     Button(action: onOpen) {
       HStack(spacing: 10) {
         VStack(alignment: .leading, spacing: 0) {
-          Text(row.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
+          Text(name ?? row.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
           TierBar(rating: stats.rating, rated: stats.rated, label: false)
         }
         Text(stats.rated == 0 ? NEW_LABEL : rank.heldLabel).font(.system(size: 13)).foregroundStyle(Theme.text2)
@@ -266,9 +287,36 @@ struct PlaybookRowView: View {
           .frame(width: 40, alignment: .trailing)
         Icon(name: "chevron", size: 18).foregroundStyle(Theme.text3)
       }
-      .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 60).contentShape(Rectangle())
+      .padding(.leading, indent).padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 60).contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+  }
+}
+
+/// The opening of yours that the rows under it answer: its name, its own tier, and their lines together.
+struct FamilyRowView: View {
+  let name: String
+  /// The book position it is named for, where its rating is kept.
+  let nodeId: String
+  let lines: Int
+  @Environment(AppStore.self) private var store
+
+  var body: some View {
+    let stats = nodeStats(store.state.score, nodeId)
+    let rank = rankOf(stats.rating, stats.rated)
+    HStack(spacing: 10) {
+      VStack(alignment: .leading, spacing: 0) {
+        Text(name).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text).lineLimit(1)
+        TierBar(rating: stats.rating, rated: stats.rated, label: false)
+      }
+      Text(stats.rated == 0 ? NEW_LABEL : rank.heldLabel).font(.system(size: 13)).foregroundStyle(Theme.text2)
+        .lineLimit(1).frame(width: 64, alignment: .trailing)
+      Text("\(lines)").font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text)
+        .frame(width: 40, alignment: .trailing)
+      Spacer().frame(width: 18)
+    }
+    .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 60)
+    .background(Theme.surface)
   }
 }
 
