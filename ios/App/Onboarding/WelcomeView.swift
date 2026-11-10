@@ -88,7 +88,7 @@ private struct DealtCard<Face: View>: View, Animatable {
   var deckDrop: CGFloat
   @ViewBuilder var face: () -> Face
 
-  var animatableData: Double {
+  nonisolated var animatableData: Double {
     get { progress }
     set { progress = newValue }
   }
