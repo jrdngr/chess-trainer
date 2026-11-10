@@ -31,8 +31,8 @@ final class EndgameGame {
   private(set) var missedBest: (from: String, to: String)?
 
   @ObservationIgnored private let store: AppStore
-  @ObservationIgnored private let engine = BasicEngine()
-  @ObservationIgnored private let judgeEngine = BasicEngine()
+  @ObservationIgnored private let engine: ChessEngine
+  @ObservationIgnored private let judgeEngine: ChessEngine
   @ObservationIgnored private var task: Task<Void, Never>?
   @ObservationIgnored private var promoted = false
 
@@ -42,6 +42,8 @@ final class EndgameGame {
   init(entry: EndgameEntry, store: AppStore) {
     self.entry = entry
     self.store = store
+    engine = makeEngine(store.state.settings.engine)
+    judgeEngine = makeEngine(store.state.settings.engine)
     start = endgameStart(entry, Env.random) { exactResult($0, for: $1) }
     fen = start
     color = fenTurn(start)

@@ -201,7 +201,7 @@ struct EngineBenchTests {
     let reference = SearchOptions(maxDepth: 8, timeMs: 800, multiPv: 1)
     let engine = BasicEngine()
     var report: [String] = []
-    for level in LEVELS {
+    for level in levels(.basic) {
       let rand = mulberry32(seed: Double(level.rating))
       var total = 0.0, slips = 0, blunders = 0
       for fen in Self.middlegames {

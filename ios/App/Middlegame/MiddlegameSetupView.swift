@@ -28,7 +28,7 @@ struct MiddlegameSetupView: View {
           PlaySection(title: "Opponent strength")
           SegmentedControl(
             value: Binding(get: { prefs.opponent }, set: { id in set { $0.opponent = id } }),
-            options: [(value: OPPONENT_MATCH, label: "Match me")] + LEVELS.map { (value: $0.id, label: $0.name) })
+            options: [(value: OPPONENT_MATCH, label: "Match me")] + LEVEL_RATINGS.map { (value: String($0), label: String($0)) })
           PlaySection(title: "Clock")
           SegmentedControl(
             value: Binding(get: { prefs.clock }, set: { clock in set { $0.clock = clock } }),

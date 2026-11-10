@@ -1,6 +1,6 @@
 /// What Play remembers between visits.
 public struct PlayPrefs: Equatable, Sendable, Codable {
-  /// One of LEVELS.
+  /// One of LEVEL_RATINGS, as a level id.
   public var level: String
   /// Write the opening into a repertoire when the game ends.
   public var save: Bool

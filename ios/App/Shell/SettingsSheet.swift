@@ -43,6 +43,14 @@ struct SettingsSheet: View {
           ToggleRow(label: "Move scores", on: settings.autopilot.moveScores) { store.update { $0.settings.autopilot.moveScores.toggle() } }
           FillSizeRow(value: settings.movesPerFill) { n in store.update { $0.settings.movesPerFill = n } }
         }
+        section("Engine")
+        ListCard {
+          SegmentedControl(
+            value: Binding(get: { settings.engine }, set: { kind in store.update { $0.settings.engine = kind } }),
+            options: EngineKind.allCases.map { ($0, $0.name) }
+          )
+          .padding(.horizontal, 16).padding(.vertical, 10)
+        }
         section("Profiles")
         ListCard {
           ForEach(store.profiles.profiles) { profile in profileRow(profile) }

@@ -40,8 +40,8 @@ struct MiddlegameView: View {
   @State private var opened = false
   @State private var settings = false
   /// The game engine, and a second one for the handoff's checks so a build never waits on a judge.
-  private static let engine = BasicEngine()
-  private static let builder = BasicEngine()
+  private static let engine = EngineSlot()
+  private static let builder = EngineSlot()
 
   var body: some View {
     Group {
@@ -111,7 +111,8 @@ struct MiddlegameView: View {
     model = nil
     last = drawn
     building = trail(drawn.sans)
-    let tools = handoffTools(Self.builder, index, prefs.opponentLevel(store.state.strength))
+    let kind = store.state.settings.engine
+    let tools = handoffTools(Self.builder(kind), index, prefs.opponentLevel(store.state.strength, engine: kind))
     job?.cancel()
     job = Task {
       let began = Date()
@@ -124,7 +125,7 @@ struct MiddlegameView: View {
       guard let handoff,
         let run = RunModel(
           middlegame: options, handoff: handoff, prefs: prefs, selection: selection,
-          store: store, tree: tree, index: index, engine: Self.engine)
+          store: store, tree: tree, index: index, engine: Self.engine(kind))
       else {
         toasts.show("This line couldn't be played out")
         if exact != nil { onExit() }

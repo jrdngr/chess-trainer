@@ -15,7 +15,7 @@ struct PlayOnView: View {
   @Environment(AppStore.self) private var store
   @State private var sans: [String] = []
   @State private var best: EngineLine?
-  private static let engine = BasicEngine()
+  private static let engine = EngineSlot()
 
   var body: some View {
     let fens = walkSan(sans, from).fens
@@ -70,7 +70,7 @@ struct PlayOnView: View {
   private func think(_ fen: String, _ moving: Bool) async {
     best = nil
     if moving { try? await Task.sleep(for: .milliseconds(120)) }
-    let snap = await Self.engine.analyse(fen, EngineLimits(movetime: 700, multiPv: 1))
+    let snap = await Self.engine(store.state.settings.engine).analyse(fen, EngineLimits(movetime: 700, multiPv: 1))
     guard !Task.isCancelled else { return }
     best = snap.lines.first
     if moving, let uci = best?.pv.first, let move = applyUci(fen, uci) { sans.append(move.san) }

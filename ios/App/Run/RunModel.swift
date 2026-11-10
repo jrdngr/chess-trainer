@@ -201,7 +201,7 @@ final class RunModel {
   var prefs: SurvivalPrefs { ctx.prefs }
   /// Who plays the other side past the book. Autopilot's opponent always plays at your strength.
   var opponentLevel: Level {
-    round != nil ? levelMatching(store.state.strength) : prefs.opponentLevel(store.state.strength)
+    round != nil ? levelMatching(store.state.strength, engine: engine.kind) : prefs.opponentLevel(store.state.strength, engine: engine.kind)
   }
   /// With moments, missions or the combo on, a run is scored in points as well as moves.
   var scoredInPoints: Bool { prefs.moments || prefs.missions || prefs.combo }
@@ -413,7 +413,8 @@ final class RunModel {
 
   /// The opponent's own engine, so its reply can be searched while the judge
   /// weighs your move.
-  private static let replyEngine = BasicEngine()
+  private static let replyEngines = EngineSlot()
+  private var replyEngine: ChessEngine { Self.replyEngines(engine.kind) }
   /// The reply searched ahead, for the position after your move.
   private var reply: (fen: String, search: Task<EngineSnapshot, Never>)?
 
@@ -421,7 +422,7 @@ final class RunModel {
   private func searchReply(after fen: String) {
     reply?.search.cancel()
     let level = opponentLevel
-    let engine = Self.replyEngine
+    let engine = replyEngine
     reply = (fen, Task { await engine.analyse(fen, EngineLimits(depth: level.depth, multiPv: level.multiPv)) })
   }
 
@@ -450,7 +451,7 @@ final class RunModel {
       if let ready {
         snap = await ready.value
       } else {
-        snap = await Self.replyEngine.analyse(fen, EngineLimits(depth: level.depth, multiPv: level.multiPv))
+        snap = await self.replyEngine.analyse(fen, EngineLimits(depth: level.depth, multiPv: level.multiPv))
       }
       let san = chooseMove(snap.lines, level, self.picker).flatMap { applyUci(fen, $0)?.san }
       self.thinking = false

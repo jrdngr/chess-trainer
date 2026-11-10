@@ -48,10 +48,10 @@ public func updatedStrength(_ s: PlayerStrength, lost: Double) -> PlayerStrength
   return PlayerStrength(rating: max(Double(MIN_RATING), min(Double(MAX_RATING), rating)), moves: s.moves + 1)
 }
 
-/// The level that plays like you.
-public func levelMatching(_ s: PlayerStrength) -> Level {
+/// The level that plays like you, on an engine.
+public func levelMatching(_ s: PlayerStrength, engine: EngineKind) -> Level {
   // Rounded to 50, so the level reads as a plain number.
-  levelFor(rating: Int((s.rating / 50).rounded()) * 50)
+  levelFor(rating: Int((s.rating / 50).rounded()) * 50, engine: engine)
 }
 
 extension AppState {

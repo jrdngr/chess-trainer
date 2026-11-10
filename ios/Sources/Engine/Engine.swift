@@ -26,9 +26,11 @@ public struct EngineSnapshot: Sendable {
   public var fen: String
 }
 
-/// An engine behind one protocol, so a stronger one can take its place.
+/// An engine behind one protocol, so another can take its place.
 /// `onUpdate` sees each finished depth; the result is the last word.
 public protocol ChessEngine: Sendable {
+  /// Which engine it is: its levels are drawn from this kind's style.
+  var kind: EngineKind { get }
   func analyse(_ fen: String, _ limits: EngineLimits, onUpdate: @escaping @Sendable (EngineSnapshot) -> Bool) async -> EngineSnapshot
 }
 
@@ -38,9 +40,50 @@ extension ChessEngine {
   }
 }
 
+/// A new engine of a kind, with its own memory of positions.
+public func makeEngine(_ kind: EngineKind) -> ChessEngine {
+  switch kind {
+  case .basic: return BasicEngine()
+  }
+}
+
+/// The engine chosen in Settings. The app sets it as settings change.
+public enum Engines {
+  private static let lock = NSLock()
+  nonisolated(unsafe) private static var chosen = EngineKind.basic
+
+  public static var selected: EngineKind {
+    get { lock.withLock { chosen } }
+    set { lock.withLock { chosen = newValue } }
+  }
+}
+
+/// One use's engine: one of each kind, made the first time it is asked for,
+/// so a use keeps its own engine (and its memory) apart from other uses.
+public final class EngineSlot: @unchecked Sendable {
+  private let lock = NSLock()
+  private var made: [EngineKind: ChessEngine] = [:]
+
+  public init() {}
+
+  /// This use's engine of a kind.
+  public func callAsFunction(_ kind: EngineKind) -> ChessEngine {
+    lock.withLock {
+      if let engine = made[kind] { return engine }
+      let engine = makeEngine(kind)
+      made[kind] = engine
+      return engine
+    }
+  }
+
+  /// This use's engine of the kind chosen in Settings.
+  public var current: ChessEngine { self(Engines.selected) }
+}
+
 /// The engine: the search in `Basic/`.
 /// `onUpdate` returning true stops the search there.
 public actor BasicEngine: ChessEngine {
+  public nonisolated let kind = EngineKind.basic
   /// How long a search runs when the caller only names a depth, and the longest any runs:
   /// the judge's confirmation of a suspected blunder.
   static let defaultMs: Double = 1000
