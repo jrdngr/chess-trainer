@@ -170,7 +170,7 @@ struct EndgameRoundView: View {
               if let called { CalloutStrip(text: called, good: false).transition(.opacity).id(called) }
             }
             .animation(.easeOut(duration: 0.25), value: called)
-          if let lens, lens != .eval { LensLegend(kind: lens, endgame: true).clearsLens($lens) }
+          if let lens, lens != .eval { LensLegend(kind: lens, endgame: true, safety: marks?.safety).clearsLens($lens) }
           if plan, let live = livePlan, let intro = game.entry.intro { planCard(intro.pages[live.page]) }
           if let outcome = game.outcome { ending(outcome) } else { goal }
           if game.phase == .playing {

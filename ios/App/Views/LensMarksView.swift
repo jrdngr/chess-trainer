@@ -24,6 +24,23 @@ enum LensColors {
     }
   }
 
+  static func grade(_ grade: KingGrade) -> SwiftUI.Color {
+    switch grade {
+    case .safe: green
+    case .exposed: amber
+    case .attacked: red
+    }
+  }
+
+  /// What a lens says about a piece, as the piece's own color: a ring's activity or a pawn's tag.
+  static func pieceTints(_ marks: LensMarks?) -> [String: SwiftUI.Color] {
+    guard let marks else { return [:] }
+    var out: [String: SwiftUI.Color] = [:]
+    for ring in marks.rings ?? [] { out[ring.square] = tone(ring.tone) }
+    for tag in marks.tags ?? [] { out[tag.square] = tag.tone == "good" ? green : red }
+    return out
+  }
+
   static let tintAlpha: [Int: Double] = [1: 0.3, 2: 0.44, 3: 0.58]
 
   static func tone(_ tone: String) -> SwiftUI.Color {
@@ -38,7 +55,7 @@ enum LensColors {
   }
 }
 
-/// The marks under the pieces: tints, a king's zone, a pawn's square, holes, missing shield pawns.
+/// The marks under the pieces: tints, each king's zone, a pawn's square, holes, missing shield pawns.
 struct LensUnderView: View {
   var marks: LensMarks
   var cell: CGFloat
@@ -50,11 +67,22 @@ struct LensUnderView: View {
       ForEach(Array((marks.tints ?? []).enumerated()), id: \.offset) { _, t in
         Rectangle().fill(LensColors.tint(t.color).opacity(LensColors.tintAlpha[t.strength] ?? 0.3)).at(t.square, cell, position)
       }
-      ForEach(Array((marks.zone ?? []).enumerated()), id: \.offset) { _, square in
-        Rectangle().fill(SwiftUI.Color(red: 15 / 255, green: 23 / 255, blue: 42 / 255).opacity(0.3))
-          .overlay(Rectangle().strokeBorder(.white.opacity(0.9), lineWidth: 1.5).padding(2))
-          .overlay(Rectangle().strokeBorder(.black.opacity(0.6), lineWidth: 2))
-          .at(square, cell, position)
+      // One outline per king around its zone, in the color of its grade.
+      ForEach(marks.zone == nil ? [] : marks.shields ?? [], id: \.square) { king in
+        let around = (marks.zone ?? []).map(position).filter { p in
+          let k = position(king.square)
+          return abs(p.col - k.col) <= 1 && abs(p.row - k.row) <= 1
+        }
+        if let left = around.map(\.col).min(), let right = around.map(\.col).max(),
+          let top = around.map(\.row).min(), let bottom = around.map(\.row).max()
+        {
+          let color = LensColors.grade(king.grade)
+          RoundedRectangle(cornerRadius: cell * 0.26).fill(color.opacity(0.12))
+            .overlay(RoundedRectangle(cornerRadius: cell * 0.26).strokeBorder(color, lineWidth: 2.5))
+            .padding(2)
+            .frame(width: CGFloat(right - left + 1) * cell, height: CGFloat(bottom - top + 1) * cell)
+            .offset(x: CGFloat(left) * cell, y: CGFloat(top) * cell)
+        }
       }
       ForEach(marks.boxes ?? [], id: \.from) { box in
         let a = position(box.from), b = position(box.to)
@@ -78,7 +106,7 @@ struct LensUnderView: View {
   }
 }
 
-/// The marks over the pieces: rings, badges, tags, passer letters, stars, pips, shields, lines, guides and arrows.
+/// The marks over the pieces: badges, passer letters, lines, guides and arrows. Rings and tags color the pieces themselves (`BoardView`).
 struct LensOverView: View {
   var marks: LensMarks
   var cell: CGFloat
@@ -87,24 +115,11 @@ struct LensOverView: View {
   var body: some View {
     ZStack(alignment: .topLeading) {
       lines
-      ForEach(marks.rings ?? [], id: \.square) { r in
-        // A dark edge on both sides keeps the ring readable on any square tint.
-        Circle().strokeBorder(.black.opacity(0.6), lineWidth: 6)
-          .overlay(Circle().strokeBorder(LensColors.tone(r.tone), lineWidth: 3).padding(1.5))
-          .at(r.square, cell, position)
-      }
       ForEach(marks.badges ?? [], id: \.self) { square in
         WorstBadge(size: cell * 0.32)
           .padding(cell * 0.04)
           .frame(width: cell, height: cell, alignment: .bottomLeading)
           .at(square, cell, position)
-      }
-      ForEach(marks.tags ?? [], id: \.square) { t in
-        Circle().fill(t.tone == "good" ? LensColors.green : LensColors.red)
-          .frame(width: cell * 0.24, height: cell * 0.24)
-          .padding(cell * 0.07)
-          .frame(width: cell, height: cell, alignment: .topTrailing)
-          .at(t.square, cell, position)
       }
       ForEach(marks.letters ?? [], id: \.square) { l in
         Text(l.text).font(.system(size: cell * 0.24, weight: .heavy))
@@ -115,32 +130,6 @@ struct LensOverView: View {
           .padding(cell * 0.04)
           .frame(width: cell, height: cell, alignment: .bottomTrailing)
           .at(l.square, cell, position)
-      }
-      ForEach(marks.stars ?? [], id: \.square) { s in
-        Text("\u{2605}").font(.system(size: cell * 0.3)).foregroundStyle(s.side == .mine ? LensColors.lightBlue : LensColors.lightRed)
-          .shadow(color: .black.opacity(0.6), radius: 1, y: 1)
-          .padding(.horizontal, cell * 0.06).padding(.vertical, cell * 0.02)
-          .frame(width: cell, height: cell, alignment: .topLeading)
-          .at(s.square, cell, position)
-      }
-      ForEach(Array((marks.pips ?? []).enumerated()), id: \.offset) { _, p in
-        HStack(spacing: 2) {
-          ForEach(0..<min(p.attackers, 4), id: \.self) { _ in Circle().fill(LensColors.lightRed).frame(width: 5, height: 5) }
-          ForEach(0..<min(p.defenders, 4), id: \.self) { _ in Circle().fill(LensColors.lightBlue).frame(width: 5, height: 5) }
-        }
-        .padding(.horizontal, 3).padding(.vertical, 2)
-        .background(Capsule().fill(.black.opacity(0.45)))
-        .padding(.bottom, cell * 0.05)
-        .frame(width: cell, height: cell, alignment: .bottom)
-        .at(p.square, cell, position)
-      }
-      ForEach(marks.shields ?? [], id: \.square) { s in
-        ShieldShape().fill(s.grade == .safe ? LensColors.green : s.grade == .exposed ? LensColors.amber : LensColors.red)
-          .frame(width: cell * 0.38, height: cell * 0.38)
-          .shadow(color: .black.opacity(0.6), radius: 1, y: 1)
-          .padding(cell * 0.03)
-          .frame(width: cell, height: cell, alignment: .topTrailing)
-          .at(s.square, cell, position)
       }
       ArrowsView(
         arrows: (marks.arrows ?? []).map { BoardArrow(from: $0.from, to: $0.to, color: LensColors.tone($0.tone)) },
@@ -155,9 +144,7 @@ struct LensOverView: View {
         var path = Path()
         path.move(to: center(line.from))
         path.addLine(to: center(line.to))
-        context.stroke(
-          path, with: .color(LensColors.red.opacity(0.6)),
-          style: StrokeStyle(lineWidth: cell * 0.07, lineCap: .round, dash: [cell * 0.18, cell * 0.12]))
+        context.stroke(path, with: .color(LensColors.red.opacity(0.85)), style: StrokeStyle(lineWidth: cell * 0.065, lineCap: .round))
       }
       for guide in marks.guides ?? [] {
         var path = Path()
@@ -174,14 +161,6 @@ struct LensOverView: View {
   private func center(_ square: String) -> CGPoint {
     let p = position(square)
     return CGPoint(x: (CGFloat(p.col) + 0.5) * cell, y: (CGFloat(p.row) + 0.5) * cell)
-  }
-}
-
-/// The king's shield, on a 24-point grid.
-struct ShieldShape: Shape {
-  func path(in rect: CGRect) -> Path {
-    SVGPath.parse("M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3z")
-      .applying(CGAffineTransform(translationX: rect.minX, y: rect.minY).scaledBy(x: rect.width / 24, y: rect.height / 24))
   }
 }
 

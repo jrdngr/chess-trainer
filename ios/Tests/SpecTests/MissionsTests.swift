@@ -115,6 +115,7 @@ extension Earned {
   func short(_ m: LensMarks) -> JSON {
     var out: [String: JSON] = [:]
     if let c = m.caption { out["caption"] = .string(c) }
+    if let k = m.safety { out["safety"] = .string("\(k.mine.rawValue)/\(k.theirs.rawValue)") }
     if m.ghost == true { out["ghost"] = .bool(true) }
     func put(_ key: String, _ list: [String]?, sort: Bool = true) {
       guard let list, !list.isEmpty else { return }
@@ -125,7 +126,6 @@ extension Earned {
     put("dots", m.dots)
     put("rings", m.rings?.map { "\($0.square):\($0.tone)" })
     put("badges", m.badges)
-    put("stars", m.stars?.map { "\($0.square):\($0.side.rawValue)" })
     put("zone", m.zone)
     put("pips", m.pips?.map { "\($0.square):\($0.attackers)/\($0.defenders)" })
     put("shields", m.shields?.map { "\($0.square):\($0.grade.rawValue)" }, sort: false)

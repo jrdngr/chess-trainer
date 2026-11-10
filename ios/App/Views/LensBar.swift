@@ -90,19 +90,32 @@ struct LensLegend: View {
   var kind: LensKind
   /// The endgame lenses draw their own marks.
   var endgame = false
+  /// Each king's grade, which the Kings key leads with.
+  var safety: KingSafety? = nil
 
   var body: some View {
-    LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), alignment: .leading)], spacing: 10) {
-      ForEach((endgame ? Self.endgameRows : Self.rows)[kind] ?? [], id: \.label) { row in
-        HStack(spacing: 8) {
-          row.swatch.frame(width: 18, height: 18)
-          Text(row.label).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(2)
+    VStack(alignment: .leading, spacing: 12) {
+      LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), alignment: .leading)], spacing: 10) {
+        ForEach(kingRows + ((endgame ? Self.endgameRows : Self.rows)[kind] ?? []), id: \.label) { row in
+          HStack(spacing: 8) {
+            row.swatch.frame(width: 18, height: 18)
+            Text(row.label).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(2)
+          }
         }
       }
+      if kind == .pieces { ControlScale() }
     }
     .padding(.horizontal, 14).padding(.vertical, 12)
     .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface))
     .padding(.top, 12)
+  }
+
+  private var kingRows: [Row] {
+    guard kind == .kings, let safety else { return [] }
+    return [
+      Row(swatch: Self.zone(LensColors.grade(safety.mine)), label: "You: \(KING_GRADE_TEXT[safety.mine]!)"),
+      Row(swatch: Self.zone(LensColors.grade(safety.theirs)), label: "Them: \(KING_GRADE_TEXT[safety.theirs]!)"),
+    ]
   }
 
   struct Row {
@@ -110,20 +123,41 @@ struct LensLegend: View {
     var label: String
   }
 
+  /// Who holds the squares, as one scale from yours to theirs.
+  private struct ControlScale: View {
+    var body: some View {
+      VStack(spacing: 4) {
+        Capsule()
+          .fill(LinearGradient(
+            colors: [TintColor.blue, .purpleBlue, .purple, .purpleRed, .red].map { LensColors.tint($0).opacity(0.75) },
+            startPoint: .leading, endPoint: .trailing))
+          .frame(height: 8)
+        HStack {
+          Text("Your squares")
+          Spacer()
+          Text("Contested")
+          Spacer()
+          Text("Theirs")
+        }
+        .font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.text2)
+      }
+    }
+  }
+
+  private static func piece(_ type: PieceType, _ color: SwiftUI.Color) -> AnyView {
+    AnyView(PieceView(piece: BoardPiece(square: "a1", type: type, color: .w), size: 20, tint: color))
+  }
+  private static func dot(_ color: SwiftUI.Color, _ size: CGFloat) -> AnyView { AnyView(Circle().fill(color).frame(width: size, height: size)) }
   private static func tint(_ color: TintColor) -> AnyView {
     AnyView(RoundedRectangle(cornerRadius: 4).fill(LensColors.tint(color).opacity(0.6)))
   }
-  private static func dot(_ color: SwiftUI.Color, _ size: CGFloat) -> AnyView { AnyView(Circle().fill(color).frame(width: size, height: size)) }
-  private static func ring(_ color: SwiftUI.Color) -> AnyView { AnyView(Circle().strokeBorder(color, lineWidth: 2.5)) }
-  private static func star(_ color: SwiftUI.Color) -> AnyView { AnyView(Text("\u{2605}").font(.system(size: 15)).foregroundStyle(color)) }
-  private static func shield(_ color: SwiftUI.Color) -> AnyView { AnyView(ShieldShape().fill(color)) }
-  private static func arrow(_ color: SwiftUI.Color, faint: Bool = false) -> AnyView {
+  private static func arrow(_ color: SwiftUI.Color) -> AnyView {
     AnyView(Canvas { context, size in
       let k = size.width / 20
       var shaft = Path()
       shaft.move(to: CGPoint(x: 2 * k, y: 10 * k))
       shaft.addLine(to: CGPoint(x: 13 * k, y: 10 * k))
-      context.stroke(shaft, with: .color(color), style: StrokeStyle(lineWidth: (faint ? 2 : 3) * k, lineCap: .round))
+      context.stroke(shaft, with: .color(color), style: StrokeStyle(lineWidth: 3 * k, lineCap: .round))
       var head = Path()
       head.move(to: CGPoint(x: 12 * k, y: 5 * k))
       head.addLine(to: CGPoint(x: 19 * k, y: 10 * k))
@@ -132,17 +166,16 @@ struct LensLegend: View {
       context.fill(head, with: .color(color))
     })
   }
-  private static let zone = AnyView(
-    RoundedRectangle(cornerRadius: 3).fill(SwiftUI.Color(red: 15 / 255, green: 23 / 255, blue: 42 / 255).opacity(0.3))
-      .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(.white.opacity(0.9), lineWidth: 1.5).padding(1.5))
-      .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(.black.opacity(0.6), lineWidth: 1.5)))
+  private static func zone(_ color: SwiftUI.Color) -> AnyView {
+    AnyView(RoundedRectangle(cornerRadius: 5).fill(color.opacity(0.14)).overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(color, lineWidth: 2)))
+  }
   private static let empty = AnyView(
     Circle().strokeBorder(LensColors.red.opacity(0.9), style: StrokeStyle(lineWidth: 2, dash: [3, 2])).frame(width: 14, height: 14))
   private static let line = AnyView(Canvas { context, size in
     var path = Path()
     path.move(to: CGPoint(x: 2, y: size.height / 2))
     path.addLine(to: CGPoint(x: size.width - 2, y: size.height / 2))
-    context.stroke(path, with: .color(LensColors.red.opacity(0.8)), style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
+    context.stroke(path, with: .color(LensColors.red.opacity(0.85)), style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
   })
 
   private static func guide(_ color: SwiftUI.Color) -> AnyView {
@@ -161,10 +194,17 @@ struct LensLegend: View {
     Rectangle().fill(LensColors.green.opacity(0.12))
       .overlay(Rectangle().strokeBorder(LensColors.green, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))))
 
+  private static let activity: [Row] = [
+    Row(swatch: piece(.n, LensColors.green), label: "Active"),
+    Row(swatch: piece(.n, LensColors.amber), label: "Passive"),
+    Row(swatch: piece(.n, LensColors.red), label: "Idle"),
+    Row(swatch: AnyView(WorstBadge(size: 16)), label: "Worst piece"),
+  ]
+
   private static let endgameRows: [LensKind: [Row]] = [
     .pawns: [
-      Row(swatch: dot(LensColors.green, 10), label: "Passed pawn"),
-      Row(swatch: dot(LensColors.red, 10), label: "Weak pawn"),
+      Row(swatch: piece(.p, LensColors.green), label: "Passed pawn"),
+      Row(swatch: piece(.p, LensColors.red), label: "Weak pawn"),
       Row(swatch: box, label: "Pawn\u{2019}s square"),
       Row(swatch: letter("O"), label: "Outside passer"),
       Row(swatch: letter("P"), label: "Protected passer"),
@@ -172,53 +212,29 @@ struct LensLegend: View {
       Row(swatch: arrow(LensColors.blue), label: "Your best break"),
       Row(swatch: arrow(LensColors.red), label: "Their best break"),
     ],
-    .pieces: [
-      Row(swatch: ring(LensColors.green), label: "Active"),
-      Row(swatch: ring(LensColors.amber), label: "Passive"),
-      Row(swatch: ring(LensColors.red), label: "Doing nothing"),
-      Row(swatch: AnyView(WorstBadge(size: 16)), label: "Worst piece"),
-      Row(swatch: dot(LensColors.amber.opacity(0.9), 10), label: "Pawn on its bishop\u{2019}s color"),
-      Row(swatch: tint(.blue), label: "Your square"),
-      Row(swatch: tint(.red), label: "Their square"),
-      Row(swatch: tint(.purple), label: "Contested"),
-    ],
+    .pieces: activity + [Row(swatch: dot(LensColors.amber.opacity(0.9), 10), label: "Pawn on its bishop\u{2019}s color")],
     .kings: [
       Row(swatch: tint(.blue), label: "Your key square"),
       Row(swatch: tint(.red), label: "Their key square"),
       Row(swatch: guide(SwiftUI.Color(red: 245 / 255, green: 245 / 255, blue: 247 / 255)), label: "Opposition"),
       Row(swatch: guide(LensColors.amber), label: "Cut-off line"),
-      Row(swatch: shield(LensColors.green), label: "King safety (queens on)"),
+      Row(swatch: line, label: "Open line to the king"),
+      Row(swatch: empty, label: "Missing shield pawn"),
     ],
   ]
 
   private static let rows: [LensKind: [Row]] = [
     .pawns: [
-      Row(swatch: dot(LensColors.red, 10), label: "Weak pawn"),
-      Row(swatch: dot(LensColors.green, 10), label: "Passed pawn"),
+      Row(swatch: piece(.p, LensColors.red), label: "Weak pawn"),
+      Row(swatch: piece(.p, LensColors.green), label: "Passed pawn"),
       Row(swatch: dot(LensColors.amber.opacity(0.9), 10), label: "Hole"),
       Row(swatch: arrow(LensColors.blue), label: "Your best break"),
       Row(swatch: arrow(LensColors.red), label: "Their best break"),
     ],
-    .pieces: [
-      Row(swatch: ring(LensColors.green), label: "Active"),
-      Row(swatch: ring(LensColors.amber), label: "Passive"),
-      Row(swatch: ring(LensColors.red), label: "Doing nothing"),
-      Row(swatch: AnyView(WorstBadge(size: 16)), label: "Worst piece"),
-      Row(swatch: tint(.blue), label: "Your square"),
-      Row(swatch: tint(.red), label: "Their square"),
-      Row(swatch: tint(.purple), label: "Contested"),
-      Row(swatch: star(LensColors.lightBlue), label: "Your outpost"),
-      Row(swatch: star(LensColors.lightRed), label: "Their outpost"),
-    ],
+    .pieces: activity,
     .kings: [
-      Row(swatch: zone, label: "King zone"),
-      Row(swatch: dot(LensColors.lightRed, 8), label: "Attacker"),
-      Row(swatch: dot(LensColors.lightBlue, 8), label: "Defender"),
-      Row(swatch: empty, label: "Missing shield pawn"),
       Row(swatch: line, label: "Open line to the king"),
-      Row(swatch: shield(LensColors.green), label: "Safe"),
-      Row(swatch: shield(LensColors.amber), label: "Exposed"),
-      Row(swatch: shield(LensColors.red), label: "Under attack"),
+      Row(swatch: empty, label: "Missing shield pawn"),
     ],
   ]
 }

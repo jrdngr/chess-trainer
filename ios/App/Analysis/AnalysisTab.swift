@@ -89,7 +89,7 @@ struct AnalysisTab: View {
         .clearsLens($lens)
       LensBar(held: $lens)
       if let lens {
-        LensLegend(kind: lens, endgame: isEndgame(fen)).clearsLens($lens)
+        LensLegend(kind: lens, endgame: isEndgame(fen), safety: marks?.safety).clearsLens($lens)
       } else {
         below
       }

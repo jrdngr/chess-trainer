@@ -280,7 +280,7 @@ struct RunView: View {
         if lens == .eval {
           EvalRunCard(trail: model.session.evalTrail, last: model.session.lastJudged, color: model.run.color)
         } else if let lens {
-          LensLegend(kind: lens, endgame: isEndgame(model.shownFen))
+          LensLegend(kind: lens, endgame: isEndgame(model.shownFen), safety: marks?.safety)
         } else if planOpen {
           // A long plan card scrolls rather than run off the dock.
           ScrollView { PlanLegend(fens: fens, me: model.run.color) }.scrollIndicators(.hidden).scrollBounceBehavior(.basedOnSize)

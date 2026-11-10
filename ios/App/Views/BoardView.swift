@@ -78,10 +78,11 @@ struct BoardView: View {
         // Under the pieces: an arrow never hides what it points at.
         ArrowsView(arrows: arrows, cell: cell, position: position).allowsHitTesting(false)
         let ids = tracker.ids(fen, pieces)
+        let tints = LensColors.pieceTints(marks)
         ForEach(pieces.keys.sorted().map { (id: ids[$0] ?? 0, square: $0) }, id: \.id) { placed in
           let piece = pieces[placed.square]!
           PlacedPiece(id: placed.id, square: placed.square, piece: piece, cell: cell, position: position(placed.square),
-                      ghost: marks.map { $0.focus.map { !$0.contains(placed.square) } ?? ($0.ghost == true && piece.type != .p) } ?? false)
+                      tint: tints[placed.square], ghost: marks.map { $0.focus.map { !$0.contains(placed.square) } ?? ($0.ghost == true && piece.type != .p) } ?? false)
         }
         .animation(reduceMotion ? nil : Motion.slide(0.16), value: fen)
         if let marks { LensOverView(marks: marks, cell: cell, position: position) }
@@ -179,6 +180,8 @@ struct PieceView: View {
   var size: CGFloat
   /// A black piece edged in white, to read on the dark background off the board.
   var outlined = false
+  /// A lens's color laid over the piece's own, light on White's pieces and dark on Black's.
+  var tint: SwiftUI.Color? = nil
 
   private static let shapes: [PieceType: String] = [
     .p: PieceShapes.p, .n: PieceShapes.n, .b: PieceShapes.b, .r: PieceShapes.r, .q: PieceShapes.q, .k: PieceShapes.k,
@@ -192,6 +195,7 @@ struct PieceView: View {
     let line = StrokeStyle(lineWidth: (edged ? 1.8 : 1.5) * size / 45, lineCap: .round, lineJoin: .round)
     ZStack {
       SVGPath(d: Self.shapes[piece.type]!).fill(fill)
+      if let tint { SVGPath(d: Self.shapes[piece.type]!).fill(tint.opacity(white ? 0.6 : 0.7)) }
       SVGPath(d: Self.shapes[piece.type]!).stroke(edged ? SwiftUI.Color(hex: 0xf2f4f8) : stroke, style: line)
       if piece.type == .k {
         SVGPath(d: PieceShapes.kingCross).stroke(stroke, style: StrokeStyle(lineWidth: 2.2 * size / 45, lineCap: .round))
@@ -221,10 +225,12 @@ private struct PlacedPiece: View {
   let piece: BoardPiece
   let cell: CGFloat
   let position: (col: Int, row: Int)
+  /// A lens's word on the piece, as its color.
+  let tint: SwiftUI.Color?
   let ghost: Bool
 
   var body: some View {
-    PieceView(piece: piece, size: cell * 0.78)
+    PieceView(piece: piece, size: cell * 0.78, tint: tint)
       .opacity(ghost ? 0.18 : 1)
       .frame(width: cell, height: cell)
       .offset(x: CGFloat(position.col) * cell, y: CGFloat(position.row) * cell)

@@ -21,7 +21,6 @@ public enum Side: String, Sendable, Codable { case mine, theirs }
 public struct Tint: Equatable, Sendable, Codable { public var square: String; public var color: TintColor; public var strength: Int }
 public struct Tag: Equatable, Sendable, Codable { public var square: String; public var tone: String }
 public struct Ring: Equatable, Sendable, Codable { public var square: String; public var tone: String }
-public struct Star: Equatable, Sendable, Codable { public var square: String; public var side: Side }
 public struct Pip: Equatable, Sendable, Codable { public var square: String; public var attackers: Int; public var defenders: Int }
 public struct Shield: Equatable, Sendable, Codable { public var square: String; public var grade: KingGrade }
 public struct Segment: Equatable, Sendable, Codable {
@@ -52,7 +51,6 @@ public struct LensMarks: Equatable, Sendable, Codable {
   public var rings: [Ring]?
   /// Each side's least active piece, marked in its square's corner.
   public var badges: [String]?
-  public var stars: [Star]?
   public var zone: [String]?
   public var pips: [Pip]?
   public var shields: [Shield]?
@@ -64,10 +62,18 @@ public struct LensMarks: Equatable, Sendable, Codable {
   public var boxes: [Segment]?
   public var guides: [Guide]?
   public var caption: String?
+  /// Each king's grade, for the Kings lens's key.
+  public var safety: KingSafety?
   /// The squares of the pieces the lens is about. The board dims every other piece,
   /// so a held lens always shows, even when it finds nothing.
   public var focus: [String]?
   public init() {}
+}
+
+/// How safe each side's king is: the Kings lens's verdict.
+public struct KingSafety: Equatable, Sendable, Codable {
+  public var mine: KingGrade
+  public var theirs: KingGrade
 }
 
 /* ── the board as a grid ── */
@@ -377,13 +383,8 @@ public func piecesLens(_ fen: String, _ me: Color) -> LensMarks {
     let worst = own.dropFirst().reduce(firstOwn) { $1.ratio < $0.ratio ? $1 : $0 }
     badges.append(worst.square)
   }
-  var stars: [Star] = []
-  for color in [Color.w, .b] {
-    for square in outposts(fen, color) { stars.append(Star(square: square, side: color == me ? .mine : .theirs)) }
-  }
   marks.rings = rings
   marks.badges = badges
-  marks.stars = stars
   return marks
 }
 
@@ -573,9 +574,7 @@ public func kingsLens(_ fen: String, _ me: Color) -> LensMarks {
   marks.shields = shields
   marks.emptyPawns = empty
   marks.lines = lines
-  if let mine = grades[.mine], let theirs = grades[.theirs] {
-    marks.caption = "You: \(KING_GRADE_TEXT[mine]!) \u{00b7} Them: \(KING_GRADE_TEXT[theirs]!)"
-  }
+  if let mine = grades[.mine], let theirs = grades[.theirs] { marks.safety = KingSafety(mine: mine, theirs: theirs) }
   return marks
 }
 

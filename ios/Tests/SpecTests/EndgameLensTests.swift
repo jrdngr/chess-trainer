@@ -70,7 +70,6 @@ private let BAD_BISHOP = "1r4k1/4b1p1/3p1p2/1P1Kp3/6P1/8/7N/1R6 w - - 0 1"
   #expect(tone["e7"] == "bad")
   #expect(Set(marks.dots ?? []).isSuperset(of: ["d6", "e5", "f6"]))
   #expect(tone["g8"] == "bad")
-  #expect(marks.stars == nil)
 }
 
 @Test func middlegameLensesStayAsTheyWere() {

@@ -149,7 +149,7 @@ struct EndView: View {
             }
           }
         if let lens {
-          LensLegend(kind: lens, endgame: isEndgame(shownFen)).clearsLens($lens)
+          LensLegend(kind: lens, endgame: isEndgame(shownFen), safety: marks?.safety).clearsLens($lens)
         } else {
           below
         }
