@@ -1,6 +1,6 @@
 /// The engine's view of a position, in centipawns for the side to
 /// move: PeSTO's values and tables blended by phase, a bishop pair, pawn
-/// structure and a king shield.
+/// structure, a king shield and the terms in BasicTerms.swift.
 
 private let MG_VALUE = [0, 82, 337, 365, 477, 1025, 0]
 private let EG_VALUE = [0, 94, 281, 297, 512, 936, 0]
@@ -102,6 +102,9 @@ func evaluate(_ pos: Position) -> Int {
     }
     mg += sign * kingShield(pos, side)
   }
+  let extra = termScore(pos)
+  mg += extra.mg
+  eg += extra.eg
   let mgPhase = min(phase, 24)
   let score = Double(mg * mgPhase + eg * (24 - mgPhase)) / 24
   return Int(jsRound(pos.side == BLACK_SIDE ? -score : score))

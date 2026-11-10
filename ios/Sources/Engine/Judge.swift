@@ -64,7 +64,8 @@ private final class Clock: @unchecked Sendable {
 }
 
 /// Judge your move against the baseline: a sound move settles at the quick
-/// check, a suspected blunder waits for the whole search. `reached` is true
+/// check, a suspected blunder waits for the whole search. From a book
+/// position, Stockfish's score in `BookScores` decides. `reached` is true
 /// once the game has been an endgame, so its endgame rules stay on.
 public func judge(
   _ engine: ChessEngine, _ base: Baseline, san: String, uci: String, color: Color, moments: Bool, reached: Bool = false
@@ -75,6 +76,8 @@ public func judge(
   /// At a moment you missed, the second best is what your move answers to.
   let second = moment && theirs != nil ? base.second.flatMap { $0.uci != uci ? $0.uci : nil } : nil
   let clock = Clock()
+  /// Stockfish's word on your move, when the position is in the book.
+  let book = BookScores.score(base.fen, uci)
   /// The exact results before and after your move, where the tablebase or a known ending settles both positions.
   let exact: (before: EndResult, after: EndResult)? = {
     guard let before = exactResult(base.fen, for: color),
@@ -111,7 +114,7 @@ public func judge(
   ) { snap in
     // A sound move, or one the tablebase or a known ending already settles, is settled at the quick check.
     guard let verdict = weigh(snap) else { return false }
-    return (verdict.ok || theirs == nil || exact != nil) && (clock.elapsed >= THINK_MS || snap.depth >= QUICK_DEPTH)
+    return (verdict.ok || theirs == nil || exact != nil || book != nil) && (clock.elapsed >= THINK_MS || snap.depth >= QUICK_DEPTH)
   }
   let verdict = weigh(snap)
   var judged = Judgement(
@@ -124,6 +127,16 @@ public func judge(
     judged.lost = 0
     judged.found = moment
     judged.missedMate = false
+  }
+  // From a book position, Stockfish's verdict stands, except at a moment, which the engine judges against its second best.
+  if let book, exact == nil, !moment {
+    let sign: Double = color == .w ? 1 : -1
+    let before = sign * Double(book.best), after = sign * Double(book.best - book.lost)
+    let verdict = judgeMove(base.fen, color, before, after)
+    judged.ok = verdict.ok
+    judged.lost = verdict.lost
+    judged.before = before
+    judged.after = after
   }
   return judged
 }
