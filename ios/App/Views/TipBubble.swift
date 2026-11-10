@@ -53,16 +53,20 @@ extension View {
   /// A tip hung under this view (or over it, for an arrow pointing down), drawn
   /// over what follows without moving it. It hangs from a line of no height at
   /// the view's edge, so it clears the view whatever its own height.
-  func tip(_ tip: TutorialTip?, when shown: Bool, arrow: TipBubble.Arrow = .up, arrowAt: CGFloat = 0.5, inset: CGFloat = 0, onDismiss: @escaping () -> Void) -> some View {
-    self.tip(text: shown ? tip?.text : nil, arrow: arrow, arrowAt: arrowAt, inset: inset, onDismiss: onDismiss)
+  func tip(
+    _ tip: TutorialTip?, when shown: Bool, arrow: TipBubble.Arrow = .up, arrowAt: CGFloat = 0.5, inset: CGFloat = 0, drop: CGFloat = 0,
+    onDismiss: @escaping () -> Void
+  ) -> some View {
+    self.tip(text: shown ? tip?.text : nil, arrow: arrow, arrowAt: arrowAt, inset: inset, drop: drop, onDismiss: onDismiss)
   }
 
   /// A tip with its own text, hung the same way; none while `text` is nil.
   /// On a view narrower than `minWidth` the tip keeps that width, running
   /// right from the view's leading edge; `arrowAt` is then along the tip.
+  /// `drop` hangs it further out, clear of something drawn past the view's edge.
   /// Use one per view: a second's `zIndex` loses to the first's.
   func tip(
-    text: String?, arrow: TipBubble.Arrow = .up, arrowAt: CGFloat = 0.5, inset: CGFloat = 0, minWidth: CGFloat = 0,
+    text: String?, arrow: TipBubble.Arrow = .up, arrowAt: CGFloat = 0.5, inset: CGFloat = 0, minWidth: CGFloat = 0, drop: CGFloat = 0,
     onDismiss: @escaping () -> Void = {}
   ) -> some View {
     overlay(alignment: arrow == .up ? .bottom : .top) {
@@ -72,7 +76,7 @@ extension View {
             text: text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
             .fixedSize(horizontal: false, vertical: true)
             .frame(minWidth: minWidth)
-            .padding(arrow == .up ? .top : .bottom, 12).padding(.horizontal, inset)
+            .padding(arrow == .up ? .top : .bottom, 12 + drop).padding(.horizontal, inset)
         }
       }
     }

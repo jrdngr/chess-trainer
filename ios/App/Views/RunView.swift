@@ -103,7 +103,7 @@ struct RunView: View {
         }
       }
       .padding(.horizontal).padding(.top, 6)
-      .tip(model.tip, when: Self.boardTips.contains(model.tip), inset: 16, onDismiss: model.dismissTip)
+      .tip(model.tip, when: Self.boardTips.contains(model.tip), inset: 16, drop: labeled ? BoardRim.labelDrop : 0, onDismiss: model.dismissTip)
       .layoutPriority(1)
       .onTapGesture { if model.intro == .replay { model.skipIntro() } }
       dock.padding(.horizontal).frame(maxHeight: .infinity, alignment: .top)

@@ -6,6 +6,8 @@ import SwiftUI
 struct BoardRim: View {
   var color: Color
   var label: String?
+  /// How far the label hangs below the board: tips hung from the board clear it by this much.
+  static let labelDrop: CGFloat = 34
 
   var body: some View {
     GeometryReader { geo in
@@ -17,13 +19,15 @@ struct BoardRim: View {
     }
     .overlay(alignment: .bottom) {
       if let label {
-        Text(label)
-          .font(.system(size: 15, weight: .bold)).foregroundStyle(Self.ink(color)).lineLimit(1)
-          .padding(.horizontal, 16 + RimTab.fillet).padding(.top, 9).padding(.bottom, 7)
-          .background(RimTab().fill(color).shadow(color: color.opacity(0.35), radius: 7, y: 4))
-          // Its top sits inside the rim's stroke, so the two read as one piece.
-          .alignmentGuide(.bottom) { $0[.top] }
-          .offset(y: 1)
+        // Hung from a line of no height at the board's bottom edge, so it falls below the board.
+        Color.clear.frame(height: 0).overlay(alignment: .top) {
+          Text(label)
+            .font(.system(size: 15, weight: .bold)).foregroundStyle(Self.ink(color)).lineLimit(1).fixedSize()
+            .padding(.horizontal, 16 + RimTab.fillet).padding(.top, 9).padding(.bottom, 7)
+            .background(RimTab().fill(color).shadow(color: color.opacity(0.35), radius: 7, y: 4))
+            // Its top sits inside the rim's stroke, so the two read as one piece.
+            .offset(y: 1)
+        }
       }
     }
     .allowsHitTesting(false)
