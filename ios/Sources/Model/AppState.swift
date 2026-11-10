@@ -39,7 +39,7 @@ public struct Settings: Equatable, Sendable, Codable {
   /// How Play's runs start: from move one, or wherever your prep needs work.
   public var start = RunStart.drill
   /// The engine every mode plays and judges with.
-  public var engine = EngineKind.basic
+  public var engine = EngineKind.caissa
   public init() {}
 
   enum CodingKeys: String, CodingKey {

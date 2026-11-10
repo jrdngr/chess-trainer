@@ -52,7 +52,7 @@ public func makeEngine(_ kind: EngineKind) -> ChessEngine {
 /// The engine chosen in Settings. The app sets it as settings change.
 public enum Engines {
   private static let lock = NSLock()
-  nonisolated(unsafe) private static var chosen = EngineKind.basic
+  nonisolated(unsafe) private static var chosen = EngineKind.caissa
 
   public static var selected: EngineKind {
     get { lock.withLock { chosen } }

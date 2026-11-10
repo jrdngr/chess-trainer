@@ -60,6 +60,6 @@ import Testing
 @Test func unknownEngineFallsBackToDefault() throws {
   let data = Data(#"{"engine":"retired","start":"freeform"}"#.utf8)
   let settings = try JSONDecoder().decode(Settings.self, from: data)
-  #expect(settings.engine == .basic)
+  #expect(settings.engine == Settings().engine)
   #expect(settings.start == .freeform)
 }
