@@ -24,6 +24,8 @@ struct BrowsePicker: View {
   @State private var filter: SideFilter = .both
   @State private var searching = false
   @State private var query = ""
+  /// A search result was tapped: the board is back, on its line.
+  @State private var resultShown = false
   @State private var previewed: String?
   @State private var memo = Memo<[BrowseItem]>()
 
@@ -45,11 +47,14 @@ struct BrowsePicker: View {
     return VStack(spacing: 10) {
       BrowseTopBar(side: Binding(get: { side }, set: { sideSet = $0 }), canUndo: !line.isEmpty, onBack: onBack, onClose: onClose,
                    onUndo: { undo(line) }, onSearch: toggleSearch)
-      BoardView(fen: walkSan(line).fens.last ?? START_FEN, orientation: side, interactive: true, lastMove: lastMoveOf(line),
-                bothSides: true) { play(line, $0.san) }
-        // The board gives way on short screens so the lists keep some room: `min(100%, 46dvh)`.
-        .frame(maxWidth: min(UIScreen.main.bounds.height * 0.46, 600))
-        .layoutPriority(1)
+      // A search has the board step aside until a result is tapped, so the results show above the keyboard.
+      if !searching || resultShown {
+        BoardView(fen: walkSan(line).fens.last ?? START_FEN, orientation: side, interactive: true, lastMove: lastMoveOf(line),
+                  bothSides: true) { play(line, $0.san) }
+          // The board gives way on short screens so the lists keep some room: `min(100%, 46dvh)`.
+          .frame(maxWidth: min(UIScreen.main.bounds.height * 0.46, 600))
+          .layoutPriority(1)
+      }
       BrowseNameBar(ctx: ctx, moves: line, onChoose: { choose(ctx, line, side) })
       if searching {
         BrowseSearchField(query: $query)
@@ -76,6 +81,8 @@ struct BrowsePicker: View {
     .padding(.horizontal, 16).padding(.top, 4)
     .background(Theme.background)
     .onAppear { debugOpen(ctx) }
+    // Typing again goes back to the results.
+    .onChange(of: query) { resultShown = false }
   }
 
   /// Debug builds open a list with `BROWSE_CHIP=book|suggest|shelves|mine|recent`, and with
@@ -157,6 +164,11 @@ struct BrowsePicker: View {
   }
 
   private func tapRow(_ row: BrowseRow) {
+    if searching {
+      // The keyboard goes, so the board and the result's line show.
+      UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+      resultShown = true
+    }
     moves = row.sans
     sideSet = row.side
     previewed = row.key
@@ -173,6 +185,7 @@ struct BrowsePicker: View {
   private func toggleSearch() {
     searching.toggle()
     query = ""
+    resultShown = false
   }
 
   private func choose(_ ctx: BrowseContext, _ line: [String], _ side: ChessCore.Color) {

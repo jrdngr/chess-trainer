@@ -7,11 +7,22 @@ struct BoardRim: View {
 
   var body: some View {
     GeometryReader { geo in
+      let corner = geo.size.width * 0.03
       // Just outside the board, clear of the coordinates on its edge squares.
-      RoundedRectangle(cornerRadius: geo.size.width * 0.03 + 4)
+      RoundedRectangle(cornerRadius: corner + 4)
         .strokeBorder(color, lineWidth: 3)
         .padding(-4)
         .shadow(color: color.opacity(0.6), radius: 10)
+        // The glow spreads outward only: none of it lies over the edge squares.
+        .mask {
+          Path { path in
+            path.addRect(CGRect(origin: .zero, size: geo.size).insetBy(dx: -40, dy: -40))
+            path.addRoundedRect(
+              in: CGRect(origin: .zero, size: geo.size).insetBy(dx: -1, dy: -1),
+              cornerSize: CGSize(width: corner + 1, height: corner + 1))
+          }
+          .fill(style: FillStyle(eoFill: true))
+        }
     }
     .allowsHitTesting(false)
   }

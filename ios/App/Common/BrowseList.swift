@@ -152,6 +152,8 @@ struct BrowseCrumbs: View {
           }
         }
       }
+      // Opens on the list you are in: a long trail scrolls its start out of view, not its end.
+      .defaultScrollAnchor(.trailing)
       if let filter { SideFilterControl(value: filter) }
     }
     .frame(minHeight: 32)
