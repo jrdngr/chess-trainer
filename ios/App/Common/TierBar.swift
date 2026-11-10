@@ -2,10 +2,11 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// A rating's tier as a thin bar with its name over it.
+/// A rating's tier as a thin bar in the tier's color, with its name over it unless `label` is off.
 struct TierBar: View {
   var rating: Double
   var rated: Int
+  var label = true
 
   var body: some View {
     let rank = rankOf(rating, rated)
@@ -19,12 +20,14 @@ struct TierBar: View {
         }
       }
       .overlay {
+        if label {
         Text(rated == 0 ? NEW_LABEL : rank.heldLabel).font(.system(size: 11, weight: .bold)).foregroundStyle(Theme.text)
           .shadow(color: .black, radius: 1.5)
           .shadow(color: .black, radius: 2.5)
           .shadow(color: .black.opacity(0.8), radius: 4)
           .shadow(color: .black, radius: 1, y: 1)
           .fixedSize()
+        }
       }
     }
     .frame(height: 5).padding(.vertical, 6)

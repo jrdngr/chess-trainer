@@ -4,7 +4,7 @@ import Model
 import SwiftUI
 
 /// The Playbook tab: one side at a time, each opening a row with its tier and
-/// its line count, with Tidy and the Extensions review as pills on top.
+/// its line count. Tidy and the Extensions review are in the more menu when they have something.
 struct PlaybookView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
@@ -104,9 +104,19 @@ struct PlaybookView: View {
     let extCount = rep.map { Self.extensionCounts($0, rows, extensions) } ?? [:]
     let tip = playbookTip(store.state.settings.tips, hasRows: !rows.isEmpty)
     let putAway = { dismissTip(store, tip) }
+    let untidy = scan.count ?? 0
+    let openExtensions = extensions.reduce(0) { $0 + $1.open }
     return VStack(spacing: 0) {
       AppBar(title: "Playbook", large: true) {
         Menu {
+          if untidy > 0 {
+            Button { page = .tidy } label: { Label("Tidy (\(untidy))", systemImage: "wand.and.stars") }
+          }
+          if !extensions.isEmpty {
+            Button { page = .extensions } label: {
+              Label(openExtensions > 0 ? "Extensions (\(openExtensions))" : "Extensions", systemImage: "arrow.triangle.branch")
+            }
+          }
           Button { onImport() } label: { Label("Import my games", systemImage: "square.and.arrow.down") }
           Button { onBuild() } label: { Label("Play on the board", systemImage: "checkerboard.rectangle") }
           if !reps.isEmpty {
@@ -123,8 +133,6 @@ struct PlaybookView: View {
       ScrollView {
         VStack(spacing: 0) {
           SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")])
-          PlaybookPills(count: scan.count, extensions: extensions, onTidy: { page = .tidy }, onExtensions: { page = .extensions })
-            .padding(.top, 12)
           if let rep, !rows.isEmpty {
             HStack {
               Spacer()
@@ -233,7 +241,7 @@ struct RepRef: Identifiable { var id: String }
   row.parts.first.flatMap { familyNode(tree, row.name, path: $0.path) }
 }
 
-/// One opening on the tab: its tier dot, name and tier bar, its extensions, and its line count.
+/// One opening on the tab: its name over its tier bar, the tier's name, its extensions, and its line count.
 struct PlaybookRowView: View {
   let tree: OpeningTree
   let row: PlaybookRow
@@ -247,13 +255,12 @@ struct PlaybookRowView: View {
     let rank = rankOf(stats.rating, stats.rated)
     Button(action: onOpen) {
       HStack(spacing: 10) {
-        Circle().fill(SwiftUI.Color(hexString: (rank.held ?? UNRATED).color)).frame(width: 10, height: 10)
         VStack(alignment: .leading, spacing: 0) {
-          HStack(spacing: 6) {
-            Text(row.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
-          }
-          TierBar(rating: stats.rating, rated: stats.rated)
+          Text(row.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
+          TierBar(rating: stats.rating, rated: stats.rated, label: false)
         }
+        Text(stats.rated == 0 ? NEW_LABEL : rank.heldLabel).font(.system(size: 13)).foregroundStyle(Theme.text2)
+          .lineLimit(1).frame(width: 64, alignment: .trailing)
         if extensions > 0 { ExtPill(text: "+\(extensions)") }
         Text("\(row.lines)").font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text)
           .frame(width: 40, alignment: .trailing)
@@ -262,32 +269,6 @@ struct PlaybookRowView: View {
       .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 60).contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-  }
-}
-
-/// Tidy and the Extensions review, as two pills with their counts.
-struct PlaybookPills: View {
-  let count: Int?
-  let extensions: [ExtensionOpening]
-  let onTidy: () -> Void
-  let onExtensions: () -> Void
-
-  var body: some View {
-    let open = extensions.reduce(0) { $0 + $1.open }
-    let mistakes = extensions.reduce(0) { $0 + $1.mistakes }
-    HStack(spacing: 8) {
-      Button(action: onTidy) {
-        StatsPill(dot: count.map { $0 > 0 ? Theme.accent : Theme.good }, bold: count.flatMap { $0 > 0 ? "\($0)" : nil }, text: "Tidy")
-      }
-      .buttonStyle(.plain)
-      if !extensions.isEmpty {
-        Button(action: onExtensions) {
-          StatsPill(dot: mistakes > 0 ? Theme.warn : open > 0 ? Theme.accent : Theme.good, bold: open > 0 ? "\(open)" : nil, text: "Extensions")
-        }
-        .buttonStyle(.plain)
-      }
-      Spacer(minLength: 0)
-    }
   }
 }
 
