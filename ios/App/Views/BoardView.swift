@@ -9,6 +9,8 @@ struct BoardArrow: Equatable {
   var color: SwiftUI.Color
   /// A soft halo under the arrow: Growth's nudge toward or away from your patterns.
   var glow: SwiftUI.Color? = nil
+  /// Drawn over the pieces: a threat that has to read even across the pieces in its way.
+  var over = false
 }
 
 /// The board: tap a piece, then a square. Moves are only offered to `movable`'s side.
@@ -76,7 +78,7 @@ struct BoardView: View {
         }
         if let marks { LensUnderView(marks: marks, cell: cell, position: position) }
         // Under the pieces: an arrow never hides what it points at.
-        ArrowsView(arrows: arrows, cell: cell, position: position).allowsHitTesting(false)
+        ArrowsView(arrows: arrows.filter { !$0.over }, cell: cell, position: position).allowsHitTesting(false)
         let ids = tracker.ids(fen, pieces)
         let tints = LensColors.pieceTints(marks)
         ForEach(pieces.keys.sorted().map { (id: ids[$0] ?? 0, square: $0) }, id: \.id) { placed in
@@ -86,6 +88,7 @@ struct BoardView: View {
         }
         .animation(reduceMotion ? nil : Motion.slide(0.16), value: fen)
         if let marks { LensOverView(marks: marks, cell: cell, position: position) }
+        ArrowsView(arrows: arrows.filter(\.over), cell: cell, position: position).allowsHitTesting(false)
         if let pop {
           PopView(pop: pop)
             .modifier(MoveScoreFloat())

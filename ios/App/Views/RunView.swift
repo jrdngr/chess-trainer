@@ -90,7 +90,8 @@ struct RunView: View {
         .padding(.horizontal).padding(.top, 12)
       BoardView(
         fen: model.shownFen, orientation: model.run.color,
-        interactive: model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil && model.flash == nil && !model.endCued,
+        interactive: model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil && model.flash == nil && !model.endCued
+          && !lensLesson,
         lastMove: model.held ? lastMoveOf(Array(model.introPath.prefix(model.introPly))) : lastMove, highlights: highlights, arrows: arrows, pop: model.pop, popId: model.popCount,
         marks: marks, allowed: model.fill == nil ? model.expected.map { [$0] } : model.fillChoices.map(\.san),
         onMove: model.play, onRefused: refused
@@ -153,6 +154,9 @@ struct RunView: View {
 
   /// The lenses are away: moves are being played for you or added, or there is a moment to find without them.
   private var lensesAway: Bool { model.intro == .replay || adding || (model.blunder == nil && model.momentHere) }
+
+  /// The tutorial's lens tip holds the board: a lens is turned on, then off with a tap, before the next move.
+  private var lensLesson: Bool { model.tip == .lens && lensEnabled && !lensesAway }
 
   /// A callout is up in the lenses' place.
   private var called: Bool { model.shownCallout != nil }
@@ -282,9 +286,10 @@ struct RunView: View {
         planPulse: planSeeded && plan != nil && plan != planSeen, spotlight: model.tip == .lens ? .pawns : nil
       )
       .opacity(model.held || lensesAway || called ? 0 : 1).allowsHitTesting(!(model.held || lensesAway || called))
-      .tip(model.tip, when: model.tip == .lens && lens == nil, arrowAt: 0.1, onDismiss: model.dismissTip)
       .overlay(alignment: .top) { calloutLayer.animation(.easeOut(duration: 0.25), value: model.shownCallout?.id) }
-      .zIndex(1)
+      // The callout runs past the lenses' row, over the panel under it (Undo and Done while adding moves).
+      // Only a lens puts this tip away: the board waits for one, turned on and then off.
+      .tip(model.tip, when: model.tip == .lens && lens == nil, arrowAt: 0.1, rest: 1, onDismiss: {})
       VStack(spacing: 0) {
         if lens == .eval {
           EvalRunCard(trail: model.session.evalTrail, last: model.session.lastJudged, color: model.run.color)
@@ -318,6 +323,10 @@ struct RunView: View {
       }
     }
     .onChange(of: planOpen) { if planOpen { planSeen = plan } }
+    // The lens tip's lesson ends once a lens is turned off again.
+    .onChange(of: lens) { old, new in
+      if old != nil && new == nil && model.tip == .lens { model.dismissTip() }
+    }
     // Lenses that go away take any held lens with them.
     .onChange(of: lensesAway) {
       if lensesAway {
@@ -469,7 +478,7 @@ struct RunView: View {
 
   private var arrows: [BoardArrow] {
     if let b = model.blunder {
-      return b.threat.map { [BoardArrow(from: $0.from, to: $0.to, color: Theme.bad)] } ?? []
+      return b.threat.map { [BoardArrow(from: $0.from, to: $0.to, color: Theme.bad, over: true)] } ?? []
     }
     if let miss = model.miss { return [BoardArrow(from: miss.from, to: miss.to, color: Theme.good)] }
     if model.atHole && !model.thinking {

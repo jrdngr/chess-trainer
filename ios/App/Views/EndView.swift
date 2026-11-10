@@ -148,6 +148,8 @@ struct EndView: View {
               EndVerdict(how: finish.how, plies: last).padding(.top, 8).transition(.opacity.animation(.easeOut(duration: 0.2)))
             }
           }
+          // The verdict runs past the lenses' row: over the buttons under it, not under them.
+          .zIndex(1)
         if let lens {
           LensLegend(kind: lens, endgame: isEndgame(shownFen), safety: marks?.safety).clearsLens($lens)
         } else {

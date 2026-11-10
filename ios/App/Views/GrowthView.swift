@@ -64,6 +64,8 @@ struct GrowthView: View {
               if model.flash { CalloutStrip(text: "End of the book", good: true).padding(.top, 8).transition(.opacity) }
             }
             .animation(.easeOut(duration: 0.25), value: model.flash)
+            // The callout runs past the row it stands in: over what follows, not under it.
+            .zIndex(1)
           GrowthPhaseView(model: model, exits: exits)
         }
         .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 20)
