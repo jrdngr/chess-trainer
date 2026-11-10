@@ -5,3 +5,4 @@ ios/ChessPlaybook.xcodeproj/
 ios/build/
 *.tar.gz
 *.whl
+ios/Sources/Engine/CaissaNet/*.pnn*

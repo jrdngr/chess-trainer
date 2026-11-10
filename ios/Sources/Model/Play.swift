@@ -29,11 +29,12 @@ public struct Level: Equatable, Sendable {
 
 /// The engines the app can play and judge with. One is chosen in Settings.
 public enum EngineKind: String, Sendable, Codable, CaseIterable {
-  case basic
+  case basic, caissa
 
   public var name: String {
     switch self {
     case .basic: return "Basic"
+    case .caissa: return "Caissa"
     }
   }
 
@@ -41,6 +42,7 @@ public enum EngineKind: String, Sendable, Codable, CaseIterable {
   public var style: EngineStyle {
     switch self {
     case .basic: return BasicStyle()
+    case .caissa: return CaissaStyle()
     }
   }
 }
@@ -89,6 +91,19 @@ public struct BasicStyle: EngineStyle {
     LevelAnchor(1600, depth: 5, temperature: 150, multiPv: 8, window: 40),
     LevelAnchor(2000, depth: 7, temperature: 75, multiPv: 6, window: 25),
     LevelAnchor(2200, depth: 8, temperature: 55, multiPv: 5, window: 20),
+  ]
+}
+
+/// Caissa: it sees far more at the same depth, so its levels look less far.
+public struct CaissaStyle: EngineStyle {
+  public init() {}
+  public let anchors = [
+    LevelAnchor(600, depth: 1, temperature: 700, multiPv: 20, window: 150),
+    LevelAnchor(800, depth: 1, temperature: 500, multiPv: 16, window: 100),
+    LevelAnchor(1200, depth: 2, temperature: 280, multiPv: 12, window: 60),
+    LevelAnchor(1600, depth: 4, temperature: 220, multiPv: 10, window: 55),
+    LevelAnchor(2000, depth: 6, temperature: 110, multiPv: 8, window: 40),
+    LevelAnchor(2200, depth: 8, temperature: 100, multiPv: 6, window: 35),
   ]
 }
 

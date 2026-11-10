@@ -111,7 +111,7 @@ struct MiddlegameView: View {
     model = nil
     last = drawn
     building = trail(drawn.sans)
-    let kind = store.state.settings.engine
+    let kind = store.state.settings.engine.usable
     let tools = handoffTools(Self.builder(kind), index, prefs.opponentLevel(store.state.strength, engine: kind))
     job?.cancel()
     job = Task {

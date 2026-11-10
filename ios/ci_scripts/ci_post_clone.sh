@@ -26,4 +26,6 @@ fi
 
 "$XCODEGEN" --version
 cd "$CI_PRIMARY_REPOSITORY_PATH/ios"
+# Caissa's network is fetched at build time, not kept in git.
+./scripts/fetch-caissa-net.sh
 "$XCODEGEN" generate

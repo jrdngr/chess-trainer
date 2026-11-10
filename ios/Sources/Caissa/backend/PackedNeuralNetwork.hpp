@@ -1,0 +1,130 @@
+#pragma once
+
+#include "Common.hpp"
+
+namespace nn {
+
+struct Accumulator;
+
+static constexpr uint32_t CurrentVersion = 15;
+static constexpr uint32_t MagicNumber = 0x43534E4E; // 'CSNN'
+
+static constexpr uint32_t NumKingBuckets = 32;
+static constexpr uint32_t NumNetworkInputs = NumKingBuckets * 12 * 64;
+static constexpr uint32_t AccumulatorSize = 1536;
+static constexpr uint32_t OutputSize = 1;
+static constexpr uint32_t NumVariants = 8;
+
+static constexpr uint8_t KingBucketIndex[64] =
+{
+     0, 1, 2, 3,  3, 2, 1, 0,
+     4, 5, 6, 7,  7, 6, 5, 4,
+     8, 9,10,11, 11,10, 9, 8,
+    12,13,14,15, 15,14,13,12,
+    16,17,18,19, 19,18,17,16,
+    20,21,22,23, 23,22,21,20,
+    24,25,26,27, 27,26,25,24,
+    28,29,30,31, 31,30,29,28,
+};
+
+// by this value neuron inputs are scaled
+static constexpr int16_t ActivationRangeScaling = 255;
+
+// The two halves of each accumulator are clipped and multiplied together, then shifted back into
+// uint8. 255*255 >> 9 = 127, and that upper bound is what makes the int8 hidden layers safe:
+// _mm256_maddubs_epi16 sums adjacent pairs with int16 saturation, and 2*127*127 = 32258 < 32767,
+// so the whole int8 weight range is usable without saturating.
+static constexpr int32_t PairwiseShift = 9;
+static constexpr int32_t HiddenActivationMax = ActivationRangeScaling * ActivationRangeScaling >> PairwiseShift;
+static constexpr float PairwiseOutputScale =
+    (float)(ActivationRangeScaling * ActivationRangeScaling) / (float)(1 << PairwiseShift);
+
+// Output subnet topology: L1InputSize -> L1Size -> L2Size -> 1. Pairing halves each perspective,
+// so the two accumulators contribute AccumulatorSize values in total.
+static constexpr uint32_t L1InputSize = AccumulatorSize;
+static constexpr uint32_t L1Size = 16;
+static constexpr uint32_t L2Size = 32;
+
+static constexpr int32_t WeightScaleShift = 8;
+static constexpr int32_t WeightScale = 1 << WeightScaleShift;
+
+static constexpr int32_t OutputScaleShift = 10;
+static constexpr int32_t OutputScale = 1 << OutputScaleShift;
+
+// int8 weight scale of the L1/L2 hidden layers
+static constexpr int32_t HiddenWeightScaleShift = 6;
+static constexpr int32_t HiddenWeightScale = 1 << HiddenWeightScaleShift;
+
+static constexpr float InputLayerWeightQuantizationScale = ActivationRangeScaling;
+static constexpr float InputLayerBiasQuantizationScale = ActivationRangeScaling;
+static constexpr float HiddenLayerWeightQuantizationScale = HiddenWeightScale;
+static constexpr float HiddenLayerBiasQuantizationScale = PairwiseOutputScale * HiddenWeightScale;
+static constexpr float OutputLayerWeightQuantizationScale = WeightScale * OutputScale / PairwiseOutputScale;
+static constexpr float OutputLayerBiasQuantizationScale = WeightScale * OutputScale;
+
+using FirstLayerWeightType = int16_t;
+using FirstLayerBiasType = int16_t;
+
+using HiddenLayerWeightType = int8_t;
+using HiddenLayerBiasType = int32_t;
+
+using LastLayerWeightType = int16_t;
+using LastLayerBiasType = int32_t;
+
+// hidden layer activations are unsigned, so they can feed maddubs directly
+using IntermediateType = uint8_t;
+
+// Hidden layer weights are stored input-major in groups of 4 inputs: the 4 weights of one output for
+// 4 consecutive inputs are adjacent, so a non-zero input group feeds one uint8 x int8 dot product
+// per output
+constexpr uint32_t HiddenWeightIndex(uint32_t input, uint32_t output, uint32_t numOutputs)
+{
+    return (input / 4) * (numOutputs * 4) + output * 4 + (input % 4);
+}
+
+struct alignas(CACHELINE_SIZE) PackedNeuralNetwork
+{
+    struct Header
+    {
+        uint32_t magic = 0;
+        uint32_t version = 0;
+        uint32_t padding[14];
+    };
+
+    // One full output subnet per variant. L1 and L2 weights use the grouped layout of
+    // HiddenWeightIndex; L3 is a plain row.
+    struct alignas(CACHELINE_SIZE) OutputSubnetVariant
+    {
+        HiddenLayerWeightType l1Weights[L1InputSize * L1Size];
+        HiddenLayerBiasType   l1Biases[L1Size];
+        HiddenLayerWeightType l2Weights[L1Size * L2Size];
+        HiddenLayerBiasType   l2Biases[L2Size];
+        LastLayerWeightType   l3Weights[L2Size];
+        LastLayerBiasType     l3Bias;
+        int32_t padding[15];
+    };
+
+    static_assert(sizeof(Header) == CACHELINE_SIZE, "");
+    static_assert(sizeof(OutputSubnetVariant) % CACHELINE_SIZE == 0, "");
+
+    Header header;
+    FirstLayerWeightType accumulatorWeights[NumNetworkInputs * AccumulatorSize];
+    FirstLayerBiasType accumulatorBiases[AccumulatorSize];
+    OutputSubnetVariant outputSubnetVariants[NumVariants];
+
+    PackedNeuralNetwork();
+
+    // load from file
+    bool LoadFromFile(const char* filePath);
+
+    // save to file
+    bool SaveToFile(const char* filePath) const;
+
+    // Calculate neural network output based on incrementally updated accumulators
+    int32_t Run(const Accumulator& stmAccum, const Accumulator& nstmAccum, uint32_t variant) const;
+
+    // Calculate neural network output based on input
+    int32_t Run(const uint16_t* stmFeatures, const uint32_t stmNumFeatures, const uint16_t* nstmFeatures, const uint32_t nstmNumFeatures, uint32_t variant) const;
+};
+
+} // namespace nn

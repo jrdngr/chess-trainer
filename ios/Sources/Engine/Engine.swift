@@ -44,6 +44,8 @@ extension ChessEngine {
 public func makeEngine(_ kind: EngineKind) -> ChessEngine {
   switch kind {
   case .basic: return BasicEngine()
+  // Without its network, Caissa can't run: Basic stands in.
+  case .caissa: return CaissaEngine() ?? BasicEngine()
   }
 }
 

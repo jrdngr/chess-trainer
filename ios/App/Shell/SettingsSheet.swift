@@ -1,3 +1,4 @@
+import Engine
 import Model
 import SwiftUI
 
@@ -46,8 +47,8 @@ struct SettingsSheet: View {
         section("Engine")
         ListCard {
           SegmentedControl(
-            value: Binding(get: { settings.engine }, set: { kind in store.update { $0.settings.engine = kind } }),
-            options: EngineKind.allCases.map { ($0, $0.name) }
+            value: Binding(get: { settings.engine.usable }, set: { kind in store.update { $0.settings.engine = kind } }),
+            options: EngineKind.allCases.filter(\.available).map { ($0, $0.name) }
           )
           .padding(.horizontal, 16).padding(.vertical, 10)
         }

@@ -17,19 +17,25 @@ generated from it were removed on 2026-11-02; their final state is on the
 Run the Swift tests before pushing. On a Mac:
 
 ```bash
-cd ios && swift test
+cd ios && ./scripts/fetch-caissa-net.sh && swift test
 ```
+
+`scripts/fetch-caissa-net.sh` puts Caissa's network (76 MB, not in git) in
+`Sources/Engine/CaissaNet/`. Without it the app builds but offers only the
+Basic engine, and the Caissa tests are skipped. Xcode Cloud runs it after the
+clone (`ios/ci_scripts/ci_post_clone.sh`).
 
 In a Linux cloud container, use Docker (download.swift.org may be blocked;
 Docker Hub works):
 
 ```bash
 pgrep dockerd >/dev/null || (nohup dockerd >/tmp/dockerd.log 2>&1 &); sleep 5
-cd ios && docker run --rm -v "$PWD":/src -w /src swift:6.4-noble swift test
+cd ios && ./scripts/fetch-caissa-net.sh
+docker run --rm -v "$PWD":/src -w /src swift:6.4-noble swift test
 rm -rf .build  # root-owned build output from the container
 ```
 
-Linux builds the package only (ChessCore, Book, Model, Engine and their
+Linux builds the package only (ChessCore, Book, Model, Engine, Caissa and their
 tests), not the SwiftUI app in `ios/App`. Keep package code portable: guard
 Apple-only APIs with `#if canImport(...)`, and import `FoundationNetworking`
 where URLSession is used. Xcode Cloud builds the whole app on every push to
