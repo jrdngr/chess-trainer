@@ -26,6 +26,8 @@ struct RunView: View {
   /// The rating change played over the board on the way to the next run, and its leaving.
   @State private var nextMoment: RatingMoment?
   @State private var nextLeaving = false
+  /// The X mid-round asks before it ends the round.
+  @State private var askingToEnd = false
   @Environment(Toasts.self) private var toasts
   @Environment(\.scenePhase) private var scenePhase
 
@@ -49,6 +51,10 @@ struct RunView: View {
     }
     .contentShape(Rectangle())
     .onTapGesture { if model.intro == .announce { model.toBoard() } }
+    .confirmationDialog("End this round?", isPresented: $askingToEnd, titleVisibility: .visible) {
+      Button("End round", role: .destructive) { model.endRound() }
+      Button("Keep playing", role: .cancel) {}
+    }
     // Your move's time stops while the app is in the background or the screen is locked.
     .onChange(of: scenePhase) {
       if scenePhase == .active { model.appReturned() } else { model.appLeft() }
@@ -330,7 +336,8 @@ struct RunView: View {
     if model.blunder != nil {
       model.continueToEnd()
     } else if model.live && model.intro == .done {
-      model.endRound()
+      // A round already called over, or one with nothing played yet, ends without asking.
+      if model.endCued || model.run.played.count <= model.run.opened { model.endRound() } else { askingToEnd = true }
     } else {
       onExit()
     }
@@ -403,33 +410,24 @@ struct RunView: View {
       tone: named?.color ?? Theme.text2)
   }
 
-  /// A blunder ends the run: its name, then Analyze or on to the end screen.
-  /// Analyze passes the end screen on the way, so leaving Analysis lands there.
+  /// A blunder ends the run: its name under the board for a beat, the threat drawn on it,
+  /// then the end screen, which has Analyze. A tutorial tip holds it until it is put away.
   private var ending: some View {
-    VStack(spacing: 12) {
-      HStack(spacing: 8) {
-        Icon(name: "cross", size: 18).frame(width: 26, height: 26).background(Circle().fill(Theme.bad.opacity(0.14)))
-        Text(endingTitle(model.session.ending!, model.run.played.count)).font(.system(size: 19, weight: .heavy)).tracking(-0.19)
-      }
-      .foregroundStyle(Theme.bad).padding(.vertical, 6)
-      .frame(maxWidth: .infinity)
-      // Above the blunder's name, clear of the buttons under it.
-      .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
-      HStack(spacing: 8) {
-        if let onAnalyze {
-          Button {
-            model.continueToEnd()
-            onAnalyze()
-          } label: {
-            Label("Analyze", systemImage: "magnifyingglass")
-          }
-          .buttonStyle(PlayButtonStyle(block: true))
-        }
-        Button { model.continueToEnd() } label: { HStack(spacing: 8) { Text("Continue"); Icon(name: "next", size: 18) } }
-          .buttonStyle(PlayButtonStyle(kind: .primary, block: true))
-      }
+    HStack(spacing: 8) {
+      Icon(name: "cross", size: 18).frame(width: 26, height: 26).background(Circle().fill(Theme.bad.opacity(0.14)))
+      Text(endingTitle(model.session.ending!, model.run.played.count)).font(.system(size: 19, weight: .heavy)).tracking(-0.19)
     }
+    .foregroundStyle(Theme.bad).padding(.vertical, 6)
+    .frame(maxWidth: .infinity)
+    .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
     .padding(.top, 16)
+    .contentShape(Rectangle())
+    .onTapGesture { if model.tip != .blunder { model.continueToEnd() } }
+    .task(id: model.tip == .blunder) {
+      guard model.tip != .blunder else { return }
+      try? await Task.sleep(for: .seconds(2))
+      if !Task.isCancelled { model.continueToEnd() }
+    }
   }
 
   @ViewBuilder private var flash: some View {

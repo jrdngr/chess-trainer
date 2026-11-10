@@ -38,7 +38,7 @@ struct EndgameView: View {
   }
 }
 
-/// The library: what is due, then each family with its tier and positions.
+/// The library: Practice, which plays what is due first, then each family with its tier and positions.
 struct EndgameHomeView: View {
   @Environment(AppStore.self) private var store
   let onPlay: (EndgameEntry) -> Void
@@ -59,7 +59,7 @@ struct EndgameHomeView: View {
               onPlay(next)
             }
           } label: {
-            Text(due.isEmpty ? "Play the next one" : "Play \(due.count) due").frame(maxWidth: .infinity)
+            Text("Practice").frame(maxWidth: .infinity)
           }
           .buttonStyle(PlayButtonStyle(kind: .accent, block: true))
           .disabled(due.isEmpty && record.next(Env.now()) == nil)
@@ -78,7 +78,7 @@ struct EndgameHomeView: View {
       HStack(spacing: 12) {
         Text(family.name).font(.system(size: 17, weight: .heavy)).foregroundStyle(Theme.text)
         Spacer()
-        TierBar(rating: record.ratings[family.id] ?? 0, rated: record.rated[family.id] ?? 0).frame(width: 110)
+        TierBar(rating: record.ratings[family.id] ?? 0, rated: record.rated[family.id] ?? 0, label: false).frame(width: 110)
       }
       .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 6)
       ForEach(rows, id: \.id) { entry in
@@ -87,11 +87,7 @@ struct EndgameHomeView: View {
             if let fen = entry.fen { SideDot(side: fenTurn(fen)) }
             Text(entry.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
             Spacer()
-            if let card = record.cards[entry.id], card.due <= Env.now() {
-              Text("Due").font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.accent)
-            }
-            Text(entry.goal.label).font(.system(size: 13, weight: .semibold))
-              .foregroundStyle(entry.goal == .win ? Theme.good : Theme.text2)
+            Text(entry.goal == .win ? "Win" : "Draw").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
             Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3)
           }
           .padding(.horizontal, 14).frame(minHeight: 46)
@@ -118,6 +114,8 @@ struct EndgameRoundView: View {
   @State private var plan = false
   /// A slip's word under the board, shown for 1.5s.
   @State private var called: String?
+  /// Give up asks first.
+  @State private var givingUp = false
 
   var body: some View {
     ZStack {
@@ -175,8 +173,12 @@ struct EndgameRoundView: View {
           if plan, let live = livePlan, let intro = game.entry.intro { planCard(intro.pages[live.page]) }
           if let outcome = game.outcome { ending(outcome) } else { goal }
           if game.phase == .playing {
-            Button { game.resign() } label: { Text("Give up").frame(maxWidth: .infinity) }
+            Button { givingUp = true } label: { Text("Give up").frame(maxWidth: .infinity) }
               .buttonStyle(PlayButtonStyle(kind: .soft, block: true)).padding(.top, 12)
+              .confirmationDialog("Give up this position?", isPresented: $givingUp, titleVisibility: .visible) {
+                Button("Give up", role: .destructive) { game.resign() }
+                Button("Keep playing", role: .cancel) {}
+              }
           }
         }
         .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 28)
