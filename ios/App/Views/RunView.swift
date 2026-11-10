@@ -405,8 +405,6 @@ struct RunView: View {
 
   private var runFooter: some View {
     HStack {
-      let misses = model.session.state.misses.count
-      Text(misses > 0 ? "\(misses) miss\(misses == 1 ? "" : "es") so far" : "").font(.footnote).foregroundStyle(Theme.text2)
       Spacer()
       if model.holeGap != nil && model.myTurn && model.live && model.pending == nil {
         Button { model.growHere() } label: { Label("Grow here", systemImage: "plus") }
