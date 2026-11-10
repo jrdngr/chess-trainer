@@ -50,9 +50,7 @@ private struct TipArrow: Shape {
 }
 
 extension View {
-  /// A tip hung under this view (or over it, for an arrow pointing down), drawn
-  /// over what follows without moving it. It hangs from a line of no height at
-  /// the view's edge, so it clears the view whatever its own height.
+  /// A tutorial tip under this view (over it, for an arrow pointing down), while `shown`. `tip(text:)`.
   func tip(
     _ tip: TutorialTip?, when shown: Bool, arrow: TipBubble.Arrow = .up, arrowAt: CGFloat = 0.5, inset: CGFloat = 0, drop: CGFloat = 0,
     onDismiss: @escaping () -> Void
@@ -60,27 +58,46 @@ extension View {
     self.tip(text: shown ? tip?.text : nil, arrow: arrow, arrowAt: arrowAt, inset: inset, drop: drop, onDismiss: onDismiss)
   }
 
-  /// A tip with its own text, hung the same way; none while `text` is nil.
-  /// On a view narrower than `minWidth` the tip keeps that width, running
-  /// right from the view's leading edge; `arrowAt` is then along the tip.
-  /// `drop` hangs it further out, clear of something drawn past the view's edge.
-  /// Use one per view: a second's `zIndex` loses to the first's.
-  func tip(
+  /// A tip with its own text; none while `text` is nil. It takes its own room
+  /// under this view (over it, for an arrow pointing down), moving what follows
+  /// so it never covers another control. `float` hangs it over what follows
+  /// instead, for a view in a grid or a row; so does a `minWidth` wider than a
+  /// narrow view, the tip then running right from the view's leading edge with
+  /// `arrowAt` along the tip. `drop` sets it further out.
+  /// Use one per view: a second floating tip's `zIndex` loses to the first's.
+  @ViewBuilder func tip(
     text: String?, arrow: TipBubble.Arrow = .up, arrowAt: CGFloat = 0.5, inset: CGFloat = 0, minWidth: CGFloat = 0, drop: CGFloat = 0,
-    onDismiss: @escaping () -> Void = {}
+    float: Bool = false, onDismiss: @escaping () -> Void = {}
   ) -> some View {
-    overlay(alignment: arrow == .up ? .bottom : .top) {
-      if let text {
-        Color.clear.frame(height: 0).overlay(alignment: arrow == .up ? .topLeading : .bottomLeading) {
-          TipBubble(
-            text: text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(minWidth: minWidth)
-            .padding(arrow == .up ? .top : .bottom, 12 + drop).padding(.horizontal, inset)
+    if float || minWidth > 0 {
+      overlay(alignment: arrow == .up ? .bottom : .top) {
+        if let text {
+          Color.clear.frame(height: 0).overlay(alignment: arrow == .up ? .topLeading : .bottomLeading) {
+            TipBubble(
+              text: text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
+              .fixedSize(horizontal: false, vertical: true)
+              .frame(minWidth: minWidth)
+              .padding(arrow == .up ? .top : .bottom, 12 + drop).padding(.horizontal, inset)
+          }
         }
       }
+      .zIndex(text != nil ? 2 : 0)
+    } else {
+      VStack(alignment: .leading, spacing: 0) {
+        if arrow == .down, let text {
+          TipBubble(text: text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.bottom, 12 + drop).padding(.horizontal, inset)
+        }
+        self
+        if arrow == .up, let text {
+          TipBubble(text: text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.top, 12 + drop).padding(.horizontal, inset)
+        }
+      }
+      .animation(.easeOut(duration: 0.2), value: text)
     }
-    .zIndex(text != nil ? 2 : 0)
   }
 }
 

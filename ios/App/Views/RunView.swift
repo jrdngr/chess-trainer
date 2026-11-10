@@ -23,6 +23,8 @@ struct RunView: View {
   @State private var breaks: (fen: String, found: PawnBreaks.Breaks)?
   /// Counts refused moves in a forced game: each one shakes the board.
   @State private var shakes = 0
+  /// The forced move's arrow glows for a moment after a refused move.
+  @State private var nudged = 0
   /// The rating change played over the board on the way to the next run, and its leaving.
   @State private var nextMoment: RatingMoment?
   @State private var nextLeaving = false
@@ -193,6 +195,12 @@ struct RunView: View {
     } else if model.expected != nil {
       withAnimation(.linear(duration: 0.3)) { shakes += 1 }
       Haptics.buzz(12, on: store.state.settings.hapticFeedback)
+      nudged += 1
+      let mine = nudged
+      Task { @MainActor in
+        try? await Task.sleep(for: .seconds(0.9))
+        if nudged == mine { withAnimation(.easeOut(duration: 0.3)) { nudged = 0 } }
+      }
     }
   }
 
@@ -470,7 +478,7 @@ struct RunView: View {
       return holeArrows(model)
     }
     if let expected = model.expected, !model.thinking, let move = applySan(model.run.fen, expected) {
-      return [BoardArrow(from: move.from, to: move.to, color: Theme.accent)]
+      return [BoardArrow(from: move.from, to: move.to, color: Theme.accent, glow: nudged > 0 ? Theme.accent : nil)]
     }
     return []
   }

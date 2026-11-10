@@ -290,7 +290,7 @@ public enum TutorialTip: String, Sendable, Codable, CaseIterable {
     case .flashCards:
       "Chess Playbook turns your openings into flashcards. You\u{2019}re graded on correctness and speed. We\u{2019}ll tell you which moves to play for this part of the tutorial."
     case .prepBar: "The prep bar fills as you play your line."
-    case .lineDone: "Your line is done."
+    case .lineDone: "That\u{2019}s your prep. Keep following the arrows."
     case .checkMark: "A \u{2713} means you\u{2019}re still playing common moves."
     case .nextRun: "Once your prep is done, tap Next run to start a new game."
     case .extendLines: "Extend the lines in your Playbook as you master them."
