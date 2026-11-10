@@ -1,8 +1,9 @@
 import Model
 import SwiftUI
 
-/// The lens bar under a board: hold a lens to see it over the position;
-/// let go and the board is clean again. Plan is a toggle.
+/// The lens bar under a board: tap a lens to see it over the position, tap it
+/// again to clear the board. A tap elsewhere on the screen clears it too (`clearsLens`).
+/// Plan toggles the same way.
 struct LensBar: View {
   @Binding var held: LensKind?
   /// Eval only where the screen has the engine's word on the game.
@@ -17,6 +18,8 @@ struct LensBar: View {
   var spotlight: LensKind? = nil
   /// A touch on Plan has toggled it and not yet lifted.
   @State private var planTouched = false
+  /// The lens a touch has toggled and not yet lifted from.
+  @State private var touched: LensKind?
 
   var body: some View {
     HStack(spacing: 6) {
@@ -26,8 +29,10 @@ struct LensBar: View {
           lens.label, on: on, ink: spotlight == lens.kind ? Theme.accent : Theme.text2, fill: Theme.accent, onInk: Theme.accentInk,
           enabled: enabled, pulse: spotlight == lens.kind, pulseColor: Theme.accent, outlined: spotlight == lens.kind
         ) {
-          if held != lens.kind { held = lens.kind }
-        } release: { held = nil }
+          guard touched != lens.kind else { return }
+          touched = lens.kind
+          held = on ? nil : lens.kind
+        } release: { touched = nil }
       }
       if let plan {
         button(
@@ -73,7 +78,14 @@ struct LensBar: View {
   }
 }
 
-/// The key to a held lens: one row per kind of mark it draws.
+extension View {
+  /// A tap here puts the lens away; whatever was tapped still gets the tap.
+  func clearsLens(_ lens: Binding<LensKind?>) -> some View {
+    simultaneousGesture(TapGesture().onEnded { if lens.wrappedValue != nil { lens.wrappedValue = nil } })
+  }
+}
+
+/// The key to the lens that is on: one row per kind of mark it draws.
 struct LensLegend: View {
   var kind: LensKind
   /// The endgame lenses draw their own marks.

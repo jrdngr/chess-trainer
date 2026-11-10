@@ -163,13 +163,14 @@ struct EndgameRoundView: View {
             fen: game.fen, orientation: game.color, interactive: game.myTurn, lastMove: game.lastMove,
             highlights: highlights, marks: marks, onMove: game.play)
             .dimmed(game.phase == .over)
+            .clearsLens($lens)
           LensBar(held: $lens, lenses: LENSES, enabled: game.phase == .playing, plan: $plan, planEnabled: livePlan != nil)
             .opacity(called == nil ? 1 : 0).allowsHitTesting(called == nil)
             .overlay(alignment: .top) {
               if let called { CalloutStrip(text: called, good: false).transition(.opacity).id(called) }
             }
             .animation(.easeOut(duration: 0.25), value: called)
-          if let lens, lens != .eval { LensLegend(kind: lens, endgame: true) }
+          if let lens, lens != .eval { LensLegend(kind: lens, endgame: true).clearsLens($lens) }
           if plan, let live = livePlan, let intro = game.entry.intro { planCard(intro.pages[live.page]) }
           if let outcome = game.outcome { ending(outcome) } else { goal }
           if game.phase == .playing {

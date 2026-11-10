@@ -299,7 +299,7 @@ public enum TutorialTip: String, Sendable, Codable, CaseIterable {
     case .saved: "Your new moves are saved. Keep playing on the board."
     case .endRun: "End the run."
     case .scores: "Outside of your lines, each move gets a score telling you how good (or bad) it was."
-    case .lens: "Hold a lens for hints."
+    case .lens: "Tap a lens for hints."
     case .blunder: "A blunder ends the game."
     case .pickAny: "Pick any answer you like. The list shows how often each is played."
     case .keepPlaying: "Keep playing on the board."

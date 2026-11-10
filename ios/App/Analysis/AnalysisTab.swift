@@ -86,9 +86,10 @@ struct AnalysisTab: View {
       BoardView(
         fen: fen, orientation: orientation, interactive: true, lastMove: lastMoveOf(visible),
         arrows: marks == nil ? bestArrow : [], marks: marks, bothSides: true, onMove: { play($0.san) })
+        .clearsLens($lens)
       LensBar(held: $lens)
       if let lens {
-        LensLegend(kind: lens, endgame: isEndgame(fen))
+        LensLegend(kind: lens, endgame: isEndgame(fen)).clearsLens($lens)
       } else {
         below
       }

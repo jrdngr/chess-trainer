@@ -70,6 +70,7 @@ struct RunView: View {
         }
       } else {
         header
+          .clearsLens($lens)
           // One tip modifier per view: a second one's layering would lose to the first's.
           .tip(model.tip, when: Self.headerTips.contains(model.tip), arrowAt: headerArrowAt, inset: 16, onDismiss: model.dismissTip)
       }
@@ -93,6 +94,7 @@ struct RunView: View {
         onMove: model.play, onRefused: refused
       )
       .modifier(BoardShake(count: shakes))
+      .clearsLens($lens)
       .overlay { if let pulse = model.edgePulse { EdgePulse(color: pulse.found ? Theme.good : Theme.bad).id(pulse.id) } }
       .overlay(alignment: .top) { flash }
       .overlay { if model.pulse { IntroPulse() } }
@@ -292,6 +294,7 @@ struct RunView: View {
           goalSlot.padding(.top, 12)
         }
       }
+      .clearsLens($lens)
       // Gives way before the board does: what doesn't fit is cut, never pushed up, and can't take a touch outside it.
       // A blunder's tip hangs above its name, over the lenses, so nothing is cut then.
       .frame(minHeight: 0, maxHeight: .infinity, alignment: .top)

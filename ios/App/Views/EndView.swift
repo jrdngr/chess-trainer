@@ -133,6 +133,7 @@ struct EndView: View {
           fen: shownFen, orientation: run.color, interactive: false,
           lastMove: onBlunder || missAt != nil ? nil : lastMoveOf(Array(run.played.prefix(cursor))),
           highlights: highlights(missAt), marks: marks, onMove: { _ in })
+          .clearsLens($lens)
           .overlay {
             if !flashing, let moment, card == .play || card == .leave {
               RatingOverBoard(moment: moment, leaving: card == .leave) { if card == .play { card = .leave } }
@@ -148,7 +149,7 @@ struct EndView: View {
             }
           }
         if let lens {
-          LensLegend(kind: lens, endgame: isEndgame(shownFen))
+          LensLegend(kind: lens, endgame: isEndgame(shownFen)).clearsLens($lens)
         } else {
           below
         }
