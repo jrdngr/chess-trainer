@@ -46,23 +46,6 @@ struct StatsHero<Content: View>: View {
   }
 }
 
-/// A figure in a rounded pill, the number bold: `.pill`.
-struct StatsPill: View {
-  var dot: Color?
-  var bold: String?
-  var text: String
-
-  var body: some View {
-    HStack(spacing: 6) {
-      if let dot { Circle().fill(dot).frame(width: 7, height: 7) }
-      if let bold { Text(bold).font(.system(size: 13, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text) }
-      Text(text).font(.system(size: 13, weight: .semibold).monospacedDigit()).foregroundStyle(Theme.text2)
-    }
-    .padding(.horizontal, 11).padding(.vertical, 6)
-    .background(Capsule().fill(Theme.surface2))
-  }
-}
-
 /// Small print under a control: `.note`.
 struct StatsNote: View {
   var text: Text
@@ -116,15 +99,13 @@ struct FlowRow: Layout {
   }
 }
 
-/// A change in a tinted capsule: green when it is good news, red when not.
+/// A change as colored text: green when it is good news, red when not.
 struct StatsBadge: View {
   var text: String
   var good: Bool
 
   var body: some View {
     let color = good ? Theme.good : Theme.bad
-    Text(text).font(.system(size: 12, weight: .bold).monospacedDigit()).foregroundStyle(color)
-      .padding(.horizontal, 8).padding(.vertical, 3)
-      .background(Capsule().fill(color.opacity(0.12)))
+    Text(text).font(.system(size: 13, weight: .semibold).monospacedDigit()).foregroundStyle(color)
   }
 }

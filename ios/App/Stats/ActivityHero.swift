@@ -7,16 +7,17 @@ private let GRID_WEEKS = 18
 /// The heatmap's five shades, none to busiest.
 private let HEAT = [0x1f1f26, 0x2f3170, 0x4d50b8, 0x7174ee, 0xa5a7ff].map { Color(hex: $0) }
 
-/// The top of the page: rounds in the window, the streak, and every day of
-/// the last eighteen weeks as a square, a week to a column.
+/// The top of the page: the window's switch, rounds in the window, the streak,
+/// and every day of the last eighteen weeks as a square, a week to a column.
 struct ActivityHero: View {
   var stats: NodeStats
-  var days: Int
+  @Binding var days: Int
 
   var body: some View {
     let rounds = recentRounds(stats, days)
     let run = streak(stats)
     VStack(alignment: .leading, spacing: 16) {
+      SegmentedControl(value: $days, options: STATS_WINDOWS)
       HStack(alignment: .bottom) {
         VStack(alignment: .leading, spacing: 2) {
           Text("\(rounds)").font(.system(size: 56, weight: .heavy).monospacedDigit()).tracking(-2).foregroundStyle(Theme.text)

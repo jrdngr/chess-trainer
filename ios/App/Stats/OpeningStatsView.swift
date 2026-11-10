@@ -2,7 +2,7 @@ import Model
 import Shared
 import SwiftUI
 
-/// One opening's page: its rating and ladder, its charts, its modes and its
+/// One opening's page: its rating and tier, its charts, its modes and its
 /// played variations.
 struct OpeningStatsView: View {
   let tree: OpeningTree
@@ -22,11 +22,10 @@ struct OpeningStatsView: View {
         VStack(alignment: .leading, spacing: 0) {
           hero(stats)
           selectButton.padding(.top, 12)
-          StatsSection(title: "Window")
-          SegmentedControl(value: $days, options: STATS_WINDOWS)
+          SegmentedControl(value: $days, options: STATS_WINDOWS).padding(.top, 24)
           let climb = ratingOverTime(stats, days)
           if !climb.isEmpty {
-            StatsSection(title: "Rating over time")
+            StatsSection(title: "Rating over time", first: true)
             StatsCard { LineChart(points: climb, color: Theme.accent) }
           }
           AccuracySection(stats: stats, days: days)
@@ -47,28 +46,35 @@ struct OpeningStatsView: View {
     }
   }
 
+  /// The rating and its tier, one bar toward the next tier, then the opening's numbers in a row.
   private func hero(_ stats: NodeStats) -> some View {
     let rank = rankOf(stats.rating, stats.rated)
     let rounds = roundsOf(stats)
     let acc = accuracy(answered: stats.answered, correct: stats.correct)
-    let label = rank.heldLabel + (node.eco.map { " \u{00b7} \($0)" } ?? "") + " \u{00b7} " + bookMoveText(node.sans)
-    return StatsHero(big: stats.rated == 0 ? "\u{2014}" : ratingText(stats.rating), label: label) {
-      FlowRow(spacing: 8) {
-        StatsPill(bold: "\(rounds)", text: rounds == 1 ? "round" : "rounds")
-        if let acc { StatsPill(bold: percentText(acc), text: "accuracy") }
-        if stats.bestRun > 0 { StatsPill(bold: "\(stats.bestRun)", text: "best run") }
-        if let last = stats.lastAt { StatsPill(text: "last \(shortDate(last))") }
+    return StatsHero(big: stats.rated == 0 ? "\u{2014}" : ratingText(stats.rating), label: rank.heldLabel) {
+      TierBar(rating: stats.rating, rated: stats.rated, label: false).padding(.top, 10)
+      HStack {
+        Text(ratingText(rank.floor))
+        Spacer()
+        if let next = rank.nextLabel { Text("\(next) at \(ratingText(rank.ceiling))") }
       }
-      .padding(.top, 16)
-      StatsLadder(rating: stats.rating, rated: stats.rated).padding(.top, 16)
-      if stats.extRated > 0 {
-        VStack(alignment: .leading, spacing: 4) {
-          Text("Extensions").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.ext)
-          StatsLadder(rating: stats.extRating, rated: stats.extRated)
-        }
-        .padding(.top, 14)
+      .font(.system(size: 12).monospacedDigit()).foregroundStyle(Theme.text3)
+      HStack(alignment: .top, spacing: 0) {
+        figure("\(rounds)", rounds == 1 ? "round" : "rounds")
+        if let acc { figure(percentText(acc), "accuracy") }
+        if stats.extRated > 0 { figure(ratingText(stats.extRating), "extensions") }
+        if let last = stats.lastAt { figure(shortDate(last), "last played") }
       }
+      .padding(.top, 18)
     }
+  }
+
+  private func figure(_ value: String, _ label: String) -> some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(value).font(.system(size: 17, weight: .semibold).monospacedDigit()).foregroundStyle(Theme.text)
+      Text(label).font(.system(size: 12)).foregroundStyle(Theme.text3)
+    }
+    .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
   }
 
   private var selectButton: some View {
