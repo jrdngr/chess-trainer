@@ -498,8 +498,10 @@ struct RunView: View {
     }
     if let miss = model.miss { return [BoardArrow(from: miss.from, to: miss.to, color: Theme.good)] }
     if model.atHole && !model.thinking {
+      // The tutorial's one answer takes its row's color, not the guided moves' accent: adding moves is its own step.
       if let only = model.onlyAnswer {
-        return applySan(model.run.fen, only).map { [BoardArrow(from: $0.from, to: $0.to, color: Theme.accent)] } ?? []
+        let color = roleColor(model.roles.first { $0.san == only }?.role) ?? Theme.book
+        return applySan(model.run.fen, only).map { [BoardArrow(from: $0.from, to: $0.to, color: color)] } ?? []
       }
       return holeArrows(model)
     }
