@@ -310,8 +310,12 @@ public func growAtHole(_ state: AppState, _ tree: OpeningTree, _ selection: Sele
   guard let gap = gapAt(all, color: color, line: line) ?? gapAt(playbookGaps(state, tree), color: color, line: line) else { return nil }
   let reps = state.repertoireList
   let p = pace(runs: runsSinceAdded(state.games, reps), size: state.settings.movesPerFill)
-  return (gap, growScore(gap, top: all.first, pace: p, reps: reps, cards: state.cards) >= 1)
+  return (gap, insideYourLines(gap) && growScore(gap, top: all.first, pace: p, reps: reps, cards: state.cards) >= 1)
 }
+
+/// A gap past at least one move of yours. A Play run grows only these; an answer to
+/// a White first move you have none for is left to Home's Recommendations.
+public func insideYourLines(_ gap: Gap) -> Bool { !gap.hole.path.isEmpty }
 
 /// The gap the next run steers toward when a new move is due, if any.
 public func steerGap(_ state: AppState, _ tree: OpeningTree, _ selection: Selection) -> Gap? {
@@ -321,7 +325,7 @@ public func steerGap(_ state: AppState, _ tree: OpeningTree, _ selection: Select
   let ranked = selectionGaps(state, tree, selection)
   guard let top = ranked.first else { return nil }
   var best: (gap: Gap, score: Double)?
-  for gap in ranked {
+  for gap in ranked where insideYourLines(gap) {
     let score = growScore(gap, top: top, pace: p, reps: reps, cards: state.cards)
     if score >= 1 && (best == nil || score > best!.score) { best = (gap, score) }
   }

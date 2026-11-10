@@ -105,7 +105,9 @@ until the last game added nothing, so two fills never come back to back:
 after the first game, the next one plays the White opening it grew.
 
 When a new move is due (see below), the next run steers toward the gap in the
-selection with the highest p × m² × g: the opponent follows that gap's line
+selection with the highest p × m² × g, among the gaps past at least one move of
+yours. A White first move you have no answer to is left to Home's
+Recommendations: a run never steers there or grows there: the opponent follows that gap's line
 to its reply, so new moves land on strong lines at a steady pace instead of
 whenever chance allows.
 
