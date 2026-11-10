@@ -11,10 +11,13 @@ final class RatingPlayer {
 
   private(set) var view: RatingView
   private let moment: RatingMoment
+  /// Every beat's length is scaled by this: 1 on the end screen, less on the way to the next run.
+  private let pace: Double
   private var tasks: [Task<Void, Never>] = []
 
-  init(_ moment: RatingMoment) {
+  init(_ moment: RatingMoment, pace: Double = 1) {
     self.moment = moment
+    self.pace = pace
     view = .resting(moment.before)
   }
 
@@ -23,26 +26,26 @@ final class RatingPlayer {
     guard tasks.isEmpty else { return }
     let (before, after) = (moment.before, moment.after)
     let was = rankOf(before), now = rankOf(after)
-    let lead = Self.leadMs
+    let lead = (Self.leadMs * pace)
     let end: Double
     if now.reached == was.reached {
       at(lead) {
         $0.width = now.progress
-        $0.speed = Self.growMs
+        $0.speed = (Self.growMs * pace)
         $0.moved = true
         $0.stretch = (was.progress, now.progress, after > before)
       }
-      count(lead, Self.growMs, before, after)
-      end = lead + Self.growMs + 0.3
+      count(lead, (Self.growMs * pace), before, after)
+      end = lead + (Self.growMs * pace) + 0.3 * pace
     } else if now.reached > was.reached {
       let color = fillColor(after)
       at(lead) {
         $0.width = 1
-        $0.speed = Self.topMs
+        $0.speed = (Self.topMs * pace)
         $0.moved = true
       }
-      count(lead, Self.topMs, before, now.floor)
-      let top = lead + Self.topMs
+      count(lead, (Self.topMs * pace), before, now.floor)
+      let top = lead + (Self.topMs * pace)
       at(top) {
         Haptics.pattern([20, 40, 20, 40, 60], on: haptics)
         $0.rating = after
@@ -51,14 +54,14 @@ final class RatingPlayer {
         $0.promoted = true
         $0.speed = 0
       }
-      at(top + Self.flashMs) {
+      at(top + (Self.flashMs * pace)) {
         $0.width = 0
         $0.flash = nil
         $0.speed = 0
       }
-      at(top + Self.flashMs + 0.04) { self.settle(&$0, now) }
-      count(top + Self.flashMs + 0.04, Self.regrowMs, now.floor, after)
-      end = top + Self.flashMs + 0.04 + Self.regrowMs + 0.5
+      at(top + (Self.flashMs * pace) + 0.04) { self.settle(&$0, now) }
+      count(top + (Self.flashMs * pace) + 0.04, (Self.regrowMs * pace), now.floor, after)
+      end = top + (Self.flashMs * pace) + 0.04 + (Self.regrowMs * pace) + 0.5 * pace
     } else {
       at(lead) {
         Haptics.pattern([60, 50, 60], on: haptics)
@@ -68,15 +71,15 @@ final class RatingPlayer {
         $0.flashes += 1
         $0.moved = true
       }
-      count(lead, Self.flashMs + Self.regrowMs, before, after)
-      at(lead + Self.flashMs) {
+      count(lead, (Self.flashMs * pace) + (Self.regrowMs * pace), before, after)
+      at(lead + (Self.flashMs * pace)) {
         self.settle(&$0, now)
         $0.flash = nil
       }
-      end = lead + Self.flashMs + Self.regrowMs + 0.3
+      end = lead + (Self.flashMs * pace) + (Self.regrowMs * pace) + 0.3 * pace
     }
     tasks.append(Task {
-      try? await Task.sleep(for: .seconds(end + Self.holdMs))
+      try? await Task.sleep(for: .seconds(end + (Self.holdMs * pace)))
       if !Task.isCancelled { onDone() }
     })
   }
@@ -88,7 +91,7 @@ final class RatingPlayer {
   private func settle(_ v: inout RatingView, _ now: Rank) {
     v.rating = moment.after
     v.width = now.progress
-    v.speed = Self.regrowMs
+    v.speed = (Self.regrowMs * pace)
   }
 
   private func at(_ s: Double, _ step: @escaping (inout RatingView) -> Void) {
@@ -125,11 +128,12 @@ struct RatingOverBoard: View {
   @State private var player: RatingPlayer
   @State private var shown = false
 
-  init(moment: RatingMoment, leaving: Bool, onDone: @escaping () -> Void) {
+  /// `pace` scales the playback: Next run plays it quicker than the end screen.
+  init(moment: RatingMoment, leaving: Bool, pace: Double = 1, onDone: @escaping () -> Void) {
     self.moment = moment
     self.leaving = leaving
     self.onDone = onDone
-    _player = State(initialValue: RatingPlayer(moment))
+    _player = State(initialValue: RatingPlayer(moment, pace: pace))
   }
 
   var body: some View {

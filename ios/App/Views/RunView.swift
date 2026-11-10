@@ -94,7 +94,8 @@ struct RunView: View {
       .overlay { calloutLayer.animation(.easeOut(duration: 0.25), value: model.shownCallout?.id) }
       .overlay {
         if let moment = nextMoment {
-          RatingOverBoard(moment: moment, leaving: nextLeaving) { leaveForNext() }
+          // Quicker than the end screen's: Next run is for drilling fast.
+          RatingOverBoard(moment: moment, leaving: nextLeaving, pace: 0.35) { leaveForNext() }
         }
       }
       .overlay {
