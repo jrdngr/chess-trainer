@@ -145,7 +145,7 @@ struct EndView: View {
           .animation(.easeIn(duration: 0.2).delay(0.25), value: flashing)
           .overlay(alignment: .top) {
             if flashing {
-              EndVerdict(how: finish.how, plies: last).transition(.opacity.animation(.easeOut(duration: 0.2)))
+              EndVerdict(how: finish.how, plies: last).padding(.top, 8).transition(.opacity.animation(.easeOut(duration: 0.2)))
             }
           }
         if let lens {

@@ -329,9 +329,11 @@ final class RunModel {
     return (move, reply.flatMap { applyUci(move.after, $0) })
   }
 
-  /// A Middlegame run was announced while its handoff was built, so it goes straight to the board.
+  /// A Middlegame run was announced while its handoff was built, so it goes straight to the board,
+  /// as do the first game and the tutorial's first. Later tutorial games are announced like any round.
   func start() {
-    if handoff != nil || firstGame || tutorialGame != nil { toBoard() } else { later(Self.announceMs) { $0.toBoard() } }
+    let straightIn = handoff != nil || firstGame || (tutorialGame.map { $0.number <= 1 } ?? false)
+    if straightIn { toBoard() } else { later(Self.announceMs) { $0.toBoard() } }
   }
 
   /// The announcement gives way to the board: the way in plays out, or the round begins.

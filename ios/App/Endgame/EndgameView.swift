@@ -167,7 +167,7 @@ struct EndgameRoundView: View {
           LensBar(held: $lens, lenses: LENSES, enabled: game.phase == .playing, plan: $plan, planEnabled: livePlan != nil)
             .opacity(called == nil ? 1 : 0).allowsHitTesting(called == nil)
             .overlay(alignment: .top) {
-              if let called { CalloutStrip(text: called, good: false).transition(.opacity).id(called) }
+              if let called { CalloutStrip(text: called, good: false).padding(.top, 8).transition(.opacity).id(called) }
             }
             .animation(.easeOut(duration: 0.25), value: called)
           if let lens, lens != .eval { LensLegend(kind: lens, endgame: true, safety: marks?.safety).clearsLens($lens) }

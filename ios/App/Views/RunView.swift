@@ -187,6 +187,7 @@ struct RunView: View {
   @ViewBuilder private var calloutLayer: some View {
     if let callout = model.shownCallout {
       CalloutStrip(text: callout.text, good: callout.good)
+        .padding(.top, 8)
         .tip(model.tip, when: model.tip == .playOn, arrow: .up, onDismiss: model.dismissTip)
         .transition(.opacity.combined(with: .offset(y: -6)))
         .id(callout.id)
