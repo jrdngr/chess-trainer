@@ -29,6 +29,8 @@ public enum RATING {
   public static let step: Double = 20
   /// Ratings this far apart differ by ten to one in odds.
   public static let scale: Double = 450
+  /// A miss costs at most this many right answers' worth of rating.
+  public static let missCap: Double = 5
 }
 
 /// The share of answers a rating expects to be right.
@@ -38,7 +40,9 @@ public func expectedAccuracy(_ rating: Double) -> Double {
 
 /// The rating a result leaves behind, kept to two decimals.
 public func ratingAfter(_ rating: Double, _ correct: Bool) -> Double {
-  let moved = rating + RATING.step * ((correct ? 1 : 0) - expectedAccuracy(rating))
+  let expected = expectedAccuracy(rating)
+  let gain = RATING.step * (1 - expected)
+  let moved = correct ? rating + gain : rating - min(RATING.step * expected, RATING.missCap * gain)
   return JS.round(max(RATING.floor, moved) * 100) / 100
 }
 
