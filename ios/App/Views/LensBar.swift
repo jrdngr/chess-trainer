@@ -1,3 +1,4 @@
+import ChessCore
 import Model
 import SwiftUI
 
