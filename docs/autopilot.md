@@ -200,8 +200,8 @@ button, named by its opening.
 
 Autopilot never names a mode. A run is called by its opening, with the side as
 a small square. The round intro deals the run's card from a deck: the start
-position face up, the opening's full name above it ("Sicilian: Najdorf"), the
-side and a row of segments below. The segments show how far into your prep the
+position face up, the opening's full name above it ("Sicilian: Najdorf"), a
+row of segments below; the board's orientation shows the side. The segments show how far into your prep the
 run starts: one segment for each of your own moves, lit up to where you take
 over. After a beat the card grows into the board and the run begins; a tap
 goes straight to the board. Home's button, the round intro and the end screen

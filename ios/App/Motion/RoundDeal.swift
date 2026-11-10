@@ -12,7 +12,7 @@ struct BoardFrameKey: PreferenceKey {
 
 /// Play's round, announced: its card leaves the deck small and flips face up on
 /// the round's start position, comes forward under the opening's name with the
-/// side and prep below, then after a beat grows onto the board (`board`) as the
+/// prep below, then after a beat grows onto the board (`board`) as the
 /// rest clears. Plays once, in `length`; a tap goes straight to the board.
 struct RoundDeal: View {
   let name: String
@@ -37,8 +37,12 @@ struct RoundDeal: View {
     GeometryReader { geo in
       let side = min(264, geo.size.width - 126)
       let rest = CGRect(x: (geo.size.width - side) / 2, y: geo.size.height * 0.38 - side / 2, width: side, height: side)
-      let frame = grown ? (board ?? rest) : rest
-      let inset: CGFloat = grown ? 0 : 12
+      // The card is drawn at the board's own size and scaled down, so the board inside never relays out
+      // (its coordinate labels would fade out and back in) as it grows.
+      let full = board?.width ?? side - 24
+      let scale = grown ? 1 : (side - 24) / full
+      let center = grown ? CGPoint(x: board?.midX ?? rest.midX, y: board?.midY ?? rest.midY) : CGPoint(x: rest.midX, y: rest.midY)
+      let inset: CGFloat = grown ? 0 : 12 / scale
       let deck = CGPoint(x: geo.size.width / 2, y: geo.size.height - 130)
       ZStack(alignment: .topLeading) {
         Theme.background.opacity(grown ? 0 : 1).ignoresSafeArea()
@@ -48,13 +52,10 @@ struct RoundDeal: View {
           .frame(width: geo.size.width - 48, height: 80, alignment: .bottom)
           .position(x: geo.size.width / 2, y: rest.minY - 62)
           .opacity(named && !grown ? 1 : 0).offset(y: named ? 0 : 8)
-        HStack(spacing: 12) {
-          SideSquare(color: color)
-          PrepSegmentsView(span: span)
-        }
-        .frame(width: side)
-        .position(x: geo.size.width / 2, y: rest.maxY + 30)
-        .opacity(named && !grown ? 1 : 0).offset(y: named ? 0 : 8)
+        PrepSegmentsView(span: span)
+          .frame(width: side)
+          .position(x: geo.size.width / 2, y: rest.maxY + 30)
+          .opacity(named && !grown ? 1 : 0).offset(y: named ? 0 : 8)
         ZStack {
           ForEach([-6.0, -3, 0], id: \.self) { o in
             WelcomeCardBack(radius: 12).frame(width: 106, height: 115).offset(x: o, y: -o)
@@ -62,12 +63,12 @@ struct RoundDeal: View {
         }
         .position(deck)
         .opacity(grown ? 0 : 1)
-        card(inset: inset)
-          .modifier(DealFlip(progress: dealt))
-          .frame(width: frame.width, height: frame.height)
-          .scaleEffect(forward ? 1 : 0.4 + 0.2 * dealt)
+        card(size: full, inset: inset, scale: scale)
+          .modifier(DealFlip(progress: dealt, radius: 29 / scale))
+          .frame(width: full + 2 * inset, height: full + 2 * inset)
+          .scaleEffect(scale * (forward ? 1 : 0.4 + 0.2 * dealt))
           .offset(x: (deck.x - rest.midX) * (1 - dealt), y: (deck.y - rest.midY) * (1 - dealt))
-          .position(x: frame.midX, y: frame.midY)
+          .position(center)
       }
       .frame(width: geo.size.width, height: geo.size.height)
     }
@@ -75,12 +76,14 @@ struct RoundDeal: View {
   }
 
   /// The card: the round's position in the card's frame, the frame and its accent gone once it is the board.
-  private func card(inset: CGFloat) -> some View {
+  /// Sizes are in the board's own units, so each is divided by `scale` to look right once scaled down.
+  private func card(size: CGFloat, inset: CGFloat, scale: CGFloat) -> some View {
     BoardView(fen: fen, orientation: color, interactive: false, lastMove: lastMove, onMove: { _ in })
+      .frame(width: size, height: size)
       .padding(inset)
-      .background(RoundedRectangle(cornerRadius: grown ? 4 : 29).fill(Theme.surface.opacity(grown ? 0 : 1)))
-      .overlay(RoundedRectangle(cornerRadius: grown ? 4 : 29).strokeBorder(Theme.accent.opacity(grown ? 0 : 1), lineWidth: 1.5))
-      .shadow(color: .black.opacity(grown ? 0 : 0.55), radius: 17, y: 14)
+      .background(RoundedRectangle(cornerRadius: grown ? 4 : 29 / scale).fill(Theme.surface.opacity(grown ? 0 : 1)))
+      .overlay(RoundedRectangle(cornerRadius: grown ? 4 : 29 / scale).strokeBorder(Theme.accent.opacity(grown ? 0 : 1), lineWidth: 1.5 / scale))
+      .shadow(color: .black.opacity(grown ? 0 : 0.55), radius: 17 / scale, y: 14 / scale)
   }
 
   private func play() async {
@@ -105,6 +108,7 @@ struct RoundDeal: View {
 /// The card turning over on its way from the deck: face down at 0, face up at 1.
 private struct DealFlip: ViewModifier, Animatable {
   var progress: Double
+  var radius: CGFloat
 
   nonisolated var animatableData: Double {
     get { progress }
@@ -118,7 +122,7 @@ private struct DealFlip: ViewModifier, Animatable {
         content
       } else {
         // Seen through the flip, so mirrored back to read the right way round.
-        WelcomeCardBack(radius: 29).scaleEffect(x: -1)
+        WelcomeCardBack(radius: radius).scaleEffect(x: -1)
       }
     }
     .rotation3DEffect(.degrees(flip), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
