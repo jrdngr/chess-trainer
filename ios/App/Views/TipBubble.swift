@@ -58,46 +58,30 @@ extension View {
     self.tip(text: shown ? tip?.text : nil, arrow: arrow, arrowAt: arrowAt, inset: inset, drop: drop, onDismiss: onDismiss)
   }
 
-  /// A tip with its own text; none while `text` is nil. It takes its own room
-  /// under this view (over it, for an arrow pointing down), moving what follows
-  /// so it never covers another control. `float` hangs it over what follows
-  /// instead, for a view in a grid or a row; so does a `minWidth` wider than a
-  /// narrow view, the tip then running right from the view's leading edge with
-  /// `arrowAt` along the tip. `drop` sets it further out.
-  /// Use one per view: a second floating tip's `zIndex` loses to the first's.
-  @ViewBuilder func tip(
+  /// A tip with its own text; none while `text` is nil. It hangs under this
+  /// view (over it, for an arrow pointing down) on top of what follows, so it
+  /// never moves anything. A `minWidth` wider than a narrow view runs the tip
+  /// right from the view's leading edge with `arrowAt` along the tip. `drop`
+  /// sets it further out.
+  /// Use one per view: a second tip's `zIndex` loses to the first's.
+  func tip(
     text: String?, arrow: TipBubble.Arrow = .up, arrowAt: CGFloat = 0.5, inset: CGFloat = 0, minWidth: CGFloat = 0, drop: CGFloat = 0,
-    float: Bool = false, onDismiss: @escaping () -> Void = {}
+    onDismiss: @escaping () -> Void = {}
   ) -> some View {
-    if float || minWidth > 0 {
-      overlay(alignment: arrow == .up ? .bottom : .top) {
-        if let text {
-          Color.clear.frame(height: 0).overlay(alignment: arrow == .up ? .topLeading : .bottomLeading) {
-            TipBubble(
-              text: text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
-              .fixedSize(horizontal: false, vertical: true)
-              .frame(minWidth: minWidth)
-              .padding(arrow == .up ? .top : .bottom, 12 + drop).padding(.horizontal, inset)
-          }
-        }
-      }
-      .zIndex(text != nil ? 2 : 0)
-    } else {
-      VStack(alignment: .leading, spacing: 0) {
-        if arrow == .down, let text {
-          TipBubble(text: text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
+    overlay(alignment: arrow == .up ? .bottom : .top) {
+      if let text {
+        Color.clear.frame(height: 0).overlay(alignment: arrow == .up ? .topLeading : .bottomLeading) {
+          TipBubble(
+            text: text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(.bottom, 12 + drop).padding(.horizontal, inset)
+            .frame(minWidth: minWidth)
+            .padding(arrow == .up ? .top : .bottom, 12 + drop).padding(.horizontal, inset)
         }
-        self
-        if arrow == .up, let text {
-          TipBubble(text: text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.top, 12 + drop).padding(.horizontal, inset)
-        }
+        .transition(.opacity)
       }
-      .animation(.easeOut(duration: 0.2), value: text)
     }
+    .animation(.easeOut(duration: 0.2), value: text)
+    .zIndex(text != nil ? 2 : 0)
   }
 }
 

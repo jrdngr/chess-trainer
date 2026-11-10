@@ -73,7 +73,8 @@ struct RunView: View {
       } else {
         header
           .clearsLens($lens)
-        headerTipSlot
+          // One tip modifier per view: a second one's layering would lose to the first's.
+          .tip(model.tip, when: Self.headerTips.contains(model.tip), arrowAt: headerArrowAt, inset: 16, onDismiss: model.dismissTip)
       }
       // The Eval lens's bar takes the captured row's place, so the board never moves.
       // While adding moves Growth's eval bar takes the row, with the engine's word on the answers.
@@ -139,33 +140,6 @@ struct RunView: View {
   private static let headerTips: Set<TutorialTip?> = [.prepBar, .lineDone, .endRun]
 
   private var headerArrowAt: CGFloat { model.tip == .endRun ? 0.08 : 0.5 }
-
-  /// The header's tips in this game: the tutorial game's own, and any still to come.
-  private var pendingHeaderTips: [TutorialTip] {
-    let all = ([model.tip].compactMap { $0 } + (model.tutorialGame?.tips ?? []) + store.state.settings.tips)
-      .filter { Self.headerTips.contains($0) }
-    return all.reduce(into: []) { if !$0.contains($1) { $0.append($1) } }
-  }
-
-  /// Room under the header for its tips, as tall as the tallest of the game's,
-  /// held for the whole game so the board stays put as they come and go.
-  @ViewBuilder private var headerTipSlot: some View {
-    let pending = pendingHeaderTips
-    if !pending.isEmpty {
-      ZStack(alignment: .top) {
-        ForEach(pending, id: \.self) { tip in
-          TipBubble(text: tip.text, onDismiss: {}).fixedSize(horizontal: false, vertical: true).hidden()
-        }
-        if let tip = model.tip, Self.headerTips.contains(tip) {
-          TipBubble(text: tip.text, arrowAt: headerArrowAt, onDismiss: model.dismissTip)
-            .fixedSize(horizontal: false, vertical: true)
-            .transition(.opacity)
-        }
-      }
-      .padding(.top, 12).padding(.horizontal, 16)
-      .animation(.easeOut(duration: 0.2), value: model.tip)
-    }
-  }
 
   /// The board's rim and what the status line calls it: autoplay, adding moves, a moment to find, your prep.
   private var rim: (color: SwiftUI.Color, label: String)? {

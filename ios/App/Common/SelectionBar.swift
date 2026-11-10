@@ -191,7 +191,7 @@ struct QuickPicker: View {
             }
             // The tutorial's step after its fourth game: pick the answer to 1.d4. Above the
             // row, pointing down, so the rows and sections after it can't cover it.
-            .tip(text: d4Step && opening.side == .b && opening.node.sans.first == "d4" ? D4_ROW_TIP : nil, arrow: .down, float: true)
+            .tip(text: d4Step && opening.side == .b && opening.node.sans.first == "d4" ? D4_ROW_TIP : nil, arrow: .down)
           }
           if !showAll && overflows(yours, side: side, limit: shownCount(side)) {
             more { showAll = true }
