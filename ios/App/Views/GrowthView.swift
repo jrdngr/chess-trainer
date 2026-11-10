@@ -124,7 +124,7 @@ struct GrowthView: View {
 
   /// The board's rim and what the status line calls it, as in Play: the way in playing out, then adding moves at the hole.
   private var rim: String? {
-    if model.intro == .replay { return "Autoplay" }
+    if model.intro == .replay { return "Replay" }
     if model.phase == .hole && !model.held { return "Adding new moves" }
     return nil
   }

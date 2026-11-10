@@ -140,8 +140,8 @@ private struct WelcomeCardFace: View {
   }
 }
 
-/// The back of a card: the book's blue, a dark rim line and a knight.
-private struct WelcomeCardBack: View {
+/// The back of a card: the book's blue, a dark rim line and a knight. Play's round deal uses it too.
+struct WelcomeCardBack: View {
   var radius: CGFloat
 
   var body: some View {

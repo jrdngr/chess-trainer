@@ -42,14 +42,19 @@ struct RunView: View {
       if model.intro == .announce {
         if survival {
           PlayIntroCover(trail: introTrail, mode: "Middlegame")
-        } else {
-          PlateIntroCover {
-            IntroPlate(
-              name: lineName(model.tree, pickerCatalog(model.tree), nodeById(model.tree, model.introOpening).sans),
-              sans: nodeById(model.tree, model.introOpening).sans,
-              color: model.run.color, span: model.span)
-          }
         }
+      }
+    }
+    // Play's round is dealt as a card on its start position, which grows into the board.
+    .overlayPreferenceValue(BoardFrameKey.self) { anchor in
+      if model.intro == .announce && !survival {
+        GeometryReader { geo in
+          RoundDeal(
+            name: lineName(model.tree, pickerCatalog(model.tree), nodeById(model.tree, model.introOpening).sans),
+            fen: model.run.fen, lastMove: lastMoveOf(model.run.played), color: model.run.color, span: model.span,
+            board: anchor.map { geo[$0] })
+        }
+        .transition(.identity)
       }
     }
     .contentShape(Rectangle())
@@ -98,6 +103,9 @@ struct RunView: View {
         onMove: model.play, onRefused: refused
       )
       .modifier(BoardShake(count: shakes))
+      // Under Play's deal the card stands in for the board until it has grown onto it.
+      .opacity(model.intro == .announce && !survival ? 0 : 1)
+      .anchorPreference(key: BoardFrameKey.self, value: .bounds) { $0 }
       .clearsLens($lens)
       .overlay { if let pulse = model.edgePulse { EdgePulse(color: pulse.found ? Theme.good : Theme.bad).id(pulse.id) } }
       .overlay(alignment: .top) { flash }
@@ -143,9 +151,9 @@ struct RunView: View {
 
   private var headerArrowAt: CGFloat { model.tip == .endRun ? 0.08 : 0.5 }
 
-  /// The board's rim and what the status line calls it: autoplay, adding moves, a moment to find, your prep.
+  /// The board's rim and what the status line calls it: a replay, adding moves, a moment to find, your prep.
   private var rim: (color: SwiftUI.Color, label: String)? {
-    if model.intro == .replay { return (Theme.accent, "Autoplay") }
+    if model.intro == .replay { return (Theme.accent, "Replay") }
     if adding { return (Theme.accent, "Adding new moves") }
     if model.blunder != nil { return nil }
     if model.momentHere { return (Theme.warn, "There\u{2019}s something here") }
@@ -377,8 +385,6 @@ struct RunView: View {
         HandoffMoves(handoff: handoff, played: model.introPly)
       } else if model.intro == .replay {
         movesLine(sansToMoveText(Array(model.introPath.prefix(model.introPly))))
-      } else if !model.held && model.autoplayNote {
-        movesLine("The moves up to your \(openingName(model.tree, model.introOpening)) were played for you.")
       } else if !model.held, model.prefs.missions, !model.tipsInPlay, let mission = model.session.state.extras.mission {
         GoalCard(mission: mission)
       } else if model.run.opened > 0 {
@@ -404,6 +410,18 @@ struct RunView: View {
   }
 
   private var runFooter: some View {
+    ZStack {
+      runButtons
+      if model.canReplay {
+        Button { model.replayMoves() } label: { Label("Replay moves", systemImage: "play.fill") }
+          .buttonStyle(PlayButtonStyle(kind: .soft, height: 44, radius: 12, font: 15))
+          .transition(.opacity)
+      }
+    }
+    .animation(.easeOut(duration: 0.2), value: model.canReplay)
+  }
+
+  private var runButtons: some View {
     HStack {
       Spacer()
       if model.holeGap != nil && model.myTurn && model.live && model.pending == nil {

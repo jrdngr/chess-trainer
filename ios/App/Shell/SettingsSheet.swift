@@ -37,7 +37,7 @@ struct SettingsSheet: View {
           .padding(.horizontal, 16).padding(.vertical, 10)
           ToggleRow(label: "Coordinates", on: settings.showCoordinates) { store.update { $0.settings.showCoordinates.toggle() } }
           ToggleRow(label: "Haptics", on: settings.hapticFeedback) { store.update { $0.settings.hapticFeedback.toggle() } }
-          ToggleRow(label: "Autoplay", on: settings.autoplay) { store.update { $0.settings.autoplay.toggle() } }
+          ToggleRow(label: "Replay", on: settings.autoplay) { store.update { $0.settings.autoplay.toggle() } }
         }
         section("Play")
         ListCard {

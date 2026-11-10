@@ -97,18 +97,3 @@ struct IntroCover: View {
     .introCoverFade()
   }
 }
-
-/// Autopilot's round, announced by its plate: the plate rising in over an
-/// opaque cover that fades out to the board. `.intro-plate` in `.round-intro`.
-struct PlateIntroCover<Plate: View>: View {
-  @ViewBuilder var plate: Plate
-
-  var body: some View {
-    ZStack {
-      Theme.background.ignoresSafeArea()
-      plate.arriving().padding()
-    }
-    .contentShape(Rectangle())
-    .introCoverFade()
-  }
-}

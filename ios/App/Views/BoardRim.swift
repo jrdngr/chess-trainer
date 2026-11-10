@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A rim around the board, in the color of what is going on: autoplay, your
+/// A rim around the board, in the color of what is going on: replay, your
 /// prep, a moment to find, adding moves. The status line under the title says which.
 struct BoardRim: View {
   var color: Color

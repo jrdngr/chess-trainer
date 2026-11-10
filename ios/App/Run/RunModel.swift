@@ -11,11 +11,13 @@ import Observation
 @MainActor @Observable
 final class RunModel {
   enum Phase { case playing, blunder, over }
-  /// The round's intro: announced full screen, then the way in played out on a locked board.
+  /// The round's intro: announced full screen (Play deals the round's card, which grows into the board),
+  /// then for a Middlegame run the handoff played out on a locked board. A Play run replays its way in only
+  /// when asked (Replay moves).
   /// A Middlegame run then shows the plan card at the handoff before your clock starts.
   enum Intro { case announce, replay, plan, done }
 
-  /// How long the announcement holds, and the beat between replayed moves (a Middlegame run's is quicker).
+  /// How long the announcement holds (Play's deal takes `RoundDeal.length`), and the beat between replayed moves (a Middlegame run's is quicker).
   static let announceMs = 1.2, replayMs = 0.4, handoffReplayMs = 0.12, pulseMs = 0.9
 
   /// How long a miss and a score popup stay over the board (a touch clears a miss sooner); the opponent's beat.
@@ -207,8 +209,24 @@ final class RunModel {
   var scoredInPoints: Bool { prefs.moments || prefs.missions || prefs.combo }
   /// Announcing or replaying: the board is locked, and the opponent waits.
   var held: Bool { intro != .done }
-  /// The moves the intro plays out: the way in, with Autoplay on; a Middlegame run's handoff always.
-  var introPath: [String] { handoff != nil || store.state.settings.autoplay ? Array(run.played.prefix(run.opened)) : [] }
+  /// The moves the intro plays out: a Middlegame run's handoff always; a Play run's way in when Replay moves asks.
+  var introPath: [String] { handoff != nil || replaying ? Array(run.played.prefix(run.opened)) : [] }
+  /// Replay moves was tapped: the way in plays out from move one, then the board is handed back.
+  private(set) var replaying = false
+
+  /// Replay moves is on offer: a Play run started inside its line, until your first move.
+  var canReplay: Bool {
+    round != nil && run.opened > 0 && intro == .done && live && myTurn && session.state.moves == 0 && fill == nil && pending == nil
+  }
+
+  /// Replay moves: the board goes back to move one and the way in plays out, as the intro used to.
+  func replayMoves() {
+    guard canReplay else { return }
+    replaying = true
+    introPly = 0
+    intro = .replay
+    replayStep()
+  }
   /// The opening the round is announced as. A run from move one is named by the opening it is steered toward.
   /// Under Any Opening it is the opening of the line drawn, never Any Opening itself.
   var introOpening: String {
@@ -319,7 +337,7 @@ final class RunModel {
 
   /// The board as shown: your move stands while it is judged, a blunder stays until Continue.
   var shownFen: String {
-    if held { return walkSan(introPath).fens[min(introPly, introPath.count)] }
+    if held && !introPath.isEmpty { return walkSan(introPath).fens[min(introPly, introPath.count)] }
     if let flash { return flash.move.after }
     if let pending { return pending.after }
     if case .blunder(let played, _, _, _, _) = session.ending, phase == .blunder { return applySan(run.fen, played)?.after ?? run.fen }
@@ -336,7 +354,7 @@ final class RunModel {
   /// as do the first game and the tutorial's first. Later tutorial games are announced like any round.
   func start() {
     let straightIn = handoff != nil || firstGame || (tutorialGame.map { $0.number <= 1 } ?? false)
-    if straightIn { toBoard() } else { later(Self.announceMs) { $0.toBoard() } }
+    if straightIn { toBoard() } else { later(round != nil ? RoundDeal.length : Self.announceMs) { $0.toBoard() } }
   }
 
   /// The announcement gives way to the board: the way in plays out, or the round begins.
@@ -361,6 +379,15 @@ final class RunModel {
   /// The way in has played out: a Middlegame run shows the structure's plan first, where it has one.
   private func replayDone() {
     introPly = introPath.count
+    if replaying {
+      // The round was under way already: your turn starts again, with the time spent watching off the clock.
+      replaying = false
+      introPly = 0
+      intro = .done
+      pulseEdge()
+      turnStarted = Date()
+      return
+    }
     if handoff != nil && structureOf(run.fen) != nil {
       intro = .plan
       return
@@ -546,7 +573,6 @@ final class RunModel {
     miss = nil
     missedBest = nil
     holeGap = nil
-    if autoplayNote { store.update { $0.settings.seenAutoplayNote = true } }
     let now = Env.now()
     if prepNow.contains(move.san) {
       apply(playPrepared(session, ctx, move, seconds, now))
@@ -586,11 +612,6 @@ final class RunModel {
     holeAsked = true
     guard let found = growAtHole(store.state, tree, selection, color: run.color, line: run.played) else { return }
     if found.yes { startFill(found.gap) } else { holeGap = found.gap }
-  }
-
-  /// The one-time note on autoplay: up while the first run that autoplays waits for your first move.
-  var autoplayNote: Bool {
-    round != nil && !store.state.settings.seenAutoplayNote && !introPath.isEmpty && session.state.moves == 0
   }
 
   /// The answers on offer while adding moves, the same as Growth's.
