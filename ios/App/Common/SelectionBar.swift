@@ -147,7 +147,8 @@ struct ChoiceRow<Leading: View>: View {
 
 /// The few picks most sessions want, one tap each: Any Opening, your
 /// openings (most worth focusing on first), openings you picked lately, and
-/// the common first moves. Recent's Show all opens the whole history in place. `QuickPicker`.
+/// the common first moves. White and Black list that side's openings, Random both
+/// in a column each. Recent's More opens the whole history in place. `QuickPicker`.
 struct QuickPicker: View {
   @Environment(AppStore.self) private var store
   let onClose: () -> Void
@@ -157,7 +158,8 @@ struct QuickPicker: View {
   @State private var history = false
 
   static let firstMoves = ["e4", "d4", "c4", "Nf3"]
-  static let openingsShown = 6
+  /// Your openings shown before More: six on a side's tab, four a column on Random.
+  private func shownCount(_ side: ChessCore.Color?) -> Int { side == nil ? 8 : 6 }
 
   var body: some View {
     if history {
@@ -179,45 +181,31 @@ struct QuickPicker: View {
           value: Binding(get: { selection.color }, set: { c in store.update { $0.settings.selection.color = c } }),
           options: [ColorChoice.w, .b, .random].map { ($0, colorLabel($0)) })
         tile("Any Opening", chosen: selection.opening == ANY_OPENING) { choose(ANY_OPENING, nil, color: .random) }
-        if !mine.isEmpty {
+        let side = shownSide(selection)
+        let yours = mine.filter { side == nil || $0.side == side }
+        if !yours.isEmpty {
           section("Your openings")
-          LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible())], spacing: 8) {
-            ForEach(showAll ? mine : Array(mine.prefix(Self.openingsShown)), id: \.key) { opening in
-              openingTile(opening.node.id, opening.side, shortLabel(opening.name), chosen: chosen(opening, selection)) {
-                choose(opening.node.id, opening.side)
-              }
-              // The tutorial's step after its fourth game: pick the answer to 1.d4. Above the
-              // row, pointing down, so the rows and sections after it can't cover it.
-              .tip(text: d4Step && opening.side == .b && opening.node.sans.first == "d4" ? D4_ROW_TIP : nil, arrow: .down)
+          sided(yours, side: side, limit: showAll ? nil : shownCount(side)) { opening in
+            openingTile(opening.node.id, shortLabel(opening.name), chosen: chosen(opening, selection)) {
+              choose(opening.node.id, opening.side)
             }
+            // The tutorial's step after its fourth game: pick the answer to 1.d4. Above the
+            // row, pointing down, so the rows and sections after it can't cover it.
+            .tip(text: d4Step && opening.side == .b && opening.node.sans.first == "d4" ? D4_ROW_TIP : nil, arrow: .down)
           }
-          if mine.count > Self.openingsShown {
-            Button { showAll.toggle() } label: {
-              Text(showAll ? "Show fewer" : "Show all \(mine.count)")
-                .font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text2).frame(maxWidth: .infinity).padding(10)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+          if !showAll && overflows(yours, side: side, limit: shownCount(side)) {
+            more { showAll = true }
           }
         }
-        if !recent.isEmpty {
+        let recentShown = recent.filter { side == nil || $0.side == side }
+        if !recentShown.isEmpty {
           section("Recent")
-          LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible())], spacing: 8) {
-            ForEach(recent, id: \.pick.opening) { item in
-              openingTile(item.pick.opening, item.side, item.label, chosen: selection.opening == item.pick.opening) {
-                choose(item.pick.opening, nil, color: item.pick.color)
-              }
+          sided(recentShown, side: side, limit: nil) { item in
+            openingTile(item.pick.opening, item.label, chosen: selection.opening == item.pick.opening) {
+              choose(item.pick.opening, nil, color: item.pick.color)
             }
           }
-          Button { history = true } label: {
-            HStack(spacing: 4) {
-              Text("Show all \(state.recent.count)")
-              Icon(name: "chevron", size: 14)
-            }
-            .font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text2).frame(maxWidth: .infinity).padding(10)
-            .contentShape(Rectangle())
-          }
-          .buttonStyle(.plain)
+          if state.recent.count > recentShown.count { more { history = true } }
         }
         section("First move")
         HStack(spacing: 8) {
@@ -252,12 +240,12 @@ struct QuickPicker: View {
   }
 
   /// The Recent tiles: your newest picks, less your openings and the first moves, which have tiles of their own.
-  private var recentTiles: [(pick: RecentPick, side: ChessCore.Color, label: String)] {
+  private var recentTiles: [RecentTile] {
     guard let tree = store.tree, let catalog = store.catalog else { return [] }
     let skip = Set(store.yourOpenings().map(\.node.id) + Self.firstMoves)
     return quickRecent(store.state.recent.filter { tree.byId[$0.opening] != nil }, skipping: skip).map { pick in
       let node = tree.byId[pick.opening]!
-      return (pick, recentSide(pick, catalog, node), openingLabel(catalog, node))
+      return RecentTile(pick: pick, side: recentSide(pick, catalog, node), label: openingLabel(catalog, node))
     }
   }
 
@@ -270,19 +258,67 @@ struct QuickPicker: View {
     onClose()
   }
 
-  /// An opening's tile: its side, its name and its rating tier.
-  private func openingTile(_ id: String, _ side: ChessCore.Color, _ label: String, chosen: Bool, action: @escaping () -> Void) -> some View {
+  /// An opening's tile: its name and its rating bar. The column or tab says its side.
+  private func openingTile(_ id: String, _ label: String, chosen: Bool, action: @escaping () -> Void) -> some View {
     let stats = store.state.score.nodes[id]
     return Button(action: action) {
       VStack(alignment: .leading, spacing: 6) {
-        HStack(spacing: 7) {
-          SideDot(side: side)
-          Text(label).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
-        }
-        TierBar(rating: stats?.rating ?? 0, rated: stats?.rated ?? 0)
+        Text(label).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
+        TierBar(rating: stats?.rating ?? 0, rated: stats?.rated ?? 0, label: false)
       }
       .padding(.horizontal, 12).padding(.vertical, 10).frame(maxWidth: .infinity, alignment: .leading)
       .background(tileBackground(chosen))
+    }
+    .buttonStyle(.plain)
+  }
+
+  /// The side the tab lists, or nil for both: Random, and the tutorial's step that needs a Black row.
+  private func shownSide(_ selection: Selection) -> ChessCore.Color? {
+    if d4Step { return nil }
+    switch selection.color {
+    case .w: return .w
+    case .b: return .b
+    case .random: return nil
+    }
+  }
+
+  /// Tiles two to a row for one side, or a White column beside a Black column for both.
+  @ViewBuilder private func sided<Item: Sided, Tile: View>(
+    _ items: [Item], side: ChessCore.Color?, limit: Int?, @ViewBuilder tile: @escaping (Item) -> Tile
+  ) -> some View {
+    if side != nil {
+      LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible())], spacing: 8) {
+        ForEach(Array(items.prefix(limit ?? items.count).enumerated()), id: \.offset) { _, item in tile(item) }
+      }
+    } else {
+      HStack(alignment: .top, spacing: 8) {
+        ForEach([ChessCore.Color.w, .b], id: \.self) { color in
+          let column = items.filter { $0.side == color }
+          VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 7) {
+              SideDot(side: color)
+              Text(color == .w ? "White" : "Black").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
+            }
+            .padding(.horizontal, 4)
+            ForEach(Array(column.prefix((limit ?? 2 * column.count) / 2).enumerated()), id: \.offset) { _, item in tile(item) }
+          }
+          .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+      }
+    }
+  }
+
+  /// More tiles than `sided` shows at `limit`.
+  private func overflows<Item: Sided>(_ items: [Item], side: ChessCore.Color?, limit: Int) -> Bool {
+    if side != nil { return items.count > limit }
+    return [ChessCore.Color.w, .b].contains { color in items.filter { $0.side == color }.count > limit / 2 }
+  }
+
+  private func more(_ action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      Text("More\u{2026}")
+        .font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text2).frame(maxWidth: .infinity).padding(10)
+        .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
   }
@@ -304,6 +340,15 @@ struct QuickPicker: View {
   private func section(_ title: String) -> some View {
     Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2).padding(.horizontal, 4)
   }
+}
+
+/// A tile's side, for `QuickPicker.sided`.
+private protocol Sided { var side: ChessCore.Color { get } }
+extension YourOpening: Sided {}
+private struct RecentTile: Sided {
+  var pick: RecentPick
+  var side: ChessCore.Color
+  var label: String
 }
 
 /// An opening's name as the picker shows it, short where the book's is long.
