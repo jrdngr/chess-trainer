@@ -313,6 +313,8 @@ struct RunView: View {
       // A blunder's tip hangs above its name, over the lenses, so nothing is cut then.
       .frame(minHeight: 0, maxHeight: .infinity, alignment: .top)
       .clipShape(Rectangle().inset(by: model.blunder != nil ? -200 : 0)).contentShape(Rectangle())
+      // Over the lenses' row while a blunder's tip hangs above its name.
+      .zIndex(model.blunder != nil ? 2 : 0)
       footer.padding(.top, 10).padding(.bottom, 8).opacity(model.blunder == nil ? 1 : 0)
     }
     // The plan when the lenses wake is the one the player starts with; a tap on Plan sees the one up now.
