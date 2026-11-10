@@ -60,10 +60,13 @@ public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selec
   let (wayIn, inside) = splitItems(items, recommended.opening.sans.count)
   let round = state.score.lineRounds
   let deeper = insideStart(inside, state.cards, accuracy: prepAccuracy(state.score.rounds, [recommended.color]), round: round)
+  let firstTime = roundsIn(state.score, recommended.opening.id) == 0
   let kind = chooseStart(
-    recent: state.score.starts, cold: coldNeed(wayIn, state.cards, round), inside: deeper?.need,
-    firstTime: roundsIn(state.score, recommended.opening.id) == 0)
-  if kind == .cold {
+    recent: state.score.starts, cold: coldNeed(wayIn, state.cards, round), inside: deeper?.need, firstTime: firstTime)
+  // With none of your moves past the opening's own position, a position start would play
+  // your whole prep for you: the run starts from move one instead.
+  let nothingInside = inside.isEmpty && !firstTime
+  if kind == .cold || (kind == .position && nothingInside) {
     var pick = recommended
     pick.start = .first
     return AutoRound(pick: pick, at: nil)

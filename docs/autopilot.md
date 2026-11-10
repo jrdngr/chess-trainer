@@ -63,9 +63,9 @@ Every change should pass these tests:
 
 | Start | What happens | When |
 | --- | --- | --- |
-| Position start | The moves up to the opening's own position are played for you | Default |
+| Position start | The moves up to the opening's own position are played for you | Default, when you have moves of your own past that position |
 | Inside start | The moves to one position deeper inside the opening are played for you: the one most overdue, or, with nothing due while your prep keeps missing, the one you answer worst | When it needs it more than a cold start does, never two runs in a row |
-| Cold start | Nothing is played for you. The run starts from move one and the opponent steers toward the opening | When the way in has gone unplayed long enough, never two runs in a row, and at least every 3rd run |
+| Cold start | Nothing is played for you. The run starts from move one and the opponent steers toward the opening | When the way in has gone unplayed long enough, never two runs in a row, and at least every 3rd run. Also whenever your prep ends at the opening's own position, so a run never plays your whole prep for you |
 
 Under Home's Play button, a switch picks how runs start, for any selection:
 

@@ -191,3 +191,22 @@ import Testing
   #expect(hole.yes)
   #expect(hole.gap.kind == .tooShort)
 }
+
+/// A prep that ends at the opening's own position is never played out for you:
+/// after its first run, every run starts from move one.
+@Test func prepEndingAtTheOpeningStartsFromMoveOne() throws {
+  let tree = openingTree(bookIndex)
+  var state = AppState()
+  let id = state.ensureRepertoire(.b)
+  state.addLine(id, line("d4 d5 c4 e6"), .fixed(.book))
+  let opening = try #require(tree.byId["d4 d5 c4 e6"])
+  let selection = Selection(color: .b, opening: opening.id)
+  let first = try #require(nextRound(state, tree, selection, AutoHistory()))
+  #expect(first.pick.start == .inside)
+  state.score = recordRound(
+    state.score, tree,
+    RoundRecord(mode: .survival, openingId: opening.id, color: .b, answered: 2, correct: 2, perfect: true, at: Env.now()))
+  let later = try #require(nextRound(state, tree, selection, AutoHistory()))
+  #expect(later.pick.start == .first)
+  #expect(later.at == nil)
+}
