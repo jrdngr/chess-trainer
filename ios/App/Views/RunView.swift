@@ -90,7 +90,7 @@ struct RunView: View {
       .overlay { if let pulse = model.edgePulse { EdgePulse(color: pulse.found ? Theme.good : Theme.bad).id(pulse.id) } }
       .overlay(alignment: .top) { flash }
       .overlay { if model.pulse { IntroPulse() } }
-      .overlay { if let rim { BoardRim(color: rim.color, label: rim.label).animation(.easeOut(duration: 0.2), value: rim.label) } }
+      .overlay { if let rim { BoardRim(color: rim.color) } }
       .overlay {
         if let moment = nextMoment {
           // Quicker than the end screen's: Next run is for drilling fast.
@@ -103,7 +103,7 @@ struct RunView: View {
         }
       }
       .padding(.horizontal).padding(.top, 6)
-      .tip(model.tip, when: Self.boardTips.contains(model.tip), inset: 16, drop: labeled ? BoardRim.labelDrop : 0, onDismiss: model.dismissTip)
+      .tip(model.tip, when: Self.boardTips.contains(model.tip), inset: 16, onDismiss: model.dismissTip)
       .layoutPriority(1)
       .onTapGesture { if model.intro == .replay { model.skipIntro() } }
       dock.padding(.horizontal).frame(maxHeight: .infinity, alignment: .top)
@@ -131,8 +131,8 @@ struct RunView: View {
 
   private var headerArrowAt: CGFloat { model.tip == .endRun ? 0.08 : 0.5 }
 
-  /// The board's rim and the label hung from it: autoplay, adding moves, a moment to find, your prep.
-  private var rim: (color: SwiftUI.Color, label: String?)? {
+  /// The board's rim and what the status line calls it: autoplay, adding moves, a moment to find, your prep.
+  private var rim: (color: SwiftUI.Color, label: String)? {
     if model.intro == .replay { return (Theme.accent, "Autoplay") }
     if adding { return (Theme.accent, "Adding new moves") }
     if model.blunder != nil { return nil }
@@ -141,8 +141,8 @@ struct RunView: View {
     return nil
   }
 
-  /// A labeled rim is up: the lenses make way for its label.
-  private var labeled: Bool { rim?.label != nil }
+  /// The lenses are away: moves are being played for you or added, or there is a moment to find without them.
+  private var lensesAway: Bool { model.intro == .replay || adding || (model.blunder == nil && model.momentHere) }
 
   /// A callout is up in the lenses' place.
   private var called: Bool { model.shownCallout != nil }
@@ -264,7 +264,7 @@ struct RunView: View {
         held: $lens, lenses: LENSES, enabled: lensEnabled, plan: $planOpen, planEnabled: lensEnabled && plan != nil,
         planPulse: planSeeded && plan != nil && plan != planSeen, spotlight: model.tip == .lens ? .pawns : nil
       )
-      .opacity(model.held || labeled || called ? 0 : 1).allowsHitTesting(!(model.held || labeled || called))
+      .opacity(model.held || lensesAway || called ? 0 : 1).allowsHitTesting(!(model.held || lensesAway || called))
       .tip(model.tip, when: model.tip == .lens && lens == nil, arrowAt: 0.1, onDismiss: model.dismissTip)
       .overlay(alignment: .top) { calloutLayer.animation(.easeOut(duration: 0.25), value: model.shownCallout?.id) }
       .zIndex(1)
@@ -300,9 +300,9 @@ struct RunView: View {
       }
     }
     .onChange(of: planOpen) { if planOpen { planSeen = plan } }
-    // A labeled rim takes the lenses away, and any lens held with them.
-    .onChange(of: labeled) {
-      if labeled {
+    // Lenses that go away take any held lens with them.
+    .onChange(of: lensesAway) {
+      if lensesAway {
         lens = nil
         planOpen = false
       }
@@ -391,13 +391,16 @@ struct RunView: View {
     .tip(model.tip, when: model.tip == .nextRun, arrow: .down, arrowAt: 0.85, onDismiss: model.dismissTip)
   }
 
-  /// Under the prep bar: whose move, and the combo.
+  /// Under the prep bar: the rim's name in its color while the board has one, else whose move; and the combo.
   private var headerStatus: some View {
-    StatusLine(
+    let turn = model.endCued ? "Round over" : model.pending != nil ? "Judging" : model.myTurn && !model.thinking ? "Your move" : "Reply"
+    let named = model.endCued ? nil : rim
+    return StatusLine(
       white: model.run.color == .w,
-      text: model.endCued ? "Round over" : model.pending != nil ? "Judging" : model.myTurn && !model.thinking ? "Your move" : "Reply",
+      text: named?.label ?? turn,
       busy: model.thinking || model.pending != nil,
-      combo: model.prefs.combo ? comboMultiplier(model.session.state.extras.combo) : nil)
+      combo: model.prefs.combo ? comboMultiplier(model.session.state.extras.combo) : nil,
+      tone: named?.color ?? Theme.text2)
   }
 
   /// A blunder ends the run: its name, then Analyze or on to the end screen.

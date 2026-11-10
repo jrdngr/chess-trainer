@@ -58,11 +58,10 @@ struct AnswerRow: View {
           .foregroundStyle(roleColor(role) ?? Theme.text).frame(minWidth: 56, alignment: .leading)
         VStack(alignment: .leading, spacing: 4) {
           Text(meta).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.text2).lineLimit(1)
-          if let nudge, let pill = nudge.pill { NudgePill(text: pill, tone: nudge.tone) }
+          if let nudge, let note = nudge.pill { NudgeNote(text: note, tone: nudge.tone) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         DeltaTag(cp: delta)
-        Icon(name: "plus", size: 18).foregroundStyle(Theme.text)
       }
       .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 50)
       .background(roleTint(role)).contentShape(Rectangle())
@@ -76,28 +75,28 @@ struct AnswerRow: View {
   }
 }
 
-/// Why a move matches or breaks your patterns: `.nudge-pill`.
-struct NudgePill: View {
+/// Why a move matches or breaks your patterns, in the pattern's color.
+struct NudgeNote: View {
   var text: String
   var tone: NudgeTone?
 
   var body: some View {
-    let ink = nudgeColor(tone)
-    Text(text).font(.system(size: 11, weight: .bold)).foregroundStyle(ink)
-      .padding(.horizontal, 7).padding(.vertical, 2)
-      .background(Capsule().fill(ink.opacity(0.14)))
+    Text(text).font(.system(size: 12, weight: .semibold)).foregroundStyle(nudgeColor(tone)).lineLimit(1)
   }
 }
 
 /// What an answer does to the eval bar, from your side: "+0.2", "−1.4", or "…" while the engine works.
+/// Gray unless the move is clearly worse, so a normal book move doesn't read as a mistake.
 struct DeltaTag: View {
   var cp: Double?
+  /// A loss past this many centipawns shows red.
+  static let clearlyWorse: Double = 50
 
   var body: some View {
-    let tone = cp.map(deltaTone) ?? .even
+    let worse = (cp ?? 0) < -Self.clearlyWorse
     Text(cp.map(formatDelta) ?? "\u{2026}").font(.system(size: 14).monospacedDigit())
-      .foregroundStyle(tone == .good ? Theme.good : tone == .bad ? Theme.bad : Theme.text3)
-      .frame(minWidth: 40, alignment: .trailing).padding(.trailing, 8)
+      .foregroundStyle(worse ? Theme.bad : Theme.text3)
+      .frame(minWidth: 40, alignment: .trailing)
   }
 }
 
@@ -116,7 +115,7 @@ func answerAside(added: Int, of size: Int) -> String {
   added > 0 ? "\(added) of \(size) added" : "up to \(size)"
 }
 
-/// The answers on offer at a hole, ranked, each in its arrow's color with its pattern pill and eval change.
+/// The answers on offer at a hole, ranked, each in its arrow's color with its pattern note and eval change.
 struct HoleAnswerList<Source: HoleAnswers>: View {
   let source: Source
   /// How many answers to list, best first; nil lists them all.
@@ -133,6 +132,7 @@ struct HoleAnswerList<Source: HoleAnswers>: View {
           option: option, role: roles.first { $0.san == option.san }?.role,
           nudge: toned.first { $0.san == option.san && $0.tone != nil }, delta: source.delta(option.san, evals)
         ) { onPick(option.san) }
+        .id(option.san)
       }
     }
   }

@@ -45,11 +45,12 @@ struct GrowthView: View {
 
   private var screen: some View {
     VStack(spacing: 0) {
-      PlayAppBar(title: "Growth", subtitle: subtitle, onClose: close) {
-        Text("\(model.live?.nodes.count ?? 0)").font(.system(size: 13).monospacedDigit()).foregroundStyle(Theme.text2)
-          .frame(maxWidth: .infinity, alignment: .trailing)
+      PlayAppBar(title: "Growth", subtitle: subtitle, onClose: close) { EmptyView() }
+      if let rim {
+        StatusLine(white: model.run.color == .w, text: rim, busy: status?.busy ?? false, tone: Theme.accent).padding(.bottom, 4)
+      } else if let status {
+        StatusLine(white: model.run.color == .w, text: status.text, busy: status.busy).padding(.bottom, 4)
       }
-      if let status { StatusLine(white: model.run.color == .w, text: status.text, busy: status.busy).padding(.bottom, 4) }
       ScrollView {
         VStack(spacing: 0) {
           PlayEvalBar(line: model.evals.position.map { EngineLine(multipv: 1, depth: 0, cp: $0, mate: nil, pv: []) })
@@ -106,7 +107,7 @@ struct GrowthView: View {
       onMove: model.play
     )
     .opacity(model.phase == .lost ? 0.55 : 1)
-    .overlay { if let rim { BoardRim(color: Theme.accent, label: rim) } }
+    .overlay { if rim != nil { BoardRim(color: Theme.accent) } }
     .overlay {
       if model.intro == .replay { Color.clear.contentShape(Rectangle()).onTapGesture { model.skipIntro() } }
     }
@@ -119,7 +120,7 @@ struct GrowthView: View {
     }
   }
 
-  /// The board's rim and its label, as in Play: the way in playing out, then adding moves at the hole.
+  /// The board's rim and what the status line calls it, as in Play: the way in playing out, then adding moves at the hole.
   private var rim: String? {
     if model.intro == .replay { return "Autoplay" }
     if model.phase == .hole && !model.held { return "Adding new moves" }

@@ -4,8 +4,8 @@ import Model
 import Shared
 import SwiftUI
 
-/// Under the board while a run adds moves to the Playbook: Undo, the
-/// "Adding new moves" pill and Done, then Growth's answers with who recommends
+/// Under the board while a run adds moves to the Playbook: Undo and Done,
+/// then Growth's answers with who recommends
 /// them. Each pick is saved and played, the book's most played reply comes
 /// back, and Done goes back to the game.
 struct InlineFillPanel: View {
@@ -15,7 +15,6 @@ struct InlineFillPanel: View {
 
   /// Answers listed before More: as many as fit under the board.
   static let shown = 3
-  private static let listEnd = "answers-end"
 
   var body: some View {
     let fill = model.fill
@@ -48,15 +47,17 @@ struct InlineFillPanel: View {
         }
         .font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
         .padding(.horizontal, 4).padding(.top, 14).padding(.bottom, 8)
-        // Only three rows fit under the board: More scrolls the rest into view.
+        // Only three rows fit under the board: More scrolls the last three into view,
+        // the top one flush with the list's edge so no row is cut in half.
         ScrollViewReader { scroller in
           ScrollView {
             HoleAnswerList(source: model, limit: showAll ? nil : Self.shown) { model.addMove($0) }
-            Color.clear.frame(height: 1).id(Self.listEnd)
           }
-          .scrollIndicators(.hidden).scrollBounceBehavior(.basedOnSize)
+          .scrollIndicators(.visible).scrollBounceBehavior(.basedOnSize)
           .onChange(of: showAll) {
-            if showAll { withAnimation(.easeOut(duration: 0.3)) { scroller.scrollTo(Self.listEnd, anchor: .bottom) } }
+            guard showAll, ranked.count > Self.shown else { return }
+            let top = ranked[ranked.count - Self.shown].san
+            withAnimation(.easeOut(duration: 0.3)) { scroller.scrollTo(top, anchor: .top) }
           }
         }
         .tip(
