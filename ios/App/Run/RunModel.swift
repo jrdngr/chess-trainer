@@ -210,9 +210,12 @@ final class RunModel {
   /// The moves the intro plays out: the way in, with Autoplay on; a Middlegame run's handoff always.
   var introPath: [String] { handoff != nil || store.state.settings.autoplay ? Array(run.played.prefix(run.opened)) : [] }
   /// The opening the round is announced as. A run from move one is named by the opening it is steered toward.
+  /// Under Any Opening it is the opening of the line drawn, never Any Opening itself.
   var introOpening: String {
-    run.enteredIn ?? round?.pick.opening.id
+    let named = run.enteredIn ?? round?.pick.opening.id
       ?? deepestNodeWithin(tree, nodeById(tree, run.openingId), Array(run.played.prefix(run.opened))).id
+    let node = nodeById(tree, named)
+    return node.depth == 0 ? deepestNodeWithin(tree, node, run.drawn).id : named
   }
 
   /// How far into your prep the run stands, out of how far it goes along this line, in your own moves. Held once off prep.
