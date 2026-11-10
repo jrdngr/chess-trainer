@@ -141,10 +141,14 @@ struct EndView: View {
               RatingOverBoard(moment: moment, leaving: card == .leave) { if card == .play { card = .leave } }
             }
           }
+        // The verdict fades out before the lenses fade in, so the two never show through each other.
         LensBar(held: $lens)
           .opacity(flashing ? 0 : 1).allowsHitTesting(!flashing)
+          .animation(.easeIn(duration: 0.2).delay(0.25), value: flashing)
           .overlay(alignment: .top) {
-            if flashing { EndVerdict(how: finish.how, plies: last).transition(.opacity) }
+            if flashing {
+              EndVerdict(how: finish.how, plies: last).transition(.opacity.animation(.easeOut(duration: 0.2)))
+            }
           }
         if let lens {
           LensLegend(kind: lens, endgame: isEndgame(shownFen))
@@ -201,10 +205,12 @@ struct EndView: View {
           MissedPrepList(misses: finish.ended.misses, hints: hints, onTidy: openTidy, onSeek: seek)
           if let handoff = model.handoff {
             MovesSurvivedList(
-              tree: model.tree, line: Array(handoff.line.prefix(handoff.prep)), record: store.state.middlegame,
-              moves: finish.ended.extras.points, title: "Middlegame points")
+              tree: model.tree, line: Array(handoff.line.prefix(handoff.prep)), opening: playedNode.id,
+              record: store.state.middlegame, moves: finish.ended.extras.points, title: "Middlegame points")
           } else {
-            MovesSurvivedList(tree: model.tree, line: run.played, record: store.state.survival, moves: finish.ended.moves)
+            MovesSurvivedList(
+              tree: model.tree, line: run.played, opening: playedNode.id, record: store.state.survival,
+              moves: finish.ended.moves)
           }
           SurvivalEndActions(played: sansToMoveText(run.played + (blunder.map { [$0.played] } ?? [])), onChangeOptions: onChangeOptions)
         }
@@ -307,29 +313,59 @@ struct EndView: View {
       }
       .foregroundStyle(Theme.text).buttonStyle(.plain)
       Spacer()
-      Text(openingName(model.tree, model.openingId)).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
+      Text(openingName(model.tree, playedNode.id)).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
       Spacer()
-      Text("\(finish.ended.extras.points)").font(.subheadline.bold().monospacedDigit()).foregroundStyle(Theme.text2)
-        .padding(.horizontal, 12).padding(.vertical, 5).background(Capsule().fill(Theme.surface2))
+      // Balances the close button, so the title sits centered.
+      Color.clear.frame(width: 38, height: 38)
     }
   }
 
-  /// How it ended, what it scored, and how the prep went.
+  /// The opening the run was played in: the one picked, or under Any Opening the family the game reached.
+  private var playedNode: OpeningNode {
+    let picked = nodeById(model.tree, model.openingId)
+    if picked.depth > 0 { return picked }
+    let deepest = deepestNodeWithin(model.tree, picked, run.played)
+    return familyOf(model.tree, deepest) ?? deepest
+  }
+
+  /// What it scored and how it ended, then prep, speed and misses as labeled numbers.
+  /// A run that never left its prep leads with the prep, not with a score of nothing.
   private var summary: some View {
     let state = finish.ended
+    let answers = model.session.answers
+    let found = answers.filter(\.correct).count
+    let times = model.session.prepTimes
+    let scored = state.moves > 0 || state.extras.points > 0
+    let title = endingTitle(finish.how, state.run.played.count)
     return VStack(spacing: 6) {
-      Text(endingTitle(finish.how, state.run.played.count)).font(.subheadline).foregroundStyle(isBad ? Theme.bad : Theme.text2)
-      Text("\(state.extras.points) point\(state.extras.points == 1 ? "" : "s")").font(.largeTitle.bold()).foregroundStyle(Theme.text)
-      Text("Survived \(state.moves) move\(state.moves == 1 ? "" : "s")").font(.subheadline).foregroundStyle(Theme.text)
-      if let prep = prepSummary(model.session.answers.filter(\.correct).count, model.session.answers.count, model.session.prepTimes) {
-        Text(prep).font(.footnote).foregroundStyle(Theme.text2)
+      if scored {
+        Text("\(state.extras.points) point\(state.extras.points == 1 ? "" : "s")").font(.largeTitle.bold()).foregroundStyle(Theme.text)
+        Text(title).font(.subheadline).foregroundStyle(isBad ? Theme.bad : Theme.text2)
+      } else if !answers.isEmpty && found == answers.count {
+        Text("Prep complete").font(.title.bold()).foregroundStyle(Theme.text)
+        Text(title).font(.subheadline).foregroundStyle(Theme.text2)
+      } else {
+        Text(title).font(.title2.bold()).foregroundStyle(isBad ? Theme.bad : Theme.text)
       }
-      if !state.misses.isEmpty {
-        Text("\(state.misses.count) miss\(state.misses.count == 1 ? "" : "es")").font(.footnote).foregroundStyle(Theme.bad)
+      if !answers.isEmpty {
+        HStack(alignment: .top, spacing: 0) {
+          stat("\(found) of \(answers.count)", "prep")
+          if !times.isEmpty { stat(secondsText(times.reduce(0, +) / Double(times.count)), "a move") }
+          stat("\(state.misses.count)", state.misses.count == 1 ? "miss" : "misses", state.misses.isEmpty ? Theme.text : Theme.bad)
+        }
+        .padding(.top, 10)
       }
     }
     .frame(maxWidth: .infinity).padding(.vertical, 18)
     .background(RoundedRectangle(cornerRadius: 18).fill(Theme.surface))
+  }
+
+  private func stat(_ value: String, _ label: String, _ color: SwiftUI.Color = Theme.text) -> some View {
+    VStack(spacing: 2) {
+      Text(value).font(.system(size: 17, weight: .semibold).monospacedDigit()).foregroundStyle(color)
+      Text(label).font(.system(size: 12)).foregroundStyle(Theme.text3)
+    }
+    .frame(maxWidth: .infinity)
   }
 
   private var isBad: Bool {

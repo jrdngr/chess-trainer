@@ -74,20 +74,19 @@ struct MissedPrepList: View {
   var body: some View {
     if !misses.isEmpty {
       VStack(spacing: 0) {
-        PlaySection(title: "Missed your prep \u{00b7} \(misses.count)")
+        PlaySection(title: "Missed your prep")
         ListCard {
           ForEach(misses, id: \.ply) { miss in
             VStack(spacing: 0) {
             Button { onSeek(miss.ply) } label: {
               HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                  Text("Move \(moveNumber(miss.ply))").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-                  Text("You played \(miss.played) \u{00b7} your prep \(miss.expected)").font(.system(size: 12.5)).foregroundStyle(Theme.text3)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                Text("\(moveNumber(miss.ply))\(miss.ply % 2 == 0 ? "." : "...") \(miss.played)")
+                  .font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+                Text("your prep \(miss.expected)").font(.system(size: 14)).foregroundStyle(Theme.text3)
+                  .frame(maxWidth: .infinity, alignment: .leading)
                 Icon(name: "chevron", size: 18).foregroundStyle(Theme.text3)
               }
-              .padding(.horizontal, 16).padding(.vertical, 10).frame(minHeight: 54).contentShape(Rectangle())
+              .padding(.horizontal, 16).frame(minHeight: 48).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             if let hint = hints[miss.ply], let onTidy { OffPrepHint(find: hint, onTidy: { onTidy(hint) }, compact: true) }
@@ -99,10 +98,12 @@ struct MissedPrepList: View {
   }
 }
 
-/// Moves survived in every opening the game went through, shallowest first, then all openings.
+/// This run's count beside the best, for the opening it was played in and for all openings.
 struct MovesSurvivedList: View {
   let tree: OpeningTree
   let line: [String]
+  /// The opening the run was played in.
+  let opening: String
   let record: SurvivalRecord
   let moves: Int
   /// What the record counts: moves survived, or Middlegame's points.
@@ -110,20 +111,29 @@ struct MovesSurvivedList: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      PlaySection(title: title)
+      PlaySection(title: title, aside: "Best").padding(.trailing, 12)
       ListCard {
-        ForEach(along, id: \.self) { id in
-          ScoreRow(name: nodeById(tree, id).name, score: survivalFor(record, id), now: moves)
-        }
-        ScoreRow(name: "All openings", score: record.global, now: moves)
+        if let shown { row(nodeById(tree, shown).name, survivalFor(record, shown)) }
+        row("All openings", record.global)
       }
     }
   }
 
-  /// The book names some positions twice at different depths: a name already shown is not shown again.
-  private var along: [String] {
-    var names = Set<String>()
-    return openingsAlong(tree, line).filter { names.insert(nodeById(tree, $0).name).inserted }
+  /// The run's opening when the game went through it, else the deepest opening the game reached.
+  private var shown: String? {
+    let along = openingsAlong(tree, line)
+    return along.contains(opening) ? opening : along.last
+  }
+
+  private func row(_ name: String, _ score: SurvivalScore) -> some View {
+    HStack(spacing: 12) {
+      Text(name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+        .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+      Text("\(moves)").foregroundStyle(Theme.text)
+      Text("\(score.best)").foregroundStyle(Theme.text2).frame(minWidth: 36, alignment: .trailing)
+    }
+    .font(.system(size: 15).monospacedDigit())
+    .padding(.horizontal, 16).frame(minHeight: 48)
   }
 }
 
