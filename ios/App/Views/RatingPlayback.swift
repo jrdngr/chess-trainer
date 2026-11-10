@@ -26,6 +26,7 @@ final class RatingPlayer {
     guard tasks.isEmpty else { return }
     let (before, after) = (moment.before, moment.after)
     let was = rankOf(before), now = rankOf(after)
+    let pace = self.pace
     let lead = (Self.leadMs * pace)
     let end: Double
     if now.reached == was.reached {
