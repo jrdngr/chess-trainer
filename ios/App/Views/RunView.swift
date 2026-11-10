@@ -45,7 +45,8 @@ struct RunView: View {
         } else {
           PlateIntroCover {
             IntroPlate(
-              name: openingName(model.tree, model.introOpening), sans: nodeById(model.tree, model.introOpening).sans,
+              name: lineName(model.tree, pickerCatalog(model.tree), nodeById(model.tree, model.introOpening).sans),
+              sans: nodeById(model.tree, model.introOpening).sans,
               color: model.run.color, span: model.span)
           }
         }
@@ -289,7 +290,10 @@ struct RunView: View {
       .overlay(alignment: .top) { calloutLayer.animation(.easeOut(duration: 0.25), value: model.shownCallout?.id) }
       // The callout runs past the lenses' row, over the panel under it (Undo and Done while adding moves).
       // Only a lens puts this tip away: the board waits for one, turned on and then off.
-      .tip(model.tip, when: model.tip == .lens && lens == nil, arrowAt: 0.1, rest: 1, onDismiss: {})
+      // Once one is on, the tip points up at the board to say how to turn it off.
+      .tip(
+        text: model.tip == .lens ? (lens == nil ? TutorialTip.lens.text : TutorialTip.lensOff) : nil,
+        arrow: lens == nil ? .up : .down, arrowAt: lens == nil ? 0.1 : 0.5, rest: 1)
       VStack(spacing: 0) {
         if lens == .eval {
           EvalRunCard(trail: model.session.evalTrail, last: model.session.lastJudged, color: model.run.color)
