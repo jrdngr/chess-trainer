@@ -480,7 +480,7 @@ struct RunView: View {
       }
       return holeArrows(model)
     }
-    if let expected = model.expected, !model.thinking, let move = applySan(model.run.fen, expected) {
+    if let shown = model.shownMove, !model.thinking, let move = applySan(model.run.fen, shown) {
       return [BoardArrow(from: move.from, to: move.to, color: Theme.accent, glow: nudged > 0 ? Theme.accent : nil)]
     }
     return []

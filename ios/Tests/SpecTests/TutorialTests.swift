@@ -93,6 +93,11 @@ private func playThrough(_ game: TutorialGame) -> (played: [String], line: [Stri
   let five = try #require(tutorialGame(5, RECOMMENDED_OPENINGS))
   #expect(tutorialReply(five, played: [], line: five.opening.sans, bookIndex) == "d4")
   #expect(tutorialExpected(five, played: line("d4"), line: five.opening.sans, bookIndex) == nil)
+  // Game 5 still shows your line's moves with an arrow, without insisting on them, and none once you leave it.
+  let next = five.opening.sans[1]
+  #expect(tutorialShown(five, played: line("d4"), line: five.opening.sans, bookIndex) == next)
+  let off = legalSans(walkSan(line("d4")).fens[1]).first { $0 != next }!
+  #expect(tutorialShown(five, played: line("d4 \(off)"), line: five.opening.sans, bookIndex) == nil)
   #expect(five.tips == [.playOn])
   #expect(tutorialTip(five.tips, [.pastLine]) == nil)
   #expect(tutorialTip(five.tips, [.leftPrep]) == .playOn)

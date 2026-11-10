@@ -681,6 +681,12 @@ final class RunModel {
     return tutorialExpected(game, played: run.played, line: tutorialLine, index)
   }
 
+  /// The tutorial's arrow: the move it insists on, or your line's next move in its free last game.
+  var shownMove: String? {
+    guard let game = tutorialGame, live, !held, myTurn, fill == nil, !endCued else { return nil }
+    return tutorialShown(game, played: run.played, line: tutorialLine, index)
+  }
+
   /// The tip for where the tutorial game stands, if one is still to show there.
   private func showTip() {
     guard let game = tutorialGame, tip == nil, live else { return }

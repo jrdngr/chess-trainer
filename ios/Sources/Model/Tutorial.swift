@@ -189,6 +189,12 @@ private func along(_ line: [String], _ played: [String]) -> String? {
   played.count < line.count && Array(line.prefix(played.count)) == played ? line[played.count] : nil
 }
 
+/// The move a tutorial game shows with an arrow: the one it insists on, or
+/// in a free game the next move of your line while you're still on it.
+public func tutorialShown(_ game: TutorialGame, played: [String], line: [String], _ index: ReferenceIndex) -> String? {
+  tutorialExpected(game, played: played, line: line, index) ?? along(line, played)
+}
+
 /// The book's most played move here, nil where the book has none.
 public func bookTop(_ index: ReferenceIndex, _ played: [String]) -> String? {
   let walked = walkSan(played)
