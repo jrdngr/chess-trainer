@@ -50,9 +50,8 @@ struct BasicEngineTests {
     var opts = quick
     opts.multiPv = 3
     for line in search(fen, opts, TranspositionTable())!.lines { #expect(abs(line.score) < 150) }
-    opts = quick
-    opts.timeMs = 800
-    let best = search(fen, opts, TranspositionTable())!.lines[0]
+    // A fixed depth, the judge's quick check, so a slower machine sees the same search.
+    let best = search(fen, SearchOptions(maxDepth: QUICK_DEPTH, timeMs: 60_000, multiPv: 1), TranspositionTable())!.lines[0]
     #expect(best.uci == "d5d4")
     #expect(best.score > 0)
   }

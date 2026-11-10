@@ -1,8 +1,8 @@
 /// The parts of a position the piece-square tables can't see: how freely
 /// the pieces move, rooks on open files, a king stuck in the middle, pieces
 /// under threat and whose move it is. Weights were fitted to Stockfish's
-/// scores of positions from the book; tempo's endgame weight is set by hand,
-/// as the book has few endgames to fit it on.
+/// scores of positions from the book, except tempo's, which is set by hand:
+/// the fitted 44 swung scores from one depth to the next.
 
 private let FILE_A: Bitboard = 0x0101_0101_0101_0101
 
@@ -80,5 +80,5 @@ private let FILE_A: Bitboard = 0x0101_0101_0101_0101
     }
   }
   let tempo = pos.side == WHITE_SIDE ? 1 : -1
-  return (mg + both + 44 * tempo, both + 15 * tempo)
+  return (mg + both + 20 * tempo, both + 10 * tempo)
 }
