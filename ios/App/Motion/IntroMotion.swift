@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The announcement's cover: opaque from the first frame, so the board never
 /// shows through; its words come in, and it fades out to the board over the
-/// last 12% of its 2.5s. `.round-intro` and `roundIntro`.
+/// last 0.3s of `RunModel.announceMs`. `.round-intro` and `roundIntro`.
 struct IntroCoverFade: ViewModifier {
   @Environment(\.accessibilityReduceMotion) private var reduce
   @State private var leaving = false
@@ -12,7 +12,7 @@ struct IntroCoverFade: ViewModifier {
       .opacity(leaving ? 0 : 1)
       .task {
         guard !reduce else { return }
-        try? await Task.sleep(for: .milliseconds(2200))
+        try? await Task.sleep(for: .seconds(RunModel.announceMs - 0.3))
         withAnimation(.easeInOut(duration: 0.3)) { leaving = true }
       }
   }

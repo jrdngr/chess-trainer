@@ -7,7 +7,7 @@ import Model
 /// recommendation skips both.
 extension GrowthModel {
   /// How long the announcement holds, unless tapped away: `ANNOUNCE_MS`.
-  static let announceMs = 2500
+  static let announceMs = Int(RunModel.announceMs * 1000)
   /// The beat between replayed moves: `REPLAY_MS`.
   static let replayMs = 400
 

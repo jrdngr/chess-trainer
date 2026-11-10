@@ -16,7 +16,7 @@ final class RunModel {
   enum Intro { case announce, replay, plan, done }
 
   /// How long the announcement holds, and the beat between replayed moves (a Middlegame run's is quicker).
-  static let announceMs = 2.5, replayMs = 0.4, handoffReplayMs = 0.12, pulseMs = 0.9
+  static let announceMs = 1.2, replayMs = 0.4, handoffReplayMs = 0.12, pulseMs = 0.9
 
   /// How long a miss and a score popup stay over the board (a touch clears a miss sooner); the opponent's beat.
   static let missMs = 2.0, scoreMs = 1.4, replyMs = 0.42
