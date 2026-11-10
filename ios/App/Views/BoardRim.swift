@@ -65,9 +65,9 @@ struct RimTab: Shape {
   }
 }
 
-/// A big word over the board for a moment: Prep complete, Off prep, Found it,
-/// Missed it, how a game ended.
-struct BoardCallout: View {
+/// A word under the board for a moment, in the lenses' place: Prep complete,
+/// Off prep, Found it, Missed it, how a game ended.
+struct CalloutStrip: View {
   var text: String
   var tone: Color
   var symbol: String
@@ -83,17 +83,16 @@ struct BoardCallout: View {
   }
 
   var body: some View {
-    VStack(spacing: 12) {
+    HStack(spacing: 10) {
       Image(systemName: symbol)
-        .font(.system(size: 26, weight: .heavy)).foregroundStyle(Theme.background)
-        .frame(width: 56, height: 56).background(Circle().fill(tone))
-      Text(text).font(.system(size: 28, weight: .heavy)).tracking(-0.4).foregroundStyle(tone).lineLimit(1).minimumScaleFactor(0.6)
+        .font(.system(size: 13, weight: .heavy)).foregroundStyle(Theme.background)
+        .frame(width: 26, height: 26).background(Circle().fill(tone))
+      Text(text).font(.system(size: 20, weight: .heavy)).tracking(-0.2).foregroundStyle(tone).lineLimit(1).minimumScaleFactor(0.6)
     }
-    .padding(.vertical, 22).padding(.horizontal, 34)
-    .background(RoundedRectangle(cornerRadius: 22).fill(Theme.surface.opacity(0.94)))
-    .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(tone, lineWidth: 2))
-    .shadow(color: .black.opacity(0.55), radius: 20, y: 16)
-    .shadow(color: tone.opacity(0.33), radius: 15)
+    .frame(maxWidth: .infinity).frame(height: 46)
+    .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface))
+    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(tone, lineWidth: 1.5))
+    .shadow(color: tone.opacity(0.2), radius: 7)
     .allowsHitTesting(false)
   }
 }

@@ -91,7 +91,6 @@ struct RunView: View {
       .overlay(alignment: .top) { flash }
       .overlay { if model.pulse { IntroPulse() } }
       .overlay { if let rim { BoardRim(color: rim.color, label: rim.label).animation(.easeOut(duration: 0.2), value: rim.label) } }
-      .overlay { calloutLayer.animation(.easeOut(duration: 0.25), value: model.shownCallout?.id) }
       .overlay {
         if let moment = nextMoment {
           // Quicker than the end screen's: Next run is for drilling fast.
@@ -132,10 +131,8 @@ struct RunView: View {
 
   private var headerArrowAt: CGFloat { model.tip == .endRun ? 0.08 : 0.5 }
 
-  /// The board's rim and the label hung from it. A callout's color while one is up;
-  /// then autoplay, adding moves, a moment to find, your prep.
+  /// The board's rim and the label hung from it: autoplay, adding moves, a moment to find, your prep.
   private var rim: (color: SwiftUI.Color, label: String?)? {
-    if let callout = model.shownCallout { return (callout.good ? Theme.good : Theme.bad, nil) }
     if model.intro == .replay { return (Theme.accent, "Autoplay") }
     if adding { return (Theme.accent, "Adding new moves") }
     if model.blunder != nil { return nil }
@@ -147,12 +144,15 @@ struct RunView: View {
   /// A labeled rim is up: the lenses make way for its label.
   private var labeled: Bool { rim?.label != nil }
 
-  /// Prep complete, Off prep or Found it, over the board for a moment. The last game's tip hangs from it.
+  /// A callout is up in the lenses' place.
+  private var called: Bool { model.shownCallout != nil }
+
+  /// Prep complete, Off prep or Found it, in the lenses' place for a moment. The last game's tip hangs from it.
   @ViewBuilder private var calloutLayer: some View {
     if let callout = model.shownCallout {
-      BoardCallout(text: callout.text, good: callout.good)
-        .tip(model.tip, when: model.tip == .playOn, onDismiss: model.dismissTip)
-        .transition(.opacity.combined(with: .scale(scale: 0.92)))
+      CalloutStrip(text: callout.text, good: callout.good)
+        .tip(model.tip, when: model.tip == .playOn, arrow: .up, onDismiss: model.dismissTip)
+        .transition(.opacity.combined(with: .offset(y: -6)))
         .id(callout.id)
     }
   }
@@ -264,8 +264,10 @@ struct RunView: View {
         held: $lens, lenses: LENSES, enabled: lensEnabled, plan: $planOpen, planEnabled: lensEnabled && plan != nil,
         planPulse: planSeeded && plan != nil && plan != planSeen, spotlight: model.tip == .lens ? .pawns : nil
       )
-      .opacity(model.held || labeled ? 0 : 1).allowsHitTesting(!(model.held || labeled))
+      .opacity(model.held || labeled || called ? 0 : 1).allowsHitTesting(!(model.held || labeled || called))
       .tip(model.tip, when: model.tip == .lens && lens == nil, arrowAt: 0.1, onDismiss: model.dismissTip)
+      .overlay(alignment: .top) { calloutLayer.animation(.easeOut(duration: 0.25), value: model.shownCallout?.id) }
+      .zIndex(1)
       VStack(spacing: 0) {
         if lens == .eval {
           EvalRunCard(trail: model.session.evalTrail, last: model.session.lastJudged, color: model.run.color)

@@ -11,32 +11,7 @@ enum Motion {
   static func pop(_ seconds: Double, overshoot: Double = 1.5) -> Animation { .timingCurve(0.2, overshoot, 0.4, 1, duration: seconds) }
 }
 
-/// `.board-flash`'s `boardFlash`: in over the first 8%, held, out over the last 20%.
-struct BoardFlashFade: ViewModifier {
-  var duration: Double = 2
-  @Environment(\.accessibilityReduceMotion) private var reduce
-  @State private var played = false
-
-  func body(content: Content) -> some View {
-    if reduce {
-      content
-    } else {
-      content.keyframeAnimator(initialValue: 0.0, trigger: played) { view, opacity in
-        view.opacity(opacity)
-      } keyframes: { _ in
-        LinearKeyframe(1, duration: duration * 0.08, timingCurve: .easeInOut)
-        LinearKeyframe(1, duration: duration * 0.72)
-        LinearKeyframe(0, duration: duration * 0.2, timingCurve: .easeInOut)
-      }
-      .onAppear { played = true }
-    }
-  }
-}
-
 extension View {
-  /// Fades in, holds and fades out over `duration`.
-  func boardFlash(_ duration: Double = 2) -> some View { modifier(BoardFlashFade(duration: duration)) }
-
   /// Arrives from below and fades in: `riOpening` and `ratingArrive`.
   func arriving(offset: CGFloat = 14, scale: CGFloat = 1, duration: Double = 0.6, delay: Double = 0) -> some View {
     modifier(Arriving(offset: offset, scale: scale, duration: duration, delay: delay))

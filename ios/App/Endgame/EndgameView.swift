@@ -116,6 +116,8 @@ struct EndgameRoundView: View {
   @State private var lens: LensKind?
   /// The ending's plan, held like a lens.
   @State private var plan = false
+  /// A slip's word under the board, shown for 1.5s.
+  @State private var called: String?
 
   var body: some View {
     ZStack {
@@ -129,6 +131,12 @@ struct EndgameRoundView: View {
     .onAppear { if game.phase == .playing { game.engineTurn() } }
     .onChange(of: game.phase) { if game.phase == .playing { game.engineTurn() } }
     .onDisappear { game.stop() }
+    .task(id: game.note) {
+      called = game.note
+      guard called != nil else { return }
+      try? await Task.sleep(for: .seconds(1.5))
+      if !Task.isCancelled { called = nil }
+    }
   }
 
   private var screen: some View {
@@ -157,10 +165,12 @@ struct EndgameRoundView: View {
             fen: game.fen, orientation: game.color, interactive: game.myTurn, lastMove: game.lastMove,
             highlights: highlights, marks: marks, onMove: game.play)
             .dimmed(game.phase == .over)
-            .overlay {
-              if let note = game.note { BoardCallout(text: note, good: false).boardFlash(1.5).id(note) }
-            }
           LensBar(held: $lens, lenses: LENSES, enabled: game.phase == .playing, plan: $plan, planEnabled: livePlan != nil)
+            .opacity(called == nil ? 1 : 0).allowsHitTesting(called == nil)
+            .overlay(alignment: .top) {
+              if let called { CalloutStrip(text: called, good: false).transition(.opacity).id(called) }
+            }
+            .animation(.easeOut(duration: 0.25), value: called)
           if let lens, lens != .eval { LensLegend(kind: lens, endgame: true) }
           if plan, let live = livePlan, let intro = game.entry.intro { planCard(intro.pages[live.page]) }
           if let outcome = game.outcome { ending(outcome) } else { goal }

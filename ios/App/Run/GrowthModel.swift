@@ -177,8 +177,6 @@ final class GrowthModel {
     timer?.cancel()
   }
 
-  func clearFlash() { flash = false }
-
   /* ── what happens between taps ── */
 
   func update(_ next: GrowthSession) {
@@ -288,7 +286,7 @@ final class GrowthModel {
   private func showFlash() {
     flash = true
     Task { @MainActor [weak self] in
-      try? await Task.sleep(for: .seconds(2))
+      try? await Task.sleep(for: .seconds(1.5))
       self?.flash = false
     }
   }

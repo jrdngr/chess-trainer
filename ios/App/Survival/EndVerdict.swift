@@ -2,7 +2,7 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// How the run ended, as a callout over the dimmed board as the end screen opens.
+/// How the run ended, under the board as the end screen opens.
 struct EndVerdict: View {
   let how: Ending
   let plies: Int
@@ -14,11 +14,7 @@ struct EndVerdict: View {
     case .ended: ("flag.fill", Theme.warn)
     case .draw: ("equal", Theme.warn)
     }
-    ZStack {
-      SwiftUI.Color.black.opacity(0.35)
-      BoardCallout(text: endingTitle(how, plies), tone: tone, symbol: symbol).padding(.horizontal, 16)
-    }
-    .clipShape(RoundedRectangle(cornerRadius: 14))
+    CalloutStrip(text: endingTitle(how, plies), tone: tone, symbol: symbol)
   }
 }
 

@@ -103,7 +103,7 @@ struct EndView: View {
     }
     .task {
       guard flashing else { return }
-      try? await Task.sleep(for: .seconds(2))
+      try? await Task.sleep(for: .seconds(1.5))
       withAnimation { flashing = false }
     }
     .task(id: weighed) {
@@ -137,13 +137,15 @@ struct EndView: View {
           lastMove: onBlunder || missAt != nil ? nil : lastMoveOf(Array(run.played.prefix(cursor))),
           highlights: highlights(missAt), marks: marks, onMove: { _ in })
           .overlay {
-            if flashing {
-              EndVerdict(how: finish.how, plies: last).boardFlash().onTapGesture { flashing = false }
-            } else if let moment, card == .play || card == .leave {
+            if !flashing, let moment, card == .play || card == .leave {
               RatingOverBoard(moment: moment, leaving: card == .leave) { if card == .play { card = .leave } }
             }
           }
         LensBar(held: $lens)
+          .opacity(flashing ? 0 : 1).allowsHitTesting(!flashing)
+          .overlay(alignment: .top) {
+            if flashing { EndVerdict(how: finish.how, plies: last).transition(.opacity) }
+          }
         if let lens {
           LensLegend(kind: lens, endgame: isEndgame(shownFen))
         } else {

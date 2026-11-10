@@ -58,6 +58,11 @@ struct GrowthView: View {
           board
           if model.phase == .done { nextRow.padding(.top, 12) }
           below.padding(.vertical, 8)
+            .opacity(model.flash ? 0 : 1)
+            .overlay(alignment: .top) {
+              if model.flash { CalloutStrip(text: "End of the book", good: true).padding(.top, 8).transition(.opacity) }
+            }
+            .animation(.easeOut(duration: 0.25), value: model.flash)
           GrowthPhaseView(model: model, exits: exits)
         }
         .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 20)
@@ -103,14 +108,6 @@ struct GrowthView: View {
     .opacity(model.phase == .lost ? 0.55 : 1)
     .overlay { if let rim { BoardRim(color: Theme.accent, label: rim) } }
     .overlay {
-      if model.flash {
-        ZStack {
-          SwiftUI.Color.black.opacity(0.35)
-          BoardCallout(text: "End of the book", good: true)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 14)).boardFlash(1.5)
-        .onTapGesture { model.clearFlash() }
-      }
       if model.intro == .replay { Color.clear.contentShape(Rectangle()).onTapGesture { model.skipIntro() } }
     }
     .overlay(alignment: .top) {
