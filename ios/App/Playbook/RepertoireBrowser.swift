@@ -55,7 +55,8 @@ struct RepertoireBrowser: View {
     VStack(spacing: 0) {
       AppBar(title: opening?.name ?? title,
              subtitle: "\(opening.map { "\($0.eco) \u{00b7} " } ?? "")\(rep.color == .w ? "as White" : "as Black")", onBack: onBack) {
-        IconButton(icon: "more") { sideMenu = true }
+        // The side's menu belongs to the whole tree, not to one line of it.
+        if startNodeId == nil { IconButton(icon: "more") { sideMenu = true } }
       }
       ScrollView {
         VStack(spacing: 0) {

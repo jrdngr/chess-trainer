@@ -109,7 +109,7 @@ final class GrowthModel {
 
   var run: GrowthRun { session.run }
   var phase: GrowthPhase { session.phase }
-  /// One fill's size, the same everywhere: the Moves per fill setting.
+  /// One fill's size, the same everywhere: the New moves per round setting.
   var allowance: Int { store.state.settings.movesPerFill }
   var added: Int { inBatch(session) }
   var done: Bool { phase == .done || phase == .lost }

@@ -179,13 +179,13 @@ private func removedWith(_ rep: Repertoire, _ tips: [String]) -> Int {
 /// The book's names for White openings Black meets without naming a defence of its own.
 private let WHITE_NAMES: Set<String> = ["King's Pawn Game", "King's Knight Opening", "Queen's Pawn Game", "Zukertort Opening"]
 
-/// Black's names for a list of openings: called after Black's first move
-/// where the book named White's, when that is unambiguous.
+/// Black's names for a list of openings: called by the first move of each side ("1.e4 e5")
+/// where the book named White's, when that is unambiguous. Written as moves, so it doesn't read as a name.
 private func blackNames(_ openings: [(name: String, path: [String])], _ index: ReferenceIndex) -> [String] {
   var names = openings.map(\.name)
   let renamed = openings.indices
     .filter { openings[$0].path.count >= 2 && WHITE_NAMES.contains(familyName(index, openings[$0].name)) }
-    .map { ($0, moveLabel(Array(openings[$0].path.prefix(2)))) }
+    .map { ($0, "1.\(openings[$0].path[0]) \(openings[$0].path[1])") }
   var counts: [String: Int] = [:]
   for (_, label) in renamed { counts[label, default: 0] += 1 }
   for (i, label) in renamed where counts[label] == 1 { names[i] = label }

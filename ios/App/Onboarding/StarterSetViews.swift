@@ -1,7 +1,7 @@
 import Model
 import SwiftUI
 
-/// Pick a style: every starter set, with its openings as chips. `SetList`.
+/// Pick a style: every starter set by name, with the openings it gives each side. `SetList`.
 struct SetListView: View {
   let tree: OpeningTree
   let onBack: () -> Void
@@ -23,19 +23,11 @@ struct SetListView: View {
 
   private func card(_ set: StarterSet) -> some View {
     VStack(alignment: .leading, spacing: 8) {
-      HStack(alignment: .firstTextBaseline, spacing: 8) {
-        Text(set.name).font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.text).frame(maxWidth: .infinity, alignment: .leading)
-        Text("\(setMoves(set)) moves").font(.system(size: 13)).foregroundStyle(Theme.text3)
-      }
-      Text(set.description).font(.system(size: 14)).foregroundStyle(Theme.text2).lineSpacing(1.5).multilineTextAlignment(.leading)
-      FlowLayout(spacing: 6) {
-        ForEach(slotsOf(set), id: \.self) { slot in
-          HStack(spacing: 6) {
-            SideSquare(color: SLOT_COLOR[slot]!, size: 12)
-            Text(slotNames(tree, set, slot).joined(separator: " \u{00b7} ")).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text)
-          }
-          .padding(.leading, 7).padding(.trailing, 10).padding(.vertical, 5)
-          .background(Capsule().fill(Theme.surface2))
+      Text(set.name).font(.system(size: 18, weight: .bold)).foregroundStyle(Theme.text)
+      ForEach(slotsOf(set), id: \.self) { slot in
+        HStack(spacing: 8) {
+          SideDot(side: SLOT_COLOR[slot]!)
+          Text(slotNames(tree, set, slot).joined(separator: ", ")).font(.system(size: 14)).foregroundStyle(Theme.text2).lineLimit(1)
         }
       }
     }

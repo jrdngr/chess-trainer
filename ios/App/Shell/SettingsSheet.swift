@@ -40,8 +40,7 @@ struct SettingsSheet: View {
         }
         section("Play")
         ListCard {
-          ToggleRow(label: "Move scores", hint: "What each move the engine judges cost you, in centipawns, over its square",
-                    on: settings.autopilot.moveScores) { store.update { $0.settings.autopilot.moveScores.toggle() } }
+          ToggleRow(label: "Move scores", on: settings.autopilot.moveScores) { store.update { $0.settings.autopilot.moveScores.toggle() } }
           FillSizeRow(value: settings.movesPerFill) { n in store.update { $0.settings.movesPerFill = n } }
         }
         section("Profiles")
@@ -197,7 +196,7 @@ struct ListCard<Content: View>: View {
 }
 
 /// A setting that is on or off.
-/// Moves per fill: how many of your moves a run or a recommendation adds at
+/// New moves per round: how many of your moves a run or a recommendation adds at
 /// once, and so how many runs go by between new moves.
 struct FillSizeRow: View {
   var value: Int
@@ -206,7 +205,7 @@ struct FillSizeRow: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack {
-        Text("Moves per fill").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+        Text("New moves per round").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
         Spacer()
         Text("\(value)").font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text2)
       }

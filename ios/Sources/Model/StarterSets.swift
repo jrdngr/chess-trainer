@@ -32,7 +32,7 @@ public let STARTER_SETS: [StarterSet] = [
   StarterSet(
     id: "classical", name: "Classical",
     description: "Grab the center, develop, castle. Where most coaches start.",
-    slots: [.w: [StarterOpening(id: "e4 e5 Nf3 Nc6 Bc4")], .e4: [StarterOpening(id: "e4 e5", label: "1...e5")], .d4: [StarterOpening(id: "d4 d5 c4 e6")]]),
+    slots: [.w: [StarterOpening(id: "e4 e5 Nf3 Nc6 Bc4")], .e4: [StarterOpening(id: "e4 e5", label: "1.e4 e5")], .d4: [StarterOpening(id: "d4 d5 c4 e6")]]),
   StarterSet(
     id: "system", name: "System",
     description: "The same setup nearly every game, so there's little to memorize.",
@@ -40,7 +40,7 @@ public let STARTER_SETS: [StarterSet] = [
   StarterSet(
     id: "solid", name: "Solid",
     description: "Hard to crack. Fewer early fights, more long games.",
-    slots: [.w: [StarterOpening(id: "d4 d5 c4")], .e4: [StarterOpening(id: "e4 e5", label: "1...e5"), StarterOpening(id: "e4 e5 Nf3 Nc6 Bb5 Nf6", label: "Berlin")], .d4: [StarterOpening(id: "d4 Nf6 c4 e6 Nc3 Bb4")]]),
+    slots: [.w: [StarterOpening(id: "d4 d5 c4")], .e4: [StarterOpening(id: "e4 e5", label: "1.e4 e5"), StarterOpening(id: "e4 e5 Nf3 Nc6 Bb5 Nf6", label: "Berlin")], .d4: [StarterOpening(id: "d4 Nf6 c4 e6 Nc3 Bb4")]]),
   StarterSet(
     id: "aggressive", name: "Aggressive",
     description: "Unbalanced positions where you go after the king.",

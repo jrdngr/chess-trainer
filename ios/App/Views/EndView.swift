@@ -83,11 +83,8 @@ struct EndView: View {
   var body: some View {
     VStack(spacing: 0) {
       if survival {
-        SurvivalBar(
-          title: "Middlegame", subtitle: runSubtitle(store, run.color, run.enteredIn ?? run.openingId),
-          onClose: onExit
-        ) {
-          SurvivalCountChip(value: middlegame ? finish.ended.extras.points : finish.ended.moves)
+        SurvivalBar(title: "Middlegame", subtitle: openingName(model.tree, run.enteredIn ?? run.openingId), onClose: onExit) {
+          EmptyView()
         }
       }
       scroll.modifier(SurvivalDebugScroll())

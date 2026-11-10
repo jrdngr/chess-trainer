@@ -33,7 +33,8 @@ struct HomeView: View {
     ScrollView {
       VStack(spacing: 0) {
         HStack {
-          if let tutorial = store.state.settings.tutorial {
+          // Gone once the games are played: only the Playbook tab's tips are left then.
+          if let tutorial = store.state.settings.tutorial, tutorial.played < TUTORIAL_GAMES {
             TutorialStrip(played: tutorial.played) { confirmSkip = true }
           }
           Spacer()

@@ -102,7 +102,7 @@ struct ImportView: View {
           .overlay { RoundedRectangle(cornerRadius: 7).stroke(on ? SwiftUI.Color.clear : Theme.surface3, lineWidth: 2) }
           .overlay { if on { Icon(name: "check", size: 15).foregroundStyle(Theme.accentInk) } }
           .frame(width: 24, height: 24)
-        SideSquare(color: row.color)
+        SideDot(side: row.color)
         Text(row.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
           .frame(maxWidth: .infinity, alignment: .leading)
         Text(row.slot.label).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.text2)

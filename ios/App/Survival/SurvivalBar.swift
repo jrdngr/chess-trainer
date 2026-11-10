@@ -25,21 +25,15 @@ struct SurvivalBar<Actions: View>: View {
   }
 }
 
-/// A count in the app bar: `.chip.num.wide`.
-struct SurvivalCountChip: View {
+/// The run's score in the app bar, said with its unit.
+struct SurvivalCount: View {
   var value: Int
+  /// Points, when moments, missions or the combo score; else moves survived.
+  var points: Bool
   var body: some View {
-    Text("\(value)").font(.system(size: 12, weight: .semibold).monospacedDigit()).foregroundStyle(Theme.text2)
-      .padding(.horizontal, 10).padding(.vertical, 4).frame(minWidth: 52)
-      .background(Capsule().fill(Theme.surface2))
+    Text("\(value) \(points ? "pt" : "move")\(value == 1 ? "" : "s")")
+      .font(.system(size: 13, weight: .semibold).monospacedDigit()).foregroundStyle(Theme.text2).fixedSize()
   }
-}
-
-/// "Black · Queen's Gambit Declined": the side and the opening the run is in.
-@MainActor
-func runSubtitle(_ store: AppStore, _ color: ChessCore.Color, _ opening: String) -> String? {
-  guard let tree = store.tree, let catalog = store.catalog else { return nil }
-  return selectionText(tree, catalog, color == .w ? .w : .b, opening)
 }
 
 /// The move clock: a ring that empties as the budget goes, then greys out
@@ -72,20 +66,19 @@ struct SurvivalClock: View {
   }
 }
 
-/// The app bar over a run: the side and opening it is in, the clock on your
+/// The app bar over a run: the opening it is in, the clock on your
 /// turn, and the run's points (or moves, with no extras on).
 struct SurvivalRunBar: View {
   let model: RunModel
   let onExit: () -> Void
-  @Environment(AppStore.self) private var store
 
   var body: some View {
     let state = model.session.state
-    SurvivalBar(title: "Middlegame", subtitle: runSubtitle(store, model.run.color, model.openingId), onClose: onExit) {
+    SurvivalBar(title: "Middlegame", subtitle: openingName(model.tree, model.openingId), onClose: onExit) {
       if let budget = clockSeconds(model.prefs.clock), model.live, !model.held, model.myTurn {
         SurvivalClock(budget: budget, since: model.turnStarted).id(model.turnStarted)
       }
-      SurvivalCountChip(value: model.scoredInPoints ? state.extras.points : state.moves)
+      SurvivalCount(value: model.scoredInPoints ? state.extras.points : state.moves, points: model.scoredInPoints)
       ModeSettingsButton()
     }
   }
