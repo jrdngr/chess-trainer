@@ -11,6 +11,11 @@ enum Theme {
   static let text3 = Color(hex: 0x66666f)
   static let accent = Color(hex: 0x8a8cff)
   static let accentInk = Color(hex: 0x0e0e2a)
+  /// Home's Play button pressed.
+  static let accentPressed = Color(hex: 0x7f81f4)
+  /// The two cards under Home's Play button, top one first.
+  static let deck2 = Color(hex: 0x6163cf)
+  static let deck3 = Color(hex: 0x41439a)
   static let good = Color(hex: 0x4ade80)
   static let bad = Color(hex: 0xfb7185)
   static let warn = Color(hex: 0xfbbf24)

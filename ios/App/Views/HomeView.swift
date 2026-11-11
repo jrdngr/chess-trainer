@@ -50,6 +50,7 @@ struct HomeView: View {
         .padding(.top, 2).padding(.bottom, 12)
         VStack(spacing: 0) {
           autopilot
+            .padding([.top, .horizontal], 8)
             .disabled(locked && step?.step != .play).opacity(locked && step?.step != .play ? 0.35 : 1)
             .tip(text: step?.step == .play ? step?.tip : nil, inset: 8)
           PlayFooter(step: step)
@@ -112,8 +113,8 @@ struct HomeView: View {
   @ViewBuilder private var autopilot: some View {
     let selection = store.peekRoundSelection()
     if store.state.settings.tutorial?.next != nil || nextRound(store.state, tree, selection, store.autoHistory) != nil {
-      Button { onOpen(.autopilot) } label: { PlayPlate() }
-        .buttonStyle(.plain)
+      Button { onOpen(.autopilot) } label: { PlayLabel() }
+        .buttonStyle(PlayStackStyle())
     } else {
       Button { onPlaybook() } label: {
         HStack(spacing: 13) {
@@ -130,7 +131,7 @@ struct HomeView: View {
         .padding(.horizontal, 15).padding(.vertical, 14)
         .background(LinearGradient(
           colors: [Theme.accent.opacity(0.22), Theme.accent.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
-        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 20, topTrailingRadius: 20))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
       }
       .buttonStyle(.plain)
     }
@@ -160,18 +161,37 @@ struct HomeView: View {
   }
 }
 
-/// Home's Play button: the top of one block with the selection under it, so its bottom corners are square.
-struct PlayPlate: View {
+/// The word on Home's Play button.
+struct PlayLabel: View {
   var body: some View {
     HStack(spacing: 10) {
       Image(systemName: "play.fill").font(.system(size: 18, weight: .bold))
       Text("Play").font(.system(size: 21, weight: .heavy))
     }
     .foregroundStyle(Theme.accentInk)
-    .frame(maxWidth: .infinity, minHeight: 60)
-    .background(Theme.accent)
-    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 20, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 20))
+  }
+}
+
+/// Home's Play button: the top card of a stack of three, each lower card narrower.
+/// Pressed, the top card goes down into the stack and the stack closes under it.
+struct PlayStackStyle: ButtonStyle {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  func makeBody(configuration: Configuration) -> some View {
+    let down = configuration.isPressed
+    let shape = RoundedRectangle(cornerRadius: 12)
+    ZStack(alignment: .top) {
+      shape.fill(Theme.deck3).frame(height: 54).padding(.horizontal, 14).offset(y: 8)
+      shape.fill(Theme.deck2).frame(height: 54).padding(.horizontal, 7).offset(y: down && !reduceMotion ? 8 : 4)
+      configuration.label
+        .frame(maxWidth: .infinity, minHeight: 54)
+        .background(shape.fill(down ? Theme.accentPressed : Theme.accent))
+        .offset(y: down && !reduceMotion ? 8 : 0)
+    }
+    .frame(height: 62, alignment: .top)
     .contentShape(Rectangle())
+    .animation(down ? .easeOut(duration: 0.07) : .timingCurve(0.2, 0.8, 0.3, 1, duration: 0.24), value: down)
+    .sensoryFeedback(.impact(weight: .light), trigger: down) { _, pressed in pressed }
   }
 }
 
