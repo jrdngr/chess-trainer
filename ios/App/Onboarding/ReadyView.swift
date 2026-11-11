@@ -1,7 +1,7 @@
 import Model
 import SwiftUI
 
-/// The Playbook as it will be, and the first run on Autopilot's plate.
+/// The Playbook as it will be, and Play to start the first run.
 /// Nothing goes in until one of the buttons is tapped. `Ready`.
 struct ReadyView: View {
   let tree: OpeningTree
@@ -38,16 +38,6 @@ struct ReadyView: View {
           BigButton(label: "Add more openings", icon: "plus", accent: false, xl: false, soft: true, action: onMore).padding(.top, 12)
         }
         .padding(.horizontal, 16).padding(.top, 56)
-      }
-      if let first {
-        let rep = state.repertoireList.first { $0.color == first.pick.color }
-        Button { onDone(.autopilot) } label: {
-          AutopilotPlate(
-            name: store.catalog.map { selectionTrail(tree, $0, first.pick.opening.id).last ?? "" } ?? "",
-            color: first.pick.color, span: roundSpan(rep, first.pick, first.at))
-        }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 16).padding(.top, 24).padding(.bottom, 20)
       }
       OnboardBar {
         BigButton(label: first != nil ? "Play" : "Go to Home") { onDone(first != nil ? .autopilot : .home) }

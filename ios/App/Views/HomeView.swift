@@ -160,45 +160,6 @@ struct HomeView: View {
   }
 }
 
-/// Play's next run on Home's button: the opening, the move the game starts
-/// from, and how far into your prep that is along the bottom.
-struct AutopilotPlate: View {
-  let name: String
-  let color: ChessCore.Color
-  let span: PrepSpan?
-  /// On Home, the top of one block with the selection under it: no side square
-  /// (the side shows right below), square bottom corners.
-  var attached = false
-
-  /// Your move the game starts at: the first one not played for you.
-  private var from: Int { (span?.played ?? 0) + 1 }
-
-  var body: some View {
-    VStack(spacing: 0) {
-      HStack(alignment: .center, spacing: 12) {
-        if !attached { SideSquare(color: color) }
-        VStack(alignment: .leading, spacing: 3) {
-          Text(name).font(.system(size: 21, weight: .heavy)).foregroundStyle(Theme.text)
-            .multilineTextAlignment(.leading)
-          Text("From move \(from)").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text2)
-        }
-        Spacer(minLength: 0)
-        Image(systemName: "play.fill").font(.system(size: 20, weight: .bold)).foregroundStyle(Theme.accentInk)
-          .frame(width: 48, height: 48)
-          .background(RoundedRectangle(cornerRadius: 12).fill(Theme.accent))
-          .accessibilityHidden(true)
-      }
-      .padding(.leading, 18).padding(.trailing, 12).padding(.vertical, 12)
-      .background(LinearGradient(colors: [Theme.accent.opacity(0.36), Theme.accent.opacity(0.16)], startPoint: .topLeading, endPoint: .bottomTrailing))
-      .clipShape(UnevenRoundedRectangle(
-        topLeadingRadius: 20, bottomLeadingRadius: attached ? 0 : 20, bottomTrailingRadius: attached ? 0 : 20, topTrailingRadius: 20))
-      PrepSegmentsView(span: span, height: 4).padding(.horizontal, 18).padding(.top, attached ? 0 : 8)
-    }
-    .accessibilityElement(children: .combine)
-    .accessibilityLabel("Play \(name), from move \(from)")
-  }
-}
-
 /// Home's Play button: the top of one block with the selection under it, so its bottom corners are square.
 struct PlayPlate: View {
   var body: some View {
