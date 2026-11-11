@@ -141,7 +141,7 @@ even with nothing added. The same game then goes on from there; the new
 moves are not graded this run, and later runs drill them.
 
 On a no, a Grow here button shows while it is your move at the hole, the
-only growth button in a run. The end screen has no growth button.
+only growth button in a run.
 
 ## Past your prep: common moves
 
@@ -160,7 +160,7 @@ the book:
   and the book phase is over. It's also over where the book has nothing more
   to say.
 - The prep bar counts only your line: common moves past it aren't added.
-- The end screen and Analysis mark common moves with a small book.
+- Analysis marks common moves with a small book.
 
 Moments and missions start as soon as your prep runs out, book phase
 included. After the book the rest of the
@@ -185,16 +185,19 @@ any run. `Sources/Model/Tutorial.swift` holds each game's setup.
 
 ## Ending a round
 
-A small, quiet End round button is under the board from the first move of
-every run. Ending a round still gets the normal end screen, with Analyze, so
-you can drill just your openings when you want to. It is
-quiet on purpose: playing on past your prep is the game, and it is what makes
-you care which moves you grow.
+Once you are past your prep, a Next run button is under the board: the round
+ends where it stands and the next one is dealt. The X ends a round at any
+point. It is quiet on purpose: playing on past your prep is the game, and it is
+what makes you care which moves you grow.
 
-The end screen opens on the final position, with "End of prep" and "Final
-position" to switch between where your prep ran out and where the run
-finished. Its main button is Back Home: the next run waits on Home's Play
-button, named by its opening.
+A finished round has no end screen. It stays on the board: after a blunder
+your move in red and the reply that punishes it, and under the board how it
+ended and an Analyze button. The deck sits at the bottom. Tap it and the next
+round's card is dealt; or pull a card out with a finger, and it follows along
+the deal's path, turning over as it comes. Let go before its face shows and it
+goes back into the deck. Once its face shows, the deal finishes by itself and
+the card grows into the board as the next run. The X leaves for Home. The
+tutorial's games still end on the end screen.
 
 ## How a run is shown
 
@@ -204,8 +207,8 @@ position face up, the opening's full name above it ("Sicilian: Najdorf"), a
 row of segments below; the board's orientation shows the side. The segments show how far into your prep the
 run starts: one segment for each of your own moves, lit up to where you take
 over. After a beat the card grows into the board and the run begins; a tap
-goes straight to the board. Home's button, the round intro and the end screen
-all show the segments. During the run, the app bar shows the
+goes straight to the board. Home's button and the round intro show the
+segments. During the run, the app bar shows the
 opening, the same segments counting up as you play, and the rating the run has
 gained so far. In Freeform, where every run starts from move one, Home's
 button, the round intro and the app bar show no segments. Home's button still

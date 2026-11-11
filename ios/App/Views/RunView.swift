@@ -14,6 +14,10 @@ struct RunView: View {
   var onAnalyze: (() -> Void)?
   /// Next run: Play's next round, without the end screen.
   var onNextRun: (() -> Void)?
+  /// Play's next round, drawn from the deck under a finished run: its card, taken once. Nil keeps the end screen.
+  var onDraw: (() -> RoundCard?)?
+  /// The drawn card has grown onto the board: the next round takes over.
+  var onDealt: (() -> Void)?
   @Environment(AppStore.self) var store
   @State private var lens: LensKind? = Self.pinnedLens
   @State private var planOpen = false
@@ -25,9 +29,6 @@ struct RunView: View {
   @State private var shakes = 0
   /// The forced move's arrow glows for a moment after a refused move.
   @State private var nudged = 0
-  /// The rating change played over the board on the way to the next run, and its leaving.
-  @State private var nextMoment: RatingMoment?
-  @State private var nextLeaving = false
   /// The X mid-round asks before it ends the round.
   @State private var askingToEnd = false
   @Environment(Toasts.self) private var toasts
@@ -35,6 +36,9 @@ struct RunView: View {
 
   /// A Middlegame run, not Play's round.
   var survival: Bool { model.round == nil }
+
+  /// The run is over and stays on the board, with the deck to draw the next one from.
+  var drawing: Bool { onDraw != nil && model.finish != nil && !model.advancing }
 
   var body: some View {
     ZStack {
@@ -49,10 +53,12 @@ struct RunView: View {
     .overlayPreferenceValue(BoardFrameKey.self) { anchor in
       if model.intro == .announce && !survival {
         GeometryReader { geo in
-          RoundDeal(
-            name: lineName(model.tree, pickerCatalog(model.tree), nodeById(model.tree, model.introOpening).sans),
-            fen: model.run.fen, lastMove: lastMoveOf(model.run.played), color: model.run.color, span: model.span,
-            board: anchor.map { geo[$0] })
+          RoundDeal(card: model.card, board: anchor.map { geo[$0] })
+        }
+        .transition(.identity)
+      } else if drawing {
+        GeometryReader { geo in
+          RoundDeal(board: anchor.map { geo[$0] }, draw: onDraw, onDone: onDealt)
         }
         .transition(.identity)
       }
@@ -111,12 +117,6 @@ struct RunView: View {
       .overlay(alignment: .top) { flash }
       .overlay { if model.pulse { IntroPulse() } }
       .overlay { if let rim { BoardRim(color: rim.color) } }
-      .overlay {
-        if let moment = nextMoment {
-          // Quicker than the end screen's: Next run is for drilling fast.
-          RatingOverBoard(moment: moment, leaving: nextLeaving, pace: 0.35) { leaveForNext() }
-        }
-      }
       .overlay {
         if let held = model.flash {
           FlashRings(loose: held.loose, orientation: model.run.color, onTakeBack: model.takeBack)
@@ -181,24 +181,11 @@ struct RunView: View {
     }
   }
 
-  /// Next run: the round ends where it stands, its rating change plays over the board, then the next round.
+  /// Next run: the round ends where it stands, and the next round follows.
   private func nextRun() {
     model.advancing = true
     model.endRound()
-    if let moment = model.ratingMoment {
-      nextMoment = moment
-    } else {
-      onNextRun?()
-    }
-  }
-
-  private func leaveForNext() {
-    guard !nextLeaving else { return }
-    nextLeaving = true
-    Task {
-      try? await Task.sleep(for: .seconds(0.32))
-      onNextRun?()
-    }
+    onNextRun?()
   }
 
   /// A move the board won't take in a tutorial game: growth says which it wants, a forced move shakes the board.
@@ -312,7 +299,7 @@ struct RunView: View {
           ScrollView { PlanLegend(fens: fens, me: model.run.color) }.scrollIndicators(.hidden).scrollBounceBehavior(.basedOnSize)
         } else if model.intro == .plan {
           HandoffPlanCard(fens: fens, me: model.run.color)
-        } else if model.blunder != nil {
+        } else if model.blunder != nil || drawing {
           ending
         } else if model.fill != nil {
           InlineFillPanel(model: model).padding(.top, 10)
@@ -327,7 +314,7 @@ struct RunView: View {
       .clipShape(Rectangle().inset(by: model.blunder != nil ? -200 : 0)).contentShape(Rectangle())
       // Over the lenses' row while a blunder's tip hangs above its name.
       .zIndex(model.blunder != nil ? 2 : 0)
-      footer.padding(.top, 10).padding(.bottom, 8).opacity(model.blunder == nil ? 1 : 0)
+      footer.padding(.top, 10).padding(.bottom, 8).opacity(model.blunder == nil && !drawing ? 1 : 0)
     }
     // The plan when the lenses wake is the one the player starts with; a tap on Plan sees the one up now.
     .onChange(of: lensEnabled, initial: true) {
@@ -367,8 +354,11 @@ struct RunView: View {
   }
 
   /// The X: once play is under way it ends the round and goes to the end screen; before that it leaves.
+  /// A run over on the board, with the deck under it, leaves.
   private func close() {
-    if model.blunder != nil {
+    if drawing {
+      onExit()
+    } else if model.blunder != nil {
       model.continueToEnd()
     } else if model.live && model.intro == .done {
       // A round already called over, or one with nothing played yet, ends without asking.
@@ -455,22 +445,49 @@ struct RunView: View {
 
   /// A blunder ends the run: its name under the board for a beat, the threat drawn on it,
   /// then the end screen, which has Analyze. A tutorial tip holds it until it is put away.
-  private var ending: some View {
-    HStack(spacing: 8) {
-      Icon(name: "cross", size: 18).frame(width: 26, height: 26).background(Circle().fill(Theme.bad.opacity(0.14)))
-      Text(endingTitle(model.session.ending!, model.run.played.count)).font(.system(size: 19, weight: .heavy)).tracking(-0.19)
+  /// With the deck, the run stays here: its ending's name, and Analyze under it.
+  @ViewBuilder private var ending: some View {
+    if drawing {
+      VStack(spacing: 12) {
+        endingName
+        if let onAnalyze {
+          Button("Analyze", action: onAnalyze)
+            .buttonStyle(PlayButtonStyle(kind: .soft, height: 44, radius: 12, font: 15))
+        }
+      }
+      .padding(.top, 16)
+      .frame(maxWidth: .infinity)
+    } else {
+      endingName
+        .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
+        .padding(.top, 16)
+        .contentShape(Rectangle())
+        .onTapGesture { if model.tip != .blunder { model.continueToEnd() } }
+        .task(id: model.tip == .blunder) {
+          guard model.tip != .blunder else { return }
+          try? await Task.sleep(for: .seconds(2))
+          if !Task.isCancelled { model.continueToEnd() }
+        }
     }
-    .foregroundStyle(Theme.bad).padding(.vertical, 6)
+  }
+
+  /// How the run ended, in the color of the result: a loss red with its cross, a win green.
+  private var endingName: some View {
+    let how = model.session.ending ?? .ended
+    let lostIt: Bool
+    switch how {
+    case .blunder, .lost: lostIt = true
+    default: lostIt = false
+    }
+    let tone: SwiftUI.Color = lostIt ? Theme.bad : how == .won ? Theme.good : Theme.text2
+    return HStack(spacing: 8) {
+      if lostIt {
+        Icon(name: "cross", size: 18).frame(width: 26, height: 26).background(Circle().fill(Theme.bad.opacity(0.14)))
+      }
+      Text(endingTitle(how, model.run.played.count)).font(.system(size: 19, weight: .heavy)).tracking(-0.19)
+    }
+    .foregroundStyle(tone).padding(.vertical, 6)
     .frame(maxWidth: .infinity)
-    .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
-    .padding(.top, 16)
-    .contentShape(Rectangle())
-    .onTapGesture { if model.tip != .blunder { model.continueToEnd() } }
-    .task(id: model.tip == .blunder) {
-      guard model.tip != .blunder else { return }
-      try? await Task.sleep(for: .seconds(2))
-      if !Task.isCancelled { model.continueToEnd() }
-    }
   }
 
   @ViewBuilder private var flash: some View {

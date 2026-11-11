@@ -352,8 +352,9 @@ final class RunModel {
 
   /// A Middlegame run was announced while its handoff was built, so it goes straight to the board,
   /// as do the first game and the tutorial's first. Later tutorial games are announced like any round.
-  func start() {
-    let straightIn = handoff != nil || firstGame || (tutorialGame.map { $0.number <= 1 } ?? false)
+  /// `dealt`: its card was drawn from the deck and is already on the board, so no announcement.
+  func start(dealt: Bool = false) {
+    let straightIn = dealt || handoff != nil || firstGame || (tutorialGame.map { $0.number <= 1 } ?? false)
     if straightIn { toBoard() } else { later(round != nil ? RoundDeal.length : Self.announceMs) { $0.toBoard() } }
   }
 
