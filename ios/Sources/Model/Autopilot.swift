@@ -37,7 +37,7 @@ public func insideStart(_ inside: [TrainingItem], _ cards: [String: Card], accur
   return weakestFirst(inside.filter { cards[$0.cardId] != nil }, cards).first.map { ($0, 1) }
 }
 
-/// Where the next run starts: see `docs/autopilot.md`.
+/// Where the next run starts: see `docs/gameplay.md`.
 public func chooseStart(recent: [StartKind], cold: Double, inside: Double?, firstTime: Bool = false) -> StartKind {
   if firstTime { return .position }
   let last = recent.last

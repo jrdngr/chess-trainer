@@ -47,5 +47,5 @@ cases in the same commit and say why in the message.
 
 ## Autopilot's intent
 
-Before changing Autopilot, read [docs/autopilot.md](docs/autopilot.md). It
+Before changing Autopilot, read [docs/gameplay.md](docs/gameplay.md). It
 says what Autopilot is for, and each change should pass its tests.
