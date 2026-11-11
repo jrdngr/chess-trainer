@@ -243,7 +243,7 @@ struct PieceView: View {
 private struct Jump: ViewModifier, Animatable {
   var progress: Double
   let height: CGFloat
-  var animatableData: Double {
+  nonisolated var animatableData: Double {
     get { progress }
     set { progress = newValue }
   }
