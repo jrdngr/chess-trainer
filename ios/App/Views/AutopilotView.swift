@@ -33,9 +33,7 @@ struct AutopilotView: View {
         if model.phase == .over, let finish = model.finish, !model.advancing, !deals(model) {
           EndView(model: model, finish: finish, onNext: home, onAnalyze: { analyzing = true }, onExit: home)
         } else {
-          RunView(
-            model: model, onExit: { model.finish != nil ? home() : exit() }, onAnalyze: { analyzing = true }, onNextRun: next,
-            onDraw: deals(model) ? draw : nil, onDealt: dealt)
+          runView(model)
             // A fresh screen for each round: nothing carries over from the last.
             .id(ObjectIdentifier(model))
         }
@@ -50,6 +48,19 @@ struct AutopilotView: View {
       }
     }
     .task { if model == nil && !nothing { begin() } }
+  }
+
+  /// The round on its board. Finished, its X goes Home; a Play round deals the next from its deck.
+  private func runView(_ model: RunModel) -> RunView {
+    var drawer: (() -> RoundCard?)? = nil
+    if deals(model) { drawer = { draw() } }
+    return RunView(
+      model: model, onExit: { leave(model) }, onAnalyze: { analyzing = true }, onNextRun: { next() },
+      onDraw: drawer, onDealt: { dealt() })
+  }
+
+  private func leave(_ model: RunModel) {
+    if model.finish != nil { home() } else { exit() }
   }
 
   /// The next round, picked when it starts: what the last one changed is in the store by then.
