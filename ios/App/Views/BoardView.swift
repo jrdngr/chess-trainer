@@ -34,6 +34,8 @@ struct BoardView: View {
   var bothSides = false
   /// Only these moves, by SAN, may be played: Growth's answers at a hole.
   var allowed: [String]? = nil
+  /// A move part of the way along, as a swipe through a finished game has it.
+  var slide: BoardSlide? = nil
   var onMove: (LegalMove) -> Void
   /// A legal move `allowed` held back.
   var onRefused: (() -> Void)? = nil
@@ -81,10 +83,26 @@ struct BoardView: View {
         ArrowsView(arrows: arrows.filter { !$0.over }, cell: cell, position: position).allowsHitTesting(false)
         let ids = tracker.ids(fen, pieces)
         let tints = LensColors.pieceTints(marks)
+        let sliding = slide.map { $0.motion(pieces) }
+        // A capture taken back comes in again under the piece that made it.
+        if let back = sliding?.returning {
+          PieceView(piece: back, size: cell * 0.78)
+            .frame(width: cell, height: cell)
+            .offset(x: CGFloat(position(back.square).col) * cell, y: CGFloat(position(back.square).row) * cell)
+            .opacity(sliding?.amount ?? 0)
+            .allowsHitTesting(false)
+        }
         ForEach(pieces.keys.sorted().map { (id: ids[$0] ?? 0, square: $0) }, id: \.id) { placed in
           let piece = pieces[placed.square]!
+          let target = sliding?.moving[placed.square]
+          let shift = target.map { t -> CGSize in
+            let a = position(placed.square), b = position(t), k = sliding?.amount ?? 0
+            return CGSize(width: CGFloat(b.col - a.col) * cell * k, height: CGFloat(b.row - a.row) * cell * k)
+          } ?? .zero
           PlacedPiece(id: placed.id, square: placed.square, piece: piece, cell: cell, position: position(placed.square),
-                      tint: tints[placed.square], ghost: marks.map { $0.focus.map { !$0.contains(placed.square) } ?? ($0.ghost == true && piece.type != .p) } ?? false)
+                      tint: tints[placed.square], ghost: marks.map { $0.focus.map { !$0.contains(placed.square) } ?? ($0.ghost == true && piece.type != .p) } ?? false,
+                      shift: shift, fade: sliding?.fading == placed.square ? 1 - (sliding?.amount ?? 0) : 1)
+            .zIndex(target != nil ? 1 : 0)
         }
         .animation(reduceMotion ? nil : Motion.slide(0.16), value: fen)
         if let marks { LensOverView(marks: marks, cell: cell, position: position) }
@@ -231,12 +249,15 @@ private struct PlacedPiece: View {
   /// A lens's word on the piece, as its color.
   let tint: SwiftUI.Color?
   let ghost: Bool
+  /// Part of the way to another square, under a swipe.
+  var shift: CGSize = .zero
+  var fade: Double = 1
 
   var body: some View {
     PieceView(piece: piece, size: cell * 0.78, tint: tint)
-      .opacity(ghost ? 0.18 : 1)
+      .opacity((ghost ? 0.18 : 1) * fade)
       .frame(width: cell, height: cell)
-      .offset(x: CGFloat(position.col) * cell, y: CGFloat(position.row) * cell)
+      .offset(x: CGFloat(position.col) * cell + shift.width, y: CGFloat(position.row) * cell + shift.height)
       .allowsHitTesting(false)
   }
 }
@@ -382,5 +403,37 @@ extension BoardTheme {
     case .walnut: SwiftUI.Color(hex: 0xb58863)
     case .ocean: SwiftUI.Color(hex: 0x6d94b8)
     }
+  }
+}
+
+/// A move part of the way along: forward from the board's position, or (`back`) the move
+/// that led to it being taken back. `before` is the position the move was played from.
+/// `progress` runs 0...1, and the pieces follow it on an S curve.
+struct BoardSlide: Equatable {
+  var move: LegalMove
+  var before: String
+  var back: Bool
+  var progress: Double
+
+  /// Where each moving piece is headed, the capture fading out, the one taken back, and how far along.
+  func motion(_ pieces: [String: BoardPiece]) -> (moving: [String: String], fading: String?, returning: BoardPiece?, amount: Double) {
+    let amount = (1 - cos(Double.pi * min(1, max(0, progress)))) / 2
+    let from = move.from, to = move.to
+    var moving: [String: String] = back ? [to: from] : [from: to]
+    // Castling: the rook comes along.
+    if move.piece == .k, abs(Int(from.utf8.first!) - Int(to.utf8.first!)) == 2 {
+      let rank = String(from.last!)
+      let rook = to.first == "g" ? ("h" + rank, "f" + rank) : ("a" + rank, "d" + rank)
+      if back { moving[rook.1] = rook.0 } else { moving[rook.0] = rook.1 }
+    }
+    guard let captured = move.captured else { return (moving, nil, nil, amount) }
+    // En passant takes a pawn beside the square moved to, which was empty.
+    let enPassant = move.piece == .p && !piecesFromFen(before).contains { $0.square == to }
+    let square = enPassant ? String(to.first!) + String(from.last!) : to
+    if back {
+      let mover = fenTurn(before)
+      return (moving, nil, BoardPiece(square: square, type: captured, color: mover.other), amount)
+    }
+    return (moving, square, nil, amount)
   }
 }

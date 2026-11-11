@@ -31,6 +31,10 @@ struct RunView: View {
   @State private var nudged = 0
   /// The X mid-round asks before it ends the round.
   @State private var askingToEnd = false
+  /// The finished run, analysed on its board while the deck is under it.
+  @State private var analysis: RunAnalysis?
+  /// A step through it part of the way along, as the deck's swipe has it.
+  @State private var slid: BoardSlide?
   @Environment(Toasts.self) private var toasts
   @Environment(\.scenePhase) private var scenePhase
 
@@ -39,6 +43,37 @@ struct RunView: View {
 
   /// The run is over and stays on the board, with the deck to draw the next one from.
   var drawing: Bool { onDraw != nil && model.finish != nil && !model.advancing }
+
+  /// The game as played, the move that ended it last.
+  private var gameLine: [String] {
+    if case .blunder(let played, _, _, _, _) = model.session.ending { return model.run.played + [played] }
+    return model.run.played
+  }
+
+  /// The board's position: the analysed one while the deck is under a finished run.
+  private var boardFen: String { drawing ? analysis?.fen ?? model.shownFen : model.shownFen }
+
+  /// On the game's own last position, where it ended.
+  private var atGameEnd: Bool { !drawing || analysis?.atEnd ?? true }
+
+  private var deckSteps: DeckSteps {
+    DeckSteps(
+      can: { analysis?.canStep($0) ?? false },
+      slide: { dir, progress in
+        guard progress > 0, let a = analysis, let move = a.stepMove(dir) else {
+          slid = nil
+          return
+        }
+        slid = BoardSlide(move: move, before: dir < 0 ? a.fens[a.ply - 1] : a.fen, back: dir < 0, progress: progress)
+      },
+      step: { dir in
+        withAnimation(.easeOut(duration: 0.12)) {
+          slid = nil
+          analysis?.step(dir)
+        }
+      },
+      cancel: { withAnimation(.easeOut(duration: 0.16)) { slid?.progress = 0 } })
+  }
 
   var body: some View {
     ZStack {
@@ -58,7 +93,7 @@ struct RunView: View {
         .transition(.identity)
       } else if drawing {
         GeometryReader { geo in
-          RoundDeal(board: anchor.map { geo[$0] }, draw: onDraw, onDone: onDealt)
+          RoundDeal(board: anchor.map { geo[$0] }, draw: onDraw, onDone: onDealt, steps: deckSteps)
         }
         .transition(.identity)
       }
@@ -69,6 +104,10 @@ struct RunView: View {
       Button("End round", role: .destructive) { model.endRound() }
       Button("Keep playing", role: .cancel) {}
     }
+    .onChange(of: drawing, initial: true) {
+      if drawing && analysis == nil { analysis = RunAnalysis(game: gameLine) }
+    }
+    .task(id: drawing ? analysis?.fen : nil) { await analysis?.findTop() }
     // Your move's time stops while the app is in the background or the screen is locked.
     .onChange(of: scenePhase) {
       if scenePhase == .active { model.appReturned() } else { model.appLeft() }
@@ -90,7 +129,7 @@ struct RunView: View {
       }
       // The Eval lens's bar takes the captured row's place, so the board never moves.
       // While adding moves Growth's eval bar takes the row, with the engine's word on the answers.
-      CapturedRow(fen: model.shownFen, orientation: model.run.color)
+      CapturedRow(fen: boardFen, orientation: model.run.color)
         .opacity(evalHeld || adding ? 0 : 1)
         .overlay {
           if adding {
@@ -101,12 +140,15 @@ struct RunView: View {
         }
         .padding(.horizontal).padding(.top, 12)
       BoardView(
-        fen: model.shownFen, orientation: model.run.color,
-        interactive: model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil && model.flash == nil && !model.endCued
+        fen: boardFen, orientation: model.run.color,
+        interactive: drawing ? analysis != nil : model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil && model.flash == nil && !model.endCued
           && !lensLesson,
         lastMove: model.held ? lastMoveOf(Array(model.introPath.prefix(model.introPly))) : lastMove, highlights: highlights, arrows: arrows, pop: model.pop, popId: model.popCount,
-        marks: marks, allowed: model.fill == nil ? model.expected.map { [$0] } : model.fillChoices.map(\.san),
-        onMove: model.play, onRefused: refused
+        marks: marks, bothSides: drawing, allowed: drawing ? nil : model.fill == nil ? model.expected.map { [$0] } : model.fillChoices.map(\.san),
+        slide: drawing ? slid : nil,
+        onMove: { move in
+          if drawing { analysis?.play(move) } else { model.play(move) }
+        }, onRefused: refused
       )
       .modifier(BoardShake(count: shakes))
       // Under Play's deal the card stands in for the board until it has grown onto it.
@@ -445,15 +487,15 @@ struct RunView: View {
 
   /// A blunder ends the run: its name under the board for a beat, the threat drawn on it,
   /// then the end screen, which has Analyze. A tutorial tip holds it until it is put away.
-  /// With the deck, the run stays here: its ending's name, and Analyze under it.
+  /// With the deck, the run stays here as analysis: its ending's name at the game's end, else the move and who is to play.
   @ViewBuilder private var ending: some View {
     if drawing {
-      VStack(spacing: 12) {
-        // Ended by hand, the run needs no name for how it ended.
-        if model.session.ending != .ended { endingName }
-        if let onAnalyze {
-          Button("Analyze", action: onAnalyze)
-            .buttonStyle(PlayButtonStyle(kind: .soft, height: 44, radius: 12, font: 15))
+      Group {
+        if !atGameEnd {
+          analysisStatus
+        } else if model.session.ending != .ended {
+          // Ended by hand, the run needs no name for how it ended.
+          endingName
         }
       }
       .padding(.top, 16)
@@ -469,6 +511,25 @@ struct RunView: View {
           try? await Task.sleep(for: .seconds(2))
           if !Task.isCancelled { model.continueToEnd() }
         }
+    }
+  }
+
+  /// Away from the game's end: the move and who is to play, or how the position stands when nothing can be played.
+  @ViewBuilder private var analysisStatus: some View {
+    if let analysis {
+      let fen = analysis.fen
+      let turn = fenTurn(fen)
+      Group {
+        if legalMoves(fen).isEmpty {
+          Text(analysis.last?.san.hasSuffix("#") == true ? "Checkmate" : "Stalemate")
+        } else {
+          HStack(spacing: 8) {
+            SideSquare(color: turn, size: 12)
+            Text("Move \(analysis.ply / 2 + 1), \(turn == .w ? "White" : "Black") to play")
+          }
+        }
+      }
+      .font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.text2).padding(.vertical, 8)
     }
   }
 
@@ -501,6 +562,7 @@ struct RunView: View {
   }
 
   private var lastMove: (from: String, to: String)? {
+    if drawing && !atGameEnd { return analysis?.last.map { ($0.from, $0.to) } }
     if model.blunder != nil { return nil }
     // The green on the move just added takes the last move's tint, as in Growth.
     if adding && model.justAdded != nil { return nil }
@@ -510,6 +572,7 @@ struct RunView: View {
   }
 
   private var highlights: [String: SwiftUI.Color] {
+    if !atGameEnd { return [:] }
     if adding, let added = model.justAdded { return [added.from: Theme.good, added.to: Theme.good] }
     if let b = model.blunder { return [b.move.from: Theme.bad, b.move.to: Theme.bad] }
     if let best = model.missedBest { return [best.from: Theme.bad, best.to: Theme.bad] }
@@ -517,6 +580,11 @@ struct RunView: View {
   }
 
   private var arrows: [BoardArrow] {
+    // Analysing: the top move, once the engine has it; none while a step is part of the way along.
+    if drawing && !(atGameEnd && model.blunder != nil) {
+      guard slid == nil || slid?.progress == 0, let top = analysis?.top else { return [] }
+      return [BoardArrow(from: top.from, to: top.to, color: Theme.book, over: true)]
+    }
     if let b = model.blunder {
       return b.threat.map { [BoardArrow(from: $0.from, to: $0.to, color: Theme.bad, over: true)] } ?? []
     }

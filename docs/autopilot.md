@@ -190,14 +190,23 @@ ends where it stands and the next one is dealt. The X ends a round at any
 point. It is quiet on purpose: playing on past your prep is the game, and it is
 what makes you care which moves you grow.
 
-A finished round has no end screen. It stays on the board: after a blunder
-your move in red and the reply that punishes it, and under the board how it
-ended and an Analyze button. The deck sits at the bottom. Tap it and the next
-round's card is dealt; or pull a card out with a finger, and it follows along
-the deal's path, turning over as it comes. Let go before its face shows and it
-goes back into the deck. Once its face shows, the deal finishes by itself and
-the card grows into the board as the next run. The X leaves for Home. The
-tutorial's games still end on the end screen.
+A finished round has no end screen. It stays on the board as analysis: after
+a blunder your move in red and the reply that punishes it, and under the board
+how it ended (nothing when you ended it yourself). The deck sits at the bottom.
+
+- Swipe the deck left to step back a move, right to step forward. The pieces
+  follow the swipe, and the card tucks back into the deck on that side. Past
+  the game's end, a step forward plays the engine's top move. With nowhere to
+  go, the card only gives a little.
+- Play a move on the board to try another line; it replaces what came after.
+  One arrow shows the top move. Away from the game's end, the move number and
+  who is to play show under the board.
+- Tap the deck, or flick a card up, and the next round's card is dealt. Pull it
+  out slowly and it follows along the deal's path, turning over as it comes;
+  let go before its face shows and it goes back. Once its face shows, the deal
+  finishes and the card grows into the board as the next run.
+
+The X leaves for Home. The tutorial's games still end on the end screen.
 
 ## How a run is shown
 
