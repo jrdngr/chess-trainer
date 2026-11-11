@@ -323,7 +323,13 @@ struct RunView: View {
         held: $lens, lenses: LENSES, enabled: lensEnabled, plan: $planOpen, planEnabled: lensEnabled && plan != nil,
         planPulse: planSeeded && plan != nil && plan != planSeen, spotlight: model.tip == .lens ? .pawns : nil
       )
-      .opacity(model.held || lensesAway || called ? 0 : 1).allowsHitTesting(!(model.held || lensesAway || called))
+      .opacity(model.held || lensesAway || called || drawing ? 0 : 1).allowsHitTesting(!(model.held || lensesAway || called || drawing))
+      // A finished run being analysed shows the engine's eval in the lenses' place.
+      .overlay {
+        if drawing, let analysis {
+          EvalRow(best: analysis.best, depth: analysis.depth).opacity(called ? 0 : 1)
+        }
+      }
       .overlay(alignment: .top) { calloutLayer.animation(.easeOut(duration: 0.25), value: model.shownCallout?.id) }
       // The callout runs past the lenses' row, over the panel under it (Undo and Done while adding moves).
       // Only a lens puts this tip away: the board waits for one, turned on and then off.
@@ -410,7 +416,7 @@ struct RunView: View {
     }
   }
 
-  /// One fixed-height slot: the goal past prep, else the moves played for you.
+  /// One fixed-height slot: the moves played for you while they replay, else the goal.
   @ViewBuilder private var goalSlot: some View {
     Group {
       if model.intro == .replay, let handoff = model.handoff {
@@ -419,8 +425,6 @@ struct RunView: View {
         movesLine(sansToMoveText(Array(model.introPath.prefix(model.introPly))))
       } else if !model.held, model.prefs.missions, !model.tipsInPlay, let mission = model.session.state.extras.mission {
         GoalCard(mission: mission)
-      } else if model.run.opened > 0 {
-        movesLine("From \(sansToMoveText(Array(model.run.played.prefix(model.run.opened))))")
       } else {
         Color.clear
       }
