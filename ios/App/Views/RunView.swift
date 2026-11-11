@@ -130,9 +130,12 @@ struct RunView: View {
       // The Eval lens's bar takes the captured row's place, so the board never moves.
       // While adding moves Growth's eval bar takes the row, with the engine's word on the answers.
       CapturedRow(fen: boardFen, orientation: model.run.color)
-        .opacity(evalHeld || adding ? 0 : 1)
+        .opacity(evalHeld || adding || drawing ? 0 : 1)
         .overlay {
-          if adding {
+          if drawing, let analysis {
+            // Analysing a finished run: the Analysis screen's eval row.
+            EvalRow(best: analysis.best, depth: analysis.depth)
+          } else if adding {
             EvalLensBar(cp: model.evals.position)
           } else if evalHeld {
             EvalLensBar(cp: model.session.evalCp, result: endgameResult)
@@ -298,7 +301,8 @@ struct RunView: View {
         } else {
           PrepSegmentsView(span: model.span, height: 4).frame(maxWidth: 150)
         }
-        headerStatus
+        // Kept in place while analysing a finished run, so the board doesn't move, but not shown.
+        headerStatus.opacity(drawing ? 0 : 1)
       }
       .padding(.horizontal, 60)
       HStack {
@@ -324,11 +328,9 @@ struct RunView: View {
         planPulse: planSeeded && plan != nil && plan != planSeen, spotlight: model.tip == .lens ? .pawns : nil
       )
       .opacity(model.held || lensesAway || called || drawing ? 0 : 1).allowsHitTesting(!(model.held || lensesAway || called || drawing))
-      // A finished run being analysed shows the engine's eval in the lenses' place.
+      // A finished run being analysed shows its moves in the lenses' place.
       .overlay {
-        if drawing, let analysis {
-          EvalRow(best: analysis.best, depth: analysis.depth).opacity(called ? 0 : 1)
-        }
+        if drawing, let analysis { analysisStrip(analysis).opacity(called ? 0 : 1) }
       }
       .overlay(alignment: .top) { calloutLayer.animation(.easeOut(duration: 0.25), value: model.shownCallout?.id) }
       // The callout runs past the lenses' row, over the panel under it (Undo and Done while adding moves).
@@ -475,6 +477,16 @@ struct RunView: View {
       }
     }
     .tip(model.tip, when: model.tip == .nextRun, arrow: .down, arrowAt: 0.85, onDismiss: model.dismissTip)
+  }
+
+  /// The analysed line's moves, as on the Analysis screen: a tap or an arrow goes to a move.
+  private func analysisStrip(_ analysis: RunAnalysis) -> some View {
+    let items = analysis.line.enumerated().map { i, san in
+      StripItem(
+        san: san, label: i % 2 == 0 ? "\(i / 2 + 1)." : nil, tone: i >= analysis.ply ? .ghost : nil,
+        current: i == analysis.ply - 1, seek: i + 1)
+    }
+    return MoveStrip(items: items, cursor: analysis.ply, max: analysis.line.count) { analysis.seek($0) }.padding(.horizontal, 16)
   }
 
   /// Under the prep bar: the rim's name in its color while the board has one, else whose move; and the combo.

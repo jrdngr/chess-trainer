@@ -39,7 +39,7 @@ extension RunModel {
 
 /// Play's round, announced: its card leaves the deck small and flips face up on
 /// the round's start position, comes forward under the opening's name with the
-/// prep below, then after a beat grows onto the board (`board`) as the
+/// prep below, then grows straight onto the board (`board`) as the
 /// rest clears. Plays once, in `length`; a tap goes straight to the board.
 ///
 /// With `draw`, the deck waits under a finished run instead: a tap deals the next
@@ -76,7 +76,7 @@ struct RoundDeal: View {
   @State private var tucks = 0
   private static let swipeRange: CGFloat = 112
 
-  static let deal = 0.5, beat = 0.06, forwardTime = 0.54, hold = 0.45, grow = 0.4
+  static let deal = 0.5, beat = 0.06, forwardTime = 0.54, hold = 0.0, grow = 0.4
   /// The whole announcement: `RunModel.start` waits this long before the board.
   static var length: Double { deal + beat + forwardTime + hold + grow }
   private static var dealCurve: Animation { .timingCurve(0.5, 0, 0.2, 1, duration: deal) }
@@ -314,7 +314,7 @@ struct RoundDeal: View {
     await settle()
   }
 
-  /// Face up: forward, a beat, then onto the board.
+  /// Face up: forward, then onto the board.
   private func settle() async {
     if reduceMotion {
       forward = true

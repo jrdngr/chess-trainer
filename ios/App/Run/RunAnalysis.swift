@@ -61,6 +61,11 @@ final class RunAnalysis {
     }
   }
 
+  /// Straight to the line's `target`th move, kept within the line.
+  func seek(_ target: Int) {
+    ply = min(max(0, target), line.count)
+  }
+
   /// A move played on the board: it replaces whatever came after it.
   func play(_ move: LegalMove) {
     line = Array(line.prefix(ply))
