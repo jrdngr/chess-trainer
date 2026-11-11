@@ -449,7 +449,8 @@ struct RunView: View {
   @ViewBuilder private var ending: some View {
     if drawing {
       VStack(spacing: 12) {
-        endingName
+        // Ended by hand, the run needs no name for how it ended.
+        if model.session.ending != .ended { endingName }
         if let onAnalyze {
           Button("Analyze", action: onAnalyze)
             .buttonStyle(PlayButtonStyle(kind: .soft, height: 44, radius: 12, font: 15))
