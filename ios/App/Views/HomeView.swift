@@ -108,25 +108,12 @@ struct HomeView: View {
 
   private var tip: TutorialTip? { homeTip(store.state.settings.tips) }
 
-  /// What Play would start with, said on its button, or that there is nothing to play yet.
+  /// Play's button, or that there is nothing to play yet.
   @ViewBuilder private var autopilot: some View {
     let selection = store.peekRoundSelection()
-    if let game = store.state.settings.tutorial?.next {
-      Button { onOpen(.autopilot) } label: {
-        AutopilotPlate(name: game.opening.name, color: game.color, span: nil, attached: true).contentShape(Rectangle())
-      }
-      .buttonStyle(.plain)
-    } else if let round = nextRound(store.state, tree, selection, store.autoHistory) {
-      let rep = store.state.repertoireList.first { $0.color == round.pick.color }
-      // Freeform always starts from move one, so its button shows no segments.
-      let span = store.state.settings.start == .freeform ? nil : roundSpan(rep, round.pick, round.at)
-      Button { onOpen(.autopilot) } label: {
-        AutopilotPlate(
-          name: store.catalog.map { selectionTrail(tree, $0, round.pick.opening.id).last ?? "" } ?? "",
-          color: round.pick.color, span: span, attached: true)
-          .contentShape(Rectangle())
-      }
-      .buttonStyle(.plain)
+    if store.state.settings.tutorial?.next != nil || nextRound(store.state, tree, selection, store.autoHistory) != nil {
+      Button { onOpen(.autopilot) } label: { PlayPlate() }
+        .buttonStyle(.plain)
     } else {
       Button { onPlaybook() } label: {
         HStack(spacing: 13) {
@@ -209,6 +196,21 @@ struct AutopilotPlate: View {
     }
     .accessibilityElement(children: .combine)
     .accessibilityLabel("Play \(name), from move \(from)")
+  }
+}
+
+/// Home's Play button: the top of one block with the selection under it, so its bottom corners are square.
+struct PlayPlate: View {
+  var body: some View {
+    HStack(spacing: 10) {
+      Image(systemName: "play.fill").font(.system(size: 18, weight: .bold))
+      Text("Play").font(.system(size: 21, weight: .heavy))
+    }
+    .foregroundStyle(Theme.accentInk)
+    .frame(maxWidth: .infinity, minHeight: 60)
+    .background(Theme.accent)
+    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 20, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 20))
+    .contentShape(Rectangle())
   }
 }
 
