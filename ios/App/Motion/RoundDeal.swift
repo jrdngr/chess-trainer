@@ -30,8 +30,8 @@ struct RoundCard {
   var starters: [String] = []
   /// Freeform as Black: the start position, before the opponent's first move is played on the card.
   var before: String? = nil
-  /// How long the card holds before it grows.
-  var hold: Double = RoundDeal.hold
+  /// How long the card holds before it grows (Play's card grows straight away).
+  var hold: Double = 0
 }
 
 extension RunModel {
