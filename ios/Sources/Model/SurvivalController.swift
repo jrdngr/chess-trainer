@@ -243,9 +243,10 @@ private func then(_ step: Step, _ more: (RunSession) -> Step) -> Step {
   return (after.session, step.effects + after.effects)
 }
 
-/// What your prep has here.
+/// What your prep has here. Off prep in Freeform it has nothing, so nothing more is graded.
 public func prepMoves(_ session: RunSession) -> [String] {
-  prepHere(session.source, session.state)
+  if session.source.offPrepFinal && session.prepStatus == .off { return [] }
+  return prepHere(session.source, session.state)
 }
 
 /// You played one of your prepared moves, `seconds` after your turn came.

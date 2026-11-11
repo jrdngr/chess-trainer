@@ -32,9 +32,11 @@ import Testing
   var history = AutoHistory()
   history.focuses = [.test, .test, .test]
   let round = try #require(nextRound(state, tree, Selection(color: .b, opening: ANY_OPENING), history))
-  #expect(startsInside(round.pick.opening))
+  #expect(round.free)
+  #expect(round.pick.opening.id == ANY_OPENING)
   #expect(round.pick.start == .first)
   #expect(round.at == nil)
+  #expect(round.aim == nil)
 }
 
 /// Drill on the whole Playbook starts like a picked opening: the same deep prep is not played from move one.

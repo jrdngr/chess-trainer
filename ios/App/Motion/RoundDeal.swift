@@ -26,14 +26,27 @@ struct RoundCard {
   let lastMove: (from: String, to: String)?
   let color: ChessCore.Color
   let span: PrepSpan?
+  /// Freeform: the squares of the pieces that start your lines, which jump in turn and stay lit.
+  var starters: [String] = []
+  /// Freeform as Black: the start position, before the opponent's first move is played on the card.
+  var before: String? = nil
+  /// How long the card holds before it grows.
+  var hold: Double = RoundDeal.hold
 }
 
 extension RunModel {
   /// This round's card, as the deal shows it.
   var card: RoundCard {
-    RoundCard(
-      name: lineName(tree, pickerCatalog(tree), nodeById(tree, introOpening).sans),
-      fen: run.fen, lastMove: lastMoveOf(run.played), color: run.color, span: span)
+    guard round?.free == true else {
+      return RoundCard(
+        name: lineName(tree, pickerCatalog(tree), nodeById(tree, introOpening).sans),
+        fen: run.fen, lastMove: lastMoveOf(run.played), color: run.color, span: span)
+    }
+    // Freeform: no opening named. As Black the opponent's first move plays on the card, then your answers jump.
+    let black = run.color == .b && run.played.count == 1
+    return RoundCard(
+      name: "Freeform", fen: run.fen, lastMove: lastMoveOf(run.played), color: run.color, span: nil,
+      starters: starters, before: black ? START_FEN : nil, hold: black ? 0.75 : 0.45)
   }
 }
 
@@ -62,6 +75,11 @@ struct RoundDeal: View {
   @State private var forward = false
   @State private var named = false
   @State private var grown = false
+  /// Freeform as Black: the opponent's first move has been played on the card.
+  @State private var moved = false
+  /// Freeform: the starting pieces lit so far, and how high each is in its jump.
+  @State private var lit: [String] = []
+  @State private var lift: [String: Double] = [:]
   @State private var drawn: RoundCard?
   /// The drawn card's face has shown: the rest plays by itself.
   @State private var committed = false
@@ -78,7 +96,9 @@ struct RoundDeal: View {
 
   static let deal = 0.5, beat = 0.06, forwardTime = 0.54, hold = 0.0, grow = 0.4
   /// The whole announcement: `RunModel.start` waits this long before the board.
-  static var length: Double { deal + beat + forwardTime + hold + grow }
+  static func length(_ card: RoundCard) -> Double { deal + beat + forwardTime + card.hold + grow }
+  /// A starting piece's jump, up and down, and the time between one jump starting and the next.
+  static let jump = 0.34, jumpGap = 0.1
   private static var dealCurve: Animation { .timingCurve(0.5, 0, 0.2, 1, duration: deal) }
 
   private var shown: RoundCard? { draw == nil ? card : drawn }
@@ -155,7 +175,10 @@ struct RoundDeal: View {
   /// The card: the round's position in the card's frame, the frame and its accent gone once it is the board.
   /// Sizes are in the board's own units, so each is divided by `scale` to look right once scaled down.
   private func face(_ card: RoundCard, size: CGFloat, inset: CGFloat, scale: CGFloat) -> some View {
-    BoardView(fen: card.fen, orientation: card.color, interactive: false, lastMove: card.lastMove, onMove: { _ in })
+    let before = card.before.flatMap { moved ? nil : $0 }
+    return BoardView(
+      fen: before ?? card.fen, orientation: card.color, interactive: false, lastMove: before == nil ? card.lastMove : nil,
+      highlights: Dictionary(lit.map { ($0, Theme.accent) }, uniquingKeysWith: { a, _ in a }), lift: lift, onMove: { _ in })
       .frame(width: size, height: size)
       .padding(inset)
       .background(RoundedRectangle(cornerRadius: grown ? 4 : 29 / scale).fill(Theme.surface.opacity(grown ? 0 : 1)))
@@ -316,14 +339,40 @@ struct RoundDeal: View {
 
   /// Face up: forward, then onto the board.
   private func settle() async {
+    let card = shown
     if reduceMotion {
       forward = true
+      moved = true
+      lit = card?.starters ?? []
     } else {
       withAnimation(.timingCurve(0.5, 0, 0.2, 1, duration: Self.forwardTime)) { forward = true }
     }
-    try? await Task.sleep(for: .seconds(Self.forwardTime + Self.hold))
+    async let beat: Void = reduceMotion ? () : firstBeat(card)
+    try? await Task.sleep(for: .seconds(Self.forwardTime + (card?.hold ?? Self.hold)))
+    _ = await beat
     guard !Task.isCancelled else { return }
     withAnimation(reduceMotion ? .easeOut(duration: Self.grow) : .easeInOut(duration: Self.grow)) { grown = true }
+  }
+}
+
+extension RoundDeal {
+  /// Freeform's first beat, as the card comes forward: as Black the opponent's first move is played,
+  /// then the pieces that start your lines jump one after another, each square lighting as it goes.
+  fileprivate func firstBeat(_ card: RoundCard?) async {
+    guard let card, card.before != nil || !card.starters.isEmpty else { return }
+    try? await Task.sleep(for: .seconds(Self.forwardTime - 0.16))
+    if card.before != nil {
+      moved = true
+      try? await Task.sleep(for: .seconds(0.3))
+    }
+    for square in card.starters {
+      guard !Task.isCancelled else { return }
+      withAnimation(.linear(duration: Self.jump)) {
+        lift[square] = 1
+        lit.append(square)
+      }
+      try? await Task.sleep(for: .seconds(Self.jumpGap))
+    }
   }
 }
 

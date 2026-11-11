@@ -17,7 +17,7 @@ final class RunModel {
   /// A Middlegame run then shows the plan card at the handoff before your clock starts.
   enum Intro { case announce, replay, plan, done }
 
-  /// How long the announcement holds (Play's deal takes `RoundDeal.length`), and the beat between replayed moves (a Middlegame run's is quicker).
+  /// How long the announcement holds (Play's deal takes `RoundDeal.length(card)`), and the beat between replayed moves (a Middlegame run's is quicker).
   static let announceMs = 1.2, replayMs = 0.4, handoffReplayMs = 0.12, pulseMs = 0.9
 
   /// How long a miss and a score popup stay over the board (a touch clears a miss sooner); the opponent's beat.
@@ -111,6 +111,9 @@ final class RunModel {
   private var tasks: [Task<Void, Never>] = []
   /// What a clean end of prep grows with.
   private let growth: GrowthPrefs
+  /// Freeform: the squares of the pieces that start your lines, lit until your first move.
+  let starters: [String]
+  var startLit: [String] { live && session.state.moves == 0 ? starters : [] }
 
   /// Autopilot's round, on Autopilot's own options.
   convenience init?(round: AutoRound, selection: Selection, store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
@@ -193,6 +196,7 @@ final class RunModel {
     self.growth = growth
     picker = mulberry32(seed: (Env.random() * 2_147_483_648).rounded(.down))
     session = handoff != nil ? beginMiddlegame(begun) : beginSession(begun)
+    starters = round?.free == true ? freeformStarters(begun.source, begun.state.run.fen) : []
     let losses = lossesIn(store.state.repertoireList)
     ctx = RunContext(
       index: index, prefs: prefs, autopilot: round != nil,
@@ -239,7 +243,7 @@ final class RunModel {
   /// How far into your prep the run stands, out of how far it goes along this line, in your own moves. Held once off prep.
   /// None for a Freeform Autopilot run, which always starts from move one.
   var span: PrepSpan? {
-    if round != nil && store.state.settings.start == .freeform && !firstGame { return nil }
+    if round?.free == true { return nil }
     if session.prepStatus == .off { return spanHeld }
     let line = run.played + continuation(session.source, run)
     // Moves added this run are prep too, though the run's source was read before them.
@@ -272,6 +276,7 @@ final class RunModel {
   var headerName: String {
     if let tutorialGame { return tutorialGame.opening.name }
     if firstGame || basicRun { return openingNameForPath(index, run.played)?.name ?? "Any Opening" }
+    if round?.free == true { return openingNameForPath(index, run.played)?.name ?? "Freeform" }
     return openingName(tree, openingId)
   }
   var momentHere: Bool {
@@ -355,7 +360,7 @@ final class RunModel {
   /// `dealt`: its card was drawn from the deck and is already on the board, so no announcement.
   func start(dealt: Bool = false) {
     let straightIn = dealt || handoff != nil || firstGame || (tutorialGame.map { $0.number <= 1 } ?? false)
-    if straightIn { toBoard() } else { later(round != nil ? RoundDeal.length : Self.announceMs) { $0.toBoard() } }
+    if straightIn { toBoard() } else { later(round != nil ? RoundDeal.length(card) : Self.announceMs) { $0.toBoard() } }
   }
 
   /// The announcement gives way to the board: the way in plays out, or the round begins.

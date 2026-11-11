@@ -19,6 +19,10 @@ public struct LineSource: @unchecked Sendable {
   public var weightsAt: (_ fen: String, _ played: [String]) -> [(san: String, weight: Double)]
   /// Your own prepared moves here, preferred first.
   public var prepAt: (_ fen: String) -> [String]
+  /// Your prepared moves here, the line most in need of practice first. Freeform only.
+  public var rankedPrep: ((_ fen: String) -> [String])? = nil
+  /// Off prep for good: once a run leaves your lines, nothing it plays is graded, even back in them. Freeform only.
+  public var offPrepFinal = false
 }
 
 /// One repertoire indexed by position, the opponent's moves included.
@@ -253,6 +257,10 @@ public struct BeginOptions {
   public var at: [String]?
   /// A line to follow while the run is on it: a gap to reach.
   public var aim: [String]?
+  /// Freeform: no line drawn, the opponent weighing its replies at each turn.
+  public var free = false
+  /// Freeform: the lines of gaps due a new move, which the opponent leans toward.
+  public var due: [[String]] = []
 
   public init(tree: OpeningTree, reps: [Repertoire], node: OpeningNode, color: ColorChoice) {
     self.tree = tree
@@ -287,6 +295,7 @@ public func beginRun(_ opts: BeginOptions) -> Begun? {
   let tree = opts.tree, node = opts.node
   guard let rootMoves = lookup(tree.index, START_FEN)?.moves, !rootMoves.isEmpty else { return nil }
   let rep = opts.reps.first { $0.color == side }
+  if opts.free { return beginFree(opts, rep, side, rand) }
   let source = regionSource(tree, node, rep, side)
   let aim = opts.toward ?? node
   let steer = opts.steer
@@ -347,6 +356,28 @@ public func beginRun(_ opts: BeginOptions) -> Begun? {
     return out
   }
   return Begun(source: source, run: run, redraw: redraw)
+}
+
+/// A Freeform run: from move one, with nothing drawn. As Black the opponent's
+/// first move is already played, so the round's card can show it.
+private func beginFree(_ opts: BeginOptions, _ rep: Repertoire?, _ side: Color, _ rand: () -> Double) -> Begun {
+  let node = opts.toward ?? opts.node
+  let source = freeformSource(opts.tree, node, rep, side, weakness: opts.weakness, seen: opts.seen ?? NOTHING_SEEN, due: opts.due)
+  var run = Run(
+    id: newRunId(), sourceLabel: node.name, openingId: node.id, repertoireId: rep?.id, bookRun: rep == nil,
+    color: side, fen: START_FEN, played: [], survived: 0, over: false, target: [], drawn: [], opened: 0, enteredIn: nil)
+  if side == .b {
+    let first = opponentReply(source, run, rand)
+    if !first.over && first.played.count == 1 {
+      run.fen = first.fen
+      run.played = first.played
+    } else if let top = (lookup(opts.tree.index, START_FEN)?.moves ?? []).jsSorted({ cmp($1.games, $0.games) }).first,
+      let move = applySan(START_FEN, top.san) {
+      run.fen = move.after
+      run.played = [top.san]
+    }
+  }
+  return Begun(source: source, run: run, redraw: { $0 })
 }
 
 /// Your lines through the opening that pass through a position, each whole

@@ -592,7 +592,8 @@ struct RunView: View {
     if adding, let added = model.justAdded { return [added.from: Theme.good, added.to: Theme.good] }
     if let b = model.blunder { return [b.move.from: Theme.bad, b.move.to: Theme.bad] }
     if let best = model.missedBest { return [best.from: Theme.bad, best.to: Theme.bad] }
-    return [:]
+    // Freeform: the pieces that start your lines stay lit until your first move.
+    return Dictionary(model.startLit.map { ($0, Theme.accent) }, uniquingKeysWith: { a, _ in a })
   }
 
   private var arrows: [BoardArrow] {

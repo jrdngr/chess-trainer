@@ -10,6 +10,10 @@ public struct AutoRound: Sendable {
   public var at: [String]?
   /// A gap's line the run steers to, when a new move is due.
   public var aim: [String]? = nil
+  /// Freeform: from move one with nothing drawn; the opponent weighs its replies at each turn.
+  public var free = false
+  /// Freeform: the lines of gaps due a new move, which the opponent leans toward.
+  public var due: [[String]] = []
 }
 
 /// What a session remembers of its runs so far, oldest first.
@@ -45,15 +49,14 @@ public func roundsIn(_ score: ScoreState, _ openingId: String) -> Int {
 
 /// Autopilot's next run, or nil with nothing prepared inside the selection.
 public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _ history: AutoHistory) -> AutoRound? {
+  if state.settings.start == .freeform { return freeRound(state, tree, selection, history) }
   // A new move is due: the run heads for the gap that most wants one.
   if let gap = steerGap(state, tree, selection) {
     let region = nodeById(tree, selection.opening)
     let opening = deepestNodeWithin(tree, region, gap.path)
     return AutoRound(pick: Recommendation(focus: .test, opening: opening, color: gap.color, start: .first), at: nil, aim: gap.line)
   }
-  guard var recommended = recommend(recommendInput(state, tree, selection, history)) else { return nil }
-  // Freeform always starts from move one; the opponent still steers toward the pick.
-  if state.settings.start == .freeform { recommended.start = .first }
+  guard let recommended = recommend(recommendInput(state, tree, selection, history)) else { return nil }
   if recommended.start == .first { return AutoRound(pick: recommended, at: nil) }
   let rep = state.repertoireList.first { $0.color == recommended.color }
   let items = rep.map { itemsInRegion(tree, recommended.opening, allItems([$0])) } ?? []
@@ -75,6 +78,14 @@ public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selec
   return AutoRound(pick: recommended, at: nil)
 }
 
+/// A Freeform round: the side the recommendation picks, from move one, steered only
+/// toward the opening picked on Home. Gaps due a new move are leaned toward, never set as the goal.
+func freeRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _ history: AutoHistory) -> AutoRound? {
+  guard let recommended = recommend(recommendInput(state, tree, selection, history)) else { return nil }
+  let pick = Recommendation(focus: recommended.focus, opening: nodeById(tree, selection.opening), color: recommended.color, start: .first)
+  return AutoRound(pick: pick, at: nil, free: true, due: dueGapLines(state, tree, selection, color: recommended.color))
+}
+
 /// A run played: what the session remembers of it.
 public func afterRound(_ history: AutoHistory, _ round: AutoRound, _ selection: Selection) -> AutoHistory {
   var next = history
@@ -91,6 +102,8 @@ public func survivalOptions(_ round: AutoRound, _ state: AppState, _ tree: Openi
   opts.enter = round.pick.start == .inside
   opts.at = round.at
   opts.aim = round.aim
+  opts.free = round.free
+  opts.due = round.due
   // The saved selection's mistakes.
   let evidence = evidenceIn(state, tree, state.settings.selection)
   opts.weakness = weaknessFromCards(state.cards, slips(evidence))

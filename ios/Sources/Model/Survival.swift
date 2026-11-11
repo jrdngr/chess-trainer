@@ -171,6 +171,10 @@ public struct StartOptions {
   public var at: [String]?
   /// A line the opponent follows while it can: a gap to reach.
   public var aim: [String]?
+  /// Freeform: nothing drawn, the opponent weighing its replies at each turn.
+  public var free = false
+  /// Freeform: the lines of gaps due a new move.
+  public var due: [[String]] = []
 
   public init(steer: SurvivalSteer, tree: OpeningTree, reps: [Repertoire], node: OpeningNode, color: ColorChoice) {
     self.steer = steer
@@ -190,6 +194,8 @@ public func startSurvival(_ opts: StartOptions) -> SurvivalStart? {
   begin.enter = opts.enter
   begin.at = opts.at
   begin.aim = opts.aim
+  begin.free = opts.free
+  begin.due = opts.due
   begin.weakness = opts.weakness
   begin.growth = opts.growth
   begin.seen = opts.seen

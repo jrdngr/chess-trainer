@@ -36,6 +36,8 @@ struct BoardView: View {
   var allowed: [String]? = nil
   /// A move part of the way along, as a swipe through a finished game has it.
   var slide: BoardSlide? = nil
+  /// Pieces jumping in place, by square: how far through the jump, 0...1, at rest at either end.
+  var lift: [String: Double] = [:]
   var onMove: (LegalMove) -> Void
   /// A legal move `allowed` held back.
   var onRefused: (() -> Void)? = nil
@@ -99,10 +101,12 @@ struct BoardView: View {
             let a = position(placed.square), b = position(t), k = sliding?.amount ?? 0
             return CGSize(width: CGFloat(b.col - a.col) * cell * k, height: CGFloat(b.row - a.row) * cell * k)
           } ?? .zero
+          let up = lift[placed.square] ?? 0
           PlacedPiece(id: placed.id, square: placed.square, piece: piece, cell: cell, position: position(placed.square),
                       tint: tints[placed.square], ghost: marks.map { $0.focus.map { !$0.contains(placed.square) } ?? ($0.ghost == true && piece.type != .p) } ?? false,
                       shift: shift, fade: sliding?.fading == placed.square ? 1 - (sliding?.amount ?? 0) : 1)
-            .zIndex(target != nil ? 1 : 0)
+            .modifier(Jump(progress: up, height: cell * 0.7))
+            .zIndex(target != nil || lift[placed.square] != nil ? 1 : 0)
         }
         .animation(reduceMotion ? nil : Motion.slide(0.16), value: fen)
         if let marks { LensOverView(marks: marks, cell: cell, position: position) }
@@ -232,6 +236,21 @@ struct PieceView: View {
     }
     .frame(width: size, height: size)
     .shadow(color: .black.opacity(0.42), radius: 1.5 * size / 45, y: size / 45)
+  }
+}
+
+/// A piece jumping in place: up `height` and back down as `progress` runs 0 to 1, a little larger at the top.
+private struct Jump: ViewModifier, Animatable {
+  var progress: Double
+  let height: CGFloat
+  var animatableData: Double {
+    get { progress }
+    set { progress = newValue }
+  }
+
+  func body(content: Content) -> some View {
+    let up = sin(.pi * min(1, max(0, progress)))
+    return content.scaleEffect(1 + 0.22 * up).offset(y: -height * up)
   }
 }
 
