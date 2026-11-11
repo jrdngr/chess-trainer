@@ -19,41 +19,25 @@ struct DeckSteps {
   let cancel: () -> Void
 }
 
-/// What a round's card shows: its opening, start position, side and prep.
+/// What a round's card shows: its start position and side.
 struct RoundCard {
-  let name: String
   let fen: String
   let lastMove: (from: String, to: String)?
   let color: ChessCore.Color
-  let span: PrepSpan?
-  /// Freeform: the squares of the pieces that start your lines, which jump in turn and stay lit.
+  /// Freeform: the squares of the pieces that start your lines, lit on the card.
   var starters: [String] = []
-  /// Freeform as Black: the start position, before the opponent's first move is played on the card.
-  var before: String? = nil
-  /// How long the card holds before it grows (Play's card grows straight away).
-  var hold: Double = 0
 }
 
 extension RunModel {
   /// This round's card, as the deal shows it.
   var card: RoundCard {
-    guard round?.free == true else {
-      return RoundCard(
-        name: lineName(tree, pickerCatalog(tree), nodeById(tree, introOpening).sans),
-        fen: run.fen, lastMove: lastMoveOf(run.played), color: run.color, span: span)
-    }
-    // Freeform: no opening named. As Black the opponent's first move plays on the card, then your answers jump.
-    let black = run.color == .b && run.played.count == 1
-    return RoundCard(
-      name: "Freeform", fen: run.fen, lastMove: lastMoveOf(run.played), color: run.color, span: nil,
-      starters: starters, before: black ? START_FEN : nil, hold: black ? 0.75 : 0.45)
+    RoundCard(fen: run.fen, lastMove: lastMoveOf(run.played), color: run.color, starters: starters)
   }
 }
 
-/// Play's round, announced: its card leaves the deck small and flips face up on
-/// the round's start position, comes forward under the opening's name with the
-/// prep below, then grows straight onto the board (`board`) as the
-/// rest clears. Plays once, in `length`; a tap goes straight to the board.
+/// Play's round, announced: its card leaves the deck small, turns face up on the
+/// round's start position on its way, and lands as the board (`board`), its frame
+/// fading as it lands. Plays once, in `length`.
 ///
 /// With `draw`, the deck waits under a finished run instead: a tap deals the next
 /// round's card, or a finger pulls it out along the same path, turning it over as it
@@ -70,16 +54,10 @@ struct RoundDeal: View {
   /// With the deck under a finished run: swipes step through its game.
   var steps: DeckSteps? = nil
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  /// How far the card has come from the deck, 0...1, small and face up at 1.
+  /// How far the card has come from the deck, 0...1: face down on the deck at 0, the board at 1.
   @State private var dealt = 0.0
-  @State private var forward = false
-  @State private var named = false
-  @State private var grown = false
-  /// Freeform as Black: the opponent's first move has been played on the card.
-  @State private var moved = false
-  /// Freeform: the starting pieces lit so far, and how high each is in its jump.
-  @State private var lit: [String] = []
-  @State private var lift: [String: Double] = [:]
+  /// The card is the board: the deck and the cover are gone.
+  @State private var landed = false
   @State private var drawn: RoundCard?
   /// The drawn card's face has shown: the rest plays by itself.
   @State private var committed = false
@@ -94,45 +72,25 @@ struct RoundDeal: View {
   @State private var tucks = 0
   private static let swipeRange: CGFloat = 112
 
-  static let deal = 0.5, beat = 0.06, forwardTime = 0.54, hold = 0.0, grow = 0.4
+  static let deal = 0.7
   /// The whole announcement: `RunModel.start` waits this long before the board.
-  static func length(_ card: RoundCard) -> Double { deal + beat + forwardTime + card.hold + grow }
-  /// A starting piece's jump, up and down, and the time between one jump starting and the next.
-  static let jump = 0.34, jumpGap = 0.1
+  static var length: Double { deal }
   private static var dealCurve: Animation { .timingCurve(0.5, 0, 0.2, 1, duration: deal) }
 
   private var shown: RoundCard? { draw == nil ? card : drawn }
 
   var body: some View {
     GeometryReader { geo in
-      let side = min(264, geo.size.width - 126)
-      let rest = CGRect(x: (geo.size.width - side) / 2, y: geo.size.height * 0.38 - side / 2, width: side, height: side)
       // The card is drawn at the board's own size and scaled down, so the board inside never relays out
-      // (its coordinate labels would fade out and back in) as it grows.
-      let full = board?.width ?? side - 24
-      let scale = grown ? 1 : (side - 24) / full
-      let center = grown ? CGPoint(x: board?.midX ?? rest.midX, y: board?.midY ?? rest.midY) : CGPoint(x: rest.midX, y: rest.midY)
-      let inset: CGFloat = grown ? 0 : 12 / scale
+      // (its coordinate labels would fade out and back in) on its way.
+      let full = board?.width ?? geo.size.width - 24
+      let target = CGPoint(x: board?.midX ?? geo.size.width / 2, y: board?.midY ?? geo.size.height * 0.4)
       let deck = CGPoint(x: geo.size.width / 2, y: geo.size.height - 130)
       // Drawn by hand, the finished run shows until the card comes out.
-      let cover = grown ? 0 : draw == nil ? 1 : min(1, dealt * 1.15)
+      let cover = landed ? 0 : draw == nil ? 1 : min(1, dealt * 1.15)
       ZStack(alignment: .topLeading) {
         Theme.background.opacity(cover).ignoresSafeArea()
           .allowsHitTesting(false)
-        if let shown {
-          Text(shown.name)
-            .font(.system(size: shown.name.count > 20 ? 24 : 28, weight: .bold)).tracking(-0.4).foregroundStyle(Theme.text)
-            .multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.8)
-            .frame(width: geo.size.width - 48, height: 80, alignment: .bottom)
-            .position(x: geo.size.width / 2, y: rest.minY - 62)
-            .opacity(named && !grown ? 1 : 0).offset(y: named ? 0 : 8)
-            .allowsHitTesting(false)
-          PrepSegmentsView(span: shown.span)
-            .frame(width: side)
-            .position(x: geo.size.width / 2, y: rest.maxY + 30)
-            .opacity(named && !grown ? 1 : 0).offset(y: named ? 0 : 8)
-            .allowsHitTesting(false)
-        }
         // Once the drawn card has turned over, a tap anywhere goes straight to the board.
         if committed {
           Color.clear.contentShape(Rectangle()).onTapGesture { done() }
@@ -148,21 +106,20 @@ struct RoundDeal: View {
           }
         }
         .contentShape(Rectangle())
-        .gesture(pull(from: deck, to: CGPoint(x: rest.midX, y: rest.midY)), including: draw == nil ? .none : .all)
+        .gesture(pull(from: deck, to: target), including: draw == nil ? .none : .all)
         .accessibilityElement()
         .accessibilityLabel("Next run")
         .accessibilityAddTraits(.isButton)
         .accessibilityHidden(draw == nil)
         .accessibilityAction { if draw != nil { tapped() } }
         .position(deck)
-        .opacity(grown ? 0 : 1)
+        .opacity(landed ? 0 : 1)
         if let shown {
-          face(shown, size: full, inset: inset, scale: scale)
-            .modifier(DealFlip(progress: dealt, radius: 29 / scale, thickness: grown ? 0 : (full + 2 * inset) * 0.035))
-            .frame(width: full + 2 * inset, height: full + 2 * inset)
-            .scaleEffect(scale * (forward ? 1 : 0.4 + 0.2 * dealt))
-            .offset(x: (deck.x - rest.midX) * (1 - dealt), y: (deck.y - rest.midY) * (1 - dealt))
-            .position(center)
+          face(shown, size: full)
+            .modifier(DealPath(
+              progress: dealt, from: CGSize(width: deck.x - target.x, height: deck.y - target.y),
+              startScale: 100 / full, thickness: full * 0.035))
+            .position(target)
             .allowsHitTesting(false)
         }
       }
@@ -172,18 +129,12 @@ struct RoundDeal: View {
     .onDisappear { playing?.cancel() }
   }
 
-  /// The card: the round's position in the card's frame, the frame and its accent gone once it is the board.
-  /// Sizes are in the board's own units, so each is divided by `scale` to look right once scaled down.
-  private func face(_ card: RoundCard, size: CGFloat, inset: CGFloat, scale: CGFloat) -> some View {
-    let before = card.before.flatMap { moved ? nil : $0 }
-    return BoardView(
-      fen: before ?? card.fen, orientation: card.color, interactive: false, lastMove: before == nil ? card.lastMove : nil,
-      highlights: Dictionary(lit.map { ($0, Theme.accent) }, uniquingKeysWith: { a, _ in a }), lift: lift, onMove: { _ in })
+  /// The card's face: the round's start position at the board's size, Freeform's starting squares lit.
+  private func face(_ card: RoundCard, size: CGFloat) -> some View {
+    BoardView(
+      fen: card.fen, orientation: card.color, interactive: false, lastMove: card.lastMove,
+      highlights: Dictionary(card.starters.map { ($0, Theme.accent) }, uniquingKeysWith: { a, _ in a }), onMove: { _ in })
       .frame(width: size, height: size)
-      .padding(inset)
-      .background(RoundedRectangle(cornerRadius: grown ? 4 : 29 / scale).fill(Theme.surface.opacity(grown ? 0 : 1)))
-      .overlay(RoundedRectangle(cornerRadius: grown ? 4 : 29 / scale).strokeBorder(Theme.accent.opacity(grown ? 0 : 1), lineWidth: 1.5 / scale))
-      .shadow(color: .black.opacity(grown ? 0 : 0.55), radius: 17 / scale, y: 14 / scale)
   }
 
   /// A finger on the deck. Up, the card follows it along the deal's path, nowhere else, and a quick
@@ -303,17 +254,7 @@ struct RoundDeal: View {
   private func commit() {
     committed = true
     playing = Task { @MainActor in
-      if reduceMotion {
-        dealt = 1
-        named = true
-      } else {
-        let left = Self.deal * (1 - dealt)
-        withAnimation(dealt > 0 ? .easeOut(duration: left) : Self.dealCurve) { dealt = 1 }
-        withAnimation(.easeOut(duration: 0.35).delay(left)) { named = true }
-        try? await Task.sleep(for: .seconds(left + Self.beat))
-      }
-      await settle()
-      try? await Task.sleep(for: .seconds(Self.grow))
+      await land()
       if !Task.isCancelled { done() }
     }
   }
@@ -326,62 +267,33 @@ struct RoundDeal: View {
   }
 
   private func play() async {
+    await land()
+  }
+
+  /// The rest of the way from the deck, straight onto the board.
+  private func land() async {
+    let left = Self.deal * (1 - dealt)
     if reduceMotion {
       dealt = 1
-      named = true
     } else {
-      withAnimation(Self.dealCurve) { dealt = 1 }
-      withAnimation(.easeOut(duration: 0.35).delay(Self.deal + 0.12)) { named = true }
+      let curve: Animation = dealt > 0 ? .easeOut(duration: left) : Self.dealCurve
+      withAnimation(curve) { dealt = 1 }
+      try? await Task.sleep(for: .seconds(left))
     }
-    try? await Task.sleep(for: .seconds(Self.deal + Self.beat))
-    await settle()
-  }
-
-  /// Face up: forward, then onto the board.
-  private func settle() async {
-    let card = shown
-    if reduceMotion {
-      forward = true
-      moved = true
-      lit = card?.starters ?? []
-    } else {
-      withAnimation(.timingCurve(0.5, 0, 0.2, 1, duration: Self.forwardTime)) { forward = true }
-    }
-    async let beat: Void = reduceMotion ? () : firstBeat(card)
-    try? await Task.sleep(for: .seconds(Self.forwardTime + (card?.hold ?? Self.hold)))
-    _ = await beat
     guard !Task.isCancelled else { return }
-    withAnimation(reduceMotion ? .easeOut(duration: Self.grow) : .easeInOut(duration: Self.grow)) { grown = true }
+    landed = true
   }
 }
 
-extension RoundDeal {
-  /// Freeform's first beat, as the card comes forward: as Black the opponent's first move is played,
-  /// then the pieces that start your lines jump one after another, each square lighting as it goes.
-  fileprivate func firstBeat(_ card: RoundCard?) async {
-    guard let card, card.before != nil || !card.starters.isEmpty else { return }
-    try? await Task.sleep(for: .seconds(Self.forwardTime - 0.16))
-    if card.before != nil {
-      moved = true
-      try? await Task.sleep(for: .seconds(0.3))
-    }
-    for square in card.starters {
-      guard !Task.isCancelled else { return }
-      withAnimation(.linear(duration: Self.jump)) {
-        lift[square] = 1
-        lit.append(square)
-      }
-      try? await Task.sleep(for: .seconds(Self.jumpGap))
-    }
-  }
-}
-
-/// The card turning over on its way from the deck: face down at 0, face up at 1.
+/// The card on its way from the deck to the board: face down and small on the deck at 0, turning
+/// over as it comes (face up past halfway), the board itself at 1, its card frame fading as it lands.
+/// The content is the board at full size; `from` is the deck's offset from the board's center.
 /// Its body is thin copies of its rounded outline between the faces, so side-on it keeps an edge.
-private struct DealFlip: ViewModifier, Animatable {
+private struct DealPath: ViewModifier, Animatable {
   var progress: Double
-  var radius: CGFloat
-  var thickness: CGFloat = 0
+  let from: CGSize
+  let startScale: CGFloat
+  let thickness: CGFloat
 
   nonisolated var animatableData: Double {
     get { progress }
@@ -391,14 +303,24 @@ private struct DealFlip: ViewModifier, Animatable {
   private static let layers = 7
 
   func body(content: Content) -> some View {
-    let flip = 180 * (1 - progress)
+    let p = CGFloat(min(1, max(0, progress)))
+    let scale = startScale + (1 - startScale) * p
+    // The frame fades over the last stretch, as the card becomes the board.
+    let frame = 1 - min(1, max(0, (p - 0.75) / 0.25))
+    // Sizes below are in the board's own units, divided by `scale` to look right on screen.
+    let radius = (4 + 8 * frame) / scale
+    let margin = 10 * frame / scale
+    let flip = 180 * (1 - Double(p))
     let side = CGFloat(sin(flip * .pi / 180))
-    ZStack {
-      if thickness > 0 && side > 0.01 {
+    let edge = thickness * frame
+    let card = RoundedRectangle(cornerRadius: radius)
+    return ZStack {
+      if edge > 0 && side > 0.01 {
         ForEach(0..<Self.layers, id: \.self) { i in
-          let depth = thickness * (CGFloat(i) / CGFloat(Self.layers - 1) - 0.5)
-          RoundedRectangle(cornerRadius: radius)
+          let depth = edge * (CGFloat(i) / CGFloat(Self.layers - 1) - 0.5)
+          card
             .fill(i % 2 == 0 ? SwiftUI.Color(hex: 0xaab0be) : SwiftUI.Color(hex: 0xc3c8d3))
+            .padding(-margin)
             .rotation3DEffect(.degrees(flip), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
             .offset(x: depth * side)
         }
@@ -406,13 +328,18 @@ private struct DealFlip: ViewModifier, Animatable {
       Group {
         if flip < 90 {
           content
+            .background(card.fill(Theme.surface.opacity(frame)).padding(-margin))
+            .overlay(card.strokeBorder(Theme.accent.opacity(frame), lineWidth: 1.5 / scale).padding(-margin))
+            .shadow(color: .black.opacity(0.55 * frame), radius: 17 / scale, y: 14 / scale)
         } else {
           // Seen through the flip, so mirrored back to read the right way round.
-          WelcomeCardBack(radius: radius).scaleEffect(x: -1)
+          WelcomeCardBack(radius: radius).padding(-margin).scaleEffect(x: -1)
         }
       }
       .rotation3DEffect(.degrees(flip), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
-      .offset(x: (flip < 90 ? 0.5 : -0.5) * thickness * side)
+      .offset(x: (flip < 90 ? 0.5 : -0.5) * edge * side)
     }
+    .scaleEffect(scale)
+    .offset(x: from.width * (1 - p), y: from.height * (1 - p))
   }
 }
