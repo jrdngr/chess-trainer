@@ -187,7 +187,7 @@ any run. `Sources/Model/Tutorial.swift` holds each game's setup.
 
 Once you are past your prep, a Next run button is under the board: the round
 ends where it stands and the next one is dealt. The X ends a round at any
-point. It is quiet on purpose: playing on past your prep is the game, and it is
+point: it asks "End session?" and goes Home, with no end screen. It is quiet on purpose: playing on past your prep is the game, and it is
 what makes you care which moves you grow.
 
 A finished round has no end screen. It stays on the board as analysis: after

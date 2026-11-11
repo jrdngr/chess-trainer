@@ -29,7 +29,7 @@ struct RunView: View {
   @State private var shakes = 0
   /// The forced move's arrow glows for a moment after a refused move.
   @State private var nudged = 0
-  /// The X mid-round asks before it ends the round.
+  /// The X mid-round asks before it ends the session.
   @State private var askingToEnd = false
   /// The finished run, analysed on its board while the deck is under it.
   @State private var analysis: RunAnalysis?
@@ -100,8 +100,8 @@ struct RunView: View {
     }
     .contentShape(Rectangle())
     .onTapGesture { if model.intro == .announce { model.toBoard() } }
-    .confirmationDialog("End this round?", isPresented: $askingToEnd, titleVisibility: .visible) {
-      Button("End round", role: .destructive) { model.endRound() }
+    .confirmationDialog(model.tutorialGame == nil ? "End session?" : "End this round?", isPresented: $askingToEnd, titleVisibility: .visible) {
+      Button(model.tutorialGame == nil ? "End session" : "End round", role: .destructive) { end() }
       Button("Keep playing", role: .cancel) {}
     }
     .onChange(of: drawing, initial: true) {
@@ -403,8 +403,8 @@ struct RunView: View {
     return fens + [shown]
   }
 
-  /// The X: once play is under way it ends the round and goes to the end screen; before that it leaves.
-  /// A run over on the board, with the deck under it, leaves.
+  /// The X: once play is under way it asks, then ends the round and goes Home; before that it leaves.
+  /// A tutorial game ends on its end screen instead. A run over on the board, with the deck under it, leaves.
   private func close() {
     if drawing {
       onExit()
@@ -412,10 +412,16 @@ struct RunView: View {
       model.continueToEnd()
     } else if model.live && model.intro == .done {
       // A round already called over, or one with nothing played yet, ends without asking.
-      if model.endCued || model.run.played.count <= model.run.opened { model.endRound() } else { askingToEnd = true }
+      if model.endCued || model.run.played.count <= model.run.opened { end() } else { askingToEnd = true }
     } else {
       onExit()
     }
+  }
+
+  /// The round ends where it stands: Home, or a tutorial game's end screen.
+  private func end() {
+    model.endRound()
+    if model.tutorialGame == nil { onExit() }
   }
 
   /// One fixed-height slot: the moves played for you while they replay, else the goal.
