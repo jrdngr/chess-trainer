@@ -51,13 +51,14 @@ import Testing
     state.score.rounds = [RoundRecord(mode: .run, openingId: "", color: .w, answered: 1, correct: 1, perfect: true, at: 0)]
     state.recordGame(GameRecord(
       id: "g", mode: .play, at: 0, color: .w, picked: state.settings.selection, opening: "", moves: ["e4"], result: "*", termination: "ended"))
-    state.events = [AppEvent(kind: "add", via: .playbook, playbookId: id)]
+    state.events = [AppEvent(kind: "add", via: .playbook, playbookId: id), AppEvent(kind: "remove-playbook", playbookId: id)]
     // The same save as version 2 wrote it.
     var old = String(decoding: try JSONEncoder().encode(state), as: UTF8.self)
     for (new, was) in [
       ("\"playbookId\"", "\"repertoireId\""), ("\"playbooks\"", "\"repertoires\""), ("\"playbookOrder\"", "\"repertoireOrder\""),
       ("\"runRecord\"", "\"survival\""), ("\"version\":3", "\"version\":2"), ("\"run\":{", "\"survival\":{"), ("\"oldPlay\":{", "\"run\":{"),
       ("\"mode\":\"run\"", "\"mode\":\"survival\""), ("\"mode\":\"play\"", "\"mode\":\"autopilot\""), ("\"via\":\"playbook\"", "\"via\":\"repertoire\""),
+      ("\"remove-playbook\"", "\"remove-repertoire\""),
       ("\"play\":{", "\"autopilot\":{"), ("\"either\"", "\"random\""),
     ] {
       #expect(old.contains(new), "\(new) is not in the save")
@@ -73,6 +74,20 @@ import Testing
   @Test func currentSavesReadAsTheyAre() throws {
     var state = AppState()
     state.addLine(state.ensurePlaybook(.w), line("e4 e5"), .fixed(.book))
+    let data = try JSONEncoder().encode(state)
+    #expect(renamedSave(data) == data)
+    #expect(try decodeSave(data) == state)
+  }
+
+  /// Rule 4: a save renamed on load and written back before its version was raised reads as it is.
+  @Test func renamedSaveWrittenBackEarlyReadsAsItIs() throws {
+    var state = AppState()
+    state.addLine(state.ensurePlaybook(.w), line("e4 e5"), .fixed(.book))
+    state.settings.play.moveScores = false
+    state.score.global.byMode[.run]?.rounds = 5
+    state.recordGame(GameRecord(
+      id: "g", mode: .play, at: 0, color: .w, picked: state.settings.selection, opening: "", moves: ["e4"], result: "*", termination: "ended"))
+    state.version = 0
     let data = try JSONEncoder().encode(state)
     #expect(renamedSave(data) == data)
     #expect(try decodeSave(data) == state)

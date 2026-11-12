@@ -1132,7 +1132,7 @@
       "review"
     ],
     "MODE_NAMES": {
-      "run": "Play (old)",
+      "oldPlay": "Play (old)",
       "run": "Run",
       "drill": "Drill",
       "growth": "Growth",

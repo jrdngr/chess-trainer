@@ -43,9 +43,11 @@ public func decodeSave(_ data: Data) throws -> AppState {
 }
 
 /// A save from before version 3 with its keys and values under their new names; any other data as it is.
+/// A save that already holds `playbooks` has the new names, whatever its version says: it was
+/// renamed on an earlier load and written back before `migrate` could raise its version.
 public func renamedSave(_ data: Data) -> Data {
   guard var root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return data }
-  if (root["version"] as? Int ?? 0) >= 3 { return data }
+  if (root["version"] as? Int ?? 0) >= 3 || root["playbooks"] != nil { return data }
   root = renameKeys(root, ["repertoireId": "playbookId", "repertoires": "playbooks", "repertoireOrder": "playbookOrder"]) as! [String: Any]
   rename(&root, "survival", "runRecord")
   if var settings = root["settings"] as? [String: Any] {
@@ -65,7 +67,7 @@ public func renamedSave(_ data: Data) -> Data {
   }
   if let events = root["events"] as? [[String: Any]] {
     let places = ["repertoire": "playbook", "play": "freePlay", "autopilot": "play", "survival": "run"]
-    root["events"] = events.map { renamedValue($0, "via", places) }
+    root["events"] = events.map { renamedValue(renamedValue($0, "via", places), "kind", ["remove-repertoire": "remove-playbook"]) }
   }
   return (try? JSONSerialization.data(withJSONObject: root)) ?? data
 }
