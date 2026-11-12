@@ -149,7 +149,6 @@ public struct StartOptions {
   /// What My lines tilts toward. Autopilot chooses; the setup screen leans weak.
   public var lean: Steer?
   public var toward: OpeningNode?
-  public var enter = false
   public var at: [String]?
   /// A line the opponent follows while it can: a gap to reach.
   public var aim: [String]?
@@ -173,7 +172,6 @@ public func startSurvival(_ opts: StartOptions) -> SurvivalStart? {
   var begin = BeginOptions(tree: opts.tree, reps: blind ? [] : opts.reps, node: opts.node, color: opts.color)
   begin.steer = opts.steer == .gaps ? .gaps : opts.lean ?? .weak
   begin.toward = opts.toward
-  begin.enter = opts.enter
   begin.at = opts.at
   begin.aim = opts.aim
   begin.free = opts.free

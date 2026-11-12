@@ -30,11 +30,10 @@ private func fixed4(_ x: Double) -> Double { Double(JS.toFixed(x, 4))! }
     return Seen(at: at, round: 10)
   }
   func choice(_ j: JSON) -> ColorChoice { ColorChoice(rawValue: j.string)! }
-  func start(_ steer: SurvivalSteer, _ lean: Steer?, _ c: ColorChoice, _ at: OpeningNode, toward: OpeningNode? = nil, enter: Bool = false, seed: Int, seen: Seen? = nil) -> SurvivalStart {
+  func start(_ steer: SurvivalSteer, _ lean: Steer?, _ c: ColorChoice, _ at: OpeningNode, toward: OpeningNode? = nil, seed: Int, seen: Seen? = nil) -> SurvivalStart {
     var opts = StartOptions(steer: steer, tree: tree, reps: reps, node: at, color: c)
     opts.lean = lean
     opts.toward = toward
-    opts.enter = enter
     opts.seed = Double(seed)
     opts.seen = seen
     return Env.at(now) { startSurvival(opts)! }
@@ -59,7 +58,7 @@ private func fixed4(_ x: Double) -> Double { Double(JS.toFixed(x, 4))! }
       let lean = a[1].stringOrNil.map { Steer(rawValue: $0)! }
       let at = node(a[3].string)
       return (1...12).map { seed -> String in
-        let s = start(steer, lean, choice(a[2]), at, toward: at, enter: a[4].bool, seed: seed).state.run
+        let s = start(steer, lean, choice(a[2]), at, toward: at, seed: seed).state.run
         return "\(s.color.rawValue) [\(s.played.joined(separator: " "))] \(s.target.joined(separator: " "))"
       }.json
     },
@@ -86,7 +85,6 @@ private func fixed4(_ x: Double) -> Double { Double(JS.toFixed(x, 4))! }
       let rand = mulberry32(7)
       return counts((1...300).map { _ in opponentReply(source, base, rand).played.last ?? "(none)" })
     },
-    "openingRun.wayIn": { wayIn(tree, node($0[0].string), line($0[1].string)).json },
     "openingRun.weaknessFromCards": { a in
       let key = positionKey("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")
       var cards: [String: Card] = [:]

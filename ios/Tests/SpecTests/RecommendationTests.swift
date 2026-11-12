@@ -77,30 +77,36 @@ import Testing
   #expect(found.first?.color == .w)
 }
 
-/// Play fills a missing Black basic only when the side can be Black, the
-/// selected opening's own first move first.
-@Test func basicRunOnlyWhenBlackCanPlay() throws {
+/// On Any Opening with Black or Either, Black's first runs start at move one
+/// and grow Black's answer to 1.e4, then to 1.d4. A picked opening never does.
+@Test func blacksFirstRunsGrowItsFirstAnswers() throws {
   let tree = openingTree(bookIndex)
   var state = AppState()
   state.addLine(state.ensureRepertoire(.w), line("e4 e5 Nf3 Nc6 Bb5"), .fixed(.book))
-  func play() {
-    let at = Env.now() + Double(state.games.count + 1)
-    state.games.append(GameRecord(
-      id: "g\(at)", mode: .autopilot, at: at, color: .w, picked: DEFAULT_SELECTION, opening: "", moves: [],
-      result: "*", termination: "ended"))
-  }
-  let random = Selection(color: .random, opening: ANY_OPENING)
-  // The game that added the moves, then one that only plays them: no two fills in a row.
-  play()
-  #expect(basicRunGap(state, tree, random) == nil)
-  play()
-  #expect(basicRunGap(state, tree, Selection(color: .w, opening: ANY_OPENING)) == nil)
-  #expect(basicRunGap(state, tree, Selection(color: .random, opening: ANY_OPENING))?.line == line("e4"))
   let qgd = try #require(tree.byId["d4 d5 c4 e6"])
-  #expect(basicRunGap(state, tree, Selection(color: .b, opening: qgd.id))?.line == line("d4"))
+  #expect(blackFirstGap(state, tree, Selection(color: .b, opening: qgd.id)) == nil)
+  #expect(blackFirstGap(state, tree, Selection(color: .w, opening: ANY_OPENING)) == nil)
+  for color in [ColorChoice.b, .random] {
+    let round = try #require(nextRound(state, tree, Selection(color: color, opening: ANY_OPENING), AutoHistory()))
+    #expect(round.pick.color == .b && round.at == nil && round.aim == line("e4") && round.grow?.line == line("e4"))
+  }
   state.addLine(state.ensureRepertoire(.b), line("e4 e5"), .fixed(.book))
+  #expect(nextRound(state, tree, Selection(color: .b, opening: ANY_OPENING), AutoHistory())?.grow?.line == line("d4"))
   state.addLine(state.ensureRepertoire(.b), line("d4 d5"), .fixed(.book))
-  #expect(basicRunGap(state, tree, Selection(color: .b, opening: ANY_OPENING)) == nil)
+  #expect(blackFirstGap(state, tree, Selection(color: .b, opening: ANY_OPENING)) == nil)
+}
+
+/// With nothing of yours past White's move 1, Drill starts at move one and grows
+/// at the opening's gap, whatever the line's need.
+@Test func drillWithNothingToStartAtGrowsFromMoveOne() throws {
+  let tree = openingTree(bookIndex)
+  var state = AppState()
+  state.addLine(state.ensureRepertoire(.w), line("e4"), .fixed(.book))
+  let round = try #require(nextRound(state, tree, Selection(color: .w, opening: ANY_OPENING), AutoHistory()))
+  #expect(round.at == nil)
+  let grow = try #require(round.grow)
+  #expect(grow.hole.path == line("e4"))
+  #expect(round.aim == grow.line)
 }
 
 /// More shows ten: five "Too short" when there are five, the rest by importance.
@@ -185,9 +191,9 @@ import Testing
   #expect(hole.gap.kind == .tooShort)
 }
 
-/// Drill never starts from move one, even with a prep that ends at the opening's own position:
-/// every run starts at one of your moves.
-@Test func drillNeverStartsFromMoveOne() throws {
+/// With a move of yours to start at, Drill starts there, even with a prep that ends at the
+/// opening's own position.
+@Test func drillStartsAtOneOfYourMoves() throws {
   let tree = openingTree(bookIndex)
   var state = AppState()
   let id = state.ensureRepertoire(.b)
@@ -202,7 +208,6 @@ import Testing
       RoundRecord(mode: .survival, openingId: opening.id, color: .b, answered: 2, correct: 2, perfect: true, at: Env.now()))
     let later = try #require(nextRound(state, tree, selection, AutoHistory()))
     #expect([line("d4"), line("d4 d5 c4")].contains(later.at ?? []))
-    state.score.starts.append(startKind(start: later.pick.start, at: later.at))
   }
 }
 

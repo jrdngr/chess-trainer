@@ -15,11 +15,6 @@ public enum ActivityMode: String, Sendable, Codable, CaseIterable {
 
 public let ACTIVITY_MODES = ActivityMode.allCases
 
-/// Where an Autopilot run started.
-public enum StartKind: String, Sendable, Codable {
-  case position, inside, cold
-}
-
 public enum RATING {
   /// Where an opening starts.
   public static let start: Double = 0
@@ -182,8 +177,6 @@ public struct ScoreState: Equatable, Sendable, Codable {
   public var seen: [String: Int] = [:]
   /// How many rounds have played a line: the clock freshness is read against.
   public var lineRounds = 0
-  /// Where Autopilot's last runs started, oldest first.
-  public var starts: [StartKind] = []
 
   public init() {}
 }
@@ -346,16 +339,6 @@ public func recordRound(_ state: ScoreState, _ tree: OpeningTree, _ round: Round
     next.lineRounds += 1
     next.seen = markSeen(state.seen, line, next.lineRounds)
   }
-  return next
-}
-
-/// How many of Autopilot's starts are remembered.
-let STARTS_KEPT = 6
-
-/// Autopilot started a run: remembered across sessions.
-public func recordStart(_ state: ScoreState, _ kind: StartKind) -> ScoreState {
-  var next = state
-  next.starts = Array((state.starts + [kind]).suffix(STARTS_KEPT))
   return next
 }
 

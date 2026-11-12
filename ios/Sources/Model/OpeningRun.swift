@@ -251,8 +251,6 @@ public struct BeginOptions {
   public var weakness: Weakness?
   public var growth: GrowthOptions?
   public var seen: Seen?
-  /// Start inside the opening walked toward.
-  public var enter = false
   /// Start at the position these moves reach.
   public var at: [String]?
   /// A line to follow while the run is on it: a gap to reach.
@@ -333,12 +331,11 @@ public func beginRun(_ opts: BeginOptions) -> Begun? {
   let atWalk = (opts.at?.isEmpty == false) ? walkSan(opts.at!) : nil
   let atFen = atWalk.flatMap { $0.moves.count == opts.at!.count ? $0.fens[opts.at!.count] : nil }
   let first = atFen.map { draw(At(fen: $0, played: opts.at!)) } ?? draw(At(fen: START_FEN, played: []))
-  // A round started inside the opening: the drawn line's way in is played for you.
-  let way = atFen != nil ? opts.at! : opts.enter && aim.depth >= 2 ? wayIn(tree, aim, first.target) : []
+  let way = atFen != nil ? opts.at! : []
   let entered = walkSan(way)
   let opened = entered.moves.count == way.count ? way.count : 0
   let fen = opened < entered.fens.count ? entered.fens[opened] : START_FEN
-  let startedIn = opened == 0 ? nil : atFen != nil ? deepestNodeWithin(tree, aim, way) : aim
+  let startedIn = opened == 0 ? nil : deepestNodeWithin(tree, aim, way)
 
   let run = Run(
     id: newRunId(), sourceLabel: startedIn?.name ?? node.name, openingId: node.id, repertoireId: rep?.id,
@@ -392,20 +389,6 @@ private func linesThrough(_ rep: Repertoire, _ tree: OpeningTree, _ aim: Opening
     out.append((line.tipId, at.played + rest.map(\.san), rest.filter { fenTurn($0.fenBefore) == side }.map(\.key)))
   }
   return out
-}
-
-/// The way into an opening along a line: its moves up to the first that
-/// reaches a position the opening names; empty when it never gets there.
-public func wayIn(_ tree: OpeningTree, _ aim: OpeningNode, _ sans: [String]) -> [String] {
-  if aim.depth == 0 { return [] }
-  let inside = regionOf(tree, aim).inside
-  var fen = START_FEN
-  for (i, san) in sans.enumerated() {
-    guard let move = applySan(fen, san) else { return [] }
-    fen = move.after
-    if inside.contains(positionKey(fen)) { return Array(sans.prefix(i + 1)) }
-  }
-  return []
 }
 
 /// The hole to walk toward: inside the opening while there is any, drawn on

@@ -10,6 +10,8 @@ public struct AutoRound: Sendable {
   public var at: [String]?
   /// A gap's line the run steers to, when a new move is due.
   public var aim: [String]? = nil
+  /// The gap growth opens at when the run reaches it, whatever the line's need.
+  public var grow: Gap? = nil
   /// Freeform: from move one with nothing drawn; the opponent weighs its replies at each turn.
   public var free = false
   /// Freeform: the lines of gaps due a new move, which the opponent leans toward.
@@ -44,6 +46,7 @@ public func prepAccuracy(_ rounds: [RoundRecord], _ colors: [Color]) -> Double? 
 
 /// Autopilot's next run, or nil with nothing prepared inside the selection.
 public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _ history: AutoHistory) -> AutoRound? {
+  if let gap = blackFirstGap(state, tree, selection) { return firstMoveRound(tree, gap) }
   if state.settings.start == .freeform { return freeRound(state, tree, selection, history) }
   let accuracy = { (color: Color) in prepAccuracy(state.score.rounds, [color]) }
   // A new move is due: the run heads for the gap that most wants one, from your move most due on its line.
@@ -56,24 +59,26 @@ public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selec
         && item.expected.contains { $0.san == line[item.pathSans.count] }
     }
     let start = drillStart(onLine, state.cards, accuracy: accuracy(gap.color), round: state.score.lineRounds)
-    let pick = Recommendation(focus: .test, opening: opening, color: gap.color, start: .inside)
-    // With no move of yours on the line to start at, past your first move as White, the run starts at the hole.
-    return AutoRound(pick: pick, at: start?.item.pathSans ?? gap.hole.path, aim: line)
+    let pick = Recommendation(focus: .test, opening: opening, color: gap.color)
+    // With no move of yours on the line to start at, past your first move as White, the run starts at move one.
+    return AutoRound(pick: pick, at: start?.item.pathSans, aim: line, grow: start == nil ? gap : nil)
   }
-  guard let recommended = recommend(recommendInput(state, tree, selection, history)) else { return nil }
-  let rep = state.repertoireList.first { $0.color == recommended.color }
-  let items = rep.map { itemsInRegion(tree, recommended.opening, allItems([$0])) } ?? []
-  var pick = recommended
-  pick.start = .inside
-  let start = drillStart(items, state.cards, accuracy: accuracy(recommended.color), round: state.score.lineRounds)
-  return AutoRound(pick: pick, at: start?.item.pathSans)
+  guard let pick = recommend(recommendInput(state, tree, selection, history)) else { return nil }
+  let rep = state.repertoireList.first { $0.color == pick.color }
+  let items = rep.map { itemsInRegion(tree, pick.opening, allItems([$0])) } ?? []
+  if let start = drillStart(items, state.cards, accuracy: accuracy(pick.color), round: state.score.lineRounds) {
+    return AutoRound(pick: pick, at: start.item.pathSans)
+  }
+  // No move of yours to start at, past your first move as White: from move one, growing at the opening's first gap.
+  let gap = rep.flatMap { rankGaps(gaps([$0], tree.index, tree: tree, scope: pick.opening)).first(where: insideYourLines) }
+  return AutoRound(pick: pick, at: nil, aim: gap?.line, grow: gap)
 }
 
 /// A Freeform round: the side the recommendation picks, from move one, steered only
 /// toward the opening picked on Home. Gaps due a new move are leaned toward, never set as the goal.
 func freeRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _ history: AutoHistory) -> AutoRound? {
   guard let recommended = recommend(recommendInput(state, tree, selection, history)) else { return nil }
-  let pick = Recommendation(focus: recommended.focus, opening: nodeById(tree, selection.opening), color: recommended.color, start: .first)
+  let pick = Recommendation(focus: recommended.focus, opening: nodeById(tree, selection.opening), color: recommended.color)
   return AutoRound(pick: pick, at: nil, free: true, due: dueGapLines(state, tree, selection, color: recommended.color))
 }
 
@@ -81,7 +86,7 @@ func freeRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _
 public func afterRound(_ history: AutoHistory, _ round: AutoRound, _ selection: Selection) -> AutoHistory {
   var next = history
   next.focuses.append(round.pick.focus)
-  next.steered.append(isSteered(opening: round.pick.opening, start: round.pick.start, selection))
+  next.steered.append(!round.free && isSteered(opening: round.pick.opening, selection))
   return next
 }
 
@@ -90,7 +95,6 @@ public func survivalOptions(_ round: AutoRound, _ state: AppState, _ tree: Openi
   var opts = StartOptions(steer: .lines, tree: tree, reps: state.repertoireList, node: nodeById(tree, selection.opening), color: round.pick.color == .w ? .w : .b)
   opts.lean = LEAN_FOR[round.pick.focus]
   opts.toward = round.pick.opening
-  opts.enter = round.pick.start == .inside
   opts.at = round.at
   opts.aim = round.aim
   opts.free = round.free

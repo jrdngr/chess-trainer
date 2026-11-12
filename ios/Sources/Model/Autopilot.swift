@@ -7,7 +7,7 @@ import Shared
 /// Where a Drill run starts: the position of your move most due, the moves to it played for
 /// you; see `docs/gameplay.md`. A move never asked is the most due. With none due, your weakest
 /// while your prep keeps missing, else the one closest to due. Never your first move as White,
-/// so a Drill run never starts from move one. Nil with no moves of yours to start at.
+/// so a Drill run starts from move one only when there is no move of yours to start at, which is nil.
 public func drillStart(_ items: [TrainingItem], _ cards: [String: Card], accuracy: Double?, round: Int, now: Double? = nil) -> (item: TrainingItem, need: Double)? {
   let now = now ?? Env.now()
   let candidates = items.filter { !$0.pathSans.isEmpty }
@@ -19,11 +19,6 @@ public func drillStart(_ items: [TrainingItem], _ cards: [String: Card], accurac
     return (weakest, ranked.first { $0.item.cardId == weakest.cardId }?.need ?? 0)
   }
   return ranked.first
-}
-
-/// The kind of start a round was given.
-public func startKind(start: Start, at: [String]?) -> StartKind {
-  at != nil ? .inside : start == .first ? .cold : .position
 }
 
 /// What each focus asks of a run.

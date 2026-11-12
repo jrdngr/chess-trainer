@@ -159,10 +159,6 @@ extension AppState {
     score = recordRound(score, tree, round)
   }
 
-  public mutating func noteStart(_ kind: StartKind) {
-    score = recordStart(score, kind)
-  }
-
   public mutating func endSurvival(_ tree: OpeningTree, _ line: [String], _ moves: Int, _ points: Int) {
     survival = recordSurvival(survival, tree, line, moves, points)
   }

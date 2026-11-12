@@ -182,7 +182,7 @@ public func tutorialGame(_ n: Int, _ openings: TutorialOpenings) -> TutorialGame
 
 /// A tutorial game's round: its side, from move one, steered along its line.
 public func tutorialRound(_ tree: OpeningTree, _ game: TutorialGame) -> AutoRound {
-  AutoRound(pick: Recommendation(focus: .test, opening: tree.root, color: game.color, start: .first), at: nil, aim: game.opening.sans)
+  AutoRound(pick: Recommendation(focus: .test, opening: tree.root, color: game.color), at: nil, aim: game.opening.sans)
 }
 
 /// The next move of a line `played` is still on, if it is.
@@ -455,7 +455,7 @@ public func commonPlies(_ index: ReferenceIndex, _ played: [String], from: Int =
 
 /// The first game's round: White, from move one, in no opening yet.
 public func firstGameRound(_ tree: OpeningTree) -> AutoRound {
-  AutoRound(pick: Recommendation(focus: .test, opening: tree.root, color: .w, start: .first), at: nil)
+  AutoRound(pick: Recommendation(focus: .test, opening: tree.root, color: .w), at: nil)
 }
 
 /// The gap a game with nothing saved for a side starts at: that side's first

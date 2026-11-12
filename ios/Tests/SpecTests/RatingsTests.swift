@@ -81,13 +81,8 @@ private func stats(_ days: [JSON], rating: Double = 0, rated: Int? = nil) -> Nod
   ], only: ["scoring.streak", "scoring.ratingChange", "scoring.ratingOn"])
 
   try check("autopilot", [
-    "scoring.recordStart": { a in
-      var state = ScoreState()
-      state.starts = a[0].array.map { StartKind(rawValue: $0.string)! }
-      return recordStart(state, StartKind(rawValue: a[1].string)!).starts.map(\.rawValue).json
-    },
     "srs.runNeed": { a in runNeed(a[0].decoded(Card.self), a[1].int, 1_790_845_200_000).json },
-  ], only: ["scoring.recordStart", "srs.runNeed"])
+  ], only: ["srs.runNeed"])
 }
 
 /// Just after midnight following the 23-hour day daylight saving starts on,

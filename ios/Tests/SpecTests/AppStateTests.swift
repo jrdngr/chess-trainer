@@ -28,13 +28,13 @@ import Testing
   state.settings.start = .freeform
   let id = state.ensureRepertoire(.b)
   state.addLine(id, line("e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5"), .fixed(.book))
+  state.addLine(id, line("d4 d5"), .fixed(.book))
   // Recent Tests brake the Playbook-wide Test, so a Review narrowed into the Najdorf wins.
   var history = AutoHistory()
   history.focuses = [.test, .test, .test]
   let round = try #require(nextRound(state, tree, Selection(color: .b, opening: ANY_OPENING), history))
   #expect(round.free)
   #expect(round.pick.opening.id == ANY_OPENING)
-  #expect(round.pick.start == .first)
   #expect(round.at == nil)
   #expect(round.aim == nil)
 }
@@ -45,10 +45,11 @@ import Testing
   var state = AppState()
   let id = state.ensureRepertoire(.b)
   state.addLine(id, line("e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5"), .fixed(.book))
+  state.addLine(id, line("d4 d5"), .fixed(.book))
   var history = AutoHistory()
   history.focuses = [.test, .test, .test]
   let round = try #require(nextRound(state, tree, Selection(color: .b, opening: ANY_OPENING), history))
-  #expect(round.pick.start != .first)
+  #expect(round.at?.isEmpty == false)
 }
 
 /// A save from before the start setting opens on Drill.

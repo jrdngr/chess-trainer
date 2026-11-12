@@ -26,31 +26,20 @@ public func narrowingBar(_ level: Int) -> Double {
   return at / (at + 1)
 }
 
-/// Whether a round on this opening starts in its position rather than from move one.
-public func startsInside(_ opening: OpeningNode) -> Bool {
-  opening.depth >= 2
-}
-
-public enum Start: String, Sendable, Codable {
-  case first, inside
-}
-
 public struct Recommendation: Sendable {
   public var focus: Focus
   public var opening: OpeningNode
   public var color: Color
-  public var start: Start
-  public init(focus: Focus, opening: OpeningNode, color: Color, start: Start) {
+  public init(focus: Focus, opening: OpeningNode, color: Color) {
     self.focus = focus
     self.opening = opening
     self.color = color
-    self.start = start
   }
 }
 
-/// Whether a round was steered: started inside an opening below the selection.
-public func isSteered(opening: OpeningNode, start: Start, _ selection: Selection) -> Bool {
-  start == .inside && opening.id != selection.opening
+/// Whether a Drill round was steered: on an opening below the selection.
+public func isSteered(opening: OpeningNode, _ selection: Selection) -> Bool {
+  opening.id != selection.opening
 }
 
 public struct Candidate: Equatable, Sendable {
@@ -245,7 +234,7 @@ public func candidates(_ input: RecommendInput) -> [Candidate] {
       }
       push(.review, node, color, reviewNeed(due, unseen, input.newPerSession), reachedIn(items, node).filter(wanting).count)
 
-      // A Test is only ever the selection, from move one.
+      // A Test is only ever the selection.
       if node === region {
         let since = lastAt(node.id) ?? 0
         let untested = mine.filter { $0.addedAt > since }.count
@@ -262,7 +251,7 @@ public func candidates(_ input: RecommendInput) -> [Candidate] {
 public func recommend(_ input: RecommendInput) -> Recommendation? {
   let tree = input.tree
   let closed = steeredRecently(input.recentSteered)
-  let open = { (id: String) in !closed || !isSteered(opening: nodeById(tree, id), start: .inside, input.selection) }
+  let open = { (id: String) in !closed || !isSteered(opening: nodeById(tree, id), input.selection) }
   let ranked = rank(candidates(input).filter { open($0.openingId) }, input.recentFocuses)
   guard var best = ranked.first else { return nil }
   while best.focus != .test {
@@ -279,7 +268,7 @@ public func recommend(_ input: RecommendInput) -> Recommendation? {
     best = child
   }
   let opening = nodeById(tree, best.openingId)
-  return Recommendation(focus: best.focus, opening: opening, color: best.color, start: startsInside(opening) ? .inside : .first)
+  return Recommendation(focus: best.focus, opening: opening, color: best.color)
 }
 
 /// How many recent Survival runs your prep accuracy is read over.

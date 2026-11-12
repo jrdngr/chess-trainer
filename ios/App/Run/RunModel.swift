@@ -113,13 +113,22 @@ final class RunModel {
   private let growth: GrowthPrefs
 
   /// Autopilot's round, on Autopilot's own options.
+  /// A round that grows at a first move (Black's answer to 1.e4 or 1.d4) adds it before the game goes on.
   convenience init?(round: AutoRound, selection: Selection, store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
+    let first = round.grow.flatMap { $0.hole.path.isEmpty ? $0 : nil }
+    var repId = ""
+    if let first { store.update { repId = $0.ensureRepertoire(first.color) } }
     let seed = (Env.random() * 2_147_483_648).rounded(.down)
     guard let begun = startSurvival(survivalOptions(round, store.state, tree, selection, seed: seed)) else { return nil }
     self.init(
       begun: begun, round: round, prefs: autoSurvival(store.state.settings.autopilot), growth: AUTO_GROWTH,
       selection: selection, store: store, tree: tree, index: index, engine: engine)
-    store.update { $0.noteStart(startKind(start: round.pick.start, at: round.at)) }
+    if var first {
+      first.repertoireId = repId
+      basicRun = true
+      holeAsked = true
+      fill = Fill(gap: first, size: store.state.settings.movesPerFill)
+    }
   }
 
   /// A new player's first game: White, nothing saved, adding moves from move one.
@@ -146,21 +155,6 @@ final class RunModel {
     tutorialLine = game.opening.sans
     holeAsked = true
     store.update { $0.settings.tips = game.tips }
-  }
-
-  /// A Play run that fills a Black basic: Black from move one, the opponent
-  /// opens with the basic's move, and you add your answer before the game goes on.
-  convenience init?(basic gap: Gap, store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
-    var repId = ""
-    store.update { repId = $0.ensureRepertoire(gap.color) }
-    var gap = gap
-    gap.repertoireId = repId
-    self.init(
-      round: basicRound(tree, gap), selection: Selection(color: gap.color == .w ? .w : .b, opening: ANY_OPENING), store: store, tree: tree, index: index,
-      engine: engine)
-    basicRun = true
-    holeAsked = true
-    fill = Fill(gap: gap, size: store.state.settings.movesPerFill)
   }
 
   /// A run set up on Survival's screen, on those options: `start` with no plan.
@@ -606,7 +600,8 @@ final class RunModel {
     else { return }
     holeAsked = true
     guard let found = growAtHole(store.state, tree, selection, color: run.color, line: run.played) else { return }
-    if found.yes { startFill(found.gap) } else { holeGap = found.gap }
+    // A round set to grow here grows whatever the line's need.
+    if found.yes || found.gap.line == round?.grow?.line { startFill(found.gap) } else { holeGap = found.gap }
   }
 
   /// The answers on offer while adding moves, the same as Growth's.

@@ -26,16 +26,13 @@ import Testing
   let decks = [deck { _ in nil }, deck { _ in 1 }, deck { $0 % 4 == 0 ? 8 : 2 }, deck({ $0 }, .learning)]
 
   try check("autopilot", [
-    "autopilot.startKind": { a in
-      startKind(start: Start(rawValue: a[0]["pick"]["start"].string)!, at: a[0]["at"] == .null ? nil : a[0]["at"].strings).rawValue.json
-    },
     "autopilot.drillStart": { a in
       drillStart(items, decks[a[0].int], accuracy: a[1].numberOrNil, round: a[2].int, now: now)
         .map { obj(["item": $0.item.cardId, "need": $0.need]) } ?? .null
     },
     "recommend.missingPrep": { missingPrep($0[0].numberOrNil).json },
     "autopilot.prepDepth": { a in prepDepth(line(a[0].string), color(a[1]), prepAt, a[2].int).json },
-  ], only: ["autopilot.startKind", "autopilot.drillStart", "recommend.missingPrep", "autopilot.prepDepth"])
+  ], only: ["autopilot.drillStart", "recommend.missingPrep", "autopilot.prepDepth"])
 }
 
 /// Golden/cases/functions/recommend.json
@@ -91,7 +88,7 @@ import Testing
     input.seen = Seen(at: score.seen, round: score.lineRounds)
     input.now = t
     guard let pick = recommend(input) else { return .null }
-    return obj(["focus": pick.focus.rawValue, "opening": pick.opening.id, "color": pick.color.rawValue, "start": pick.start.rawValue])
+    return obj(["focus": pick.focus.rawValue, "opening": pick.opening.id, "color": pick.color.rawValue])
   }
 
   try check("recommend", [

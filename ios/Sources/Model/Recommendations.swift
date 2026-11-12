@@ -256,25 +256,17 @@ public func growScore(_ gap: Gap, top: Gap?, pace p: Double, reps: [Repertoire],
 
 /* ── the questions, on the app's state ── */
 
-/// Play games since anything was added before a basics run: the game that
-/// added moves, then one that only plays them, so two fills never come back to back.
-public let BASIC_RUN_AFTER = 2
-
-/// The Black basic a Play run fills before anything else, when the selection
-/// plays Black or either side: the answer to 1.e4 or 1.d4 still missing, the
-/// selected opening's own first move first. Waits until the last game added
-/// nothing. Nil once both are answered.
-public func basicRunGap(_ state: AppState, _ tree: OpeningTree, _ selection: Selection) -> Gap? {
-  guard colorsOf(selection.color).contains(.b) else { return nil }
-  guard runsSinceAdded(state.games, state.repertoireList) >= BASIC_RUN_AFTER else { return nil }
-  let missing = basicGaps(state.repertoireList, tree.index).filter { $0.color == .b }
-  let first = nodeById(tree, selection.opening).sans.first
-  return missing.first { $0.hole.san == first } ?? missing.first
+/// Black's first runs on Any Opening, while Black has no answer to 1.e4 or
+/// 1.d4: the missing answer, 1.e4's first. Nil once both are answered, when
+/// the side can't be Black, or when a specific opening is picked.
+public func blackFirstGap(_ state: AppState, _ tree: OpeningTree, _ selection: Selection) -> Gap? {
+  guard selection.opening == ANY_OPENING, colorsOf(selection.color).contains(.b) else { return nil }
+  return basicGaps(state.repertoireList, tree.index).first { $0.color == .b }
 }
 
-/// The run that fills a basic: from move one, steered along the gap's line.
-public func basicRound(_ tree: OpeningTree, _ gap: Gap) -> AutoRound {
-  AutoRound(pick: Recommendation(focus: .test, opening: tree.root, color: gap.color, start: .first), at: nil, aim: gap.line)
+/// A run from move one along a gap's line, growing at its hole.
+public func firstMoveRound(_ tree: OpeningTree, _ gap: Gap) -> AutoRound {
+  AutoRound(pick: Recommendation(focus: .test, opening: tree.root, color: gap.color), at: nil, aim: gap.line, grow: gap)
 }
 
 /// The gaps inside a selection, every side it covers.

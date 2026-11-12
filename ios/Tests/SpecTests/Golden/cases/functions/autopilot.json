@@ -2,16 +2,6 @@
   "area": "autopilot",
   "functions": [
     {
-      "fn": "autopilot.startKind",
-      "about": "The kind of start a round was given.",
-      "cases": [
-      {"args":[{"pick":{"start":"inside"},"at":null}],"out":"position"},
-      {"args":[{"pick":{"start":"first"},"at":null}],"out":"cold"},
-      {"args":[{"pick":{"start":"inside"},"at":["e4","e5"]}],"out":"inside"},
-      {"args":[{"pick":{"start":"first"},"at":["e4","e5"]}],"out":"inside"}
-      ]
-    },
-    {
       "fn": "autopilot.drillStart",
       "about": "Where a Drill run starts: your move most due, a move never asked first; with none due, the weakest while prep keeps missing, else the closest to due. Never White's first move.",
       "cases": [
@@ -39,42 +29,6 @@
       {"args":[3,0.8,30],"out":{"item":"rep_w#rnbqkb1r/pp2pppp/3p1n2/8/3NP3/8/PPP2PPP/RNBQKB1R w KQkq -","need":10.0}},
       {"args":[3,0.97,20],"out":{"item":"rep_w#rnbqkb1r/pp2pppp/3p1n2/8/3NP3/8/PPP2PPP/RNBQKB1R w KQkq -","need":5.0}},
       {"args":[3,0.97,30],"out":{"item":"rep_w#rnbqkb1r/pp2pppp/3p1n2/8/3NP3/8/PPP2PPP/RNBQKB1R w KQkq -","need":10.0}}
-      ]
-    },
-    {
-      "fn": "scoring.recordStart",
-      "about": "Where runs started, kept with the score: the last few.",
-      "cases": [
-      {"args":[[],"position"],"out":["position"]},
-      {"args":[[],"inside"],"out":["inside"]},
-      {"args":[[],"cold"],"out":["cold"]},
-      {"args":[["position"],"position"],"out":["position","position"]},
-      {"args":[["position"],"inside"],"out":["position","inside"]},
-      {"args":[["position"],"cold"],"out":["position","cold"]},
-      {"args":[["cold"],"position"],"out":["cold","position"]},
-      {"args":[["cold"],"inside"],"out":["cold","inside"]},
-      {"args":[["cold"],"cold"],"out":["cold","cold"]},
-      {"args":[["inside"],"position"],"out":["inside","position"]},
-      {"args":[["inside"],"inside"],"out":["inside","inside"]},
-      {"args":[["inside"],"cold"],"out":["inside","cold"]},
-      {"args":[["position","position"],"position"],"out":["position","position","position"]},
-      {"args":[["position","position"],"inside"],"out":["position","position","inside"]},
-      {"args":[["position","position"],"cold"],"out":["position","position","cold"]},
-      {"args":[["cold","position"],"position"],"out":["cold","position","position"]},
-      {"args":[["cold","position"],"inside"],"out":["cold","position","inside"]},
-      {"args":[["cold","position"],"cold"],"out":["cold","position","cold"]},
-      {"args":[["position","inside"],"position"],"out":["position","inside","position"]},
-      {"args":[["position","inside"],"inside"],"out":["position","inside","inside"]},
-      {"args":[["position","inside"],"cold"],"out":["position","inside","cold"]},
-      {"args":[["inside","position"],"position"],"out":["inside","position","position"]},
-      {"args":[["inside","position"],"inside"],"out":["inside","position","inside"]},
-      {"args":[["inside","position"],"cold"],"out":["inside","position","cold"]},
-      {"args":[["position","position","cold"],"position"],"out":["position","position","cold","position"]},
-      {"args":[["position","position","cold"],"inside"],"out":["position","position","cold","inside"]},
-      {"args":[["position","position","cold"],"cold"],"out":["position","position","cold","cold"]},
-      {"args":[["cold","inside","position"],"position"],"out":["cold","inside","position","position"]},
-      {"args":[["cold","inside","position"],"inside"],"out":["cold","inside","position","inside"]},
-      {"args":[["cold","inside","position"],"cold"],"out":["cold","inside","position","cold"]}
       ]
     },
     {
