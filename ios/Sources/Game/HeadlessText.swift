@@ -1,4 +1,5 @@
 import ChessCore
+import Engine
 import Model
 
 /// The headless app as text: what a player would see on screen, for the command line and for agents.
@@ -12,6 +13,7 @@ extension HeadlessApp {
     case .home: lines += homeLines()
     case .play, .middlegame: lines += runLines()
     case .growth: lines += growthLines()
+    case .playOn: lines += playOnLines()
     case .endgame: lines += endgameLines()
     }
     let flashed = takeSignals().compactMap(Self.describe)
@@ -71,6 +73,16 @@ extension HeadlessApp {
     case .done, .lost: lines.append("Done: \(growth.verdictText). `save` keeps the moves, `more` adds another batch.")
     default: lines.append("Walking your line.")
     }
+    return lines
+  }
+
+  private func playOnLines() -> [String] {
+    guard let playOn else { return [] }
+    var lines = ["Playing on · you play \(playOn.color == .w ? "White" : "Black")"]
+    lines.append(board(playOn.fen, playOn.color))
+    lines.append("Moves: \(playOn.sans.joined(separator: " "))")
+    if let best = playOn.best { lines.append("Eval: \(formatScore(best))") }
+    lines.append(playOn.result.map { "Over: \($0)" } ?? (playOn.engineTurn ? "Engine thinking." : "Your move. `undo` takes back a pair; `back` returns to the line."))
     return lines
   }
 

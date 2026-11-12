@@ -18,7 +18,7 @@ let HELP = """
              play · recs · grow N · endgames · middlegame
   Board:     <san> (or move <san> <san>...) · think SECONDS
   Play:      end · continue · next · undo · done · grow · replay
-  Growth:    save · more
+  Growth:    save · more · play-on · back
   Endgames:  practice · ending ID · resign · next
   """
 
@@ -95,6 +95,8 @@ func perform(_ app: HeadlessApp, _ words: [String]) async throws -> Bool {
     await app.idle()
   case "save": app.saveGrowth()
   case "more": await app.addMore()
+  case "play-on": try await app.playOnFromGrowth()
+  case "back": app.backToTheLine()
   case "practice": try await app.practice()
   case "ending": try await app.playEnding(rest.first ?? "")
   case "resign": await app.resign()

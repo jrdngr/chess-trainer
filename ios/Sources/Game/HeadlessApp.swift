@@ -15,7 +15,7 @@ import Model
 public final class HeadlessApp: SignalSink {
   /// What's on screen.
   public enum Screen: String, Sendable {
-    case welcome, onboarding, home, play, growth, endgame, middlegame
+    case welcome, onboarding, home, play, growth, playOn, endgame, middlegame
   }
 
   public enum Failure: Error, CustomStringConvertible {
@@ -45,6 +45,8 @@ public final class HeadlessApp: SignalSink {
   public private(set) var growth: GrowthModel?
   public private(set) var endgame: EndgameSession?
   public private(set) var middlegame: MiddlegameSession?
+  /// A game played on from the end of a Growth line, over the sitting.
+  public private(set) var playOn: PlayOnGame?
 
   private init(store: AppStore, clock: VirtualClock, services: GameServices, tree: OpeningTree, index: ReferenceIndex) {
     self.store = store
@@ -135,6 +137,7 @@ public final class HeadlessApp: SignalSink {
   public var screen: Screen {
     if !state.settings.seenIntro { return .welcome }
     if !state.settings.onboarded && play == nil { return .onboarding }
+    if playOn != nil { return .playOn }
     if growth != nil { return .growth }
     if play != nil { return .play }
     if endgame != nil { return .endgame }
@@ -245,6 +248,8 @@ public final class HeadlessApp: SignalSink {
   }
 
   private func closeModes() {
+    playOn?.stop()
+    playOn = nil
     play?.leave()
     play = nil
     growth?.leave()
@@ -266,6 +271,7 @@ public final class HeadlessApp: SignalSink {
 
   /// The board as it stands.
   public var fen: String? {
+    if let playOn { return playOn.fen }
     if let growth { return growth.introFen ?? growth.fen }
     if let run { return run.shownFen }
     if let game = endgame?.game { return game.fen }
@@ -274,6 +280,7 @@ public final class HeadlessApp: SignalSink {
 
   /// The side you play on the board.
   public var side: ChessCore.Color? {
+    if let playOn { return playOn.color }
     if let growth { return growth.run.color }
     if let run { return run.run.color }
     if let game = endgame?.game { return game.color }
@@ -282,6 +289,7 @@ public final class HeadlessApp: SignalSink {
 
   /// The moves played on the board.
   public var moves: [String] {
+    if let playOn { return playOn.sans }
     if let growth { return growth.run.path }
     if let run { return run.run.played }
     if let game = endgame?.game { return game.moves }
@@ -294,7 +302,9 @@ public final class HeadlessApp: SignalSink {
     guard let fen else { throw Failure.notHere("No board") }
     guard let move = applySan(fen, san) else { throw Failure.illegal(san) }
     let before = (moves.count, growth?.session, endgame?.game?.moves.count)
-    if let growth {
+    if let playOn {
+      playOn.play(move)
+    } else if let growth {
       growth.play(move)
     } else if let run {
       run.play(move)
@@ -320,7 +330,7 @@ public final class HeadlessApp: SignalSink {
 
   /// Undo the last move added.
   public func undo() async {
-    if let growth { growth.undoLast() } else { run?.undoAdded() }
+    if let playOn { playOn.takeBack() } else if let growth { growth.undoLast() } else { run?.undoAdded() }
     await idle()
   }
 
@@ -354,6 +364,11 @@ public final class HeadlessApp: SignalSink {
         _ = play.draw()
         play.dealt()
       } else {
+        // Next run on a round under way: it ends where it stands, and the next follows.
+        if let model = play.model, model.finish == nil {
+          model.advancing = true
+          model.endRound()
+        }
         play.next()
       }
     } else if let middlegame {
@@ -378,6 +393,19 @@ public final class HeadlessApp: SignalSink {
   public func addMore() async {
     growth?.addMore()
     await idle()
+  }
+
+  /// Play on from the end of the sitting's line against the engine. Nothing is recorded.
+  public func playOnFromGrowth() async throws {
+    guard let growth else { throw Failure.notHere("Growth isn't open") }
+    playOn = PlayOnGame(from: growth.fen, color: growth.run.color, services: services)
+    await idle()
+  }
+
+  /// Back from playing on, to the sitting.
+  public func backToTheLine() {
+    playOn?.stop()
+    playOn = nil
   }
 
   /* ── Endgames ── */

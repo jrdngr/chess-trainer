@@ -71,3 +71,28 @@ private func freeCapture(_ fen: String) -> String? {
     #expect(run.myTurn && run.live)
   }
 }
+
+/// Playing on from where a Growth sitting rests: the engine answers your move, Take back removes the pair,
+/// and nothing goes into the Playbook or the history.
+@MainActor @Test func playingOnFromALineRecordsNothing() async throws {
+  try await headless { app in
+    try app.skipTutorial(starter: "classical")
+    let gap = try #require(app.recommendations.first { $0.color == .w })
+    try await app.grow(gap)
+    try await app.move(try #require(app.choices.first))
+    let playbooks = app.state.playbooks
+    try await app.playOnFromGrowth()
+    #expect(app.screen == .playOn)
+    let start = try #require(app.fen)
+
+    try #require(fenTurn(start) == .w, "the sitting rests on White's move")
+
+    try await app.move(try #require(goodMove(start)))
+    #expect(app.moves.count == 2, "the engine answers")
+    await app.undo()
+    #expect(app.moves.isEmpty && app.fen == start)
+    app.backToTheLine()
+    #expect(app.screen == .growth)
+    #expect(app.state.playbooks == playbooks && app.state.games.isEmpty)
+  }
+}

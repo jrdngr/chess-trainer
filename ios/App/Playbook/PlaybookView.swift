@@ -28,7 +28,7 @@ struct PlaybookView: View {
 
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
-  @State private var scan = TidyScan()
+  @State private var scan = TidyScan(checks: EngineChecks.shared)
   @State private var page: Page?
   @State private var focus: TidyFind?
   @State private var adding = false
