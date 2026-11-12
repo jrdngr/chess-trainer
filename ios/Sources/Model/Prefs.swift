@@ -58,9 +58,9 @@ public struct SurvivalPrefs: Equatable, Sendable, Codable {
 public let OPPONENT_MATCH = "match"
 
 extension SurvivalPrefs {
-  /// The level the opponent plays at on an engine, given your strength.
-  public func opponentLevel(_ strength: PlayerStrength, engine: EngineKind) -> Level {
-    opponent == OPPONENT_MATCH ? levelMatching(strength, engine: engine) : levelById(opponent, engine: engine)
+  /// The level the opponent plays at, given your strength.
+  public func opponentLevel(_ strength: PlayerStrength) -> Level {
+    opponent == OPPONENT_MATCH ? levelMatching(strength) : levelById(opponent)
   }
 }
 

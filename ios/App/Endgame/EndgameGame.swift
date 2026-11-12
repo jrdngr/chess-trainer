@@ -42,8 +42,8 @@ final class EndgameGame {
   init(entry: EndgameEntry, store: AppStore) {
     self.entry = entry
     self.store = store
-    engine = makeEngine(store.state.settings.engine)
-    judgeEngine = makeEngine(store.state.settings.engine)
+    engine = makeEngine()
+    judgeEngine = makeEngine()
     start = endgameStart(entry, Env.random) { exactResult($0, for: $1) }
     fen = start
     color = fenTurn(start)

@@ -207,7 +207,7 @@ final class RunModel {
   var prefs: SurvivalPrefs { ctx.prefs }
   /// Who plays the other side past the book. Autopilot's opponent always plays at your strength.
   var opponentLevel: Level {
-    round != nil ? levelMatching(store.state.strength, engine: engine.kind) : prefs.opponentLevel(store.state.strength, engine: engine.kind)
+    round != nil ? levelMatching(store.state.strength) : prefs.opponentLevel(store.state.strength)
   }
   /// With moments, missions or the combo on, a run is scored in points as well as moves.
   var scoredInPoints: Bool { prefs.moments || prefs.missions || prefs.combo }
@@ -452,7 +452,7 @@ final class RunModel {
   /// The opponent's own engine, so its reply can be searched while the judge
   /// weighs your move.
   private static let replyEngines = EngineSlot()
-  private var replyEngine: ChessEngine { Self.replyEngines(engine.kind) }
+  private var replyEngine: ChessEngine { Self.replyEngines() }
   /// The reply searched ahead, for the position after your move.
   private var reply: (fen: String, search: Task<EngineSnapshot, Never>)?
 

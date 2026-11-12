@@ -57,11 +57,3 @@ import Testing
   let settings = try JSONDecoder().decode(Settings.self, from: data)
   #expect(settings.start == .drill)
 }
-
-/// An engine this build doesn't have opens on the default one, keeping the rest of the save.
-@Test func unknownEngineFallsBackToDefault() throws {
-  let data = Data(#"{"engine":"retired","start":"freeform"}"#.utf8)
-  let settings = try JSONDecoder().decode(Settings.self, from: data)
-  #expect(settings.engine == Settings().engine)
-  #expect(settings.start == .freeform)
-}

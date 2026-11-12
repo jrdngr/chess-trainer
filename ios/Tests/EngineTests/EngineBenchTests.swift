@@ -4,45 +4,10 @@ import Model
 import Testing
 @testable import Engine
 
-/// How the engine does, printed for comparing builds. Runs only with
+/// How the judge and the levels do, printed for comparing builds. Runs only with
 /// ENGINE_BENCH set (CI's release step), since the judge bench takes minutes.
 @Suite(.serialized, .enabled(if: ProcessInfo.processInfo.environment["ENGINE_BENCH"] != nil))
 struct EngineBenchTests {
-  static let positions = [
-    START_FEN,
-    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
-    "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
-    "r2q1rk1/pp2bppp/2n1pn2/3p4/2PP4/2N1PN2/PP3PPP/R2QKB1R w KQ - 0 9",
-  ]
-
-  func perft(_ pos: Position, _ depth: Int) -> Int {
-    if depth == 0 { return 1 }
-    var total = 0
-    for move in pos.pseudoMoves() where pos.make(move) {
-      total += perft(pos, depth - 1)
-      pos.unmake(move)
-    }
-    return total
-  }
-
-  /// Speed: fixed depths, so the work is the same from run to run.
-  @Test func bench() {
-    var started = Date()
-    let nodes = perft(Position(START_FEN), 4) + perft(Position(Self.positions[1]), 3)
-    let perftSeconds = Date().timeIntervalSince(started)
-    #expect(nodes == 197_281 + 97_862)
-
-    started = Date()
-    var searched = 0
-    for fen in Self.positions {
-      searched += search(fen, SearchOptions(maxDepth: 6, timeMs: 60_000, multiPv: 1), TranspositionTable())!.nodes
-    }
-    let searchSeconds = Date().timeIntervalSince(started)
-    print(String(
-      format: "BENCH perft %d nodes %.3fs (%.0f knps) | search %d nodes %.3fs (%.0f knps)",
-      nodes, perftSeconds, Double(nodes) / perftSeconds / 1000, searched, searchSeconds, Double(searched) / searchSeconds / 1000))
-  }
-
   /// The most played move in the book's 60 most played positions. Strong
   /// players' main moves are sound, so each one flagged is a false blunder.
   static let bookMoves: [(fen: String, san: String)] = [
@@ -119,7 +84,7 @@ struct EngineBenchTests {
     (["e4", "e5", "Qh5", "Nc6", "Bc4"], "Nf6"),
   ]
 
-  func verdict(_ engine: BasicEngine, _ fen: String, _ san: String) async -> Judgement? {
+  func verdict(_ engine: CaissaEngine, _ fen: String, _ san: String) async -> Judgement? {
     guard let move = applySan(fen, san), let base = await baseline(engine, fen, moments: false) else { return nil }
     return await judge(engine, base, san: san, uci: move.uci, color: fenTurn(fen), moments: false)
   }
@@ -129,14 +94,14 @@ struct EngineBenchTests {
     let started = Date()
     var flagged: [String] = []
     for c in Self.bookMoves {
-      let engine = BasicEngine()
+      let engine = CaissaEngine()
       guard let v = await verdict(engine, c.fen, c.san) else { continue }
       if !v.ok { flagged.append("\(c.san) (lost \(Int(v.lost)))") }
     }
     var missed: [String] = []
     for c in Self.blunders {
       let fen = walkSan(c.line).fens.last!
-      if let v = await verdict(BasicEngine(), fen, c.san), v.ok { missed.append("\(c.san) (lost \(Int(v.lost)), best \(v.best ?? "?"))") }
+      if let v = await verdict(CaissaEngine(), fen, c.san), v.ok { missed.append("\(c.san) (lost \(Int(v.lost)), best \(v.best ?? "?"))") }
     }
     print("BENCH judge: false blunders \(flagged.count)/\(Self.bookMoves.count) \(flagged), missed blunders \(missed.count)/\(Self.blunders.count) \(missed), \(String(format: "%.1f", Date().timeIntervalSince(started)))s")
   }
@@ -194,27 +159,35 @@ struct EngineBenchTests {
 ,
   ]
 
+  func score(_ line: EngineLine) -> Double? {
+    if let cp = line.cp { return cp }
+    return line.mate.map { $0 > 0 ? 10_000 - Double($0) : -10_000 - Double($0) }
+  }
+
   /// What each level's moves cost on average, against a deeper search: how
   /// human each level plays, to set beside the ratings' expected losses.
   @Test func levelBench() async {
     let started = Date()
-    let reference = SearchOptions(maxDepth: 8, timeMs: 800, multiPv: 1)
-    let engine = BasicEngine()
+    let reference = EngineLimits(depth: 12, movetime: 800, multiPv: 1)
+    let engine = CaissaEngine(), judge = CaissaEngine()
     var report: [String] = []
-    for level in levels(.basic) {
+    for level in levels() {
       let rand = mulberry32(seed: Double(level.rating))
       var total = 0.0, slips = 0, blunders = 0
       for fen in Self.middlegames {
         let snap = await engine.analyse(fen, EngineLimits(depth: level.depth, multiPv: level.multiPv))
         guard let move = chooseMove(snap.lines, level, rand),
-              let best = search(fen, reference, TranspositionTable())?.lines.first else { continue }
-        if move == best.uci { continue }
-        var options = reference
-        options.multiPv = 2
-        options.searchmoves = [best.uci, move]
-        guard let lines = search(fen, options, TranspositionTable())?.lines,
-              let top = lines.first(where: { $0.uci == best.uci }), let mine = lines.first(where: { $0.uci == move }) else { continue }
-        let loss = Double(min(1000, max(0, top.score - mine.score)))
+              let best = await judge.analyse(fen, reference).lines.first?.pv.first else { continue }
+        if move == best { continue }
+        var limits = reference
+        limits.multiPv = 2
+        limits.searchmoves = [best, move]
+        let lines = await judge.analyse(fen, limits).lines
+        guard let top = lines.first(where: { $0.pv.first == best }).flatMap(score),
+              let mine = lines.first(where: { $0.pv.first == move }).flatMap(score) else { continue }
+        // Scores are White's; the loss is the mover's.
+        let sign: Double = fenTurn(fen) == .w ? 1 : -1
+        let loss = min(1000, max(0, sign * (top - mine)))
         total += loss
         if loss >= 50 { slips += 1 }
         if loss >= 200 { blunders += 1 }

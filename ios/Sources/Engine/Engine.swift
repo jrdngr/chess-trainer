@@ -26,11 +26,8 @@ public struct EngineSnapshot: Sendable {
   public var fen: String
 }
 
-/// An engine behind one protocol, so another can take its place.
-/// `onUpdate` sees each finished depth; the result is the last word.
+/// An engine behind one protocol. `onUpdate` sees each finished depth; the result is the last word.
 public protocol ChessEngine: Sendable {
-  /// Which engine it is: its levels are drawn from this kind's style.
-  var kind: EngineKind { get }
   func analyse(_ fen: String, _ limits: EngineLimits, onUpdate: @escaping @Sendable (EngineSnapshot) -> Bool) async -> EngineSnapshot
 }
 
@@ -40,83 +37,29 @@ extension ChessEngine {
   }
 }
 
-/// A new engine of a kind, with its own memory of positions.
-public func makeEngine(_ kind: EngineKind) -> ChessEngine {
-  switch kind {
-  case .basic: return BasicEngine()
-  // Without its network, Caissa can't run: Basic stands in.
-  case .caissa: return CaissaEngine() ?? BasicEngine()
-  }
-}
+/// A new engine, with its own memory of positions.
+public func makeEngine() -> ChessEngine { CaissaEngine() }
 
-/// The engine chosen in Settings. The app sets it as settings change.
-public enum Engines {
-  private static let lock = NSLock()
-  nonisolated(unsafe) private static var chosen = EngineKind.caissa
-
-  public static var selected: EngineKind {
-    get { lock.withLock { chosen } }
-    set { lock.withLock { chosen = newValue } }
-  }
-}
-
-/// One use's engine: one of each kind, made the first time it is asked for,
-/// so a use keeps its own engine (and its memory) apart from other uses.
+/// One use's engine, made the first time it is asked for, so a use keeps its
+/// own engine (and its memory) apart from other uses.
 public final class EngineSlot: @unchecked Sendable {
   private let lock = NSLock()
-  private var made: [EngineKind: ChessEngine] = [:]
+  private var made: ChessEngine?
 
   public init() {}
 
-  /// This use's engine of a kind.
-  public func callAsFunction(_ kind: EngineKind) -> ChessEngine {
+  /// This use's engine.
+  public func callAsFunction() -> ChessEngine {
     lock.withLock {
-      if let engine = made[kind] { return engine }
-      let engine = makeEngine(kind)
-      made[kind] = engine
+      if let made { return made }
+      let engine = makeEngine()
+      made = engine
       return engine
     }
   }
 
-  /// This use's engine of the kind chosen in Settings.
-  public var current: ChessEngine { self(Engines.selected) }
-}
-
-/// The engine: the search in `Basic/`.
-/// `onUpdate` returning true stops the search there.
-public actor BasicEngine: ChessEngine {
-  public nonisolated let kind = EngineKind.basic
-  /// How long a search runs when the caller only names a depth, and the longest any runs:
-  /// the judge's confirmation of a suspected blunder.
-  static let defaultMs: Double = 1000
-  static let maxMs: Double = CONFIRM_MS
-
-  private let tt = TranspositionTable()
-
-  public init() {}
-
-  public func analyse(_ fen: String, _ limits: EngineLimits, onUpdate: @escaping @Sendable (EngineSnapshot) -> Bool) async -> EngineSnapshot {
-    let options = SearchOptions(
-      maxDepth: limits.depth ?? 64, timeMs: max(50, min(limits.movetime ?? Self.defaultMs, Self.maxMs)),
-      multiPv: limits.multiPv ?? 3, searchmoves: limits.searchmoves)
-    var stop = false
-    let result = search(fen, options, tt, onDepth: { depth in
-      if onUpdate(snapshotOf(fen, depth, thinking: true)) { stop = true }
-    }, stopped: { stop || Task.isCancelled })
-    return snapshotOf(fen, result, thinking: false)
-  }
-}
-
-/// A search result in White's frame, as the app reads engines.
-func snapshotOf(_ fen: String, _ result: DepthResult?, thinking: Bool) -> EngineSnapshot {
-  let sign: Double = fenTurn(fen) == .b ? -1 : 1
-  let lines = (result?.lines ?? []).enumerated().map { i, line in
-    EngineLine(
-      multipv: i + 1, depth: result!.depth,
-      cp: line.mate == nil ? sign * Double(max(-2000, min(2000, line.score))) : nil,
-      mate: line.mate.map { sign * Double($0) }, pv: line.pv)
-  }
-  return EngineSnapshot(lines: lines, depth: result?.depth ?? 0, nodes: result?.nodes ?? 0, thinking: thinking, fen: fen)
+  /// This use's engine.
+  public var current: ChessEngine { self() }
 }
 
 /// A score as Analysis writes it, in White's frame: "+0.35", "-M3". `formatScore`.

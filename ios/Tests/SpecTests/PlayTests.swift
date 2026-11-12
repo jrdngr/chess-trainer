@@ -30,26 +30,26 @@ private func picks(_ lines: [EngineLine], _ level: Level) -> [String: Int] {
 }
 
 @Test func levelsAreRatings() {
-  #expect(levels(.basic).map(\.name) == ["800", "1200", "1600", "2000"])
-  #expect(levelById("1600", engine: .basic).rating == 1600)
+  #expect(levels().map(\.name) == ["800", "1200", "1600", "2000"])
+  #expect(levelById("1600").rating == 1600)
   // Saves from before keep a matching strength.
-  #expect(levelById("club", engine: .basic).rating == 1200)
-  #expect(levelById("full", engine: .basic).rating == 2000)
-  #expect(levelById("nonsense", engine: .basic).rating == 1200)
+  #expect(levelById("club").rating == 1200)
+  #expect(levelById("full").rating == 2000)
+  #expect(levelById("nonsense").rating == 1200)
   // Stronger looks further and gives up less.
-  for (weaker, stronger) in zip(levels(.basic), levels(.basic).dropFirst()) {
+  for (weaker, stronger) in zip(levels(), levels().dropFirst()) {
     #expect(weaker.depth <= stronger.depth)
     #expect(weaker.temperature > stronger.temperature)
     #expect(weaker.window > stronger.window)
   }
-  #expect(levelFor(rating: 100, engine: .basic).rating == MIN_RATING)
-  #expect(levelFor(rating: 1400, engine: .basic).depth == 4)
+  #expect(levelFor(rating: 100).rating == MIN_RATING)
+  #expect(levelFor(rating: 1400).depth == 3)
 }
 
 @Test func slipsAreSmallMoreOftenThanBig() {
   // Best, a 10cp slip, a 50cp one.
   let lines = candidates([0, 10, 50])
-  let weak = picks(lines, levelFor(rating: 800, engine: .basic)), strong = picks(lines, levelFor(rating: 1600, engine: .basic))
+  let weak = picks(lines, levelFor(rating: 800)), strong = picks(lines, levelFor(rating: 1600))
   #expect(weak["m2", default: 0] > weak["m3", default: 0])
   #expect(weak["m3", default: 0] > 0)
   #expect(strong["m1", default: 0] > weak["m1", default: 0])
@@ -58,20 +58,20 @@ private func picks(_ lines: [EngineLine], _ level: Level) -> [String: Int] {
 @Test func aSeenBlunderIsNeverPlayed() {
   // One move keeps the piece; eleven drop it (9...Rb8 instead of 9...Nxf5).
   let lines = candidates([0] + Array(repeating: 300, count: 11))
-  for level in [levelFor(rating: MIN_RATING, engine: .basic)] + levels(.basic) {
+  for level in [levelFor(rating: MIN_RATING)] + levels() {
     #expect(picks(lines, level)["m1", default: 0] == 4000)
   }
 }
 
 @Test func aLossPastTheWindowIsNeverPlayed() {
-  let level = levelFor(rating: 1200, engine: .basic)
+  let level = levelFor(rating: 1200)
   let counts = picks(candidates([0, level.window - 5, level.window + 5]), level)
   #expect(counts["m2", default: 0] > 0)
   #expect(counts["m3", default: 0] == 0)
 }
 
 @Test func equalMovesAreEquallyLikely() {
-  let counts = picks(candidates([0, 0]), levelFor(rating: 2000, engine: .basic))
+  let counts = picks(candidates([0, 0]), levelFor(rating: 2000))
   #expect(abs(counts["m1", default: 0] - counts["m2", default: 0]) < 300)
 }
 
@@ -80,6 +80,6 @@ private func picks(_ lines: [EngineLine], _ level: Level) -> [String: Int] {
     EngineLine(multipv: 1, depth: 5, cp: nil, mate: 1, pv: ["mate"]),
     EngineLine(multipv: 2, depth: 5, cp: 300, mate: nil, pv: ["piece"]),
   ]
-  #expect(picks(lines, levelFor(rating: 800, engine: .basic))["mate", default: 0] == 4000)
+  #expect(picks(lines, levelFor(rating: 800))["mate", default: 0] == 4000)
 }
 

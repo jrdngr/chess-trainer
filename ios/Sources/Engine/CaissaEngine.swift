@@ -3,37 +3,29 @@ import ChessCore
 import Foundation
 import Model
 
-/// Caissa's network, in the bundle when `scripts/fetch-caissa-net.sh` put it there.
+/// Caissa's network, `Sources/Engine/CaissaNet/caissa.pnn`, loaded once, the first time an engine is made.
 enum CaissaNetwork {
-  static let path: String? = Bundle.module.url(forResource: "caissa", withExtension: "pnn", subdirectory: "CaissaNet")?
-    .path(percentEncoded: false)
-
-  /// Loaded once, the first time a Caissa engine is made.
-  static let loaded: Bool = path.map { caissa_load_network($0) } ?? false
+  static let loaded: Bool = {
+    guard let path = Bundle.module.url(forResource: "caissa", withExtension: "pnn", subdirectory: "CaissaNet")?
+      .path(percentEncoded: false)
+    else { return false }
+    return caissa_load_network(path)
+  }()
 }
 
-extension EngineKind {
-  /// Whether this build can make the engine: Caissa needs its network.
-  public var available: Bool {
-    switch self {
-    case .basic: return true
-    case .caissa: return CaissaNetwork.path != nil
-    }
-  }
-
-  /// This kind, or Basic where it isn't available.
-  public var usable: EngineKind { available ? self : .basic }
-}
-
-/// Caissa (MIT, `Sources/Caissa`): a strong engine with a neural network
+/// Caissa (MIT, `Sources/Caissa`): the engine, with a neural network
 /// evaluation. `onUpdate` returning true stops the search there.
 public actor CaissaEngine: ChessEngine {
-  public nonisolated let kind = EngineKind.caissa
+  /// How long a search runs when the caller only names a depth, and the longest any runs:
+  /// the judge's confirmation of a suspected blunder.
+  static let defaultMs: Double = 1000
+  static let maxMs: Double = CONFIRM_MS
+
   private nonisolated(unsafe) let searcher: OpaquePointer
 
-  /// Nil when the network can't be loaded.
-  init?() {
-    guard CaissaNetwork.loaded, let searcher = caissa_create(16) else { return nil }
+  /// The network ships in the bundle, so a failure here is a broken build.
+  public init() {
+    guard CaissaNetwork.loaded, let searcher = caissa_create(16) else { fatalError("Caissa's network didn't load") }
     self.searcher = searcher
   }
 
@@ -44,7 +36,7 @@ public actor CaissaEngine: ChessEngine {
     let choices = moves?.count ?? legalMoves(fen).count
     guard choices > 0 else { return EngineSnapshot(lines: [], depth: 0, nodes: 0, thinking: false, fen: fen) }
     let multiPv = max(1, min(limits.multiPv ?? 3, choices))
-    let ms = max(50, min(limits.movetime ?? BasicEngine.defaultMs, BasicEngine.maxMs))
+    let ms = max(50, min(limits.movetime ?? Self.defaultMs, Self.maxMs))
     let progress = Progress(fen: fen, onUpdate: onUpdate)
     let context = Unmanaged.passUnretained(progress).toOpaque()
     var out = [CChar](repeating: 0, count: 1 << 16)

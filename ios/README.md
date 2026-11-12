@@ -21,7 +21,7 @@ cd ios && swift test
 ```
 
 - `ChessCoreTests`: perft counts on the standard positions.
-- `EngineTests`: search, perft and the judge. `ENGINE_BENCH=1` adds the benchmarks.
+- `EngineTests`: Caissa, the judge and plan checks. `ENGINE_BENCH=1` adds the judge and level benchmarks.
 - `SpecTests`: the model against the golden cases in `Tests/SpecTests/Golden/`
   (`cases/functions/*.json`, `cases/scenarios/*.json`, `constants.json`).
   They were recorded from the web prototype and are now plain fixtures: when a

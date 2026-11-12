@@ -23,7 +23,7 @@ struct AutopilotView: View {
   /// The finished round's start is already counted for the next one.
   @State private var counted = false
   private static let engines = EngineSlot()
-  private var engine: ChessEngine { Self.engines(store.state.settings.engine) }
+  private var engine: ChessEngine { Self.engines() }
 
   var body: some View {
     Group {

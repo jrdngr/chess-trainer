@@ -11,5 +11,5 @@ import Testing
     PlanStep(text: "Knight to c3", goals: [Goal(piece: .n, to: "c3")]),
   ]
   #expect(firstMove(steps[0], fen, .w) == "f3e5")
-  #expect(await PlanChecks.notYet(BasicEngine(), fen, .w, steps, open: [true, true]) == [0])
+  #expect(await PlanChecks.notYet(CaissaEngine(), fen, .w, steps, open: [true, true]) == [0])
 }

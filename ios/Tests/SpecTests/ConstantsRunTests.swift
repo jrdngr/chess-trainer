@@ -60,7 +60,7 @@ import Testing
   var play = DEFAULT_PLAY
   play.level = "club"
   expect("modes", "DEFAULT_PLAY", encoded(play))
-  #expect(levelById(DEFAULT_PLAY.level, engine: .basic) == levelById("club", engine: .basic))
+  #expect(levelById(DEFAULT_PLAY.level) == levelById("club"))
   expect("modes", "GROWTH_DEPTHS", GROWTH_DEPTHS)
   expect("modes", "SHARE_STEPS", SHARE_STEPS)
   expect("openingRun", "CLOCK_MODES", CLOCK_MODES.map(\.rawValue))

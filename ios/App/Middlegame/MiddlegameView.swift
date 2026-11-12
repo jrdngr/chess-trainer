@@ -111,8 +111,7 @@ struct MiddlegameView: View {
     model = nil
     last = drawn
     building = trail(drawn.sans)
-    let kind = store.state.settings.engine.usable
-    let tools = handoffTools(Self.builder(kind), index, prefs.opponentLevel(store.state.strength, engine: kind))
+    let tools = handoffTools(Self.builder(), index, prefs.opponentLevel(store.state.strength))
     job?.cancel()
     job = Task {
       let began = Date()
@@ -125,7 +124,7 @@ struct MiddlegameView: View {
       guard let handoff,
         let run = RunModel(
           middlegame: options, handoff: handoff, prefs: prefs, selection: selection,
-          store: store, tree: tree, index: index, engine: Self.engine(kind))
+          store: store, tree: tree, index: index, engine: Self.engine())
       else {
         toasts.show("This line couldn't be played out")
         if exact != nil { onExit() }

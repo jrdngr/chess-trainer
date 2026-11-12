@@ -40,8 +40,6 @@ public struct Settings: Equatable, Sendable, Codable {
   public var drill = DEFAULT_DRILL
   /// How Play's runs start: from move one, or wherever your prep needs work.
   public var start = RunStart.drill
-  /// The engine every mode plays and judges with.
-  public var engine = EngineKind.caissa
   public init() {}
 
   enum CodingKeys: String, CodingKey {
@@ -52,7 +50,6 @@ public struct Settings: Equatable, Sendable, Codable {
     case middlegame
     case drill
     case start
-    case engine
   }
 
   /// A save missing a setting takes its default.
@@ -84,8 +81,6 @@ public struct Settings: Equatable, Sendable, Codable {
     survival = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .survival) ?? survival
     middlegame = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .middlegame) ?? middlegame
     drill = try c.decodeIfPresent(SavedDrillPrefs.self, forKey: .drill)?.prefs ?? drill
-    // An engine this build doesn't have falls back to the default.
-    engine = (try? c.decodeIfPresent(EngineKind.self, forKey: .engine)) ?? engine
     start = try c.decodeIfPresent(RunStart.self, forKey: .start) ?? start
   }
 }

@@ -12,10 +12,7 @@ final class AppStore {
   private(set) var tree: OpeningTree?
   /// The opening picker's catalogue, built once from the tree.
   private(set) var catalog: PickerCatalog?
-  var state = AppState() {
-    // Engines asked for outside the store (hints, lenses) follow Settings.
-    didSet { if Engines.selected != state.settings.engine.usable { Engines.selected = state.settings.engine.usable } }
-  }
+  var state = AppState()
   /// Play's recent rounds this session, kept across trips Home so the next round's start follows them.
   var autoHistory = AutoHistory()
   /// The save exists but could not be read (locked, say): saving now would replace it with a fresh state.

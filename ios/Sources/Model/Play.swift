@@ -9,13 +9,11 @@ import Shared
  * quiet threats go unseen, and picks among the good moves it sees. A move it
  * sees losing more than its level's window is never played on purpose. */
 
-/// A playing strength, named by the rating it plays like, on one engine.
+/// A playing strength, named by the rating it plays like.
 public struct Level: Equatable, Sendable {
   public var id: String
   public var name: String
   public var rating: Int
-  /// The engine it plays with: its anchors made this level, and it picks the move.
-  public var engine: EngineKind
   /// How far it looks.
   public var depth: Int
   /// How many candidate moves it weighs.
@@ -25,26 +23,6 @@ public struct Level: Equatable, Sendable {
   public var temperature: Double
   /// The most a move it plays may cost against its best, in centipawns.
   public var window: Double
-}
-
-/// The engines the app can play and judge with. One is chosen in Settings.
-public enum EngineKind: String, Sendable, Codable, CaseIterable {
-  case basic, caissa
-
-  public var name: String {
-    switch self {
-    case .basic: return "Basic"
-    case .caissa: return "Caissa"
-    }
-  }
-
-  /// How it plays at each rating.
-  public var style: EngineStyle {
-    switch self {
-    case .basic: return BasicStyle()
-    case .caissa: return CaissaStyle()
-    }
-  }
 }
 
 /// A point the levels are drawn between: at this rating, how far the engine
@@ -68,51 +46,23 @@ public struct LevelAnchor: Sendable {
 /// A candidate line a level may play, with its score (White's) and its weight.
 public typealias LevelMove = (line: EngineLine, cp: Double, weight: Double)
 
-/// How an engine plays at each rating. Engines differ in what their top
-/// lines are worth, so each sets its own anchors and may pick its own way.
-public protocol EngineStyle: Sendable {
-  /// Rising by rating, from `MIN_RATING` to `MAX_RATING`.
-  var anchors: [LevelAnchor] { get }
-  /// The lines a level may play, best first, each with its weight.
-  func levelMoves(_ lines: [EngineLine], _ level: Level) -> [LevelMove]
-}
-
-extension EngineStyle {
-  public func levelMoves(_ lines: [EngineLine], _ level: Level) -> [LevelMove] { windowMoves(lines, level) }
-}
-
-/// The app's own engine, in `Engine/Basic`.
-public struct BasicStyle: EngineStyle {
-  public init() {}
-  public let anchors = [
-    LevelAnchor(600, depth: 1, temperature: 700, multiPv: 20, window: 150),
-    LevelAnchor(800, depth: 2, temperature: 500, multiPv: 16, window: 100),
-    LevelAnchor(1200, depth: 3, temperature: 280, multiPv: 12, window: 60),
-    LevelAnchor(1600, depth: 5, temperature: 150, multiPv: 8, window: 40),
-    LevelAnchor(2000, depth: 7, temperature: 75, multiPv: 6, window: 25),
-    LevelAnchor(2200, depth: 8, temperature: 55, multiPv: 5, window: 20),
-  ]
-}
-
-/// Caissa: it sees far more at the same depth, so its levels look less far.
-public struct CaissaStyle: EngineStyle {
-  public init() {}
-  public let anchors = [
-    LevelAnchor(600, depth: 1, temperature: 700, multiPv: 20, window: 150),
-    LevelAnchor(800, depth: 1, temperature: 500, multiPv: 16, window: 100),
-    LevelAnchor(1200, depth: 2, temperature: 280, multiPv: 12, window: 60),
-    LevelAnchor(1600, depth: 4, temperature: 220, multiPv: 10, window: 55),
-    LevelAnchor(2000, depth: 6, temperature: 110, multiPv: 8, window: 40),
-    LevelAnchor(2200, depth: 8, temperature: 100, multiPv: 6, window: 35),
-  ]
-}
+/// The levels' anchors, rising by rating from `MIN_RATING` to `MAX_RATING`.
+/// Caissa sees far at a shallow depth, so its levels look less far than their ratings suggest.
+public let LEVEL_ANCHORS = [
+  LevelAnchor(600, depth: 1, temperature: 700, multiPv: 20, window: 150),
+  LevelAnchor(800, depth: 1, temperature: 500, multiPv: 16, window: 100),
+  LevelAnchor(1200, depth: 2, temperature: 280, multiPv: 12, window: 60),
+  LevelAnchor(1600, depth: 4, temperature: 220, multiPv: 10, window: 55),
+  LevelAnchor(2000, depth: 6, temperature: 110, multiPv: 8, window: 40),
+  LevelAnchor(2200, depth: 8, temperature: 100, multiPv: 6, window: 35),
+]
 
 /// The ratings a level can be set to.
 public let MIN_RATING = 600, MAX_RATING = 2200
 
-/// The level that plays like a rating on an engine, between its anchors.
-public func levelFor(rating: Int, engine: EngineKind) -> Level {
-  let anchors = engine.style.anchors
+/// The level that plays like a rating, between its anchors.
+public func levelFor(rating: Int) -> Level {
+  let anchors = LEVEL_ANCHORS
   let r = max(MIN_RATING, min(MAX_RATING, rating))
   let upper = anchors.firstIndex { $0.rating >= r } ?? anchors.count - 1
   let lower = max(0, upper - 1)
@@ -122,24 +72,24 @@ public func levelFor(rating: Int, engine: EngineKind) -> Level {
   let temperature = a.temperature + t * (b.temperature - a.temperature)
   let window = a.window + t * (b.window - a.window)
   return Level(
-    id: String(r), name: String(r), rating: r, engine: engine, depth: between(a.depth, b.depth),
+    id: String(r), name: String(r), rating: r, depth: between(a.depth, b.depth),
     multiPv: between(a.multiPv, b.multiPv), temperature: temperature, window: window)
 }
 
 /// The ratings Play offers as levels.
 public let LEVEL_RATINGS = [800, 1200, 1600, 2000]
 
-/// The levels Play offers, on an engine.
-public func levels(_ engine: EngineKind) -> [Level] { LEVEL_RATINGS.map { levelFor(rating: $0, engine: engine) } }
+/// The levels Play offers.
+public func levels() -> [Level] { LEVEL_RATINGS.map { levelFor(rating: $0) } }
 
 public let DEFAULT_LEVEL = "1200"
 
 /// Levels saved under their old names.
 private let OLD_LEVELS = ["casual": 800, "club": 1200, "strong": 1600, "full": 2000]
 
-/// A saved level on an engine: a rating, or one of the old names.
-public func levelById(_ id: String, engine: EngineKind) -> Level {
-  levelFor(rating: Int(id) ?? OLD_LEVELS[id] ?? Int(DEFAULT_LEVEL)!, engine: engine)
+/// A saved level: a rating, or one of the old names.
+public func levelById(_ id: String) -> Level {
+  levelFor(rating: Int(id) ?? OLD_LEVELS[id] ?? Int(DEFAULT_LEVEL)!)
 }
 
 /// A line's score in centipawns, mate as a large number.
@@ -149,15 +99,10 @@ private func centipawns(_ line: EngineLine) -> Double? {
   return nil
 }
 
-/// The candidate lines a level may play, as its engine picks them.
-public func levelMoves(_ lines: [EngineLine], _ level: Level) -> [LevelMove] {
-  level.engine.style.levelMoves(lines, level)
-}
-
-/// The usual pick: the lines inside the window of the best, best first, a
+/// The candidate lines a level may play: the lines inside the window of the best, best first, a
 /// move costing more being likelier the less it costs. With no temperature,
 /// only the best.
-public func windowMoves(_ lines: [EngineLine], _ level: Level) -> [LevelMove] {
+public func levelMoves(_ lines: [EngineLine], _ level: Level) -> [LevelMove] {
   let scored = lines.filter { !$0.pv.isEmpty }.jsSorted { Double($0.multipv - $1.multipv) }
     .compactMap { line in centipawns(line).map { (line: line, cp: $0) } }
   guard let best = scored.first?.cp else { return [] }
