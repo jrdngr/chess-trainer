@@ -740,6 +740,10 @@ public final class RunModel {
   /// A tap on the tip, or your next move: some tips lead to the next.
   public func dismissTip() {
     guard let current = tip else { return }
+    if current == .blunder, tutorialGame != nil, finish != nil {
+      tip = .goHome
+      return
+    }
     if let next = current.next, store.state.settings.tips.contains(next) {
       tip = next
       store.update { $0.settings.tips.removeAll { $0 == next } }
@@ -840,7 +844,8 @@ public final class RunModel {
       if case .ended = f.how { ended = true }
       // Ended by hand before its end, the game is played again.
       let counted = endCued || game.number >= 4 || !ended
-      tip = blundered && game.tips.contains(.blunder) ? .blunder : nil
+      // Ended on its own board, the game points at its X, after the blunder tip where it has one.
+      tip = blundered && game.tips.contains(.blunder) ? .blunder : ended ? nil : .goHome
       store.update { $0.settings.finishTutorialGame(counted: counted) }
     }
     before = handoff != nil ? store.state.middlegame : store.state.runRecord

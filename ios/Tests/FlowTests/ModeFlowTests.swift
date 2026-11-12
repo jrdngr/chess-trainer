@@ -46,15 +46,6 @@ import Testing
   }
 }
 
-/// A move that puts a piece where the opponent takes it for nothing.
-private func freeCapture(_ fen: String) -> String? {
-  legalMoves(fen).first { move in
-    move.piece != .k && move.piece != .p
-      && legalMoves(move.after).contains { $0.to == move.to }
-      && !legalMoves(move.after).contains { reply in reply.to == move.to && legalMoves(reply.after).contains { $0.to == move.to } }
-  }?.san
-}
-
 /// Middlegame: one of your lines is played out to a middlegame for you, then the run is yours from there.
 @MainActor @Test func middlegameHandsOverAfterYourLine() async throws {
   try await headless { app in

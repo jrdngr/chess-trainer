@@ -285,6 +285,8 @@ public enum TutorialTip: String, Sendable, Codable, CaseIterable {
   case flashCards, prepBar, lineDone, checkMark, nextRun
   case extendLines, answerRow, doneButton, saved, endRun
   case scores, lens, blunder
+  /// A tutorial game that ended on its own board: its X goes Home.
+  case goHome
   case pickAny, keepPlaying
   case playOn
   /// Home, after the last game: the Playbook tab.
@@ -308,6 +310,7 @@ public enum TutorialTip: String, Sendable, Codable, CaseIterable {
     case .scores: "Outside of your lines, each move gets a score telling you how good (or bad) it was."
     case .lens: "Tap a lens for hints."
     case .blunder: "A blunder ends the game."
+    case .goHome: "Tap \u{2715} to go back Home."
     case .pickAny: "Pick any answer you like. The list shows how often each is played."
     case .keepPlaying: "Keep playing on the board."
     case .playOn: "Your prep is done, but the game isn\u{2019}t. Keep playing until you blunder, or tap \u{201C}Next run\u{201D}."
@@ -334,7 +337,7 @@ public enum TutorialTip: String, Sendable, Codable, CaseIterable {
     case .saved, .keepPlaying: .growthEnded
     case .scores: .scored
     case .blunder: .blunder
-    case .answerRow, .doneButton, .lens, .playbookTab, .playbookAdd, .playbookMore, .playbookRow: nil
+    case .answerRow, .doneButton, .lens, .goHome, .playbookTab, .playbookAdd, .playbookMore, .playbookRow: nil
     }
   }
 

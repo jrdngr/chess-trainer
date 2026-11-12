@@ -23,6 +23,33 @@ import Testing
   }
 }
 
+/// A tutorial game ended by a blunder stays on its board: the blunder tip, then a tip pointing at the X to go Home.
+@MainActor @Test func tutorialBlunderPointsAtTheX() async throws {
+  try await headless { app in
+    await app.recommendOpenings()
+    for _ in 0..<2 {
+      try await playTutorialGame(app)
+      try await app.next()
+    }
+    let run = try #require(app.run)
+    #expect(run.tutorialGame?.number == 3)
+    for _ in 0..<40 {
+      guard run.live, run.expected != nil || !run.prepNow.isEmpty else { break }
+      if run.tip != nil { run.dismissTip() }
+      try await app.move(try #require(run.expected ?? run.prepNow.first))
+    }
+    if run.tip != nil { run.dismissTip() }
+    try await app.move(try #require(freeCapture(run.run.fen)))
+    guard case .blunder = try #require(run.finish).how else {
+      Issue.record("hanging a piece didn't end the game")
+      return
+    }
+    #expect(run.tip == .blunder)
+    run.dismissTip()
+    #expect(run.tip == .goHome)
+  }
+}
+
 /// Plays a tutorial game as it asks: its forced moves, the answers it offers while adding, then ends it when cued.
 @MainActor private func playTutorialGame(_ app: HeadlessApp) async throws {
   for _ in 0..<60 {

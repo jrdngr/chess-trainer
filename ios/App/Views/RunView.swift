@@ -204,9 +204,9 @@ struct RunView: View {
   private static let boardTips: Set<TutorialTip?> = [.flashCards, .checkMark, .saved, .keepPlaying, .scores]
 
   /// The tutorial's tips hung from the header: at the prep bar, or at the X for the end of a game.
-  private static let headerTips: Set<TutorialTip?> = [.prepBar, .lineDone, .endRun]
+  private static let headerTips: Set<TutorialTip?> = [.prepBar, .lineDone, .endRun, .goHome]
 
-  private var headerArrowAt: CGFloat { model.tip == .endRun ? 0.08 : 0.5 }
+  private var headerArrowAt: CGFloat { model.tip == .endRun || model.tip == .goHome ? 0.08 : 0.5 }
 
   /// The board's rim and what the status line calls it: a replay, adding moves, a moment to find, your prep.
   private var rim: (color: SwiftUI.Color, label: String)? {
