@@ -1,8 +1,9 @@
 # The Play screen
 
-How a run is shown, ended and dealt. Code: `PlayView`, `RunView` and
-`RunModel` in the app. These rules live in the app target, so they have no
-test until they move into the package.
+How a run is shown, ended and dealt. Code: `PlayView` and `RunView` in the
+app, `PlaySession` and `RunModel` in the Game target. These rules have no
+test yet; the parts in the Game target can be covered by `HeadlessApp` flow
+tests.
 
 1. **A run is named by its opening, never by a mode,** with the side as a
    small square.

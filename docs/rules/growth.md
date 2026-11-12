@@ -3,7 +3,7 @@
 How a Play run adds moves to your Playbook. Code: `Recommendations.swift`
 (gaps, pace, mastery and the question at a hole), `prepRanOut`
 (`RunController.swift`) and `askAtHole`, `addMove` and `fillReply` in
-`RunModel`. Tests: the `docs/rules/growth.md` suite in
+`RunModel` (Game target). Tests: the `docs/rules/growth.md` suite in
 `Tests/SpecTests/Rules/GrowthRules.swift`.
 
 1. **A gap** is a common reply with no answer in your Playbook:
@@ -42,5 +42,5 @@ How a Play run adds moves to your Playbook. Code: `Recommendations.swift`
    hole. It starts the same New move.
 10. **Growth never goes past the book.** See [playbook](playbook.md).
 
-Rules 2 (the conditions), 7 (the replies) and 9 live in the app target and
-have no test until they move into the package.
+Rules 2 (the conditions), 7 (the replies) and 9 live in `RunModel` and
+have no test yet; `HeadlessApp` flow tests can cover them.

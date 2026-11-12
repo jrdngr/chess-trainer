@@ -3,7 +3,7 @@
 How Play picks each run: the opening, the side and the focus. Code:
 `nextRound` (`Rounds.swift`), `recommend` (`Recommend.swift`) and the
 questions in `Recommendations.swift`; the first two steps are in
-`PlayView.make`. Tests: the `docs/rules/next-run.md` suite in
+`PlaySession.make` (Game target). Tests: the `docs/rules/next-run.md` suite in
 `Tests/SpecTests/Rules/NextRunRules.swift`.
 
 1. **The order.** The first match wins:

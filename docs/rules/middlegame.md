@@ -1,7 +1,8 @@
 # Middlegame
 
 One of your lines played on for you to a middlegame, then yours to play.
-Code: `Middlegame.swift`, and `MiddlegameView` and `RunModel` in the app.
+Code: `Middlegame.swift`, and `MiddlegameSession` and `RunModel` in the
+Game target.
 Tests: the `docs/rules/middlegame.md` suite in
 `Tests/SpecTests/Rules/MiddlegameRules.swift`.
 
