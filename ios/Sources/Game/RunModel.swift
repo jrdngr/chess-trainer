@@ -267,6 +267,8 @@ public final class RunModel {
     if round?.free == true { return openingNameForPath(index, run.played)?.name ?? "Freeform" }
     return openingName(tree, openingId)
   }
+  /// The header's line over its name: the opening's family, when the name is deeper than it.
+  public var headerFamily: String? { familyAbove(index, headerName) }
   public var momentHere: Bool {
     prefs.moments && live && myTurn && pending == nil && prepNow.isEmpty && baseline?.fen == run.fen && baseline?.isMomentFor(run.color) == true
   }

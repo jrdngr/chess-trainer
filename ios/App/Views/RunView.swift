@@ -306,7 +306,12 @@ struct RunView: View {
   private var header: some View {
     ZStack {
       VStack(spacing: 6) {
-        Text(model.headerName).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
+        VStack(spacing: 1) {
+          if let family = model.headerFamily {
+            Text(family).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.text2).lineLimit(1)
+          }
+          Text(model.headerName).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
+        }
         if model.endgameOn {
           // Endgame rules, on for the rest of the game once it reaches an endgame: moves are judged by the result they keep.
           Text("ENDGAME").font(.system(size: 11, weight: .bold)).tracking(0.7).foregroundStyle(Theme.text2)

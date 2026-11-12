@@ -1,9 +1,9 @@
 # The Play screen
 
 How a run is shown, ended and dealt. Code: `PlayView` and `RunView` in the
-app, `PlaySession` and `RunModel` in the Game target. These rules have no
-test yet; the parts in the Game target can be covered by `HeadlessApp` flow
-tests.
+app, `PlaySession` and `RunModel` in the Game target. Rule 3 is tested in
+`PlayScreenRules`; the others have no test yet, and the parts in the Game
+target can be covered by `HeadlessApp` flow tests.
 
 1. **A run is named by its opening, never by a mode,** with the side as a
    small square.
@@ -14,7 +14,9 @@ tests.
    straight there. Freeform shows no segments, but Home's button still
    names the opening the opponent steers toward.
 3. **During a run,** the app bar shows the opening, the segments counting up
-   as you play, and the rating the run has gained so far.
+   as you play, and the rating the run has gained so far. Over a name
+   deeper than its family, a smaller line names the family ("Sicilian
+   Defence" over "Sicilian Defence: Najdorf Variation").
 4. **Replay moves.** A run that starts inside its line opens on that
    position. Until your first move, Replay moves under the board plays the
    moves to it from move one, then hands it back.

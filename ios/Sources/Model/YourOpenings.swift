@@ -20,6 +20,13 @@ public func openingFamily(_ index: ReferenceIndex, _ name: String) -> String? {
   return variation
 }
 
+/// The family shown over an opening's name, where it says more than the name:
+/// "Sicilian Defence" over "Sicilian Defence: Najdorf Variation", nothing over "Sicilian Defence".
+public func familyAbove(_ index: ReferenceIndex, _ name: String) -> String? {
+  let family = familyName(index, name)
+  return family == name ? nil : family
+}
+
 /// The book opening a family stands for, where its rating is kept: the
 /// shallowest node of that name, else the node at `path`.
 public func familyNode(_ tree: OpeningTree, _ name: String, path: [String]) -> OpeningNode? {
