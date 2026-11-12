@@ -89,8 +89,9 @@ struct RoundDeal: View {
       let center = grown ? CGPoint(x: board?.midX ?? rest.midX, y: board?.midY ?? rest.midY) : CGPoint(x: rest.midX, y: rest.midY)
       let inset: CGFloat = grown ? 0 : 12 / scale
       let deck = CGPoint(x: geo.size.width / 2, y: geo.size.height - 130)
-      // Drawn by hand, the finished run shows until the card comes out.
-      let cover = grown ? 0 : draw == nil ? 1 : min(1, dealt * 1.15)
+      // Drawn by hand, the finished run shows until the card comes out, and stays hidden
+      // until the card is the board: it is the old game's board, not the next one's.
+      let cover = draw == nil ? (grown ? 0 : 1) : min(1, dealt * 1.15)
       ZStack(alignment: .topLeading) {
         Theme.background.opacity(cover).ignoresSafeArea()
           .allowsHitTesting(false)
