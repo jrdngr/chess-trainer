@@ -10,7 +10,7 @@ import Testing
   let items = allItems([r])
   let index = prepIndex(r)
   let prepAt = { (fen: String) in index[positionKey(fen)] ?? [] }
-  func deck(_ ago: (Int) -> Int?, _ stage: CardStage = .review, _ interval: Double = 1) -> [String: Card] {
+  func deck(_ ago: (Int) -> Int?, _ stage: CardStage = .review, _ interval: Double = 3) -> [String: Card] {
     var out: [String: Card] = [:]
     for (i, item) in items.enumerated() {
       var card = createCard(item.cardId, item.repertoireId, item.key, item.fen, now)
@@ -27,7 +27,7 @@ import Testing
 
   try check("autopilot", [
     "autopilot.drillStart": { a in
-      drillStart(items, decks[a[0].int], accuracy: a[1].numberOrNil, round: a[2].int, now: now)
+      drillStart(items, decks[a[0].int], accuracy: a[1].numberOrNil, round: a[2].int)
         .map { obj(["item": $0.item.cardId, "need": $0.need]) } ?? .null
     },
     "recommend.missingPrep": { missingPrep($0[0].numberOrNil).json },
@@ -58,17 +58,6 @@ import Testing
   }
   func recommendIn(_ s: JSON) -> JSON {
     let reps = [repOf(.w, s["white"].strings), repOf(.b, s["black"].strings)].filter { !$0.rootChildren.isEmpty }
-    var cards: [String: Card] = [:]
-    for item in allItems(reps) {
-      guard let rule = s["cards"].array.first(where: { item.pathSans.joined(separator: " ").hasPrefix($0["prefix"].string) || $0["prefix"].string.isEmpty }) else {
-        continue
-      }
-      var card = createCard(item.cardId, item.repertoireId, item.key, item.fen, t - DAY)
-      card.stage = .review
-      card.interval = 3
-      card.due = rule["due"].bool ? t - 1 : t + 5 * DAY
-      cards[item.cardId] = card
-    }
     let selection = Selection(color: ColorChoice(rawValue: s["selection"]["color"].string)!, opening: s["selection"]["opening"].string)
     let played = s["played"].strings
     var score = ScoreState()
@@ -76,6 +65,17 @@ import Testing
       score = recordRound(score, tree, RoundRecord(
         mode: .run, openingId: selection.opening, color: .w, answered: 1, correct: 1, perfect: false,
         at: t - 3_600_000 - Double(played.count - 1 - i) * DAY, line: line(l)))
+    }
+    var cards: [String: Card] = [:]
+    for item in allItems(reps) {
+      guard let rule = s["cards"].array.first(where: { item.pathSans.joined(separator: " ").hasPrefix($0["prefix"].string) || $0["prefix"].string.isEmpty }) else {
+        continue
+      }
+      var card = createCard(item.cardId, item.repertoireId, item.key, item.fen, t - DAY)
+      card.stage = .review
+      card.interval = 9
+      card.testedRound = score.lineRounds - (rule["due"].bool ? 9 : 0)
+      cards[item.cardId] = card
     }
     let repairs = (s.object["slipped"]?.strings ?? []).map { l -> RepairRef in
       let path = line(l)
@@ -86,7 +86,6 @@ import Testing
       newPerSession: 8, recentFocuses: focuses(s["recentFocuses"]))
     input.recentSteered = s["recentSteered"].array.map(\.bool)
     input.seen = Seen(at: score.seen, round: score.lineRounds)
-    input.now = t
     guard let pick = recommend(input) else { return .null }
     return obj(["focus": pick.focus.rawValue, "opening": pick.opening.id, "color": pick.color.rawValue])
   }

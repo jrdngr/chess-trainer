@@ -159,18 +159,29 @@ public extension SavedEndgame {
   }
 }
 
-/// One position's schedule: when it is due, and how far apart its reviews have grown.
+/// One position's schedule, in Endgame rounds: the round it is due, and how far apart its reviews have grown.
 public struct EndgameCard: Equatable, Sendable, Codable {
-  public var due: Double
-  /// Days to the next review after a success.
+  public var dueRound: Int
+  /// Endgame rounds to the next review after a success.
   public var interval: Double
   public var reps: Int
   public var lapses: Int
-  public init(due: Double, interval: Double, reps: Int, lapses: Int) {
-    self.due = due
+  public init(dueRound: Int, interval: Double, reps: Int, lapses: Int) {
+    self.dueRound = dueRound
     self.interval = interval
     self.reps = reps
     self.lapses = lapses
+  }
+
+  enum CodingKeys: String, CodingKey { case dueRound, interval, reps, lapses }
+
+  /// Saves before version 2 kept a date instead of `dueRound`: those come due at once, until migrated.
+  public init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    dueRound = try c.decodeIfPresent(Int.self, forKey: .dueRound) ?? 0
+    interval = try c.decode(Double.self, forKey: .interval)
+    reps = try c.decode(Int.self, forKey: .reps)
+    lapses = try c.decode(Int.self, forKey: .lapses)
   }
 }
 
@@ -183,9 +194,11 @@ public struct EndgameRecord: Equatable, Sendable, Codable {
   public var seenIntros: [String] = []
   /// Newest first.
   public var saved: [SavedEndgame] = []
+  /// Endgame rounds played: the clock cards are scheduled on.
+  public var rounds = 0
   public init() {}
 
-  enum CodingKeys: String, CodingKey { case cards, ratings, rated, seenIntros, saved }
+  enum CodingKeys: String, CodingKey { case cards, ratings, rated, seenIntros, saved, rounds }
 
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -194,6 +207,7 @@ public struct EndgameRecord: Equatable, Sendable, Codable {
     rated = try c.decodeIfPresent([String: Int].self, forKey: .rated) ?? [:]
     seenIntros = try c.decodeIfPresent([String].self, forKey: .seenIntros) ?? []
     saved = try c.decodeIfPresent([SavedEndgame].self, forKey: .saved) ?? []
+    rounds = try c.decodeIfPresent(Int.self, forKey: .rounds) ?? 0
   }
 
   /// Every position to play: the library, then your saved ones.
@@ -203,18 +217,19 @@ public struct EndgameRecord: Equatable, Sendable, Codable {
   public func rank(_ family: String) -> Rank { rankOf(ratings[family] ?? 0, rated[family] ?? 0) }
 
   /// Positions due now, oldest due first. A position never played is not due: it waits to be started.
-  public func due(_ now: Double) -> [EndgameEntry] {
-    entries.filter { e in cards[e.id].map { $0.due <= now } ?? false }
-      .sorted { cards[$0.id]!.due < cards[$1.id]!.due }
+  public var due: [EndgameEntry] {
+    entries.filter { e in cards[e.id].map { $0.dueRound <= rounds } ?? false }
+      .sorted { cards[$0.id]!.dueRound < cards[$1.id]!.dueRound }
   }
 
   /// The next position to play: the first due, else the first never played.
-  public func next(_ now: Double) -> EndgameEntry? {
-    due(now).first ?? entries.first { cards[$0.id] == nil }
+  public var next: EndgameEntry? {
+    due.first ?? entries.first { cards[$0.id] == nil }
   }
 }
 
-public let DAY_MS: Double = 86_400_000
+/// Endgame rounds a first success waits.
+public let ENDGAME_FIRST_INTERVAL: Double = 3
 /// What a round is worth to its family's rating.
 public let ENDGAME_SUCCESS_POINTS: Double = 40
 public let ENDGAME_MISSION_POINTS: Double = 20
@@ -222,18 +237,19 @@ public let ENDGAME_FAIL_POINTS: Double = 30
 
 extension EndgameRecord {
   /// A round played: the card moves on its schedule and the family's rating moves.
-  /// A success pushes the card out (1 day, then 2.5 times as far each time); a
-  /// failure brings it back due now.
-  public mutating func review(_ entry: EndgameEntry, success: Bool, mission: Bool, now: Double) {
-    var card = cards[entry.id] ?? EndgameCard(due: now, interval: 0, reps: 0, lapses: 0)
+  /// A success pushes the card out (3 Endgame rounds, then 2.5 times as far each
+  /// time); a failure brings it back due at once.
+  public mutating func review(_ entry: EndgameEntry, success: Bool, mission: Bool) {
+    rounds += 1
+    var card = cards[entry.id] ?? EndgameCard(dueRound: rounds, interval: 0, reps: 0, lapses: 0)
     card.reps += 1
     if success {
-      card.interval = card.interval == 0 ? 1 : card.interval * 2.5
-      card.due = now + card.interval * DAY_MS
+      card.interval = card.interval == 0 ? ENDGAME_FIRST_INTERVAL : card.interval * 2.5
+      card.dueRound = rounds + Int(card.interval.rounded())
     } else {
       card.lapses += 1
       card.interval = 0
-      card.due = now
+      card.dueRound = rounds
     }
     cards[entry.id] = card
     let delta = success ? ENDGAME_SUCCESS_POINTS + (mission ? ENDGAME_MISSION_POINTS : 0) : -ENDGAME_FAIL_POINTS

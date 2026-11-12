@@ -59,8 +59,8 @@ public struct YourOpening: Sendable {
 
 /// Your openings, most worth focusing on first: every Playbook family of
 /// both sides. Value grows with how often the book reaches the family, how
-/// many lines you hold in it, and how lately you played it.
-public func yourOpenings(_ reps: [Repertoire], _ tree: OpeningTree, _ score: ScoreState, now: Double) -> [YourOpening] {
+/// many lines you hold in it, and how few runs ago you played it.
+public func yourOpenings(_ reps: [Repertoire], _ tree: OpeningTree, _ score: ScoreState) -> [YourOpening] {
   let total = max(1, tree.root.games)
   var out: [YourOpening] = []
   for rep in reps {
@@ -77,8 +77,9 @@ public func yourOpenings(_ reps: [Repertoire], _ tree: OpeningTree, _ score: Sco
   for i in out.indices {
     let reach = (out[i].node.games / total).squareRoot()
     let prep = 1 + log2(1 + Double(out[i].lines))
-    let lastAt = score.nodes[out[i].node.id]?.lastAt
-    let fresh = lastAt.map { 1 + 1 / (1 + max(0, now - $0) / DAY) } ?? 1
+    // Played this run counts double, three runs ago one and a half.
+    let lastRound = score.nodes[out[i].node.id]?.lastRound
+    let fresh = lastRound.map { 1 + 1 / (1 + Double(max(0, score.lineRounds - $0)) / 3) } ?? 1
     out[i].value = reach * prep * fresh
   }
   return out.sorted { a, b in a.value != b.value ? a.value > b.value : a.name < b.name }

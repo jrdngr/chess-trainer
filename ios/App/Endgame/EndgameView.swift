@@ -47,7 +47,7 @@ struct EndgameHomeView: View {
 
   var body: some View {
     let record = store.state.endgames
-    let due = record.due(Env.now())
+    let due = record.due
     VStack(spacing: 0) {
       PlayAppBar(title: "Endgames", subtitle: nil, onClose: onExit) { EmptyView() }
       ScrollView {
@@ -55,14 +55,14 @@ struct EndgameHomeView: View {
           Button {
             if !due.isEmpty {
               onPlayDue(due)
-            } else if let next = record.next(Env.now()) {
+            } else if let next = record.next {
               onPlay(next)
             }
           } label: {
             Text("Practice").frame(maxWidth: .infinity)
           }
           .buttonStyle(PlayButtonStyle(kind: .accent, block: true))
-          .disabled(due.isEmpty && record.next(Env.now()) == nil)
+          .disabled(due.isEmpty && record.next == nil)
           ForEach(ENDGAME_FAMILIES, id: \.id) { family in
             let rows = record.entries.filter { $0.family == family.id }
             if !rows.isEmpty { section(family, rows, record) }

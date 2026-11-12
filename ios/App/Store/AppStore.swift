@@ -323,7 +323,7 @@ final class AppStore {
   /// Your openings, most worth focusing on first: `yourOpenings`.
   func yourOpenings() -> [YourOpening] {
     guard let tree else { return [] }
-    return Model.yourOpenings(state.repertoireList, tree, state.score, now: Env.now())
+    return Model.yourOpenings(state.repertoireList, tree, state.score)
   }
 
   /// Change the state and save it.

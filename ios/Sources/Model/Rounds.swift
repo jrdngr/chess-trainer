@@ -110,7 +110,7 @@ public func survivalOptions(_ round: AutoRound, _ state: AppState, _ tree: Openi
   opts.due = round.due
   // The saved selection's mistakes.
   let evidence = evidenceIn(state, tree, state.settings.selection)
-  opts.weakness = weaknessFromCards(state.cards, slips(evidence))
+  opts.weakness = weaknessFromCards(state.cards, slips(evidence), round: state.score.lineRounds)
   opts.growth = GrowthOptions(minShare: AUTO_GROWTH.minShare, maxPly: AUTO_GROWTH.maxPly)
   opts.seen = Seen(at: state.score.seen, round: state.score.lineRounds)
   opts.seed = seed

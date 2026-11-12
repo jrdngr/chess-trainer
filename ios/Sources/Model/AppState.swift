@@ -181,9 +181,7 @@ extension AppState {
     let key = positionKey(fen)
     let id = cardId(repertoireId, key)
     let existing = cards[id]
-    var card = review(existing ?? createCard(id, repertoireId, key, fen, now), existing != nil ? grade : .good, now).card
-    card.testedRound = score.lineRounds
-    cards[id] = card
+    cards[id] = review(existing ?? createCard(id, repertoireId, key, fen, now), existing != nil ? grade : .good, round: score.lineRounds, now: now)
     // A logged mistake retires once the position is answered right.
     mistakes.removeAll { $0.id == "\(repertoireId)#\(key)" }
   }
@@ -192,9 +190,7 @@ extension AppState {
   public mutating func missed(_ repertoireId: String, _ fen: String, _ played: String, _ expected: String, now: Double = Env.now()) {
     let key = positionKey(fen)
     let id = cardId(repertoireId, key)
-    var card = review(cards[id] ?? createCard(id, repertoireId, key, fen, now), .again, now).card
-    card.testedRound = score.lineRounds
-    cards[id] = card
+    cards[id] = review(cards[id] ?? createCard(id, repertoireId, key, fen, now), .again, round: score.lineRounds, now: now)
     mistakes = Env.at(now) {
       addMistake(mistakes, Mistake(source: .openingRun, repertoireId: repertoireId, key: key, fen: fen, played: played, expected: expected))
     }

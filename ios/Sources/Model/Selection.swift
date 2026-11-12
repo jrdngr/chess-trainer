@@ -6,7 +6,7 @@ import ChessCore
 public enum ColorChoice: String, Sendable, Codable {
   case w, b, either
 
-  /// Saves before version 1 call Either "random".
+  /// Older saves call Either "random".
   public init(from decoder: Decoder) throws {
     let raw = try decoder.singleValueContainer().decode(String.self)
     guard let choice = ColorChoice(rawValue: raw == "random" ? "either" : raw) else {

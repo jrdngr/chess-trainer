@@ -60,7 +60,7 @@
       {"args":[{},0],"out":1},
       {"args":[{"stage":"review","ease":2.5,"correct":3},0],"out":1},
       {"args":[{"stage":"review","ease":1.9,"lapses":2,"correct":2,"incorrect":2},0],"out":5.6},
-      {"args":[{"stage":"learning","due":1793447999999},0],"out":3},
+      {"args":[{"stage":"learning","asked":2},0],"out":3},
       {"args":[{"stage":"review","ease":2.5,"correct":3},2],"out":5}
       ]
     },

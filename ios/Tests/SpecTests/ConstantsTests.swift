@@ -15,16 +15,14 @@ import Testing
   let srs = DEFAULT_SRS
   expect("srs", "DAY", DAY.json)
   expect("srs", "MINUTE", MINUTE.json)
-  expect("srs", "RUNS_PER_DAY", RUNS_PER_DAY.json)
   expect("srs", "DEFAULT_SRS", obj([
     "learningSteps": srs.learningSteps, "relearningSteps": srs.relearningSteps,
     "graduatingInterval": srs.graduatingInterval, "easyInterval": srs.easyInterval,
     "startingEase": srs.startingEase, "minEase": srs.minEase,
     "easeDelta": Dictionary(uniqueKeysWithValues: srs.easeDelta.map { ($0.key.rawValue, $0.value) }),
     "hardMultiplier": srs.hardMultiplier, "easyBonus": srs.easyBonus,
-    "lapseMultiplier": srs.lapseMultiplier, "maxInterval": srs.maxInterval,
+    "lapseMultiplier": srs.lapseMultiplier, "minInterval": srs.minInterval, "maxInterval": srs.maxInterval,
   ]))
-  expect("autopilot", "RUNS_PER_DAY", RUNS_PER_DAY.json)
 
   expect("scoring", "ACTIVITY_MODES", ACTIVITY_MODES.map(\.rawValue).json)
   expect("scoring", "EMPTY_SCORE", encoded(ScoreState()))

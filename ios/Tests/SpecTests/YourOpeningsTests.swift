@@ -19,7 +19,7 @@ import Testing
   let tree = openingTree(bookIndex)
   let black = rep(.b, ["e4 e5 Nf3 Nc6 Bc4 Bc5", "e4 e5 Nf3 Nc6 Bb5 a6", "e4 e5 Nc3"])
   let white = rep(.w, ["d4 d5 Nf3 Nf6 Bf4"])
-  let mine = yourOpenings([black, white], tree, ScoreState(), now: 0)
+  let mine = yourOpenings([black, white], tree, ScoreState())
   #expect(Set(mine.map { "\($0.side.rawValue) \($0.name)" }) == ["b Italian Game", "b Ruy Lopez", "b Vienna Game", "w London System"])
   #expect(mine.allSatisfy { $0.node.depth > 0 })
 }
@@ -27,7 +27,7 @@ import Testing
 /// The same family played from both sides is two openings.
 @Test func yourOpeningsKeepEachSide() {
   let tree = openingTree(bookIndex)
-  let mine = yourOpenings([rep(.w, ["e4 c5 Nf3"]), rep(.b, ["e4 c5 Nf3 d6"])], tree, ScoreState(), now: 0)
+  let mine = yourOpenings([rep(.w, ["e4 c5 Nf3"]), rep(.b, ["e4 c5 Nf3 d6"])], tree, ScoreState())
   #expect(mine.map(\.name) == ["Sicilian Defence", "Sicilian Defence"])
   #expect(Set(mine.map(\.key)).count == 2)
 }
@@ -36,14 +36,15 @@ import Testing
 @Test func yourOpeningsRankByReachThenRecency() {
   let tree = openingTree(bookIndex)
   let white = rep(.w, ["e4 c5 c3", "e4 e5 Qh5"])
-  let unplayed = yourOpenings([white], tree, ScoreState(), now: 0)
+  let unplayed = yourOpenings([white], tree, ScoreState())
   #expect(unplayed.map(\.name) == ["Sicilian Defence", "Wayward Queen Attack"])
   var score = ScoreState()
   let wayward = unplayed[1]
   var stats = NodeStats()
-  stats.lastAt = 1_000
+  stats.lastRound = 4
+  score.lineRounds = 4
   score.nodes[wayward.node.id] = stats
-  let played = yourOpenings([white], tree, score, now: 1_000)
+  let played = yourOpenings([white], tree, score)
   #expect(played.first { $0.name == "Wayward Queen Attack" }!.value == 2 * wayward.value)
 }
 

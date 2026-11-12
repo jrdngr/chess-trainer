@@ -125,6 +125,8 @@ public struct NodeStats: Equatable, Sendable, Codable {
   public var byMode: [ActivityMode: ModeTally] = Dictionary(uniqueKeysWithValues: ActivityMode.allCases.map { ($0, ModeTally()) })
   public var bestRun = 0
   public var lastAt: Double?
+  /// `ScoreState.lineRounds` when a round last played here.
+  public var lastRound: Int?
   /// "YYYY-MM-DD" → the day's numbers.
   public var days: [String: DayTally] = [:]
 
@@ -313,10 +315,11 @@ public func settleRun(_ state: ScoreState, _ tree: OpeningTree, _ earlier: [Move
   return (next, moves)
 }
 
-private func tallyRound(_ stats: NodeStats, _ round: RoundRecord) -> NodeStats {
+private func tallyRound(_ stats: NodeStats, _ round: RoundRecord, _ lineRounds: Int) -> NodeStats {
   var out = stats
   if round.mode == .run { out.bestRun = max(stats.bestRun, round.correct) }
   out.lastAt = round.at
+  out.lastRound = lineRounds
   var mode = stats.byMode[round.mode] ?? ModeTally()
   mode.rounds += 1
   mode.lastAt = round.at
@@ -331,14 +334,14 @@ private func tallyRound(_ stats: NodeStats, _ round: RoundRecord) -> NodeStats {
 /// Log a finished round against its opening and every opening above it.
 public func recordRound(_ state: ScoreState, _ tree: OpeningTree, _ round: RoundRecord) -> ScoreState {
   var next = state
-  for id in ancestorsOf(tree, round.openingId).map(\.id) { next.nodes[id] = tallyRound(state.nodes[id] ?? NodeStats(), round) }
-  next.global = tallyRound(state.global, round)
-  next.rounds.append(round)
   // A round that played a line is one the next should not repeat.
   if let line = round.line {
     next.lineRounds += 1
     next.seen = markSeen(state.seen, line, next.lineRounds)
   }
+  for id in ancestorsOf(tree, round.openingId).map(\.id) { next.nodes[id] = tallyRound(state.nodes[id] ?? NodeStats(), round, next.lineRounds) }
+  next.global = tallyRound(state.global, round, next.lineRounds)
+  next.rounds.append(round)
   return next
 }
 

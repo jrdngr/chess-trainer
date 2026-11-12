@@ -6,8 +6,7 @@
     "LEAN_FOR": {
       "test": "popular",
       "review": "weak"
-    },
-    "RUNS_PER_DAY": 3
+    }
   },
   "src/model/autopilotPrefs.ts": {
     "AUTO_DRILL": {
@@ -1473,15 +1472,10 @@
   "src/model/srs.ts": {
     "DAY": 86400000,
     "DEFAULT_SRS": {
-      "learningSteps": [
-        1,
-        10
-      ],
-      "relearningSteps": [
-        10
-      ],
-      "graduatingInterval": 1,
-      "easyInterval": 4,
+      "learningSteps": 2,
+      "relearningSteps": 1,
+      "graduatingInterval": 3,
+      "easyInterval": 12,
       "startingEase": 2.5,
       "minEase": 1.3,
       "easeDelta": {
@@ -1493,10 +1487,10 @@
       "hardMultiplier": 1.2,
       "easyBonus": 1.3,
       "lapseMultiplier": 0.5,
-      "maxInterval": 365
+      "minInterval": 3,
+      "maxInterval": 1095
     },
-    "MINUTE": 60000,
-    "RUNS_PER_DAY": 3
+    "MINUTE": 60000
   },
   "src/model/starterSets.ts": {
     "SLOT_COLOR": {

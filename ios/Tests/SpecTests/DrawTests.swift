@@ -89,18 +89,19 @@ private func fixed4(_ x: Double) -> Double { Double(JS.toFixed(x, 4))! }
       let key = positionKey("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")
       var cards: [String: Card] = [:]
       if a[0] != .null {
-        var card = createCard(cardId("rep_w", key), "rep_w", key, "", now + DAY)
+        var card = createCard(cardId("rep_w", key), "rep_w", key, "", now)
+        card.testedRound = 10
         let over = a[0].object
         if let v = over["stage"] { card.stage = CardStage(rawValue: v.string)! }
         if let v = over["ease"] { card.ease = v.number }
         if let v = over["lapses"] { card.lapses = v.int }
         if let v = over["correct"] { card.correct = v.int }
         if let v = over["incorrect"] { card.incorrect = v.int }
-        if let v = over["due"] { card.due = v.number }
+        if let v = over["asked"] { card.testedRound = 10 - v.int }
         cards[card.id] = card
       }
       let slips = a[1].int > 0 ? [Slip(kind: "offprep", repertoireId: "rep_w", key: key, games: a[1].int)] : []
-      return fixed4Three(weaknessFromCards(cards, slips, now)("rep_w", key)).json
+      return fixed4Three(weaknessFromCards(cards, slips, round: 10)("rep_w", key)).json
     },
     "openingRun.lineWeakness": { a in
       let values = a[0].numbers

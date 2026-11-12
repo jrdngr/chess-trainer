@@ -91,7 +91,6 @@ public struct RecommendInput {
   public var recentFocuses: [Focus]
   public var recentSteered: [Bool] = []
   public var seen: Seen?
-  public var now: Double?
 
   public init(tree: OpeningTree, selection: Selection, reps: [Repertoire], cards: [String: Card], repairs: [RepairRef] = [], score: ScoreState, newPerSession: Int, recentFocuses: [Focus]) {
     self.tree = tree
@@ -195,7 +194,6 @@ public func candidates(_ input: RecommendInput) -> [Candidate] {
   let region = nodeById(tree, input.selection.opening)
   let nodes = [region] + descendantsOf(region)
   var out: [Candidate] = []
-  let now = input.now ?? Env.now()
   let lastAt = { (id: String) in nodeStats(score, id).byMode[.run]?.lastAt }
   let everRun = (score.global.byMode[.run]?.rounds ?? 0) > 0
   func push(_ focus: Focus, _ node: OpeningNode, _ color: Color, _ need: Double, _ work: Int) {
@@ -222,12 +220,12 @@ public func candidates(_ input: RecommendInput) -> [Candidate] {
       if mine.isEmpty { continue }
       let wanting = { (item: TrainingItem) -> Bool in
         guard let card = input.cards[item.cardId] else { return true }
-        return runNeed(card, score.lineRounds, now) >= 1 || slipped.contains(item.key)
+        return runNeed(card, score.lineRounds) >= 1 || slipped.contains(item.key)
       }
       var due = 0, unseen = 0
       for item in within(items, node) {
         if let card = input.cards[item.cardId] {
-          if runNeed(card, score.lineRounds, now) >= 1 || slipped.contains(item.key) { due += 1 }
+          if runNeed(card, score.lineRounds) >= 1 || slipped.contains(item.key) { due += 1 }
         } else {
           unseen += 1
         }

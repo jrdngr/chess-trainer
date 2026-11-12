@@ -155,6 +155,6 @@ final class EndgameGame {
     case .success(_, let m): (success, mission) = (true, m)
     case .failure: (success, mission) = (false, false)
     }
-    store.update { $0.endgames.review(entry, success: success, mission: mission, now: Env.now()) }
+    store.update { $0.endgames.review(entry, success: success, mission: mission) }
   }
 }

@@ -8,11 +8,10 @@ import Shared
 /// you; see `docs/gameplay.md`. A move never asked is the most due. With none due, your weakest
 /// while your prep keeps missing, else the one closest to due. Never your first move as White,
 /// so a Drill run starts from move one only when there is no move of yours to start at, which is nil.
-public func drillStart(_ items: [TrainingItem], _ cards: [String: Card], accuracy: Double?, round: Int, now: Double? = nil) -> (item: TrainingItem, need: Double)? {
-  let now = now ?? Env.now()
+public func drillStart(_ items: [TrainingItem], _ cards: [String: Card], accuracy: Double?, round: Int) -> (item: TrainingItem, need: Double)? {
   let candidates = items.filter { !$0.pathSans.isEmpty }
   let ranked = candidates
-    .map { item in (item: item, need: cards[item.cardId].map { runNeed($0, round, now) } ?? .infinity) }
+    .map { item in (item: item, need: cards[item.cardId].map { runNeed($0, round) } ?? .infinity) }
     .jsSorted { cmp($1.need, $0.need) }
   if let first = ranked.first, first.need >= 1 { return first }
   if missingPrep(accuracy) > 0, let weakest = weakestFirst(candidates.filter { cards[$0.cardId] != nil }, cards).first {

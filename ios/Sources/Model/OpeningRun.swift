@@ -200,7 +200,7 @@ public struct Slip: Sendable {
 }
 
 /// The review schedule as a practice appetite.
-public func weaknessFromCards(_ cards: [String: Card], _ slips: [Slip] = [], _ now: Double = Env.now()) -> Weakness {
+public func weaknessFromCards(_ cards: [String: Card], _ slips: [Slip] = [], round: Int) -> Weakness {
   var slipped: [String: Int] = [:]
   for item in slips where item.kind == "offprep" { slipped[cardId(item.repertoireId, item.key), default: 0] += item.games }
   return { repertoireId, key in
@@ -212,7 +212,7 @@ public func weaknessFromCards(_ cards: [String: Card], _ slips: [Slip] = [], _ n
     score += Double(card.lapses) * 1.2
     score += max(0, 2.5 - card.ease) * 2
     if card.stage == .learning { score += 1 }
-    if card.due <= now { score += 1 }
+    if runNeed(card, round) >= 1 { score += 1 }
     let answered = card.correct + card.incorrect
     if answered > 0 { score += Double(card.incorrect) / Double(answered) * 2 }
     return score

@@ -23,19 +23,28 @@ private func near(_ got: [Double], _ want: [Double]) -> Bool {
   var card = createCard("id", "rep", "key", "fen", 0)
   card.stage = .review
   card.interval = 40
-  card.due = 0
-  let lapsed = review(card, .again, 0)
-  #expect(lapsed.delay == 10 * MINUTE)
+  card.testedRound = 0
+  let lapsed = review(card, .again, round: 40)
+  #expect(lapsed.stage == .learning)
 
-  let hard = review(lapsed.card, .hard, lapsed.card.due)
-  #expect(hard.card.stage == .learning)
-  #expect(hard.delay == 10 * MINUTE)
+  let hard = review(lapsed, .hard, round: 42)
+  #expect(hard.stage == .learning && hard.step == lapsed.step)
 
-  let good = review(lapsed.card, .good, lapsed.card.due).card
+  let good = review(lapsed, .good, round: 42)
   #expect(good.stage == .review)
   #expect(good.interval == 20)
 
-  let fresh = review(createCard("id", "rep", "key", "fen", 0), .good, 0).card
+  let fresh = review(createCard("id", "rep", "key", "fen", 0), .good, round: 0)
   #expect(fresh.stage == .learning)
+}
+
+/// A known card asked before its interval is up keeps it; asked when due, it grows.
+@Test func aCardAskedEarlyKeepsItsInterval() {
+  var card = createCard("id", "rep", "key", "fen", 0)
+  card.stage = .review
+  card.interval = 10
+  card.testedRound = 0
+  #expect(review(card, .good, round: 9).interval == 10)
+  #expect(review(card, .good, round: 10).interval == 25)
 }
 

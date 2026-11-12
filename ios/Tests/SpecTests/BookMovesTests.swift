@@ -40,3 +40,28 @@ import Testing
   let old = try JSONDecoder().decode(AppState.self, from: Data("{}".utf8))
   #expect(old.version == 0)
 }
+
+/// Version 2 counts schedules in runs: a card's days become three runs each, and an
+/// Endgame position waits its interval in Endgame rounds, or is due if it was failed last.
+@Test func migrationSchedulesByRuns() throws {
+  var state = AppState()
+  state.version = 1
+  var card = createCard("rep_w#k", "rep_w", "k", "fen", 0)
+  card.stage = .review
+  card.interval = 4
+  state.cards[card.id] = card
+  state.endgames.cards["won"] = EndgameCard(dueRound: 0, interval: 2.5, reps: 2, lapses: 0)
+  state.endgames.cards["lost"] = EndgameCard(dueRound: 0, interval: 0, reps: 1, lapses: 1)
+  let changed = state.migrate(bookIndex)
+  #expect(changed)
+  #expect(state.cards[card.id]?.interval == 12)
+  #expect(state.endgames.cards["won"]?.dueRound == 8)
+  #expect(state.endgames.due.isEmpty)
+  #expect(state.endgames.cards["lost"]?.dueRound == 0)
+}
+
+/// An Endgame card saved with a date instead of a round reads as due at once.
+@Test func anEndgameCardWithADateReadsAsDue() throws {
+  let data = Data(#"{"due":1790845200000.5,"interval":2.5,"reps":2,"lapses":0}"#.utf8)
+  #expect(try JSONDecoder().decode(EndgameCard.self, from: data).dueRound == 0)
+}

@@ -2,7 +2,7 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// One move in the tree: its schedule, where it came from, how many branches
+/// One move in the tree: where it came from, how many branches
 /// follow, and its note. `TreeRow`.
 struct TreeRow: View {
   let rep: Repertoire
@@ -16,8 +16,7 @@ struct TreeRow: View {
     let kids = childrenOf(rep, node.id).count
     let meta = [
       sourceLabel(node.source), kids == 0 ? "end of line" : "\(kids) \(kids == 1 ? "branch" : "branches")",
-      card != nil && ourTurn ? describeDue(card!.due) : nil,
-    ].compactMap { $0 }.joined(separator: " \u{00b7} ")
+    ].joined(separator: " \u{00b7} ")
     HStack(spacing: 0) {
       Button(action: onOpen) {
         HStack(spacing: 12) {
@@ -43,7 +42,7 @@ struct TreeRow: View {
     switch card.stage {
     case .new: return Theme.accent
     case .learning: return Theme.warn
-    case .review: return card.interval >= 21 ? Theme.good : SwiftUI.Color(hex: 0x7dd3fc)
+    case .review: return card.interval >= 63 ? Theme.good : SwiftUI.Color(hex: 0x7dd3fc)
     }
   }
 }

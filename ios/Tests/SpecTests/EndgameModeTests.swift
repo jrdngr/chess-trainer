@@ -77,29 +77,35 @@ private func coordsOf(_ square: String) -> (Int, Int) {
 @Test func successesSpreadOutAndMissesComeBack() {
   var record = EndgameRecord()
   let entry = ENDGAME_LIBRARY[0]
-  record.review(entry, success: true, mission: true, now: 0)
-  #expect(record.cards[entry.id]?.due == DAY_MS)
-  record.review(entry, success: true, mission: false, now: DAY_MS)
-  #expect(record.cards[entry.id]?.interval == 2.5)
+  record.review(entry, success: true, mission: true)
+  #expect(record.cards[entry.id]?.dueRound == 1 + 3)
+  #expect(record.due.isEmpty)
+  record.review(entry, success: true, mission: false)
+  #expect(record.cards[entry.id]?.interval == 7.5)
+  #expect(record.cards[entry.id]?.dueRound == 2 + 8)
   #expect(record.ratings[entry.family] == 2 * ENDGAME_SUCCESS_POINTS + ENDGAME_MISSION_POINTS)
-  record.review(entry, success: false, mission: false, now: 5 * DAY_MS)
-  #expect(record.cards[entry.id]?.due == 5 * DAY_MS)
+  record.review(entry, success: false, mission: false)
+  #expect(record.cards[entry.id]?.dueRound == 3)
   #expect(record.cards[entry.id]?.lapses == 1)
-  #expect(record.due(5 * DAY_MS).map(\.id) == [entry.id])
+  #expect(record.due.map(\.id) == [entry.id])
   // A family's rating never drops below zero.
   var fresh = EndgameRecord()
-  fresh.review(entry, success: false, mission: false, now: 0)
+  fresh.review(entry, success: false, mission: false)
   #expect(fresh.ratings[entry.family] == 0)
   #expect(fresh.rank(entry.family).heldLabel == UNRATED.name)
 }
 
 @Test func theNextPositionIsTheFirstDueThenTheFirstNew() {
   var record = EndgameRecord()
-  #expect(record.next(0)?.id == ENDGAME_LIBRARY[0].id)
-  record.review(ENDGAME_LIBRARY[0], success: true, mission: true, now: 0)
-  #expect(record.next(0)?.id == ENDGAME_LIBRARY[1].id)
-  record.review(ENDGAME_LIBRARY[3], success: false, mission: false, now: 0)
-  #expect(record.next(0)?.id == ENDGAME_LIBRARY[3].id)
+  #expect(record.next?.id == ENDGAME_LIBRARY[0].id)
+  record.review(ENDGAME_LIBRARY[0], success: true, mission: true)
+  #expect(record.next?.id == ENDGAME_LIBRARY[1].id)
+  record.review(ENDGAME_LIBRARY[3], success: false, mission: false)
+  #expect(record.next?.id == ENDGAME_LIBRARY[3].id)
+  // Three rounds on, the first success is due again, after the miss due since round 2.
+  for entry in ENDGAME_LIBRARY[4...6] { record.review(entry, success: false, mission: false) }
+  #expect(record.due.first?.id == ENDGAME_LIBRARY[3].id)
+  #expect(record.due.map(\.id).contains(ENDGAME_LIBRARY[0].id))
 }
 
 @Test func savedEndgamesAreKeptOncePerPosition() {
@@ -152,7 +158,7 @@ private func coordsOf(_ square: String) -> (Int, Int) {
 
 @Test func endgamesSaveWithTheState() throws {
   var state = AppState()
-  state.endgames.review(ENDGAME_LIBRARY[0], success: true, mission: true, now: 0)
+  state.endgames.review(ENDGAME_LIBRARY[0], success: true, mission: true)
   state.endgames.sawIntro(ENDGAME_LIBRARY[0].id)
   let data = try JSONEncoder().encode(state)
   #expect(try JSONDecoder().decode(AppState.self, from: data) == state)

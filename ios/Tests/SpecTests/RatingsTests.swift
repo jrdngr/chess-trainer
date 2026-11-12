@@ -81,7 +81,7 @@ private func stats(_ days: [JSON], rating: Double = 0, rated: Int? = nil) -> Nod
   ], only: ["scoring.streak", "scoring.ratingChange", "scoring.ratingOn"])
 
   try check("autopilot", [
-    "srs.runNeed": { a in runNeed(a[0].decoded(Card.self), a[1].int, 1_790_845_200_000).json },
+    "srs.runNeed": { a in runNeed(a[0].decoded(Card.self), a[1].int).json },
   ], only: ["srs.runNeed"])
 }
 
