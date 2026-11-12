@@ -2,6 +2,7 @@ import Book
 import ChessCore
 import Model
 import SwiftUI
+import UIKit
 
 /// The Playbook tab: one side at a time, its openings under their first move,
 /// replies to one opening of yours under its name, each row with its tier and
@@ -25,6 +26,7 @@ struct PlaybookView: View {
   var onPlay: () -> Void = {}
 
   @Environment(AppStore.self) private var store
+  @Environment(Toasts.self) private var toasts
   @State private var scan = TidyScan()
   @State private var page: Page?
   @State private var focus: TidyFind?
@@ -199,12 +201,16 @@ struct PlaybookView: View {
     }
   }
 
-  /// One opening's row, swiping left to remove it.
+  /// One opening's row, swiping left to delete it after a confirmation.
   private func rowView(_ rep: Repertoire, _ row: PlaybookRow, _ extCount: [String: Int], name: String? = nil, indent: CGFloat = 0) -> some View {
-    SwipeToRemove {
+    let removes = row.parts.reduce(0) { $0 + $1.removes }
+    return SwipeToRemove(title: "Delete \(row.name)?", action: "Delete \(removes) \(removes == 1 ? "move" : "moves")") {
       store.update { state in
-        for part in row.parts { state.removeOpening(rep.id, part.rootId) }
+        for part in row.parts {
+          state.removeOpening(rep.id, part.rootId, tips: part.nested != nil ? tipsOf(rep, part) : nil)
+        }
       }
+      toasts.show("\(row.name) deleted")
     } content: {
       PlaybookRowView(tree: tree, row: row, extensions: extCount[row.id] ?? 0, name: name, indent: indent) {
         page = .opening(repId: rep.id, name: row.name)
@@ -320,41 +326,91 @@ struct FamilyRowView: View {
   }
 }
 
-/// A row that swipes left to show Remove.
+/// A row that swipes left to show Delete, which asks before it deletes.
 struct SwipeToRemove<Content: View>: View {
+  let title: String
+  /// The confirming button's label.
+  let action: String
   let onRemove: () -> Void
   @ViewBuilder var content: Content
   @State private var offset: CGFloat = 0
   @State private var start: CGFloat = 0
+  @State private var asking = false
   private let width: CGFloat = 92
 
   var body: some View {
     ZStack(alignment: .trailing) {
       if offset < 0 {
-        Button {
-          withAnimation(.snappy) { offset = 0 }
-          onRemove()
-        } label: {
-          Text("Remove").font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
+        Button { asking = true } label: {
+          Text("Delete").font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
             .frame(width: width).frame(maxHeight: .infinity).background(Theme.bad)
         }
         .buttonStyle(.plain)
       }
       content
         .background(Theme.surface)
+        // While open, a tap on the row closes it instead of opening the opening.
+        .overlay {
+          if offset < 0 {
+            SwiftUI.Color.black.opacity(0.001).contentShape(Rectangle())
+              .onTapGesture { close() }
+          }
+        }
         .offset(x: offset)
-        .simultaneousGesture(
-          DragGesture(minimumDistance: 16)
-            .onChanged { drag in
-              guard abs(drag.translation.width) > abs(drag.translation.height) else { return }
-              offset = min(0, max(-width * 1.3, start + drag.translation.width))
-            }
-            .onEnded { _ in
-              withAnimation(.snappy) { offset = offset < -width / 2 ? -width : 0 }
-              start = offset
-            })
+        .gesture(HorizontalPan { dx in
+          offset = min(0, max(-width * 1.3, start + dx))
+        } onEnd: { dx, velocity in
+          let end = start + dx
+          withAnimation(.snappy) { offset = end < -width / 2 || velocity < -300 ? -width : 0 }
+          start = offset
+        })
     }
     .clipped()
-    .accessibilityAction(named: "Remove", onRemove)
+    .confirmationDialog(title, isPresented: $asking, titleVisibility: .visible) {
+      Button(action, role: .destructive) {
+        close()
+        onRemove()
+      }
+      Button("Cancel", role: .cancel) { close() }
+    }
+    .accessibilityAction(named: "Delete") { asking = true }
+  }
+
+  private func close() {
+    withAnimation(.snappy) { offset = 0 }
+    start = 0
+  }
+}
+
+/// A pan that starts only when the finger moves more sideways than up or down,
+/// so the list still scrolls and the row's button loses the touch once it starts.
+private struct HorizontalPan: UIGestureRecognizerRepresentable {
+  let onChange: (CGFloat) -> Void
+  /// The pan's sideways travel and speed when the finger lifts.
+  let onEnd: (CGFloat, CGFloat) -> Void
+
+  func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
+
+  func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
+    let pan = UIPanGestureRecognizer()
+    pan.delegate = context.coordinator
+    return pan
+  }
+
+  func handleUIGestureRecognizerAction(_ pan: UIPanGestureRecognizer, context: Context) {
+    let dx = pan.translation(in: pan.view).x
+    switch pan.state {
+    case .changed: onChange(dx)
+    case .ended, .cancelled, .failed: onEnd(dx, pan.velocity(in: pan.view).x)
+    default: break
+    }
+  }
+
+  final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+    func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+      guard let pan = recognizer as? UIPanGestureRecognizer else { return true }
+      let v = pan.velocity(in: pan.view)
+      return abs(v.x) > abs(v.y)
+    }
   }
 }
