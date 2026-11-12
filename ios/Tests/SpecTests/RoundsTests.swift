@@ -3,8 +3,8 @@ import Foundation
 import Model
 import Testing
 
-/// Golden/cases/functions/autopilot.json, the Autopilot half.
-@Test func autopilot() throws {
+/// Golden/cases/functions/play.json, the Play half.
+@Test func play() throws {
   let now = 1_790_845_200_000.0
   let r = rep(.w, ["e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d3", "e4 e5 Nf3 Nc6 Bc4 Nf6 d3 Bc5 c3", "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3"])
   let items = allItems([r])
@@ -13,7 +13,7 @@ import Testing
   func deck(_ ago: (Int) -> Int?, _ stage: CardStage = .review, _ interval: Double = 3) -> [String: Card] {
     var out: [String: Card] = [:]
     for (i, item) in items.enumerated() {
-      var card = createCard(item.cardId, item.repertoireId, item.key, item.fen, now)
+      var card = createCard(item.cardId, item.playbookId, item.key, item.fen, now)
       card.stage = stage
       card.interval = interval
       if let tested = ago(i) { card.testedRound = 20 - tested }
@@ -25,14 +25,14 @@ import Testing
   }
   let decks = [deck { _ in nil }, deck { _ in 1 }, deck { $0 % 4 == 0 ? 8 : 2 }, deck({ $0 }, .learning)]
 
-  try check("autopilot", [
-    "autopilot.drillStart": { a in
+  try check("play", [
+    "play.drillStart": { a in
       drillStart(items, decks[a[0].int], accuracy: a[1].numberOrNil, round: a[2].int)
         .map { obj(["item": $0.item.cardId, "need": $0.need]) } ?? .null
     },
     "recommend.missingPrep": { missingPrep($0[0].numberOrNil).json },
-    "autopilot.prepDepth": { a in prepDepth(line(a[0].string), color(a[1]), prepAt, a[2].int).json },
-  ], only: ["autopilot.drillStart", "recommend.missingPrep", "autopilot.prepDepth"])
+    "play.prepDepth": { a in prepDepth(line(a[0].string), color(a[1]), prepAt, a[2].int).json },
+  ], only: ["play.drillStart", "recommend.missingPrep", "play.prepDepth"])
 }
 
 /// Golden/cases/functions/recommend.json
@@ -50,7 +50,7 @@ import Testing
     obj(["focus": c.focus.rawValue, "openingId": c.openingId, "color": c.color.rawValue, "need": c.need, "work": c.work,
          "lastAt": c.lastAt, "level": c.level, "score": c.score])
   }
-  func repOf(_ c: Color, _ lines: [String]) -> Repertoire {
+  func repOf(_ c: Color, _ lines: [String]) -> Playbook {
     var out = rep(c, [])
     for l in lines { out = addLine(out, line(l), .fixed(.book)).rep }
     for id in out.nodes.keys { out.nodes[id]!.addedAt = t - 10 * DAY }
@@ -63,7 +63,7 @@ import Testing
     var score = ScoreState()
     for (i, l) in played.enumerated() {
       score = recordRound(score, tree, RoundRecord(
-        mode: .run, openingId: selection.opening, color: .w, answered: 1, correct: 1, perfect: false,
+        mode: .oldPlay, openingId: selection.opening, color: .w, answered: 1, correct: 1, perfect: false,
         at: t - 3_600_000 - Double(played.count - 1 - i) * DAY, line: line(l)))
     }
     var cards: [String: Card] = [:]
@@ -71,7 +71,7 @@ import Testing
       guard let rule = s["cards"].array.first(where: { item.pathSans.joined(separator: " ").hasPrefix($0["prefix"].string) || $0["prefix"].string.isEmpty }) else {
         continue
       }
-      var card = createCard(item.cardId, item.repertoireId, item.key, item.fen, t - DAY)
+      var card = createCard(item.cardId, item.playbookId, item.key, item.fen, t - DAY)
       card.stage = .review
       card.interval = 9
       card.testedRound = score.lineRounds - (rule["due"].bool ? 9 : 0)

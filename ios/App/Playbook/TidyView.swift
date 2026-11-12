@@ -19,11 +19,11 @@ struct TidyView: View {
 
   var body: some View {
     let state = store.state
-    let pinnedLive = pinned.flatMap { p in state.repertoires[p.repertoireId]?.nodes[p.nodeId] != nil ? p : nil }
+    let pinnedLive = pinned.flatMap { p in state.playbooks[p.playbookId]?.nodes[p.nodeId] != nil ? p : nil }
     let rest = (scan.finds ?? []).filter { $0.id != pinnedLive?.id }
     let list = pinnedLive.map { [$0] + rest } ?? rest
     let shown = scan.shown(list)
-    let reps = repertoiresIn(state.repertoireList, state.settings.selection.color)
+    let reps = playbooksIn(state.playbookList, state.settings.selection.color)
     VStack(spacing: 0) {
       AppBar(title: "Tidy", onBack: onBack)
       ScrollView {
@@ -73,8 +73,8 @@ struct TidyView: View {
     var undo: PlaybookUndo?
     store.update {
       setEventPlace(.tidy)
-      undo = $0.tidySwitch(find.repertoireId, find.nodeId, find.suggestion)
-      setEventPlace(.repertoire)
+      undo = $0.tidySwitch(find.playbookId, find.nodeId, find.suggestion)
+      setEventPlace(.playbook)
     }
     guard let undo else {
       toasts.show("That move cannot be played there")
@@ -138,7 +138,7 @@ struct TidyCard: View {
 
   /// Why your move works against your lines: worked out only for an open card.
   private var against: String? {
-    guard open, let index = store.index, let rep = store.state.repertoires[find.repertoireId], let node = rep.nodes[find.nodeId] else { return nil }
+    guard open, let index = store.index, let rep = store.state.playbooks[find.playbookId], let node = rep.nodes[find.nodeId] else { return nil }
     let line = pathTo(rep, node.parentId)
     let prefs = store.state.settings.growth
     return againstReason(

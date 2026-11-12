@@ -37,12 +37,12 @@ struct SideMenu: View {
   @State private var confirming = false
 
   var body: some View {
-    if let rep = store.state.repertoires[repId] {
+    if let rep = store.state.playbooks[repId] {
       let moves = rep.nodes.count
-      let trained = store.state.cards.values.filter { $0.repertoireId == rep.id }.count
+      let trained = store.state.cards.values.filter { $0.playbookId == rep.id }.count
       let side = rep.color == .w ? "White" : "Black"
       VStack(alignment: .leading, spacing: 0) {
-        SheetHead(title: repertoireName(rep.color))
+        SheetHead(title: playbookName(rep.color))
         ListCard {
           kv("Moves", "\(moves)")
           kv("Scheduled positions", "\(trained)")
@@ -53,7 +53,7 @@ struct SideMenu: View {
             confirming = true
             return
           }
-          store.update { $0.removeRepertoire(rep.id) }
+          store.update { $0.removePlaybook(rep.id) }
           onClose()
           onDeleted()
           toasts.show("Everything you play as \(side) deleted")

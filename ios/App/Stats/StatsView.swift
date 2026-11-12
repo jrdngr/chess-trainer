@@ -42,11 +42,11 @@ enum StatsDebug {
   /// `STATS_SCROLL=bottom` opens each page scrolled to its end.
   static var scrollToBottom: Bool { env["STATS_SCROLL"] == "bottom" }
 
-  /// `STATS_ROUND=1` logs one Survival round with nothing answered, as one
-  /// Autopilot round does, when none has been played yet.
+  /// `STATS_ROUND=1` logs one Run round with nothing answered, as one
+  /// Play round does, when none has been played yet.
   @MainActor static func seedRound(_ store: AppStore, _ tree: OpeningTree) {
     guard env["STATS_ROUND"] == "1", store.state.score.rounds.isEmpty else { return }
-    let round = RoundRecord(mode: .survival, openingId: "", color: .w, answered: 0, correct: 0, perfect: false, at: Env.now())
+    let round = RoundRecord(mode: .run, openingId: "", color: .w, answered: 0, correct: 0, perfect: false, at: Env.now())
     store.update { $0.score = recordRound($0.score, tree, round) }
   }
 }

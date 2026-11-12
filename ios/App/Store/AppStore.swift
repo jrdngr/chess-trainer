@@ -84,7 +84,7 @@ final class AppStore {
 
   private func decode(_ data: Data) {
     do {
-      state = try JSONDecoder().decode(AppState.self, from: data)
+      state = try decodeSave(data)
     } catch {
       // The next save would overwrite it with a fresh state: keep the unreadable one beside it.
       print("load failed: \(error)")
@@ -323,7 +323,7 @@ final class AppStore {
   /// Your openings, most worth focusing on first: `yourOpenings`.
   func yourOpenings() -> [YourOpening] {
     guard let tree else { return [] }
-    return Model.yourOpenings(state.repertoireList, tree, state.score)
+    return Model.yourOpenings(state.playbookList, tree, state.score)
   }
 
   /// Change the state and save it.

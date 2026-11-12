@@ -5,9 +5,9 @@ import Shared
 /// Openings, derived from the tree rather than stored.
 
 public struct DerivedOpening: Equatable, Sendable {
-  /// Stable within a repertoire: the node the region begins at.
+  /// Stable within a playbook: the node the region begins at.
   public var id: String
-  public var repertoireId: String
+  public var playbookId: String
   public var color: Color
   public var name: String
   public var eco: String?
@@ -56,8 +56,8 @@ private final class NamedRegion {
   }
 }
 
-/// Every opening in one repertoire, the biggest first.
-public func openingsIn(_ rep: Repertoire, _ index: ReferenceIndex) -> [DerivedOpening] {
+/// Every opening in one playbook, the biggest first.
+public func openingsIn(_ rep: Playbook, _ index: ReferenceIndex) -> [DerivedOpening] {
   let openings = collapse(namedRegions(rep, index))
   if rep.color == .b {
     for (region, name) in zip(openings, blackNames(openings.map { ($0.name, $0.path) }, index)) { region.name = name }
@@ -66,7 +66,7 @@ public func openingsIn(_ rep: Repertoire, _ index: ReferenceIndex) -> [DerivedOp
 }
 
 /// Every named region of a tree, nested as the book names them.
-private func namedRegions(_ rep: Repertoire, _ index: ReferenceIndex) -> [NamedRegion] {
+private func namedRegions(_ rep: Playbook, _ index: ReferenceIndex) -> [NamedRegion] {
   var tops: [NamedRegion] = []
   func visit(_ node: RepMove, _ path: [String], _ enclosing: NamedRegion?) {
     let here = path + [node.san]
@@ -106,7 +106,7 @@ private final class FamilyRow {
 /// The Playbook's rows: one per opening family, a family nested in another on a row of its own.
 /// Lines that stop where only a first-move name covers them (see `openingFamily`) have no row,
 /// unless `firstMoves` keeps them, as imports do: under that name, or for Black after its first move.
-public func familiesIn(_ rep: Repertoire, _ index: ReferenceIndex, firstMoves: Bool = false) -> [DerivedOpening] {
+public func familiesIn(_ rep: Playbook, _ index: ReferenceIndex, firstMoves: Bool = false) -> [DerivedOpening] {
   var rows: [FamilyRow] = []
   func visit(_ region: NamedRegion, _ row: FamilyRow?) {
     var here = row
@@ -132,7 +132,7 @@ public func familiesIn(_ rep: Repertoire, _ index: ReferenceIndex, firstMoves: B
   return sorted(listed.enumerated().map { i, row in
     let stats = subtreeStats(rep, row.rootId, row.path.count, Set(row.nested))
     return DerivedOpening(
-      id: "\(rep.id)#\(row.rootId)", repertoireId: rep.id, color: rep.color, name: names[i], eco: row.eco,
+      id: "\(rep.id)#\(row.rootId)", playbookId: rep.id, color: rep.color, name: names[i], eco: row.eco,
       rootId: row.rootId, path: row.path, moves: stats.moves,
       removes: row.nested.isEmpty ? pruneCount(rep, row.rootId) : removedWith(rep, stats.tips),
       lines: stats.lines, depth: stats.depth, variations: [], nested: row.nested.isEmpty ? nil : row.nested)
@@ -140,12 +140,12 @@ public func familiesIn(_ rep: Repertoire, _ index: ReferenceIndex, firstMoves: B
 }
 
 /// The ends of every line an opening holds, leaving out openings nested in it.
-public func tipsOf(_ rep: Repertoire, _ opening: DerivedOpening) -> [String] {
+public func tipsOf(_ rep: Playbook, _ opening: DerivedOpening) -> [String] {
   subtreeStats(rep, opening.rootId, opening.path.count, Set(opening.nested ?? [])).tips
 }
 
 /// How many moves go when these lines are deleted: every move all of whose lines are among them.
-private func removedWith(_ rep: Repertoire, _ tips: [String]) -> Int {
+private func removedWith(_ rep: Playbook, _ tips: [String]) -> Int {
   let gone = Set(tips)
   var count = 0
   func visit(_ node: RepMove) -> Bool {
@@ -192,10 +192,10 @@ private func collapse(_ regions: [NamedRegion]) -> [NamedRegion] {
   return out
 }
 
-private func finish(_ rep: Repertoire, _ region: NamedRegion) -> DerivedOpening {
+private func finish(_ rep: Playbook, _ region: NamedRegion) -> DerivedOpening {
   let stats = subtreeStats(rep, region.rootId, region.path.count)
   return DerivedOpening(
-    id: "\(rep.id)#\(region.rootId)", repertoireId: rep.id, color: rep.color, name: region.name, eco: region.eco,
+    id: "\(rep.id)#\(region.rootId)", playbookId: rep.id, color: rep.color, name: region.name, eco: region.eco,
     rootId: region.rootId, path: region.path, moves: stats.moves, removes: pruneCount(rep, region.rootId),
     lines: stats.lines, depth: stats.depth, variations: sorted(region.children.map { finish(rep, $0) }))
 }
@@ -208,7 +208,7 @@ private func sorted(_ openings: [DerivedOpening]) -> [DerivedOpening] {
   }
 }
 
-private func subtreeStats(_ rep: Repertoire, _ nodeId: String, _ ply: Int, _ skip: Set<String> = []) -> (moves: Int, lines: Int, depth: Int, tips: [String]) {
+private func subtreeStats(_ rep: Playbook, _ nodeId: String, _ ply: Int, _ skip: Set<String> = []) -> (moves: Int, lines: Int, depth: Int, tips: [String]) {
   let all = childrenOf(rep, nodeId)
   if all.isEmpty { return (1, 1, ply, [nodeId]) }
   // Only the way into an opening listed on its own: a move, but no line.
@@ -239,7 +239,7 @@ public struct OpeningLine: Equatable, Sendable {
 }
 
 /// Every line of one opening, in tree order, each named for where it goes.
-public func linesOf(_ rep: Repertoire, _ opening: DerivedOpening, _ index: ReferenceIndex) -> [OpeningLine] {
+public func linesOf(_ rep: Playbook, _ opening: DerivedOpening, _ index: ReferenceIndex) -> [OpeningLine] {
   guard let root = rep.nodes[opening.rootId] else { return [] }
   var raw: [(tipId: String, path: [String], name: String, split: Int)] = []
   let nested = Set(opening.nested ?? [])
@@ -281,7 +281,7 @@ private func shortName(_ name: String, _ family: String) -> String {
 }
 
 /// Ply of the first move only this line has.
-private func splitPly(_ rep: Repertoire, _ tipId: String) -> Int {
+private func splitPly(_ rep: Playbook, _ tipId: String) -> Int {
   var ply = 0
   var id: String? = tipId
   while let at = id {
@@ -303,22 +303,22 @@ private func splitPly(_ rep: Repertoire, _ tipId: String) -> Int {
 public struct PlaybookRow: Equatable, Sendable {
   public var name: String
   public var color: Color
-  public var repertoireId: String
+  public var playbookId: String
   /// The family's rows from `familiesIn`, biggest first.
   public var parts: [DerivedOpening]
 
-  public var id: String { "\(repertoireId)#\(name)" }
+  public var id: String { "\(playbookId)#\(name)" }
   public var lines: Int { parts.reduce(0) { $0 + $1.lines } }
 }
 
 /// The Playbook tab's rows for one side: `familiesIn`, with rows of the same name merged.
-public func playbookRows(_ rep: Repertoire, _ index: ReferenceIndex, firstMoves: Bool = false) -> [PlaybookRow] {
+public func playbookRows(_ rep: Playbook, _ index: ReferenceIndex, firstMoves: Bool = false) -> [PlaybookRow] {
   var rows: [PlaybookRow] = []
   for opening in familiesIn(rep, index, firstMoves: firstMoves) {
     if let at = rows.firstIndex(where: { $0.name == opening.name }) {
       rows[at].parts.append(opening)
     } else {
-      rows.append(PlaybookRow(name: opening.name, color: rep.color, repertoireId: rep.id, parts: [opening]))
+      rows.append(PlaybookRow(name: opening.name, color: rep.color, playbookId: rep.id, parts: [opening]))
     }
   }
   return rows
@@ -406,6 +406,6 @@ public func nameUnder(_ family: String, _ name: String) -> String {
 }
 
 /// Every line of a Playbook row, part by part.
-public func linesOf(_ rep: Repertoire, _ row: PlaybookRow, _ index: ReferenceIndex) -> [OpeningLine] {
+public func linesOf(_ rep: Playbook, _ row: PlaybookRow, _ index: ReferenceIndex) -> [OpeningLine] {
   row.parts.flatMap { linesOf(rep, $0, index) }
 }

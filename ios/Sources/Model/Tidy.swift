@@ -2,19 +2,19 @@ import Book
 import ChessCore
 import Shared
 
-/// Tidy: finding the places a repertoire could converge.
+/// Tidy: finding the places a playbook could converge.
 ///
 /// Every move you have chosen is compared with the moves you could have chosen
 /// instead, by the same familiarity the Growth arrows use. Where another move
 /// is closer to the rest of your lines than yours, that is a find: switch to
 /// it, and your move and everything under it go. Your own move is judged
-/// against the repertoire *without* its subtree, so it gets no credit for being
+/// against the playbook *without* its subtree, so it gets no credit for being
 /// the line it already is.
 
 public struct TidyFind: Equatable, Sendable {
-  /// Stable while the line is unchanged: the repertoire and your move's node.
+  /// Stable while the line is unchanged: the playbook and your move's node.
   public var id: String
-  public var repertoireId: String
+  public var playbookId: String
   public var color: Color
   /// Your move at the position.
   public var nodeId: String
@@ -48,7 +48,7 @@ public struct TidyOptions: Sendable {
 }
 
 /// The one switch that would tidy a position, or nil when your move is as familiar as any.
-public func findAt(_ rep: Repertoire, _ index: ReferenceIndex, _ node: RepMove, _ opts: TidyOptions, _ candidates: [String]? = nil) -> TidyFind? {
+public func findAt(_ rep: Playbook, _ index: ReferenceIndex, _ node: RepMove, _ opts: TidyOptions, _ candidates: [String]? = nil) -> TidyFind? {
   let line = pathTo(rep, node.parentId)
   let path = line.map(\.san)
   // Your first move picks the opening; two first moves are two openings, not a loose end.
@@ -71,20 +71,20 @@ public func findAt(_ rep: Repertoire, _ index: ReferenceIndex, _ node: RepMove, 
   else { return nil }
   let drawn = Set(movesToDraw(index, fen).map(\.san))
   return TidyFind(
-    id: "\(rep.id)#\(node.id)", repertoireId: rep.id, color: rep.color, nodeId: node.id, mine: node.san, path: path,
+    id: "\(rep.id)#\(node.id)", playbookId: rep.id, color: rep.color, nodeId: node.id, mine: node.san, path: path,
     fen: fen, key: node.key, suggestion: best.san, kind: best.kind, tone: drawn.contains(best.san) ? .toward : .towardFar,
     offBook: !book.contains(best.san), reason: best.reason, against: best.against, removes: subtreeIds(rep, node.id).count)
 }
 
-/// Your moves in a repertoire: the positions where you chose.
-public func yourMoves(_ rep: Repertoire) -> [RepMove] {
+/// Your moves in a playbook: the positions where you chose.
+public func yourMoves(_ rep: Playbook) -> [RepMove] {
   nodesInOrder(rep).filter { fenTurn($0.fenBefore) == rep.color }
 }
 
 /// The positions a scan looks at: your moves inside a region. A position met
 /// by two move orders is one decision, so it is looked at once.
-public func tidyPositions(_ reps: [Repertoire], _ tree: OpeningTree, _ region: OpeningNode) -> [(rep: Repertoire, node: RepMove)] {
-  var out: [(rep: Repertoire, node: RepMove)] = []
+public func tidyPositions(_ reps: [Playbook], _ tree: OpeningTree, _ region: OpeningNode) -> [(rep: Playbook, node: RepMove)] {
+  var out: [(rep: Playbook, node: RepMove)] = []
   for rep in reps {
     var seen = Set<String>()
     for node in yourMoves(rep) where seen.insert("\(node.key)|\(node.san)").inserted {
@@ -105,7 +105,7 @@ public func sortFinds(_ finds: [TidyFind]) -> [TidyFind] {
 /// closer to the rest of your lines than the prepared one? The prepared move
 /// is found by position, since a round can reach it by another move order.
 public func offPrepHint(
-  _ rep: Repertoire?, _ index: ReferenceIndex, _ fen: String, _ played: String, _ expected: String, _ opts: TidyOptions
+  _ rep: Playbook?, _ index: ReferenceIndex, _ fen: String, _ played: String, _ expected: String, _ opts: TidyOptions
 ) -> TidyFind? {
   guard let rep else { return nil }
   let key = positionKey(fen)
@@ -115,7 +115,7 @@ public func offPrepHint(
 
 /// Switch your move at a position: the new move becomes yours there, and the
 /// old one goes with everything under it. Nil when the move is not legal.
-public func switchMove(_ rep: Repertoire, _ nodeId: String, _ san: String) -> Repertoire? {
+public func switchMove(_ rep: Playbook, _ nodeId: String, _ san: String) -> Playbook? {
   guard let old = rep.nodes[nodeId], let added = addMove(rep, old.parentId, san, .tidy) else { return nil }
   return removeSubtree(setPreferred(added.rep, added.node.id), nodeId)
 }

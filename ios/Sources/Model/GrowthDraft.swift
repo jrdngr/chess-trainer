@@ -5,12 +5,12 @@ import ChessCore
 
 public struct GrowthDraft {
   /// The side's tree with the sitting's moves in it.
-  public private(set) var rep: Repertoire
+  public private(set) var rep: Playbook
   /// What Save Line writes, in order: the opening's own line first, then each answer's line.
   public private(set) var lines: [(sans: [String], source: SourceFor)] = []
 
   /// A draft on a saved tree, with a line kept from the start: the chosen opening's own moves.
-  public init(_ saved: Repertoire, keep: [String]? = nil, source: MoveSource = .picker) {
+  public init(_ saved: Playbook, keep: [String]? = nil, source: MoveSource = .picker) {
     rep = saved
     if let keep, !keep.isEmpty { add(keep, .fixed(source)) }
   }
@@ -31,7 +31,7 @@ public struct GrowthDraft {
 
 extension AppState {
   /// Save Line: a draft's lines into the side's tree.
-  public mutating func saveGrowth(_ repertoireId: String, _ draft: GrowthDraft) {
-    for line in draft.lines { addLine(repertoireId, line.sans, line.source, via: .growth) }
+  public mutating func saveGrowth(_ playbookId: String, _ draft: GrowthDraft) {
+    for line in draft.lines { addLine(playbookId, line.sans, line.source, via: .growth) }
   }
 }

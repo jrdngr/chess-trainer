@@ -1,7 +1,7 @@
 import ChessCore
 import Shared
 
-/// Autopilot: one Survival run after another, each decided for you,
+/// Play: one Run run after another, each decided for you,
 /// including where it starts.
 
 /// Where a Drill run starts: the position of your move most due, the moves to it played for
@@ -45,7 +45,7 @@ public func movesBy(_ color: Color, in plies: Int) -> Int {
   color == .w ? (plies + 1) / 2 : plies / 2
 }
 
-/// Where a run stands in your prep, for Autopilot's segments.
+/// Where a run stands in your prep, for Play's segments.
 public struct PrepSpan: Equatable, Sendable {
   public var played: Int
   public var total: Int

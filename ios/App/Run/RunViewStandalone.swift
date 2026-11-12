@@ -2,7 +2,7 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// What a Survival run you set up shows that Autopilot's round does not.
+/// What a Run run you set up shows that Play's round does not.
 extension RunView {
   /// The opening the run is announced as, by its trail.
   var introTrail: [String] {

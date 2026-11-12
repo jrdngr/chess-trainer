@@ -2,7 +2,7 @@ import Book
 import ChessCore
 import Shared
 
-/// A Survival run (Autopilot's too) as a pure controller: `state + event →
+/// A Run run (Play's too) as a pure controller: `state + event →
 /// state + effects`. The screen owns
 /// timing, the engine and the store; it feeds each thing that happens in and
 /// carries out the effects in order.
@@ -98,19 +98,19 @@ public struct Judgement: Equatable, Sendable {
 /// What the run is played under, fixed for its length.
 public struct RunContext {
   public var index: ReferenceIndex
-  public var prefs: SurvivalPrefs
-  /// Opened by Autopilot: prepared and book moves pop with their time.
-  public var autopilot: Bool
-  public init(index: ReferenceIndex, prefs: SurvivalPrefs, autopilot: Bool) {
+  public var prefs: RunPrefs
+  /// Opened by Play: prepared and book moves pop with their time.
+  public var play: Bool
+  public init(index: ReferenceIndex, prefs: RunPrefs, play: Bool) {
     self.index = index
     self.prefs = prefs
-    self.autopilot = autopilot
+    self.play = play
   }
 }
 
 public struct RunSession {
   public var source: LineSource
-  public var state: SurvivalRun
+  public var state: RunTally
   public var redraw: (Run) -> Run
   public var prepStatus: PrepStatus = .on
   /// Whether your prep has answered anything yet.
@@ -167,7 +167,7 @@ public func evalLensTints(_ last: JudgedMark?, played: Int) -> [Tint] {
 /// What the run asks the store to keep when it ends.
 public struct Finish {
   public var how: Ending
-  public var ended: SurvivalRun
+  public var ended: RunTally
   /// Your prep played to its end without a miss: where growing it would start.
   public var clean: [String]?
   /// Prep that asked nothing.
@@ -180,9 +180,9 @@ public enum Effect {
   /// Rate one answered prepared position; `earlier` is the run's answers before it.
   case rate(result: MoveResult, earlier: [MoveResult])
   /// A prepared position answered: review its card.
-  case answered(repertoireId: String, fen: String, san: String, grade: Grade)
+  case answered(playbookId: String, fen: String, san: String, grade: Grade)
   /// A prepared position missed: log it for review.
-  case missed(repertoireId: String, fen: String, played: String, expected: String)
+  case missed(playbookId: String, fen: String, played: String, expected: String)
   case buzz(Int)
   case pop(Pop)
   case note(Note?)
@@ -197,7 +197,7 @@ public enum Effect {
 public typealias Step = (session: RunSession, effects: [Effect])
 
 /// A run, just begun.
-public func beginSession(_ begun: SurvivalStart) -> RunSession {
+public func beginSession(_ begun: RunBegun) -> RunSession {
   RunSession(source: begun.source, state: begun.state, redraw: begun.redraw)
 }
 
@@ -205,14 +205,14 @@ private func unchanged(_ session: RunSession) -> Step { (session, []) }
 
 /// One prepared position answered: a rated result, credited to the position asked.
 private func tally(_ session: RunSession, _ line: [String], _ correct: Bool, _ at: Double) -> Step {
-  let result = MoveResult(mode: .survival, line: line, color: session.state.run.color, correct: correct, rated: true, at: at)
+  let result = MoveResult(mode: .run, line: line, color: session.state.run.color, correct: correct, rated: true, at: at)
   var next = session
   next.answers.append(result)
   return (next, [.rate(result: result, earlier: session.answers)])
 }
 
 /// The run is over: say how, once.
-private func finish(_ session: RunSession, _ ended: SurvivalRun, _ how: Ending) -> Step {
+private func finish(_ session: RunSession, _ ended: RunTally, _ how: Ending) -> Step {
   if session.ending != nil { return unchanged(session) }
   let clean = ended.misses.isEmpty ? session.prepEnd : nil
   var next = session
@@ -221,7 +221,7 @@ private func finish(_ session: RunSession, _ ended: SurvivalRun, _ how: Ending) 
 }
 
 /// After any move: a finished game ends the run.
-private func afterMove(_ session: RunSession, _ state: SurvivalRun) -> Step {
+private func afterMove(_ session: RunSession, _ state: RunTally) -> Step {
   var next = session
   next.state = state
   let status = positionStatus(state.run.fen)
@@ -246,8 +246,8 @@ public func playPrepared(_ session: RunSession, _ ctx: RunContext, _ move: Legal
   if session.ending != nil { return unchanged(session) }
   let run = session.state.run
   var effects: [Effect] = [.buzz(10)]
-  if let rid = run.repertoireId { effects.append(.answered(repertoireId: rid, fen: run.fen, san: move.san, grade: gradeForTime(seconds))) }
-  if ctx.autopilot {
+  if let rid = run.playbookId { effects.append(.answered(playbookId: rid, fen: run.fen, san: move.san, grade: gradeForTime(seconds))) }
+  if ctx.play {
     effects.append(.pop(Pop(square: move.to, text: secondsText(seconds), tone: speedTone(seconds), found: true)))
   }
   var start = session
@@ -274,7 +274,7 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     step = tally(session, run.played, false, now)
     step.session.prepStatus = .off
     step.session.prepEnd = nil
-    if let rid = run.repertoireId { step.effects.append(.missed(repertoireId: rid, fen: run.fen, played: judged.san, expected: first)) }
+    if let rid = run.playbookId { step.effects.append(.missed(playbookId: rid, fen: run.fen, played: judged.san, expected: first)) }
   }
   if !judged.ok {
     let slip =
@@ -309,7 +309,7 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
       lost: book ? 0 : judged.lost, after: judged.after, moment: judged.moment && expected.isEmpty, found: judged.found, fen: landed?.after))
     if let moment = scored.earned.moment, moment.found, let landed {
       effects.append(.pop(Pop(square: landed.to, text: "+\(moment.bonus)", tone: .up, found: true, moment: true)))
-    } else if book && ctx.autopilot, let landed {
+    } else if book && ctx.play, let landed {
       effects.append(.pop(Pop(square: landed.to, text: secondsText(seconds), tone: speedTone(seconds), found: true, book: true)))
     } else if let score, let landed {
       effects.append(.pop(Pop(square: landed.to, text: score.cp > 0 ? "+\(JSNum(score.cp))" : "\u{2212}\(JSNum(-score.cp))", tone: score.tone)))
@@ -362,7 +362,7 @@ public func engineMove(_ session: RunSession, _ san: String) -> Step {
 }
 
 /// The opponent's move landed: a Convert it mission may settle on it, then the game may be over.
-private func theirMove(_ session: RunSession, _ state: SurvivalRun) -> Step {
+private func theirMove(_ session: RunSession, _ state: RunTally) -> Step {
   var state = state
   var effects: [Effect] = []
   if let cp = session.lastScored {
@@ -401,7 +401,7 @@ public func closeBook(_ session: RunSession, _ index: ReferenceIndex) -> RunSess
 }
 
 /// Where the prep runs out, the first mission is set from the eval in front of you.
-public func missionFrom(_ session: RunSession, _ prefs: SurvivalPrefs, _ cp: Double) -> RunSession {
+public func missionFrom(_ session: RunSession, _ prefs: RunPrefs, _ cp: Double) -> RunSession {
   if !prepMoves(session).isEmpty { return session }
   let run = session.state.run
   let extras = firstMission(session.state.extras, missions: prefs.missions, run.color, cp, run.fen)
@@ -417,7 +417,7 @@ public func runRound(_ finish: Finish, _ tree: OpeningTree, at: Double) -> Round
   var blunder = false
   if case .blunder = finish.how { blunder = true }
   return RoundRecord(
-    mode: .survival, openingId: deepestNodeWithin(tree, nodeById(tree, finish.ended.run.openingId), line).id,
+    mode: .run, openingId: deepestNodeWithin(tree, nodeById(tree, finish.ended.run.openingId), line).id,
     color: finish.ended.run.color, answered: finish.ended.moves + (blunder ? 1 : 0), correct: finish.ended.moves,
     perfect: finish.clean != nil && !finish.stub, at: at,
     prep: RoundRecord.Prep(asked: finish.answers.count, found: finish.answers.filter(\.correct).count),

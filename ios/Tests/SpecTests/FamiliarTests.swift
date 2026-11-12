@@ -31,7 +31,7 @@ private let PREFS: [String: NudgePrefs] = [
 private let MIN_SHARE = AUTO_GROWTH.minShare
 private let OPTS = TidyOptions(prefs: PREFS["transposition"]!, minShare: MIN_SHARE)
 
-private func tree(_ t: JSON) -> Repertoire {
+private func tree(_ t: JSON) -> Playbook {
   let found = TREES[t.string]!
   return rep(found.color, found.lines)
 }

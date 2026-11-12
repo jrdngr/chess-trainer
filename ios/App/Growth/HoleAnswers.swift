@@ -14,7 +14,7 @@ import Model
   /// The side adding moves.
   var answerColor: ChessCore.Color { get }
   /// The side's Playbook tree as it is now.
-  var answerTree: Repertoire? { get }
+  var answerTree: Playbook? { get }
   var nudgePrefs: NudgePrefs { get }
   var minShare: Double { get }
   var tonedMemo: Memo<[NudgedMove]> { get }

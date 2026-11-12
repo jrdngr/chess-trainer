@@ -244,13 +244,13 @@ public func tutorialEndCue(_ game: TutorialGame, played: [String], line: [String
 }
 
 /// The gap a tutorial game grows at: the position `played` reaches.
-public func tutorialGap(_ rep: Repertoire, _ played: [String]) -> Gap {
+public func tutorialGap(_ rep: Playbook, _ played: [String]) -> Gap {
   let fens = walkSan(played).fens
   let before = fens.count >= 2 ? fens[fens.count - 2] : START_FEN
   let hole = Hole(
     path: Array(played.dropLast()), fen: before, san: played.last ?? "", share: 100, games: 0, after: fens.last ?? START_FEN,
     nodeId: nil, reach: 1)
-  return Gap(kind: .noAnswer, repertoireId: rep.id, color: rep.color, hole: hole, importance: 1, name: "", missing: 1)
+  return Gap(kind: .noAnswer, playbookId: rep.id, color: rep.color, hole: hole, importance: 1, name: "", missing: 1)
 }
 
 /// Whether a tutorial game grows at this turn: its growth not yet started,
@@ -460,7 +460,7 @@ public func firstGameRound(_ tree: OpeningTree) -> AutoRound {
 
 /// The gap a game with nothing saved for a side starts at: that side's first
 /// move, before any reply.
-public func firstMoveGap(_ rep: Repertoire, _ index: ReferenceIndex) -> Gap {
+public func firstMoveGap(_ rep: Playbook, _ index: ReferenceIndex) -> Gap {
   let hole = Hole(path: [], fen: START_FEN, san: "", share: 100, games: 0, after: START_FEN, nodeId: nil, reach: 1)
-  return Gap(kind: .noAnswer, repertoireId: rep.id, color: rep.color, hole: hole, importance: 1, name: "", missing: 1)
+  return Gap(kind: .noAnswer, playbookId: rep.id, color: rep.color, hole: hole, importance: 1, name: "", missing: 1)
 }

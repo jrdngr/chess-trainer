@@ -2,8 +2,8 @@ import Foundation
 import Model
 import Testing
 
-/// The run's constants against Golden/constants.json: Survival, missions,
-/// Autopilot, recommend, freshness, the draw, holes, lenses.
+/// The run's constants against Golden/constants.json: Run, missions,
+/// Play, recommend, freshness, the draw, holes, lenses.
 @Test func runConstants() throws {
   let all = try JSON.parse(Data(contentsOf: Cases.golden.appendingPathComponent("constants.json")))
   func expect(_ file: String, _ name: String, _ value: JSONable, sourceLocation: SourceLocation = #_sourceLocation) {
@@ -11,15 +11,15 @@ import Testing
     #expect(want != .null, "\(file).\(name) is not in constants.json", sourceLocation: sourceLocation)
     #expect(matches(value.json, want), "\(file).\(name): \(value.json) is not \(want)", sourceLocation: sourceLocation)
   }
-  let s = "survival"
+  let s = "run"
   expect(s, "BOOK_SHARE", BOOK_SHARE)
   expect(s, "COMBO_CLEAN", COMBO_CLEAN)
   expect(s, "COMBO_HOLD", COMBO_HOLD)
   expect(s, "CONVERT_FROM", CONVERT_FROM)
   expect(s, "CONVERT_WINDOW", CONVERT_WINDOW)
-  expect(s, "DEFAULT_SURVIVAL", webEncoded(DEFAULT_SURVIVAL))
+  expect(s, "DEFAULT_RUN", webEncoded(DEFAULT_RUN))
   expect(s, "EDGE_MOVES", EDGE_MOVES)
-  expect(s, "EMPTY_SURVIVAL_SCORE", encoded(SurvivalScore()))
+  expect(s, "EMPTY_RUN_SCORE", encoded(RunScore()))
   expect(s, "HISTORY_RUNS", HISTORY_RUNS)
   expect(s, "MISSION_BONUS", MISSION_BONUS)
   expect(s, "MISSION_BREAK", MISSION_BREAK)
@@ -37,7 +37,7 @@ import Testing
   expect(s, "RECENT_RUNS", RECENT_RUNS)
   expect(s, "SCORE_SLIGHT", SCORE_SLIGHT)
 
-  expect("autopilot", "LEAN_FOR", Dictionary(uniqueKeysWithValues: LEAN_FOR.map { ($0.key.rawValue, $0.value.rawValue) }))
+  expect("rounds", "LEAN_FOR", Dictionary(uniqueKeysWithValues: LEAN_FOR.map { ($0.key.rawValue, $0.value.rawValue) }))
 
   let r = "recommend"
   expect(r, "ACCURACY_RUNS", ACCURACY_RUNS)
@@ -51,8 +51,8 @@ import Testing
   expect("freshness", "HEAD_WEIGHT", HEAD_WEIGHT)
   expect("freshness", "NOTHING_SEEN", obj(["at": [String: Int]().mapValues { $0 }, "round": NOTHING_SEEN.round]))
   expect("evalDelta", "EVEN_CP", EVEN_CP)
-  expect("autopilotPrefs", "AUTO_GROWTH", encoded(AUTO_GROWTH))
-  expect("autopilotPrefs", "DEFAULT_AUTOPILOT", encoded(DEFAULT_AUTOPILOT))
+  expect("playPrefs", "AUTO_GROWTH", encoded(AUTO_GROWTH))
+  expect("playPrefs", "DEFAULT_PLAY", encoded(DEFAULT_PLAY))
   expect("openingRun", "CLOCK_MODES", CLOCK_MODES.map(\.rawValue))
   expect("openingRun", "DRAW_WINDOW", DRAW_WINDOW)
   expect("growth", "DEFAULT_MAX_PLY", DEFAULT_MAX_PLY)

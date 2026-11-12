@@ -19,7 +19,7 @@ extension RatingMove: JSONable {
     var steps: [JSON] = []
     for (i, answer) in answers.enumerated() {
       let result = MoveResult(
-        mode: .survival, line: line(answer["line"].string), color: .w, correct: answer["correct"].bool,
+        mode: .run, line: line(answer["line"].string), color: .w, correct: answer["correct"].bool,
         rated: true, at: at + Double(i) * 1000)
       let applied = applyResult(state, tree, result, earlier)
       state = applied.state
@@ -69,7 +69,7 @@ private func stats(_ days: [JSON], rating: Double = 0, rated: Int? = nil) -> Nod
   return s
 }
 
-/// The scoring functions in Golden/cases/functions/home.json and autopilot.json.
+/// The scoring functions in Golden/cases/functions/home.json and play.json.
 @Test func scoringOnHome() throws {
   try check("home", [
     "scoring.streak": { streak(stats($0[0].array, rated: 0), noon($0[1].string)).json },
@@ -80,7 +80,7 @@ private func stats(_ days: [JSON], rating: Double = 0, rated: Int? = nil) -> Nod
     },
   ], only: ["scoring.streak", "scoring.ratingChange", "scoring.ratingOn"])
 
-  try check("autopilot", [
+  try check("play", [
     "srs.runNeed": { a in runNeed(a[0].decoded(Card.self), a[1].int).json },
   ], only: ["srs.runNeed"])
 }

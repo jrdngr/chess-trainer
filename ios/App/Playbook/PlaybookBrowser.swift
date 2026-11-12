@@ -5,8 +5,8 @@ import SwiftUI
 
 /// One side's tree, from a node: the board, the line, the moves here, the
 /// book's moves to add, and Explore. A new move played on the board
-/// opens the board editor there. `RepertoireBrowser`.
-struct RepertoireBrowser: View {
+/// opens the board editor there. `PlaybookBrowser`.
+struct PlaybookBrowser: View {
   let repId: String
   let startNodeId: String?
   let title: String
@@ -28,14 +28,14 @@ struct RepertoireBrowser: View {
   @State private var sideMenu = false
 
   var body: some View {
-    if let rep = store.state.repertoires[repId], let index = store.index {
+    if let rep = store.state.playbooks[repId], let index = store.index {
       content(rep, index)
     } else {
       Color.clear.onAppear(perform: onBack)
     }
   }
 
-  @ViewBuilder private func content(_ rep: Repertoire, _ index: ReferenceIndex) -> some View {
+  @ViewBuilder private func content(_ rep: Playbook, _ index: ReferenceIndex) -> some View {
     let at = nodeId.flatMap { rep.nodes[$0] != nil ? $0 : nil }
     let fen = fenAt(rep, at)
     let path = pathTo(rep, at)
@@ -85,7 +85,7 @@ struct RepertoireBrowser: View {
           }
           if let book, !book.moves.isEmpty {
             SectionHead(title: "The book", aside: "Tap to add")
-            BookMoves(entry: book, inRepertoire: Set(kids.map(\.san))) { san in addFromBook(rep, index, pathSans, san, at) }
+            BookMoves(entry: book, inPlaybook: Set(kids.map(\.san))) { san in addFromBook(rep, index, pathSans, san, at) }
           }
           SheetButton("Explore", style: .soft) { onExplore(pathSans, rep.color) }
             .padding(.top, 24)
@@ -114,7 +114,7 @@ struct RepertoireBrowser: View {
     }
   }
 
-  private func cutSheet(_ rep: Repertoire, _ id: String) -> some View {
+  private func cutSheet(_ rep: Playbook, _ id: String) -> some View {
     let count = subtreeIds(rep, id).count
     return VStack(alignment: .leading, spacing: 0) {
       SheetHead(title: "Delete \(count) move\(count == 1 ? "" : "s")?", moves: sansToMoveText(pathTo(rep, id).map(\.san)))
@@ -137,7 +137,7 @@ struct RepertoireBrowser: View {
     if let id, !line.contains(where: { $0.id == id }) { lineTip = id }
   }
 
-  private func onBoardMove(_ rep: Repertoire, _ index: ReferenceIndex, _ kids: [RepMove], _ pathSans: [String], _ move: LegalMove) {
+  private func onBoardMove(_ rep: Playbook, _ index: ReferenceIndex, _ kids: [RepMove], _ pathSans: [String], _ move: LegalMove) {
     if let existing = kids.first(where: { $0.san == move.san }) {
       nodeId = existing.id
       if lineTip.map({ pathTo(rep, $0).contains { $0.id == existing.id } }) != true { lineTip = existing.id }
@@ -146,14 +146,14 @@ struct RepertoireBrowser: View {
     onEdit(pathSans + [move.san])
   }
 
-  private func addFromBook(_ rep: Repertoire, _ index: ReferenceIndex, _ pathSans: [String], _ san: String, _ at: String?) {
+  private func addFromBook(_ rep: Playbook, _ index: ReferenceIndex, _ pathSans: [String], _ san: String, _ at: String?) {
     store.update { $0.addLine(repId, pathSans + [san], .fixed(.book)) }
     descend(san, at: at)
     toasts.show("\(san) added")
   }
 
   private func descend(_ san: String, at: String?) {
-    guard let fresh = store.state.repertoires[repId], let child = childrenOf(fresh, at).first(where: { $0.san == san }) else { return }
+    guard let fresh = store.state.playbooks[repId], let child = childrenOf(fresh, at).first(where: { $0.san == san }) else { return }
     nodeId = child.id
     lineTip = child.id
   }
@@ -167,7 +167,7 @@ struct LineRef: Identifiable {
 /// The book's moves here, most played first, with what you already have marked; tap to add.
 struct BookMoves: View {
   let entry: ExplorerEntry
-  let inRepertoire: Set<String>
+  let inPlaybook: Set<String>
   let onPlay: (String) -> Void
 
   var body: some View {
@@ -176,11 +176,11 @@ struct BookMoves: View {
       ForEach(entry.moves.prefix(8), id: \.san) { move in
         Button { onPlay(move.san) } label: {
           HStack(spacing: 12) {
-            Text(move.san).font(.system(size: 15, weight: .bold)).foregroundStyle(inRepertoire.contains(move.san) ? Theme.accent : Theme.text)
+            Text(move.san).font(.system(size: 15, weight: .bold)).foregroundStyle(inPlaybook.contains(move.san) ? Theme.accent : Theme.text)
               .frame(width: 56, alignment: .leading)
             Text("\(Int(JSRound(move.games / total * 100)))%").font(.system(size: 13).monospacedDigit()).foregroundStyle(Theme.text2)
             Spacer()
-            if inRepertoire.contains(move.san) { Icon(name: "check", size: 16).foregroundStyle(Theme.accent) }
+            if inPlaybook.contains(move.san) { Icon(name: "check", size: 16).foregroundStyle(Theme.accent) }
           }
           .padding(.horizontal, 16).frame(minHeight: 44).contentShape(Rectangle())
         }

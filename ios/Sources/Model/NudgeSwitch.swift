@@ -8,9 +8,9 @@ import Shared
 /// Soundness is not judged here; the engine does that before any is shown.
 ///
 /// `habitsOnly` looks only at habits, which can be listed without trying every
-/// legal move: what a scan of a whole repertoire can afford.
+/// legal move: what a scan of a whole playbook can afford.
 public func familiarOffBook(
-  _ rep: Repertoire?, _ index: ReferenceIndex, _ path: [String], _ fen: String, _ prefs: NudgePrefs,
+  _ rep: Playbook?, _ index: ReferenceIndex, _ path: [String], _ fen: String, _ prefs: NudgePrefs,
   _ minShare: Double, _ opts: SignalOptions = SignalOptions(), habitsOnly: Bool = false
 ) -> [String] {
   guard let rep, !isFirstMove(path) else { return [] }
@@ -78,7 +78,7 @@ public struct Switch: Equatable, Sendable {
 /// Familiarity is compared kind first, then strength; ties go to the earlier
 /// of `others`. `played` marks a switch to a move just played over the board.
 public func bestSwitch(
-  _ rep: Repertoire, _ index: ReferenceIndex, _ path: [String], _ fen: String, _ mine: String, _ others: [String],
+  _ rep: Playbook, _ index: ReferenceIndex, _ path: [String], _ fen: String, _ mine: String, _ others: [String],
   _ prefs: NudgePrefs, _ minShare: Double, _ opts: SignalOptions = SignalOptions(), against: Bool = true, played: Bool = false
 ) -> Switch? {
   let profile = profileOf(rep, index)
@@ -112,7 +112,7 @@ public func bestSwitch(
 /// Why a move of yours works against your other lines — it closes them off,
 /// or you keep choosing otherwise — or nil.
 public func againstReason(
-  _ rep: Repertoire, _ index: ReferenceIndex, _ path: [String], _ fen: String, _ mine: String,
+  _ rep: Playbook, _ index: ReferenceIndex, _ path: [String], _ fen: String, _ mine: String,
   _ prefs: NudgePrefs, _ minShare: Double, _ opts: SignalOptions = SignalOptions()
 ) -> String? {
   var loud = opts
@@ -124,7 +124,7 @@ public func againstReason(
 
 /// The positions only a subtree reaches: what goes if the move at its top is
 /// switched away. A position another line also reaches stays.
-public func goneWith(_ rep: Repertoire, _ index: ReferenceIndex, _ nodeId: String) -> Set<String> {
+public func goneWith(_ rep: Playbook, _ index: ReferenceIndex, _ nodeId: String) -> Set<String> {
   let profile = profileOf(rep, index)
   let inside = Set(subtreeIds(rep, nodeId))
   let outside = Set(profile.nodes.filter { !inside.contains($0.id) }.map(\.after))

@@ -2,7 +2,7 @@ import Book
 import ChessCore
 import Shared
 
-/// Nudges: keeping a repertoire narrow while it grows. Four files: the profile and context here, the signals, the arrows, and
+/// Nudges: keeping a playbook narrow while it grows. Four files: the profile and context here, the signals, the arrows, and
 /// the switches Tidy offers.
 ///
 /// A move that lands in a position you already know, or one you already play
@@ -50,17 +50,17 @@ struct ProfileNode {
   var leaf: Bool
 }
 
-/// A repertoire from the point of view of a move being added: every move in
+/// A playbook from the point of view of a move being added: every move in
 /// it, the opening each belongs to, and every position it reaches.
 struct NudgeProfile {
   var color: Color
   var rootFen: String
   var nodes: [ProfileNode]
-  /// Every position in the repertoire, with the line that reaches it first.
+  /// Every position in the playbook, with the line that reaches it first.
   var positions: [String: [String]]
 }
 
-func profileOf(_ rep: Repertoire, _ index: ReferenceIndex) -> NudgeProfile {
+func profileOf(_ rep: Playbook, _ index: ReferenceIndex) -> NudgeProfile {
   var nodes: [ProfileNode] = []
   var positions: [String: [String]] = [positionKey(rep.rootFen): []]
   // The deepest name so far is carried down rather than looked up per line.

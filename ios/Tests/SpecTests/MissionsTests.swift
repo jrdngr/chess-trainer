@@ -20,22 +20,22 @@ extension Earned {
     ExtrasPrefs(moments: j["moments"].bool, missions: j["missions"].bool, combo: j["combo"].bool)
   }
   try check("missions", [
-    "survival.missionFor": { a in encoded(missionFor(color(a[0]), a[1].number, a.count > 2 ? a[2].stringOrNil : nil)) },
-    "survival.stepMission": { a in
+    "run.missionFor": { a in encoded(missionFor(color(a[0]), a[1].number, a.count > 2 ? a[2].stringOrNil : nil)) },
+    "run.stepMission": { a in
       let s = stepMission(a[0].decoded(Mission.self), color(a[1]), a[2].number, a.count > 3 ? a[3].stringOrNil : nil)
       return obj(["mission": encoded(s.mission), "result": s.result?.rawValue])
     },
-    "survival.judgedExtras": { a in
+    "run.judgedExtras": { a in
       let m = a[3]
       let move = JudgedMove(lost: m["lost"].number, after: m["after"].number, moment: m["moment"].bool, found: m["found"].bool, fen: m["fen"].stringOrNil)
       let r = judgedExtras(a[0].decoded(Extras.self), prefs(a[1]), color(a[2]), move)
       return obj(["extras": encoded(r.extras), "earned": r.earned.json])
     },
-    "survival.prepExtras": { encoded(prepExtras($0[0].decoded(Extras.self))) },
-    "survival.firstMission": { a in
+    "run.prepExtras": { encoded(prepExtras($0[0].decoded(Extras.self))) },
+    "run.firstMission": { a in
       encoded(firstMission(a[0].decoded(Extras.self), missions: a[1]["missions"].bool, color(a[2]), a[3].number, a.count > 4 ? a[4].stringOrNil : nil))
     },
-  ], only: ["survival.missionFor", "survival.stepMission", "survival.judgedExtras", "survival.prepExtras"])
+  ], only: ["run.missionFor", "run.stepMission", "run.judgedExtras", "run.prepExtras"])
   // firstMission no longer matches the web: the first mission comes from the
   // eval even where the pawns form a plan. Its own tests are below.
 }

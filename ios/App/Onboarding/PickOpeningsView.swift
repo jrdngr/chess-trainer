@@ -24,7 +24,7 @@ struct PickOpeningsView: View {
   @State private var filter: SideFilter = .both
   @State private var searching = false
   @State private var query = ""
-  @State private var repsMemo = Memo<[Repertoire]>()
+  @State private var repsMemo = Memo<[Playbook]>()
   @State private var rootMemo = Memo<[BrowseItem]>()
 
   var body: some View {
@@ -126,8 +126,8 @@ struct PickOpeningsView: View {
   }
 
   /// The Playbook as the picks would make it, for suggestions and search.
-  private var reps: [Repertoire] {
-    repsMemo.get(pendingKey(picked)) { onboardedState(store.state, tree, picked).repertoireList }
+  private var reps: [Playbook] {
+    repsMemo.get(pendingKey(picked)) { onboardedState(store.state, tree, picked).playbookList }
   }
 
   private func rootItems(_ catalog: PickerCatalog) -> [BrowseItem] {

@@ -7,19 +7,19 @@ func after(_ text: String) -> String {
   line(text).reduce(START_FEN) { applySan($0, $1)!.after }
 }
 
-func rep(_ color: Color, _ lines: [String]) -> Repertoire {
-  var out = createRepertoire(color == .w ? "White" : "Black", color, "rep_\(color.rawValue)")
+func rep(_ color: Color, _ lines: [String]) -> Playbook {
+  var out = createPlaybook(color == .w ? "White" : "Black", color, "rep_\(color.rawValue)")
   for l in lines { out = addLine(out, line(l), .fixed(.seed)).rep }
   return out
 }
 
 /// A tree arg: `{ color, lines }`.
-func rep(_ j: JSON) -> Repertoire {
+func rep(_ j: JSON) -> Playbook {
   rep(Color(rawValue: j["color"].string)!, j["lines"].strings)
 }
 
 /// A tree written without its node ids.
-private func shape(_ r: Repertoire) -> JSON {
+private func shape(_ r: Playbook) -> JSON {
   obj([
     "lines": leafLines(r).map { $0.sans.joined(separator: " ") },
     "positions": JSON.array(decisionPoints(r).map { point in
@@ -40,12 +40,12 @@ private func listed(_ o: DerivedOpening) -> JSON {
 @Test func playbook() throws {
   let index = bookIndex
   func mistake(_ key: String, _ played: String) -> Mistake {
-    Mistake(source: .drill, repertoireId: "rep_w", key: key, fen: "", path: [], played: played, expected: "e4")
+    Mistake(source: .drill, playbookId: "rep_w", key: key, fen: "", path: [], played: played, expected: "e4")
   }
 
   try check("playbook", [
-    "repertoire.shape": { shape(rep($0[0])) },
-    "repertoire.pruneLine": { a in
+    "playbook.shape": { shape(rep($0[0])) },
+    "playbook.pruneLine": { a in
       let r = rep(a[0])
       let node = nodeAtLine(r, line(a[1].string))!
       return obj(["removed": pruneCount(r, node.id), "left": shape(pruneLine(r, node.id))["lines"]])
@@ -76,7 +76,7 @@ private func listed(_ o: DerivedOpening) -> JSON {
     },
     "mistakes.recentMistakes": { a in
       var b = mistake("b", "h3")
-      b.repertoireId = "rep_b"
+      b.playbookId = "rep_b"
       var log = [mistake("a", "h3"), b, mistake("c", "h3")]
       for (i, (id, at)) in [("rep_w#a", 3.0), ("rep_b#b", 2), ("rep_w#c", 5)].enumerated() {
         log[i].id = id

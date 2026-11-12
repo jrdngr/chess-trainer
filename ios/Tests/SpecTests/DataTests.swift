@@ -9,12 +9,12 @@ import Testing
 
   /// Steps on an empty Playbook, and the event log they leave, without times or ids.
   func play(_ steps: [JSON]) -> JSON {
-    setEventPlace(.repertoire)
+    setEventPlace(.playbook)
     var state = AppState()
     var undo: PlaybookUndo?
     Env.at(at) {
-      func rep(_ color: JSON) -> String { state.ensureRepertoire(Color(rawValue: color.string)!) }
-      func node(_ color: JSON, _ text: JSON) -> String { nodeAtLine(state.repertoires[rep(color)]!, line(text.string))!.id }
+      func rep(_ color: JSON) -> String { state.ensurePlaybook(Color(rawValue: color.string)!) }
+      func node(_ color: JSON, _ text: JSON) -> String { nodeAtLine(state.playbooks[rep(color)]!, line(text.string))!.id }
       for step in steps {
         let a = step.array
         switch a[0].string {
@@ -23,7 +23,7 @@ import Testing
         case "remove": undo = state.removeNode(rep(a[1]), node(a[1], a[2]))
         case "removeLine": undo = state.removeLine(rep(a[1]), node(a[1], a[2]))
         case "removeOpening": state.removeOpening(rep(a[1]), node(a[1], a[2]))
-        case "removeRepertoire": state.removeRepertoire(rep(a[1]))
+        case "removePlaybook": state.removePlaybook(rep(a[1]))
         case "prefer": state.preferMove(rep(a[1]), node(a[1], a[2]))
         case "note": state.annotate(rep(a[1]), node(a[1], a[2]), "a note")
         case "reorder": state.reorder(rep(a[1]), node(a[1], a[2]), a[3].int)
@@ -45,12 +45,12 @@ import Testing
     }
     return obj([
       "events": state.events.map(eventJSON).json,
-      "playbook": state.repertoireList.map { "\($0.color.rawValue): \($0.nodes.count) moves" },
+      "playbook": state.playbookList.map { "\($0.color.rawValue): \($0.nodes.count) moves" },
     ])
   }
 
-  func rep(_ lines: [JSON]) -> Repertoire {
-    var out = createRepertoire("White", .w, "rep_w")
+  func rep(_ lines: [JSON]) -> Playbook {
+    var out = createPlaybook("White", .w, "rep_w")
     for l in lines { out = addLine(out, line(l.string), .fixed(.seed)).rep }
     return out
   }

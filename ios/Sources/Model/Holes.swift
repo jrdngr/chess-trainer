@@ -108,8 +108,8 @@ struct Choice {
 /// What a move the book has never seen is worth, so a line through it is not lost.
 private let RARE = 0.0001
 
-/// Every position inside a repertoire where the opponent has the move.
-func walkChoices(_ rep: Repertoire, _ index: ReferenceIndex, _ opts: GrowthOptions, _ visit: (Choice) -> Void) {
+/// Every position inside a playbook where the opponent has the move.
+func walkChoices(_ rep: Playbook, _ index: ReferenceIndex, _ opts: GrowthOptions, _ visit: (Choice) -> Void) {
   let minShare = opts.minShare ?? DEFAULT_MIN_SHARE
   let maxPly = opts.maxPly ?? DEFAULT_MAX_PLY
   var seen = Set<String>()
@@ -164,8 +164,8 @@ private func shareMap(_ index: ReferenceIndex, _ fen: String, _ prepared: [Strin
   return out
 }
 
-/// Every unanswered reply in a repertoire, shallowest and most popular first.
-public func findHoles(_ rep: Repertoire, _ index: ReferenceIndex, _ opts: GrowthOptions = GrowthOptions()) -> [Hole] {
+/// Every unanswered reply in a playbook, shallowest and most popular first.
+public func findHoles(_ rep: Playbook, _ index: ReferenceIndex, _ opts: GrowthOptions = GrowthOptions()) -> [Hole] {
   var holes: [Hole] = []
   walkChoices(rep, index, opts) { choice in
     func push(_ move: Reply, _ kept: Bool) {

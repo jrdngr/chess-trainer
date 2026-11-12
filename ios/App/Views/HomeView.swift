@@ -49,7 +49,7 @@ struct HomeView: View {
         }
         .padding(.top, 2).padding(.bottom, 12)
         VStack(spacing: 0) {
-          autopilot
+          play
             .padding([.top, .horizontal], 8)
             .disabled(locked && step?.step != .play).opacity(locked && step?.step != .play ? 0.35 : 1)
             .tip(text: step?.step == .play ? step?.tip : nil, inset: 8)
@@ -110,10 +110,10 @@ struct HomeView: View {
   private var tip: TutorialTip? { homeTip(store.state.settings.tips) }
 
   /// Play's button, or that there is nothing to play yet.
-  @ViewBuilder private var autopilot: some View {
+  @ViewBuilder private var play: some View {
     let selection = store.peekRoundSelection()
     if store.state.settings.tutorial?.next != nil || nextRound(store.state, tree, selection, store.autoHistory) != nil {
-      Button { onOpen(.autopilot) } label: { PlayLabel() }
+      Button { onOpen(.play) } label: { PlayLabel() }
         .buttonStyle(PlayStackStyle())
     } else {
       Button { onPlaybook() } label: {

@@ -4,7 +4,7 @@ import Testing
 
 private func game(_ picked: String, _ color: ColorChoice = .w, at: Double) -> GameRecord {
   GameRecord(
-    id: "g\(at)", mode: .survival, at: at, color: .w, picked: Selection(color: color, opening: picked),
+    id: "g\(at)", mode: .run, at: at, color: .w, picked: Selection(color: color, opening: picked),
     opening: picked, moves: ["e4"], result: "*", termination: "blunder")
 }
 

@@ -2,7 +2,7 @@
   "area": "playbook",
   "functions": [
     {
-      "fn": "repertoire.shape",
+      "fn": "playbook.shape",
       "about": "A Playbook tree as lines and the positions you answer, preferred move marked *; a transposition is one position with its options merged.",
       "cases": [
       {"args":[{"color":"b","lines":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O","e4 c5 Nf3 d6"]}],"out":{"lines":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O","e4 c5 Nf3 d6"],"positions":[{"path":"d4","options":["Nf6*"]},{"path":"e4","options":["c5*"]},{"path":"d4 Nf6 c4","options":["g6*"]},{"path":"e4 c5 Nf3","options":["d6*"]},{"path":"d4 Nf6 c4 g6 Nc3","options":["Bg7*"]},{"path":"d4 Nf6 c4 g6 Nf3","options":["Bg7*"]},{"path":"d4 Nf6 c4 g6 Nc3 Bg7 e4","options":["d6*"]},{"path":"d4 Nf6 c4 g6 Nf3 Bg7 g3","options":["O-O*"]}],"items":8}},
@@ -11,7 +11,7 @@
       ]
     },
     {
-      "fn": "repertoire.pruneLine",
+      "fn": "playbook.pruneLine",
       "about": "Removing a line takes the moves that only led to it, up to the first real branch: the lines left, and how many moves went.",
       "cases": [
       {"args":[{"color":"b","lines":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O","e4 c5 Nf3 d6"]},"d4 Nf6 c4 g6 Nc3 Bg7 e4 d6"],"out":{"removed":4,"left":["d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O","e4 c5 Nf3 d6"]}},
@@ -135,7 +135,7 @@
     },
     {
       "fn": "mistakes.recentMistakes",
-      "about": "A repertoire's mistakes, newest first.",
+      "about": "A playbook's mistakes, newest first.",
       "cases": [
       {"args":[null],"out":["rep_w#c","rep_w#a","rep_b#b"]},
       {"args":["rep_w"],"out":["rep_w#c","rep_w#a"]},

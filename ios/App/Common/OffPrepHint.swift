@@ -38,7 +38,7 @@ struct OffPrepHint: View {
 }
 
 /// The misses whose move was closer to the rest of your lines than your prep, by ply.
-func tidyHints(_ misses: [Miss], _ rep: Repertoire?, _ index: ReferenceIndex, _ growth: GrowthPrefs) -> [Int: TidyFind] {
+func tidyHints(_ misses: [Miss], _ rep: Playbook?, _ index: ReferenceIndex, _ growth: GrowthPrefs) -> [Int: TidyFind] {
   var out: [Int: TidyFind] = [:]
   let opts = TidyOptions(prefs: NudgePrefs(priority: growth.nudgePriority, pawns: growth.nudgePawns), minShare: growth.minShare)
   for miss in misses {

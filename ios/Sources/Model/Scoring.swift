@@ -10,7 +10,7 @@ import Shared
 
 /// The modes whose activity is tallied. `run` and `repair` are kept for history.
 public enum ActivityMode: String, Sendable, Codable, CaseIterable {
-  case run, survival, drill, growth, repair
+  case oldPlay, run, drill, growth, repair
 }
 
 public let ACTIVITY_MODES = ActivityMode.allCases
@@ -133,7 +133,7 @@ public struct NodeStats: Equatable, Sendable, Codable {
   public init() {}
 }
 
-/// One round: a Survival run, a Drill session or line, or a Growth run.
+/// One round: a Run run, a Drill session or line, or a Growth run.
 public struct RoundRecord: Equatable, Sendable, Codable {
   public var mode: ActivityMode
   /// The opening the round was credited to.
@@ -143,7 +143,7 @@ public struct RoundRecord: Equatable, Sendable, Codable {
   public var correct: Int
   public var perfect: Bool
   public var at: Double
-  /// A Survival run's prepared positions: how many it asked, how many you found.
+  /// A Run run's prepared positions: how many it asked, how many you found.
   public var prep: Prep?
   /// The line the round was about.
   public var line: [String]?
@@ -317,7 +317,7 @@ public func settleRun(_ state: ScoreState, _ tree: OpeningTree, _ earlier: [Move
 
 private func tallyRound(_ stats: NodeStats, _ round: RoundRecord, _ lineRounds: Int) -> NodeStats {
   var out = stats
-  if round.mode == .run { out.bestRun = max(stats.bestRun, round.correct) }
+  if round.mode == .oldPlay { out.bestRun = max(stats.bestRun, round.correct) }
   out.lastAt = round.at
   out.lastRound = lineRounds
   var mode = stats.byMode[round.mode] ?? ModeTally()

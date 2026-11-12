@@ -5,7 +5,7 @@ import Model
 import Observation
 
 /// One sitting of Growth, driven through GrowthController: opened from Home,
-/// or grown from the end of an Autopilot or Survival run. Its moves stay in a
+/// or grown from the end of an Play or Run run. Its moves stay in a
 /// draft until Save Line. The answers on offer are `HoleAnswers.swift`,
 /// the announcement `GrowthModel+Intro.swift`.
 @MainActor @Observable
@@ -36,7 +36,7 @@ final class GrowthModel {
   let tree: OpeningTree
   let store: AppStore
   /// The tree as it was when the sitting began, with the kept line, so adding cannot re-steer it.
-  let start: Repertoire
+  let start: Playbook
   /// The sitting's moves, written only by Save Line.
   private(set) var draft: GrowthDraft
   private(set) var session: GrowthSession
@@ -44,7 +44,7 @@ final class GrowthModel {
   private(set) var thinking = false
   /// "End of the book", flashed over the board.
   private(set) var flash = false
-  /// Autopilot's own toast, over the board; Growth's go to `onToast`.
+  /// Play's own toast, over the board; Growth's go to `onToast`.
   private(set) var toast: String?
   @ObservationIgnored var onToast: ((String) -> Void)?
 
@@ -67,7 +67,7 @@ final class GrowthModel {
   @ObservationIgnored let tonedMemo = Memo<[NudgedMove]>()
 
   init?(launch: Launch, store: AppStore, tree: OpeningTree, index: ReferenceIndex) {
-    guard let saved = store.state.repertoires[launch.row.repertoireId] else { return nil }
+    guard let saved = store.state.playbooks[launch.row.playbookId] else { return nil }
     self.launch = launch
     self.store = store
     self.tree = tree
@@ -80,7 +80,7 @@ final class GrowthModel {
     planIntro()
   }
 
-  /// Grown from the offer at the end of an Autopilot or Survival run, on Growth's own settings.
+  /// Grown from the offer at the end of an Play or Run run, on Growth's own settings.
   convenience init?(offer: GrowOffer, store: AppStore, tree: OpeningTree, index: ReferenceIndex) {
     let prefs = store.state.settings.growth
     let widened = offer.launch.widened
@@ -95,10 +95,10 @@ final class GrowthModel {
   /// at move one for a side's first move. A side with no tree yet gets one.
   convenience init?(gap: Gap, store: AppStore, tree: OpeningTree, index: ReferenceIndex) {
     var gap = gap
-    if store.state.repertoires[gap.repertoireId] == nil {
+    if store.state.playbooks[gap.playbookId] == nil {
       var repId = ""
-      store.update { repId = $0.ensureRepertoire(gap.color) }
-      gap.repertoireId = repId
+      store.update { repId = $0.ensurePlaybook(gap.color) }
+      gap.playbookId = repId
     }
     self.init(
       launch: Launch(
@@ -117,7 +117,7 @@ final class GrowthModel {
   var held: Bool { intro != .done }
   var prefs: GrowthPrefs { store.state.settings.growth }
   /// The side's tree as it is now, with this sitting's moves in it.
-  var live: Repertoire? { draft.rep }
+  var live: Playbook? { draft.rep }
   /// Answers that X would throw away.
   var unsaved: Int { session.history.count }
   var minShare: Double { launch.find.minShare ?? DEFAULT_MIN_SHARE }
@@ -293,5 +293,5 @@ extension GrowthModel: HoleAnswers {
   var holeFen: String { run.fen }
   var holePath: [String] { run.path }
   var answerColor: ChessCore.Color { run.color }
-  var answerTree: Repertoire? { live }
+  var answerTree: Playbook? { live }
 }

@@ -5,7 +5,7 @@ import SwiftUI
 
 /// A mode open over the tabs.
 enum Mode: Equatable {
-  case autopilot, endgame, middlegame
+  case play, endgame, middlegame
 }
 
 /// The app: onboarding ahead of everything, a mode over the tabs, or the tabs.
@@ -112,7 +112,7 @@ struct RootView: View {
           mode = .middlegame
         }, onImport: { importing = true }, onBuild: { building = true }, onHome: { tab = .home }, onPlay: {
           setupFirst = false
-          mode = .autopilot
+          mode = .play
         })
           .tabItem { Label(Tab.playbook.label, systemImage: Tab.playbook.symbol) }.tag(Tab.playbook)
         StatsView(tree: tree, index: index)
@@ -127,8 +127,8 @@ struct RootView: View {
 
   @ViewBuilder private func modeView(_ mode: Mode, _ tree: OpeningTree, _ index: ReferenceIndex) -> some View {
     switch mode {
-    case .autopilot:
-      AutopilotView(tree: tree, index: index, onAnalyze: { analyzing = ($0, $1) }) { leave() }
+    case .play:
+      PlayView(tree: tree, index: index, onAnalyze: { analyzing = ($0, $1) }) { leave() }
     case .endgame: EndgameView { leave() }
     case .middlegame:
       MiddlegameView(
@@ -145,7 +145,7 @@ struct RootView: View {
     }
     tab = .home
     setupFirst = false
-    mode = .autopilot
+    mode = .play
   }
 
   /// The tutorial skipped from its first question: adding openings, then Home with the Playbook's tips.
@@ -156,7 +156,7 @@ struct RootView: View {
     }
     skippedTutorial = false
     tab = .home
-    if next == .autopilot { mode = .autopilot }
+    if next == .play { mode = .play }
   }
 
   /// Leaving a mode, from anywhere inside it, lands on Home.

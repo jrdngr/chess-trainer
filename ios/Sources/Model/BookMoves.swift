@@ -24,7 +24,7 @@ public func movedBy(_ ply: Int, _ color: Color) -> Bool {
 
 /// The moves of a tree the book does not have, highest first: each is
 /// removed with everything under it.
-public func nonBookMoves(_ rep: Repertoire, _ index: ReferenceIndex) -> [String] {
+public func nonBookMoves(_ rep: Playbook, _ index: ReferenceIndex) -> [String] {
   var out: [String] = []
   func visit(_ node: RepMove) {
     if !inBook(index, node.fenBefore, node.san) {
@@ -41,12 +41,12 @@ extension AppState {
   /// Removes every move the book does not have, with everything under it,
   /// and what only existed for the positions that went.
   public mutating func removeNonBookMoves(_ index: ReferenceIndex) {
-    for repId in repertoireOrder {
-      guard let rep = repertoires[repId] else { continue }
+    for repId in playbookOrder {
+      guard let rep = playbooks[repId] else { continue }
       let gone = nonBookMoves(rep, index)
       if gone.isEmpty { continue }
       shrink(repId, { gone.reduce($0) { removeSubtree($0, $1) } }) { before, after in
-        AppEvent(kind: "remove-non-book", repertoireId: repId, color: before.color).with(removedBetween(before, after))
+        AppEvent(kind: "remove-non-book", playbookId: repId, color: before.color).with(removedBetween(before, after))
       }
     }
   }

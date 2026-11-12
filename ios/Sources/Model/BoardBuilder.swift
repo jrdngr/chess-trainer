@@ -179,7 +179,7 @@ public func moveQuality(_ lost: Double) -> MoveQuality? {
 }
 
 /// How many moves at the start of a line a tree already holds.
-public func savedPlies(_ rep: Repertoire?, _ sans: [String]) -> Int {
+public func savedPlies(_ rep: Playbook?, _ sans: [String]) -> Int {
   guard let rep else { return 0 }
   var parent: String?
   for (i, san) in sans.enumerated() {

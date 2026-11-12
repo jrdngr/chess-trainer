@@ -3,7 +3,7 @@
   "functions": [
     {
       "fn": "repair.buildRepairs",
-      "about": "Positions your mistakes log says you got wrong with a move prepared, most recent first; one whose position is not your turn in that tree, or whose tree is gone, is left out. Autopilot counts every one as due (AUTO-18).",
+      "about": "Positions your mistakes log says you got wrong with a move prepared, most recent first; one whose position is not your turn in that tree, or whose tree is gone, is left out. Play counts every one as due (AUTO-18).",
       "cases": [
       {"args":[false],"out":[]},
       {"args":[true],"out":["drill e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 played e6 expected e5","drill d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 played c5 expected O-O"]}

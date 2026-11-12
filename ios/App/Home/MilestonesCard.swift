@@ -8,7 +8,7 @@ struct MilestonesCard: View {
   @State private var open = false
 
   var body: some View {
-    let list = store.tree.map { milestones(store.state.score, store.state.survival, $0) } ?? []
+    let list = store.tree.map { milestones(store.state.score, store.state.runRecord, $0) } ?? []
     let days = streak(store.state.score.global)
     let done = list.filter(earned).count
     // The streak always leads; the three closest of the rest follow it.
@@ -103,7 +103,7 @@ struct MilestoneBadge: View {
     case .streak: Icon(name: "flame", size: 20, filled: won)
     case .tier: Icon(name: "star", size: 20, filled: won)
     case .breadth: Icon(name: "tree", size: 20)
-    case .survival: Text("\(Int(milestone.target))").font(.system(size: 13, weight: .heavy).monospacedDigit())
+    case .run: Text("\(Int(milestone.target))").font(.system(size: 13, weight: .heavy).monospacedDigit())
     case .rounds:
       Text(milestone.target >= 1000 ? "\(Int(milestone.target) / 1000)k" : "\(Int(milestone.target))")
         .font(.system(size: 13, weight: .heavy).monospacedDigit())

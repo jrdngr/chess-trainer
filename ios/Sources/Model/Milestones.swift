@@ -5,7 +5,7 @@ import Shared
 /// one is read from what the app already records, so whatever was done
 /// before they existed counts.
 
-public enum MilestoneKind: String, Sendable, Codable { case streak, survival, tier, breadth, rounds }
+public enum MilestoneKind: String, Sendable, Codable { case streak, run, tier, breadth, rounds }
 
 public struct Milestone: Equatable, Sendable {
   public var id: String
@@ -53,7 +53,7 @@ private func familyOf(_ tree: OpeningTree, _ id: String) -> String? {
 
 private let FAMILIAR = TIERS.first { $0.name == "Familiar" }!.at
 private let STREAKS = [3, 7, 30]
-private let SURVIVALS = [10, 20, 30]
+private let RUN_MILESTONES = [10, 20, 30]
 private let BREADTHS = [3, 5, 10]
 private let ROUNDS = [100, 500, 1000, 5000]
 
@@ -62,9 +62,9 @@ private func roundsLabel(_ n: Int) -> String { n >= 1000 ? "\(n / 1000)k rounds"
 /// Every milestone with how far along it is. Breadth counts families (a
 /// Najdorf and the Sicilian above it are one), so one good line cannot earn
 /// it three times over.
-public func milestones(_ score: ScoreState, _ survival: SurvivalRecord, _ tree: OpeningTree) -> [Milestone] {
+public func milestones(_ score: ScoreState, _ run: RunRecord, _ tree: OpeningTree) -> [Milestone] {
   let streak = Double(longestStreak(score.global))
-  let best = Double(survival.global.best)
+  let best = Double(run.global.best)
   let rounds = Double(ACTIVITY_MODES.reduce(0) { $0 + (score.global.byMode[$1]?.rounds ?? 0) })
 
   var peak = 0.0
@@ -76,7 +76,7 @@ public func milestones(_ score: ScoreState, _ survival: SurvivalRecord, _ tree: 
   }
 
   return STREAKS.map { Milestone(id: "streak-\($0)", kind: .streak, label: "\($0) days", target: Double($0), value: streak) }
-    + SURVIVALS.map { Milestone(id: "survival-\($0)", kind: .survival, label: "\($0) moves", target: Double($0), value: best) }
+    + RUN_MILESTONES.map { Milestone(id: "run-\($0)", kind: .run, label: "\($0) moves", target: Double($0), value: best) }
     + TIERS.filter { $0.at >= FAMILIAR }.map {
       Milestone(id: "tier-\($0.name.lowercased())", kind: .tier, label: $0.name, target: $0.at, value: peak, color: $0.color)
     }

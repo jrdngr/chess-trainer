@@ -61,7 +61,7 @@ public func isFirstMove(_ path: [String]) -> Bool { path.count < 2 }
 /// place when already drawn, else in place of the same piece's arrow, else of
 /// the third — or, with `append`, alongside the rest.
 public func nudgeArrows(
-  _ rep: Repertoire?, _ index: ReferenceIndex, _ path: [String], _ fen: String, _ drawn: [DrawnMove],
+  _ rep: Playbook?, _ index: ReferenceIndex, _ path: [String], _ fen: String, _ drawn: [DrawnMove],
   _ candidates: [NudgeCandidate], _ prefs: NudgePrefs, _ minShare: Double,
   _ offBook: Set<String> = [], _ append: Bool = false
 ) -> [NudgedMove] {

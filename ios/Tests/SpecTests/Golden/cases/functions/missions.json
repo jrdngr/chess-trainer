@@ -2,7 +2,7 @@
   "area": "missions",
   "functions": [
     {
-      "fn": "survival.missionFor",
+      "fn": "run.missionFor",
       "about": "The mission the eval calls for: Convert it when well ahead with pieces to trade, else keep, take or dig back to a lead.",
       "cases": [
       {"args":["w",-450],"out":{"kind":"dig","moves":0,"held":0}},
@@ -80,7 +80,7 @@
       ]
     },
     {
-      "fn": "survival.stepMission",
+      "fn": "run.stepMission",
       "about": "One judged move against a mission, with the eval and the position after it.",
       "cases": [
       {"args":[{"kind":"edge","moves":0,"held":0},"w",-200],"out":{"mission":{"kind":"edge","moves":1,"held":0},"result":"failed"}},
@@ -178,7 +178,7 @@
       ]
     },
     {
-      "fn": "survival.judgedExtras",
+      "fn": "run.judgedExtras",
       "about": "One judged move: the combo, its points, a moment settled, a mission stepped or set.",
       "cases": [
       {"args":[{"points":0,"combo":0,"bestCombo":0,"moments":{"found":0,"missed":0,"streak":0},"mission":null,"missionBreak":0,"missions":{"done":0,"failed":0}},{"moments":true,"missions":true,"combo":true},"w",{"lost":0,"after":120,"moment":false,"found":false}],"out":{"extras":{"points":1,"combo":1,"bestCombo":1,"moments":{"found":0,"missed":0,"streak":0},"mission":null,"missionBreak":0,"missions":{"done":0,"failed":0}},"earned":{"points":1,"moment":null,"mission":null,"combo":null}}},
@@ -280,7 +280,7 @@
       ]
     },
     {
-      "fn": "survival.prepExtras",
+      "fn": "run.prepExtras",
       "about": "A move your prep answered: a point, at ×1.",
       "cases": [
       {"args":[{"points":0,"combo":0,"bestCombo":0,"moments":{"found":0,"missed":0,"streak":0},"mission":null,"missionBreak":0,"missions":{"done":0,"failed":0}}],"out":{"points":1,"combo":0,"bestCombo":0,"moments":{"found":0,"missed":0,"streak":0},"mission":null,"missionBreak":0,"missions":{"done":0,"failed":0}}},
@@ -294,7 +294,7 @@
       ]
     },
     {
-      "fn": "survival.firstMission",
+      "fn": "run.firstMission",
       "about": "The first mission, where the prep runs out: the plan when the pawns form one, else from the eval.",
       "cases": [
       {"args":[{"points":0,"combo":0,"bestCombo":0,"moments":{"found":0,"missed":0,"streak":0},"mission":null,"missionBreak":0,"missions":{"done":0,"failed":0}},{"missions":true},"w",-150,"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"],"out":{"points":0,"combo":0,"bestCombo":0,"moments":{"found":0,"missed":0,"streak":0},"mission":{"kind":"dig","moves":0,"held":0},"missionBreak":0,"missions":{"done":0,"failed":0}}},

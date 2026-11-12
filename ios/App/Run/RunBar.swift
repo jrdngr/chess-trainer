@@ -2,11 +2,11 @@ import ChessCore
 import Model
 import SwiftUI
 
-/// Survival's app bar: close, "Survival" over the selection, and what sits
+/// Run's app bar: close, "Run" over the selection, and what sits
 /// on the right (the clock and the run's count). `AppBar` with `actions`.
-struct SurvivalBar<Actions: View>: View {
-  /// The mode's name: Survival, or Middlegame.
-  var title = "Survival"
+struct RunBar<Actions: View>: View {
+  /// The mode's name: Run, or Middlegame.
+  var title = "Run"
   var subtitle: String?
   var onClose: () -> Void
   @ViewBuilder var actions: Actions
@@ -26,7 +26,7 @@ struct SurvivalBar<Actions: View>: View {
 }
 
 /// The run's score in the app bar, said with its unit.
-struct SurvivalCount: View {
+struct RunCount: View {
   var value: Int
   /// Points, when moments, missions or the combo score; else moves survived.
   var points: Bool
@@ -38,7 +38,7 @@ struct SurvivalCount: View {
 
 /// The move clock: a ring that empties as the budget goes, then greys out
 /// at nothing. Running out ends nothing.
-struct SurvivalClock: View {
+struct RunClock: View {
   let budget: Double
   let since: Date
 
@@ -68,17 +68,17 @@ struct SurvivalClock: View {
 
 /// The app bar over a run: the opening it is in, the clock on your
 /// turn, and the run's points (or moves, with no extras on).
-struct SurvivalRunBar: View {
+struct RunHeaderBar: View {
   let model: RunModel
   let onExit: () -> Void
 
   var body: some View {
     let state = model.session.state
-    SurvivalBar(title: "Middlegame", subtitle: openingName(model.tree, model.openingId), onClose: onExit) {
+    RunBar(title: "Middlegame", subtitle: openingName(model.tree, model.openingId), onClose: onExit) {
       if let budget = clockSeconds(model.prefs.clock), model.live, !model.held, model.myTurn {
-        SurvivalClock(budget: budget, since: model.turnStarted).id(model.turnStarted)
+        RunClock(budget: budget, since: model.turnStarted).id(model.turnStarted)
       }
-      SurvivalCount(value: model.scoredInPoints ? state.extras.points : state.moves, points: model.scoredInPoints)
+      RunCount(value: model.scoredInPoints ? state.extras.points : state.moves, points: model.scoredInPoints)
       ModeSettingsButton()
     }
   }

@@ -3,7 +3,7 @@ import ChessCore
 import Foundation
 import Shared
 
-/// Growth: the repertoire gets wider, one batch of answers at a time. The
+/// Growth: the playbook gets wider, one batch of answers at a time. The
 /// rows and the run; the holes are in `Holes.swift`.
 
 /// One line's tip, with the opponent to move and nothing of yours for what they play.
@@ -17,7 +17,7 @@ public struct LineEnd: Equatable, Sendable {
 /// One opening family with work available in it, named for where its holes lead.
 public struct GrowthRow: Equatable, Sendable {
   public var id: String
-  public var repertoireId: String
+  public var playbookId: String
   public var color: Color
   public var name: String
   public var eco: String?
@@ -56,7 +56,7 @@ private func openingsInSelection(_ tree: OpeningTree, _ node: OpeningNode) -> Se
 private let UNWEIGHED_SHARE = 0.5
 
 /// Growth's rows for some trees, ranked by urgency.
-public func growthRows(_ reps: [Repertoire], _ index: ReferenceIndex, _ opts: GrowthOptions = GrowthOptions()) -> [GrowthRow] {
+public func growthRows(_ reps: [Playbook], _ index: ReferenceIndex, _ opts: GrowthOptions = GrowthOptions()) -> [GrowthRow] {
   let scoped = opts.region.flatMap { $0.node.depth > 0 ? $0 : nil }
   let offered = scoped.map { openingsInSelection($0.tree, $0.node) }
   let above = scoped.map { Set(ancestorsOf($0.tree, $0.node.id).map(\.name)) }
@@ -77,7 +77,7 @@ public func growthRows(_ reps: [Repertoire], _ index: ReferenceIndex, _ opts: Gr
       let (name, eco) = heading(line, holeLabel(hole))
       let id = "\(rep.id)#\(name)"
       var row = byName[id] ?? GrowthRow(
-        id: id, repertoireId: rep.id, color: rep.color, name: name, eco: eco, depth: hole.path.count, topShare: 0,
+        id: id, playbookId: rep.id, color: rep.color, name: name, eco: eco, depth: hole.path.count, topShare: 0,
         urgency: 0, score: 0, holes: [], ends: [])
       row.depth = min(row.depth, hole.path.count)
       row.holes.append(hole)
@@ -118,7 +118,7 @@ private func holeLabel(_ hole: Hole) -> String {
 /* ── the run ── */
 
 public struct GrowthRun: Equatable, Sendable {
-  public var repertoireId: String
+  public var playbookId: String
   public var color: Color
   public var rowId: String
   /// Position keys the run is aiming for.
@@ -130,9 +130,9 @@ public struct GrowthRun: Equatable, Sendable {
   public var hole: Hole?
 }
 
-public func startGrowth(_ rep: Repertoire, _ row: GrowthRow) -> GrowthRun {
+public func startGrowth(_ rep: Playbook, _ row: GrowthRow) -> GrowthRun {
   GrowthRun(
-    repertoireId: rep.id, color: rep.color, rowId: row.id, targets: Set(row.holes.map { positionKey($0.fen) }),
+    playbookId: rep.id, color: rep.color, rowId: row.id, targets: Set(row.holes.map { positionKey($0.fen) }),
     path: [], fen: rep.rootFen, nodeId: nil, hole: nil)
 }
 
@@ -169,7 +169,7 @@ public func holePastBook(_ index: ReferenceIndex, _ hole: Hole) -> Bool {
   pastTheBook(index, hole.fen) || pastTheBook(index, hole.after)
 }
 
-public func startGrowthAtEnd(_ rep: Repertoire, _ row: GrowthRow, _ end: LineEnd) -> GrowthRun {
+public func startGrowthAtEnd(_ rep: Playbook, _ row: GrowthRow, _ end: LineEnd) -> GrowthRun {
   var run = startGrowth(rep, row)
   run.path = end.path
   run.fen = end.fen
@@ -178,7 +178,7 @@ public func startGrowthAtEnd(_ rep: Repertoire, _ row: GrowthRow, _ end: LineEnd
 }
 
 /// A run that begins standing at a hole.
-public func startGrowthAt(_ rep: Repertoire, _ row: GrowthRow, _ hole: Hole) -> GrowthRun {
+public func startGrowthAt(_ rep: Playbook, _ row: GrowthRow, _ hole: Hole) -> GrowthRun {
   var run = startGrowth(rep, row)
   run.path = hole.path
   run.fen = hole.fen
@@ -188,10 +188,10 @@ public func startGrowthAt(_ rep: Repertoire, _ row: GrowthRow, _ hole: Hole) -> 
 
 public func isUsersTurn(_ run: GrowthRun) -> Bool { fenTurn(run.fen) == run.color }
 
-public func preparedHere(_ rep: Repertoire, _ run: GrowthRun) -> [RepMove] { childrenOf(rep, run.nodeId) }
+public func preparedHere(_ rep: Playbook, _ run: GrowthRun) -> [RepMove] { childrenOf(rep, run.nodeId) }
 
-/// Play a move the repertoire already has.
-public func advance(_ rep: Repertoire, _ run: GrowthRun, _ san: String) -> GrowthRun? {
+/// Play a move the playbook already has.
+public func advance(_ rep: Playbook, _ run: GrowthRun, _ san: String) -> GrowthRun? {
   guard let kid = preparedHere(rep, run).first(where: { $0.san == san }) else { return nil }
   var next = run
   next.path.append(kid.san)
@@ -203,7 +203,7 @@ public func advance(_ rep: Repertoire, _ run: GrowthRun, _ san: String) -> Growt
 private let STEER_DECAY = 0.85
 
 /// The opponent's reply on the walk, chosen to reach the hole most worth having.
-public func steer(_ rep: Repertoire, _ index: ReferenceIndex, _ run: GrowthRun, _ opts: GrowthOptions = GrowthOptions()) -> (san: String, hole: Hole?)? {
+public func steer(_ rep: Playbook, _ index: ReferenceIndex, _ run: GrowthRun, _ opts: GrowthOptions = GrowthOptions()) -> (san: String, hole: Hole?)? {
   let holes = findHoles(rep, index, opts).filter { run.targets.contains(positionKey($0.fen)) }
   let hereKey = positionKey(run.fen)
   let here = holes.filter { positionKey($0.fen) == hereKey }
@@ -223,7 +223,7 @@ public func steer(_ rep: Repertoire, _ index: ReferenceIndex, _ run: GrowthRun, 
   return ((best?.kid ?? firstKid).san, nil)
 }
 
-private func bestBelow(_ rep: Repertoire, _ nodeId: String, _ worth: [String: Double], _ depth: Int) -> Double? {
+private func bestBelow(_ rep: Playbook, _ nodeId: String, _ worth: [String: Double], _ depth: Int) -> Double? {
   if depth > DEFAULT_MAX_PLY { return nil }
   guard let node = rep.nodes[nodeId] else { return nil }
   var best = worth[positionKey(node.fenAfter)].map { $0 * pow(STEER_DECAY, Double(depth)) }
@@ -242,12 +242,12 @@ public func enterHole(_ run: GrowthRun, _ hole: Hole) -> GrowthRun {
   return next
 }
 
-/// The run has arrived where the repertoire says nothing.
-public func atHole(_ rep: Repertoire, _ run: GrowthRun) -> Bool {
+/// The run has arrived where the playbook says nothing.
+public func atHole(_ rep: Playbook, _ run: GrowthRun) -> Bool {
   run.hole != nil || (isUsersTurn(run) && childrenOf(rep, run.nodeId).isEmpty)
 }
 
-/// Play your chosen answer. The run leaves the repertoire tree here.
+/// Play your chosen answer. The run leaves the playbook tree here.
 public func answerHole(_ run: GrowthRun, _ san: String) -> GrowthRun? {
   guard let move = applySan(run.fen, san) else { return nil }
   var next = run
@@ -292,11 +292,11 @@ public func onePerPiece(_ fen: String, _ sans: [String], _ count: Int = .max) ->
   return out
 }
 
-/// The line a chosen move writes into the repertoire.
+/// The line a chosen move writes into the playbook.
 public func lineFor(_ run: GrowthRun, _ san: String) -> [String] { run.path + [san] }
 
 /// The run another batch would carry on from, or nil with nothing left to answer.
-public func resumeAdding(_ rep: Repertoire, _ index: ReferenceIndex, _ run: GrowthRun) -> GrowthRun? {
+public func resumeAdding(_ rep: Playbook, _ index: ReferenceIndex, _ run: GrowthRun) -> GrowthRun? {
   if atHole(rep, run) {
     return choicesAt(index, run.fen, 1).isEmpty ? nil : run
   }

@@ -50,7 +50,7 @@ private func lines(_ row: SeedRow) -> [String] { row.lines.map { $0.joined(separ
   var state = AppState()
   // Classical: the Italian as White, 1...e5 and the Queen's Gambit Declined as Black.
   state.seed(tree, STARTER_SETS[0])
-  let rows = seedRows(ARCHIVE, bookIndex, state.repertoireList)
+  let rows = seedRows(ARCHIVE, bookIndex, state.playbookList)
   #expect(rows.allSatisfy { !$0.checked })
   #expect(!rows.contains { $0.color == .w && $0.lines.contains { $0.starts(with: line("e4 e5 Nf3 Nc6 Bc4")) } })
   // The same name on the other side is a different opening: your Queen's Gambit as White still shows.
@@ -82,11 +82,11 @@ private func lines(_ row: SeedRow) -> [String] { row.lines.map { $0.joined(separ
   let rows = seedRows(ARCHIVE, bookIndex, []).filter(\.checked)
   let added = state.addSeedRows(rows)
   #expect(added > 0)
-  let white = try #require(state.repertoireList.first { $0.color == .w })
+  let white = try #require(state.playbookList.first { $0.color == .w })
   let tip = try #require(nodeAtLine(white, line("e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d4")))
   #expect(tip.source == .import)
   // Once added, the same games offer nothing checked and none of those openings again.
-  let again = seedRows(ARCHIVE, bookIndex, state.repertoireList)
+  let again = seedRows(ARCHIVE, bookIndex, state.playbookList)
   #expect(again.allSatisfy { !$0.checked })
   #expect(Set(again.map(\.id)).isDisjoint(with: rows.map(\.id)))
 }

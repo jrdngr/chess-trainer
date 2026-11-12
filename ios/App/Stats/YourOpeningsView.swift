@@ -2,7 +2,7 @@ import Model
 import SwiftUI
 
 /// The tab's own page: your openings with this week's rating change on top,
-/// then the graphs (the activity hero with the window's switch, Survival's
+/// then the graphs (the activity hero with the window's switch, Run's
 /// last runs and accuracy).
 struct YourOpeningsView: View {
   let tree: OpeningTree
@@ -19,7 +19,7 @@ struct YourOpeningsView: View {
         VStack(alignment: .leading, spacing: 0) {
           OpeningsLadder().padding(.top, 8)
           ActivityHero(stats: stats, days: $days).padding(.top, 16)
-          SurvivalRuns()
+          RunHistory()
           AccuracySection(stats: stats, days: days)
         }
         .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 44)

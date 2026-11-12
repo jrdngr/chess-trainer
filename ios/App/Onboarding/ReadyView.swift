@@ -40,7 +40,7 @@ struct ReadyView: View {
         .padding(.horizontal, 16).padding(.top, 56)
       }
       OnboardBar {
-        BigButton(label: first != nil ? "Play" : "Go to Home") { onDone(first != nil ? .autopilot : .home) }
+        BigButton(label: first != nil ? "Play" : "Go to Home") { onDone(first != nil ? .play : .home) }
         if first != nil { SkipButton(label: "Go to Home") { onDone(.home) } }
       }
     }

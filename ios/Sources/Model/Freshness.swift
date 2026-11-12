@@ -47,7 +47,7 @@ public func markSeen(_ at: [String: Int], _ sans: [String], _ round: Int) -> [St
 }
 
 /// A line's positions, split where it last parts from the rest of the prep.
-public func lineParts(_ rep: Repertoire, _ tipId: String) -> (head: [String], tail: [String]) {
+public func lineParts(_ rep: Playbook, _ tipId: String) -> (head: [String], tail: [String]) {
   let path = pathTo(rep, tipId)
   var split = 0
   for (i, node) in path.enumerated() where childrenOf(rep, node.parentId).count > 1 { split = i }
@@ -60,7 +60,7 @@ private func mean(_ values: [Double]) -> Double {
 }
 
 /// How long a line has been left, 0...1: its tail's, tempered by its head's.
-public func lineStaleness(_ seen: Seen, _ rep: Repertoire, _ tipId: String) -> Double {
+public func lineStaleness(_ seen: Seen, _ rep: Playbook, _ tipId: String) -> Double {
   let (head, tail) = lineParts(rep, tipId)
   let tailStale = mean(tail.map { staleness(seen, $0) })
   let headStale = mean(head.map { staleness(seen, $0) })
@@ -68,7 +68,7 @@ public func lineStaleness(_ seen: Seen, _ rep: Repertoire, _ tipId: String) -> D
 }
 
 /// True when the line's own moves were what the round being decided came after.
-public func justRun(_ seen: Seen, _ rep: Repertoire, _ tipId: String) -> Bool {
+public func justRun(_ seen: Seen, _ rep: Playbook, _ tipId: String) -> Bool {
   let tail = lineParts(rep, tipId).tail
   return !tail.isEmpty && tail.allSatisfy { seen.at[$0] == seen.round }
 }

@@ -2,13 +2,13 @@
   "src/model/answerArrows.ts": {
     "ROLE_ARROWS": 3
   },
-  "src/model/autopilot.ts": {
+  "src/model/rounds.ts": {
     "LEAN_FOR": {
       "test": "popular",
       "review": "weak"
     }
   },
-  "src/model/autopilotPrefs.ts": {
+  "src/model/playPrefs.ts": {
     "AUTO_DRILL": {
       "form": "positions",
       "draw": "due",
@@ -25,7 +25,7 @@
       "nudgePriority": "transposition",
       "nudgePawns": false
     },
-    "DEFAULT_AUTOPILOT": {
+    "DEFAULT_PLAY": {
       "moveScores": true
     }
   },
@@ -1132,8 +1132,8 @@
       "review"
     ],
     "MODE_NAMES": {
-      "run": "Autopilot (old)",
-      "survival": "Survival",
+      "run": "Play (old)",
+      "run": "Run",
       "drill": "Drill",
       "growth": "Growth",
       "repair": "Repair"
@@ -1147,8 +1147,8 @@
   },
   "src/model/scoring.ts": {
     "ACTIVITY_MODES": [
+      "oldPlay",
       "run",
-      "survival",
       "drill",
       "growth",
       "repair"
@@ -1160,13 +1160,13 @@
         "answered": 0,
         "correct": 0,
         "byMode": {
-          "run": {
+          "oldPlay": {
             "rounds": 0,
             "answered": 0,
             "correct": 0,
             "lastAt": null
           },
-          "survival": {
+          "run": {
             "rounds": 0,
             "answered": 0,
             "correct": 0,
@@ -2557,13 +2557,13 @@
       }
     ]
   },
-  "src/model/survival.ts": {
+  "src/model/run.ts": {
     "BOOK_SHARE": 0.05,
     "COMBO_CLEAN": 20,
     "COMBO_HOLD": 40,
     "CONVERT_FROM": 200,
     "CONVERT_WINDOW": 6,
-    "DEFAULT_SURVIVAL": {
+    "DEFAULT_RUN": {
       "steer": "lines",
       "clock": "off",
       "moveScores": true,
@@ -2573,7 +2573,7 @@
       "undefendedFlash": false
     },
     "EDGE_MOVES": 10,
-    "EMPTY_SURVIVAL_SCORE": {
+    "EMPTY_RUN_SCORE": {
       "best": 0,
       "recent": [],
       "history": [],

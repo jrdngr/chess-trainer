@@ -10,7 +10,7 @@ import Testing
   let at = 1_790_845_200_000.0
 
   /// A Playbook without node ids: each side's lines, where each move came from, and what the Playbook lists.
-  func written(_ rep: Repertoire) -> JSON {
+  func written(_ rep: Playbook) -> JSON {
     obj([
       "color": rep.color.rawValue, "name": rep.name,
       "lines": leafLines(rep).map { pathTo(rep, $0.tipId).map { "\($0.san)(\($0.source.rawValue))" }.joined(separator: " ") },
@@ -22,7 +22,7 @@ import Testing
     var state = AppState()
     Env.at(at) { state.onboarded(tree, openings, board) }
     return obj([
-      "playbook": state.repertoireList.map(written).json,
+      "playbook": state.playbookList.map(written).json,
       "selection": encoded(state.settings.selection),
       "onboarded": state.settings.onboarded,
       "events": state.events.map(eventJSON).json,
@@ -46,10 +46,10 @@ import Testing
   ], only: ["onboarding.playerOf", "onboarding.selectionFor", "onboarding.onboarded (a starter set)", "onboarding.onboarded"])
 }
 
-/// An event as the cases record it: without its time or repertoire id.
+/// An event as the cases record it: without its time or playbook id.
 func eventJSON(_ event: AppEvent) -> JSON {
   guard case .object(var o) = encoded(event) else { return .null }
   o["at"] = nil
-  o["repertoireId"] = nil
+  o["playbookId"] = nil
   return .object(o)
 }

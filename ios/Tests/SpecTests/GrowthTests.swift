@@ -14,7 +14,7 @@ func replyJSON(_ r: Reply) -> JSON {
 
 func rowJSON(_ r: GrowthRow) -> JSON {
   obj([
-    "id": r.id, "repertoireId": r.repertoireId, "color": r.color.rawValue, "name": r.name, "eco": r.eco, "depth": r.depth,
+    "id": r.id, "playbookId": r.playbookId, "color": r.color.rawValue, "name": r.name, "eco": r.eco, "depth": r.depth,
     "topShare": r.topShare, "urgency": r.urgency, "score": r.score,
     "holes": JSON.array(r.holes.map(holeJSON)),
     "ends": JSON.array(r.ends.map { obj(["path": $0.path, "fen": $0.fen, "reach": $0.reach]) }),
@@ -69,9 +69,9 @@ func rowJSON(_ r: GrowthRow) -> JSON {
   draft.add(line("e4 c5 d4 cxd4 c3 Nf6 e5"), .fixed(.growth))
   draft.remove(nodeAtLine(draft.rep, line("e4 c5 d4 cxd4 c3 Nf6"))!.id)
   var state = AppState()
-  let id = state.ensureRepertoire(.w)
+  let id = state.ensurePlaybook(.w)
   state.saveGrowth(id, draft)
-  let saved = state.repertoires[id]!
+  let saved = state.playbooks[id]!
   #expect(leafLines(saved).map { $0.sans.joined(separator: " ") } == ["e4 c5 d4 cxd4 c3 dxc3 Nxc3"])
   #expect(nodeAtLine(saved, line("e4 c5 d4 cxd4 c3"))?.source == .picker)
 }

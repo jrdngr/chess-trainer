@@ -3,14 +3,14 @@ import Model
 import SwiftUI
 import UIKit
 
-/// What a Survival run you set up came to, in points when moments, missions
+/// What a Run run you set up came to, in points when moments, missions
 /// or the combo were on, else in moves; and a new best.
-struct SurvivalSummary: View {
+struct RunSummary: View {
   let finish: Finish
-  let prefs: SurvivalPrefs
+  let prefs: RunPrefs
   let scoredInPoints: Bool
   /// The record as it stood before this run.
-  let before: SurvivalRecord
+  let before: RunRecord
   /// The record keeps points alone (Middlegame's), so only a points best counts.
   var pointsOnly = false
 
@@ -104,7 +104,7 @@ struct MovesSurvivedList: View {
   let line: [String]
   /// The opening the run was played in.
   let opening: String
-  let record: SurvivalRecord
+  let record: RunRecord
   let moves: Int
   /// What the record counts: moves survived, or Middlegame's points.
   var title = "Moves survived"
@@ -113,7 +113,7 @@ struct MovesSurvivedList: View {
     VStack(spacing: 0) {
       PlaySection(title: title, aside: "Best").padding(.trailing, 12)
       ListCard {
-        if let shown { row(nodeById(tree, shown).name, survivalFor(record, shown)) }
+        if let shown { row(nodeById(tree, shown).name, runFor(record, shown)) }
         row("All openings", record.global)
       }
     }
@@ -125,7 +125,7 @@ struct MovesSurvivedList: View {
     return along.contains(opening) ? opening : along.last
   }
 
-  private func row(_ name: String, _ score: SurvivalScore) -> some View {
+  private func row(_ name: String, _ score: RunScore) -> some View {
     HStack(spacing: 12) {
       Text(name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
         .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
@@ -138,7 +138,7 @@ struct MovesSurvivedList: View {
 }
 
 /// Copy the moves I played, and Change options back to the setup.
-struct SurvivalEndActions: View {
+struct RunEndActions: View {
   @Environment(Toasts.self) private var toasts
   @Environment(AppStore.self) private var store
   /// The moves as text: the run, and the blunder that ended it.
@@ -168,7 +168,7 @@ struct SurvivalEndActions: View {
 /// One opening's best and recent form, and this run's count beside it.
 struct ScoreRow: View {
   var name: String
-  var score: SurvivalScore
+  var score: RunScore
   var now: Int?
 
   var body: some View {

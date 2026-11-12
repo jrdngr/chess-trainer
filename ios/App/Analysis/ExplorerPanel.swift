@@ -10,8 +10,8 @@ struct ExplorerPanel: View {
   let fen: String
   /// SAN path to this position, used to name the opening.
   let path: [String]
-  /// Moves already in the user's repertoire from this position.
-  var inRepertoire: [String] = []
+  /// Moves already in the user's playbook from this position.
+  var inPlaybook: [String] = []
   let onPlay: (String) -> Void
   var onPickGame: ((ReferenceGame) -> Void)?
 
@@ -53,7 +53,7 @@ struct ExplorerPanel: View {
       .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 8)
       ForEach(Array(entry.moves.enumerated()), id: \.element.san) { i, move in
         if i > 0 { divider }
-        ExplorerRow(move: move, total: total, inRepertoire: inRepertoire.contains(move.san)) { onPlay(move.san) }
+        ExplorerRow(move: move, total: total, inPlaybook: inPlaybook.contains(move.san)) { onPlay(move.san) }
       }
       if !games.isEmpty {
         divider
@@ -98,7 +98,7 @@ struct ExplorerPanel: View {
 private struct ExplorerRow: View {
   let move: ExplorerMove
   let total: Double
-  let inRepertoire: Bool
+  let inPlaybook: Bool
   let onPlay: () -> Void
 
   var body: some View {
@@ -108,7 +108,7 @@ private struct ExplorerRow: View {
       HStack(spacing: 12) {
         HStack(spacing: 4) {
           Text(move.san).font(.system(size: 16, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text)
-          if inRepertoire { Icon(name: "star", size: 12, filled: true).foregroundStyle(Theme.accent) }
+          if inPlaybook { Icon(name: "star", size: 12, filled: true).foregroundStyle(Theme.accent) }
         }
         .frame(minWidth: 54, alignment: .leading)
         ResultBar(white: move.white / results * 100, draw: move.draw / results * 100, black: move.black / results * 100)

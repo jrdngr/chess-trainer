@@ -25,9 +25,9 @@ private func effectJSON(_ effect: Effect, _ tree: OpeningTree) -> JSON {
   case .rate(let result, let earlier):
     return obj(["kind": "rate", "result": result.json, "earlier": earlier.count])
   case .answered(let rid, let fen, let san, let grade):
-    return obj(["kind": "answered", "repertoireId": rid, "fen": fen, "san": san, "grade": grade.rawValue])
+    return obj(["kind": "answered", "playbookId": rid, "fen": fen, "san": san, "grade": grade.rawValue])
   case .missed(let rid, let fen, let played, let expected):
-    return obj(["kind": "missed", "repertoireId": rid, "fen": fen, "played": played, "expected": expected])
+    return obj(["kind": "missed", "playbookId": rid, "fen": fen, "played": played, "expected": expected])
   case .buzz(let pattern):
     return obj(["kind": "buzz", "pattern": pattern])
   case .pop(let p):
@@ -70,30 +70,30 @@ private func sessionJSON(_ s: RunSession) -> JSON {
   ])
 }
 
-/// Golden/cases/scenarios/survival.json: each run replayed call by call
+/// Golden/cases/scenarios/run.json: each run replayed call by call
 /// through the Swift controller, its effects and session compared at every step.
-@Test func survivalScenarios() throws {
+@Test func runScenarios() throws {
   let index = bookIndex
   let tree = openingTree(index)
-  let file = try JSON.parse(Data(contentsOf: Cases.golden.appendingPathComponent("cases/scenarios/survival.json")))
+  let file = try JSON.parse(Data(contentsOf: Cases.golden.appendingPathComponent("cases/scenarios/run.json")))
   var replayed = 0
   defer { #expect(replayed == file["scenarios"].array.reduce(0) { $0 + $1["steps"].array.count }) }
   for scenario in file["scenarios"].array {
     let name = scenario["name"].string
     let setup = scenario["setup"]
-    let reps = setup["reps"].array.map { r -> Repertoire in
-      var out = createRepertoire("", color(r["color"]), r["id"].string)
+    let reps = setup["reps"].array.map { r -> Playbook in
+      var out = createPlaybook("", color(r["color"]), r["id"].string)
       for l in r["lines"].strings { out = addLine(out, line(l), .fixed(.seed)).rep }
       return out
     }
     let start = setup["start"]
     var opts = StartOptions(
-      steer: SurvivalSteer(rawValue: start["steer"].string)!, tree: tree, reps: reps,
+      steer: RunSteer(rawValue: start["steer"].string)!, tree: tree, reps: reps,
       node: nodeById(tree, start["node"].string), color: ColorChoice(rawValue: start["color"].string)!)
     opts.seed = start["seed"].number
-    let begun = try #require(startSurvival(opts), "\(name): no run")
-    let prefs = setup["prefs"].decoded(SurvivalPrefs.self)
-    let ctx = RunContext(index: index, prefs: prefs, autopilot: setup["autopilot"].bool)
+    let begun = try #require(startRun(opts), "\(name): no run")
+    let prefs = setup["prefs"].decoded(RunPrefs.self)
+    let ctx = RunContext(index: index, prefs: prefs, play: setup["play"].bool)
     let picker = mulberry32(seed: setup["picker"].number)
     var session = beginSession(begun)
 

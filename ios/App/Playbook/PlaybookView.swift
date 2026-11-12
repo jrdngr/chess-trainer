@@ -58,18 +58,18 @@ struct PlaybookView: View {
             onHome()
           })
       case .browse(let repId, let nodeId, let title):
-        if state.repertoires[repId] != nil {
-          RepertoireBrowser(
+        if state.playbooks[repId] != nil {
+          PlaybookBrowser(
             repId: repId, startNodeId: nodeId, title: title, onBack: { page = nil }, onExplore: onExplore,
             onEdit: { sans in page = .board(repId: repId, sans: sans, title: title) })
         } else {
           Color.clear.onAppear { page = nil }
         }
       case .board(let repId, let sans, let title):
-        if let rep = state.repertoires[repId] {
+        if let rep = state.playbooks[repId] {
           BoardBuildView(start: sans, side: rep.color, onBack: { _ in
             // Back to the browser where the line's saved moves end.
-            let fresh = store.state.repertoires[repId] ?? rep
+            let fresh = store.state.playbooks[repId] ?? rep
             let held = Array(sans.prefix(savedPlies(fresh, sans)))
             page = .browse(repId: repId, nodeId: held.isEmpty ? nil : nodeAtLine(fresh, held)?.id, title: title)
           })
@@ -81,7 +81,7 @@ struct PlaybookView: View {
     }
     .task(id: scanInput) { await scan.run(scanInput, tree, index) }
     .onAppear {
-      if store.state.repertoireList.first(where: { $0.color == side }) == nil, let other = store.state.repertoireList.first {
+      if store.state.playbookList.first(where: { $0.color == side }) == nil, let other = store.state.playbookList.first {
         side = other.color
       }
       guard let tidyFocus else { return }
@@ -94,12 +94,12 @@ struct PlaybookView: View {
   private var scanInput: TidyScan.Input {
     let state = store.state
     return TidyScan.Input(
-      repertoires: state.repertoires, order: state.repertoireOrder, selection: state.settings.selection,
+      playbooks: state.playbooks, order: state.playbookOrder, selection: state.settings.selection,
       growth: state.settings.growth)
   }
 
   private var list: some View {
-    let reps = store.state.repertoireList
+    let reps = store.state.playbookList
     let rep = reps.first { $0.color == side }
     let rows = rep.map { playbookRows($0, index) } ?? []
     let tip = playbookTip(store.state.settings.tips, hasRows: !rows.isEmpty)
@@ -155,7 +155,7 @@ struct PlaybookView: View {
               .tip(tip, when: at == 0 && tip == .playbookRow, arrow: .down, arrowAt: 0.3, inset: 8, onDismiss: putAway)
             }
             ListCard {
-              Button { page = .browse(repId: rep.id, nodeId: nil, title: repertoireName(rep.color)) } label: {
+              Button { page = .browse(repId: rep.id, nodeId: nil, title: playbookName(rep.color)) } label: {
                 HStack(spacing: 12) {
                   Icon(name: "tree", size: 20).foregroundStyle(Theme.text2)
                   Text("Whole tree").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
@@ -187,13 +187,13 @@ struct PlaybookView: View {
     .fullScreenCover(isPresented: $adding) {
       OnboardingView(tree: tree, index: index, onClose: { adding = false }) { next in
         adding = false
-        if next == .autopilot { onPlay() } else { onHome() }
+        if next == .play { onPlay() } else { onHome() }
       }
     }
   }
 
   /// One opening's row, swiping left to delete it after a confirmation.
-  private func rowView(_ rep: Repertoire, _ row: PlaybookRow, name: String? = nil, indent: CGFloat = 0) -> some View {
+  private func rowView(_ rep: Playbook, _ row: PlaybookRow, name: String? = nil, indent: CGFloat = 0) -> some View {
     let removes = row.parts.reduce(0) { $0 + $1.removes }
     return SwipeToRemove(title: "Delete \(row.name)?", action: "Delete \(removes) \(removes == 1 ? "move" : "moves")") {
       store.update { state in
@@ -217,20 +217,20 @@ struct PlaybookView: View {
     return (x - 16) / max(barWidth - 32, 1)
   }
 
-  /// Your repertoire with the log of how it got that way, as a JSON file to share.
-  private func exportFile(_ reps: [Repertoire]) -> URL {
+  /// Your playbook with the log of how it got that way, as a JSON file to share.
+  private func exportFile(_ reps: [Playbook]) -> URL {
     let date = String(ISO8601DateFormatter().string(from: Date()).prefix(10))
-    let url = FileManager.default.temporaryDirectory.appending(path: "repertoire-\(date).json")
+    let url = FileManager.default.temporaryDirectory.appending(path: "playbook-\(date).json")
     struct Export: Encodable {
-      var format = "chess-trainer-repertoire"
+      var format = "chess-trainer-playbook"
       var version = 1
       var exportedAt: String
-      var repertoires: [Repertoire]
+      var playbooks: [Playbook]
       var events: [AppEvent]
     }
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-    if let data = try? encoder.encode(Export(exportedAt: date, repertoires: reps, events: store.state.events)) {
+    if let data = try? encoder.encode(Export(exportedAt: date, playbooks: reps, events: store.state.events)) {
       try? data.write(to: url)
     }
     return url

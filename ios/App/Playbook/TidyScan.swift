@@ -13,7 +13,7 @@ final class TidyScan {
 
   /// What a scan depends on.
   struct Input: Equatable {
-    var repertoires: [String: Repertoire]
+    var playbooks: [String: Playbook]
     var order: [String]
     var selection: Selection
     var growth: GrowthPrefs
@@ -24,7 +24,7 @@ final class TidyScan {
 
   func run(_ input: Input, _ tree: OpeningTree, _ index: ReferenceIndex) async {
     let regions = regionsBySide(tree, input.selection)
-    let reps = repertoiresIn(input.order.compactMap { input.repertoires[$0] }, input.selection.color)
+    let reps = playbooksIn(input.order.compactMap { input.playbooks[$0] }, input.selection.color)
     let opts = TidyOptions(prefs: NudgePrefs(priority: input.growth.nudgePriority, pawns: input.growth.nudgePawns), minShare: input.growth.minShare)
     let todo = acrossRegions(regions, reps, { rep, node in tidyPositions([rep], tree, node) }, { "\($0.rep.id):\($0.node.id)" })
     looking = todo.count

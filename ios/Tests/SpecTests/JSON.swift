@@ -123,7 +123,7 @@ extension JSON {
 }
 
 /// A value as the web encoded it: the native app's own additions left out.
-/// Survival's opponent strength is native only.
+/// Run's opponent strength is native only.
 func webEncoded<T: Encodable>(_ value: T) -> JSON {
   func strip(_ j: JSON) -> JSON {
     switch j {

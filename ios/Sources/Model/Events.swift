@@ -1,13 +1,13 @@
 import ChessCore
 
-/// A log of what changed the repertoire, and what Growth put in front of
-/// you. The repertoire says what your prep is, never
+/// A log of what changed the playbook, and what Growth put in front of
+/// you. The playbook says what your prep is, never
 /// how it got that way; this is the record that does. Data for diagnosing,
 /// not a screen.
 
 /// Where in the app an event came from.
 public enum EventPlace: String, Sendable, Codable {
-  case home, repertoire, tidy, analysis, stats, growth, autopilot, survival, drill, repair, play, `import`, onboarding, board, session, unknown
+  case home, playbook, tidy, analysis, stats, growth, play, run, drill, repair, freePlay, `import`, onboarding, board, session, unknown
 }
 
 /// One event. Each kind uses its own fields;
@@ -16,7 +16,7 @@ public struct AppEvent: Equatable, Sendable, Codable {
   public var kind: String
   public var at: Double = 0
   public var via: EventPlace = .unknown
-  public var repertoireId: String?
+  public var playbookId: String?
   public var color: Color?
   public var line: String?
   public var added: Int?
@@ -33,7 +33,7 @@ public struct AppEvent: Equatable, Sendable, Codable {
   public var all: Bool?
 
   public init(
-    kind: String, via: EventPlace? = nil, repertoireId: String? = nil, color: Color? = nil, line: String? = nil,
+    kind: String, via: EventPlace? = nil, playbookId: String? = nil, color: Color? = nil, line: String? = nil,
     added: Int? = nil, source: String? = nil, removed: [String]? = nil, count: Int? = nil, delta: Int? = nil,
     to: String? = nil, rows: [String]? = nil, picked: String? = nil, start: String? = nil, offered: [String]? = nil,
     from: String? = nil, all: Bool? = nil
@@ -41,7 +41,7 @@ public struct AppEvent: Equatable, Sendable, Codable {
     self.kind = kind
     self.via = via ?? .unknown
     self.placeGiven = via != nil
-    self.repertoireId = repertoireId
+    self.playbookId = playbookId
     self.color = color
     self.line = line
     self.added = added
@@ -62,11 +62,11 @@ public struct AppEvent: Equatable, Sendable, Codable {
   var placeGiven = true
 
   enum CodingKeys: String, CodingKey {
-    case kind, at, via, repertoireId, color, line, added, source, removed, count, delta, to, rows, picked, start, offered, from, all
+    case kind, at, via, playbookId, color, line, added, source, removed, count, delta, to, rows, picked, start, offered, from, all
   }
 
   public static func == (a: AppEvent, b: AppEvent) -> Bool {
-    a.kind == b.kind && a.at == b.at && a.via == b.via && a.repertoireId == b.repertoireId && a.color == b.color
+    a.kind == b.kind && a.at == b.at && a.via == b.via && a.playbookId == b.playbookId && a.color == b.color
       && a.line == b.line && a.added == b.added && a.source == b.source && a.removed == b.removed && a.count == b.count
       && a.delta == b.delta && a.to == b.to && a.rows == b.rows && a.picked == b.picked && a.start == b.start
       && a.offered == b.offered && a.from == b.from && a.all == b.all
@@ -106,13 +106,13 @@ public func normalizeEvents(_ saved: [AppEvent]?) -> [AppEvent] {
 }
 
 /// A node's line from the start, as moves.
-public func lineAt(_ rep: Repertoire, _ nodeId: String?) -> String {
+public func lineAt(_ rep: Playbook, _ nodeId: String?) -> String {
   pathTo(rep, nodeId).map(\.san).joined(separator: " ")
 }
 
 /// What went between two versions of a tree: every line of the old one that
 /// lost a move, whole, and how many moves went in all.
-public func removedBetween(_ before: Repertoire, _ after: Repertoire) -> (removed: [String], count: Int) {
+public func removedBetween(_ before: Playbook, _ after: Playbook) -> (removed: [String], count: Int) {
   let gone = { (id: String) in after.nodes[id] == nil }
   let count = before.nodes.keys.filter(gone).count
   let removed = leafLines(before).filter { gone($0.tipId) }.map { $0.sans.joined(separator: " ") }

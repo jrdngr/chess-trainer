@@ -4,7 +4,7 @@ import Model
 import SwiftUI
 
 /// Where onboarding hands over to.
-enum OnboardingNext: Equatable { case home, autopilot }
+enum OnboardingNext: Equatable { case home, play }
 
 /// Adding openings, from the Playbook tab's +: four ways in. A starter set,
 /// picked by style; the openings you already play, picked one at a time;
@@ -47,7 +47,7 @@ struct OnboardingView: View {
       case .ready:
         ReadyView(tree: tree, rows: pending, onMore: { step = .pick }, onDone: confirm)
       case .importGames:
-        ImportView(onBack: { step = .path }, onAdded: { confirm(.autopilot) })
+        ImportView(onBack: { step = .path }, onAdded: { confirm(.play) })
       case .browse:
         BrowsePicker(onClose: { step = .path })
       }

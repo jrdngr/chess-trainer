@@ -122,10 +122,10 @@ private func playThrough(_ game: TutorialGame) -> (played: [String], line: [Stri
 /// Growth's gap is the position the run reached, for either side.
 @Test func tutorialGapIsWhereTheRunStands() {
   var state = AppState()
-  let w = state.ensureRepertoire(.w)
-  let b = state.ensureRepertoire(.b)
-  #expect(tutorialGap(state.repertoires[w]!, line("e4 e5 Nf3 Nc6")).line == line("e4 e5 Nf3 Nc6"))
-  let black = tutorialGap(state.repertoires[b]!, line("e4 e5 Nf3 Nc6 Bc4"))
+  let w = state.ensurePlaybook(.w)
+  let b = state.ensurePlaybook(.b)
+  #expect(tutorialGap(state.playbooks[w]!, line("e4 e5 Nf3 Nc6")).line == line("e4 e5 Nf3 Nc6"))
+  let black = tutorialGap(state.playbooks[b]!, line("e4 e5 Nf3 Nc6 Bc4"))
   #expect(black.line == line("e4 e5 Nf3 Nc6 Bc4"))
   #expect(black.hole.san == "Bc4")
   #expect(black.color == .b)

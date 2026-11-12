@@ -14,9 +14,9 @@ struct MiddlegameLine: Equatable {
 }
 
 /// Middlegame mode, opened from Home or from a line on the opening sheet: one of
-/// your lines played out to a middlegame, then a Survival run from there. While the
+/// your lines played out to a middlegame, then a Run run from there. While the
 /// handoff is built, the mode is announced over the screen. A run plays on
-/// `RunModel` and `RunView`, and ends on `EndView`, as Survival's do.
+/// `RunModel` and `RunView`, and ends on `EndView`, as Run's do.
 struct MiddlegameView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
@@ -91,13 +91,13 @@ struct MiddlegameView: View {
 
   /// Draw a line from the setup (or take `line`), build its handoff, then begin the run there.
   /// A run from the opening sheet draws its next lines through that line's own opening.
-  private func start(_ saved: SurvivalPrefs, line: MiddlegameLine? = nil) {
+  private func start(_ saved: RunPrefs, line: MiddlegameLine? = nil) {
     let prefs = middlegamePrefs(saved)
     let selection = (line ?? exact).map(selectionOf) ?? store.takeRoundSelection()
     let seed = (Env.random() * 2_147_483_648).rounded(.down)
-    var options = survivalStart(prefs, selection, store.state, tree, seed: seed)
-    guard let drawn = line ?? startSurvival(options).map({ begun -> MiddlegameLine in
-      let yours = middlegameLine(begun, store.state.repertoireList)
+    var options = runStart(prefs, selection, store.state, tree, seed: seed)
+    guard let drawn = line ?? startRun(options).map({ begun -> MiddlegameLine in
+      let yours = middlegameLine(begun, store.state.playbookList)
       return MiddlegameLine(color: begun.state.run.color, sans: yours.sans, gap: yours.gap)
     }),
       !drawn.sans.isEmpty
@@ -116,7 +116,7 @@ struct MiddlegameView: View {
     job = Task {
       let began = Date()
       let handoff = await buildHandoff(drawn.sans, color: drawn.color, tools: tools, seed: seed, gap: drawn.gap)
-      // The announcement holds at least as long as Survival's, however quick the build.
+      // The announcement holds at least as long as Run's, however quick the build.
       let left = RunModel.announceMs - Date().timeIntervalSince(began)
       if left > 0 { try? await Task.sleep(for: .seconds(left)) }
       guard !Task.isCancelled else { return }

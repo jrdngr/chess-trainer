@@ -46,13 +46,13 @@ private func namedAfter(_ index: ReferenceIndex, _ tree: OpeningTree, _ sans: [S
   return nil
 }
 
-/// Holes: book replies your repertoire meets often and has no answer to.
-private func holeCandidates(_ reps: [Repertoire], _ index: ReferenceIndex, _ tree: OpeningTree) -> [Suggestion] {
+/// Holes: book replies your playbook meets often and has no answer to.
+private func holeCandidates(_ reps: [Playbook], _ index: ReferenceIndex, _ tree: OpeningTree) -> [Suggestion] {
   var out: [Suggestion] = []
   var sides = reps
-  // No Black repertoire at all still faces 1.e4: an empty one finds those holes.
+  // No Black playbook at all still faces 1.e4: an empty one finds those holes.
   if !reps.contains(where: { $0.color == .b }) {
-    sides.append(Repertoire(id: "", name: "", color: .b, rootFen: START_FEN, rootChildren: [], nodes: [:], createdAt: 0))
+    sides.append(Playbook(id: "", name: "", color: .b, rootFen: START_FEN, rootChildren: [], nodes: [:], createdAt: 0))
   }
 
   for rep in sides {
@@ -119,7 +119,7 @@ private func generic(_ entry: PickerEntry) -> Bool {
   GENERIC_FAMILIES.contains(entry.family) || (entry.level > 0 && genericBranch(entry.label))
 }
 
-/// The opening a repertoire line is filed under, for "your Najdorf": the
+/// The opening a playbook line is filed under, for "your Najdorf": the
 /// family, or its branch where the family is too big to say much on its own.
 private func yourName(_ catalog: PickerCatalog, _ node: OpeningNode?) -> String {
   guard let node else { return "" }
@@ -132,8 +132,8 @@ private func yourName(_ catalog: PickerCatalog, _ node: OpeningNode?) -> String 
   return shortName(family.label)
 }
 
-/// Lines the book reaches your positions from, that your repertoire never plays.
-private func transposeCandidates(_ reps: [Repertoire], _ index: ReferenceIndex, _ tree: OpeningTree, _ catalog: PickerCatalog) -> [Suggestion] {
+/// Lines the book reaches your positions from, that your playbook never plays.
+private func transposeCandidates(_ reps: [Playbook], _ index: ReferenceIndex, _ tree: OpeningTree, _ catalog: PickerCatalog) -> [Suggestion] {
   let graph = bookGraph(index)
   var out: [Suggestion] = []
   for rep in reps {
@@ -166,11 +166,11 @@ private func transposeCandidates(_ reps: [Repertoire], _ index: ReferenceIndex, 
   return out
 }
 
-private func plyOf(_ rep: Repertoire, _ node: RepMove) -> Int {
+private func plyOf(_ rep: Playbook, _ node: RepMove) -> Int {
   pathOf(rep, node).count
 }
 
-private func pathOf(_ rep: Repertoire, _ node: RepMove) -> [String] {
+private func pathOf(_ rep: Playbook, _ node: RepMove) -> [String] {
   var out: [String] = []
   var cursor: RepMove? = node
   while let at = cursor {
@@ -210,7 +210,7 @@ private func familyEntries(_ family: PickerFamily) -> [PickerEntry] {
 }
 
 /// Openings whose pawns settle the way your lines do.
-private func structureCandidates(_ reps: [Repertoire], _ index: ReferenceIndex, _ tree: OpeningTree, _ catalog: PickerCatalog) -> [Suggestion] {
+private func structureCandidates(_ reps: [Playbook], _ index: ReferenceIndex, _ tree: OpeningTree, _ catalog: PickerCatalog) -> [Suggestion] {
   var out: [Suggestion] = []
   for rep in reps {
     let nodes = nodesInOrder(rep)
@@ -233,7 +233,7 @@ private func structureCandidates(_ reps: [Repertoire], _ index: ReferenceIndex, 
 }
 
 /// Openings as sharp or as quiet as the ones you play most.
-private func styleCandidates(_ reps: [Repertoire], _ index: ReferenceIndex, _ tree: OpeningTree, _ catalog: PickerCatalog) -> [Suggestion] {
+private func styleCandidates(_ reps: [Playbook], _ index: ReferenceIndex, _ tree: OpeningTree, _ catalog: PickerCatalog) -> [Suggestion] {
   var out: [Suggestion] = []
   for rep in reps {
     let mine = Set(rep.nodes.values.map { positionKey($0.fenAfter) })
@@ -248,7 +248,7 @@ private func styleCandidates(_ reps: [Repertoire], _ index: ReferenceIndex, _ tr
       for family in catalog.families where family.entry.key != anchor.entry.family {
         for entry in familyEntries(family) {
           if !entry.exact || entry.side != rep.color || mine.contains(entry.node.key) || generic(entry) { continue }
-          // White picks its first move: a style match that starts elsewhere is a new repertoire, not a new line.
+          // White picks its first move: a style match that starts elsewhere is a new playbook, not a new line.
           if rep.color == .w && entry.node.sans.first != anchor.entry.node.sans.first { continue }
           let diff = abs(entry.sharpness - sharp)
           if diff > 1 { continue }
@@ -270,7 +270,7 @@ private let WEIGHTS = (need: 1.0, fit: 0.6, style: 0.35)
 /// unprepared, how much it shares with what you play, how well it suits your
 /// style — and is labeled by whichever part of that score is biggest. The list
 /// is then dealt out so no label comes up more than twice in a row.
-public func suggestions(_ reps: [Repertoire], _ index: ReferenceIndex, _ tree: OpeningTree, _ catalog: PickerCatalog, _ limit: Int = 30) -> [BrowseRow] {
+public func suggestions(_ reps: [Playbook], _ index: ReferenceIndex, _ tree: OpeningTree, _ catalog: PickerCatalog, _ limit: Int = 30) -> [BrowseRow] {
   var merged = OrderedMap<String, Suggestion>()
   let all = holeCandidates(reps, index, tree) + transposeCandidates(reps, index, tree, catalog)
     + structureCandidates(reps, index, tree, catalog) + styleCandidates(reps, index, tree, catalog)

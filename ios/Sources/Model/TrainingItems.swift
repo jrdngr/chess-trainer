@@ -12,8 +12,8 @@ public struct ExpectedMove: Equatable, Sendable {
 /// Everything a screen needs to ask one question.
 public struct TrainingItem: Equatable, Sendable {
   public var cardId: String
-  public var repertoireId: String
-  public var repertoireName: String
+  public var playbookId: String
+  public var playbookName: String
   public var key: String
   public var fen: String
   public var orientation: Color
@@ -25,12 +25,12 @@ public struct TrainingItem: Equatable, Sendable {
   public var depth: Int
 }
 
-public func cardId(_ repertoireId: String, _ key: String) -> String {
-  "\(repertoireId)#\(key)"
+public func cardId(_ playbookId: String, _ key: String) -> String {
+  "\(playbookId)#\(key)"
 }
 
 /// Follow preferred children from a node for up to `plies` moves.
-private func preferredContinuation(_ rep: Repertoire, _ nodeId: String, _ plies: Int) -> [String] {
+private func preferredContinuation(_ rep: Playbook, _ nodeId: String, _ plies: Int) -> [String] {
   var out: [String] = []
   var cur: String? = nodeId
   for _ in 0..<plies {
@@ -43,10 +43,10 @@ private func preferredContinuation(_ rep: Repertoire, _ nodeId: String, _ plies:
   return out
 }
 
-public func buildItem(_ rep: Repertoire, _ dp: DecisionPoint) -> TrainingItem {
+public func buildItem(_ rep: Playbook, _ dp: DecisionPoint) -> TrainingItem {
   let preferred = dp.options.first(where: \.preferred) ?? dp.options.first
   return TrainingItem(
-    cardId: cardId(rep.id, dp.key), repertoireId: rep.id, repertoireName: rep.name, key: dp.key, fen: dp.fen,
+    cardId: cardId(rep.id, dp.key), playbookId: rep.id, playbookName: rep.name, key: dp.key, fen: dp.fen,
     orientation: rep.color,
     expected: dp.options.map { ExpectedMove(nodeId: $0.id, san: $0.san, preferred: $0.preferred, note: $0.note) },
     pathSans: dp.pathSans,
@@ -55,6 +55,6 @@ public func buildItem(_ rep: Repertoire, _ dp: DecisionPoint) -> TrainingItem {
 }
 
 /// Every position to answer across the trees.
-public func allItems(_ reps: [Repertoire]) -> [TrainingItem] {
+public func allItems(_ reps: [Playbook]) -> [TrainingItem] {
   reps.flatMap { rep in decisionPoints(rep).map { buildItem(rep, $0) } }
 }

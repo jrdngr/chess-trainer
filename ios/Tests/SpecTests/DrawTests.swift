@@ -21,8 +21,8 @@ private func fixed4(_ x: Double) -> Double { Double(JS.toFixed(x, 4))! }
     "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6", "d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O", "d4 Nf6 Nf3 g6",
   ])
   let reps = [white, black]
-  func repFor(_ c: Color) -> Repertoire { c == .w ? white : black }
-  func lineOf(_ r: Repertoire, _ tip: String) -> String { leafLines(r).first { $0.tipId == tip }!.sans.joined(separator: " ") }
+  func repFor(_ c: Color) -> Playbook { c == .w ? white : black }
+  func lineOf(_ r: Playbook, _ tip: String) -> String { leafLines(r).first { $0.tipId == tip }!.sans.joined(separator: " ") }
   func node(_ id: String) -> OpeningNode { nodeById(tree, id) }
   func seenOf(_ rounds: [JSON]) -> Seen {
     var at: [String: Int] = [:]
@@ -30,13 +30,13 @@ private func fixed4(_ x: Double) -> Double { Double(JS.toFixed(x, 4))! }
     return Seen(at: at, round: 10)
   }
   func choice(_ j: JSON) -> ColorChoice { ColorChoice(rawValue: j.string)! }
-  func start(_ steer: SurvivalSteer, _ lean: Steer?, _ c: ColorChoice, _ at: OpeningNode, toward: OpeningNode? = nil, seed: Int, seen: Seen? = nil) -> SurvivalStart {
+  func start(_ steer: RunSteer, _ lean: Steer?, _ c: ColorChoice, _ at: OpeningNode, toward: OpeningNode? = nil, seed: Int, seen: Seen? = nil) -> RunBegun {
     var opts = StartOptions(steer: steer, tree: tree, reps: reps, node: at, color: c)
     opts.lean = lean
     opts.toward = toward
     opts.seed = Double(seed)
     opts.seen = seen
-    return Env.at(now) { startSurvival(opts)! }
+    return Env.at(now) { startRun(opts)! }
   }
   func counts(_ keys: [String]) -> JSON {
     var out: [String: Int] = [:]
@@ -53,8 +53,8 @@ private func fixed4(_ x: Double) -> Double { Double(JS.toFixed(x, 4))! }
       for (id, p) in lineOdds(r, c, index, eligible).entries { out[lineOf(r, id)] = fixed4(p).json }
       return .object(out)
     },
-    "survival.startSurvival (draw)": { a in
-      let steer = SurvivalSteer(rawValue: a[0].string)!
+    "run.startRun (draw)": { a in
+      let steer = RunSteer(rawValue: a[0].string)!
       let lean = a[1].stringOrNil.map { Steer(rawValue: $0)! }
       let at = node(a[3].string)
       return (1...12).map { seed -> String in
@@ -62,13 +62,13 @@ private func fixed4(_ x: Double) -> Double { Double(JS.toFixed(x, 4))! }
         return "\(s.color.rawValue) [\(s.played.joined(separator: " "))] \(s.target.joined(separator: " "))"
       }.json
     },
-    "survival.startSurvival (shares)": { a in
+    "run.startRun (shares)": { a in
       let plies = a[1].int
       return counts((1...400).map { seed in
         start(.lines, .popular, choice(a[0]), tree.root, seed: seed).state.run.target.prefix(plies).joined(separator: " ")
       })
     },
-    "survival.startSurvival (fresh)": { a in
+    "run.startRun (fresh)": { a in
       let seen = seenOf(a[0].array)
       return (1...12).map { seed in
         start(.lines, .popular, .w, node("e4 e5"), seed: seed, seen: seen).state.run.target.joined(separator: " ")
@@ -100,7 +100,7 @@ private func fixed4(_ x: Double) -> Double { Double(JS.toFixed(x, 4))! }
         if let v = over["asked"] { card.testedRound = 10 - v.int }
         cards[card.id] = card
       }
-      let slips = a[1].int > 0 ? [Slip(kind: "offprep", repertoireId: "rep_w", key: key, games: a[1].int)] : []
+      let slips = a[1].int > 0 ? [Slip(kind: "offprep", playbookId: "rep_w", key: key, games: a[1].int)] : []
       return fixed4Three(weaknessFromCards(cards, slips, round: 10)("rep_w", key)).json
     },
     "openingRun.lineWeakness": { a in

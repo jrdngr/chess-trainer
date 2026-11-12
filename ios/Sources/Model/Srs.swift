@@ -17,7 +17,7 @@ public enum Grade: String, Sendable, Codable, CaseIterable {
 /// Spaced-repetition state for one position you answer.
 public struct Card: Equatable, Sendable, Codable {
   public var id: String
-  public var repertoireId: String
+  public var playbookId: String
   /// positionKey of the position to answer from.
   public var key: String
   public var fen: String
@@ -71,9 +71,9 @@ public let DEFAULT_SRS = SrsConfig(
   maxInterval: 1095
 )
 
-public func createCard(_ id: String, _ repertoireId: String, _ key: String, _ fen: String, _ now: Double = Env.now()) -> Card {
+public func createCard(_ id: String, _ playbookId: String, _ key: String, _ fen: String, _ now: Double = Env.now()) -> Card {
   Card(
-    id: id, repertoireId: repertoireId, key: key, fen: fen, stage: .new, step: 0, interval: 0,
+    id: id, playbookId: playbookId, key: key, fen: fen, stage: .new, step: 0, interval: 0,
     ease: DEFAULT_SRS.startingEase, reps: 0, lapses: 0, correct: 0, incorrect: 0,
     lastReviewed: nil, createdAt: now)
 }

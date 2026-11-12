@@ -41,8 +41,8 @@ public func colorLabel(_ choice: ColorChoice) -> String {
   choice == .w ? "White" : choice == .b ? "Black" : "Either"
 }
 
-/// The repertoires the selection covers.
-public func repertoiresIn(_ reps: [Repertoire], _ choice: ColorChoice) -> [Repertoire] {
+/// The playbooks the selection covers.
+public func playbooksIn(_ reps: [Playbook], _ choice: ColorChoice) -> [Playbook] {
   let wanted = colorsOf(choice)
   return reps.filter { wanted.contains($0.color) }
 }

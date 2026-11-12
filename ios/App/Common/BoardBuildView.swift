@@ -225,7 +225,7 @@ struct BoardBuildView: View {
     if hold {
       return saved.filter { $0.color == color }.map { zip($0.sans, line).prefix { $0.0 == $0.1 }.count }.max() ?? 0
     }
-    return savedPlies(store.state.repertoireList.first { $0.color == color }, line)
+    return savedPlies(store.state.playbookList.first { $0.color == color }, line)
   }
 
   private func keep(_ line: BoardLine) {

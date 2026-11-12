@@ -56,12 +56,12 @@ import Testing
 @Test func basicsLeadHome() throws {
   let tree = openingTree(bookIndex)
   var state = AppState()
-  state.addLine(state.ensureRepertoire(.w), line("e4 e5 Nf3 Nc6 Bb5"), .fixed(.book))
+  state.addLine(state.ensurePlaybook(.w), line("e4 e5 Nf3 Nc6 Bb5"), .fixed(.book))
   let top = topGaps(playbookGaps(state, tree))
-  #expect(top.map(\.line) == [line("e4"), line("d4"), try #require(gaps(state.repertoireList, bookIndex, tree: tree).first).line])
-  #expect(top.prefix(2).allSatisfy { $0.color == .b && $0.basic && $0.repertoireId == "" })
+  #expect(top.map(\.line) == [line("e4"), line("d4"), try #require(gaps(state.playbookList, bookIndex, tree: tree).first).line])
+  #expect(top.prefix(2).allSatisfy { $0.color == .b && $0.basic && $0.playbookId == "" })
   // Answering 1.e4 leaves 1.d4 as the only basic.
-  state.addLine(state.ensureRepertoire(.b), line("e4 e5"), .fixed(.book))
+  state.addLine(state.ensurePlaybook(.b), line("e4 e5"), .fixed(.book))
   #expect(playbookGaps(state, tree).filter(\.basic).map(\.line) == [line("d4")])
 }
 
@@ -70,8 +70,8 @@ import Testing
   let tree = openingTree(bookIndex)
   var state = AppState()
   let black = rep(.b, ["e4 c5", "d4"])
-  state.repertoires[black.id] = black
-  state.repertoireOrder = [black.id]
+  state.playbooks[black.id] = black
+  state.playbookOrder = [black.id]
   let found = playbookGaps(state, tree)
   #expect(found.filter(\.basic).map(\.line) == [[], line("d4")])
   #expect(found.first?.color == .w)
@@ -82,7 +82,7 @@ import Testing
 @Test func blacksFirstRunsGrowItsFirstAnswers() throws {
   let tree = openingTree(bookIndex)
   var state = AppState()
-  state.addLine(state.ensureRepertoire(.w), line("e4 e5 Nf3 Nc6 Bb5"), .fixed(.book))
+  state.addLine(state.ensurePlaybook(.w), line("e4 e5 Nf3 Nc6 Bb5"), .fixed(.book))
   let qgd = try #require(tree.byId["d4 d5 c4 e6"])
   #expect(blackFirstGap(state, tree, Selection(color: .b, opening: qgd.id)) == nil)
   #expect(blackFirstGap(state, tree, Selection(color: .w, opening: ANY_OPENING)) == nil)
@@ -90,9 +90,9 @@ import Testing
     let round = try #require(nextRound(state, tree, Selection(color: color, opening: ANY_OPENING), AutoHistory()))
     #expect(round.pick.color == .b && round.at == nil && round.aim == line("e4") && round.grow?.line == line("e4"))
   }
-  state.addLine(state.ensureRepertoire(.b), line("e4 e5"), .fixed(.book))
+  state.addLine(state.ensurePlaybook(.b), line("e4 e5"), .fixed(.book))
   #expect(nextRound(state, tree, Selection(color: .b, opening: ANY_OPENING), AutoHistory())?.grow?.line == line("d4"))
-  state.addLine(state.ensureRepertoire(.b), line("d4 d5"), .fixed(.book))
+  state.addLine(state.ensurePlaybook(.b), line("d4 d5"), .fixed(.book))
   #expect(blackFirstGap(state, tree, Selection(color: .b, opening: ANY_OPENING)) == nil)
 }
 
@@ -101,7 +101,7 @@ import Testing
 @Test func drillWithNothingToStartAtGrowsFromMoveOne() throws {
   let tree = openingTree(bookIndex)
   var state = AppState()
-  state.addLine(state.ensureRepertoire(.w), line("e4"), .fixed(.book))
+  state.addLine(state.ensurePlaybook(.w), line("e4"), .fixed(.book))
   let round = try #require(nextRound(state, tree, Selection(color: .w, opening: ANY_OPENING), AutoHistory()))
   #expect(round.at == nil)
   let grow = try #require(round.grow)
@@ -141,9 +141,9 @@ import Testing
 /// A line's mastery is the average over your moves on it; a move never asked counts as 0.
 @Test func masteryCountsUnaskedAsWeak() {
   var state = AppState()
-  let id = state.ensureRepertoire(.w)
+  let id = state.ensurePlaybook(.w)
   state.addLine(id, line("e4 c5 d4 cxd4 c3"), .fixed(.book))
-  let rep = state.repertoires[id]!
+  let rep = state.playbooks[id]!
   #expect(lineMastery(rep, state.cards, line("e4 c5 d4 cxd4 c3")) == 0)
   #expect(lineMastery(rep, state.cards, []) == 1)
   let fens = walkSan(line("e4 c5 d4 cxd4")).fens
@@ -152,7 +152,7 @@ import Testing
     state.answered(id, fens[2], "d4", .good)
     state.answered(id, fens[4], "c3", .good)
   }
-  let known = lineMastery(state.repertoires[id]!, state.cards, line("e4 c5 d4 cxd4 c3"))
+  let known = lineMastery(state.playbooks[id]!, state.cards, line("e4 c5 d4 cxd4 c3"))
   #expect(known > 0.5)
 }
 
@@ -161,7 +161,7 @@ import Testing
 @Test func dueRunSteersToTheGap() throws {
   let tree = openingTree(bookIndex)
   var state = AppState()
-  let id = state.ensureRepertoire(.w)
+  let id = state.ensurePlaybook(.w)
   state.addLine(id, line("e4 c5 d4 cxd4 c3"), .fixed(.book))
   let fens = walkSan(line("e4 c5 d4 cxd4")).fens
   for _ in 0..<4 {
@@ -172,19 +172,19 @@ import Testing
   let selection = Selection(color: .w, opening: tree.byId["e4 c5 d4"]!.id)
   let quiet = try #require(nextRound(state, tree, selection, AutoHistory()))
   #expect(quiet.aim == nil)
-  let after = lastAddedAt(state.repertoireList) + 1
+  let after = lastAddedAt(state.playbookList) + 1
   for i in 0..<5 {
     state.recordGame(GameRecord(
-      id: "g\(i)", mode: .autopilot, at: after + Double(i), color: .w, picked: selection, opening: selection.opening, moves: ["e4"],
+      id: "g\(i)", mode: .play, at: after + Double(i), color: .w, picked: selection, opening: selection.opening, moves: ["e4"],
       result: "*", termination: "ended"))
   }
-  #expect(runsSinceAdded(state.games, state.repertoireList) == 5)
+  #expect(runsSinceAdded(state.games, state.playbookList) == 5)
   let due = try #require(nextRound(state, tree, selection, AutoHistory()))
   #expect(due.aim == line("e4 c5 d4 cxd4 c3 dxc3"))
   // It starts at one of your moves on the gap's line, not from move one.
   let at = try #require(due.at)
   #expect([line("e4 c5"), line("e4 c5 d4 cxd4")].contains(at))
-  let begun = try #require(startSurvival(survivalOptions(due, state, tree, selection, seed: 1)))
+  let begun = try #require(startRun(runOptions(due, state, tree, selection, seed: 1)))
   #expect(begun.state.run.target == line("e4 c5 d4 cxd4 c3 dxc3"))
   let hole = try #require(growAtHole(state, tree, selection, color: .w, line: line("e4 c5 d4 cxd4 c3 dxc3")))
   #expect(hole.yes)
@@ -196,7 +196,7 @@ import Testing
 @Test func drillStartsAtOneOfYourMoves() throws {
   let tree = openingTree(bookIndex)
   var state = AppState()
-  let id = state.ensureRepertoire(.b)
+  let id = state.ensurePlaybook(.b)
   state.addLine(id, line("d4 d5 c4 e6"), .fixed(.book))
   let opening = try #require(tree.byId["d4 d5 c4 e6"])
   let selection = Selection(color: .b, opening: opening.id)
@@ -205,7 +205,7 @@ import Testing
   for _ in 0..<4 {
     state.score = recordRound(
       state.score, tree,
-      RoundRecord(mode: .survival, openingId: opening.id, color: .b, answered: 2, correct: 2, perfect: true, at: Env.now()))
+      RoundRecord(mode: .run, openingId: opening.id, color: .b, answered: 2, correct: 2, perfect: true, at: Env.now()))
     let later = try #require(nextRound(state, tree, selection, AutoHistory()))
     #expect([line("d4"), line("d4 d5 c4")].contains(later.at ?? []))
   }
@@ -216,14 +216,14 @@ import Testing
 @Test func runsDoNotGrowAtWhitesFirstMove() throws {
   let tree = openingTree(bookIndex)
   var state = AppState()
-  let id = state.ensureRepertoire(.b)
+  let id = state.ensurePlaybook(.b)
   state.addLine(id, line("e4 e5 Nf3 Nc6"), .fixed(.book))
   state.addLine(id, line("d4 d5 c4 e6"), .fixed(.book))
   let selection = Selection(color: .b, opening: ANY_OPENING)
-  let after = lastAddedAt(state.repertoireList) + 1
+  let after = lastAddedAt(state.playbookList) + 1
   for i in 0..<12 {
     state.recordGame(GameRecord(
-      id: "g\(i)", mode: .autopilot, at: after + Double(i), color: .b, picked: selection, opening: selection.opening, moves: ["e4"],
+      id: "g\(i)", mode: .play, at: after + Double(i), color: .b, picked: selection, opening: selection.opening, moves: ["e4"],
       result: "*", termination: "ended"))
   }
   let firstMoveGaps = selectionGaps(state, tree, selection).filter { $0.hole.path.isEmpty }

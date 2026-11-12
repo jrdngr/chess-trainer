@@ -81,7 +81,7 @@ struct ExportView: View {
   }
 
   private func playbook() -> Data? {
-    try? exportJson(PlaybookExport(exportedAt: stamp, repertoires: store.state.repertoireList))
+    try? exportJson(PlaybookExport(exportedAt: stamp, playbooks: store.state.playbookList))
   }
 
   /// Write the file to the temporary folder and open the share sheet on it.

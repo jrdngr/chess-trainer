@@ -2,7 +2,7 @@ import Foundation
 import ChessCore
 import Shared
 
-/// What Autopilot's next Survival run should be: an opening inside the
+/// What Play's next Run run should be: an opening inside the
 /// selection, a colour, and a focus.
 
 public enum Focus: String, Sendable, Codable, CaseIterable {
@@ -82,7 +82,7 @@ public struct RepairRef: Sendable {
 public struct RecommendInput {
   public var tree: OpeningTree
   public var selection: Selection
-  public var reps: [Repertoire]
+  public var reps: [Playbook]
   public var cards: [String: Card]
   public var repairs: [RepairRef]
   public var score: ScoreState
@@ -92,7 +92,7 @@ public struct RecommendInput {
   public var recentSteered: [Bool] = []
   public var seen: Seen?
 
-  public init(tree: OpeningTree, selection: Selection, reps: [Repertoire], cards: [String: Card], repairs: [RepairRef] = [], score: ScoreState, newPerSession: Int, recentFocuses: [Focus]) {
+  public init(tree: OpeningTree, selection: Selection, reps: [Playbook], cards: [String: Card], repairs: [RepairRef] = [], score: ScoreState, newPerSession: Int, recentFocuses: [Focus]) {
     self.tree = tree
     self.selection = selection
     self.reps = reps
@@ -173,8 +173,8 @@ private func reachedIn<T>(_ placed: [Placed<T>], _ node: OpeningNode) -> [T] {
   placed.filter { $0.regions[node.id] == .reached }.map(\.item)
 }
 
-/// Every move in a repertoire, with the line that reaches it.
-private func repMoves(_ rep: Repertoire) -> [(sans: [String], addedAt: Double)] {
+/// Every move in a playbook, with the line that reaches it.
+private func repMoves(_ rep: Playbook) -> [(sans: [String], addedAt: Double)] {
   var out: [(sans: [String], addedAt: Double)] = []
   func visit(_ ids: [String], _ path: [String]) {
     for id in ids {
@@ -194,8 +194,8 @@ public func candidates(_ input: RecommendInput) -> [Candidate] {
   let region = nodeById(tree, input.selection.opening)
   let nodes = [region] + descendantsOf(region)
   var out: [Candidate] = []
-  let lastAt = { (id: String) in nodeStats(score, id).byMode[.run]?.lastAt }
-  let everRun = (score.global.byMode[.run]?.rounds ?? 0) > 0
+  let lastAt = { (id: String) in nodeStats(score, id).byMode[.oldPlay]?.lastAt }
+  let everRun = (score.global.byMode[.oldPlay]?.rounds ?? 0) > 0
   func push(_ focus: Focus, _ node: OpeningNode, _ color: Color, _ need: Double, _ work: Int) {
     if need <= 0 { return }
     out.append(Candidate(
@@ -269,7 +269,7 @@ public func recommend(_ input: RecommendInput) -> Recommendation? {
   return Recommendation(focus: best.focus, opening: opening, color: best.color)
 }
 
-/// How many recent Survival runs your prep accuracy is read over.
+/// How many recent Run runs your prep accuracy is read over.
 public let ACCURACY_RUNS = 5
 
 /// How far your prep is missing: 0 at 95% found or better, 1 at 85% or worse.

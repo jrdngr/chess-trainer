@@ -9,8 +9,8 @@ private enum Tools {
   static let AT = 1_790_845_200_000.0  // 2026-10-01T09:00:00Z
 
   /// A tree with its moves added at `AT`.
-  static func rep(_ color: Color, _ lines: [String]) -> Repertoire {
-    var out = createRepertoire(color == .w ? "White" : "Black", color, "rep_\(color.rawValue)")
+  static func rep(_ color: Color, _ lines: [String]) -> Playbook {
+    var out = createPlaybook(color == .w ? "White" : "Black", color, "rep_\(color.rawValue)")
     for l in lines { out = Env.at(AT) { addLine(out, line(l), .fixed(.seed)).rep } }
     return out
   }
@@ -41,7 +41,7 @@ private enum Tools {
   static func mistake(_ l: String, _ played: String, _ expected: String, _ at: Double) -> Mistake {
     let fen = after(l)
     return Mistake(
-      id: "\(BLACK.id)#x", at: at, source: .drill, repertoireId: BLACK.id, key: positionKey(fen), fen: fen,
+      id: "\(BLACK.id)#x", at: at, source: .drill, playbookId: BLACK.id, key: positionKey(fen), fen: fen,
       path: line(l), played: played, expected: expected)
   }
 

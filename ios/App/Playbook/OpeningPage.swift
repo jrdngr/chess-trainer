@@ -23,14 +23,14 @@ struct OpeningPage: View {
   @State private var deleting = false
 
   var body: some View {
-    if let rep = store.state.repertoires[repId], let row = playbookRows(rep, index).first(where: { $0.name == name }) {
+    if let rep = store.state.playbooks[repId], let row = playbookRows(rep, index).first(where: { $0.name == name }) {
       content(rep, row)
     } else {
       Color.clear.onAppear(perform: onBack)
     }
   }
 
-  private func content(_ rep: Repertoire, _ row: PlaybookRow) -> some View {
+  private func content(_ rep: Playbook, _ row: PlaybookRow) -> some View {
     let lines = linesOf(rep, row, index)
     let node = openingNode(tree, row)
     let stats = node.map { nodeStats(store.state.score, $0.id) } ?? NodeStats()
@@ -101,7 +101,7 @@ struct OpeningPage: View {
     .padding(16).background(RoundedRectangle(cornerRadius: 22).fill(Theme.surface))
   }
 
-  private func lineRow(_ rep: Repertoire, _ row: PlaybookRow, _ line: OpeningLine) -> some View {
+  private func lineRow(_ rep: Playbook, _ row: PlaybookRow, _ line: OpeningLine) -> some View {
     Button { onOpenLine(line.tipId, row.name) } label: {
       HStack(spacing: 6) {
         Text(line.name).foregroundStyle(Theme.text2).lineLimit(1)
@@ -120,7 +120,7 @@ struct OpeningPage: View {
     }
   }
 
-  private func deleteLine(_ rep: Repertoire, _ line: OpeningLine) {
+  private func deleteLine(_ rep: Playbook, _ line: OpeningLine) {
     var undo: PlaybookUndo?
     store.update { undo = $0.removeLine(rep.id, line.tipId) }
     if let undo {
@@ -129,7 +129,7 @@ struct OpeningPage: View {
   }
 
   /// Make this opening and its side the global selection, as the opening picker does.
-  private func select(_ rep: Repertoire, _ node: OpeningNode?) {
+  private func select(_ rep: Playbook, _ node: OpeningNode?) {
     guard let node else { return }
     store.update {
       $0.settings.selection.opening = node.id
@@ -139,7 +139,7 @@ struct OpeningPage: View {
   }
 
   /// Growth's own pick for this opening, past Growth's settings when there is none within.
-  private func grow(_ rep: Repertoire, _ node: OpeningNode?) {
+  private func grow(_ rep: Playbook, _ node: OpeningNode?) {
     let prefs = store.state.settings.growth
     guard let node,
       let launch = growLaunch(

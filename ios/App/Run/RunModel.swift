@@ -5,7 +5,7 @@ import Foundation
 import Model
 import Observation
 
-/// One Survival run on screen, Autopilot's or one you set up. It feeds the controller what happens (your moves, the judge's verdicts,
+/// One Run run on screen, Play's or one you set up. It feeds the controller what happens (your moves, the judge's verdicts,
 /// the opponent's replies), carries out the effects in order, and keeps what
 /// the view draws.
 @MainActor @Observable
@@ -27,7 +27,7 @@ final class RunModel {
   /// How long the Undefended flash holds your move before it lands.
   static let flashMs = 1.3
 
-  /// Autopilot's round; nil for a run set up on Survival's or Middlegame's own screen.
+  /// Play's round; nil for a run set up on Run's or Middlegame's own screen.
   let round: AutoRound?
   /// A Middlegame run's handoff: the moves played for you, and who chose each.
   let handoff: Handoff?
@@ -98,8 +98,8 @@ final class RunModel {
   private(set) var flash: (move: LegalMove, loose: [String])?
   /// Counts held moves, so a flash's timer lands only the hold it began with.
   private var flashCount = 0
-  /// The Survival record as it stood before this run ended, to tell a new best.
-  private(set) var before: SurvivalRecord?
+  /// The Run record as it stood before this run ended, to tell a new best.
+  private(set) var before: RunRecord?
 
   private var picker: () -> Double
   /// When your turn began: the clock counts from here.
@@ -112,19 +112,19 @@ final class RunModel {
   /// What a clean end of prep grows with.
   private let growth: GrowthPrefs
 
-  /// Autopilot's round, on Autopilot's own options.
+  /// Play's round, on Play's own options.
   /// A round that grows at a first move (Black's answer to 1.e4 or 1.d4) adds it before the game goes on.
   convenience init?(round: AutoRound, selection: Selection, store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
     let first = round.grow.flatMap { $0.hole.path.isEmpty ? $0 : nil }
     var repId = ""
-    if let first { store.update { repId = $0.ensureRepertoire(first.color) } }
+    if let first { store.update { repId = $0.ensurePlaybook(first.color) } }
     let seed = (Env.random() * 2_147_483_648).rounded(.down)
-    guard let begun = startSurvival(survivalOptions(round, store.state, tree, selection, seed: seed)) else { return nil }
+    guard let begun = startRun(runOptions(round, store.state, tree, selection, seed: seed)) else { return nil }
     self.init(
-      begun: begun, round: round, prefs: autoSurvival(store.state.settings.autopilot), growth: AUTO_GROWTH,
+      begun: begun, round: round, prefs: autoRun(store.state.settings.play), growth: AUTO_GROWTH,
       selection: selection, store: store, tree: tree, index: index, engine: engine)
     if var first {
-      first.repertoireId = repId
+      first.playbookId = repId
       basicRun = true
       holeAsked = true
       fill = Fill(gap: first, size: store.state.settings.movesPerFill)
@@ -134,8 +134,8 @@ final class RunModel {
   /// A new player's first game: White, nothing saved, adding moves from move one.
   convenience init?(firstGame store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
     var repId = ""
-    store.update { repId = $0.ensureRepertoire(.w) }
-    guard let rep = store.state.repertoires[repId] else { return nil }
+    store.update { repId = $0.ensurePlaybook(.w) }
+    guard let rep = store.state.playbooks[repId] else { return nil }
     self.init(
       round: firstGameRound(tree), selection: Selection(color: .w, opening: ANY_OPENING), store: store, tree: tree, index: index,
       engine: engine)
@@ -147,7 +147,7 @@ final class RunModel {
   /// One of the tutorial's games: its side from move one, its moves forced
   /// where it says, the opponent along its line and script.
   convenience init?(tutorial game: TutorialGame, store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
-    store.update { _ = $0.ensureRepertoire(game.color) }
+    store.update { _ = $0.ensurePlaybook(game.color) }
     self.init(
       round: tutorialRound(tree, game), selection: Selection(color: game.color == .w ? .w : .b, opening: ANY_OPENING),
       store: store, tree: tree, index: index, engine: engine)
@@ -157,25 +157,25 @@ final class RunModel {
     store.update { $0.settings.tips = game.tips }
   }
 
-  /// A run set up on Survival's screen, on those options: `start` with no plan.
-  convenience init?(survival options: StartOptions, prefs: SurvivalPrefs, growth: GrowthPrefs, selection: Selection,
+  /// A run set up on Run's screen, on those options: `start` with no plan.
+  convenience init?(run options: StartOptions, prefs: RunPrefs, growth: GrowthPrefs, selection: Selection,
                     store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
-    guard let begun = startSurvival(options) else { return nil }
+    guard let begun = startRun(options) else { return nil }
     self.init(begun: begun, round: nil, prefs: prefs, growth: growth, selection: selection, store: store, tree: tree, index: index, engine: engine)
   }
 
   /// A Middlegame run, begun at its handoff: `options` start at `handoff.line`.
-  convenience init?(middlegame options: StartOptions, handoff: Handoff, prefs: SurvivalPrefs, selection: Selection,
+  convenience init?(middlegame options: StartOptions, handoff: Handoff, prefs: RunPrefs, selection: Selection,
                     store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
     var options = options
     options.at = handoff.line
-    guard let begun = startSurvival(options), begun.state.run.played == handoff.line else { return nil }
+    guard let begun = startRun(options), begun.state.run.played == handoff.line else { return nil }
     self.init(
       begun: begun, round: nil, handoff: handoff, prefs: middlegamePrefs(prefs), growth: store.state.settings.growth,
       selection: selection, store: store, tree: tree, index: index, engine: engine)
   }
 
-  private init(begun: SurvivalStart, round: AutoRound?, handoff: Handoff? = nil, prefs: SurvivalPrefs, growth: GrowthPrefs, selection: Selection,
+  private init(begun: RunBegun, round: AutoRound?, handoff: Handoff? = nil, prefs: RunPrefs, growth: GrowthPrefs, selection: Selection,
                store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
     self.round = round
     self.handoff = handoff
@@ -187,11 +187,11 @@ final class RunModel {
     self.growth = growth
     picker = mulberry32(seed: (Env.random() * 2_147_483_648).rounded(.down))
     session = handoff != nil ? beginMiddlegame(begun) : beginSession(begun)
-    ctx = RunContext(index: index, prefs: prefs, autopilot: round != nil)
+    ctx = RunContext(index: index, prefs: prefs, play: round != nil)
   }
 
-  var prefs: SurvivalPrefs { ctx.prefs }
-  /// Who plays the other side past the book. Autopilot's opponent always plays at your strength.
+  var prefs: RunPrefs { ctx.prefs }
+  /// Who plays the other side past the book. Play's opponent always plays at your strength.
   var opponentLevel: Level {
     round != nil ? levelMatching(store.state.strength) : prefs.opponentLevel(store.state.strength)
   }
@@ -227,13 +227,13 @@ final class RunModel {
   }
 
   /// How far into your prep the run stands, out of how far it goes along this line, in your own moves. Held once off prep.
-  /// None for a Freeform Autopilot run, which always starts from move one.
+  /// None for a Freeform Play run, which always starts from move one.
   var span: PrepSpan? {
     if round?.free == true { return nil }
     if session.prepStatus == .off { return spanHeld }
     let line = run.played + continuation(session.source, run)
     // Moves added this run are prep too, though the run's source was read before them.
-    let added = filledRep.map { prepIndex(store.state.repertoires[$0]) } ?? [:]
+    let added = filledRep.map { prepIndex(store.state.playbooks[$0]) } ?? [:]
     let prepAt = filledRep != nil ? { (fen: String) in added[positionKey(fen)] ?? [] } : session.source.prepAt
     let total = prepDepth(line, run.color, prepAt, run.opened)
     // Common moves past your line aren't counted on the bar: scores start where your line ends.
@@ -496,7 +496,7 @@ final class RunModel {
     askAtHole()
     if let game = tutorialGame {
       if !tutorialGrown && session.state.misses.isEmpty && tutorialGrowsHere(game, played: run.played, line: tutorialLine),
-        let rep = store.state.repertoireList.first(where: { $0.color == game.color }) {
+        let rep = store.state.playbookList.first(where: { $0.color == game.color }) {
         tutorialGrown = true
         tutorialLine = run.played
         fill = Fill(gap: tutorialGap(rep, run.played), size: game.growth)
@@ -617,19 +617,19 @@ final class RunModel {
     holeGap = nil
     fill = Fill(gap: gap, size: store.state.settings.movesPerFill)
     pulseEdge()
-    store.update { $0.logEvent(AppEvent(kind: "inline-grow", via: .autopilot, color: gap.color, line: gap.line.joined(separator: " "))) }
+    store.update { $0.logEvent(AppEvent(kind: "inline-grow", via: .play, color: gap.color, line: gap.line.joined(separator: " "))) }
   }
 
   /// A move picked while adding: saved to the Playbook, then played.
   func addMove(_ san: String) {
     guard var current = fill, live, myTurn, pending == nil else { return }
     if tip != nil { dismissTip() }
-    let rid = current.gap.repertoireId
+    let rid = current.gap.playbookId
     let line = run.played + [san]
     let offered = fillChoices.map(\.san)
     let move = applySan(run.fen, san)
     // Undo removes from the first move this line added.
-    let rep = store.state.repertoires[rid]
+    let rep = store.state.playbooks[rid]
     let fresh = (1...line.count).first { k in rep.flatMap { nodeAtLine($0, Array(line.prefix(k))) } == nil } ?? line.count
     current.steps.append((session, Array(line.prefix(fresh))))
     filledRep = rid
@@ -637,7 +637,7 @@ final class RunModel {
     store.update { state in
       state.addGrowthLine(rid, line, index)
       state.logEvent(AppEvent(
-        kind: "growth-pick", via: .autopilot, color: run.color, line: run.played.joined(separator: " "), picked: san, offered: offered))
+        kind: "growth-pick", via: .play, color: run.color, line: run.played.joined(separator: " "), picked: san, offered: offered))
     }
     Haptics.buzz(10, on: store.state.settings.hapticFeedback)
     let ends = tutorialGame != nil ? current.added >= current.size : fillEnds(index, line, added: current.added, size: current.size)
@@ -675,11 +675,11 @@ final class RunModel {
   func undoAdded() {
     guard var current = fill, !current.steps.isEmpty else { return }
     let last = current.steps.removeLast()
-    let rid = current.gap.repertoireId
+    let rid = current.gap.playbookId
     stop()
     thinking = false
     store.update { state in
-      if let rep = state.repertoires[rid], let node = nodeAtLine(rep, last.remove) { _ = state.removeNode(rid, node.id, via: .autopilot) }
+      if let rep = state.playbooks[rid], let node = nodeAtLine(rep, last.remove) { _ = state.removeNode(rid, node.id, via: .play) }
     }
     session = last.session
     justAdded = nil
@@ -832,7 +832,7 @@ final class RunModel {
       tip = blundered && game.tips.contains(.blunder) ? .blunder : nil
       store.update { $0.settings.finishTutorialGame(counted: counted) }
     }
-    before = handoff != nil ? store.state.middlegame : store.state.survival
+    before = handoff != nil ? store.state.middlegame : store.state.runRecord
     let line = f.ended.run.played
     let points = scoredInPoints ? f.ended.extras.points : f.ended.moves
     // An endgame result that slipped away is kept for Endgame mode, from the position before the move.
@@ -852,9 +852,9 @@ final class RunModel {
     }
     store.update { state in
       if case .ended = f.how {
-        state.endSurvivalEarly(tree, line)
+        state.endRunEarly(tree, line)
       } else {
-        state.endSurvival(tree, line, f.ended.moves, points)
+        state.recordRunEnd(tree, line, f.ended.moves, points)
       }
       ratings.track(state.settleRun(tree, f.answers, line))
       state.endRound(tree, runRound(f, tree, at: Env.now()))
@@ -867,7 +867,7 @@ final class RunModel {
   private func game(_ f: Finish) -> GameRecord {
     let run = f.ended.run
     let outcome = runOutcome(f.how, color: run.color)
-    let mode: GameMode = handoff != nil ? .middlegame : round != nil ? .autopilot : .survival
+    let mode: GameMode = handoff != nil ? .middlegame : round != nil ? .play : .run
     return GameRecord(
       id: run.id, mode: mode, at: Env.now(), color: run.color, picked: selection,
       opening: run.openingId, moves: run.played, opened: run.opened, result: outcome.result, termination: outcome.termination)
@@ -966,7 +966,7 @@ extension RunModel: HoleAnswers {
   var holeFen: String { run.fen }
   var holePath: [String] { run.played }
   var answerColor: ChessCore.Color { run.color }
-  var answerTree: Repertoire? { fill.flatMap { store.state.repertoires[$0.gap.repertoireId] } }
+  var answerTree: Playbook? { fill.flatMap { store.state.playbooks[$0.gap.playbookId] } }
   var nudgePrefs: NudgePrefs {
     let prefs = store.state.settings.growth
     return NudgePrefs(priority: prefs.nudgePriority, pawns: prefs.nudgePawns)

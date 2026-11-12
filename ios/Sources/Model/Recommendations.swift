@@ -22,7 +22,7 @@ public enum GapKind: String, Sendable, Codable {
 /// A common opponent reply in your Playbook with no answer from you.
 public struct Gap: Equatable, Sendable {
   public var kind: GapKind
-  public var repertoireId: String
+  public var playbookId: String
   public var color: Color
   /// The reply, with where it is played from.
   public var hole: Hole
@@ -42,7 +42,7 @@ public struct Gap: Equatable, Sendable {
   public var line: [String] { hole.san.isEmpty ? hole.path : hole.path + [hole.san] }
   /// Plies of the line that are yours and already in the Playbook.
   public var path: [String] { hole.path }
-  public var id: String { "\(repertoireId)#\(line.joined(separator: " "))" }
+  public var id: String { "\(playbookId)#\(line.joined(separator: " "))" }
 }
 
 /// The least share a reply needs to be a gap, in percent.
@@ -87,7 +87,7 @@ public func gapImportance(reach: Double, share: Double, plies: Int) -> Double {
 
 /// Every gap in some sides' Playbooks, most important first. `scope` keeps
 /// only replies inside an opening.
-public func gaps(_ reps: [Repertoire], _ index: ReferenceIndex, tree: OpeningTree? = nil, scope: OpeningNode? = nil) -> [Gap] {
+public func gaps(_ reps: [Playbook], _ index: ReferenceIndex, tree: OpeningTree? = nil, scope: OpeningNode? = nil) -> [Gap] {
   var out: [Gap] = []
   for rep in reps where !rep.nodes.isEmpty {
     let region = tree.flatMap { t in scope.flatMap { $0.depth > 0 ? (tree: t, node: $0) : nil } }
@@ -104,7 +104,7 @@ public func gaps(_ reps: [Repertoire], _ index: ReferenceIndex, tree: OpeningTre
       guard importance >= GAP_MIN_IMPORTANCE else { continue }
       let name = deepestName(index, line)?.name ?? end.name
       out.append(Gap(
-        kind: kind, repertoireId: rep.id, color: rep.color, hole: hole, importance: importance,
+        kind: kind, playbookId: rep.id, color: rep.color, hole: hole, importance: importance,
         name: name, missing: max(1, (end.ply - line.count + 1) / 2)))
     }
   }
@@ -116,13 +116,13 @@ public let BASIC_FIRST_MOVES = ["e4", "d4"]
 
 /// The Playbook's basics still missing: a White first move, then Black
 /// answers to 1.e4 and 1.d4. A side with no tree yet has an empty
-/// `repertoireId`; whoever fills the gap makes the tree.
-public func basicGaps(_ reps: [Repertoire], _ index: ReferenceIndex) -> [Gap] {
+/// `playbookId`; whoever fills the gap makes the tree.
+public func basicGaps(_ reps: [Playbook], _ index: ReferenceIndex) -> [Gap] {
   var out: [Gap] = []
   let white = reps.first { $0.color == .w }
   if white.map({ $0.rootChildren.isEmpty }) ?? true {
     let hole = Hole(path: [], fen: START_FEN, san: "", share: 100, games: 0, after: START_FEN, nodeId: nil, reach: 1)
-    out.append(Gap(kind: .noAnswer, repertoireId: white?.id ?? "", color: .w, hole: hole, importance: 1, name: "", missing: 1, basic: true))
+    out.append(Gap(kind: .noAnswer, playbookId: white?.id ?? "", color: .w, hole: hole, importance: 1, name: "", missing: 1, basic: true))
   }
   let black = reps.first { $0.color == .b }
   let shares = popularReplies(index, START_FEN, 0)
@@ -135,7 +135,7 @@ public func basicGaps(_ reps: [Repertoire], _ index: ReferenceIndex) -> [Gap] {
       nodeId: nil, reach: 1)
     let end = namedEnd(index, [san])
     out.append(Gap(
-      kind: .noAnswer, repertoireId: black?.id ?? "", color: .b, hole: hole,
+      kind: .noAnswer, playbookId: black?.id ?? "", color: .b, hole: hole,
       importance: gapImportance(reach: 1, share: hole.share, plies: 0),
       name: deepestName(index, [san])?.name ?? end?.name ?? "", missing: max(1, (end?.ply ?? 1) / 2), basic: true))
   }
@@ -206,14 +206,14 @@ public func gapAt(_ ranked: [Gap], color: Color, line: [String]) -> Gap? {
 /* ── pace, mastery and the yes or no at a hole ── */
 
 /// When anything was last added to a Playbook, from any source.
-public func lastAddedAt(_ reps: [Repertoire]) -> Double {
+public func lastAddedAt(_ reps: [Playbook]) -> Double {
   reps.flatMap { $0.nodes.values.map(\.addedAt) }.max() ?? 0
 }
 
-/// Autopilot runs played since anything was added to the Playbook.
-public func runsSinceAdded(_ games: [GameRecord], _ reps: [Repertoire]) -> Int {
+/// Play runs played since anything was added to the Playbook.
+public func runsSinceAdded(_ games: [GameRecord], _ reps: [Playbook]) -> Int {
   let since = lastAddedAt(reps)
-  return games.filter { $0.mode == .autopilot && $0.at > since }.count
+  return games.filter { $0.mode == .play && $0.at > since }.count
 }
 
 /// How due a new move is: runs since the last one, over the fill size.
@@ -232,7 +232,7 @@ public func positionMastery(_ card: Card?) -> Double {
 
 /// How well you know a line up to a hole: the average over your moves on it.
 /// A line with no moves of yours yet counts as known.
-public func lineMastery(_ rep: Repertoire, _ cards: [String: Card], _ path: [String]) -> Double {
+public func lineMastery(_ rep: Playbook, _ cards: [String: Card], _ path: [String]) -> Double {
   let walked = walkSan(path)
   var scores: [Double] = []
   for i in path.indices where i < walked.moves.count && fenTurn(walked.fens[i]) == rep.color {
@@ -248,8 +248,8 @@ public func gapWeight(_ gap: Gap, top: Gap?) -> Double {
 }
 
 /// p × m² × g for a gap: what steering and the question at a hole weigh.
-public func growScore(_ gap: Gap, top: Gap?, pace p: Double, reps: [Repertoire], cards: [String: Card]) -> Double {
-  guard let rep = reps.first(where: { $0.id == gap.repertoireId }) else { return 0 }
+public func growScore(_ gap: Gap, top: Gap?, pace p: Double, reps: [Playbook], cards: [String: Card]) -> Double {
+  guard let rep = reps.first(where: { $0.id == gap.playbookId }) else { return 0 }
   let m = lineMastery(rep, cards, gap.path)
   return p * m * m * gapWeight(gap, top: top)
 }
@@ -261,7 +261,7 @@ public func growScore(_ gap: Gap, top: Gap?, pace p: Double, reps: [Repertoire],
 /// the side can't be Black, or when a specific opening is picked.
 public func blackFirstGap(_ state: AppState, _ tree: OpeningTree, _ selection: Selection) -> Gap? {
   guard selection.opening == ANY_OPENING, colorsOf(selection.color).contains(.b) else { return nil }
-  return basicGaps(state.repertoireList, tree.index).first { $0.color == .b }
+  return basicGaps(state.playbookList, tree.index).first { $0.color == .b }
 }
 
 /// A run from move one along a gap's line, growing at its hole.
@@ -271,7 +271,7 @@ public func firstMoveRound(_ tree: OpeningTree, _ gap: Gap) -> AutoRound {
 
 /// The gaps inside a selection, every side it covers.
 public func selectionGaps(_ state: AppState, _ tree: OpeningTree, _ selection: Selection) -> [Gap] {
-  let reps = state.repertoireList
+  let reps = state.playbookList
   var out: [Gap] = []
   for region in regionsBySide(tree, selection) {
     let side = reps.filter { $0.color == region.side }
@@ -283,7 +283,7 @@ public func selectionGaps(_ state: AppState, _ tree: OpeningTree, _ selection: S
 
 /// Every gap in the Playbook, for Home, the basics first: the selection plays no part.
 public func playbookGaps(_ state: AppState, _ tree: OpeningTree) -> [Gap] {
-  let reps = state.repertoireList
+  let reps = state.playbookList
   let basics = basicGaps(reps, tree.index)
   let rest = gaps(reps, tree.index, tree: tree).filter { gap in !basics.contains { $0.id == gap.id } }
   return rankGaps(basics + rest)
@@ -294,7 +294,7 @@ public func growAtHole(_ state: AppState, _ tree: OpeningTree, _ selection: Sele
   let ranked = selectionGaps(state, tree, selection)
   let all = ranked.isEmpty ? playbookGaps(state, tree) : ranked
   guard let gap = gapAt(all, color: color, line: line) ?? gapAt(playbookGaps(state, tree), color: color, line: line) else { return nil }
-  let reps = state.repertoireList
+  let reps = state.playbookList
   let p = pace(runs: runsSinceAdded(state.games, reps), size: state.settings.movesPerFill)
   return (gap, insideYourLines(gap) && growScore(gap, top: all.first, pace: p, reps: reps, cards: state.cards) >= 1)
 }
@@ -305,7 +305,7 @@ public func insideYourLines(_ gap: Gap) -> Bool { !gap.hole.path.isEmpty }
 
 /// The gap the next run steers toward when a new move is due, if any.
 public func steerGap(_ state: AppState, _ tree: OpeningTree, _ selection: Selection) -> Gap? {
-  let reps = state.repertoireList
+  let reps = state.playbookList
   let p = pace(runs: runsSinceAdded(state.games, reps), size: state.settings.movesPerFill)
   if p < 1 { return nil }
   let ranked = selectionGaps(state, tree, selection)
@@ -321,6 +321,6 @@ public func steerGap(_ state: AppState, _ tree: OpeningTree, _ selection: Select
 /// A gap as Growth's one row, so a sitting can start on its reply.
 public func gapRow(_ gap: Gap) -> GrowthRow {
   GrowthRow(
-    id: gap.id, repertoireId: gap.repertoireId, color: gap.color, name: gap.name, eco: nil, depth: gap.path.count,
+    id: gap.id, playbookId: gap.playbookId, color: gap.color, name: gap.name, eco: nil, depth: gap.path.count,
     topShare: gap.share, urgency: 0, score: 0, holes: gap.hole.san.isEmpty ? [] : [gap.hole], ends: [])
 }

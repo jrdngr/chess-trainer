@@ -2,11 +2,11 @@ import Model
 import SwiftUI
 
 /// The screen that decides a Middlegame run: which of your lines it plays out,
-/// the opponent's strength and the clock. Start sits on top, as on Survival's.
+/// the opponent's strength and the clock. Start sits on top, as on Run's.
 struct MiddlegameSetupView: View {
   @Environment(AppStore.self) private var store
   let tree: OpeningTree
-  let onStart: (SurvivalPrefs) -> Void
+  let onStart: (RunPrefs) -> Void
   let onExit: () -> Void
   /// The top button: Start from Home, Restart over a run in play.
   var startLabel = "Start"
@@ -15,7 +15,7 @@ struct MiddlegameSetupView: View {
     let prefs = middlegamePrefs(store.state.settings.middlegame)
     let record = store.state.middlegame
     VStack(spacing: 0) {
-      SurvivalBar(title: "Middlegame", subtitle: nil, onClose: onExit) { Color.clear.frame(width: 38, height: 1) }
+      RunBar(title: "Middlegame", subtitle: nil, onClose: onExit) { Color.clear.frame(width: 38, height: 1) }
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
           SelectionBar().padding(.bottom, 12)
@@ -24,7 +24,7 @@ struct MiddlegameSetupView: View {
           PlaySection(title: "Opponent steers toward")
           SegmentedControl(
             value: Binding(get: { prefs.steer }, set: { steer in set { $0.steer = steer } }),
-            options: MIDDLEGAME_STEERS.map { ($0, survivalSteerLabel($0)) })
+            options: MIDDLEGAME_STEERS.map { ($0, runSteerLabel($0)) })
           PlaySection(title: "Opponent strength")
           SegmentedControl(
             value: Binding(get: { prefs.opponent }, set: { id in set { $0.opponent = id } }),
@@ -41,7 +41,7 @@ struct MiddlegameSetupView: View {
           if record.global.runs > 0 {
             PlaySection(title: "Middlegame points")
             ListCard {
-              if let opening { ScoreRow(name: opening.name, score: survivalFor(record, opening.id)) }
+              if let opening { ScoreRow(name: opening.name, score: runFor(record, opening.id)) }
               ScoreRow(name: "All openings", score: record.global)
             }
           }
@@ -57,7 +57,7 @@ struct MiddlegameSetupView: View {
     return id.isEmpty ? nil : nodeById(tree, id)
   }
 
-  private func set(_ change: (inout SurvivalPrefs) -> Void) {
+  private func set(_ change: (inout RunPrefs) -> Void) {
     store.update { change(&$0.settings.middlegame) }
   }
 }

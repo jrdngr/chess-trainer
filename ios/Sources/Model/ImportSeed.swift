@@ -124,7 +124,7 @@ private func slotOf(_ color: Color, _ path: [String]) -> SeedSlot {
 
 /// Whether a Playbook leaves a slot empty, and the slot is common enough to fill:
 /// White always needs a first move; Black needs an answer to each first move strong players choose.
-private func slotOpen(_ slot: SeedSlot, _ reps: [Repertoire], _ index: ReferenceIndex) -> Bool {
+private func slotOpen(_ slot: SeedSlot, _ reps: [Playbook], _ index: ReferenceIndex) -> Bool {
   let rep = reps.first { $0.color == slot.color }
   switch slot {
   case .white:
@@ -138,7 +138,7 @@ private func slotOpen(_ slot: SeedSlot, _ reps: [Repertoire], _ index: Reference
 
 /// One side's openings, as the Playbook would name them.
 private func rowsFor(_ lines: [[String]], _ color: Color, _ trie: GameTrie, _ index: ReferenceIndex) -> [SeedRow] {
-  var rep = createRepertoire(repertoireName(color), color, "seed_\(color.rawValue)")
+  var rep = createPlaybook(playbookName(color), color, "seed_\(color.rawValue)")
   for line in lines { rep = addLine(rep, line, .fixed(.import)).rep }
   return playbookRows(rep, index, firstMoves: true).compactMap { row in
     guard let first = row.parts.first else { return nil }
@@ -154,7 +154,7 @@ private func rowsFor(_ lines: [[String]], _ color: Color, _ trie: GameTrie, _ in
 /// often: those filling an empty slot first, then by games. An opening
 /// your Playbook already has never shows. `lost` is what the engine said each
 /// of your moves gives away, keyed by position and move.
-public func seedRows(_ games: [ImportedGame], _ index: ReferenceIndex, _ reps: [Repertoire], lost: [String: Double] = [:]) -> [SeedRow] {
+public func seedRows(_ games: [ImportedGame], _ index: ReferenceIndex, _ reps: [Playbook], lost: [String: Double] = [:]) -> [SeedRow] {
   var full: [SeedRow] = []
   var loose: [SeedRow] = []
   for color in [Color.w, .b] {
@@ -209,7 +209,7 @@ extension AppState {
   public mutating func addSeedRows(_ rows: [SeedRow]) -> Int {
     var added = 0
     for row in rows {
-      let repId = ensureRepertoire(row.color)
+      let repId = ensurePlaybook(row.color)
       for line in row.lines {
         added += addLine(repId, line, .fixed(.import), via: .import)
       }

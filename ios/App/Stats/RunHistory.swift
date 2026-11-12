@@ -6,12 +6,12 @@ import SwiftUI
 /// gold, with lines at the best and the average. Over them, the last run and
 /// how it sat against the average. Follows the selection; not bound to the
 /// Stats window.
-struct SurvivalRuns: View {
+struct RunHistory: View {
   @Environment(AppStore.self) private var store
 
   var body: some View {
     let selection = store.state.settings.selection
-    let score = survivalFor(store.state.survival, selection.opening)
+    let score = runFor(store.state.runRecord, selection.opening)
     let runs = score.history
     StatsSection(title: "Play", aside: "last \(HISTORY_RUNS) runs")
     StatsCard {

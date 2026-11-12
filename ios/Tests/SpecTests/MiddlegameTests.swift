@@ -126,15 +126,15 @@ private func movesAt(_ plies: Range<Int>) -> [String: [String]] {
   state.seed(tree, STARTER_SETS[0])
   let italian = line("e4 e5 Nf3 Nc6 Bc4")
   let node = try #require(deepestNodeAlong(tree, italian))
-  let blackOnly = state.repertoireList.filter { $0.color == .b }
+  let blackOnly = state.playbookList.filter { $0.color == .b }
   var opts = StartOptions(steer: .lines, tree: tree, reps: blackOnly, node: node, color: .w)
   opts.seed = 1
-  let fallback = try #require(startSurvival(opts))
+  let fallback = try #require(startRun(opts))
   #expect(middlegameLine(fallback, blackOnly).sans.isEmpty)
   // With the White Playbook the starter set saved, the draw is its line.
-  opts.reps = state.repertoireList
-  let drawn = try #require(startSurvival(opts))
-  let yours = middlegameLine(drawn, state.repertoireList)
+  opts.reps = state.playbookList
+  let drawn = try #require(startRun(opts))
+  let yours = middlegameLine(drawn, state.playbookList)
   #expect(yours.sans == italian)
   #expect(!yours.gap)
 }
@@ -154,10 +154,10 @@ private func handoffRun() throws -> (session: RunSession, tree: OpeningTree) {
   let tree = openingTree(bookIndex)
   var state = AppState()
   state.seed(tree, STARTER_SETS[0])
-  var opts = StartOptions(steer: .lines, tree: tree, reps: state.repertoireList, node: nodeById(tree, ""), color: .w)
+  var opts = StartOptions(steer: .lines, tree: tree, reps: state.playbookList, node: nodeById(tree, ""), color: .w)
   opts.at = QGD
   opts.seed = 1
-  let begun = try #require(startSurvival(opts))
+  let begun = try #require(startRun(opts))
   return (beginMiddlegame(begun), tree)
 }
 
@@ -168,26 +168,26 @@ private func handoffRun() throws -> (session: RunSession, tree: OpeningTree) {
   #expect(prepLabel(session) == .middlegame)
   #expect(!bookRanOut(session, bookIndex))
   // The first goal comes from the eval at the handoff.
-  let set = missionFrom(session, middlegamePrefs(DEFAULT_SURVIVAL), 40)
+  let set = missionFrom(session, middlegamePrefs(DEFAULT_RUN), 40)
   #expect(set.state.extras.mission?.kind == missionFor(.w, 40, set.state.run.fen).kind)
   // The end screen's Handoff tab is where your board began.
   #expect(set.prepEnd == QGD)
 }
 
-@Test func middlegamePointsAreKeptApartFromSurvival() throws {
+@Test func middlegamePointsAreKeptApartFromRuns() throws {
   let (_, tree) = try handoffRun()
   var state = AppState()
   state.endMiddlegame(tree, YOURS, 120)
   state.endMiddlegame(tree, YOURS, 80)
   #expect(state.middlegame.global.bestPoints == 120)
   #expect(state.middlegame.global.recent == [120, 80])
-  #expect(state.survival == SurvivalRecord())
+  #expect(state.runRecord == RunRecord())
   let data = try JSONEncoder().encode(state)
   #expect(try JSONDecoder().decode(AppState.self, from: data) == state)
 }
 
 @Test func theModeAlwaysScoresInPoints() {
-  var prefs = DEFAULT_SURVIVAL
+  var prefs = DEFAULT_RUN
   prefs.steer = .book
   prefs.combo = false
   let played = middlegamePrefs(prefs)

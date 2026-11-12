@@ -18,15 +18,15 @@ import Testing
     return s
   }
 
-  /// A profile's record in short: global days, each opening's rated days and rating now, Survival best, rounds by mode.
-  func profile(_ p: JSON) -> (ScoreState, SurvivalRecord) {
+  /// A profile's record in short: global days, each opening's rated days and rating now, Run best, rounds by mode.
+  func profile(_ p: JSON) -> (ScoreState, RunRecord) {
     var score = ScoreState()
     score.global = stats(p["days"].array, rating: 0, rated: 0)
     for (mode, n) in p["rounds"].object { score.global.byMode[ActivityMode(rawValue: mode)!]?.rounds = n.int }
     for (id, entry) in p["openings"].object { score.nodes[id] = stats(entry[0].array, rating: entry[1].number) }
-    var survival = SurvivalRecord()
-    survival.global.best = p["best"].int
-    return (score, survival)
+    var run = RunRecord()
+    run.global.best = p["best"].int
+    return (score, run)
   }
 
   func short(_ m: Milestone) -> String {
@@ -37,12 +37,12 @@ import Testing
     "milestones.longestStreak": { longestStreak(stats($0[0].array, rating: 0, rated: 0)).json },
     "milestones.peakRating": { peakRating(stats($0[0].array, rating: $0[1].number)).json },
     "milestones.milestones": { a in
-      let (score, survival) = profile(a[0])
-      return milestones(score, survival, tree).map(short).json
+      let (score, run) = profile(a[0])
+      return milestones(score, run, tree).map(short).json
     },
     "milestones.nextUp": { a in
-      let (score, survival) = profile(a[0])
-      let list = milestones(score, survival, tree)
+      let (score, run) = profile(a[0])
+      let list = milestones(score, run, tree)
       return obj([
         "earned": list.filter(earned).map(\.id).json,
         "next": nextUp(list.filter { $0.kind != .streak }, a[1].int).map { "\($0.id) \(JS.toFixed(progress($0), 3))" }.json,

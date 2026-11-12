@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Debug builds open the end screen scrolled with `END_SCROLL=bottom` (or `middle`), for screenshots.
-struct SurvivalDebugScroll: ViewModifier {
+struct RunDebugScroll: ViewModifier {
   func body(content: Content) -> some View {
     #if DEBUG
       switch ProcessInfo.processInfo.environment["END_SCROLL"] {
@@ -16,11 +16,11 @@ struct SurvivalDebugScroll: ViewModifier {
 }
 
 extension RootView {
-  /// Debug builds open a mode over the tabs with `OPEN_MODE=autopilot` (or `endgame`, `middlegame`), for screenshots.
+  /// Debug builds open a mode over the tabs with `OPEN_MODE=play` (or `endgame`, `middlegame`), for screenshots.
   static var debugMode: Mode? {
     #if DEBUG
       switch ProcessInfo.processInfo.environment["OPEN_MODE"] {
-      case "autopilot": .autopilot
+      case "play": .play
       case "endgame": .endgame
       case "middlegame": .middlegame
       default: nil

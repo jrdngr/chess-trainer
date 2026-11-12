@@ -96,7 +96,7 @@ struct PlaySection: View {
 /// The game or run announced full screen: the shared `IntroCover`, named for the mode.
 struct PlayIntroCover: View {
   var trail: [String]
-  /// The mode as the round is called: Play, Survival or Growth.
+  /// The mode as the round is called: Play, Run or Growth.
   var mode = "Play"
   var body: some View { IntroCover(mode: mode, trail: trail) }
 }

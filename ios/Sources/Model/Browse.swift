@@ -124,9 +124,9 @@ public func nodeAt(_ tree: OpeningTree, _ sans: [String]) -> OpeningNode? {
   return tree.byKey[positionKey(fens[fens.count - 1])]
 }
 
-/// Your own repertoire as names: each side, then its openings, their
+/// Your own playbook as names: each side, then its openings, their
 /// variations, and the lines of an opening with none.
-public func myLines(_ reps: [Repertoire], _ index: ReferenceIndex, _ tree: OpeningTree) -> [BrowseItem] {
+public func myLines(_ reps: [Playbook], _ index: ReferenceIndex, _ tree: OpeningTree) -> [BrowseItem] {
   var out: [BrowseItem] = []
   for color in [Color.w, .b] {
     var rows: [BrowseRow] = []
@@ -209,7 +209,7 @@ private func matches(_ needle: String, _ name: String, _ sans: [String], _ eco: 
 }
 
 /// Search by name, ECO, moves or initials: your own lines first, then the book.
-public func searchItems(_ query: String, _ reps: [Repertoire], _ index: ReferenceIndex, _ tree: OpeningTree, _ catalog: PickerCatalog, _ limit: Int = 40) -> [BrowseItem] {
+public func searchItems(_ query: String, _ reps: [Playbook], _ index: ReferenceIndex, _ tree: OpeningTree, _ catalog: PickerCatalog, _ limit: Int = 40) -> [BrowseItem] {
   let needle = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
   if needle.isEmpty { return [] }
   var out: [BrowseItem] = []
@@ -247,12 +247,12 @@ public struct NextMove: Sendable {
   public var share: Double
   /// Where it goes, by name, or "" when the book names nothing near.
   public var name: String
-  /// Your repertoire plays it here.
+  /// Your playbook plays it here.
   public var mine: Bool
 }
 
-/// Every move your repertoires play, as position|san.
-public func repMoves(_ reps: [Repertoire]) -> Set<String> {
+/// Every move your playbooks play, as position|san.
+public func repMoves(_ reps: [Playbook]) -> Set<String> {
   Set(reps.flatMap { $0.nodes.values.map { "\($0.key)|\($0.san)" } })
 }
 

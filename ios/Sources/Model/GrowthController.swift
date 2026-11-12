@@ -1,7 +1,7 @@
 import Book
 import ChessCore
 
-/// A Growth run as a pure controller, the same shape as SurvivalController.
+/// A Growth run as a pure controller, the same shape as RunController.
 
 public enum GrowthPhase: String, Sendable {
   case walking, hole, answered, done, lost
@@ -49,19 +49,19 @@ public typealias GrowthStep = (session: GrowthSession, effects: [GrowthEffect])
 
 /// A run begins at the hole it was handed, or the row's shallowest one,
 /// or at a line's tip for the book to reply; otherwise it walks from move one.
-public func beginGrowth(_ tree: Repertoire, _ row: GrowthRow, _ hole: Hole? = nil) -> GrowthSession {
+public func beginGrowth(_ tree: Playbook, _ row: GrowthRow, _ hole: Hole? = nil) -> GrowthSession {
   let start = hole ?? firstHole(row)
   let end = start == nil ? firstEnd(row) : nil
   let run = start.map { startGrowthAt(tree, row, $0) } ?? end.map { startGrowthAtEnd(tree, row, $0) } ?? startGrowth(tree, row)
   return GrowthSession(run: run, phase: start != nil ? .hole : end != nil ? .answered : .walking)
 }
 
-public func opponentToMove(_ session: GrowthSession, _ tree: Repertoire) -> Bool {
+public func opponentToMove(_ session: GrowthSession, _ tree: Playbook) -> Bool {
   session.phase == .walking && !isUsersTurn(session.run) && !atHole(tree, session.run)
 }
 
 /// The opponent's move on the walk, steered toward the hole most worth answering.
-public func opponentWalks(_ session: GrowthSession, _ tree: Repertoire, _ index: ReferenceIndex, _ find: GrowthOptions) -> GrowthSession {
+public func opponentWalks(_ session: GrowthSession, _ tree: Playbook, _ index: ReferenceIndex, _ find: GrowthOptions) -> GrowthSession {
   if !opponentToMove(session, tree) { return session }
   var next = session
   guard let reply = steer(tree, index, session.run, find) else {
@@ -86,7 +86,7 @@ public func nothingPrepared(_ session: GrowthSession, _ prepared: Int) -> Growth
 }
 
 /// Your move on the walk: your prep is the only thing that counts here.
-public func walk(_ session: GrowthSession, _ tree: Repertoire, _ san: String) -> GrowthStep {
+public func walk(_ session: GrowthSession, _ tree: Playbook, _ san: String) -> GrowthStep {
   if session.phase != .walking || !isUsersTurn(session.run) { return (session, []) }
   var next = session
   guard let walked = advance(tree, session.run, san) else {
@@ -144,7 +144,7 @@ public func theyReply(_ session: GrowthSession, _ hole: Hole?) -> GrowthSession 
 }
 
 /// Take back answers added this sitting: the last one, or all of them.
-public func undo(_ session: GrowthSession, _ live: Repertoire?, all: Bool = false) -> GrowthStep {
+public func undo(_ session: GrowthSession, _ live: Playbook?, all: Bool = false) -> GrowthStep {
   guard !session.history.isEmpty else { return (session, []) }
   let to = all ? 0 : session.history.count - 1
   let step = session.history[to]
@@ -168,7 +168,7 @@ public func undo(_ session: GrowthSession, _ live: Repertoire?, all: Bool = fals
 }
 
 /// Another batch, from where `resumeAdding` says it starts.
-public func anotherBatch(_ session: GrowthSession, _ tree: Repertoire, _ more: GrowthRun) -> GrowthStep {
+public func anotherBatch(_ session: GrowthSession, _ tree: Playbook, _ more: GrowthRun) -> GrowthStep {
   var next = session
   next.answer = nil
   next.batch = nil

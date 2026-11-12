@@ -47,8 +47,8 @@ struct RecommendationsCard: View {
   /// Every gap in the Playbook, kept until a line is added or removed.
   private var ranked: [Gap] {
     let state = store.state
-    let key = state.repertoireList.map { "\($0.id):\($0.nodes.count)" }.joined(separator: ",")
-      + "|\(lastAddedAt(state.repertoireList))"
+    let key = state.playbookList.map { "\($0.id):\($0.nodes.count)" }.joined(separator: ",")
+      + "|\(lastAddedAt(state.playbookList))"
     return memo.get(key) { playbookGaps(state, tree) }
   }
 }

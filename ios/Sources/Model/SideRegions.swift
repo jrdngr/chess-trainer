@@ -14,10 +14,10 @@ public func regionsBySide(_ tree: OpeningTree, _ selection: Selection) -> [SideR
   return colorsOf(selection.color).map { SideRegion(side: $0, node: node) }
 }
 
-/// Each region a selection covers, paired with that side's repertoire, and
+/// Each region a selection covers, paired with that side's playbook, and
 /// the results merged without repeats: what one region's call gives, for all of them.
 public func acrossRegions<T>(
-  _ regions: [SideRegion], _ reps: [Repertoire], _ each: (Repertoire, OpeningNode) -> [T], _ key: (T) -> String
+  _ regions: [SideRegion], _ reps: [Playbook], _ each: (Playbook, OpeningNode) -> [T], _ key: (T) -> String
 ) -> [T] {
   var seen = Set<String>()
   var out: [T] = []

@@ -6,7 +6,7 @@ import SwiftUI
 /// A run in play: the board, what floats over it, and the dock under it.
 /// The board takes the screen's width first; the dock (goal card, status,
 /// lenses) has what is left, so nothing in it can shrink the board.
-/// A Survival run you set up (no Autopilot round) adds its own app bar with the clock.
+/// A Run run you set up (no Play round) adds its own app bar with the clock.
 struct RunView: View {
   @Bindable var model: RunModel
   let onExit: () -> Void
@@ -39,7 +39,7 @@ struct RunView: View {
   @Environment(\.scenePhase) private var scenePhase
 
   /// A Middlegame run, not Play's round.
-  var survival: Bool { model.round == nil }
+  var standalone: Bool { model.round == nil }
 
   /// The run is over and stays on the board, with the deck to draw the next one from.
   var drawing: Bool { onDraw != nil && model.finish != nil && !model.advancing }
@@ -87,14 +87,14 @@ struct RunView: View {
     ZStack {
       board
       if model.intro == .announce {
-        if survival {
+        if standalone {
           PlayIntroCover(trail: introTrail, mode: "Middlegame")
         }
       }
     }
     // Play's round is dealt as a card on its start position, which grows into the board.
     .overlayPreferenceValue(BoardFrameKey.self) { anchor in
-      if model.intro == .announce && !survival {
+      if model.intro == .announce && !standalone {
         GeometryReader { geo in
           RoundDeal(card: model.card, board: anchor.map { geo[$0] })
         }
@@ -127,9 +127,9 @@ struct RunView: View {
 
   private var board: some View {
     VStack(spacing: 0) {
-      if survival {
+      if standalone {
         VStack(spacing: 0) {
-          SurvivalRunBar(model: model, onExit: close)
+          RunHeaderBar(model: model, onExit: close)
           headerStatus.padding(.bottom, 4)
         }
       } else {
@@ -166,7 +166,7 @@ struct RunView: View {
       )
       .modifier(BoardShake(count: shakes))
       // Under Play's deal the card stands in for the board until it has grown onto it.
-      .opacity(model.intro == .announce && !survival ? 0 : 1)
+      .opacity(model.intro == .announce && !standalone ? 0 : 1)
       .anchorPreference(key: BoardFrameKey.self, value: .bounds) { $0 }
       .clearsLens($lens)
       .overlay { if let pulse = model.edgePulse { EdgePulse(color: pulse.found ? Theme.good : Theme.bad).id(pulse.id) } }

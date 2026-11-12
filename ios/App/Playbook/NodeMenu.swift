@@ -5,7 +5,7 @@ import SwiftUI
 /// One move in the tree: where it came from, how many branches
 /// follow, and its note. `TreeRow`.
 struct TreeRow: View {
-  let rep: Repertoire
+  let rep: Playbook
   let node: RepMove
   let card: Card?
   let ourTurn: Bool
@@ -50,7 +50,7 @@ struct TreeRow: View {
 /// What can be done to one move: go there, make it main,
 /// note it, reorder it, or delete it and everything after it. `NodeMenu`.
 struct NodeMenu: View {
-  let rep: Repertoire
+  let rep: Playbook
   let nodeId: String
   let onNavigate: (String) -> Void
   let onDelete: (String) -> Void
@@ -60,7 +60,7 @@ struct NodeMenu: View {
   @State private var editing = false
 
   var body: some View {
-    let rep = store.state.repertoires[self.rep.id] ?? self.rep
+    let rep = store.state.playbooks[self.rep.id] ?? self.rep
     if let node = rep.nodes[nodeId] {
       let ourMove = fenTurn(node.fenBefore) == rep.color
       let siblings = childrenOf(rep, node.parentId)

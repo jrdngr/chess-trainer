@@ -2,7 +2,7 @@ import Engine
 import Model
 import SwiftUI
 
-/// Settings: the board, Autopilot's extras, the engine, profiles, iCloud backup and Export.
+/// Settings: the board, Play's extras, the engine, profiles, iCloud backup and Export.
 struct SettingsSheet: View {
   @Environment(AppStore.self) private var store
   @Environment(\.dismiss) private var dismiss
@@ -41,7 +41,7 @@ struct SettingsSheet: View {
         }
         section("Play")
         ListCard {
-          ToggleRow(label: "Move scores", on: settings.autopilot.moveScores) { store.update { $0.settings.autopilot.moveScores.toggle() } }
+          ToggleRow(label: "Move scores", on: settings.play.moveScores) { store.update { $0.settings.play.moveScores.toggle() } }
           FillSizeRow(value: settings.movesPerFill) { n in store.update { $0.settings.movesPerFill = n } }
         }
         section("Profiles")

@@ -4,7 +4,7 @@ import Foundation
 import Shared
 
 /// Middlegame mode: one of your Playbook lines, played on for you to a
-/// middlegame, then handed to you under Survival's rules.
+/// middlegame, then handed to you under Run's rules.
 ///
 /// The handoff is built here: your line as it stands, then book moves for both
 /// sides, then the engine at your level where the book runs out. Every move
@@ -216,15 +216,15 @@ private func engineCandidates(_ fen: String, _ tools: HandoffTools) async -> [Ha
 /* ── the run ── */
 
 /// What a Middlegame run's opponent steers toward: one of your lines, or one ending where your prep has a gap.
-public let MIDDLEGAME_STEERS: [SurvivalSteer] = [.lines, .gaps]
+public let MIDDLEGAME_STEERS: [RunSteer] = [.lines, .gaps]
 
 /// Middlegame mode's setup. It is scored in points, so moments, missions and the combo are always on.
-public let DEFAULT_MIDDLEGAME = SurvivalPrefs(
+public let DEFAULT_MIDDLEGAME = RunPrefs(
   steer: .lines, clock: .off, moveScores: true, moments: true, missions: true, combo: true,
   undefendedFlash: false)
 
 /// A setup as the mode plays it: a steer it knows, and the extras on.
-public func middlegamePrefs(_ prefs: SurvivalPrefs) -> SurvivalPrefs {
+public func middlegamePrefs(_ prefs: RunPrefs) -> RunPrefs {
   var out = prefs
   if !MIDDLEGAME_STEERS.contains(out.steer) { out.steer = .lines }
   out.moments = true
@@ -233,12 +233,12 @@ public func middlegamePrefs(_ prefs: SurvivalPrefs) -> SurvivalPrefs {
   return out
 }
 
-/// The line a Middlegame run plays out: the one Survival's draw picked, to its end.
+/// The line a Middlegame run plays out: the one Run's draw picked, to its end.
 /// Empty when the draw found no line of yours and fell back on the opening's own moves.
 /// A gap's line is yours up to the reply your Playbook has no answer for, its last move.
-public func middlegameLine(_ begun: SurvivalStart, _ reps: [Repertoire]) -> (sans: [String], gap: Bool) {
+public func middlegameLine(_ begun: RunBegun, _ reps: [Playbook]) -> (sans: [String], gap: Bool) {
   let run = begun.state.run
-  guard let rep = reps.first(where: { $0.id == run.repertoireId }), !run.target.isEmpty else { return ([], false) }
+  guard let rep = reps.first(where: { $0.id == run.playbookId }), !run.target.isEmpty else { return ([], false) }
   if nodeAtLine(rep, run.target) != nil { return (run.target, false) }
   if nodeAtLine(rep, Array(run.target.dropLast())) != nil { return (run.target, true) }
   return ([], false)
@@ -247,7 +247,7 @@ public func middlegameLine(_ begun: SurvivalStart, _ reps: [Repertoire]) -> (san
 /// A run begun at the handoff. Your prep is never asked (a transposition back into
 /// your Playbook grades nothing), the book phase is over before it starts, and the
 /// opponent plays from the book and the engine, not from your lines.
-public func beginMiddlegame(_ begun: SurvivalStart) -> RunSession {
+public func beginMiddlegame(_ begun: RunBegun) -> RunSession {
   var session = beginSession(begun)
   session.source.prepAt = { _ in [] }
   session.source.weightsAt = { _, _ in [] }

@@ -194,7 +194,7 @@ public struct ExtrasPrefs: Sendable {
     self.missions = missions
     self.combo = combo
   }
-  public init(_ prefs: SurvivalPrefs) {
+  public init(_ prefs: RunPrefs) {
     self.init(moments: prefs.moments, missions: prefs.missions, combo: prefs.combo)
   }
 }

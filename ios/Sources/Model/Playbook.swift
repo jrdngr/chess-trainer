@@ -13,7 +13,7 @@ public enum MoveSource: String, Sendable, Codable, CaseIterable {
 public struct RepMove: Equatable, Sendable, Codable {
   public var id: String
   public var parentId: String?
-  public var repertoireId: String
+  public var playbookId: String
   /// FEN of the position this move is played from.
   public var fenBefore: String
   /// positionKey(fenBefore): transpositions collapse on it.
@@ -31,7 +31,7 @@ public struct RepMove: Equatable, Sendable, Codable {
   public var keptAt: Double?
 }
 
-public struct Repertoire: Equatable, Sendable, Codable {
+public struct Playbook: Equatable, Sendable, Codable {
   public var id: String
   public var name: String
   /// The side you play in it.
@@ -54,22 +54,22 @@ public func newId(_ prefix: String = "n") -> String {
   return "\(prefix)_\(String(Int64(Env.now()), radix: 36))_\(String(count, radix: 36))"
 }
 
-public func createRepertoire(_ name: String, _ color: Color, _ id: String? = nil) -> Repertoire {
-  Repertoire(id: id ?? newId("rep"), name: name, color: color, rootFen: START_FEN, rootChildren: [], nodes: [:], createdAt: Env.now())
+public func createPlaybook(_ name: String, _ color: Color, _ id: String? = nil) -> Playbook {
+  Playbook(id: id ?? newId("rep"), name: name, color: color, rootFen: START_FEN, rootChildren: [], nodes: [:], createdAt: Env.now())
 }
 
-public func childrenOf(_ rep: Repertoire, _ nodeId: String?) -> [RepMove] {
+public func childrenOf(_ rep: Playbook, _ nodeId: String?) -> [RepMove] {
   let ids = nodeId.map { rep.nodes[$0]?.children ?? [] } ?? rep.rootChildren
   return ids.compactMap { rep.nodes[$0] }
 }
 
-public func fenAt(_ rep: Repertoire, _ nodeId: String?) -> String {
+public func fenAt(_ rep: Playbook, _ nodeId: String?) -> String {
   guard let nodeId else { return rep.rootFen }
   return rep.nodes[nodeId]?.fenAfter ?? rep.rootFen
 }
 
 /// The moves from the root down to and including `nodeId`.
-public func pathTo(_ rep: Repertoire, _ nodeId: String?) -> [RepMove] {
+public func pathTo(_ rep: Playbook, _ nodeId: String?) -> [RepMove] {
   var out: [RepMove] = []
   var cur = nodeId
   while let id = cur, let node = rep.nodes[id] {
@@ -79,12 +79,12 @@ public func pathTo(_ rep: Repertoire, _ nodeId: String?) -> [RepMove] {
   return out
 }
 
-public func findChildBySan(_ rep: Repertoire, _ parentId: String?, _ san: String) -> RepMove? {
+public func findChildBySan(_ rep: Playbook, _ parentId: String?, _ san: String) -> RepMove? {
   childrenOf(rep, parentId).first { $0.san == san }
 }
 
 /// The node a line from the root ends on, or nil when the tree lacks it.
-public func nodeAtLine(_ rep: Repertoire, _ sans: [String]) -> RepMove? {
+public func nodeAtLine(_ rep: Playbook, _ sans: [String]) -> RepMove? {
   var parent: String?
   var node: RepMove?
   for san in sans {
@@ -96,18 +96,18 @@ public func nodeAtLine(_ rep: Repertoire, _ sans: [String]) -> RepMove? {
 }
 
 public struct AddMoveResult {
-  public var rep: Repertoire
+  public var rep: Playbook
   public var node: RepMove
   public var created: Bool
 }
 
 /// Add one move under `parentId`. Replaying a move returns the node it already has.
-public func addMove(_ rep: Repertoire, _ parentId: String?, _ san: String, _ source: MoveSource = .manual) -> AddMoveResult? {
+public func addMove(_ rep: Playbook, _ parentId: String?, _ san: String, _ source: MoveSource = .manual) -> AddMoveResult? {
   let fenBefore = fenAt(rep, parentId)
   if let existing = findChildBySan(rep, parentId, san) { return AddMoveResult(rep: rep, node: existing, created: false) }
   guard let move = applySan(fenBefore, san) else { return nil }
   let node = RepMove(
-    id: newId(), parentId: parentId, repertoireId: rep.id, fenBefore: fenBefore, key: positionKey(fenBefore),
+    id: newId(), parentId: parentId, playbookId: rep.id, fenBefore: fenBefore, key: positionKey(fenBefore),
     san: move.san, uci: move.uci, fenAfter: move.after, children: [],
     // The first move added from a position is the preferred one.
     preferred: childrenOf(rep, parentId).isEmpty, source: source, addedAt: Env.now())
@@ -128,7 +128,7 @@ public enum SourceFor {
 }
 
 /// Add a whole SAN line, reusing the nodes it already matches.
-public func addLine(_ rep: Repertoire, _ sans: [String], _ source: SourceFor = .fixed(.manual), _ startNodeId: String? = nil) -> (rep: Repertoire, added: Int, tipId: String?) {
+public func addLine(_ rep: Playbook, _ sans: [String], _ source: SourceFor = .fixed(.manual), _ startNodeId: String? = nil) -> (rep: Playbook, added: Int, tipId: String?) {
   var current = rep
   var parentId = startNodeId
   var added = 0
@@ -147,7 +147,7 @@ public func addLine(_ rep: Repertoire, _ sans: [String], _ source: SourceFor = .
 }
 
 /// Remove a node and everything below it.
-public func removeSubtree(_ rep: Repertoire, _ nodeId: String) -> Repertoire {
+public func removeSubtree(_ rep: Playbook, _ nodeId: String) -> Playbook {
   guard let node = rep.nodes[nodeId] else { return rep }
   var nodes = rep.nodes
   var stack = [nodeId]
@@ -180,7 +180,7 @@ public func removeSubtree(_ rep: Repertoire, _ nodeId: String) -> Repertoire {
 }
 
 /// Remove a node, everything below it, and the moves that only led to it.
-public func pruneLine(_ rep: Repertoire, _ nodeId: String) -> Repertoire {
+public func pruneLine(_ rep: Playbook, _ nodeId: String) -> Playbook {
   guard let start = rep.nodes[nodeId] else { return rep }
   var next = removeSubtree(rep, nodeId)
   var parentId = start.parentId
@@ -194,7 +194,7 @@ public func pruneLine(_ rep: Repertoire, _ nodeId: String) -> Repertoire {
 }
 
 /// How many moves `pruneLine` would take.
-public func pruneCount(_ rep: Repertoire, _ nodeId: String) -> Int {
+public func pruneCount(_ rep: Playbook, _ nodeId: String) -> Int {
   guard let start = rep.nodes[nodeId] else { return 0 }
   var count = subtreeIds(rep, nodeId).count
   var childId = nodeId
@@ -209,14 +209,14 @@ public func pruneCount(_ rep: Repertoire, _ nodeId: String) -> Int {
 }
 
 /// Make `nodeId` the preferred move among its siblings.
-public func setPreferred(_ rep: Repertoire, _ nodeId: String) -> Repertoire {
+public func setPreferred(_ rep: Playbook, _ nodeId: String) -> Playbook {
   guard let node = rep.nodes[nodeId] else { return rep }
   var next = rep
   for sib in childrenOf(rep, node.parentId) { next.nodes[sib.id]!.preferred = sib.id == nodeId }
   return next
 }
 
-public func setNote(_ rep: Repertoire, _ nodeId: String, _ note: String) -> Repertoire {
+public func setNote(_ rep: Playbook, _ nodeId: String, _ note: String) -> Playbook {
   guard rep.nodes[nodeId] != nil else { return rep }
   var next = rep
   let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -225,7 +225,7 @@ public func setNote(_ rep: Repertoire, _ nodeId: String, _ note: String) -> Repe
 }
 
 /// A move moved up or down among its siblings.
-public func moveSibling(_ rep: Repertoire, _ nodeId: String, _ delta: Int) -> Repertoire {
+public func moveSibling(_ rep: Playbook, _ nodeId: String, _ delta: Int) -> Playbook {
   guard let node = rep.nodes[nodeId] else { return rep }
   var ids = node.parentId.map { rep.nodes[$0]!.children } ?? rep.rootChildren
   guard let idx = ids.firstIndex(of: nodeId), idx + delta >= 0, idx + delta < ids.count else { return rep }
@@ -239,7 +239,7 @@ public func moveSibling(_ rep: Repertoire, _ nodeId: String, _ delta: Int) -> Re
 public struct DecisionPoint: Equatable, Sendable {
   public var key: String
   public var fen: String
-  public var repertoireId: String
+  public var playbookId: String
   /// Every move from this position, preferred first.
   public var options: [RepMove]
   /// The shortest path to it, in SAN.
@@ -248,7 +248,7 @@ public struct DecisionPoint: Equatable, Sendable {
 }
 
 /// Every position you answer, once each: a transposition is one, its options merged.
-public func decisionPoints(_ rep: Repertoire) -> [DecisionPoint] {
+public func decisionPoints(_ rep: Playbook) -> [DecisionPoint] {
   var byKey = OrderedMap<String, DecisionPoint>()
   func visit(_ nodeId: String?, _ pathSans: [String]) {
     let fen = fenAt(rep, nodeId)
@@ -263,7 +263,7 @@ public func decisionPoints(_ rep: Repertoire) -> [DecisionPoint] {
         var options = kids.jsSorted { a, b in Double((b.preferred ? 1 : 0) - (a.preferred ? 1 : 0)) }
         // A shorter way to a position already met keeps the options found the longer way.
         for move in byKey[key]?.options ?? [] where !options.contains(where: { $0.san == move.san }) { options.append(move) }
-        byKey[key] = DecisionPoint(key: key, fen: fen, repertoireId: rep.id, options: options, pathSans: pathSans, depth: pathSans.count)
+        byKey[key] = DecisionPoint(key: key, fen: fen, playbookId: rep.id, options: options, pathSans: pathSans, depth: pathSans.count)
       }
     }
     for kid in kids { visit(kid.id, pathSans + [kid.san]) }
@@ -273,7 +273,7 @@ public func decisionPoints(_ rep: Repertoire) -> [DecisionPoint] {
 }
 
 /// Every line to a tip, longest first.
-public func leafLines(_ rep: Repertoire) -> [(tipId: String, sans: [String])] {
+public func leafLines(_ rep: Playbook) -> [(tipId: String, sans: [String])] {
   var out: [(tipId: String, sans: [String])] = []
   func visit(_ nodeId: String?, _ sans: [String]) {
     let kids = childrenOf(rep, nodeId)
@@ -288,7 +288,7 @@ public func leafLines(_ rep: Repertoire) -> [(tipId: String, sans: [String])] {
 }
 
 /// Every node in the order it was added: by when, then by the counter `newId` ends an id with.
-public func nodesInOrder(_ rep: Repertoire) -> [RepMove] {
+public func nodesInOrder(_ rep: Playbook) -> [RepMove] {
   func counter(_ id: String) -> Int { id.split(separator: "_").last.flatMap { Int($0, radix: 36) } ?? 0 }
   return rep.nodes.values.sorted { a, b in
     if a.addedAt != b.addedAt { return a.addedAt < b.addedAt }
@@ -298,7 +298,7 @@ public func nodesInOrder(_ rep: Repertoire) -> [RepMove] {
 }
 
 /// Every node in the subtree at `nodeId`, itself included.
-public func subtreeIds(_ rep: Repertoire, _ nodeId: String) -> [String] {
+public func subtreeIds(_ rep: Playbook, _ nodeId: String) -> [String] {
   var out: [String] = []
   var stack = [nodeId]
   while let id = stack.popLast() {
@@ -310,6 +310,6 @@ public func subtreeIds(_ rep: Repertoire, _ nodeId: String) -> [String] {
 }
 
 /// What a stored tree is called.
-public func repertoireName(_ color: Color) -> String {
+public func playbookName(_ color: Color) -> String {
   color == .w ? "White Playbook" : "Black Playbook"
 }

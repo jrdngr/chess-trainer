@@ -46,7 +46,7 @@ import Testing
   ])
 }
 
-private func playbooks() -> [String: [Repertoire]] {
+private func playbooks() -> [String: [Playbook]] {
   [
     "empty": [],
     "e4 player": [

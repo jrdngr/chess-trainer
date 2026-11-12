@@ -89,7 +89,7 @@ struct EngineBenchTests {
     return await judge(engine, base, san: san, uci: move.uci, color: fenTurn(fen), moments: false)
   }
 
-  /// The judge's procedure, as Survival runs it, on known answers.
+  /// The judge's procedure, as Run runs it, on known answers.
   @Test func judgeBench() async {
     let started = Date()
     var flagged: [String] = []

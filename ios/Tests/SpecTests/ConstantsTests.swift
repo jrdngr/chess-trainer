@@ -41,7 +41,7 @@ import Testing
   expect("freshness", "HORIZON", HORIZON.json)
   expect("openingRun", "BLUNDER_LIMIT", BLUNDER_LIMIT.json)
   expect("openingRun", "BOOK_SHARE", BOOK_SHARE.json)
-  expect("survival", "BOOK_SHARE", BOOK_SHARE.json)
+  expect("run", "BOOK_SHARE", BOOK_SHARE.json)
 
   expect("pickerData", "FAMILY_SHARPNESS", FAMILY_SHARPNESS.json)
   expect("pickerData", "SHARPNESS_OVERRIDES", SHARPNESS_OVERRIDES.json)

@@ -1,10 +1,10 @@
 import ChessCore
 
-/// Autopilot's rounds: what the next run is, and where it starts.
+/// Play's rounds: what the next run is, and where it starts.
 /// Your logged mistakes (`evidenceIn`) steer
 /// both the pick and the run.
 
-/// What Autopilot's next run is: the recommendation, and for a run started at a position, the moves to it.
+/// What Play's next run is: the recommendation, and for a run started at a position, the moves to it.
 public struct AutoRound: Sendable {
   public var pick: Recommendation
   public var at: [String]?
@@ -28,7 +28,7 @@ public struct AutoHistory: Sendable {
 /// Everything the recommendation needs, read off the state.
 public func recommendInput(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _ history: AutoHistory) -> RecommendInput {
   var input = RecommendInput(
-    tree: tree, selection: selection, reps: repertoiresIn(state.repertoireList, selection.color), cards: state.cards,
+    tree: tree, selection: selection, reps: playbooksIn(state.playbookList, selection.color), cards: state.cards,
     repairs: repairRefs(evidenceIn(state, tree, selection)), score: state.score, newPerSession: NEW_PER_ROUND,
     recentFocuses: history.focuses)
   input.recentSteered = history.steered
@@ -38,13 +38,13 @@ public func recommendInput(_ state: AppState, _ tree: OpeningTree, _ selection: 
 
 /// Your prep accuracy across the last few runs on these sides.
 public func prepAccuracy(_ rounds: [RoundRecord], _ colors: [Color]) -> Double? {
-  let runs = rounds.filter { $0.mode == .survival && ($0.prep?.asked ?? 0) > 0 && colors.contains($0.color) }
+  let runs = rounds.filter { $0.mode == .run && ($0.prep?.asked ?? 0) > 0 && colors.contains($0.color) }
   let recent = runs.suffix(ACCURACY_RUNS)
   let asked = recent.reduce(0) { $0 + $1.prep!.asked }
   return asked > 0 ? Double(recent.reduce(0) { $0 + $1.prep!.found }) / Double(asked) : nil
 }
 
-/// Autopilot's next run, or nil with nothing prepared inside the selection.
+/// Play's next run, or nil with nothing prepared inside the selection.
 public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _ history: AutoHistory) -> AutoRound? {
   if let gap = blackFirstGap(state, tree, selection) { return firstMoveRound(tree, gap) }
   if state.settings.start == .freeform { return freeRound(state, tree, selection, history) }
@@ -54,7 +54,7 @@ public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selec
     let region = nodeById(tree, selection.opening)
     let opening = deepestNodeWithin(tree, region, gap.path)
     let line = gap.line
-    let onLine = state.repertoireList.filter { $0.id == gap.repertoireId }.flatMap { allItems([$0]) }.filter { item in
+    let onLine = state.playbookList.filter { $0.id == gap.playbookId }.flatMap { allItems([$0]) }.filter { item in
       item.pathSans.count < gap.hole.path.count && Array(line.prefix(item.pathSans.count)) == item.pathSans
         && item.expected.contains { $0.san == line[item.pathSans.count] }
     }
@@ -64,7 +64,7 @@ public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selec
     return AutoRound(pick: pick, at: start?.item.pathSans, aim: line, grow: start == nil ? gap : nil)
   }
   guard let pick = recommend(recommendInput(state, tree, selection, history)) else { return nil }
-  let rep = state.repertoireList.first { $0.color == pick.color }
+  let rep = state.playbookList.first { $0.color == pick.color }
   let items = rep.map { itemsInRegion(tree, pick.opening, allItems([$0])) } ?? []
   if let start = drillStart(items, state.cards, accuracy: accuracy(pick.color), round: state.score.lineRounds) {
     return AutoRound(pick: pick, at: start.item.pathSans)
@@ -99,9 +99,9 @@ public func afterRound(_ history: AutoHistory, _ round: AutoRound, _ selection: 
   return next
 }
 
-/// The Survival run Autopilot plays for a round.
-public func survivalOptions(_ round: AutoRound, _ state: AppState, _ tree: OpeningTree, _ selection: Selection, seed: Double) -> StartOptions {
-  var opts = StartOptions(steer: .lines, tree: tree, reps: state.repertoireList, node: nodeById(tree, selection.opening), color: round.pick.color == .w ? .w : .b)
+/// The Run run Play plays for a round.
+public func runOptions(_ round: AutoRound, _ state: AppState, _ tree: OpeningTree, _ selection: Selection, seed: Double) -> StartOptions {
+  var opts = StartOptions(steer: .lines, tree: tree, reps: state.playbookList, node: nodeById(tree, selection.opening), color: round.pick.color == .w ? .w : .b)
   opts.lean = LEAN_FOR[round.pick.focus]
   opts.toward = round.pick.opening
   opts.at = round.at

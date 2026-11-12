@@ -9,7 +9,7 @@ public struct Settings: Equatable, Sendable, Codable {
   /// Starred openings from older saves, by tree node id. Nothing reads them;
   /// they are kept so a save round-trips.
   public var favoriteOpenings: [String] = []
-  public var autopilot = DEFAULT_AUTOPILOT
+  public var play = DEFAULT_PLAY
   public var hapticFeedback = true
   public var showCoordinates = true
   /// Whether the opening question has been put to this player.
@@ -39,7 +39,7 @@ public struct Settings: Equatable, Sendable, Codable {
   public init() {}
 
   enum CodingKeys: String, CodingKey {
-    case selection, favoriteOpenings, autopilot, hapticFeedback, showCoordinates, onboarded, seenIntro, autoplay
+    case selection, favoriteOpenings, play, hapticFeedback, showCoordinates, onboarded, seenIntro, autoplay
     case boardTheme, lichessUsername, chesscomUsername, growth
     case movesPerFill, seenAutoplayNote, seenDeckTip, tips, tutorial
     case middlegame
@@ -53,7 +53,7 @@ public struct Settings: Equatable, Sendable, Codable {
     selection = try c.decodeIfPresent(Selection.self, forKey: .selection) ?? selection
     if selection.opening == LEGACY_ANY_FAVORITE { selection.opening = ANY_OPENING }
     favoriteOpenings = try c.decodeIfPresent([String].self, forKey: .favoriteOpenings) ?? favoriteOpenings
-    autopilot = try c.decodeIfPresent(AutopilotPrefs.self, forKey: .autopilot) ?? autopilot
+    play = try c.decodeIfPresent(PlayPrefs.self, forKey: .play) ?? play
     hapticFeedback = try c.decodeIfPresent(Bool.self, forKey: .hapticFeedback) ?? hapticFeedback
     showCoordinates = try c.decodeIfPresent(Bool.self, forKey: .showCoordinates) ?? showCoordinates
     onboarded = try c.decodeIfPresent(Bool.self, forKey: .onboarded) ?? onboarded
@@ -71,7 +71,7 @@ public struct Settings: Equatable, Sendable, Codable {
     seenDeckTip = try c.decodeIfPresent(Bool.self, forKey: .seenDeckTip) ?? seenDeckTip
     tips = try c.decodeIfPresent([String].self, forKey: .tips).map(TutorialTip.decoded) ?? tips
     tutorial = try c.decodeIfPresent(Tutorial.self, forKey: .tutorial)
-    middlegame = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .middlegame) ?? middlegame
+    middlegame = try c.decodeIfPresent(RunPrefs.self, forKey: .middlegame) ?? middlegame
     start = try c.decodeIfPresent(RunStart.self, forKey: .start) ?? start
   }
 }
@@ -84,11 +84,11 @@ public enum RunStart: String, Sendable, Codable, CaseIterable { case freeform, d
 public enum BoardTheme: String, Sendable, Codable, CaseIterable { case slate, walnut, ocean }
 
 public struct AppState: Equatable, Sendable, Codable {
-  public var repertoires: [String: Repertoire] = [:]
-  public var repertoireOrder: [String] = []
+  public var playbooks: [String: Playbook] = [:]
+  public var playbookOrder: [String] = []
   public var cards: [String: Card] = [:]
   public var score = ScoreState()
-  public var survival = SurvivalRecord()
+  public var runRecord = RunRecord()
   public var mistakes: [Mistake] = []
   /// Every review, oldest first.
   public var log: [ReviewLogEntry] = []
@@ -98,8 +98,8 @@ public struct AppState: Equatable, Sendable, Codable {
   public var strength = PlayerStrength()
   /// Endgame mode: its cards, family ratings and saved positions.
   public var endgames = EndgameRecord()
-  /// Middlegame mode's points, per opening and overall: a Survival record kept in points.
-  public var middlegame = SurvivalRecord()
+  /// Middlegame mode's points, per opening and overall: a Run record kept in points.
+  public var middlegame = RunRecord()
   /// The games you played here, newest first, at most GAMES_CAP.
   public var games: [GameRecord] = []
   /// Which `migrate` steps the save has had.
@@ -107,7 +107,7 @@ public struct AppState: Equatable, Sendable, Codable {
   public init() {}
 
   enum CodingKeys: String, CodingKey {
-    case repertoires, repertoireOrder, cards, score, survival, mistakes, log, events, settings, strength, endgames, middlegame
+    case playbooks, playbookOrder, cards, score, runRecord, mistakes, log, events, settings, strength, endgames, middlegame
     case games, version
   }
 
@@ -115,23 +115,23 @@ public struct AppState: Equatable, Sendable, Codable {
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
     self.init()
-    repertoires = try c.decodeIfPresent([String: Repertoire].self, forKey: .repertoires) ?? repertoires
-    repertoireOrder = try c.decodeIfPresent([String].self, forKey: .repertoireOrder) ?? repertoireOrder
+    playbooks = try c.decodeIfPresent([String: Playbook].self, forKey: .playbooks) ?? playbooks
+    playbookOrder = try c.decodeIfPresent([String].self, forKey: .playbookOrder) ?? playbookOrder
     cards = try c.decodeIfPresent([String: Card].self, forKey: .cards) ?? cards
     score = try c.decodeIfPresent(ScoreState.self, forKey: .score) ?? score
-    survival = try c.decodeIfPresent(SurvivalRecord.self, forKey: .survival) ?? survival
+    runRecord = try c.decodeIfPresent(RunRecord.self, forKey: .runRecord) ?? runRecord
     mistakes = try c.decodeIfPresent([Mistake].self, forKey: .mistakes) ?? mistakes
     log = try c.decodeIfPresent([ReviewLogEntry].self, forKey: .log) ?? log
     events = normalizeEvents(try c.decodeIfPresent([AppEvent].self, forKey: .events))
     settings = try c.decodeIfPresent(Settings.self, forKey: .settings) ?? settings
     strength = try c.decodeIfPresent(PlayerStrength.self, forKey: .strength) ?? strength
     endgames = try c.decodeIfPresent(EndgameRecord.self, forKey: .endgames) ?? endgames
-    middlegame = try c.decodeIfPresent(SurvivalRecord.self, forKey: .middlegame) ?? middlegame
+    middlegame = try c.decodeIfPresent(RunRecord.self, forKey: .middlegame) ?? middlegame
     games = try c.decodeIfPresent([GameRecord].self, forKey: .games) ?? games
     version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 0
   }
 
-  public var repertoireList: [Repertoire] { repertoireOrder.compactMap { repertoires[$0] } }
+  public var playbookList: [Playbook] { playbookOrder.compactMap { playbooks[$0] } }
 }
 
 extension AppState {
@@ -153,40 +153,40 @@ extension AppState {
     score = recordRound(score, tree, round)
   }
 
-  public mutating func endSurvival(_ tree: OpeningTree, _ line: [String], _ moves: Int, _ points: Int) {
-    survival = recordSurvival(survival, tree, line, moves, points)
+  public mutating func recordRunEnd(_ tree: OpeningTree, _ line: [String], _ moves: Int, _ points: Int) {
+    runRecord = recordRun(runRecord, tree, line, moves, points)
   }
 
-  public mutating func endSurvivalEarly(_ tree: OpeningTree, _ line: [String]) {
-    survival = recordEndedSurvival(survival, tree, line)
+  public mutating func endRunEarly(_ tree: OpeningTree, _ line: [String]) {
+    runRecord = recordEndedRun(runRecord, tree, line)
   }
 
   /// A Middlegame run, logged in points against every opening your line went through.
   public mutating func endMiddlegame(_ tree: OpeningTree, _ line: [String], _ points: Int) {
-    middlegame = recordSurvival(middlegame, tree, line, points, points)
+    middlegame = recordRun(middlegame, tree, line, points, points)
   }
 
   public mutating func endMiddlegameEarly(_ tree: OpeningTree, _ line: [String]) {
-    middlegame = recordEndedSurvival(middlegame, tree, line)
+    middlegame = recordEndedRun(middlegame, tree, line)
   }
 
   /// A prepared position answered in a run: its card reviewed, and marked with the run that asked it.
-  public mutating func answered(_ repertoireId: String, _ fen: String, _ played: String, _ grade: Grade, now: Double = Env.now()) {
+  public mutating func answered(_ playbookId: String, _ fen: String, _ played: String, _ grade: Grade, now: Double = Env.now()) {
     let key = positionKey(fen)
-    let id = cardId(repertoireId, key)
+    let id = cardId(playbookId, key)
     let existing = cards[id]
-    cards[id] = review(existing ?? createCard(id, repertoireId, key, fen, now), existing != nil ? grade : .good, round: score.lineRounds, now: now)
+    cards[id] = review(existing ?? createCard(id, playbookId, key, fen, now), existing != nil ? grade : .good, round: score.lineRounds, now: now)
     // A logged mistake retires once the position is answered right.
-    mistakes.removeAll { $0.id == "\(repertoireId)#\(key)" }
+    mistakes.removeAll { $0.id == "\(playbookId)#\(key)" }
   }
 
   /// A prepared position missed in a run: its card failed, and the miss logged.
-  public mutating func missed(_ repertoireId: String, _ fen: String, _ played: String, _ expected: String, now: Double = Env.now()) {
+  public mutating func missed(_ playbookId: String, _ fen: String, _ played: String, _ expected: String, now: Double = Env.now()) {
     let key = positionKey(fen)
-    let id = cardId(repertoireId, key)
-    cards[id] = review(cards[id] ?? createCard(id, repertoireId, key, fen, now), .again, round: score.lineRounds, now: now)
+    let id = cardId(playbookId, key)
+    cards[id] = review(cards[id] ?? createCard(id, playbookId, key, fen, now), .again, round: score.lineRounds, now: now)
     mistakes = Env.at(now) {
-      addMistake(mistakes, Mistake(source: .openingRun, repertoireId: repertoireId, key: key, fen: fen, played: played, expected: expected))
+      addMistake(mistakes, Mistake(source: .openingRun, playbookId: playbookId, key: key, fen: fen, played: played, expected: expected))
     }
   }
 
@@ -205,7 +205,7 @@ extension AppState {
       board.filter { legal($0.sans) }.map { ($0, .board) }
       + openings.filter { legal($0.sans) }.map { (OnboardingLine(sans: $0.sans, color: $0.color), .picker) }
     for (line, source) in lines {
-      let repId = ensureRepertoire(line.color)
+      let repId = ensurePlaybook(line.color)
       addLine(repId, line.sans, .fixed(source), via: .onboarding)
     }
     // The selection follows the picks the book names.

@@ -3,8 +3,8 @@ import Book
 import ChessCore
 import Shared
 
-/// How a run's line is drawn and how the opponent replies, for Survival and
-/// Autopilot.
+/// How a run's line is drawn and how the opponent replies, for Run and
+/// Play.
 
 /// What a run knows about a position: what keeps it alive, how likely each
 /// reply is, and what your prep says.
@@ -25,8 +25,8 @@ public struct LineSource: @unchecked Sendable {
   public var offPrepFinal = false
 }
 
-/// One repertoire indexed by position, the opponent's moves included.
-public func prepIndex(_ rep: Repertoire?) -> [String: [String]] {
+/// One playbook indexed by position, the opponent's moves included.
+public func prepIndex(_ rep: Playbook?) -> [String: [String]] {
   var byPosition: [String: [String]] = [:]
   guard let rep else { return byPosition }
   func visit(_ nodeId: String?) {
@@ -44,7 +44,7 @@ public func prepIndex(_ rep: Repertoire?) -> [String: [String]] {
 }
 
 /// Prepared or theory, inside the region. `rep` is nil when nothing is prepared for the side.
-public func regionSource(_ tree: OpeningTree, _ node: OpeningNode, _ rep: Repertoire?, _ color: Color) -> LineSource {
+public func regionSource(_ tree: OpeningTree, _ node: OpeningNode, _ rep: Playbook?, _ color: Color) -> LineSource {
   let index = tree.index
   let prep = prepIndex(rep)
   let approach = node.depth == 0 ? nil : approachKeys(tree, node)
@@ -103,9 +103,9 @@ public func regionSource(_ tree: OpeningTree, _ node: OpeningNode, _ rep: Repert
     })
 }
 
-/// How often each line of a repertoire should come up, as a weight per tip:
+/// How often each line of a playbook should come up, as a weight per tip:
 /// by the book where the opponent chooses, evenly where you do. Empty without a book.
-public func lineOdds(_ rep: Repertoire, _ side: Color, _ index: ReferenceIndex?, _ eligible: Set<String>? = nil) -> OrderedMap<String, Double> {
+public func lineOdds(_ rep: Playbook, _ side: Color, _ index: ReferenceIndex?, _ eligible: Set<String>? = nil) -> OrderedMap<String, Double> {
   var odds = OrderedMap<String, Double>()
   guard let index else { return odds }
   let wanted = { (tipId: String) in eligible == nil || eligible!.contains(tipId) }
@@ -152,13 +152,13 @@ public enum Steer: String, Sendable { case popular, weak, gaps }
 /// How much less often a hole may be met than the best one and still be drawn.
 public let DRAW_WINDOW: Double = 8
 
-/// A run's board and the line steered toward: what Survival reads of a run.
+/// A run's board and the line steered toward: what Run reads of a run.
 public struct Run: Equatable, Sendable {
   public var id: String
   public var sourceLabel: String
   /// The region the run was drawn in.
   public var openingId: String
-  public var repertoireId: String?
+  public var playbookId: String?
   public var bookRun: Bool
   public var color: Color
   public var fen: String
@@ -182,18 +182,18 @@ private func newRunId() -> String {
   return "run\(runCounter)-\(String(Int64(Env.now()), radix: 36))"
 }
 
-/// How badly each position wants practice, by repertoire and position.
-public typealias Weakness = (_ repertoireId: String, _ key: String) -> Double
+/// How badly each position wants practice, by playbook and position.
+public typealias Weakness = (_ playbookId: String, _ key: String) -> Double
 
 /// A game of yours that went off prep at a position: what `weaknessFromCards` reads of Repair.
 public struct Slip: Sendable {
   public var kind: String
-  public var repertoireId: String
+  public var playbookId: String
   public var key: String
   public var games: Int
-  public init(kind: String, repertoireId: String, key: String, games: Int) {
+  public init(kind: String, playbookId: String, key: String, games: Int) {
     self.kind = kind
-    self.repertoireId = repertoireId
+    self.playbookId = playbookId
     self.key = key
     self.games = games
   }
@@ -202,9 +202,9 @@ public struct Slip: Sendable {
 /// The review schedule as a practice appetite.
 public func weaknessFromCards(_ cards: [String: Card], _ slips: [Slip] = [], round: Int) -> Weakness {
   var slipped: [String: Int] = [:]
-  for item in slips where item.kind == "offprep" { slipped[cardId(item.repertoireId, item.key), default: 0] += item.games }
-  return { repertoireId, key in
-    let id = cardId(repertoireId, key)
+  for item in slips where item.kind == "offprep" { slipped[cardId(item.playbookId, item.key), default: 0] += item.games }
+  return { playbookId, key in
+    let id = cardId(playbookId, key)
     let evidence = 2 * Double(min(3, slipped[id] ?? 0))
     // Never studied: worth seeing, but not the emergency a lapse is.
     guard let card = cards[id] else { return 1.5 + evidence }
@@ -220,9 +220,9 @@ public func weaknessFromCards(_ cards: [String: Card], _ slips: [Slip] = [], rou
 }
 
 /// The mean appetite over the positions a line asks you about.
-public func lineWeakness(_ repertoireId: String, _ keys: [String], _ weakness: Weakness) -> Double {
+public func lineWeakness(_ playbookId: String, _ keys: [String], _ weakness: Weakness) -> Double {
   if keys.isEmpty { return 1 }
-  return keys.reduce(0) { $0 + weakness(repertoireId, $1) } / Double(keys.count)
+  return keys.reduce(0) { $0 + weakness(playbookId, $1) } / Double(keys.count)
 }
 
 func pickWeighted<T>(_ items: [T], _ weight: (T) -> Double, _ rand: () -> Double) -> T {
@@ -238,7 +238,7 @@ func pickWeighted<T>(_ items: [T], _ weight: (T) -> Double, _ rand: () -> Double
 
 public struct BeginOptions {
   public var tree: OpeningTree
-  public var reps: [Repertoire]
+  public var reps: [Playbook]
   /// The region to run in.
   public var node: OpeningNode
   /// An opening inside the region to walk toward.
@@ -260,7 +260,7 @@ public struct BeginOptions {
   /// Freeform: the lines of gaps due a new move, which the opponent leans toward.
   public var due: [[String]] = []
 
-  public init(tree: OpeningTree, reps: [Repertoire], node: OpeningNode, color: ColorChoice) {
+  public init(tree: OpeningTree, reps: [Playbook], node: OpeningNode, color: ColorChoice) {
     self.tree = tree
     self.reps = reps
     self.node = node
@@ -338,7 +338,7 @@ public func beginRun(_ opts: BeginOptions) -> Begun? {
   let startedIn = opened == 0 ? nil : deepestNodeWithin(tree, aim, way)
 
   let run = Run(
-    id: newRunId(), sourceLabel: startedIn?.name ?? node.name, openingId: node.id, repertoireId: rep?.id,
+    id: newRunId(), sourceLabel: startedIn?.name ?? node.name, openingId: node.id, playbookId: rep?.id,
     bookRun: rep == nil || linesThrough(rep!, tree, aim, side, At(fen: START_FEN, played: [])).isEmpty,
     color: side, fen: fen, played: Array(way.prefix(opened)), survived: 0, over: false,
     target: first.target, drawn: first.target, opened: opened,
@@ -357,11 +357,11 @@ public func beginRun(_ opts: BeginOptions) -> Begun? {
 
 /// A Freeform run: from move one, with nothing drawn. As Black the opponent's
 /// first move is already played, so the round's card can show it.
-private func beginFree(_ opts: BeginOptions, _ rep: Repertoire?, _ side: Color, _ rand: () -> Double) -> Begun {
+private func beginFree(_ opts: BeginOptions, _ rep: Playbook?, _ side: Color, _ rand: () -> Double) -> Begun {
   let node = opts.toward ?? opts.node
   let source = freeformSource(opts.tree, node, rep, side, weakness: opts.weakness, seen: opts.seen ?? NOTHING_SEEN, due: opts.due)
   var run = Run(
-    id: newRunId(), sourceLabel: node.name, openingId: node.id, repertoireId: rep?.id, bookRun: rep == nil,
+    id: newRunId(), sourceLabel: node.name, openingId: node.id, playbookId: rep?.id, bookRun: rep == nil,
     color: side, fen: START_FEN, played: [], survived: 0, over: false, target: [], drawn: [], opened: 0, enteredIn: nil)
   if side == .b {
     let first = opponentReply(source, run, rand)
@@ -379,7 +379,7 @@ private func beginFree(_ opts: BeginOptions, _ rep: Repertoire?, _ side: Color, 
 
 /// Your lines through the opening that pass through a position, each whole
 /// with the moves played so far first, and the positions it still asks.
-private func linesThrough(_ rep: Repertoire, _ tree: OpeningTree, _ aim: OpeningNode, _ side: Color, _ at: At) -> [(tipId: String, sans: [String], keys: [String])] {
+private func linesThrough(_ rep: Playbook, _ tree: OpeningTree, _ aim: OpeningNode, _ side: Color, _ at: At) -> [(tipId: String, sans: [String], keys: [String])] {
   let key = positionKey(at.fen)
   var out: [(tipId: String, sans: [String], keys: [String])] = []
   for line in leafLines(rep) where lineStatus(tree, aim, line.sans) == .reached {
@@ -393,7 +393,7 @@ private func linesThrough(_ rep: Repertoire, _ tree: OpeningTree, _ aim: Opening
 
 /// The hole to walk toward: inside the opening while there is any, drawn on
 /// how often you would meet it and how much of the round would be new.
-private func drawHole(_ rep: Repertoire, _ tree: OpeningTree, _ aim: OpeningNode, _ opts: BeginOptions, _ rand: () -> Double, _ at: At) -> (hole: Hole, rest: [String])? {
+private func drawHole(_ rep: Playbook, _ tree: OpeningTree, _ aim: OpeningNode, _ opts: BeginOptions, _ rand: () -> Double, _ at: At) -> (hole: Hole, rest: [String])? {
   let key = positionKey(at.fen)
   var growth = opts.growth ?? GrowthOptions()
   growth.region = (tree, aim)

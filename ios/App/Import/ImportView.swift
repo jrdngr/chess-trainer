@@ -130,7 +130,7 @@ struct ImportView: View {
       if site == .lichess { $0.settings.lichessUsername = name } else { $0.settings.chesscomUsername = name }
     }
     step = .checking
-    let reps = store.state.repertoireList
+    let reps = store.state.playbookList
     var lost: [String: Double] = [:]
     for move in seedMoves(seedRows(games, index, reps)) {
       if let cost = await EngineChecks.quickLoss(move.fen, move.san) { lost["\(positionKey(move.fen)) \(move.san)"] = cost }

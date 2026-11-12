@@ -60,7 +60,7 @@ public struct YourOpening: Sendable {
 /// Your openings, most worth focusing on first: every Playbook family of
 /// both sides. Value grows with how often the book reaches the family, how
 /// many lines you hold in it, and how few runs ago you played it.
-public func yourOpenings(_ reps: [Repertoire], _ tree: OpeningTree, _ score: ScoreState) -> [YourOpening] {
+public func yourOpenings(_ reps: [Playbook], _ tree: OpeningTree, _ score: ScoreState) -> [YourOpening] {
   let total = max(1, tree.root.games)
   var out: [YourOpening] = []
   for rep in reps {

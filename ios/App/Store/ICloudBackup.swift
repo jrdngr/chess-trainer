@@ -55,7 +55,7 @@ actor ICloudBackup {
     guard let root = root() else { return nil }
     for file in files {
       if let data = coordinatedRead(root.appending(path: folder).appending(path: file)),
-        (try? JSONDecoder().decode(AppState.self, from: data)) != nil
+        (try? decodeSave(data)) != nil
       {
         return (file, data)
       }

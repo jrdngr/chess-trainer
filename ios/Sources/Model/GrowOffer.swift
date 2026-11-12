@@ -3,8 +3,8 @@ import ChessCore
 
 /// The offer to grow, at the end of a run.
 
-/// The repertoire node a line reaches, by any move order.
-private func nodeAt(_ rep: Repertoire, _ sans: [String], _ fen: String) -> String? {
+/// The playbook node a line reaches, by any move order.
+private func nodeAt(_ rep: Playbook, _ sans: [String], _ fen: String) -> String? {
   var nodeId: String?
   for san in sans {
     guard let kid = childrenOf(rep, nodeId).first(where: { $0.san == san }) else {
@@ -35,7 +35,7 @@ public struct GrowLaunch: Sendable {
 /// same one its lobby would start, past Growth's settings when there is none
 /// within. Where the round ended plays no part, so a one-line opening widens
 /// at its early, common replies before any line gets longer (owner, 11-01).
-public func growLaunch(_ rep: Repertoire, _ index: ReferenceIndex, _ tree: OpeningTree, _ opening: OpeningNode, minShare: Double, maxPly: Int) -> GrowLaunch? {
+public func growLaunch(_ rep: Playbook, _ index: ReferenceIndex, _ tree: OpeningTree, _ opening: OpeningNode, minShare: Double, maxPly: Int) -> GrowLaunch? {
   let region = (tree: tree, node: opening)
   if let within = recommended(growthRows([rep], index, GrowthOptions(minShare: minShare, maxPly: maxPly, region: region))) {
     return GrowLaunch(opening: opening, row: within, hole: nil, widened: nil)

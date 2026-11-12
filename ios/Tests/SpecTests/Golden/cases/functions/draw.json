@@ -11,7 +11,7 @@
       ]
     },
     {
-      "fn": "survival.startSurvival (draw)",
+      "fn": "run.startRun (draw)",
       "about": "The line a run is drawn on, seed by seed: the side, the line the opponent steers along. My lines leans popular or weak; My gaps walks to a reply you have no answer to; Ignore my lines draws on the book alone.",
       "cases": [
       {"args":["lines","popular","w",""],"out":["w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [] e4 c6 d4 d5 e5 Bf5 Nf3","w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [] e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","w [] e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O","w [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3","w [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3","w [] e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","w [] e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","w [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3"]},
@@ -23,7 +23,7 @@
       ]
     },
     {
-      "fn": "survival.startSurvival (shares)",
+      "fn": "run.startRun (shares)",
       "about": "Over 400 seeds, how often each first reply comes up on My lines, popular: close to the line odds.",
       "cases": [
       {"args":["w",2],"out":{"e4 c5":190,"e4 e5":156,"e4 c6":54}},
@@ -32,7 +32,7 @@
       ]
     },
     {
-      "fn": "survival.startSurvival (fresh)",
+      "fn": "run.startRun (fresh)",
       "about": "The line last run is not drawn again while another is there, and the one left longest is preferred: draws over 12 seeds with the given lines seen in rounds before round 10.",
       "cases": [
       {"args":[[]],"out":["e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O"]},

@@ -1,4 +1,4 @@
-/// What each mode plays on, and Autopilot's fixed setup.
+/// What each mode plays on, and Play's fixed setup.
 
 /// How long you get for each of your own moves.
 public enum ClockMode: String, Sendable, Codable, CaseIterable {
@@ -24,12 +24,12 @@ public func clockLabel(_ mode: ClockMode) -> String {
   }
 }
 
-/// What a Survival opponent steers toward.
-public enum SurvivalSteer: String, Sendable, Codable, CaseIterable {
+/// What a Run opponent steers toward.
+public enum RunSteer: String, Sendable, Codable, CaseIterable {
   case lines, gaps, book
 }
 
-public func survivalSteerLabel(_ steer: SurvivalSteer) -> String {
+public func runSteerLabel(_ steer: RunSteer) -> String {
   switch steer {
   case .gaps: return "My gaps"
   case .book: return "Ignore my lines"
@@ -37,8 +37,8 @@ public func survivalSteerLabel(_ steer: SurvivalSteer) -> String {
   }
 }
 
-public struct SurvivalPrefs: Equatable, Sendable, Codable {
-  public var steer: SurvivalSteer
+public struct RunPrefs: Equatable, Sendable, Codable {
+  public var steer: RunSteer
   public var clock: ClockMode
   /// What each engine-judged move cost, floated up from its square.
   public var moveScores: Bool
@@ -55,24 +55,24 @@ public struct SurvivalPrefs: Equatable, Sendable, Codable {
 /// The opponent plays at your own strength.
 public let OPPONENT_MATCH = "match"
 
-extension SurvivalPrefs {
+extension RunPrefs {
   /// The level the opponent plays at, given your strength.
   public func opponentLevel(_ strength: PlayerStrength) -> Level {
     opponent == OPPONENT_MATCH ? levelMatching(strength) : levelById(opponent)
   }
 }
 
-public let DEFAULT_SURVIVAL = SurvivalPrefs(
+public let DEFAULT_RUN = RunPrefs(
   steer: .lines, clock: .off, moveScores: true, moments: true, missions: true, combo: true,
   undefendedFlash: false)
 
-extension SurvivalPrefs {
-  /// A saved setup missing an option takes its default: `{ ...DEFAULT_SURVIVAL, ...known.survival }`.
+extension RunPrefs {
+  /// A saved setup missing an option takes its default: `{ ...DEFAULT_RUN, ...known.run }`.
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
-    let d = DEFAULT_SURVIVAL
+    let d = DEFAULT_RUN
     self.init(
-      steer: try c.decodeIfPresent(SurvivalSteer.self, forKey: .steer) ?? d.steer,
+      steer: try c.decodeIfPresent(RunSteer.self, forKey: .steer) ?? d.steer,
       clock: try c.decodeIfPresent(ClockMode.self, forKey: .clock) ?? d.clock,
       moveScores: try c.decodeIfPresent(Bool.self, forKey: .moveScores) ?? d.moveScores,
       moments: try c.decodeIfPresent(Bool.self, forKey: .moments) ?? d.moments,
@@ -92,15 +92,15 @@ public struct GrowthPrefs: Equatable, Sendable, Codable {
   public var nudgePawns: Bool
 }
 
-/// Autopilot's own options: matters of taste only.
-public struct AutopilotPrefs: Equatable, Sendable, Codable {
+/// Play's own options: matters of taste only.
+public struct PlayPrefs: Equatable, Sendable, Codable {
   public var moveScores: Bool
   public init(moveScores: Bool) {
     self.moveScores = moveScores
   }
 }
 
-public let DEFAULT_AUTOPILOT = AutopilotPrefs(moveScores: true)
+public let DEFAULT_PLAY = PlayPrefs(moveScores: true)
 
 /// How many new moves a round may ask.
 public let NEW_PER_ROUND = 8
@@ -115,9 +115,9 @@ public let MOVES_PER_FILL_RANGE = 1...5
 
 public let AUTO_GROWTH = GrowthPrefs(minShare: 1, maxPly: 18, nudgePriority: .transposition, nudgePawns: false)
 
-/// Survival rounds: Autopilot steers, there is no clock, the feedback is yours.
-public func autoSurvival(_ prefs: AutopilotPrefs) -> SurvivalPrefs {
-  SurvivalPrefs(
+/// Run rounds: Play steers, there is no clock, the feedback is yours.
+public func autoRun(_ prefs: PlayPrefs) -> RunPrefs {
+  RunPrefs(
     steer: .lines, clock: .off, moveScores: prefs.moveScores, moments: true,
     missions: true, combo: true, undefendedFlash: false)
 }

@@ -210,7 +210,7 @@ struct BrowseContext {
   let index: ReferenceIndex
   let catalog: PickerCatalog
   let state: AppState
-  var reps: [Repertoire] { state.repertoireList }
+  var reps: [Playbook] { state.playbookList }
 }
 
 /// The browser's lists: `CHIPS`.

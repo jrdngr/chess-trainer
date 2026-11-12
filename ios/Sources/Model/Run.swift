@@ -2,7 +2,7 @@ import Book
 import ChessCore
 import Shared
 
-/// Survival: how far you get before your first blunder. Every Autopilot
+/// Run: how far you get before your first blunder. Every Play
 /// round is one. Missions are in `Missions.swift`.
 
 /// How a move's score reads: green for eval gained, yellow or red for eval lost.
@@ -122,7 +122,7 @@ public struct Miss: Equatable, Sendable {
   public var expected: String
 }
 
-public struct SurvivalRun: Equatable, Sendable {
+public struct RunTally: Equatable, Sendable {
   public var run: Run
   /// Your own moves so far, every one the referee passed.
   public var moves: Int
@@ -130,23 +130,23 @@ public struct SurvivalRun: Equatable, Sendable {
   public var extras: Extras
 }
 
-public struct SurvivalStart {
+public struct RunBegun {
   public var source: LineSource
-  public var state: SurvivalRun
+  public var state: RunTally
   public var redraw: (Run) -> Run
 }
 
 public struct StartOptions {
-  public var steer: SurvivalSteer
+  public var steer: RunSteer
   public var tree: OpeningTree
-  public var reps: [Repertoire]
+  public var reps: [Playbook]
   public var node: OpeningNode
   public var color: ColorChoice
   public var weakness: Weakness?
   public var growth: GrowthOptions?
   public var seen: Seen?
   public var seed: Double?
-  /// What My lines tilts toward. Autopilot chooses; the setup screen leans weak.
+  /// What My lines tilts toward. Play chooses; the setup screen leans weak.
   public var lean: Steer?
   public var toward: OpeningNode?
   public var at: [String]?
@@ -157,7 +157,7 @@ public struct StartOptions {
   /// Freeform: the lines of gaps due a new move.
   public var due: [[String]] = []
 
-  public init(steer: SurvivalSteer, tree: OpeningTree, reps: [Repertoire], node: OpeningNode, color: ColorChoice) {
+  public init(steer: RunSteer, tree: OpeningTree, reps: [Playbook], node: OpeningNode, color: ColorChoice) {
     self.steer = steer
     self.tree = tree
     self.reps = reps
@@ -167,7 +167,7 @@ public struct StartOptions {
 }
 
 /// Open a run. Ignore my lines draws on the book alone, your prep kept to know where you missed.
-public func startSurvival(_ opts: StartOptions) -> SurvivalStart? {
+public func startRun(_ opts: StartOptions) -> RunBegun? {
   let blind = opts.steer == .book
   var begin = BeginOptions(tree: opts.tree, reps: blind ? [] : opts.reps, node: opts.node, color: opts.color)
   begin.steer = opts.steer == .gaps ? .gaps : opts.lean ?? .weak
@@ -187,18 +187,18 @@ public func startSurvival(_ opts: StartOptions) -> SurvivalStart? {
     let side = begun.run.color
     let rep = opts.reps.first { $0.color == side }
     source.prepAt = regionSource(opts.tree, opts.node, rep, side).prepAt
-    begun.run.repertoireId = rep?.id
+    begun.run.playbookId = rep?.id
   }
-  return SurvivalStart(source: source, state: SurvivalRun(run: begun.run, moves: 0, misses: [], extras: NO_EXTRAS), redraw: begun.redraw)
+  return RunBegun(source: source, state: RunTally(run: begun.run, moves: 0, misses: [], extras: NO_EXTRAS), redraw: begun.redraw)
 }
 
 /// Your prep's answers here, best first.
-public func prepHere(_ source: LineSource, _ state: SurvivalRun) -> [String] {
+public func prepHere(_ source: LineSource, _ state: RunTally) -> [String] {
   source.prepAt(state.run.fen)
 }
 
 /// One of your moves, passed by your prep or the engine. A miss is logged on the run.
-public func playYours(_ state: SurvivalRun, _ san: String, _ missed: String? = nil, _ extras: Extras? = nil) -> SurvivalRun {
+public func playYours(_ state: RunTally, _ san: String, _ missed: String? = nil, _ extras: Extras? = nil) -> RunTally {
   let run = state.run
   guard let move = applySan(run.fen, san) else { return state }
   var next = state
@@ -213,7 +213,7 @@ public func playYours(_ state: SurvivalRun, _ san: String, _ missed: String? = n
 }
 
 /// The opponent's reply from the book, when there is one.
-public func bookReply(_ source: LineSource, _ index: ReferenceIndex, _ state: SurvivalRun, _ rand: () -> Double) -> String? {
+public func bookReply(_ source: LineSource, _ index: ReferenceIndex, _ state: RunTally, _ rand: () -> Double) -> String? {
   let run = state.run
   if !source.weightsAt(run.fen, run.played).isEmpty {
     let next = opponentReply(source, run, rand)
@@ -235,7 +235,7 @@ public func bookReply(_ source: LineSource, _ index: ReferenceIndex, _ state: Su
 }
 
 /// The opponent's move, whoever chose it.
-public func playTheirs(_ state: SurvivalRun, _ san: String) -> SurvivalRun {
+public func playTheirs(_ state: RunTally, _ san: String) -> RunTally {
   guard let move = applySan(state.run.fen, san) else { return state }
   var next = state
   next.run.fen = move.after
@@ -253,7 +253,7 @@ public func moveNumber(_ ply: Int) -> Int {
 public let RECENT_RUNS = 5
 public let HISTORY_RUNS = 16
 
-public struct SurvivalScore: Equatable, Sendable, Codable {
+public struct RunScore: Equatable, Sendable, Codable {
   public var best = 0
   public var recent: [Int] = []
   public var history: [Int] = []
@@ -264,9 +264,9 @@ public struct SurvivalScore: Equatable, Sendable, Codable {
   public init() {}
 }
 
-public struct SurvivalRecord: Equatable, Sendable, Codable {
-  public var global = SurvivalScore()
-  public var openings: [String: SurvivalScore] = [:]
+public struct RunRecord: Equatable, Sendable, Codable {
+  public var global = RunScore()
+  public var openings: [String: RunScore] = [:]
   public init() {}
 }
 
@@ -280,8 +280,8 @@ public func openingsAlong(_ tree: OpeningTree, _ line: [String]) -> [String] {
   return out.keys
 }
 
-private func scored(_ score: SurvivalScore?, _ moves: Int, _ points: Int) -> SurvivalScore {
-  var out = score ?? SurvivalScore()
+private func scored(_ score: RunScore?, _ moves: Int, _ points: Int) -> RunScore {
+  var out = score ?? RunScore()
   out.best = max(out.best, moves)
   out.recent = Array((out.recent + [moves]).suffix(RECENT_RUNS))
   out.history = Array((out.history + [moves]).suffix(HISTORY_RUNS))
@@ -291,7 +291,7 @@ private func scored(_ score: SurvivalScore?, _ moves: Int, _ points: Int) -> Sur
 }
 
 /// Log a finished run against the global record and every opening it went through.
-public func recordSurvival(_ record: SurvivalRecord, _ tree: OpeningTree, _ line: [String], _ moves: Int, _ points: Int? = nil) -> SurvivalRecord {
+public func recordRun(_ record: RunRecord, _ tree: OpeningTree, _ line: [String], _ moves: Int, _ points: Int? = nil) -> RunRecord {
   var out = record
   for id in openingsAlong(tree, line) { out.openings[id] = scored(out.openings[id], moves, points ?? moves) }
   out.global = scored(record.global, moves, points ?? moves)
@@ -299,15 +299,15 @@ public func recordSurvival(_ record: SurvivalRecord, _ tree: OpeningTree, _ line
 }
 
 /// Log a run you ended yourself: counted, and nothing toward best or recent form.
-public func recordEndedSurvival(_ record: SurvivalRecord, _ tree: OpeningTree, _ line: [String]) -> SurvivalRecord {
+public func recordEndedRun(_ record: RunRecord, _ tree: OpeningTree, _ line: [String]) -> RunRecord {
   var out = record
-  for id in openingsAlong(tree, line) { out.openings[id, default: SurvivalScore()].ended += 1 }
+  for id in openingsAlong(tree, line) { out.openings[id, default: RunScore()].ended += 1 }
   out.global.ended += 1
   return out
 }
 
 /// Recent form: the median of the last few runs, or nil before any.
-public func recentForm(_ score: SurvivalScore?) -> Double? {
+public func recentForm(_ score: RunScore?) -> Double? {
   let recent = score?.recent ?? []
   if recent.isEmpty { return nil }
   let sorted = recent.sorted()
@@ -316,12 +316,12 @@ public func recentForm(_ score: SurvivalScore?) -> Double? {
 }
 
 /// The score for an opening, or the global one for the root.
-public func survivalFor(_ record: SurvivalRecord, _ id: String) -> SurvivalScore {
-  id.isEmpty ? record.global : record.openings[id] ?? SurvivalScore()
+public func runFor(_ record: RunRecord, _ id: String) -> RunScore {
+  id.isEmpty ? record.global : record.openings[id] ?? RunScore()
 }
 
-extension SurvivalScore {
-  /// A saved score missing a field is still a score: `normalizeSurvival`.
+extension RunScore {
+  /// A saved score missing a field is still a score: `normalizeRun`.
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
     self.init()
@@ -336,11 +336,11 @@ extension SurvivalScore {
   }
 }
 
-extension SurvivalRecord {
+extension RunRecord {
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
     self.init()
-    global = try c.decodeIfPresent(SurvivalScore.self, forKey: .global) ?? SurvivalScore()
-    openings = try c.decodeIfPresent([String: SurvivalScore].self, forKey: .openings) ?? [:]
+    global = try c.decodeIfPresent(RunScore.self, forKey: .global) ?? RunScore()
+    openings = try c.decodeIfPresent([String: RunScore].self, forKey: .openings) ?? [:]
   }
 }

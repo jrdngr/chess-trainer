@@ -1,8 +1,8 @@
 import Foundation
 
 /* Your playing strength, as the judge sees it: a rating estimated from what
- * your moves cost once you're past your prep. The opponent in Autopilot plays
- * at it, and Survival can too. It's kept apart from the openings' ratings,
+ * your moves cost once you're past your prep. The opponent in Play plays
+ * at it, and Run can too. It's kept apart from the openings' ratings,
  * which measure how well you know your prep. */
 
 /// The estimate and how many moves it rests on.

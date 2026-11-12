@@ -33,7 +33,7 @@ struct Signals {
 
 /// What asking about a move leaves out: positions behind you, or going with a subtree.
 public struct SignalOptions {
-  /// Positions to treat as gone, as if their lines were not in the repertoire.
+  /// Positions to treat as gone, as if their lines were not in the playbook.
   public var gone: Set<String>?
   /// Count the lines each move closes off (red), which costs the most. Default true.
   public var away: Bool?

@@ -102,9 +102,9 @@ struct SaveSheet: View {
     var added = 0
     var repId = ""
     store.update { state in
-      repId = state.ensureRepertoire(side)
+      repId = state.ensurePlaybook(side)
       added = state.addLine(repId, line, .fixed(source))
-      if let note, upTo == slice.count, let rep = state.repertoires[repId], let tip = nodeAtLine(rep, line) {
+      if let note, upTo == slice.count, let rep = state.playbooks[repId], let tip = nodeAtLine(rep, line) {
         state.annotate(repId, tip.id, note)
       }
     }

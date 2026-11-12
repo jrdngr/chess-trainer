@@ -6,9 +6,9 @@ import SwiftUI
 
 /// The end of a run. Final position and End of prep to switch
 /// between, the board, Grow this line, Analyze and Back Home (Next run in
-/// Survival and Middlegame), then what
-/// the run came to and the rating it moved. A Survival run you set up
-/// (no Autopilot round) adds its own parts: `SurvivalEndParts`. A Middlegame
+/// Run and Middlegame), then what
+/// the run came to and the rating it moved. A Run run you set up
+/// (no Play round) adds its own parts: `RunEndParts`. A Middlegame
 /// run names its start Handoff, scores in points and offers Same line.
 struct EndView: View {
   let model: RunModel
@@ -16,7 +16,7 @@ struct EndView: View {
   let onNext: () -> Void
   let onAnalyze: () -> Void
   let onExit: () -> Void
-  /// Back to Survival's setup; nil when Autopilot set the run up.
+  /// Back to Run's setup; nil when Play set the run up.
   let onChangeOptions: (() -> Void)?
   /// Middlegame's: the same line played out again.
   let onSameLine: (() -> Void)?
@@ -49,8 +49,8 @@ struct EndView: View {
     _card = State(initialValue: model.endSeen ? .placed(arriving: false) : .play)
   }
 
-  /// Survival opened from Home, not Autopilot's round.
-  private var survival: Bool { model.round == nil }
+  /// Run opened from Home, not Play's round.
+  private var standalone: Bool { model.round == nil }
   /// A Middlegame run, begun at its handoff.
   private var middlegame: Bool { model.handoff != nil }
 
@@ -76,18 +76,18 @@ struct EndView: View {
   /// The misses Tidy has a switch for; only when there is a Tidy to go to.
   private var hints: [Int: TidyFind] {
     guard openTidy != nil, let index = store.index else { return [:] }
-    let rep = store.state.repertoireList.first { $0.color == run.color }
+    let rep = store.state.playbookList.first { $0.color == run.color }
     return tidyHints(finish.ended.misses, rep, index, model.round != nil ? AUTO_GROWTH : store.state.settings.growth)
   }
 
   var body: some View {
     VStack(spacing: 0) {
-      if survival {
-        SurvivalBar(title: "Middlegame", subtitle: openingName(model.tree, run.enteredIn ?? run.openingId), onClose: onExit) {
+      if standalone {
+        RunBar(title: "Middlegame", subtitle: openingName(model.tree, run.enteredIn ?? run.openingId), onClose: onExit) {
           EmptyView()
         }
       }
-      scroll.modifier(SurvivalDebugScroll())
+      scroll.modifier(RunDebugScroll())
     }
     .onAppear {
       if reduceMotion { card = .placed(arriving: false) }
@@ -115,7 +115,7 @@ struct EndView: View {
     let missAt = finish.ended.misses.first { $0.ply == cursor }
     return ScrollView {
       VStack(spacing: 0) {
-        if !survival { header.padding(.bottom, 14) }
+        if !standalone { header.padding(.bottom, 14) }
         if let prepAt {
           SegmentedControl(
             value: Binding(get: { cursor == prepAt ? 0 : cursor == last ? 1 : -1 }, set: { seek($0 == 0 ? prepAt : last) }),
@@ -177,7 +177,7 @@ struct EndView: View {
           .buttonStyle(PlayButtonStyle(height: 52, block: true, inset: 8))
         }
         Button(action: onNext) {
-          if survival {
+          if standalone {
             HStack(spacing: 6) { Text("Next run"); Icon(name: "next", size: 18) }
           } else {
             HStack(spacing: 6) { Icon(name: "house", size: 18); Text("Back Home") }
@@ -192,9 +192,9 @@ struct EndView: View {
       MoveStrip(items: strip, cursor: cursor, max: last, onSeek: seek)
       ratingCard
       RatingsList(items: moved).padding(.top, 10)
-      if survival {
-        SurvivalSummary(
-          finish: finish, prefs: model.prefs, scoredInPoints: model.scoredInPoints, before: model.before ?? SurvivalRecord(),
+      if standalone {
+        RunSummary(
+          finish: finish, prefs: model.prefs, scoredInPoints: model.scoredInPoints, before: model.before ?? RunRecord(),
           pointsOnly: middlegame)
       } else {
         summary
@@ -209,10 +209,10 @@ struct EndView: View {
               record: store.state.middlegame, moves: finish.ended.extras.points, title: "Middlegame points")
           } else {
             MovesSurvivedList(
-              tree: model.tree, line: run.played, opening: playedNode.id, record: store.state.survival,
+              tree: model.tree, line: run.played, opening: playedNode.id, record: store.state.runRecord,
               moves: finish.ended.moves)
           }
-          SurvivalEndActions(played: sansToMoveText(run.played + (blunder.map { [$0.played] } ?? [])), onChangeOptions: onChangeOptions)
+          RunEndActions(played: sansToMoveText(run.played + (blunder.map { [$0.played] } ?? [])), onChangeOptions: onChangeOptions)
         }
         .padding(.top, -14)
       }
@@ -294,7 +294,7 @@ struct EndView: View {
     .background(RoundedRectangle(cornerRadius: 18).fill(Theme.surface))
   }
 
-  /// Survival's: the blunder beside the engine's move, or a miss beside your prep, where they were played.
+  /// Run's: the blunder beside the engine's move, or a miss beside your prep, where they were played.
   private func highlights(_ missAt: Miss?) -> [String: SwiftUI.Color] {
     if onBlunder, let blunder { return endHighlights(run.fen, played: blunder.played, right: blunder.best) }
     if let missAt { return endHighlights(missAt.fen, played: missAt.played, right: missAt.expected) }

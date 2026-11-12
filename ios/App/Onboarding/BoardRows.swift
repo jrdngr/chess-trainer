@@ -10,7 +10,7 @@ func boardRows(_ state: AppState, _ tree: OpeningTree, _ index: ReferenceIndex, 
   next.onboarded(tree, [], saved)
   var order: [String] = []
   var rows: [String: PendingOpening] = [:]
-  for rep in next.repertoireList {
+  for rep in next.playbookList {
     let tips: [(tip: RepMove, line: OnboardingLine)] = saved.filter { $0.color == rep.color }.compactMap { line in
       let fen = walkSan(line.sans).fens.last
       let tip = rep.nodes.values.first { $0.fenAfter == fen && $0.san == line.sans.last }

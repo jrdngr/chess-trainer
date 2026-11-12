@@ -11,9 +11,9 @@ import Shared
 /// How much more a reply weighs when it leads toward a gap that is due a new move.
 public let DUE_GAP_BOOST: Double = 6
 
-/// How much each line of a repertoire needs practice, by tip: how weak its
+/// How much each line of a playbook needs practice, by tip: how weak its
 /// positions are, times how long it has been left.
-func lineNeeds(_ rep: Repertoire, _ side: Color, weakness: Weakness?, seen: Seen) -> [String: Double] {
+func lineNeeds(_ rep: Playbook, _ side: Color, weakness: Weakness?, seen: Seen) -> [String: Double] {
   var out: [String: Double] = [:]
   for line in leafLines(rep) {
     let keys = pathTo(rep, line.tipId).filter { fenTurn($0.fenBefore) == side }.map(\.key)
@@ -23,8 +23,8 @@ func lineNeeds(_ rep: Repertoire, _ side: Color, weakness: Weakness?, seen: Seen
   return out
 }
 
-/// The mean need of the lines through each position of a repertoire, by position key.
-func positionNeeds(_ rep: Repertoire, _ lines: [String: Double]) -> [String: Double] {
+/// The mean need of the lines through each position of a playbook, by position key.
+func positionNeeds(_ rep: Playbook, _ lines: [String: Double]) -> [String: Double] {
   var sum: [String: Double] = [:]
   var count: [String: Double] = [:]
   for (tipId, need) in lines {
@@ -41,11 +41,11 @@ func positionNeeds(_ rep: Repertoire, _ lines: [String: Double]) -> [String: Dou
   return out
 }
 
-/// What a Freeform run plays from: your whole repertoire for the side, the
+/// What a Freeform run plays from: your whole playbook for the side, the
 /// opponent weighing its replies at every turn. `node` is the opening picked on
 /// Home (the root for Any Opening); `due` are the lines of gaps due a new move.
 public func freeformSource(
-  _ tree: OpeningTree, _ node: OpeningNode, _ rep: Repertoire?, _ color: Color,
+  _ tree: OpeningTree, _ node: OpeningNode, _ rep: Playbook?, _ color: Color,
   weakness: Weakness?, seen: Seen, due: [[String]]
 ) -> LineSource {
   let index = tree.index
@@ -111,7 +111,7 @@ public func freeformSource(
 
 /// The lines of the gaps on one side of a selection that are due a new move now.
 public func dueGapLines(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, color: Color) -> [[String]] {
-  let reps = state.repertoireList
+  let reps = state.playbookList
   let p = pace(runs: runsSinceAdded(state.games, reps), size: state.settings.movesPerFill)
   if p < 1 { return [] }
   let ranked = selectionGaps(state, tree, selection)

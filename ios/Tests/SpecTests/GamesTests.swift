@@ -5,7 +5,7 @@ import Testing
 
 private func game(_ id: String, at: Double, moves: [String] = ["e4", "e5"]) -> GameRecord {
   GameRecord(
-    id: id, mode: .play, at: at, color: .w, picked: Selection(color: .w, opening: ""), opening: "",
+    id: id, mode: .freePlay, at: at, color: .w, picked: Selection(color: .w, opening: ""), opening: "",
     moves: moves, result: "1-0", termination: "checkmate")
 }
 
@@ -57,21 +57,21 @@ private func outcome(_ how: Ending, _ color: ChessCore.Color) -> [String] {
   let tree = openingTree(bookIndex)
   // 2026-11-04 12:00:05 UTC.
   let record = GameRecord(
-    id: "x", mode: .survival, at: 1_793_793_605_000, color: .b, picked: Selection(color: .b, opening: LEGACY_ANY_FAVORITE),
+    id: "x", mode: .run, at: 1_793_793_605_000, color: .b, picked: Selection(color: .b, opening: LEGACY_ANY_FAVORITE),
     opening: "e4 c5 d4", moves: ["e4", "c5", "d4", "cxd4"], opened: 3, result: "*", termination: "blunder")
   let pgn = gamePgn(record, tree)
   let opening = nodeById(tree, "e4 c5 d4").name
   #expect(pgn == """
-    [Event "Chess Playbook Survival"]
+    [Event "Chess Playbook Run"]
     [Site "Chess Playbook"]
     [Date "2026.11.04"]
     [Round "-"]
-    [White "Chess Playbook Survival"]
+    [White "Chess Playbook Run"]
     [Black "You"]
     [Result "*"]
     [UTCTime "12:00:05"]
     [Termination "blunder"]
-    [Mode "survival"]
+    [Mode "run"]
     [Picked "Any Opening"]
     [Opening "\(opening)"]
     [Opened "3"]
@@ -80,7 +80,7 @@ private func outcome(_ how: Ending, _ color: ChessCore.Color) -> [String] {
 
     """)
   let mine = GameRecord(
-    id: "y", mode: .play, at: 0, color: .w, picked: Selection(color: .w, opening: ANY_OPENING),
+    id: "y", mode: .freePlay, at: 0, color: .w, picked: Selection(color: .w, opening: ANY_OPENING),
     opening: "", moves: ["e4"], result: "1-0", termination: "resignation")
   let lines = gamePgn(mine, tree).split(separator: "\n")
   #expect(lines.contains("[Picked \"Any Opening\"]"))
@@ -95,7 +95,7 @@ private func outcome(_ how: Ending, _ color: ChessCore.Color) -> [String] {
   #expect(old.games.isEmpty)
   var state = AppState()
   state.recordGame(GameRecord(
-    id: "r1", mode: .autopilot, at: 7, color: .b, picked: Selection(color: .b, opening: "caro"),
+    id: "r1", mode: .play, at: 7, color: .b, picked: Selection(color: .b, opening: "caro"),
     opening: "caro", moves: ["e4", "c6"], result: "*", termination: "ended"))
   #expect(state.recent == [RecentPick(opening: "caro", color: .b, at: 7)])
   let data = try JSONEncoder().encode(state)

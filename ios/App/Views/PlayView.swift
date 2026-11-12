@@ -4,10 +4,10 @@ import Engine
 import Model
 import SwiftUI
 
-/// Autopilot: a Survival run decided for you. A finished round stays on its board with
+/// Play: a Run run decided for you. A finished round stays on its board with
 /// the deck under it, and the next round is drawn from the deck; the close button leaves.
 /// A tutorial game also stays on its board when it ends, with no deck: its X goes back Home.
-struct AutopilotView: View {
+struct PlayView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
   /// Analysis on a line grown here, seen from a side, opened over the mode.
@@ -80,7 +80,7 @@ struct AutopilotView: View {
     if let game = store.state.settings.tutorial?.next {
       return RunModel(tutorial: game, store: store, tree: tree, index: index, engine: engine)
     }
-    if store.state.repertoires.values.allSatisfy({ $0.nodes.isEmpty }) {
+    if store.state.playbooks.values.allSatisfy({ $0.nodes.isEmpty }) {
       return RunModel(firstGame: store, tree: tree, index: index, engine: engine)
     }
     let selection = store.takeRoundSelection()

@@ -1,20 +1,20 @@
 import ChessCore
 import Foundation
 
-/// The games you played here, newest first: Survival, Autopilot and Middlegame
+/// The games you played here, newest first: Run, Play and Middlegame
 /// runs, and Play games. Recent reads the openings you picked from them, and
 /// Export writes them out as PGN.
 
 /// The mode a game was played in.
 public enum GameMode: String, Sendable, Codable, CaseIterable {
-  case survival, autopilot, middlegame, play
+  case run, play, middlegame, freePlay
 
   public var label: String {
     switch self {
-    case .survival: "Survival"
-    case .autopilot: "Play"
+    case .run: "Run"
+    case .play: "Play"
     case .middlegame: "Middlegame"
-    case .play: "Free play"
+    case .freePlay: "Free play"
     }
   }
 }
@@ -72,7 +72,7 @@ public func pgnResult(won: Bool?, color: Color) -> String {
   return won == (color == .w) ? "1-0" : "0-1"
 }
 
-/// How a Survival, Autopilot or Middlegame run ended, as PGN's result and termination.
+/// How a Run, Play or Middlegame run ended, as PGN's result and termination.
 /// A run that stopped on a blunder or by your hand has no result.
 public func runOutcome(_ how: Ending, color: Color) -> (result: String, termination: String) {
   switch how {
@@ -166,11 +166,11 @@ public struct PlaybookExport: Encodable {
   public var format = "chess-playbook-playbook"
   public var version = 1
   public var exportedAt: String
-  public var repertoires: [Repertoire]
+  public var playbooks: [Playbook]
 
-  public init(exportedAt: String, repertoires: [Repertoire]) {
+  public init(exportedAt: String, playbooks: [Playbook]) {
     self.exportedAt = exportedAt
-    self.repertoires = repertoires
+    self.playbooks = playbooks
   }
 }
 

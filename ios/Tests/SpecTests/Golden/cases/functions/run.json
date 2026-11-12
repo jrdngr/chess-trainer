@@ -1,8 +1,8 @@
 {
-  "area": "survival",
+  "area": "run",
   "functions": [
     {
-      "fn": "survival.moveScore",
+      "fn": "run.moveScore",
       "about": "A move's score over its square: centipawns gained or lost, and its tone.",
       "cases": [
       {"args":[-250],"out":{"cp":-250,"tone":"bad"}},
@@ -509,7 +509,7 @@
       ]
     },
     {
-      "fn": "survival.evalSwing",
+      "fn": "run.evalSwing",
       "about": "What a move changed, from your side; null when either side is a mate.",
       "cases": [
       {"args":["w",-10000,-10000],"out":null},
@@ -611,7 +611,7 @@
       ]
     },
     {
-      "fn": "survival.speedTone",
+      "fn": "run.speedTone",
       "about": "The color of a prepared move found, by how long it took.",
       "cases": [
       {"args":[0],"out":"up"},
@@ -768,7 +768,7 @@
       ]
     },
     {
-      "fn": "survival.secondsText",
+      "fn": "run.secondsText",
       "about": "How a time is written.",
       "cases": [
       {"args":[0],"out":"0.0s"},
@@ -790,7 +790,7 @@
       ]
     },
     {
-      "fn": "survival.comboAfter",
+      "fn": "run.comboAfter",
       "about": "The combo streak after a move that lost this many centipawns.",
       "cases": [
       {"args":[0,0],"out":1},
@@ -952,7 +952,7 @@
       ]
     },
     {
-      "fn": "survival.comboMultiplier",
+      "fn": "run.comboMultiplier",
       "about": "What a streak multiplies points by.",
       "cases": [
       {"args":[0],"out":1},
@@ -979,7 +979,7 @@
       ]
     },
     {
-      "fn": "survival.isMoment",
+      "fn": "run.isMoment",
       "about": "Whether one move here is far better than the rest.",
       "cases": [
       {"args":["w",-400,null],"out":false},
@@ -1271,7 +1271,7 @@
       ]
     },
     {
-      "fn": "survival.momentBonus",
+      "fn": "run.momentBonus",
       "about": "A moment's bonus, by the streak of moments found.",
       "cases": [
       {"args":[0],"out":10},
@@ -1290,7 +1290,7 @@
       ]
     },
     {
-      "fn": "survival.missionTitle",
+      "fn": "run.missionTitle",
       "about": "A mission's name.",
       "cases": [
       {"args":["edge"],"out":"Keep your edge"},
@@ -1301,7 +1301,7 @@
       ]
     },
     {
-      "fn": "survival.moveNumber",
+      "fn": "run.moveNumber",
       "about": "The move number a ply count is on.",
       "cases": [
       {"args":[0],"out":1},
@@ -1348,7 +1348,7 @@
       ]
     },
     {
-      "fn": "survival.survivalSteerLabel",
+      "fn": "run.runSteerLabel",
       "about": "Each steer's name.",
       "cases": [
       {"args":["lines"],"out":"My lines"},
@@ -1357,7 +1357,7 @@
       ]
     },
     {
-      "fn": "survival.openingsAlong",
+      "fn": "run.openingsAlong",
       "about": "Every opening a line went through, and every opening above those.",
       "cases": [
       {"args":["e4"],"out":["e4"]},
@@ -1368,8 +1368,8 @@
       ]
     },
     {
-      "fn": "survival.recordSurvival (runs)",
-      "about": "Survival's record over runs: best and best points only go up, recent form is the median of the last 5, the chart keeps 16, and a run you end yourself is only counted.",
+      "fn": "run.recordRun (runs)",
+      "about": "Run's record over runs: best and best points only go up, recent form is the median of the last 5, the chart keeps 16, and a run you end yourself is only counted.",
       "cases": [
       {"args":[[{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":12},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":5},{"line":"e4 e5","moves":30,"points":55},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","ended":true},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":8}],"e4 c5"],"out":[{"global":{"best":12,"recent":[12],"history":[12],"runs":1,"ended":0,"bestPoints":12},"opening":{"best":12,"recent":[12],"history":[12],"runs":1,"ended":0,"bestPoints":12},"form":12},{"global":{"best":12,"recent":[12,5],"history":[12,5],"runs":2,"ended":0,"bestPoints":12},"opening":{"best":12,"recent":[12,5],"history":[12,5],"runs":2,"ended":0,"bestPoints":12},"form":9},{"global":{"best":30,"recent":[12,5,30],"history":[12,5,30],"runs":3,"ended":0,"bestPoints":55},"opening":{"best":12,"recent":[12,5],"history":[12,5],"runs":2,"ended":0,"bestPoints":12},"form":12},{"global":{"best":30,"recent":[12,5,30],"history":[12,5,30],"runs":3,"ended":1,"bestPoints":55},"opening":{"best":12,"recent":[12,5],"history":[12,5],"runs":2,"ended":1,"bestPoints":12},"form":12},{"global":{"best":30,"recent":[12,5,30,8],"history":[12,5,30,8],"runs":4,"ended":1,"bestPoints":55},"opening":{"best":12,"recent":[12,5,8],"history":[12,5,8],"runs":3,"ended":1,"bestPoints":12},"form":10}]},
       {"args":[[{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":0},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":7},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":14},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":21},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":5},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":12},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":19},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":3},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":10},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":17},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":1},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":8},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":15},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":22},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":6},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":13},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":20},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","moves":4}],"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"],"out":[{"global":{"best":0,"recent":[0],"history":[0],"runs":1,"ended":0,"bestPoints":0},"opening":{"best":0,"recent":[0],"history":[0],"runs":1,"ended":0,"bestPoints":0},"form":0},{"global":{"best":7,"recent":[0,7],"history":[0,7],"runs":2,"ended":0,"bestPoints":7},"opening":{"best":7,"recent":[0,7],"history":[0,7],"runs":2,"ended":0,"bestPoints":7},"form":4},{"global":{"best":14,"recent":[0,7,14],"history":[0,7,14],"runs":3,"ended":0,"bestPoints":14},"opening":{"best":14,"recent":[0,7,14],"history":[0,7,14],"runs":3,"ended":0,"bestPoints":14},"form":7},{"global":{"best":21,"recent":[0,7,14,21],"history":[0,7,14,21],"runs":4,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[0,7,14,21],"history":[0,7,14,21],"runs":4,"ended":0,"bestPoints":21},"form":11},{"global":{"best":21,"recent":[0,7,14,21,5],"history":[0,7,14,21,5],"runs":5,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[0,7,14,21,5],"history":[0,7,14,21,5],"runs":5,"ended":0,"bestPoints":21},"form":7},{"global":{"best":21,"recent":[7,14,21,5,12],"history":[0,7,14,21,5,12],"runs":6,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[7,14,21,5,12],"history":[0,7,14,21,5,12],"runs":6,"ended":0,"bestPoints":21},"form":12},{"global":{"best":21,"recent":[14,21,5,12,19],"history":[0,7,14,21,5,12,19],"runs":7,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[14,21,5,12,19],"history":[0,7,14,21,5,12,19],"runs":7,"ended":0,"bestPoints":21},"form":14},{"global":{"best":21,"recent":[21,5,12,19,3],"history":[0,7,14,21,5,12,19,3],"runs":8,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[21,5,12,19,3],"history":[0,7,14,21,5,12,19,3],"runs":8,"ended":0,"bestPoints":21},"form":12},{"global":{"best":21,"recent":[5,12,19,3,10],"history":[0,7,14,21,5,12,19,3,10],"runs":9,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[5,12,19,3,10],"history":[0,7,14,21,5,12,19,3,10],"runs":9,"ended":0,"bestPoints":21},"form":10},{"global":{"best":21,"recent":[12,19,3,10,17],"history":[0,7,14,21,5,12,19,3,10,17],"runs":10,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[12,19,3,10,17],"history":[0,7,14,21,5,12,19,3,10,17],"runs":10,"ended":0,"bestPoints":21},"form":12},{"global":{"best":21,"recent":[19,3,10,17,1],"history":[0,7,14,21,5,12,19,3,10,17,1],"runs":11,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[19,3,10,17,1],"history":[0,7,14,21,5,12,19,3,10,17,1],"runs":11,"ended":0,"bestPoints":21},"form":10},{"global":{"best":21,"recent":[3,10,17,1,8],"history":[0,7,14,21,5,12,19,3,10,17,1,8],"runs":12,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[3,10,17,1,8],"history":[0,7,14,21,5,12,19,3,10,17,1,8],"runs":12,"ended":0,"bestPoints":21},"form":8},{"global":{"best":21,"recent":[10,17,1,8,15],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15],"runs":13,"ended":0,"bestPoints":21},"opening":{"best":21,"recent":[10,17,1,8,15],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15],"runs":13,"ended":0,"bestPoints":21},"form":10},{"global":{"best":22,"recent":[17,1,8,15,22],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15,22],"runs":14,"ended":0,"bestPoints":22},"opening":{"best":22,"recent":[17,1,8,15,22],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15,22],"runs":14,"ended":0,"bestPoints":22},"form":15},{"global":{"best":22,"recent":[1,8,15,22,6],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15,22,6],"runs":15,"ended":0,"bestPoints":22},"opening":{"best":22,"recent":[1,8,15,22,6],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15,22,6],"runs":15,"ended":0,"bestPoints":22},"form":8},{"global":{"best":22,"recent":[8,15,22,6,13],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15,22,6,13],"runs":16,"ended":0,"bestPoints":22},"opening":{"best":22,"recent":[8,15,22,6,13],"history":[0,7,14,21,5,12,19,3,10,17,1,8,15,22,6,13],"runs":16,"ended":0,"bestPoints":22},"form":13},{"global":{"best":22,"recent":[15,22,6,13,20],"history":[7,14,21,5,12,19,3,10,17,1,8,15,22,6,13,20],"runs":17,"ended":0,"bestPoints":22},"opening":{"best":22,"recent":[15,22,6,13,20],"history":[7,14,21,5,12,19,3,10,17,1,8,15,22,6,13,20],"runs":17,"ended":0,"bestPoints":22},"form":15},{"global":{"best":22,"recent":[22,6,13,20,4],"history":[14,21,5,12,19,3,10,17,1,8,15,22,6,13,20,4],"runs":18,"ended":0,"bestPoints":22},"opening":{"best":22,"recent":[22,6,13,20,4],"history":[14,21,5,12,19,3,10,17,1,8,15,22,6,13,20,4],"runs":18,"ended":0,"bestPoints":22},"form":13}]},
@@ -1377,7 +1377,7 @@
       ]
     },
     {
-      "fn": "survival.recentForm",
+      "fn": "run.recentForm",
       "about": "Recent form: the median of the last few runs, rounded, or null before any.",
       "cases": [
       {"args":[[]],"out":null},
@@ -1389,7 +1389,7 @@
       ]
     },
     {
-      "fn": "survival.normalizeSurvival",
+      "fn": "run.normalizeRun",
       "about": "A saved record missing a field is still a record.",
       "cases": [
       {"args":[null],"out":{"global":{"best":0,"recent":[],"history":[],"runs":0,"ended":0,"bestPoints":0},"openings":{}}},
@@ -1399,8 +1399,8 @@
       ]
     },
     {
-      "fn": "survival.DEFAULT_SURVIVAL",
-      "about": "Survival's options as a new player has them.",
+      "fn": "run.DEFAULT_RUN",
+      "about": "Run's options as a new player has them.",
       "cases": [
       {"args":[],"out":{"steer":"lines","clock":"off","moveScores":true,"moments":true,"missions":true,"combo":true,"undefendedFlash":false}}
       ]
