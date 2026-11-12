@@ -68,14 +68,6 @@ public func missionFor(_ color: Color, _ cp: Double, _ fen: String? = nil) -> Mi
   return Mission(kind: at >= MISSION_LEAD ? .edge : at <= -MISSION_LEAD ? .dig : .lead)
 }
 
-/// The plan as a mission, when the pawns form a named structure and one of its squares is in reach.
-public func planMission(_ fen: String, _ color: Color, _ cp: Double) -> Mission? {
-  guard let structure = structureOf(fen) else { return nil }
-  let goals = planFor(structure, color).flatMap { $0.goals ?? [] }.filter { !goalRoute(fen, color, $0).done }
-  if !goals.contains(where: { !goalRoute(fen, color, $0).arrows.isEmpty }) { return nil }
-  return Mission(kind: .plan, goals: goals, start: mine(color, cp))
-}
-
 public func missionTitle(_ kind: MissionKind) -> String {
   switch kind {
   case .edge: return "Keep your edge"
@@ -104,21 +96,6 @@ public func missionTurnsLeft(_ mission: Mission) -> Int {
   case .plan: return PLAN_WINDOW - mission.moves
   case .convert: return CONVERT_WINDOW - mission.moves
   default: return MISSION_WINDOW - mission.moves
-  }
-}
-
-/// The mission's line under "Your move".
-public func missionText(_ mission: Mission) -> String {
-  func left(_ window: Int) -> String {
-    let n = window - mission.moves
-    return "\(n) move\(n == 1 ? "" : "s") left"
-  }
-  let dot = " \u{00b7} "
-  switch mission.kind {
-  case .edge: return missionTitle(mission.kind) + dot + "\(mission.held) of \(EDGE_MOVES)"
-  case .plan: return missionTitle(mission.kind) + dot + left(PLAN_WINDOW)
-  case .convert: return missionTitle(mission.kind) + dot + "trade a piece" + dot + left(CONVERT_WINDOW)
-  default: return missionTitle(mission.kind) + dot + left(MISSION_WINDOW)
   }
 }
 

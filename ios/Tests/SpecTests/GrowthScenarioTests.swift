@@ -26,7 +26,7 @@ import Testing
       obj(["path": run.path, "fen": run.fen, "hole": run.hole.map(holeJSON) ?? .null, "targets": run.targets.sorted()])
     }
     func sessionJSON(_ s: GrowthSession) -> JSON {
-      let round = growthRound(s, tree, tree.root, allowanceOf(s, maxPly), at: 0).map { r -> JSON in
+      let round = growthRound(s, tree, tree.root, s.batch?.allowance ?? addsToFit(s.run.path.count, maxPly), at: 0).map { r -> JSON in
         var o = encoded(r).object
         o["at"] = nil
         return .object(o)

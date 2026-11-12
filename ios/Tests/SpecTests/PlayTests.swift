@@ -3,19 +3,6 @@ import Foundation
 import Model
 import Testing
 
-/// Golden/cases/functions/play.json, built as `play.cases.ts` builds them.
-@Test func play() throws {
-  let long = "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O h3 Nb8 d4 Nbd7 c4 c6 cxb5 axb5 Nc3 Bb7 Bg5 b4 Nb1 h6 Bh4 c5 dxe5 Nxe5 Nxe5 dxe5 Qxd8 Rfxd8 Nd2 Bd6 f3"
-    .split(separator: " ").map(String.init)
-  func color(_ j: JSON) -> Color { Color(rawValue: j.string)! }
-
-  // Levels and move choice no longer match the web: levels are ratings now.
-  // Their own tests are below.
-  try check("play", [
-    "play.openingLine": { a in openingLine(Array(long.prefix(a[0].int)), color(a[1])).joined(separator: " ").json },
-  ], only: ["play.openingLine"])
-}
-
 /// Candidate lines best first, from White's side, each costing what's given.
 private func candidates(_ losses: [Double]) -> [EngineLine] {
   losses.enumerated().map { i, loss in EngineLine(multipv: i + 1, depth: 5, cp: 50 - loss, mate: nil, pv: ["m\(i + 1)"]) }
@@ -30,14 +17,14 @@ private func picks(_ lines: [EngineLine], _ level: Level) -> [String: Int] {
 }
 
 @Test func levelsAreRatings() {
-  #expect(levels().map(\.name) == ["800", "1200", "1600", "2000"])
+  #expect(LEVEL_RATINGS.map(levelFor(rating:)).map(\.name) == ["800", "1200", "1600", "2000"])
   #expect(levelById("1600").rating == 1600)
   // Saves from before keep a matching strength.
   #expect(levelById("club").rating == 1200)
   #expect(levelById("full").rating == 2000)
   #expect(levelById("nonsense").rating == 1200)
   // Stronger looks further and gives up less.
-  for (weaker, stronger) in zip(levels(), levels().dropFirst()) {
+  for (weaker, stronger) in zip(LEVEL_RATINGS.map(levelFor(rating:)), LEVEL_RATINGS.map(levelFor(rating:)).dropFirst()) {
     #expect(weaker.depth <= stronger.depth)
     #expect(weaker.temperature > stronger.temperature)
     #expect(weaker.window > stronger.window)
@@ -58,7 +45,7 @@ private func picks(_ lines: [EngineLine], _ level: Level) -> [String: Int] {
 @Test func aSeenBlunderIsNeverPlayed() {
   // One move keeps the piece; eleven drop it (9...Rb8 instead of 9...Nxf5).
   let lines = candidates([0] + Array(repeating: 300, count: 11))
-  for level in [levelFor(rating: MIN_RATING)] + levels() {
+  for level in [levelFor(rating: MIN_RATING)] + LEVEL_RATINGS.map(levelFor(rating:)) {
     #expect(picks(lines, level)["m1", default: 0] == 4000)
   }
 }

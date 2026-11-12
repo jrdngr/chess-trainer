@@ -451,17 +451,6 @@ public func control(_ fen: String, _ me: Color) -> [Control] {
   return out
 }
 
-/// Squares each side holds outright in the other's half.
-public func spaceCount(_ fen: String, _ me: Color) -> (mine: Int, theirs: Int) {
-  var mine = 0, theirs = 0
-  for c in control(fen, me) {
-    let rank = coords(c.square).rank
-    if c.holder == "mine" && rel(me, rank) >= 4 { mine += 1 }
-    if c.holder == "theirs" && rel(me.other, rank) >= 4 { theirs += 1 }
-  }
-  return (mine, theirs)
-}
-
 /// Who holds each square and by how much: blue yours, red theirs, purple contested
 /// (leaning to whoever has the cheaper attacker). Drawn under the Pieces lens.
 public func controlTints(_ fen: String, _ me: Color) -> [Tint] {

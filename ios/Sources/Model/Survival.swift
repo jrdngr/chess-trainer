@@ -59,21 +59,6 @@ public func secondsText(_ seconds: Double) -> String {
   seconds < 10 ? "\(JS.toFixed(seconds, 1))s" : "\(JS.string(JS.round(seconds)))s"
 }
 
-/// How a run went on your prep, for its end screen.
-public func prepSummary(_ found: Int, _ asked: Int, _ seconds: [Double], _ book: Int = 0) -> String? {
-  if asked == 0 && book == 0 { return nil }
-  var parts: [String] = []
-  if asked > 0 {
-    parts.append("Prep \(found) of \(asked)")
-    if !seconds.isEmpty {
-      parts.append("\(secondsText(seconds.reduce(0, +) / Double(seconds.count))) average")
-      parts.append("\(seconds.filter { gradeForTime($0) == .easy }.count) fast")
-    }
-  }
-  if book > 0 { parts.append("\(book) book move\(book == 1 ? "" : "s")") }
-  return parts.joined(separator: " \u{00b7} ")
-}
-
 public enum GlowTone: String, Sendable, Codable { case green, yellow, red }
 
 /// A tint around the board.
@@ -82,9 +67,6 @@ public struct Glow: Equatable, Sendable, Codable {
   /// 0...1, how bright.
   public var strength: Double
 }
-
-/// The board's glow while a moment is up.
-public let MOMENT_GLOW = Glow(tone: .green, strength: 0.5)
 
 /* ── points, moments, combo ── */
 
@@ -289,8 +271,6 @@ public struct SurvivalRecord: Equatable, Sendable, Codable {
   public var openings: [String: SurvivalScore] = [:]
   public init() {}
 }
-
-public let EMPTY_SURVIVAL_SCORE = SurvivalScore()
 
 /// Every opening a line went through, and every one above those.
 public func openingsAlong(_ tree: OpeningTree, _ line: [String]) -> [String] {

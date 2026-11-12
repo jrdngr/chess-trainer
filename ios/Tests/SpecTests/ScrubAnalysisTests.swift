@@ -22,12 +22,3 @@ import Testing
   #expect(gamesFromPgn(standard, "tester", .lichess).map(\.moves) == [["e4", "e5"]])
 }
 
-@Test func unfinishedGameScoresAsDrawForEitherSide() throws {
-  for color in [Color.w, .b] {
-    let game = ImportedGame(
-      id: "g", site: .lichess, white: "a", black: "b", result: "*", userColor: color, moves: ["e4", "e5"])
-    let tree = buildPlayerTree([game], color)
-    let root = try #require(tree.nodes[positionKey(START_FEN)])
-    #expect([root.wins, root.draws, root.losses] == [0, 1, 0])
-  }
-}

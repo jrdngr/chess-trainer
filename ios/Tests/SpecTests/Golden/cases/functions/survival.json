@@ -790,18 +790,6 @@
       ]
     },
     {
-      "fn": "survival.prepSummary",
-      "about": "Autopilot's line on how the run went on your prep.",
-      "cases": [
-      {"args":[0,0,[],0],"out":null},
-      {"args":[3,3,[1,2,3],0],"out":"Prep 3 of 3 · 2.0s average · 2 fast"},
-      {"args":[2,3,[1.5,9],0],"out":"Prep 2 of 3 · 5.3s average · 1 fast"},
-      {"args":[4,4,[2.9,3,3.1,8],2],"out":"Prep 4 of 4 · 4.3s average · 1 fast · 2 book moves"},
-      {"args":[0,2,[],1],"out":"Prep 0 of 2 · 1 book move"},
-      {"args":[1,1,[12],1],"out":"Prep 1 of 1 · 12s average · 0 fast · 1 book move"}
-      ]
-    },
-    {
       "fn": "survival.comboAfter",
       "about": "The combo streak after a move that lost this many centipawns.",
       "cases": [

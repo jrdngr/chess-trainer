@@ -50,25 +50,6 @@ public struct Card: Schedule, Equatable, Sendable, Codable {
   public var testedRound: Int?
 }
 
-/// Spaced-repetition state for one whole line, keyed by its last move.
-public struct LineCard: Schedule, Equatable, Sendable, Codable {
-  /// `repertoireId#tipId`.
-  public var id: String
-  public var repertoireId: String
-  public var tipId: String
-  public var stage: CardStage
-  public var step: Int
-  public var interval: Double
-  public var ease: Double
-  public var reps: Int
-  public var lapses: Int
-  public var correct: Int
-  public var incorrect: Int
-  public var due: Double
-  public var lastReviewed: Double?
-  public var createdAt: Double
-}
-
 public struct SrsConfig: Sendable {
   /// Learning steps in minutes, walked before a card graduates.
   public var learningSteps: [Double]
@@ -105,17 +86,6 @@ public func createCard(_ id: String, _ repertoireId: String, _ key: String, _ fe
     id: id, repertoireId: repertoireId, key: key, fen: fen, stage: .new, step: 0, interval: 0,
     ease: DEFAULT_SRS.startingEase, reps: 0, lapses: 0, correct: 0, incorrect: 0, due: now,
     lastReviewed: nil, createdAt: now)
-}
-
-public func createLineCard(_ repertoireId: String, _ tipId: String, _ now: Double = Env.now()) -> LineCard {
-  LineCard(
-    id: lineCardId(repertoireId, tipId), repertoireId: repertoireId, tipId: tipId, stage: .new, step: 0,
-    interval: 0, ease: DEFAULT_SRS.startingEase, reps: 0, lapses: 0, correct: 0, incorrect: 0, due: now,
-    lastReviewed: nil, createdAt: now)
-}
-
-public func lineCardId(_ repertoireId: String, _ tipId: String) -> String {
-  "\(repertoireId)#\(tipId)"
 }
 
 private func clampEase(_ ease: Double, _ cfg: SrsConfig) -> Double {
@@ -237,13 +207,6 @@ public func gradeForTime(_ seconds: Double) -> Grade {
   return .hard
 }
 
-/// A whole line's grade: Guessed after any miss, otherwise the average time.
-public func gradeForLine(_ seconds: [Double], _ misses: Int) -> Grade {
-  if misses > 0 { return .again }
-  if seconds.isEmpty { return .good }
-  return gradeForTime(seconds.reduce(0, +) / Double(seconds.count))
-}
-
 /// Runs a review card's interval stands for, per day of it.
 public let RUNS_PER_DAY: Double = 3
 
@@ -285,29 +248,3 @@ public struct ReviewLogEntry: Equatable, Sendable, Codable {
   }
 }
 
-/// How many cards are due, and in which stage, and how many wait for later.
-public struct DueCounts: Equatable, Sendable {
-  public var due = 0
-  public var new = 0
-  public var learning = 0
-  public var review = 0
-  public var later = 0
-  public var total = 0
-}
-
-public func countDue(_ cards: [Card], _ now: Double = Env.now()) -> DueCounts {
-  var counts = DueCounts(total: cards.count)
-  for c in cards {
-    if isDue(c, now) {
-      counts.due += 1
-      switch c.stage {
-      case .new: counts.new += 1
-      case .learning: counts.learning += 1
-      default: counts.review += 1
-      }
-    } else {
-      counts.later += 1
-    }
-  }
-  return counts
-}

@@ -101,8 +101,6 @@ private func pawnsOf(_ fen: String) -> Pawns {
   })
 }
 
-public let STRUCTURE_TEMPLATES = TEMPLATES.map(\.template)
-
 /// The structure the pawns form, if they match a named one.
 public func structureOf(_ fen: String) -> Structure? {
   let p = pawnsOf(fen)
@@ -121,14 +119,6 @@ public func structureLabel(_ structure: Structure) -> String {
 public func placeSquare(_ square: String, _ a: Color) -> String {
   if a == .w { return square }
   return "\(square.first!)\(9 - Int(String(square.last!))!)"
-}
-
-/// Your side's plan in a structure.
-public func planFor(_ structure: Structure, _ me: Color) -> [PlanStep] {
-  let steps = structure.a == me ? structure.template.a : structure.template.b
-  return steps.map { s in
-    PlanStep(text: stepText(s.text, structure.a, me), goals: s.goals?.map { Goal(piece: $0.piece, to: placeSquare($0.to, structure.a)) })
-  }
 }
 
 /// A step's words for the board: squares mirrored when `a` is Black, Black's moves given their "...".
@@ -165,11 +155,6 @@ public let PLAN_HEADLINES: [String: (a: String, b: String)] = [
   "open-center": ("Activity first", "Activity first"),
 ]
 
-/// Your side's plan in a few words, its squares placed for the board.
-public func planHeadline(_ structure: Structure, _ me: Color) -> String? {
-  PLAN_HEADLINES[structure.template.id].map { stepText(structure.a == me ? $0.a : $0.b, structure.a, me) }
-}
-
 /// A piece of a step's words: plain, or a move it names.
 public struct StepRun: Equatable, Sendable {
   public var text: String
@@ -178,13 +163,6 @@ public struct StepRun: Equatable, Sendable {
     self.text = text
     self.move = move
   }
-}
-
-/// Your side's plan as runs of words, the moves marked so they can stand out.
-/// Each step's runs join to the same words as `planFor`'s.
-public func planRuns(_ structure: Structure, _ me: Color) -> [[StepRun]] {
-  let steps = structure.a == me ? structure.template.a : structure.template.b
-  return steps.map { stepRuns($0.text, structure.a, me) }
 }
 
 /// A step's words split at its marked moves, each placed as `stepText` places it.

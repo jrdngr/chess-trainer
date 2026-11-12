@@ -171,7 +171,7 @@ struct EngineBenchTests {
     let reference = EngineLimits(depth: 12, movetime: 800, multiPv: 1)
     let engine = CaissaEngine(), judge = CaissaEngine()
     var report: [String] = []
-    for level in levels() {
+    for level in LEVEL_RATINGS.map(levelFor(rating:)) {
       let rand = mulberry32(seed: Double(level.rating))
       var total = 0.0, slips = 0, blunders = 0
       for fen in Self.middlegames {

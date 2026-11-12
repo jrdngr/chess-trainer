@@ -18,9 +18,9 @@ import Testing
     "browse.myLines": { a in written(myLines(books[a[0].string]!, bookIndex, tree), 2).json },
     "browse.recentItems": { a in
       let now = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 31, hour: 18))!.timeIntervalSince1970 * 1000
-      var score = EMPTY_SCORE
+      var score = ScoreState()
       for played in a[0].array {
-        var stats = emptyNodeStats()
+        var stats = NodeStats()
         stats.lastAt = now - played[1].number * 3_600_000
         score.nodes[played[0].string] = stats
       }

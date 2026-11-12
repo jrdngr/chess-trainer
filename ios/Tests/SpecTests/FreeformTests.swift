@@ -69,14 +69,6 @@ private func source(_ state: AppState, _ tree: OpeningTree, _ node: OpeningNode,
   #expect(boosted > base)
 }
 
-/// The card lifts the pieces that start your lines.
-@Test func freeformStartersAreYourFirstPieces() throws {
-  let tree = openingTree(bookIndex)
-  let (state, _) = whiteState()
-  let starters = freeformStarters(source(state, tree, tree.root, .w), START_FEN)
-  #expect(Set(starters) == ["e2", "d2"])
-}
-
 /// Once a Freeform run is off prep nothing is graded, even back in your lines; Drill still grades.
 @Test func freeformOffPrepIsFinal() throws {
   let tree = openingTree(bookIndex)

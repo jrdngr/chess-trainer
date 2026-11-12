@@ -111,9 +111,6 @@ final class RunModel {
   private var tasks: [Task<Void, Never>] = []
   /// What a clean end of prep grows with.
   private let growth: GrowthPrefs
-  /// Freeform: the squares of the pieces that start your lines, lit until your first move.
-  let starters: [String]
-  var startLit: [String] { live && session.state.moves == 0 ? starters : [] }
 
   /// Autopilot's round, on Autopilot's own options.
   convenience init?(round: AutoRound, selection: Selection, store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
@@ -196,7 +193,6 @@ final class RunModel {
     self.growth = growth
     picker = mulberry32(seed: (Env.random() * 2_147_483_648).rounded(.down))
     session = handoff != nil ? beginMiddlegame(begun) : beginSession(begun)
-    starters = round?.free == true ? freeformStarters(begun.source, begun.state.run.fen) : []
     let losses = lossesIn(store.state.repertoireList)
     ctx = RunContext(
       index: index, prefs: prefs, autopilot: round != nil,

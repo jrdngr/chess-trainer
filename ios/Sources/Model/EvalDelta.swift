@@ -28,15 +28,6 @@ public func formatDelta(_ cp: Double) -> String {
   return (cp > 0 ? "+" : "\u{2212}") + JS.toFixed(pawns, 1)
 }
 
-public enum DeltaTone: String, Sendable {
-  case good, bad, even
-}
-
-public func deltaTone(_ cp: Double) -> DeltaTone {
-  if abs(cp) < EVEN_CP { return .even }
-  return cp > 0 ? .good : .bad
-}
-
 /// A delta as the list shows it, so two answers that read the same tie.
 private func shownCp(_ cp: Double) -> Double {
   abs(cp) < EVEN_CP ? 0 : (cp > 0 ? 1 : -1) * JS.round(min(abs(cp), 990) / 10)

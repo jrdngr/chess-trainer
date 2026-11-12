@@ -23,4 +23,3 @@ func endingTitle(_ ending: Ending, _ plies: Int) -> String {
 }
 
 import SwiftUI
-typealias SwiftUIColor = SwiftUI.Color

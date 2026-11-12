@@ -10,7 +10,7 @@ private func noon(_ key: String) -> Double {
 }
 
 private func history() -> NodeStats {
-  var s = emptyNodeStats()
+  var s = NodeStats()
   s.days["2026-10-26"] = DayTally(answered: 4, correct: 3, rounds: 2)
   s.days["2026-10-29"] = DayTally(answered: 0, correct: 0, rounds: 1)
   s.days["2026-11-01"] = DayTally(answered: 5, correct: 5, rounds: 6)

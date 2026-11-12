@@ -132,16 +132,6 @@ import Testing
   #expect(fillEnds(bookIndex, past, added: 1, size: 5))
 }
 
-/// p × m² × g ≥ 1: on the top gap with a fill size of 3, a line known at 0.9
-/// gets its move on the 4th run, not the 3rd.
-@Test func newMoveDueByPaceAndMastery() {
-  #expect(!needsNewMove(pace: pace(runs: 3, size: 3), mastery: 0.9, gap: 1))
-  #expect(needsNewMove(pace: pace(runs: 4, size: 3), mastery: 0.9, gap: 1))
-  #expect(!needsNewMove(pace: pace(runs: 30, size: 3), mastery: 0.3, gap: 1))
-  #expect(needsNewMove(pace: pace(runs: 34, size: 3), mastery: 0.3, gap: 1))
-  #expect(!needsNewMove(pace: 100, mastery: 0, gap: 1))
-}
-
 /// A line's mastery is the average over your moves on it; a move never asked counts as 0.
 @Test func masteryCountsUnaskedAsWeak() {
   var state = AppState()

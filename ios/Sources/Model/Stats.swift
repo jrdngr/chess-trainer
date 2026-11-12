@@ -21,15 +21,6 @@ private func dayStart(_ now: Double, _ back: Int) -> Double {
   return day.timeIntervalSince1970 * 1000
 }
 
-/// The last `days` days, oldest first, each with the rounds played that day.
-public func dailyRounds(_ stats: NodeStats, _ days: Int, _ now: Double = Env.now()) -> [DayPoint] {
-  stride(from: days - 1, through: 0, by: -1).map { back in
-    let at = dayStart(now, back)
-    let key = dayKey(at)
-    return DayPoint(at: at, key: key, value: Double(stats.days[key]?.rounds ?? 0))
-  }
-}
-
 /// The rating as it stood at the end of each day in the window.
 ///
 /// A day the rating never moved holds the day before's, so the line is
@@ -97,16 +88,6 @@ private func byRating(_ a: Ranked, _ b: Ranked) -> Double {
   if r != 0 { return r }
   let d = cmp(a.node.depth, b.node.depth)
   return d != 0 ? d : Double(JS.localeCompare(a.node.name, b.node.name))
-}
-
-/// Every rated opening not among `mine` (your openings, listed on their
-/// own), best rated first. One never rated is not listed.
-public func ratedOpenings(_ tree: OpeningTree, _ score: ScoreState, _ mine: [String]) -> [Ranked] {
-  let listed = Set(mine)
-  return score.nodes
-    .filter { id, stats in stats.rated > 0 && !listed.contains(id) && (tree.byId[id]?.depth ?? 0) > 0 }
-    .map { ranked(tree, score, $0.key) }
-    .jsSorted(byRating)
 }
 
 /// Ticks for an axis: a few round numbers that cover the range.

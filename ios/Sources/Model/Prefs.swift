@@ -29,8 +29,6 @@ public enum SurvivalSteer: String, Sendable, Codable, CaseIterable {
   case lines, gaps, book
 }
 
-public let SURVIVAL_STEERS = SurvivalSteer.allCases
-
 public func survivalSteerLabel(_ steer: SurvivalSteer) -> String {
   switch steer {
   case .gaps: return "My gaps"
@@ -85,20 +83,6 @@ extension SurvivalPrefs {
   }
 }
 
-public enum DrillForm: String, Sendable, Codable { case positions, lines }
-public enum DrillDraw: String, Sendable, Codable { case due, new, cram }
-
-public struct DrillPrefs: Equatable, Sendable, Codable {
-  public var form: DrillForm
-  public var draw: DrillDraw
-  public var newPerSession: Int
-  public var followLine: Bool
-  public var weakFirst: Bool
-  public var explain: Bool
-  public var batchSimilar: Bool
-  public var clock: ClockMode
-}
-
 public enum NudgePriority: String, Sendable, Codable { case transposition, habit }
 
 public struct GrowthPrefs: Equatable, Sendable, Codable {
@@ -119,10 +103,8 @@ public struct AutopilotPrefs: Equatable, Sendable, Codable {
 
 public let DEFAULT_AUTOPILOT = AutopilotPrefs(moveScores: true)
 
-/// Drill rounds: no clock, Why? always offered.
-public let AUTO_DRILL = DrillPrefs(
-  form: .positions, draw: .due, newPerSession: 8, followLine: true, weakFirst: false, explain: true,
-  batchSimilar: true, clock: .off)
+/// How many new moves a round may ask.
+public let NEW_PER_ROUND = 8
 
 /// Growth rounds, and what counts as ready to grow. Autopilot never grows past the book.
 /// Growth's own defaults.
@@ -141,12 +123,3 @@ public func autoSurvival(_ prefs: AutopilotPrefs) -> SurvivalPrefs {
     missions: true, combo: true, undefendedFlash: false)
 }
 
-public struct ModePrefs: Equatable, Sendable, Codable {
-  public var survival: SurvivalPrefs
-  public var drill: DrillPrefs
-  public var growth: GrowthPrefs
-}
-
-public func autopilotModes(_ prefs: AutopilotPrefs) -> ModePrefs {
-  ModePrefs(survival: autoSurvival(prefs), drill: AUTO_DRILL, growth: AUTO_GROWTH)
-}

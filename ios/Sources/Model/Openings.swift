@@ -192,15 +192,6 @@ private func blackNames(_ openings: [(name: String, path: [String])], _ index: R
   return names
 }
 
-/// The opening a node sits in, if the list is to hand.
-public func openingAt(_ openings: [DerivedOpening], _ nodeId: String) -> DerivedOpening? {
-  for opening in openings {
-    if opening.rootId == nodeId { return opening }
-    if let deeper = openingAt(opening.variations, nodeId) { return deeper }
-  }
-  return nil
-}
-
 /// Drop the names that only lead somewhere: a first move with openings under
 /// it, and deeper a region with no lines of its own and one region under it.
 private func collapse(_ regions: [NamedRegion]) -> [NamedRegion] {

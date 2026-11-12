@@ -110,34 +110,6 @@ public func rowReaches(_ tree: OpeningTree, _ node: OpeningNode, _ row: GrowthRo
   row.holes.contains { lineStatus(tree, node, $0.path + [$0.san]) == .reached }
 }
 
-/// An opening's own moves as Growth keeps them for a side. Where the
-/// opponent is to move at the end and the book carries the same name one
-/// reply and one move of yours further (2.d4, then 2...cxd4 3.c3 for the
-/// Smith-Morra Gambit), those two moves are part of it.
-public func openingLine(_ index: ReferenceIndex, _ node: OpeningNode, _ side: Color) -> [String] {
-  let sans = node.sans
-  let fens = walkSan(sans).fens
-  guard !sans.isEmpty, fens.count == sans.count + 1, let fen = fens.last, fenTurn(fen) != side,
-    let reply = popularReplies(index, fen, 0).first, let after = applySan(fen, reply.san)?.after
-  else { return sans }
-  for move in popularReplies(index, after, 0) {
-    guard let next = applySan(after, move.san)?.after else { continue }
-    if nameAt(index, next)?.name == node.name { return sans + [reply.san, move.san] }
-  }
-  return sans
-}
-
-/// The hole most worth answering at the very end of a line, and its row.
-public func holeAtTip(_ rows: [GrowthRow], _ line: [String]) -> (row: GrowthRow, hole: Hole)? {
-  var best: (row: GrowthRow, hole: Hole)?
-  for row in rows {
-    for hole in row.holes where hole.path == line {
-      if best == nil || holeWorth(hole) > holeWorth(best!.hole) { best = (row, hole) }
-    }
-  }
-  return best
-}
-
 /// A move the book has no name for, called after itself: "vs 1.g3".
 private func holeLabel(_ hole: Hole) -> String {
   "vs \(hole.path.count / 2 + 1).\(hole.path.count % 2 == 0 ? "" : "..")\(hole.san)"

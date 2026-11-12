@@ -10,8 +10,6 @@ import Shared
 
 /// How much more a reply weighs when it leads toward a gap that is due a new move.
 public let DUE_GAP_BOOST: Double = 6
-/// The most of your starting pieces the round's card lifts.
-public let FREEFORM_STARTERS_MAX = 3
 
 /// How much each line of a repertoire needs practice, by tip: how weak its
 /// positions are, times how long it has been left.
@@ -109,18 +107,6 @@ public func freeformSource(
   source.rankedPrep = ranked
   source.offPrepFinal = true
   return source
-}
-
-/// The squares of the pieces that start your lines here, the line most in need
-/// of practice first. They are lit on the round's card and on the board until you move.
-public func freeformStarters(_ source: LineSource, _ fen: String) -> [String] {
-  var out: [String] = []
-  for san in source.rankedPrep?(fen) ?? source.prepAt(fen) {
-    guard let move = applySan(fen, san), !out.contains(move.from) else { continue }
-    out.append(move.from)
-    if out.count == FREEFORM_STARTERS_MAX { break }
-  }
-  return out
 }
 
 /// The lines of the gaps on one side of a selection that are due a new move now.

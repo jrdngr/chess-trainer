@@ -24,14 +24,12 @@ struct RoundCard {
   let fen: String
   let lastMove: (from: String, to: String)?
   let color: ChessCore.Color
-  /// Freeform: the squares of the pieces that start your lines, lit on the card.
-  var starters: [String] = []
 }
 
 extension RunModel {
   /// This round's card, as the deal shows it.
   var card: RoundCard {
-    RoundCard(fen: run.fen, lastMove: lastMoveOf(run.played), color: run.color, starters: starters)
+    RoundCard(fen: run.fen, lastMove: lastMoveOf(run.played), color: run.color)
   }
 }
 
@@ -146,7 +144,7 @@ struct RoundDeal: View {
   private func face(_ card: RoundCard, size: CGFloat, inset: CGFloat, scale: CGFloat) -> some View {
     BoardView(
       fen: card.fen, orientation: card.color, interactive: false, lastMove: card.lastMove,
-      highlights: Dictionary(card.starters.map { ($0, Theme.accent) }, uniquingKeysWith: { a, _ in a }), onMove: { _ in })
+      highlights: [:], onMove: { _ in })
       .frame(width: size, height: size)
       .padding(inset)
       .background(RoundedRectangle(cornerRadius: grown ? 4 : 29 / scale).fill(Theme.surface.opacity(grown ? 0 : 1)))

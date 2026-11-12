@@ -21,9 +21,7 @@ import Testing
 
   try check("srs", [
     "srs.gradeForTime": { gradeForTime($0[0].number).rawValue.json },
-    "srs.gradeForLine": { gradeForLine($0[0].numbers, $0[1].int).rawValue.json },
     "srs.createCard": { a in encoded(createCard(a[0].string, a[1].string, a[2].string, a[3].string, a[4].number)) },
-    "srs.createLineCard": { a in encoded(createLineCard(a[0].string, a[1].string, a[2].number)) },
     "srs.review (one grade)": { a in
       let outcome = review(base(), grade(a[0]), start)
       return obj(["card": encoded(outcome.card), "delay": outcome.delay])

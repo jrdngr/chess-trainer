@@ -39,61 +39,6 @@ func rowJSON(_ r: GrowthRow) -> JSON {
   ], only: ["growth.holeShare", "growth.movesToFit", "growth.addsToFit", "growth.rowUrgency", "growth.optionsAt", "growth.choicesAt", "growth.pastTheBook", "growth.growthRows"])
 }
 
-/// Golden/cases/functions/growOffer.json
-@Test func growOffers() throws {
-  let index = bookIndex
-  let tree = openingTree(index)
-  let added = 1_788_253_200_000.0  // 2026-09-01T09:00:00Z
-  func repOf(_ end: JSON) -> Repertoire {
-    var r = rep(end)
-    for id in r.nodes.keys { r.nodes[id]!.addedAt = added }
-    return r
-  }
-  func rounds(_ end: JSON) -> [RoundRecord] {
-    end["lines"].strings.enumerated().flatMap { l, text in
-      (0..<end["finishes"].int).map { n in
-        RoundRecord(mode: .survival, openingId: end["opening"].string, color: color(end["color"]), answered: 4, correct: 4, perfect: true,
-                    at: added + Double(n + 1) * 86_400_000 + Double(l), line: line(text))
-      }
-    }
-  }
-  // growOfferAt no longer matches the web: every grow starts at Growth's own
-  // pick, not where the round ended. Its own tests are below.
-  try check("growOffer", [
-    "growOffer.readyToGrow": { a in readyToGrow(repOf(a[0]), tree, nodeById(tree, a[0]["opening"].string), rounds(a[0])).json },
-    "growOffer.offerOpening": { a in
-      offerOpening(tree, nodeById(tree, a[0].string), a[1].stringOrNil.map { nodeById(tree, $0) }, line(a[2].string)).id.json
-    },
-  ], only: ["growOffer.readyToGrow", "growOffer.offerOpening"])
-}
-
-/// A one-line opening widens before it lengthens: a clean run to the end of
-/// its only line grows a common early reply it does not answer.
-@Test func lineGrowWidensFirst() {
-  let tree = openingTree(bookIndex)
-  let played = line("d4 d5 c4 e6 Nc3")
-  let opening = deepestNodeWithin(tree, tree.root, Array(played.prefix(3)))
-  let offer = growOfferAt(
-    rep: rep(.w, ["d4 d5 c4 e6 Nc3"]), index: bookIndex, tree: tree, opening: opening, played: played,
-    rounds: [], minShare: 1, maxPly: 18)
-  #expect(offer?.kind == "line")
-  #expect(offer?.onLine == false)
-  let hole = offer.flatMap { firstHole($0.launch.row) }
-  #expect(hole?.path == line("d4 d5 c4"))
-  #expect(["c6", "dxc4"].contains(hole?.san ?? ""))
-}
-
-/// Where Growth's pick is the reply the round ended on, the button says this line.
-@Test func lineGrowOnTheLinePlayed() {
-  let tree = openingTree(bookIndex)
-  let played = line("d4 d5 c4 c6")
-  let opening = deepestNodeWithin(tree, tree.root, Array(played.prefix(3)))
-  let r = rep(.w, ["d4 d5 c4 e6 Nc3", "d4 d5 c4 dxc4 e3", "d4 d5 c4 Nf6 cxd5", "d4 d5 c4 Bf5 Nc3"])
-  let offer = growOfferAt(rep: r, index: bookIndex, tree: tree, opening: opening, played: played, rounds: [], minShare: 1, maxPly: 18)
-  #expect(offer?.kind == "line")
-  #expect(offer?.onLine == true)
-}
-
 /// A one-line Ruy Lopez grows its earliest reply first, though forks deep in
 /// the main line are met more often than the third-move sidelines.
 @Test func growthStartsAtTheShallowestReply() {
@@ -106,15 +51,6 @@ func rowJSON(_ r: GrowthRow) -> JSON {
   #expect(hole?.san == "Nf6")
 }
 
-/// The Smith-Morra Gambit is named at 2.d4 and again at 3.c3: Start keeps
-/// White's 3.c3, and Black's side stops where the opening is named.
-@Test func openingLineCarriesItsOwnName() {
-  let tree = openingTree(bookIndex)
-  let morra = tree.byId["e4 c5 d4"]!
-  #expect(openingLine(bookIndex, morra, .w) == line("e4 c5 d4 cxd4 c3"))
-  #expect(openingLine(bookIndex, morra, .b) == line("e4 c5 d4"))
-}
-
 /// With only 1.e4 kept and the Smith-Morra chosen, the work Growth finds is
 /// 1...c5 on the way in, none of it inside: the lobby's Start keeps the opening.
 @Test func wayInWorkIsNotInsideTheOpening() {
@@ -123,18 +59,6 @@ func rowJSON(_ r: GrowthRow) -> JSON {
   let rows = growthRows([rep(.w, ["e4"])], bookIndex, GrowthOptions(minShare: 1, maxPly: 18, region: (tree, morra)))
   #expect(rows.first?.holes.contains { $0.path == ["e4"] && $0.san == "c5" } == true)
   #expect(!rows.contains { rowReaches(tree, morra, $0) })
-}
-
-/// Started from its own line, the Smith-Morra begins at Black's most played
-/// answer to 3.c3, not at the shallower 2...d6.
-@Test func openingStartsAtItsTip() {
-  let tree = openingTree(bookIndex)
-  let morra = tree.byId["e4 c5 d4"]!
-  let kept = line("e4 c5 d4 cxd4 c3")
-  let rows = growthRows([rep(.w, ["e4 c5 d4 cxd4 c3"])], bookIndex, GrowthOptions(minShare: 1, maxPly: 18, region: (tree, morra)))
-  let found = holeAtTip(rows, kept)
-  #expect(found?.hole.san == "dxc3")
-  #expect(found.flatMap { firstHole($0.row) }?.path.count == 3)
 }
 
 /// A sitting's moves stay off the tree it started from until Save Line,

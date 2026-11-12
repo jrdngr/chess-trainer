@@ -27,7 +27,7 @@ import Testing
   expect("autopilot", "RUNS_PER_DAY", RUNS_PER_DAY.json)
 
   expect("scoring", "ACTIVITY_MODES", ACTIVITY_MODES.map(\.rawValue).json)
-  expect("scoring", "EMPTY_SCORE", encoded(EMPTY_SCORE))
+  expect("scoring", "EMPTY_SCORE", encoded(ScoreState()))
   expect("scoring", "NEW_LABEL", NEW_LABEL.json)
   expect("scoring", "RATING", obj(["start": RATING.start, "floor": RATING.floor, "step": RATING.step, "scale": RATING.scale]))
   expect("scoring", "TIERS", encoded(TIERS))

@@ -35,7 +35,7 @@ public enum PawnBreaks {
     return (String(uci.prefix(2)), String(uci.dropFirst(2).prefix(2)))
   }
 
-  /// `lineScore`: from `color`'s side, a mate counted as 100000.
+  /// From `color`'s side, a mate counted as 100000.
   private static func score(_ line: EngineLine?, _ color: ChessCore.Color) -> Double? {
     guard let line else { return nil }
     let white = line.mate.map { $0 > 0 ? 100000 : $0 < 0 ? -100000 : 0 } ?? (line.cp ?? 0)

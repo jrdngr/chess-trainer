@@ -21,8 +21,6 @@ extension Earned {
   }
   try check("missions", [
     "survival.missionFor": { a in encoded(missionFor(color(a[0]), a[1].number, a.count > 2 ? a[2].stringOrNil : nil)) },
-    "survival.planMission": { a in planMission(a[0].string, color(a[1]), a[2].number).map(encoded) ?? .null },
-    "survival.missionText": { missionText($0[0].decoded(Mission.self)).json },
     "survival.stepMission": { a in
       let s = stepMission(a[0].decoded(Mission.self), color(a[1]), a[2].number, a.count > 3 ? a[3].stringOrNil : nil)
       return obj(["mission": encoded(s.mission), "result": s.result?.rawValue])
@@ -37,7 +35,7 @@ extension Earned {
     "survival.firstMission": { a in
       encoded(firstMission(a[0].decoded(Extras.self), missions: a[1]["missions"].bool, color(a[2]), a[3].number, a.count > 4 ? a[4].stringOrNil : nil))
     },
-  ], only: ["survival.missionFor", "survival.planMission", "survival.missionText", "survival.stepMission", "survival.judgedExtras", "survival.prepExtras"])
+  ], only: ["survival.missionFor", "survival.stepMission", "survival.judgedExtras", "survival.prepExtras"])
   // firstMission no longer matches the web: the first mission comes from the
   // eval even where the pawns form a plan. Its own tests are below.
 }
@@ -139,7 +137,6 @@ extension Earned {
   }
   try check("lenses", [
     "boardHints.lensMarks": { a in short(lensMarks(LensKind(rawValue: a[1].string)!, fenOf(a[0].string), color(a[2]), prevOf(a[0].string))) },
-    "boardHints.spaceCount": { a in let s = spaceCount(fenOf(a[0].string), color(a[1])); return obj(["mine": s.mine, "theirs": s.theirs]) },
     "boardHints.kingReport": { a in
       kingReport(fenOf(a[0].string), color(a[1])).map { obj(["square": $0.square, "score": $0.score, "grade": $0.grade.rawValue]) } ?? .null
     },
@@ -152,18 +149,8 @@ extension Earned {
       return newlyLoose(before, move.after, fenTurn(before), from: move.from, to: move.to).json
     },
     "structures.structureOf": { structureOf(fenOf($0[0].string)).map(structureLabel)?.json ?? .null },
-    "structures.planFor": { a in
-      let template = STRUCTURE_TEMPLATES.first { $0.id == a[0].string }!
-      return planFor(Structure(template: template, a: color(a[1])), color(a[2])).map { s in
-        s.text + (s.goals.map { " [" + $0.map { "\($0.piece.rawValue)\($0.to)" }.joined(separator: " ") + "]" } ?? "")
-      }.json
-    },
     "boardHints.goalRoute": { a in
       goalRoute(fenOf(a[0].string), color(a[1]), Goal(piece: PieceType(rawValue: a[2].string)!, to: a[3].string)).done.json
-    },
-    "cashOut.pickTrade": { a in
-      let fen = walk("d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7").last!
-      return pickTrade(fen, a[0].array.map { $0.decoded(EngineLine.self) }, color(a[1])).map(encoded) ?? .null
     },
   ])
 }

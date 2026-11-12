@@ -133,7 +133,7 @@ private func fixed4(_ x: Double) -> Double { Double(JS.toFixed(x, 4))! }
     "evalDelta.whiteCp": { whiteCp(cp: $0[0].numberOrNil, mate: $0[1].numberOrNil).json },
     "evalDelta.deltaFor": { a in
       let d = deltaFor(color(a[0]), a[1].number, a[2].number)
-      return obj(["delta": d, "shown": formatDelta(d), "tone": deltaTone(d).rawValue])
+      return obj(["delta": d, "shown": formatDelta(d)])
     },
     "evalDelta.order": { a in
       let moves = a[0].array.map { (san: $0[0].string, share: $0[1].number, delta: $0[2].numberOrNil) }
@@ -143,7 +143,6 @@ private func fixed4(_ x: Double) -> Double { Double(JS.toFixed(x, 4))! }
         "share": byShare(moves, san: \.san, share: \.share, delta).map(\.san),
       ])
     },
-    "autopilotPrefs.autopilotModes": { webEncoded(autopilotModes(AutopilotPrefs(moveScores: $0[0].bool))) },
   ])
 }
 

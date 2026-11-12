@@ -75,25 +75,6 @@ public struct PrepSpan: Equatable, Sendable {
   }
 }
 
-/// Where the next run would start in your prep, for its button, in your own moves.
-public func roundSpan(_ rep: Repertoire?, _ pick: Recommendation, _ at: [String]?, _ limit: Int = 60) -> PrepSpan {
-  guard let rep else { return PrepSpan(played: 0, total: 0) }
-  let index = prepIndex(rep)
-  let prepAt = { (fen: String) in index[positionKey(fen)] ?? [] }
-  let way = at ?? (pick.start == .inside ? pick.opening.sans : [])
-  var line = at ?? pick.opening.sans
-  let fens = walkSan(line).fens
-  line = Array(line.prefix(fens.count - 1))
-  var fen = fens.last!
-  while line.count < limit {
-    guard let san = prepAt(fen).first, let move = applySan(fen, san) else { break }
-    line.append(san)
-    fen = move.after
-  }
-  let total = prepDepth(line, pick.color, prepAt, way.count)
-  return PrepSpan(played: min(way.count, total), total: total).ownMoves(pick.color)
-}
-
 /// How badly a position has gone: lapses count double.
 public func weakness(_ item: TrainingItem, _ cards: [String: Card]) -> Int {
   guard let card = cards[item.cardId] else { return 0 }

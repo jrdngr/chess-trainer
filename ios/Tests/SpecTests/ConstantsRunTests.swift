@@ -19,7 +19,7 @@ import Testing
   expect(s, "CONVERT_WINDOW", CONVERT_WINDOW)
   expect(s, "DEFAULT_SURVIVAL", webEncoded(DEFAULT_SURVIVAL))
   expect(s, "EDGE_MOVES", EDGE_MOVES)
-  expect(s, "EMPTY_SURVIVAL_SCORE", encoded(EMPTY_SURVIVAL_SCORE))
+  expect(s, "EMPTY_SURVIVAL_SCORE", encoded(SurvivalScore()))
   expect(s, "HISTORY_RUNS", HISTORY_RUNS)
   expect(s, "MISSION_BONUS", MISSION_BONUS)
   expect(s, "MISSION_BREAK", MISSION_BREAK)
@@ -36,7 +36,6 @@ import Testing
   expect(s, "PLAN_WINDOW", PLAN_WINDOW)
   expect(s, "RECENT_RUNS", RECENT_RUNS)
   expect(s, "SCORE_SLIGHT", SCORE_SLIGHT)
-  expect(s, "SURVIVAL_STEERS", SURVIVAL_STEERS.map(\.rawValue))
 
   expect("autopilot", "LEAN_FOR", Dictionary(uniqueKeysWithValues: LEAN_FOR.map { ($0.key.rawValue, $0.value.rawValue) }))
 
@@ -45,7 +44,6 @@ import Testing
   expect(r, "BRAKE", BRAKE)
   expect(r, "BRAKE_WINDOW", BRAKE_WINDOW)
   expect(r, "DEPTH", DEPTH)
-  expect(r, "FOCUSES", FOCUSES.map(\.rawValue))
   expect(r, "STALENESS", STALENESS)
   expect(r, "STEER_GAP", STEER_GAP)
   expect(r, "TEST_FLOOR", TEST_FLOOR)
@@ -53,7 +51,6 @@ import Testing
   expect("freshness", "HEAD_WEIGHT", HEAD_WEIGHT)
   expect("freshness", "NOTHING_SEEN", obj(["at": [String: Int]().mapValues { $0 }, "round": NOTHING_SEEN.round]))
   expect("evalDelta", "EVEN_CP", EVEN_CP)
-  expect("autopilotPrefs", "AUTO_DRILL", encoded(AUTO_DRILL))
   expect("autopilotPrefs", "AUTO_GROWTH", encoded(AUTO_GROWTH))
   expect("autopilotPrefs", "DEFAULT_AUTOPILOT", encoded(DEFAULT_AUTOPILOT))
   // DEFAULT_PLAY differs on purpose: levels are ratings now (PlayTests).
@@ -61,8 +58,6 @@ import Testing
   play.level = "club"
   expect("modes", "DEFAULT_PLAY", encoded(play))
   #expect(levelById(DEFAULT_PLAY.level) == levelById("club"))
-  expect("modes", "GROWTH_DEPTHS", GROWTH_DEPTHS)
-  expect("modes", "SHARE_STEPS", SHARE_STEPS)
   expect("openingRun", "CLOCK_MODES", CLOCK_MODES.map(\.rawValue))
   expect("openingRun", "DRAW_WINDOW", DRAW_WINDOW)
   expect("growth", "DEFAULT_MAX_PLY", DEFAULT_MAX_PLY)
@@ -73,5 +68,4 @@ import Testing
   expect("engineReplies", "NEAR_BEST", NEAR_BEST)
   expect("boardHints", "KING_GRADE_TEXT", Dictionary(uniqueKeysWithValues: KING_GRADE_TEXT.map { ($0.key.rawValue, $0.value) }))
   expect("boardHints", "LENSES", JSON.array(LENSES.map { obj(["kind": $0.kind.rawValue, "label": $0.label]) }))
-  expect("structures", "STRUCTURE_TEMPLATES", encoded(STRUCTURE_TEMPLATES))
 }

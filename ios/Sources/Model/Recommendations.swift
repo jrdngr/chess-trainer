@@ -241,11 +241,6 @@ public func lineMastery(_ rep: Repertoire, _ cards: [String: Card], _ path: [Str
   return scores.isEmpty ? 1 : scores.reduce(0, +) / Double(scores.count)
 }
 
-/// Whether a line needs a new move now: pace × mastery² × gap ≥ 1.
-public func needsNewMove(pace: Double, mastery: Double, gap: Double) -> Bool {
-  pace * mastery * mastery * gap >= 1
-}
-
 /// How a hole weighs against the top gap, 0...1.
 public func gapWeight(_ gap: Gap, top: Gap?) -> Double {
   guard let top, top.importance > 0 else { return 1 }
@@ -276,7 +271,6 @@ public func basicRunGap(_ state: AppState, _ tree: OpeningTree, _ selection: Sel
   let first = nodeById(tree, selection.opening).sans.first
   return missing.first { $0.hole.san == first } ?? missing.first
 }
-
 
 /// The run that fills a basic: from move one, steered along the gap's line.
 public func basicRound(_ tree: OpeningTree, _ gap: Gap) -> AutoRound {

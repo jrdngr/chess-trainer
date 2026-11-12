@@ -14,7 +14,7 @@ extension RatingMove: JSONable {
   let at = 1_790_845_200_000.0
 
   func run(_ answers: [JSON], _ ended: String?) -> JSON {
-    var state = EMPTY_SCORE
+    var state = ScoreState()
     var earlier: [MoveResult] = []
     var steps: [JSON] = []
     for (i, answer) in answers.enumerated() {
@@ -60,7 +60,7 @@ private func noon(_ key: String) -> Double {
 }
 
 private func stats(_ days: [JSON], rating: Double = 0, rated: Int? = nil) -> NodeStats {
-  var s = emptyNodeStats()
+  var s = NodeStats()
   s.rating = rating
   s.rated = rated ?? (days.contains { $0[2] != .null } ? 10 : 0)
   for d in days {
@@ -83,7 +83,7 @@ private func stats(_ days: [JSON], rating: Double = 0, rated: Int? = nil) -> Nod
 
   try check("autopilot", [
     "scoring.recordStart": { a in
-      var state = EMPTY_SCORE
+      var state = ScoreState()
       state.starts = a[0].array.map { StartKind(rawValue: $0.string)! }
       return recordStart(state, StartKind(rawValue: a[1].string)!).starts.map(\.rawValue).json
     },

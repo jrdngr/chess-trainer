@@ -25,7 +25,6 @@ func color(_ j: JSON) -> Color { Color(rawValue: j.string)! }
     "survival.evalSwing": { evalSwing(color($0[0]), $0[1].number, $0[2].number).json },
     "survival.speedTone": { speedTone($0[0].number).rawValue.json },
     "survival.secondsText": { secondsText($0[0].number).json },
-    "survival.prepSummary": { prepSummary($0[0].int, $0[1].int, $0[2].numbers, $0[3].int).json },
     "survival.comboAfter": { comboAfter($0[0].int, $0[1].number).json },
     "survival.comboMultiplier": { comboMultiplier($0[0].int).json },
     "survival.isMoment": { isMoment(color($0[0]), $0[1].number, $0[2].numberOrNil).json },

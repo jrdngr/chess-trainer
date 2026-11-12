@@ -90,21 +90,5 @@ struct SkipButton: View {
   }
 }
 
-/// A section's title: `.section`.
-struct SectionTitle: View {
-  var title: String
-  var aside: String?
-
-  var body: some View {
-    HStack {
-      Text(title)
-      Spacer()
-      if let aside { Text(aside) }
-    }
-    .font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
-    .padding(.horizontal, 4).padding(.top, 24).padding(.bottom, 8)
-  }
-}
-
 /// "3 moves", "1 move".
 func plural(_ n: Int, _ word: String) -> String { "\(n) \(word)\(n == 1 ? "" : "s")" }

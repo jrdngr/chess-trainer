@@ -106,10 +106,6 @@ public func measureBatch(_ session: GrowthSession, _ maxPly: Int) -> GrowthSessi
   return next
 }
 
-public func allowanceOf(_ session: GrowthSession, _ maxPly: Int) -> Int {
-  session.batch?.allowance ?? addsToFit(session.run.path.count, maxPly)
-}
-
 /// How many answers this batch has added so far.
 public func inBatch(_ session: GrowthSession) -> Int {
   session.added.count - (session.batch?.base ?? session.added.count)

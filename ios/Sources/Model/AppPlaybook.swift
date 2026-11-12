@@ -82,7 +82,6 @@ extension AppState {
     repertoires[repId] = nil
     repertoireOrder.removeAll { $0 == repId }
     cards = cards.filter { $0.value.repertoireId != repId }
-    lineCards = lineCards.filter { $0.value.repertoireId != repId }
     log.removeAll { $0.cardId.hasPrefix("\(repId)#") }
     mistakes.removeAll { $0.repertoireId == repId }
   }

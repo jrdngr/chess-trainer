@@ -27,7 +27,7 @@ public struct AutoHistory: Sendable {
 public func recommendInput(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _ history: AutoHistory) -> RecommendInput {
   var input = RecommendInput(
     tree: tree, selection: selection, reps: repertoiresIn(state.repertoireList, selection.color), cards: state.cards,
-    repairs: repairRefs(evidenceIn(state, tree, selection)), score: state.score, newPerSession: AUTO_DRILL.newPerSession,
+    repairs: repairRefs(evidenceIn(state, tree, selection)), score: state.score, newPerSession: NEW_PER_ROUND,
     recentFocuses: history.focuses)
   input.recentSteered = history.steered
   input.seen = Seen(at: state.score.seen, round: state.score.lineRounds)

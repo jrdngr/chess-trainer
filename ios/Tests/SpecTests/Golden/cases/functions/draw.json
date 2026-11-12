@@ -183,14 +183,14 @@
     },
     {
       "fn": "evalDelta.deltaFor",
-      "about": "What a move does to the eval bar, from the mover's side; shown in pawns (0.0 under 10cp, at most 9.9) and toned good, bad or even.",
+      "about": "What a move does to the eval bar, from the mover's side; shown in pawns (0.0 under 10cp, at most 9.9).",
       "cases": [
-      {"args":["w",30,32],"out":{"delta":2,"shown":"0.0","tone":"even"}},
-      {"args":["w",30,10],"out":{"delta":-20,"shown":"−0.2","tone":"bad"}},
-      {"args":["w",30,45],"out":{"delta":15,"shown":"+0.1","tone":"good"}},
-      {"args":["b",30,10],"out":{"delta":20,"shown":"+0.2","tone":"good"}},
-      {"args":["b",30,300],"out":{"delta":-270,"shown":"−2.7","tone":"bad"}},
-      {"args":["w",0,5000],"out":{"delta":5000,"shown":"+9.9","tone":"good"}}
+      {"args":["w",30,32],"out":{"delta":2,"shown":"0.0"}},
+      {"args":["w",30,10],"out":{"delta":-20,"shown":"−0.2"}},
+      {"args":["w",30,45],"out":{"delta":15,"shown":"+0.1"}},
+      {"args":["b",30,10],"out":{"delta":20,"shown":"+0.2"}},
+      {"args":["b",30,300],"out":{"delta":-270,"shown":"−2.7"}},
+      {"args":["w",0,5000],"out":{"delta":5000,"shown":"+9.9"}}
       ]
     },
     {
@@ -199,14 +199,6 @@
       "cases": [
       {"args":[[["Nf3",0.5,-12],["Nc3",0.2,-8],["c3",0.1,-14],["d4",0.1,null],["Bc4",0.1,-40]]],"out":{"engine":["Nc3","Nf3","c3","Bc4","d4"],"share":["Nf3","Nc3","c3","Bc4","d4"]}},
       {"args":[[["a",0,3],["b",0,-3],["c",0,null],["d",0,25]]],"out":{"engine":["d","a","b","c"],"share":["d","a","b","c"]}}
-      ]
-    },
-    {
-      "fn": "autopilotPrefs.autopilotModes",
-      "about": "How an Autopilot round plays each mode, whatever the mode's own setup says; only the move scores follow Autopilot's settings.",
-      "cases": [
-      {"args":[true],"out":{"survival":{"steer":"lines","clock":"off","moveScores":true,"moments":true,"missions":true,"combo":true,"undefendedFlash":false},"drill":{"form":"positions","draw":"due","newPerSession":8,"followLine":true,"weakFirst":false,"explain":true,"batchSimilar":true,"clock":"off"},"growth":{"minShare":1,"maxPly":18,"nudgePriority":"transposition","nudgePawns":false,"pastBook":false}}},
-      {"args":[false],"out":{"survival":{"steer":"lines","clock":"off","moveScores":false,"moments":true,"missions":true,"combo":true,"undefendedFlash":false},"drill":{"form":"positions","draw":"due","newPerSession":8,"followLine":true,"weakFirst":false,"explain":true,"batchSimilar":true,"clock":"off"},"growth":{"minShare":1,"maxPly":18,"nudgePriority":"transposition","nudgePawns":false,"pastBook":false}}}
       ]
     }
   ]

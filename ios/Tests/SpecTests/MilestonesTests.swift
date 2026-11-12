@@ -8,7 +8,7 @@ import Testing
   let tree = openingTree(bookIndex)
 
   func stats(_ days: [JSON], rating: Double = 0, rated: Int? = nil) -> NodeStats {
-    var s = emptyNodeStats()
+    var s = NodeStats()
     s.rating = rating
     s.rated = rated ?? (days.contains { $0[2] != .null } ? 10 : 0)
     for d in days {
@@ -20,7 +20,7 @@ import Testing
 
   /// A profile's record in short: global days, each opening's rated days and rating now, Survival best, rounds by mode.
   func profile(_ p: JSON) -> (ScoreState, SurvivalRecord) {
-    var score = EMPTY_SCORE
+    var score = ScoreState()
     score.global = stats(p["days"].array, rating: 0, rated: 0)
     for (mode, n) in p["rounds"].object { score.global.byMode[ActivityMode(rawValue: mode)!]?.rounds = n.int }
     for (id, entry) in p["openings"].object { score.nodes[id] = stats(entry[0].array, rating: entry[1].number) }

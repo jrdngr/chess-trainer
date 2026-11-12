@@ -79,9 +79,6 @@ public func levelFor(rating: Int) -> Level {
 /// The ratings Play offers as levels.
 public let LEVEL_RATINGS = [800, 1200, 1600, 2000]
 
-/// The levels Play offers.
-public func levels() -> [Level] { LEVEL_RATINGS.map { levelFor(rating: $0) } }
-
 public let DEFAULT_LEVEL = "1200"
 
 /// Levels saved under their old names.
@@ -124,22 +121,5 @@ public func chooseMove(_ lines: [EngineLine], _ level: Level, _ rand: () -> Doub
     if ticket <= 0 { return move.line.pv[0] }
   }
   return moves.last!.line.pv[0]
-}
-
-/// How long a game's opening is worth keeping, in plies.
-public let OPENING_PLIES = 16
-
-/// The opening of a game, as the line to write into a repertoire: the first
-/// plies, trimmed to end on your own move.
-public func openingLine(_ moves: [String], _ color: Color, _ plies: Int = OPENING_PLIES) -> [String] {
-  let cut = Array(moves.prefix(plies))
-  if cut.isEmpty { return cut }
-  // A White line has odd length (ends on White's move); a Black line, even.
-  let isOdd = cut.count % 2 == 1
-  return isOdd == (color == .w) ? cut : Array(cut.dropLast())
-}
-
-public enum GameResult: String, Sendable, Codable {
-  case win, loss, draw, unfinished
 }
 

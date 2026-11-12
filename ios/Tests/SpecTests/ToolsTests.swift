@@ -48,7 +48,7 @@ private enum Tools {
 
   /// One opening's per-day stats: [day, rounds, answered, correct, rating or nil].
   static func stats(_ days: [(String, Int, Int, Int, Double?)], rating: Double = 0) -> NodeStats {
-    var s = emptyNodeStats()
+    var s = NodeStats()
     s.rating = rating
     s.rated = days.contains { $0.4 != nil } ? 20 : 0
     for d in days { s.days[d.0] = DayTally(answered: d.2, correct: d.3, rounds: d.1, rating: d.4) }
@@ -64,7 +64,7 @@ private enum Tools {
   ], rating: 175)
 
   static let SCORE: ScoreState = {
-    var s = EMPTY_SCORE
+    var s = ScoreState()
     s.nodes = [
       "e4 c5": stats([("2026-10-30", 5, 20, 15, 300)], rating: 300),
       "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6": stats([("2026-10-30", 3, 12, 10, 420)], rating: 420),
@@ -112,7 +112,6 @@ private func noon(_ key: String) -> Double {
   func series(_ days: Int, _ today: String) -> JSON {
     let now = noon(today)
     return obj([
-      "rounds": dailyRounds(T.HISTORY, days, now).map { "\($0.key):\(JS.string($0.value))" },
       "rating": ratingOverTime(T.HISTORY, days, now).map { JS.string($0.value) },
       "accuracy": rollingAccuracy(T.HISTORY, days, now).map { JS.toFixed($0.value, 3) },
       "recent": recentRounds(T.HISTORY, days, now),
@@ -153,19 +152,8 @@ private func noon(_ key: String) -> Double {
   }
 
   try check("tools", [
-    "gameAnalysis.buildPlayerTree": { a in
-      let t = buildPlayerTree(T.GAMES, color(a[0]))
-      let positions = t.nodes.values.filter { $0.games >= 2 }.map { n in
-        let choices = n.choices.isEmpty ? "" : " [" + n.choices.entries.map { "\($0.key):\($0.value)" }.joined(separator: " ") + "]"
-        return "\(n.path.joined(separator: " ")) \(n.games)g \(n.wins)/\(n.draws)/\(n.losses)\(choices)"
-      }
-      return obj(["games": t.games, "positions": positions])
-    },
     "repair.buildRepairs": { repairs($0[0].bool) },
     "stats.series": { series($0[0].int, $0[1].string) },
-    "stats.ladders": { a in
-      obj(["rated": ratedOpenings(tree, T.SCORE, a[0].strings).map(\.node.id)])
-    },
     "stats.niceTicks": { niceTicks($0[0].number).json },
     "extensionGraph.layoutGraph": { layout($0[0].bool) },
     "extensionGraph.extensionRoots": { _ in

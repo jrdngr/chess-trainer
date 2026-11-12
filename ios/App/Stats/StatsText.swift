@@ -27,12 +27,6 @@ func ratingText(_ rating: Double) -> String { "\(Int(JSRound(rating)))" }
 /// A share as a whole percentage.
 func percentText(_ share: Double) -> String { "\(Int(JSRound(share * 100)))%" }
 
-/// "1st", "2nd", "11th".
-func ordinal(_ n: Int) -> String {
-  let suffix = (11...13).contains(n % 100) ? "th" : ["th", "st", "nd", "rd"].indices.contains(n % 10) ? ["th", "st", "nd", "rd"][n % 10] : "th"
-  return "\(n)\(suffix)"
-}
-
 /// "1. e4 e5 2. Nf3": a line from the start, as `sansToMoveText` writes it.
 func bookMoveText(_ sans: [String]) -> String {
   sans.enumerated().flatMap { i, san in i % 2 == 0 ? ["\(i / 2 + 1).", san] : [san] }.joined(separator: " ")

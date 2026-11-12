@@ -9,7 +9,6 @@ public enum Focus: String, Sendable, Codable, CaseIterable {
   case test, review
 }
 
-public let FOCUSES = Focus.allCases
 public let DEPTH = 0.6
 public let STALENESS = 2.0
 public let BRAKE = 0.5

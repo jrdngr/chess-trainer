@@ -74,7 +74,7 @@ import Testing
     }
     let selection = Selection(color: ColorChoice(rawValue: s["selection"]["color"].string)!, opening: s["selection"]["opening"].string)
     let played = s["played"].strings
-    var score = EMPTY_SCORE
+    var score = ScoreState()
     for (i, l) in played.enumerated() {
       score = recordRound(score, tree, RoundRecord(
         mode: .run, openingId: selection.opening, color: .w, answered: 1, correct: 1, perfect: false,

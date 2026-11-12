@@ -80,58 +80,6 @@
       ]
     },
     {
-      "fn": "survival.planMission",
-      "about": "The structure's plan as a mission, when a square it names is in reach.",
-      "cases": [
-      {"args":["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","w",-150],"out":null},
-      {"args":["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","w",0],"out":null},
-      {"args":["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","w",150],"out":null},
-      {"args":["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","b",-150],"out":null},
-      {"args":["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","b",0],"out":null},
-      {"args":["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","b",150],"out":null},
-      {"args":["r1bq1rk1/pp1nbppp/2p2n2/3p2B1/3P4/2NBP3/PPQ2PPP/R3K1NR w KQ - 0 9","w",-150],"out":{"kind":"plan","moves":0,"held":0,"goals":[{"piece":"p","to":"b5"},{"piece":"n","to":"e5"}],"start":-150}},
-      {"args":["r1bq1rk1/pp1nbppp/2p2n2/3p2B1/3P4/2NBP3/PPQ2PPP/R3K1NR w KQ - 0 9","w",0],"out":{"kind":"plan","moves":0,"held":0,"goals":[{"piece":"p","to":"b5"},{"piece":"n","to":"e5"}],"start":0}},
-      {"args":["r1bq1rk1/pp1nbppp/2p2n2/3p2B1/3P4/2NBP3/PPQ2PPP/R3K1NR w KQ - 0 9","w",150],"out":{"kind":"plan","moves":0,"held":0,"goals":[{"piece":"p","to":"b5"},{"piece":"n","to":"e5"}],"start":150}},
-      {"args":["r1bq1rk1/pp1nbppp/2p2n2/3p2B1/3P4/2NBP3/PPQ2PPP/R3K1NR w KQ - 0 9","b",-150],"out":{"kind":"plan","moves":0,"held":0,"goals":[{"piece":"n","to":"e4"}],"start":150}},
-      {"args":["r1bq1rk1/pp1nbppp/2p2n2/3p2B1/3P4/2NBP3/PPQ2PPP/R3K1NR w KQ - 0 9","b",0],"out":{"kind":"plan","moves":0,"held":0,"goals":[{"piece":"n","to":"e4"}],"start":0}},
-      {"args":["r1bq1rk1/pp1nbppp/2p2n2/3p2B1/3P4/2NBP3/PPQ2PPP/R3K1NR w KQ - 0 9","b",150],"out":{"kind":"plan","moves":0,"held":0,"goals":[{"piece":"n","to":"e4"}],"start":-150}},
-      {"args":["rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6","w",-150],"out":null},
-      {"args":["rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6","w",0],"out":null},
-      {"args":["rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6","w",150],"out":null},
-      {"args":["rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6","b",-150],"out":null},
-      {"args":["rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6","b",0],"out":null},
-      {"args":["rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6","b",150],"out":null},
-      {"args":["r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQK2R w KQkq - 0 6","w",-150],"out":null},
-      {"args":["r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQK2R w KQkq - 0 6","w",0],"out":null},
-      {"args":["r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQK2R w KQkq - 0 6","w",150],"out":null},
-      {"args":["r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQK2R w KQkq - 0 6","b",-150],"out":null},
-      {"args":["r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQK2R w KQkq - 0 6","b",0],"out":null},
-      {"args":["r1bqk2r/ppp2ppp/2np1n2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQK2R w KQkq - 0 6","b",150],"out":null},
-      {"args":["r1b1k2r/ppp2pp1/2np1q1p/2b1p3/2B1P3/2PP1N2/PP3PPP/RN1QK2R w KQkq - 0 8","w",-150],"out":null},
-      {"args":["r1b1k2r/ppp2pp1/2np1q1p/2b1p3/2B1P3/2PP1N2/PP3PPP/RN1QK2R w KQkq - 0 8","w",0],"out":null},
-      {"args":["r1b1k2r/ppp2pp1/2np1q1p/2b1p3/2B1P3/2PP1N2/PP3PPP/RN1QK2R w KQkq - 0 8","w",150],"out":null},
-      {"args":["r1b1k2r/ppp2pp1/2np1q1p/2b1p3/2B1P3/2PP1N2/PP3PPP/RN1QK2R w KQkq - 0 8","b",-150],"out":null},
-      {"args":["r1b1k2r/ppp2pp1/2np1q1p/2b1p3/2B1P3/2PP1N2/PP3PPP/RN1QK2R w KQkq - 0 8","b",0],"out":null},
-      {"args":["r1b1k2r/ppp2pp1/2np1q1p/2b1p3/2B1P3/2PP1N2/PP3PPP/RN1QK2R w KQkq - 0 8","b",150],"out":null}
-      ]
-    },
-    {
-      "fn": "survival.missionText",
-      "about": "The mission's line under Your move.",
-      "cases": [
-      {"args":[{"kind":"edge","moves":0,"held":0}],"out":"Keep your edge · 0 of 10"},
-      {"args":[{"kind":"edge","moves":9,"held":9}],"out":"Keep your edge · 9 of 10"},
-      {"args":[{"kind":"lead","moves":0,"held":0}],"out":"Take the lead · 15 moves left"},
-      {"args":[{"kind":"lead","moves":14,"held":0}],"out":"Take the lead · 1 move left"},
-      {"args":[{"kind":"dig","moves":0,"held":0}],"out":"Dig in · 15 moves left"},
-      {"args":[{"kind":"dig","moves":14,"held":0}],"out":"Dig in · 1 move left"},
-      {"args":[{"kind":"convert","moves":0,"held":0,"pieces":{"mine":7,"theirs":7}}],"out":"Convert it · trade a piece · 6 moves left"},
-      {"args":[{"kind":"convert","moves":5,"held":0,"pieces":{"mine":7,"theirs":7}}],"out":"Convert it · trade a piece · 1 move left"},
-      {"args":[{"kind":"plan","moves":0,"held":0,"goals":[{"piece":"p","to":"b5"},{"piece":"n","to":"e5"}],"start":30}],"out":"Follow the plan · 8 moves left"},
-      {"args":[{"kind":"plan","moves":7,"held":0,"goals":[{"piece":"p","to":"b5"},{"piece":"n","to":"e5"}],"start":30}],"out":"Follow the plan · 1 move left"}
-      ]
-    },
-    {
       "fn": "survival.stepMission",
       "about": "One judged move against a mission, with the eval and the position after it.",
       "cases": [

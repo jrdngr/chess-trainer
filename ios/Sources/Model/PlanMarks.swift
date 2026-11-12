@@ -96,11 +96,6 @@ public func advanceTrail(_ trail: PlanTrail, _ fen: String, _ me: Color) -> Plan
   return out
 }
 
-/// The trail over a game's positions, first to last.
-public func planTrail(_ fens: [String], _ me: Color) -> PlanTrail {
-  fens.reduce(PlanTrail()) { advanceTrail($0, $1, me) }
-}
-
 /// How many steps of a plan were done and how many went.
 public func markTally(_ shown: ShownPlan) -> (done: Int, gone: Int) {
   (shown.marks.filter { $0 == .done }.count, shown.marks.filter { $0 == .gone }.count)

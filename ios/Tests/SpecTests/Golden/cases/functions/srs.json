@@ -159,32 +159,10 @@
       ]
     },
     {
-      "fn": "srs.gradeForLine",
-      "about": "A whole line's grade: Guessed after any miss, otherwise the average time.",
-      "cases": [
-      {"args":[[],0],"out":"good"},
-      {"args":[[1,2],0],"out":"easy"},
-      {"args":[[2.9,3.1],0],"out":"good"},
-      {"args":[[3,3],0],"out":"good"},
-      {"args":[[7.9,8.1],0],"out":"hard"},
-      {"args":[[8,8],0],"out":"hard"},
-      {"args":[[12,20],0],"out":"hard"},
-      {"args":[[1],1],"out":"again"},
-      {"args":[[],2],"out":"again"}
-      ]
-    },
-    {
       "fn": "srs.createCard",
       "about": "A new position card.",
       "cases": [
       {"args":["rep_w#key","rep_w","key","fen",1790845200000],"out":{"id":"rep_w#key","repertoireId":"rep_w","key":"key","fen":"fen","stage":"new","step":0,"interval":0,"ease":2.5,"reps":0,"lapses":0,"correct":0,"incorrect":0,"due":1790845200000,"lastReviewed":null,"createdAt":1790845200000}}
-      ]
-    },
-    {
-      "fn": "srs.createLineCard",
-      "about": "A new line card.",
-      "cases": [
-      {"args":["rep_w","tip",1790845200000],"out":{"id":"rep_w#tip","repertoireId":"rep_w","tipId":"tip","stage":"new","step":0,"interval":0,"ease":2.5,"reps":0,"lapses":0,"correct":0,"incorrect":0,"due":1790845200000,"lastReviewed":null,"createdAt":1790845200000}}
       ]
     },
     {

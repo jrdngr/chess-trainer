@@ -139,8 +139,6 @@ public struct NodeStats: Equatable, Sendable, Codable {
   public init() {}
 }
 
-public func emptyNodeStats() -> NodeStats { NodeStats() }
-
 /// One round: a Survival run, a Drill session or line, or a Growth run.
 public struct RoundRecord: Equatable, Sendable, Codable {
   public var mode: ActivityMode
@@ -192,8 +190,6 @@ public struct ScoreState: Equatable, Sendable, Codable {
 
   public init() {}
 }
-
-public let EMPTY_SCORE = ScoreState()
 
 /// The local calendar day a moment falls on.
 public func dayKey(_ at: Double, _ calendar: Calendar = .current) -> String {

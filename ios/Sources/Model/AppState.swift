@@ -37,7 +37,6 @@ public struct Settings: Equatable, Sendable, Codable {
   public var survival = DEFAULT_SURVIVAL
   /// Middlegame mode's setup.
   public var middlegame = DEFAULT_MIDDLEGAME
-  public var drill = DEFAULT_DRILL
   /// How Play's runs start: from move one, or wherever your prep needs work.
   public var start = RunStart.drill
   public init() {}
@@ -48,7 +47,6 @@ public struct Settings: Equatable, Sendable, Codable {
     case movesPerFill, seenAutoplayNote, seenDeckTip, tips, tutorial
     case survival
     case middlegame
-    case drill
     case start
   }
 
@@ -80,7 +78,6 @@ public struct Settings: Equatable, Sendable, Codable {
     tutorial = try c.decodeIfPresent(Tutorial.self, forKey: .tutorial)
     survival = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .survival) ?? survival
     middlegame = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .middlegame) ?? middlegame
-    drill = try c.decodeIfPresent(SavedDrillPrefs.self, forKey: .drill)?.prefs ?? drill
     start = try c.decodeIfPresent(RunStart.self, forKey: .start) ?? start
   }
 }
@@ -99,7 +96,6 @@ public struct AppState: Equatable, Sendable, Codable {
   public var score = ScoreState()
   public var survival = SurvivalRecord()
   public var mistakes: [Mistake] = []
-  public var lineCards: [String: LineCard] = [:]
   /// Every review, oldest first.
   public var log: [ReviewLogEntry] = []
   public var events: [AppEvent] = []
@@ -115,7 +111,7 @@ public struct AppState: Equatable, Sendable, Codable {
   public init() {}
 
   enum CodingKeys: String, CodingKey {
-    case repertoires, repertoireOrder, cards, score, survival, mistakes, lineCards, log, events, settings, strength, endgames, middlegame
+    case repertoires, repertoireOrder, cards, score, survival, mistakes, log, events, settings, strength, endgames, middlegame
     case games
   }
 
@@ -129,7 +125,6 @@ public struct AppState: Equatable, Sendable, Codable {
     score = try c.decodeIfPresent(ScoreState.self, forKey: .score) ?? score
     survival = try c.decodeIfPresent(SurvivalRecord.self, forKey: .survival) ?? survival
     mistakes = try c.decodeIfPresent([Mistake].self, forKey: .mistakes) ?? mistakes
-    lineCards = try c.decodeIfPresent([String: LineCard].self, forKey: .lineCards) ?? lineCards
     log = try c.decodeIfPresent([ReviewLogEntry].self, forKey: .log) ?? log
     events = normalizeEvents(try c.decodeIfPresent([AppEvent].self, forKey: .events))
     settings = try c.decodeIfPresent(Settings.self, forKey: .settings) ?? settings
