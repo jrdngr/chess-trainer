@@ -7,7 +7,7 @@ import Model
 import SwiftUI
 
 /// Middlegame mode, opened from Home or from a line on the opening sheet: one of
-/// your lines played out to a middlegame, then a Run run from there. While the
+/// your lines played out to a middlegame, then a run from there. While the
 /// handoff is built, the mode is announced over the screen. A run plays on
 /// `RunModel` and `RunView`, and ends on `EndView`, as Run's do.
 struct MiddlegameView: View {

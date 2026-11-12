@@ -48,7 +48,12 @@ in `ios/Tests/FlowTests/`. See "Playing without the screens" in
 giving. When a change to the app's behavior is intended, update the affected
 cases in the same commit and say why in the message.
 
-## Autopilot's intent
+## Play's intent and the gameplay rules
 
-Before changing Autopilot, read [docs/gameplay.md](docs/gameplay.md). It
-says what Autopilot is for, and each change should pass its tests.
+Before changing Play, read [docs/gameplay.md](docs/gameplay.md). It says
+what Play is for, and each change should pass its tests.
+
+[docs/rules/](docs/rules/README.md) says what the gameplay code does, one
+topic per file, each rule backed by a test in the suite named after its file
+(`ios/Tests/SpecTests/Rules/`). A change to gameplay updates its rule and test
+in the same commit.

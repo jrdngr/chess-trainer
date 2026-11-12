@@ -21,24 +21,6 @@ import Testing
   #expect(try JSONDecoder().decode(AppState.self, from: data) == state)
 }
 
-/// Freeform starts from move one even when all your prep sits deep inside one opening.
-@Test func freeformStartsFromMoveOne() throws {
-  let tree = openingTree(bookIndex)
-  var state = AppState()
-  state.settings.start = .freeform
-  let id = state.ensurePlaybook(.b)
-  state.addLine(id, line("e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5"), .fixed(.book))
-  state.addLine(id, line("d4 d5"), .fixed(.book))
-  // Recent Tests brake the Playbook-wide Test, so a Review narrowed into the Najdorf wins.
-  var history = AutoHistory()
-  history.focuses = [.test, .test, .test]
-  let round = try #require(nextRound(state, tree, Selection(color: .b, opening: ANY_OPENING), history))
-  #expect(round.free)
-  #expect(round.pick.opening.id == ANY_OPENING)
-  #expect(round.at == nil)
-  #expect(round.aim == nil)
-}
-
 /// Drill on the whole Playbook starts like a picked opening: the same deep prep is not played from move one.
 @Test func drillOnWholePlaybookStartsInside() throws {
   let tree = openingTree(bookIndex)
@@ -63,17 +45,4 @@ import Testing
 @Test func randomSideReadsAsEither() throws {
   let data = Data(#"{"color":"random","opening":""}"#.utf8)
   #expect(try JSONDecoder().decode(Selection.self, from: data).color == .either)
-}
-
-/// Freeform plays the picked side even with nothing to recommend there; only Either takes the recommendation's side.
-@Test func freeformPlaysThePickedSide() throws {
-  let tree = openingTree(bookIndex)
-  var state = AppState()
-  state.settings.start = .freeform
-  state.addLine(state.ensurePlaybook(.b), line("e4 c5 d4 cxd4"), .fixed(.book))
-  state.addLine(state.ensurePlaybook(.b), line("d4 d5"), .fixed(.book))
-  let white = try #require(nextRound(state, tree, Selection(color: .w, opening: ANY_OPENING), AutoHistory()))
-  #expect(white.free && white.pick.color == .w)
-  let either = try #require(nextRound(state, tree, Selection(color: .either, opening: ANY_OPENING), AutoHistory()))
-  #expect(either.pick.color == .b)
 }

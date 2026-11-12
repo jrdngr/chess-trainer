@@ -5,7 +5,7 @@ import Foundation
 import Model
 import Observation
 
-/// One Run run on screen, Play's or one you set up. It feeds the controller what happens (your moves, the judge's verdicts,
+/// One run on screen, Play's or one you set up. It feeds the controller what happens (your moves, the judge's verdicts,
 /// the opponent's replies), carries out the effects in order, and keeps what
 /// the view draws.
 @MainActor @Observable

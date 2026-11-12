@@ -4,7 +4,7 @@ import Model
 import SwiftUI
 
 /// A sitting of Growth wherever it opens: from Home, or grown from the end
-/// of an Play or Run run. A game from here plays over it.
+/// of a Play run or a run you set up. A game from here plays over it.
 struct GrowthSitting: View {
   let model: GrowthModel
   /// Analysis on a line, seen from a side.

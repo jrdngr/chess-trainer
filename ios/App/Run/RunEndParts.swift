@@ -4,7 +4,7 @@ import Model
 import SwiftUI
 import UIKit
 
-/// What a Run run you set up came to, in points when moments, missions
+/// What a run you set up came to, in points when moments, missions
 /// or the combo were on, else in moves; and a new best.
 struct RunSummary: View {
   let finish: Finish

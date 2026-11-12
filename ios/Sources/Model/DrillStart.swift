@@ -1,11 +1,11 @@
 import ChessCore
 import Shared
 
-/// Play: one Run run after another, each decided for you,
+/// Play: one run after another, each decided for you,
 /// including where it starts.
 
 /// Where a Drill run starts: the position of your move most due, the moves to it played for
-/// you; see `docs/gameplay.md`. A move never asked is the most due. With none due, your weakest
+/// you; see `docs/rules/drill.md`. A move never asked is the most due. With none due, your weakest
 /// while your prep keeps missing, else the one closest to due. Never your first move as White,
 /// so a Drill run starts from move one only when there is no move of yours to start at, which is nil.
 public func drillStart(_ items: [TrainingItem], _ cards: [String: Card], accuracy: Double?, round: Int) -> (item: TrainingItem, need: Double)? {

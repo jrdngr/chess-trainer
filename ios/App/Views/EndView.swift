@@ -8,7 +8,7 @@ import SwiftUI
 /// The end of a run. Final position and End of prep to switch
 /// between, the board, Grow this line, Analyze and Back Home (Next run in
 /// Run and Middlegame), then what
-/// the run came to and the rating it moved. A Run run you set up
+/// the run came to and the rating it moved. A run you set up
 /// (no Play round) adds its own parts: `RunEndParts`. A Middlegame
 /// run names its start Handoff, scores in points and offers Same line.
 struct EndView: View {

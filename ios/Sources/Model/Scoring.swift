@@ -133,7 +133,7 @@ public struct NodeStats: Equatable, Sendable, Codable {
   public init() {}
 }
 
-/// One round: a Run run, a Drill session or line, or a Growth run.
+/// One round: a run, a Drill session or line, or a Growth run.
 public struct RoundRecord: Equatable, Sendable, Codable {
   public var mode: ActivityMode
   /// The opening the round was credited to.
@@ -143,7 +143,7 @@ public struct RoundRecord: Equatable, Sendable, Codable {
   public var correct: Int
   public var perfect: Bool
   public var at: Double
-  /// A Run run's prepared positions: how many it asked, how many you found.
+  /// A run's prepared positions: how many it asked, how many you found.
   public var prep: Prep?
   /// The line the round was about.
   public var line: [String]?

@@ -11,8 +11,10 @@ Swift package, `ChessPlaybook`:
 | `Shared` | Number formatting, string ordering, a stable sort and an insertion-ordered map, matched to the golden cases' JavaScript origin |
 | `ChessCore` | Board, legal moves, SAN, FEN |
 | `Book` | The 2200+ book, decoded from `book.json`, and reading it: names, families |
-| `Model` | The opening tree and regions, the Playbook tree and its openings, extensions, the prepared floor, SRS cards, ratings, the selection, Any favorite, the picker catalogue and its browse lists; Autopilot, Survival, Drill and Growth as pure controllers; missions, lenses and structures; import |
-| `Engine` | The engine (bitboard alpha-beta search), the judge, and the Pawns lens's best breaks; the human-like levels are in `Model/Strength.swift` |
+| `Model` | The opening tree and regions, the Playbook tree and its openings, the prepared floor, SRS cards, ratings, the selection, the picker catalogue and its browse lists; Play, Run, Middlegame, Endgames and Growth as pure controllers; missions, lenses and structures; import; save migrations |
+| `Fathom` | Syzygy tablebase probing (vendored C) |
+| `Caissa` | The Caissa engine and its net (vendored C++) |
+| `Engine` | Caissa behind the app's engine interface, the judge, tablebases, book scores and the Pawns lens's best breaks; the human-like levels are in `Model/Play.swift` and `Model/Strength.swift` |
 | `Game` | The app without its screens: the store and its saves, Play's rounds (`PlaySession`, `RunModel`), Growth sittings, Middlegame and Endgames, all on injected time, engines and storage (`GameServices`). `HeadlessApp` drives it from code; `ScriptedEngine` is a fast, fixed engine for it |
 | `PlaybookCLI` | `playbook`, the app on the command line |
 
@@ -29,6 +31,7 @@ cd ios && swift test
   (`cases/functions/*.json`, `cases/scenarios/*.json`, `constants.json`).
   They were recorded from the web prototype and are now plain fixtures: when a
   behavior change is intended, edit the affected cases with it.
+  `SpecTests/Rules/` holds one suite per file in `docs/rules/`.
 
 `PickerData.swift`, `StructureTemplates.swift` and `StarterSets.swift` hold
 data that the constants tests compare with `Golden/constants.json`.
@@ -81,6 +84,6 @@ leaving the middle box for the lightest). Re-render the PNG from the SVG after e
 
 ## Builds and versions
 
-- Xcode Cloud archives every push to `main` for TestFlight, and builds every push to `dev` without publishing; after a `dev` build, `ci_scripts/ci_post_xcodebuild.sh` runs `swift test`. `ci_scripts/ci_post_clone.sh` installs XcodeGen and generates the project, since `ChessPlaybook.xcodeproj` is not checked in.
+- Xcode Cloud builds every push to `main`. After a plain build, `ci_scripts/ci_post_xcodebuild.sh` runs `swift test`; archives for TestFlight skip it. `ci_scripts/ci_post_clone.sh` installs XcodeGen and generates the project, since `ChessPlaybook.xcodeproj` is not checked in.
 - The marketing version is `MARKETING_VERSION` in `project.yml`. To bump it, edit it there and regenerate.
 - Xcode Cloud sets the build number on every archive. Local builds stay at `1`. They are only for installing on a device, never for uploading.

@@ -99,7 +99,7 @@ public func afterRound(_ history: AutoHistory, _ round: AutoRound, _ selection: 
   return next
 }
 
-/// The Run run Play plays for a round.
+/// The run Play plays for a round.
 public func runOptions(_ round: AutoRound, _ state: AppState, _ tree: OpeningTree, _ selection: Selection, seed: Double) -> StartOptions {
   var opts = StartOptions(steer: .lines, tree: tree, reps: state.playbookList, node: nodeById(tree, selection.opening), color: round.pick.color == .w ? .w : .b)
   opts.lean = LEAN_FOR[round.pick.focus]

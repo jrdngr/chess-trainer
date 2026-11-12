@@ -2,7 +2,7 @@ import Foundation
 import ChessCore
 import Shared
 
-/// What Play's next Run run should be: an opening inside the
+/// What Play's next run should be: an opening inside the
 /// selection, a colour, and a focus.
 
 public enum Focus: String, Sendable, Codable, CaseIterable {
@@ -269,7 +269,7 @@ public func recommend(_ input: RecommendInput) -> Recommendation? {
   return Recommendation(focus: best.focus, opening: opening, color: best.color)
 }
 
-/// How many recent Run runs your prep accuracy is read over.
+/// How many recent runs your prep accuracy is read over.
 public let ACCURACY_RUNS = 5
 
 /// How far your prep is missing: 0 at 95% found or better, 1 at 85% or worse.

@@ -3,7 +3,7 @@ import Game
 import Model
 import SwiftUI
 
-/// What a Run run you set up shows that Play's round does not.
+/// What a run you set up shows that Play's round does not.
 extension RunView {
   /// The opening the run is announced as, by its trail.
   var introTrail: [String] {

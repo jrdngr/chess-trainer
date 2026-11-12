@@ -7,7 +7,7 @@ import SwiftUI
 /// A run in play: the board, what floats over it, and the dock under it.
 /// The board takes the screen's width first; the dock (goal card, status,
 /// lenses) has what is left, so nothing in it can shrink the board.
-/// A Run run you set up (no Play round) adds its own app bar with the clock.
+/// A run you set up (no Play round) adds its own app bar with the clock.
 struct RunView: View {
   @Bindable var model: RunModel
   let onExit: () -> Void

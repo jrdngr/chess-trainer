@@ -5,7 +5,7 @@ import Model
 import Observation
 
 /// One sitting of Growth, driven through GrowthController: opened from Home,
-/// or grown from the end of an Play or Run run. Its moves stay in a
+/// or grown from the end of a Play run or a run you set up. Its moves stay in a
 /// draft until Save Line. The answers on offer are `HoleAnswers.swift`,
 /// the announcement `GrowthModel+Intro.swift`.
 @MainActor @Observable
@@ -80,7 +80,7 @@ public final class GrowthModel {
     planIntro()
   }
 
-  /// Grown from the offer at the end of an Play or Run run, on Growth's own settings.
+  /// Grown from the offer at the end of a Play run or a run you set up, on Growth's own settings.
   public convenience init?(offer: GrowOffer, store: AppStore, tree: OpeningTree, index: ReferenceIndex) {
     let prefs = store.state.settings.growth
     let widened = offer.launch.widened

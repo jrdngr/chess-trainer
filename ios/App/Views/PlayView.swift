@@ -5,7 +5,7 @@ import Game
 import Model
 import SwiftUI
 
-/// Play: a Run run decided for you. A finished round stays on its board with
+/// Play: a run decided for you. A finished round stays on its board with
 /// the deck under it, and the next round is drawn from the deck; the close button leaves.
 /// A tutorial game also stays on its board when it ends, with no deck: its X goes back Home.
 struct PlayView: View {

@@ -146,7 +146,7 @@ public func lineOdds(_ rep: Playbook, _ side: Color, _ index: ReferenceIndex?, _
   return odds
 }
 
-/// What a Run's opponent steers toward.
+/// What a run's opponent steers toward.
 public enum Steer: String, Sendable { case popular, weak, gaps }
 
 /// How much less often a hole may be met than the best one and still be drawn.
