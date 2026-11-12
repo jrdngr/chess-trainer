@@ -72,7 +72,7 @@ public func growthRows(_ reps: [Repertoire], _ index: ReferenceIndex, _ opts: Gr
   for rep in reps {
     var byName = OrderedMap<String, GrowthRow>()
     for hole in findHoles(rep, index, opts) {
-      if opts.pastBook != true && holePastBook(index, hole) { continue }
+      if holePastBook(index, hole) { continue }
       let line = hole.path + [hole.san]
       let (name, eco) = heading(line, holeLabel(hole))
       let id = "\(rep.id)#\(name)"
@@ -164,9 +164,9 @@ public func pastTheBook(_ index: ReferenceIndex, _ fen: String) -> Bool {
   popularReplies(index, fen, 0).isEmpty
 }
 
-/// A hole the engine found, or one either side of which the book has nothing.
+/// A hole either side of which the book has nothing.
 public func holePastBook(_ index: ReferenceIndex, _ hole: Hole) -> Bool {
-  hole.engine || pastTheBook(index, hole.fen) || pastTheBook(index, hole.after)
+  pastTheBook(index, hole.fen) || pastTheBook(index, hole.after)
 }
 
 public func startGrowthAtEnd(_ rep: Repertoire, _ row: GrowthRow, _ end: LineEnd) -> GrowthRun {
@@ -257,14 +257,11 @@ public func answerHole(_ run: GrowthRun, _ san: String) -> GrowthRun? {
   return next
 }
 
-/// Their most popular reply to the answer just added, as the next hole; past
-/// the book the engine's best. Nil (outer) while the engine has not answered.
-public func nextHole(_ index: ReferenceIndex, _ run: GrowthRun) -> Hole?? {
-  let book = popularReplies(index, run.fen, 0)
-  if book.isEmpty && engineReplies(run.fen) == nil { return nil }
-  let reply = book.first ?? (engineReplies(run.fen) ?? []).first.map { Reply(san: $0, games: 0, white: 0, draw: 0, black: 0, share: 0, engine: true) }
-  guard let reply, let after = applySan(run.fen, reply.san) else { return .some(nil) }
-  return Hole(path: run.path, fen: run.fen, san: reply.san, share: reply.share, games: reply.games, after: after.after, nodeId: nil, engine: reply.engine, reach: 0)
+/// Their most popular reply to the answer just added, as the next hole; nil
+/// where the book has none.
+public func nextHole(_ index: ReferenceIndex, _ run: GrowthRun) -> Hole? {
+  guard let reply = popularReplies(index, run.fen, 0).first, let after = applySan(run.fen, reply.san) else { return nil }
+  return Hole(path: run.path, fen: run.fen, san: reply.san, share: reply.share, games: reply.games, after: after.after, nodeId: nil, reach: 0)
 }
 
 /// The book's answers at a position, most played first.
@@ -272,14 +269,9 @@ public func optionsAt(_ index: ReferenceIndex, _ fen: String, _ limit: Int = 4) 
   Array(popularReplies(index, fen, 0).prefix(limit))
 }
 
-/// What a run offers you at a hole; nil past the book while the engine works.
-public func choicesAt(_ index: ReferenceIndex, _ fen: String, _ limit: Int = 4) -> [Reply]? {
-  let book = optionsAt(index, fen, limit)
-  if !book.isEmpty { return book }
-  guard let engine = engineReplies(fen) else { return nil }
-  return Array(engine.map { Reply(san: $0, games: 0, white: 0, draw: 0, black: 0, share: 0, engine: true) }
-    .filter { (engineLoss(fen, $0.san) ?? 0) <= NEAR_BEST }
-    .prefix(limit))
+/// What a run offers you at a hole: the book's answers, none past the book.
+public func choicesAt(_ index: ReferenceIndex, _ fen: String, _ limit: Int = 4) -> [Reply] {
+  optionsAt(index, fen, limit)
 }
 
 /// The book's arrows at a position: each piece's most played move, up to `count` pieces.
@@ -306,11 +298,8 @@ public func lineFor(_ run: GrowthRun, _ san: String) -> [String] { run.path + [s
 /// The run another batch would carry on from, or nil with nothing left to answer.
 public func resumeAdding(_ rep: Repertoire, _ index: ReferenceIndex, _ run: GrowthRun) -> GrowthRun? {
   if atHole(rep, run) {
-    let choices = choicesAt(index, run.fen, 1)
-    return choices == nil || !choices!.isEmpty ? run : nil
+    return choicesAt(index, run.fen, 1).isEmpty ? nil : run
   }
-  guard let found = nextHole(index, run) else { return run }
-  guard let hole = found else { return nil }
-  let choices = choicesAt(index, hole.after, 1)
-  return choices == nil || !choices!.isEmpty ? enterHole(run, hole) : nil
+  guard let hole = nextHole(index, run) else { return nil }
+  return choicesAt(index, hole.after, 1).isEmpty ? nil : enterHole(run, hole)
 }

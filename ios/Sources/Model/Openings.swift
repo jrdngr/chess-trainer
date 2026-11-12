@@ -139,23 +139,6 @@ public func familiesIn(_ rep: Repertoire, _ index: ReferenceIndex, firstMoves: B
   })
 }
 
-/// Whether a node belongs to an opening: in its subtree but not one nested in it, or on the way to it.
-public func holdsNode(_ rep: Repertoire, _ opening: DerivedOpening, _ nodeId: String) -> Bool {
-  let nested = Set(opening.nested ?? [])
-  var id: String? = nodeId
-  while let at = id {
-    if nested.contains(at) { return false }
-    if at == opening.rootId { return true }
-    id = rep.nodes[at]?.parentId
-  }
-  id = opening.rootId
-  while let at = id {
-    if at == nodeId { return true }
-    id = rep.nodes[at]?.parentId
-  }
-  return false
-}
-
 /// The ends of every line an opening holds, leaving out openings nested in it.
 public func tipsOf(_ rep: Repertoire, _ opening: DerivedOpening) -> [String] {
   subtreeStats(rep, opening.rootId, opening.path.count, Set(opening.nested ?? [])).tips

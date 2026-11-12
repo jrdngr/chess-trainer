@@ -57,13 +57,10 @@ public struct PrepSpan: Equatable, Sendable {
   public var total: Int
   /// Plies played in the book past the prep.
   public var book: Int?
-  /// The ply the prep leaves the book at.
-  public var ext: Int?
-  public init(played: Int, total: Int, book: Int? = nil, ext: Int? = nil) {
+  public init(played: Int, total: Int, book: Int? = nil) {
     self.played = played
     self.total = total
     self.book = book
-    self.ext = ext
   }
 
   /// The same span counted in `color`'s own moves rather than plies, so moves played for you don't take up segments.
@@ -71,7 +68,7 @@ public struct PrepSpan: Equatable, Sendable {
     let book = book.map { movesBy(color, in: total + $0) - movesBy(color, in: total) }
     return PrepSpan(
       played: movesBy(color, in: played), total: movesBy(color, in: total),
-      book: book == 0 ? nil : book, ext: ext.map { movesBy(color, in: $0) })
+      book: book == 0 ? nil : book)
   }
 }
 

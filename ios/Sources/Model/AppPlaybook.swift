@@ -30,11 +30,11 @@ extension AppState {
 
   @discardableResult
   public mutating func addLine(
-    _ repId: String, _ sans: [String], _ source: SourceFor, via: EventPlace? = nil, lost: [Double?]? = nil
+    _ repId: String, _ sans: [String], _ source: SourceFor, via: EventPlace? = nil
   ) -> Int {
     guard let rep = repertoires[repId] else { return 0 }
     let res = Model.addLine(rep, sans, source)
-    repertoires[repId] = lost.map { $0.isEmpty ? res.rep : recordLosses(res.rep, sans, $0) } ?? res.rep
+    repertoires[repId] = res.rep
     if res.added > 0 {
       let name: String
       switch source {

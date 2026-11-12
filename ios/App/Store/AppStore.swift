@@ -55,12 +55,12 @@ final class AppStore {
     if let data = try? Data(contentsOf: profilesFile), let list = try? JSONDecoder().decode(ProfileList.self, from: data) {
       profiles = list
     }
-    readState()
     if let built {
       index = built.0
       tree = built.1
       catalog = pickerCatalog(built.1)
     }
+    readState()
     if fresh { Task { restoreOffer = await deviceBackups() ?? [] } }
   }
 
@@ -75,6 +75,7 @@ final class AppStore {
     guard FileManager.default.fileExists(atPath: file.path(percentEncoded: false)) else { return }
     if let data = try? Data(contentsOf: file) {
       decode(data)
+      if let index, state.migrate(index) { save() }
     } else {
       print("load failed: \(file.lastPathComponent) could not be read")
       saveBlocked = true

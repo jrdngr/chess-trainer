@@ -4,7 +4,7 @@ import Testing
 
 extension RatingMove: JSONable {
   var json: JSON {
-    obj(["id": id, "ext": ext ? true : nil, "before": before, "after": after, "promotion": promotion])
+    obj(["id": id, "before": before, "after": after, "promotion": promotion])
   }
 }
 
@@ -18,10 +18,9 @@ extension RatingMove: JSONable {
     var earlier: [MoveResult] = []
     var steps: [JSON] = []
     for (i, answer) in answers.enumerated() {
-      let kind = answer["kind"].stringOrNil
       let result = MoveResult(
         mode: .survival, line: line(answer["line"].string), color: .w, correct: answer["correct"].bool,
-        rated: kind != "mistake", ext: kind == "ext" || kind == "mistake", at: at + Double(i) * 1000)
+        rated: true, at: at + Double(i) * 1000)
       let applied = applyResult(state, tree, result, earlier)
       state = applied.state
       earlier.append(result)
@@ -34,7 +33,7 @@ extension RatingMove: JSONable {
       settled = done.moves.json
     }
     let ratings = state.nodes.mapValues { s in
-      obj(["rating": s.rating, "rated": s.rated, "extRating": s.extRating, "extRated": s.extRated, "answered": s.answered, "correct": s.correct])
+      obj(["rating": s.rating, "rated": s.rated, "answered": s.answered, "correct": s.correct])
     }
     return obj(["steps": JSON.array(steps), "settled": settled, "ratings": ratings])
   }

@@ -137,7 +137,7 @@ struct GrowthView: View {
       let mine = isUsersTurn(model.run)
       return (mine && !model.thinking ? "Your move" : "Reply", model.thinking)
     case .answered: return ("Reply", true)
-    case .hole: return model.waitingForEngine ? ("Reply", true) : ("Your move", false)
+    case .hole: return ("Your move", false)
     default: return nil
     }
   }

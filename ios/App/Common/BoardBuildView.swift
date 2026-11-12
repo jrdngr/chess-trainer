@@ -5,17 +5,16 @@ import Model
 import Shared
 import SwiftUI
 
-/// A line saved from the board, with what the engine said of each move when it is held back.
+/// A line saved from the board.
 struct BoardLine: Equatable {
   var color: ChessCore.Color
   var sans: [String]
-  var lost: [Double?]?
 }
 
 /// The board editor: build lines by playing the moves in, for both sides.
 /// Nothing moves on its own; Move opponent plays the book's most played reply,
-/// or the engine's best past the book. Book moves are filled in the strip,
-/// extensions outlined, and the board is ringed while you are in one. The
+/// or the engine's best past the book. Book moves are filled in the strip and
+/// moves past the book outlined; only the book part of a line is saved. The
 /// engine judges every move, and a dubious move or a blunder shows what it
 /// gave away and an arrow to the better move. Nothing is saved until Save line.
 /// Shared by onboarding, the Playbook tab and the Playbook browser.
@@ -60,8 +59,7 @@ struct BoardBuildView: View {
     let mine = turnAfter(visible) == color
     let judged = moves.indices.map { i in i + 1 < fens.count ? checks.check(fens[i], moves[i]) ?? nil : nil }
     let lost = judged.map { $0?.lost }
-    let book = bookLength(lineKinds(index, moves, color, lost))
-    let inExtension = cursor > book
+    let book = bookLength(index, moves)
     let last = cursor > 0 ? judged[cursor - 1] : nil
     let lastBad = last.flatMap { moveQuality($0.lost) } != nil
     let choices = bookChoices(index, fen)
@@ -88,18 +86,6 @@ struct BoardBuildView: View {
           BoardView(fen: fen, orientation: flipped ? color.other : color, interactive: true,
                     lastMove: lastMoveOf(visible), arrows: arrows, bothSides: true) { move in setLine(visible + [move.san]) }
             .padding(3)
-            .overlay {
-              if inExtension { RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.accent, lineWidth: 2) }
-            }
-            .overlay(alignment: .bottom) {
-              if inExtension {
-                Text("EXTENSION").font(.system(size: 11, weight: .heavy)).tracking(0.5).foregroundStyle(Theme.extText)
-                  .padding(.horizontal, 9).padding(.vertical, 2)
-                  .background(Capsule().fill(Theme.background))
-                  .overlay(Capsule().strokeBorder(Theme.accent, lineWidth: 1.5))
-                  .offset(y: 10)
-              }
-            }
           MoveStrip(
             items: moves.enumerated().map { i, san in
               StripItem(san: san, label: i % 2 == 0 ? "\(i / 2 + 1)." : nil, tone: tone(i, book, lost), current: i == cursor - 1,
@@ -178,9 +164,9 @@ struct BoardBuildView: View {
         onSaved(saved)
       }
     }) { ref in
-      SaveSheet(sans: ref.sans, color: color, whole: true, source: .board,
+      SaveSheet(sans: ref.sans, color: color, source: .board,
                 onSaved: { _, _, line in keep(BoardLine(color: color, sans: line)) },
-                onKeep: hold ? { line, _, lost in keep(BoardLine(color: color, sans: line, lost: lost)) } : nil,
+                onKeep: hold ? { line, _ in keep(BoardLine(color: color, sans: line)) } : nil,
                 onClose: { saving = nil })
         .presentationDetents([.medium, .large]).presentationBackground(Theme.background)
     }
@@ -203,13 +189,13 @@ struct BoardBuildView: View {
     .padding(3).background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface))
   }
 
-  /// A move in the strip: judged dubious or a blunder, else book or extension; past the cursor, faint.
+  /// A move in the strip: judged dubious or a blunder, else in the book or past it; past the cursor, faint.
   private func tone(_ ply: Int, _ book: Int, _ lost: [Double?]) -> MoveTone {
     if ply >= cursor { return .ghost }
     switch lost[ply].flatMap(moveQuality) {
     case .blunder: return .blunder
     case .dubious: return .dubious
-    case nil: return ply < book ? .book : .ext
+    case nil: return ply < book ? .book : .offBook
     }
   }
 

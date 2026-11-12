@@ -364,18 +364,14 @@ struct PopView: View {
 
   private func plain(_ tone: SwiftUI.Color) -> some View {
     HStack(spacing: 3) {
-      if pop.found { Text("\u{2713}").foregroundStyle(pop.book ? Theme.book : pop.ext ? Theme.ext : tone) }
+      if pop.found { Text("\u{2713}").foregroundStyle(pop.book ? Theme.book : tone) }
       // A common move past your line gets only its quiet tick: no time, no word.
-      if !pop.book {
-        if pop.ext { Text("Ext").foregroundStyle(Theme.ext) }
-        Text(pop.text).foregroundStyle(tone)
-      }
+      if !pop.book { Text(pop.text).foregroundStyle(tone) }
     }
     .font(.system(size: 13, weight: .bold).monospacedDigit())
     .padding(.horizontal, 6)
     .padding(.vertical, 2)
     .background(Capsule().fill(Theme.background.opacity(0.85)))
-    .overlay(Capsule().stroke(pop.ext ? Theme.ext : .clear, lineWidth: 1))
   }
 }
 

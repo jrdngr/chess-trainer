@@ -6,7 +6,6 @@ import SwiftUI
 struct RatingsList: View {
   struct Item {
     var id: String
-    var ext: Bool
     var name: String
     var delta: Double
     var after: Double
@@ -34,14 +33,7 @@ struct RatingsList: View {
       Circle().fill(Color(hexString: (rank.held ?? UNRATED).color)).frame(width: 10, height: 10)
       VStack(alignment: .leading, spacing: 2) {
         Text(item.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
-        HStack(spacing: 6) {
-          if item.ext {
-            Text("Extensions").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.ext)
-              .padding(.horizontal, 6).overlay(Capsule().strokeBorder(Theme.accent, lineWidth: 1.5))
-          }
-          Text(rank.heldLabel).font(.system(size: 12.5)).foregroundStyle(Theme.text3)
-        }
-        .lineLimit(1)
+        Text(rank.heldLabel).font(.system(size: 12.5)).foregroundStyle(Theme.text3).lineLimit(1)
       }
       Spacer(minLength: 0)
       Text(delta >= 0 ? "+\(delta)" : "\(delta)").font(.system(size: 14).monospacedDigit())

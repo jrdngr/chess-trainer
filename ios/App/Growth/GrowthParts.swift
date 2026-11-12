@@ -71,7 +71,7 @@ struct AnswerRow: View {
 
   private var meta: String {
     if option.games > 0 { return "\(Int(JSRound(option.share)))% of games" }
-    return option.engine ? "Engine's pick" : "Not in the book"
+    return "Rarely played"
   }
 }
 

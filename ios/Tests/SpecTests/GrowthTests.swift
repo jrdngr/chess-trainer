@@ -5,11 +5,11 @@ import Testing
 
 func holeJSON(_ h: Hole) -> JSON {
   obj(["path": h.path, "fen": h.fen, "san": h.san, "share": h.share, "games": h.games, "after": h.after,
-       "kept": h.kept ? true : nil, "engine": h.engine ? true : nil, "reach": h.reach])
+       "kept": h.kept ? true : nil, "reach": h.reach])
 }
 
 func replyJSON(_ r: Reply) -> JSON {
-  obj(["san": r.san, "games": r.games, "white": r.white, "draw": r.draw, "black": r.black, "share": r.share, "engine": r.engine ? true : nil, "next": r.next])
+  obj(["san": r.san, "games": r.games, "white": r.white, "draw": r.draw, "black": r.black, "share": r.share, "next": r.next])
 }
 
 func rowJSON(_ r: GrowthRow) -> JSON {
@@ -33,7 +33,7 @@ func rowJSON(_ r: GrowthRow) -> JSON {
     "growth.addsToFit": { addsToFit($0[0].int, $0[1].int).json },
     "growth.rowUrgency": { rowUrgency($0[0].int, $0[1].number, $0[2].int).json },
     "growth.optionsAt": { a in .array(optionsAt(index, a[0].string, a[1].int).map(replyJSON)) },
-    "growth.choicesAt": { a in choicesAt(index, a[0].string, 4).map { .array($0.map(replyJSON)) } ?? .string("undefined") },
+    "growth.choicesAt": { a in .array(choicesAt(index, a[0].string, 4).map(replyJSON)) },
     "growth.pastTheBook": { pastTheBook(index, $0[0].string).json },
     "growth.growthRows": { a in .array(growthRows([rep(a[0])], index, options(a[1])).map(rowJSON)) },
   ], only: ["growth.holeShare", "growth.movesToFit", "growth.addsToFit", "growth.rowUrgency", "growth.optionsAt", "growth.choicesAt", "growth.pastTheBook", "growth.growthRows"])

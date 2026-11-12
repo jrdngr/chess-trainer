@@ -3,17 +3,14 @@ import Model
 import SwiftUI
 
 /// One move in the tree: its schedule, where it came from, how many branches
-/// follow, its note, and what it is against the book. `TreeRow`.
+/// follow, and its note. `TreeRow`.
 struct TreeRow: View {
   let rep: Repertoire
   let node: RepMove
-  let kind: MoveKind?
   let card: Card?
   let ourTurn: Bool
   let onOpen: () -> Void
   let onMenu: () -> Void
-
-  static let kindLabel: [MoveKind: String] = [.book: "Book", .rare: "Rare", .mistake: "Mistake", .past: "Past the book"]
 
   var body: some View {
     let kids = childrenOf(rep, node.id).count
@@ -31,7 +28,6 @@ struct TreeRow: View {
             if let note = node.note { Text(note).font(.system(size: 12.5)).foregroundStyle(Theme.text2).lineLimit(1) }
           }
           Spacer(minLength: 0)
-          if let kind, kind != .book { ExtPill(text: Self.kindLabel[kind]!, mistake: kind == .mistake) }
           if node.preferred && ourTurn { Chip(text: "main", tone: .accent) }
         }
         .frame(minHeight: 34).contentShape(Rectangle())

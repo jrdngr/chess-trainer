@@ -73,22 +73,6 @@ struct Chip: View {
   }
 }
 
-/// An outlined count or kind: `.ext-pill`.
-struct ExtPill: View {
-  var text: String
-  var mistake = false
-
-  var body: some View {
-    HStack(spacing: 4) {
-      if mistake { Icon(name: "warn", size: 12) }
-      Text(text)
-    }
-    .font(.system(size: 12, weight: .semibold)).foregroundStyle(mistake ? Theme.warn : Theme.ext)
-    .padding(.horizontal, 8).padding(.vertical, 2)
-    .overlay(Capsule().strokeBorder(mistake ? Theme.warn : Theme.accent, lineWidth: 1.5))
-  }
-}
-
 /// A section's heading over a list, with an aside.
 struct SectionHead: View {
   var title: String

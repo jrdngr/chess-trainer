@@ -14,7 +14,7 @@ struct GrowthPhaseView: View {
     VStack(spacing: 0) {
       // Whose move sits under the app bar; under the board only what there is to do.
       switch model.phase {
-      case .hole where !model.held && !model.waitingForEngine && !model.choices.isEmpty:
+      case .hole where !model.held && !model.choices.isEmpty:
         hole
       case .lost: lost
       case .done: GrowthReveal(model: model, exits: exits)

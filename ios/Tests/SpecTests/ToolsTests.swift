@@ -8,11 +8,10 @@ import Testing
 private enum Tools {
   static let AT = 1_790_845_200_000.0  // 2026-10-01T09:00:00Z
 
-  /// A tree with its moves added at `AT`, and engine losses on the last move of some lines.
-  static func rep(_ color: Color, _ lines: [String], lost: [String: Double] = [:]) -> Repertoire {
+  /// A tree with its moves added at `AT`.
+  static func rep(_ color: Color, _ lines: [String]) -> Repertoire {
     var out = createRepertoire(color == .w ? "White" : "Black", color, "rep_\(color.rawValue)")
     for l in lines { out = Env.at(AT) { addLine(out, line(l), .fixed(.seed)).rep } }
-    for (l, cp) in lost { out.nodes[nodeAtLine(out, line(l))!.id]!.lost = cp }
     return out
   }
 
@@ -74,15 +73,6 @@ private enum Tools {
     ]
     return s
   }()
-
-  static let EXT = rep(.b, [
-    "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5 Nb3 Be6",
-    "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 h5",
-    "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bg5 e6 f4 Qb6",
-    "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bg5 Nbd7",
-    "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 h3 e5 Nde2 h5 g3 h4",
-    "e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3 d6 Bg5 Qa5",
-  ], lost: ["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bg5 Nbd7": 120])
 }
 
 /// Noon on a local day, as the cases build their "now".
@@ -118,28 +108,6 @@ private func noon(_ key: String) -> Double {
     ])
   }
 
-  func layout(_ extOnly: Bool) -> JSON {
-    let kinds = treeKinds(T.EXT, index)
-    let root = nodeAtLine(T.EXT, ["e4"])!
-    return layoutGraph(T.EXT, index, kinds, root.id, extOnly: extOnly).map { row in
-      let from = row.parent.map { "\($0.row).\($0.col)" } ?? "-"
-      let cells = row.cells.map { c in
-        if c.kind == .move(.book) { return c.label }
-        return "\(c.label)(\(c.kind.name)\(c.joinRow.map { " \($0)" } ?? ""))"
-      }
-      return "\(from) @\(row.start): \(cells.joined(separator: " "))"
-    }.json
-  }
-
-  func kept(_ keptAt: Double?, _ addedLater: Double) -> JSON {
-    var r = T.EXT
-    let root = nodeAtLine(r, line("e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bg5 Nbd7"))!
-    for id in r.nodes.keys { r.nodes[id]!.addedAt = 100 }
-    r.nodes[root.id]!.keptAt = keptAt
-    r.nodes[root.id]!.addedAt = addedLater
-    return keptCurrent(r, r.nodes[root.id]!).json
-  }
-
   func styles(_ l: String) -> JSON {
     let choices = bookChoices(index, after(l))
     var picks: [Style: String] = [:]
@@ -155,18 +123,6 @@ private func noon(_ key: String) -> Double {
     "repair.buildRepairs": { repairs($0[0].bool) },
     "stats.series": { series($0[0].int, $0[1].string) },
     "stats.niceTicks": { niceTicks($0[0].number).json },
-    "extensionGraph.layoutGraph": { layout($0[0].bool) },
-    "extensionGraph.extensionRoots": { _ in
-      let kinds = treeKinds(T.EXT, index)
-      return extensionRoots(T.EXT, kinds).map { n in
-        "\(pathTo(T.EXT, n.id).map(\.san).joined(separator: " ")) (\(kinds[n.id]!.rawValue))"
-      }.json
-    },
-    "extensionGraph.orderedKids": { a in
-      let kinds = treeKinds(T.EXT, index)
-      return orderedKids(T.EXT, index, kinds, nodeAtLine(T.EXT, line(a[0].string))!.id).map(\.san).json
-    },
-    "extensionGraph.keptCurrent": { kept($0[0].numberOrNil, $0[1].number) },
     "boardBuilder.bookChoices": { a in
       bookChoices(index, after(a[0].string)).map { "\($0.san) \(JS.toFixed($0.share, 3))" }.json
     },

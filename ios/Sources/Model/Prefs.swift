@@ -90,7 +90,6 @@ public struct GrowthPrefs: Equatable, Sendable, Codable {
   public var maxPly: Int
   public var nudgePriority: NudgePriority
   public var nudgePawns: Bool
-  public var pastBook: Bool
 }
 
 /// Autopilot's own options: matters of taste only.
@@ -106,15 +105,15 @@ public let DEFAULT_AUTOPILOT = AutopilotPrefs(moveScores: true)
 /// How many new moves a round may ask.
 public let NEW_PER_ROUND = 8
 
-/// Growth rounds, and what counts as ready to grow. Autopilot never grows past the book.
+/// Growth rounds, and what counts as ready to grow.
 /// Growth's own defaults.
-public let DEFAULT_GROWTH = GrowthPrefs(minShare: 1, maxPly: 18, nudgePriority: .transposition, nudgePawns: false, pastBook: false)
+public let DEFAULT_GROWTH = GrowthPrefs(minShare: 1, maxPly: 18, nudgePriority: .transposition, nudgePawns: false)
 
 /// One fill's size, in your moves; the settings slider runs 1...5.
 public let DEFAULT_MOVES_PER_FILL = 3
 public let MOVES_PER_FILL_RANGE = 1...5
 
-public let AUTO_GROWTH = GrowthPrefs(minShare: 1, maxPly: 18, nudgePriority: .transposition, nudgePawns: false, pastBook: false)
+public let AUTO_GROWTH = GrowthPrefs(minShare: 1, maxPly: 18, nudgePriority: .transposition, nudgePawns: false)
 
 /// Survival rounds: Autopilot steers, there is no clock, the feedback is yours.
 public func autoSurvival(_ prefs: AutopilotPrefs) -> SurvivalPrefs {

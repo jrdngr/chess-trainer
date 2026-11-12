@@ -18,7 +18,7 @@ struct OffPrepHint: View {
   var body: some View {
     let ply = find.path.count
     VStack(alignment: .leading, spacing: 8) {
-      Text("\(moveLabel(ply, find.suggestion)) is closer to the rest of your prep than \(moveLabel(ply, find.mine)). \(find.reason)\(find.offBook ? NOT_IN_BOOK : "").")
+      Text("\(moveLabel(ply, find.suggestion)) is closer to the rest of your prep than \(moveLabel(ply, find.mine)). \(find.reason)\(find.offBook ? RARELY_PLAYED : "").")
         .font(.system(size: 13.5)).foregroundStyle(nudgeColor(find.tone)).lineSpacing(3)
         .frame(maxWidth: .infinity, alignment: .leading)
       Button(action: onTidy) {

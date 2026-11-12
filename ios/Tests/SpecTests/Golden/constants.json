@@ -24,8 +24,7 @@
       "minShare": 1,
       "maxPly": 18,
       "nudgePriority": "transposition",
-      "nudgePawns": false,
-      "pastBook": false
+      "nudgePawns": false
     },
     "DEFAULT_AUTOPILOT": {
       "moveScores": true
@@ -463,8 +462,7 @@
       "minShare": 1,
       "maxPly": 18,
       "nudgePriority": "transposition",
-      "nudgePawns": false,
-      "pastBook": false
+      "nudgePawns": false
     },
     "DEFAULT_PLAY": {
       "level": "club",
@@ -542,7 +540,6 @@
   "src/model/nudge.ts": {
     "HABIT_MIN": 2,
     "HABIT_PLIES": 4,
-    "NOT_IN_BOOK": " · not in the book",
     "VIA_REPLY_MIN": 0.25
   },
   "src/model/onboarding.ts": {
@@ -1168,8 +1165,6 @@
       "global": {
         "rating": 0,
         "rated": 0,
-        "extRating": 0,
-        "extRated": 0,
         "answered": 0,
         "correct": 0,
         "byMode": {

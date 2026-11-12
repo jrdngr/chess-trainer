@@ -6,7 +6,7 @@ import UIKit
 
 /// The Playbook tab: one side at a time, its openings under their first move,
 /// replies to one opening of yours under its name, each row with its tier and
-/// its line count. Tidy and the Extensions review are in the more menu when they have something.
+/// its line count. Tidy is in the more menu when it has something.
 struct PlaybookView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
@@ -36,7 +36,7 @@ struct PlaybookView: View {
   @State private var barWidth: CGFloat = 393
 
   enum Page: Equatable {
-    case tidy, extensions
+    case tidy
     case opening(repId: String, name: String)
     case browse(repId: String, nodeId: String?, title: String)
     /// The board editor on a line of one side's tree, back to the browser after.
@@ -48,7 +48,6 @@ struct PlaybookView: View {
     Group {
       switch page {
       case .tidy: TidyView(scan: scan, focus: focus, onFocusShown: { focus = nil }) { page = nil }
-      case .extensions: ExtensionsView { page = nil }
       case .opening(let repId, let name):
         OpeningPage(
           tree: tree, index: index, repId: repId, name: name, onBack: { page = nil },
@@ -103,22 +102,14 @@ struct PlaybookView: View {
     let reps = store.state.repertoireList
     let rep = reps.first { $0.color == side }
     let rows = rep.map { playbookRows($0, index) } ?? []
-    let extensions = extensionOpenings(reps, index)
-    let extCount = rep.map { Self.extensionCounts($0, rows, extensions) } ?? [:]
     let tip = playbookTip(store.state.settings.tips, hasRows: !rows.isEmpty)
     let putAway = { dismissTip(store, tip) }
     let untidy = scan.count ?? 0
-    let openExtensions = extensions.reduce(0) { $0 + $1.open }
     return VStack(spacing: 0) {
       AppBar(title: "Playbook", large: true) {
         Menu {
           if untidy > 0 {
             Button { page = .tidy } label: { Label("Tidy (\(untidy))", systemImage: "wand.and.stars") }
-          }
-          if !extensions.isEmpty {
-            Button { page = .extensions } label: {
-              Label(openExtensions > 0 ? "Extensions (\(openExtensions))" : "Extensions", systemImage: "arrow.triangle.branch")
-            }
           }
           Button { onImport() } label: { Label("Import my games", systemImage: "square.and.arrow.down") }
           Button { onBuild() } label: { Label("Play on the board", systemImage: "checkerboard.rectangle") }
@@ -153,10 +144,10 @@ struct PlaybookView: View {
                 ForEach(Array(group.entries.enumerated()), id: \.offset) { _, entry in
                   switch entry {
                   case .row(let row):
-                    rowView(rep, row, extCount)
+                    rowView(rep, row)
                   case .family(let name, let node, let members):
                     FamilyRowView(name: name, nodeId: node, lines: entry.lines)
-                    ForEach(members, id: \.id) { row in rowView(rep, row, extCount, name: nameUnder(name, row.name), indent: 18) }
+                    ForEach(members, id: \.id) { row in rowView(rep, row, name: nameUnder(name, row.name), indent: 18) }
                   }
                 }
               }
@@ -202,7 +193,7 @@ struct PlaybookView: View {
   }
 
   /// One opening's row, swiping left to delete it after a confirmation.
-  private func rowView(_ rep: Repertoire, _ row: PlaybookRow, _ extCount: [String: Int], name: String? = nil, indent: CGFloat = 0) -> some View {
+  private func rowView(_ rep: Repertoire, _ row: PlaybookRow, name: String? = nil, indent: CGFloat = 0) -> some View {
     let removes = row.parts.reduce(0) { $0 + $1.removes }
     return SwipeToRemove(title: "Delete \(row.name)?", action: "Delete \(removes) \(removes == 1 ? "move" : "moves")") {
       store.update { state in
@@ -212,7 +203,7 @@ struct PlaybookView: View {
       }
       toasts.show("\(row.name) deleted")
     } content: {
-      PlaybookRowView(tree: tree, row: row, extensions: extCount[row.id] ?? 0, name: name, indent: indent) {
+      PlaybookRowView(tree: tree, row: row, name: name, indent: indent) {
         page = .opening(repId: rep.id, name: row.name)
       }
     }
@@ -224,17 +215,6 @@ struct PlaybookView: View {
     let plus = barWidth - 20 - 19
     let x = tip == .playbookMore ? plus - 46 : plus
     return (x - 16) / max(barWidth - 32, 1)
-  }
-
-  /// Extensions per row, counted once however many of its parts and variations they sit in.
-  static func extensionCounts(_ rep: Repertoire, _ rows: [PlaybookRow], _ extensions: [ExtensionOpening]) -> [String: Int] {
-    let roots = Set(extensions.filter { $0.rep.id == rep.id }.flatMap(\.roots))
-    var out: [String: Int] = [:]
-    for row in rows {
-      let held = roots.filter { root in row.parts.contains { holdsNode(rep, $0, root) } }.count
-      if held > 0 { out[row.id] = held }
-    }
-    return out
   }
 
   /// Your repertoire with the log of how it got that way, as a JSON file to share.
@@ -265,11 +245,10 @@ struct RepRef: Identifiable { var id: String }
   row.parts.first.flatMap { familyNode(tree, row.name, path: $0.path) }
 }
 
-/// One opening on the tab: its name over its tier bar, the tier's name, its extensions, and its line count.
+/// One opening on the tab: its name over its tier bar, the tier's name, and its line count.
 struct PlaybookRowView: View {
   let tree: OpeningTree
   let row: PlaybookRow
-  let extensions: Int
   /// The name shown, shorter under a family's row.
   var name: String? = nil
   var indent: CGFloat = 0
@@ -288,7 +267,6 @@ struct PlaybookRowView: View {
         }
         Text(stats.rated == 0 ? NEW_LABEL : rank.heldLabel).font(.system(size: 13)).foregroundStyle(Theme.text2)
           .lineLimit(1).frame(width: 64, alignment: .trailing)
-        if extensions > 0 { ExtPill(text: "+\(extensions)") }
         Text("\(row.lines)").font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text)
           .frame(width: 40, alignment: .trailing)
         Icon(name: "chevron", size: 18).foregroundStyle(Theme.text3)

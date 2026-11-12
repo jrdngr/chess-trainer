@@ -3,8 +3,8 @@ import SwiftUI
 /// How a move reads in the strip.
 enum MoveTone {
   case mine, theirs, ghost, bad, good
-  /// The board editor's: a book move filled, an extension outlined, a dubious move or a blunder in its color.
-  case book, ext, dubious, blunder
+  /// The board editor's: a book move filled, a move past the book outlined, a dubious move or a blunder in its color.
+  case book, offBook, dubious, blunder
 }
 
 struct StripItem {
@@ -101,7 +101,7 @@ struct MoveStrip: View {
     case .bad: return (Theme.bad, Theme.bad.opacity(0.14))
     case .good: return (Theme.good, Theme.good.opacity(0.14))
     case .book: return item.current ? (Theme.accentInk, Theme.accent) : (Theme.extText, Theme.accent.opacity(0.18))
-    case .ext: return item.current ? (Theme.text, Theme.accent.opacity(0.14)) : (Theme.extText, .clear)
+    case .offBook: return item.current ? (Theme.text, Theme.accent.opacity(0.14)) : (Theme.extText, .clear)
     case .dubious: return (Theme.warn, Theme.warn.opacity(item.current ? 0.2 : 0.12))
     case .blunder: return (Theme.bad, Theme.bad.opacity(item.current ? 0.2 : 0.12))
     default:
@@ -110,10 +110,10 @@ struct MoveStrip: View {
     }
   }
 
-  /// The editor's extensions and judged moves are drawn outlined.
+  /// The editor's moves past the book and judged moves are drawn outlined.
   private func outline(_ item: StripItem) -> SwiftUI.Color? {
     switch item.tone {
-    case .ext: item.current ? Theme.extText : Theme.accent
+    case .offBook: item.current ? Theme.extText : Theme.accent
     case .dubious: Theme.warn
     case .blunder: Theme.bad
     default: nil
@@ -122,7 +122,7 @@ struct MoveStrip: View {
 
   private func numberColor(_ item: StripItem) -> SwiftUI.Color {
     if item.tone == .book && item.current { return Theme.accentInk.opacity(0.55) }
-    if [.book, .ext, .dubious, .blunder].contains(item.tone) { return colors(item).0.opacity(0.6) }
+    if [.book, .offBook, .dubious, .blunder].contains(item.tone) { return colors(item).0.opacity(0.6) }
     if item.tone == .bad || item.tone == .good || item.tone == .mine { return colors(item).0.opacity(0.5) }
     return item.current ? .black.opacity(0.45) : Theme.text3
   }

@@ -47,8 +47,8 @@ public enum TowardKind: String, Sendable {
 
 enum AwayKind { case closes, passed }
 
-/// Appended to the reason of a move the book does not have.
-public let NOT_IN_BOOK = " · not in the book"
+/// Appended to the reason of a book move strong players rarely choose.
+public let RARELY_PLAYED = " · rarely played"
 
 /// Whether a move after `path` is the first one of its side in the game.
 public func isFirstMove(_ path: [String]) -> Bool { path.count < 2 }
@@ -76,7 +76,7 @@ public func nudgeArrows(
   for c in candidates { share[c.san] = c.share }
 
   if let green = pickToward(signals, prefs.priority, share) {
-    let reason = towardReason(green.signal, green.kind, index, fam) + (offBook.contains(green.signal.san) ? NOT_IN_BOOK : "")
+    let reason = towardReason(green.signal, green.kind, index, fam) + (offBook.contains(green.signal.san) ? RARELY_PLAYED : "")
     let pill = towardPill(green.signal, green.kind)
     if let at = out.firstIndex(where: { $0.san == green.signal.san }) {
       out[at].tone = .toward

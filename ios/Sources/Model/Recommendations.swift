@@ -93,7 +93,7 @@ public func gaps(_ reps: [Repertoire], _ index: ReferenceIndex, tree: OpeningTre
     let region = tree.flatMap { t in scope.flatMap { $0.depth > 0 ? (tree: t, node: $0) : nil } }
     let holes = findHoles(rep, index, GrowthOptions(minShare: GAP_SHARE, maxPly: GAP_MAX_PLY, region: region))
     var shortAt = Set<String>()
-    for hole in holes where !hole.engine && hole.share >= GAP_SHARE {
+    for hole in holes where hole.share >= GAP_SHARE {
       let line = hole.path + [hole.san]
       guard let end = namedEnd(index, line), end.ply >= line.count else { continue }
       let answered = childrenOf(rep, hole.nodeId).contains { !childrenOf(rep, $0.id).isEmpty }

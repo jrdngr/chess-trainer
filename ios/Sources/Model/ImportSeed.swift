@@ -153,7 +153,7 @@ private func rowsFor(_ lines: [[String]], _ color: Color, _ trie: GameTrie, _ in
 /// clears the bar. Then up to `SEED_UNCHECKED_MAX` other openings you play
 /// often: those filling an empty slot first, then by games. An opening
 /// your Playbook already has never shows. `lost` is what the engine said each
-/// of your moves gives away, keyed as `lossesIn` keys them.
+/// of your moves gives away, keyed by position and move.
 public func seedRows(_ games: [ImportedGame], _ index: ReferenceIndex, _ reps: [Repertoire], lost: [String: Double] = [:]) -> [SeedRow] {
   var full: [SeedRow] = []
   var loose: [SeedRow] = []
@@ -203,17 +203,15 @@ public func seedMoves(_ rows: [SeedRow]) -> [(fen: String, san: String)] {
 }
 
 extension AppState {
-  /// The chosen rows, added to the Playbook as imported moves, with what the engine said of each of your moves.
+  /// The chosen rows, added to the Playbook as imported moves.
   /// Returns how many moves went in.
   @discardableResult
-  public mutating func addSeedRows(_ rows: [SeedRow], lost: [String: Double] = [:]) -> Int {
+  public mutating func addSeedRows(_ rows: [SeedRow]) -> Int {
     var added = 0
     for row in rows {
       let repId = ensureRepertoire(row.color)
       for line in row.lines {
-        let fens = walkSan(line).fens
-        let costs = line.indices.map { i in i < fens.count ? lost["\(positionKey(fens[i])) \(line[i])"] : nil }
-        added += addLine(repId, line, .fixed(.import), via: .import, lost: costs)
+        added += addLine(repId, line, .fixed(.import), via: .import)
       }
     }
     return added

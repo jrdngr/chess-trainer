@@ -5,7 +5,7 @@ import Testing
 
 extension MoveResult {
   var json: JSON {
-    obj(["mode": mode.rawValue, "line": line, "color": color.rawValue, "correct": correct, "rated": rated, "ext": ext ? true : nil, "at": at])
+    obj(["mode": mode.rawValue, "line": line, "color": color.rawValue, "correct": correct, "rated": rated, "at": at])
   }
 }
 
@@ -33,7 +33,7 @@ private func effectJSON(_ effect: Effect, _ tree: OpeningTree) -> JSON {
   case .pop(let p):
     return obj(["kind": "pop", "pop": obj([
       "square": p.square, "text": p.text, "tone": p.tone.rawValue,
-      "found": p.found ? true : nil, "book": p.book ? true : nil, "ext": p.ext ? true : nil, "moment": p.moment ? true : nil,
+      "found": p.found ? true : nil, "book": p.book ? true : nil, "moment": p.moment ? true : nil,
     ])])
   case .note(let note):
     return obj(["kind": "note", "note": note.map { obj(["text": $0.text, "tone": $0.tone]) } ?? .null])
@@ -93,11 +93,7 @@ private func sessionJSON(_ s: RunSession) -> JSON {
     opts.seed = start["seed"].number
     let begun = try #require(startSurvival(opts), "\(name): no run")
     let prefs = setup["prefs"].decoded(SurvivalPrefs.self)
-    let kinds = setup["kinds"].object.mapValues { MoveKind(rawValue: $0.string)! }
-    let losses = setup["losses"].object.mapValues(\.number)
-    let ctx = RunContext(
-      index: index, prefs: prefs, autopilot: setup["autopilot"].bool,
-      kindOf: { l, san in kinds["\(l.joined(separator: " ")) | \(san)"] ?? .book }, lossOf: { losses[$0] })
+    let ctx = RunContext(index: index, prefs: prefs, autopilot: setup["autopilot"].bool)
     let picker = mulberry32(seed: setup["picker"].number)
     var session = beginSession(begun)
 

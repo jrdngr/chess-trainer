@@ -63,9 +63,6 @@ import Testing
   expect("growth", "DEFAULT_MAX_PLY", DEFAULT_MAX_PLY)
   expect("growth", "DEFAULT_MIN_SHARE", DEFAULT_MIN_SHARE)
   expect("growth", "MAX_ADDS", MAX_ADDS)
-  expect("engineReplies", "ENGINE_REPLIES", ENGINE_REPLIES)
-  expect("engineReplies", "ENGINE_THEIR_REPLIES", ENGINE_THEIR_REPLIES)
-  expect("engineReplies", "NEAR_BEST", NEAR_BEST)
   expect("boardHints", "KING_GRADE_TEXT", Dictionary(uniqueKeysWithValues: KING_GRADE_TEXT.map { ($0.key.rawValue, $0.value) }))
   expect("boardHints", "LENSES", JSON.array(LENSES.map { obj(["kind": $0.kind.rawValue, "label": $0.label]) }))
 }

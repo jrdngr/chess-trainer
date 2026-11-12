@@ -29,8 +29,6 @@ public struct RepMove: Equatable, Sendable, Codable {
   public var addedAt: Double
   /// When you kept this reply on Tidy's card.
   public var keptAt: Double?
-  /// Centipawns the move gave away against the engine's best, when checked on the way in.
-  public var lost: Double?
 }
 
 public struct Repertoire: Equatable, Sendable, Codable {
@@ -146,19 +144,6 @@ public func addLine(_ rep: Repertoire, _ sans: [String], _ source: SourceFor = .
     if res.created { added += 1 }
   }
   return (current, added, parentId)
-}
-
-/// Keep what the engine said of each move along a line: `lost[i]` is for move i.
-public func recordLosses(_ rep: Repertoire, _ sans: [String], _ lost: [Double?]) -> Repertoire {
-  var next = rep
-  var parentId: String?
-  for (i, san) in sans.enumerated() {
-    let kids = parentId.map { rep.nodes[$0]?.children ?? [] } ?? rep.rootChildren
-    guard let node = kids.compactMap({ rep.nodes[$0] }).first(where: { $0.san == san }) else { break }
-    if i < lost.count, let value = lost[i], node.lost != value { next.nodes[node.id]!.lost = value }
-    parentId = node.id
-  }
-  return next
 }
 
 /// Remove a node and everything below it.

@@ -9,7 +9,7 @@ func survivalStart(_ prefs: SurvivalPrefs, _ selection: Selection, _ state: AppS
   var opts = StartOptions(steer: prefs.steer, tree: tree, reps: state.repertoireList, node: nodeById(tree, selection.opening), color: selection.color)
   opts.weakness = weaknessFromCards(state.cards, slips(evidence))
   let growth = state.settings.growth
-  opts.growth = GrowthOptions(minShare: growth.minShare, maxPly: growth.maxPly, pastBook: growth.pastBook)
+  opts.growth = GrowthOptions(minShare: growth.minShare, maxPly: growth.maxPly)
   opts.seen = Seen(at: state.score.seen, round: state.score.lineRounds)
   opts.seed = seed
   return opts

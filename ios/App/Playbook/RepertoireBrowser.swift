@@ -26,8 +26,6 @@ struct RepertoireBrowser: View {
   /// A branch chosen for deletion in the node menu; its confirm sheet opens once the menu is gone.
   @State private var cutNext: String?
   @State private var sideMenu = false
-  @State private var saving: [String]?
-  @State private var savingSource = MoveSource.manual
 
   var body: some View {
     if let rep = store.state.repertoires[repId], let index = store.index {
@@ -47,7 +45,6 @@ struct RepertoireBrowser: View {
     let line = onIt && full.count >= path.count ? full : path
     let next = line.count > path.count ? line[path.count] : nil
     let kids = childrenOf(rep, at)
-    let kinds = treeKinds(rep, index)
     let ourTurn = fenTurn(fen) == rep.color
     let opening = openingNameForPath(index, pathSans)
     let book = lookup(index, fen)
@@ -81,7 +78,7 @@ struct RepertoireBrowser: View {
           } else {
             ListCard {
               ForEach(kids, id: \.id) { kid in
-                TreeRow(rep: rep, node: kid, kind: kinds[kid.id], card: store.state.cards[cardId(rep.id, kid.key)], ourTurn: ourTurn,
+                TreeRow(rep: rep, node: kid, card: store.state.cards[cardId(rep.id, kid.key)], ourTurn: ourTurn,
                         onOpen: { goTo(kid.id, line) }, onMenu: { menuFor = kid.id })
               }
             }
@@ -115,12 +112,6 @@ struct RepertoireBrowser: View {
     .sheet(item: Binding(get: { cutting.map(RepRef.init) }, set: { cutting = $0?.id })) { ref in
       cutSheet(rep, ref.id).presentationDetents([.height(260)]).presentationBackground(Theme.background)
     }
-    .sheet(item: Binding(get: { saving.map { LineRef(sans: $0) } }, set: { saving = $0?.sans })) { ref in
-      SaveSheet(sans: ref.sans, color: rep.color, source: savingSource, onSaved: { _, _, saved in
-        if saved.count == ref.sans.count { descend(saved.last!, at: at) }
-      }, onClose: { saving = nil })
-      .presentationDetents([.medium, .large]).presentationBackground(Theme.background)
-    }
   }
 
   private func cutSheet(_ rep: Repertoire, _ id: String) -> some View {
@@ -146,12 +137,6 @@ struct RepertoireBrowser: View {
     if let id, !line.contains(where: { $0.id == id }) { lineTip = id }
   }
 
-  /// A line that leaves the book goes through the Save sheet, which checks the move first.
-  private func leavesBook(_ rep: Repertoire, _ index: ReferenceIndex, _ sans: [String]) -> Bool {
-    let kinds = lineKinds(index, sans, rep.color)
-    return bookLength(kinds) < kinds.count
-  }
-
   private func onBoardMove(_ rep: Repertoire, _ index: ReferenceIndex, _ kids: [RepMove], _ pathSans: [String], _ move: LegalMove) {
     if let existing = kids.first(where: { $0.san == move.san }) {
       nodeId = existing.id
@@ -162,11 +147,6 @@ struct RepertoireBrowser: View {
   }
 
   private func addFromBook(_ rep: Repertoire, _ index: ReferenceIndex, _ pathSans: [String], _ san: String, _ at: String?) {
-    if leavesBook(rep, index, pathSans + [san]) {
-      savingSource = .book
-      saving = pathSans + [san]
-      return
-    }
     store.update { $0.addLine(repId, pathSans + [san], .fixed(.book)) }
     descend(san, at: at)
     toasts.show("\(san) added")

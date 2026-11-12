@@ -125,9 +125,6 @@ public struct NodeStats: Equatable, Sendable, Codable {
   public var rating = RATING.start
   /// Rated results this opening has had.
   public var rated = 0
-  /// The Extensions rating: moved only by answers past where the line left the book.
-  public var extRating = RATING.start
-  public var extRated = 0
   public var answered = 0
   public var correct = 0
   public var byMode: [ActivityMode: ModeTally] = Dictionary(uniqueKeysWithValues: ActivityMode.allCases.map { ($0, ModeTally()) })
@@ -208,17 +205,14 @@ public struct MoveResult: Equatable, Sendable {
   public var correct: Bool
   /// Whether this moves ratings: only a prepared position answered in a run.
   public var rated: Bool
-  /// The answer was an extension: it rates the Extensions rating.
-  public var ext: Bool
   public var at: Double
 
-  public init(mode: ActivityMode, line: [String], color: Color, correct: Bool, rated: Bool, ext: Bool = false, at: Double) {
+  public init(mode: ActivityMode, line: [String], color: Color, correct: Bool, rated: Bool, at: Double) {
     self.mode = mode
     self.line = line
     self.color = color
     self.correct = correct
     self.rated = rated
-    self.ext = ext
     self.at = at
   }
 }
@@ -226,8 +220,6 @@ public struct MoveResult: Equatable, Sendable {
 /// How one opening's rating moved.
 public struct RatingMove: Equatable, Sendable {
   public var id: String
-  /// The Extensions rating rather than the main one.
-  public var ext: Bool
   public var before: Double
   public var after: Double
   /// 1 promoted a tier, -1 demoted, 0 neither.
@@ -267,11 +259,6 @@ private func tallyAnswer(_ stats: NodeStats, _ result: MoveResult) -> NodeStats 
 
 private func tallyRating(_ stats: NodeStats, _ result: MoveResult) -> NodeStats {
   var out = stats
-  if result.ext {
-    out.extRating = ratingAfter(stats.extRating, result.correct)
-    out.extRated += 1
-    return out
-  }
   let after = ratingAfter(stats.rating, result.correct)
   let key = dayKey(result.at)
   var day = stats.days[key] ?? DayTally()
@@ -288,11 +275,10 @@ private func tallyRating(_ stats: NodeStats, _ result: MoveResult) -> NodeStats 
 private func rateRun(
   _ nodes: inout [String: NodeStats], _ tree: OpeningTree, _ earlier: [MoveResult], _ line: [String], _ result: MoveResult?
 ) -> [RatingMove] {
-  var before = OrderedMap<String, (id: String, ext: Bool, was: Double)>()
+  var before = OrderedMap<String, Double>()
   func rate(_ id: String, _ answer: MoveResult) {
     let stats = nodes[id] ?? NodeStats()
-    let key = answer.ext ? "\(id) ext" : id
-    if !before.has(key) { before[key] = (id, answer.ext, answer.ext ? stats.extRating : stats.rating) }
+    if !before.has(id) { before[id] = stats.rating }
     nodes[id] = tallyRating(stats, answer)
   }
   let reached = ratedNodes(tree, line)
@@ -301,10 +287,11 @@ private func rateRun(
   let rated = Set(counted.flatMap { ratedNodes(tree, $0.line) })
   for id in reached where !rated.contains(id) { for answer in counted { rate(id, answer) } }
   if let result, result.rated { for id in reached { rate(id, result) } }
-  return before.values.map { entry in
-    let after = entry.ext ? nodes[entry.id]!.extRating : nodes[entry.id]!.rating
-    let climbed = rankOf(after).reached - rankOf(entry.was).reached
-    return RatingMove(id: entry.id, ext: entry.ext, before: entry.was, after: after, promotion: climbed > 0 ? 1 : climbed < 0 ? -1 : 0)
+  return before.keys.map { id in
+    let was = before[id]!
+    let after = nodes[id]!.rating
+    let climbed = rankOf(after).reached - rankOf(was).reached
+    return RatingMove(id: id, before: was, after: after, promotion: climbed > 0 ? 1 : climbed < 0 ? -1 : 0)
   }
 }
 

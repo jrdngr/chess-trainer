@@ -67,48 +67,6 @@
       ]
     },
     {
-      "fn": "extensions.moveKind",
-      "about": "What one of your moves is: book (any move the book has, unless a mistake), rare (the book knows the position but not the move), a mistake (gives away over 80cp), or past the book.",
-      "cases": [
-      {"args":["","e4",null],"out":"book"},
-      {"args":["","a3",null],"out":"book"},
-      {"args":["","Na3",null],"out":"rare"},
-      {"args":["","e4",120],"out":"mistake"},
-      {"args":["","e4",80],"out":"book"},
-      {"args":["e4 e5","Qh5",null],"out":"book"},
-      {"args":["e4 e5","Nf3",null],"out":"book"},
-      {"args":["e4 e5","Nf3",81],"out":"mistake"},
-      {"args":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5 O-O Nc6 d5 Ne7 Ne1 Nd7 Nd3 f5 Bd2 Nf6 f3 f4 g4 g5","Kh1",null],"out":"past"}
-      ]
-    },
-    {
-      "fn": "extensions.lineKinds",
-      "about": "Each move of a line by kind for one side: the opponent's always book, and once yours leaves the book every later one of yours is an extension.",
-      "cases": [
-      {"args":["e4 e5 Nf3 Nc6 Bc4","w"],"out":["book","book","book","book","book"]},
-      {"args":["e4 e5 Nf3 Nc6 Bc4 Bc5 b4","w"],"out":["book","book","book","book","book","book","book"]},
-      {"args":["e4 e5 Qh5 Nc6 Bc4","w"],"out":["book","book","book","book","book"]},
-      {"args":["e4 e5 a3","w"],"out":["book","book","book"]},
-      {"args":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5 O-O Nc6 d5 Ne7","b"],"out":["book","book","book","book","book","book","book","book","book","book","book","book","book","book","book","book"]},
-      {"args":["e4 c5 Nf3 a6 c3 b5","b"],"out":["book","book","book","book","book","book"]},
-      {"args":["e4 c5 d4 cxd4 c3 dxc3 Nxc3","w"],"out":["book","book","book","book","book","book","book"]},
-      {"args":["e4 g5 d4 h6","b"],"out":["book","rare","book","past"]}
-      ]
-    },
-    {
-      "fn": "extensions.bookLength",
-      "about": "Where a line becomes an extension.",
-      "cases": [
-      {"args":["e4 e5 Nf3 Nc6 Bc4","w"],"out":5},
-      {"args":["e4 e5 Nf3 Nc6 Bc4 Bc5 b4","w"],"out":7},
-      {"args":["e4 e5 Qh5 Nc6 Bc4","w"],"out":5},
-      {"args":["e4 e5 a3","w"],"out":3},
-      {"args":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5 O-O Nc6 d5 Ne7","b"],"out":16},
-      {"args":["e4 c5 Nf3 a6 c3 b5","b"],"out":6},
-      {"args":["e4 g5 d4 h6","b"],"out":1}
-      ]
-    },
-    {
       "fn": "extensions.movedBy",
       "about": "Whether a ply is played by a side.",
       "cases": [

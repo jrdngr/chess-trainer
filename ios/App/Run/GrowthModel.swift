@@ -150,8 +150,7 @@ final class GrowthModel {
 
   /// What another batch would answer, once the run has come to rest; nil with nothing left.
   var more: GrowthRun? {
-    _ = GrowthEngine.shared.version
-    return phase == .done ? resumeAdding(start, index, run) : nil
+    phase == .done ? resumeAdding(start, index, run) : nil
   }
 
   func addMore() {
@@ -220,7 +219,7 @@ final class GrowthModel {
       if phase == .walking && !opponentToMove(session, start) {
         session = nothingPrepared(session, preparedHere(start, run).count)
       }
-      if (phase == .hole || phase == .answered) && !prefs.pastBook && pastTheBook(index, run.fen) {
+      if (phase == .hole || phase == .answered) && pastTheBook(index, run.fen) {
         apply(reachedEdge(session), settling: false)
       }
       // A recommendation is filled once its named opening ends or no reply is common enough.
@@ -228,13 +227,10 @@ final class GrowthModel {
         session = stop(session)
       }
       if phase == .hole {
-        if let offered = choicesAt(index, run.fen, 4), offered.isEmpty { session = stop(session) }
+        if choicesAt(index, run.fen, 4).isEmpty { session = stop(session) }
         session = measureBatch(session, launch.maxPly)
       }
       if session == before { break }
-    }
-    if (phase == .hole || phase == .answered) && needsEngine(index, run.fen) {
-      GrowthEngine.shared.ask([run.fen], urgent: true) { [weak self] in self?.settle() }
     }
     if timerFor != session {
       timer?.cancel()
@@ -265,13 +261,13 @@ final class GrowthModel {
 
   /// What each hole put in front of you, logged once per position when its moves are in.
   func logOffer() {
-    guard phase == .hole, choices(at: run.fen) != nil, offeredAt != run.fen else { return }
+    guard phase == .hole, offeredAt != run.fen else { return }
     let offered = listed.map(\.san)
     guard !offered.isEmpty else { return }
     offeredAt = run.fen
     log(AppEvent(
       kind: "growth-offer", via: .growth, color: run.color, line: run.path.joined(separator: " "), offered: offered,
-      from: run.hole?.kept == true ? "kept" : pastBook ? "engine" : "book"))
+      from: run.hole?.kept == true ? "kept" : "book"))
   }
 
   private func show(_ text: String) {

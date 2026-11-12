@@ -2,10 +2,9 @@ import Book
 import ChessCore
 import Shared
 
-/// Moves the book does not have, and comparing moves for Tidy.
+/// Rare book moves, and comparing moves for Tidy.
 
-/// Legal moves the book leaves out, or ranks under `minShare`, that are
-/// familiar anyway: they transpose, head toward your lines, or are a habit.
+/// Book moves ranked under `minShare` that are familiar anyway: they transpose, head toward your lines, or are a habit.
 /// Soundness is not judged here; the engine does that before any is shown.
 ///
 /// `habitsOnly` looks only at habits, which can be listed without trying every
@@ -42,6 +41,8 @@ public func familiarOffBook(
   } else {
     sans = legalMoves(fen).map(\.san).filter { !listed.contains($0) }
   }
+  // The Playbook holds only book moves.
+  sans = sans.filter { inBook(index, fen, $0) }
   if sans.isEmpty { return [] }
   var quiet = opts
   quiet.away = false

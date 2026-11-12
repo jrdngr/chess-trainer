@@ -62,7 +62,6 @@ struct OpeningStatsView: View {
       HStack(alignment: .top, spacing: 0) {
         figure("\(rounds)", rounds == 1 ? "round" : "rounds")
         if let acc { figure(percentText(acc), "accuracy") }
-        if stats.extRated > 0 { figure(ratingText(stats.extRating), "extensions") }
         if let last = stats.lastAt { figure(shortDate(last), "last played") }
       }
       .padding(.top, 18)

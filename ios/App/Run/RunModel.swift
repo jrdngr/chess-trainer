@@ -193,11 +193,7 @@ final class RunModel {
     self.growth = growth
     picker = mulberry32(seed: (Env.random() * 2_147_483_648).rounded(.down))
     session = handoff != nil ? beginMiddlegame(begun) : beginSession(begun)
-    let losses = lossesIn(store.state.repertoireList)
-    ctx = RunContext(
-      index: index, prefs: prefs, autopilot: round != nil,
-      kindOf: { line, san in playedKinds(index, line + [san], line.count % 2 == 0 ? .w : .b, losses).last ?? .book },
-      lossOf: { losses[$0] })
+    ctx = RunContext(index: index, prefs: prefs, autopilot: round != nil)
   }
 
   var prefs: SurvivalPrefs { ctx.prefs }
@@ -246,11 +242,8 @@ final class RunModel {
     let added = filledRep.map { prepIndex(store.state.repertoires[$0]) } ?? [:]
     let prepAt = filledRep != nil ? { (fen: String) in added[positionKey(fen)] ?? [] } : session.source.prepAt
     let total = prepDepth(line, run.color, prepAt, run.opened)
-    let losses = lossesIn(store.state.repertoireList)
-    let ext = bookLength(playedKinds(index, Array(line.prefix(total)), run.color, losses))
     // Common moves past your line aren't counted on the bar: scores start where your line ends.
-    return PrepSpan(played: min(run.played.count, total), total: total, book: nil, ext: ext < total ? ext : nil)
-      .ownMoves(run.color)
+    return PrepSpan(played: min(run.played.count, total), total: total, book: nil).ownMoves(run.color)
   }
   var run: Run { session.state.run }
 
@@ -947,11 +940,10 @@ final class RunModel {
 }
 
 /// Each opening's rating over a run: where it stood before its first move, and after its last.
-/// `byKey` holds the main ratings; `changes` lists Extensions ratings too, in the order first moved.
+/// `changes` lists them in the order first moved.
 struct OrderedRatings {
   struct Change {
     var id: String
-    var ext: Bool
     var before: Double
     var after: Double
     var delta: Double { after - before }
@@ -960,15 +952,15 @@ struct OrderedRatings {
   private(set) var changes: [Change] = []
 
   var byKey: [String: (before: Double, after: Double)] {
-    Dictionary(changes.filter { !$0.ext }.map { ($0.id, ($0.before, $0.after)) }, uniquingKeysWith: { a, _ in a })
+    Dictionary(changes.map { ($0.id, ($0.before, $0.after)) }, uniquingKeysWith: { a, _ in a })
   }
 
   mutating func track(_ moves: [RatingMove]) {
     for move in moves {
-      if let i = changes.firstIndex(where: { $0.id == move.id && $0.ext == move.ext }) {
+      if let i = changes.firstIndex(where: { $0.id == move.id }) {
         changes[i].after = move.after
       } else {
-        changes.append(Change(id: move.id, ext: move.ext, before: move.before, after: move.after))
+        changes.append(Change(id: move.id, before: move.before, after: move.after))
       }
     }
   }

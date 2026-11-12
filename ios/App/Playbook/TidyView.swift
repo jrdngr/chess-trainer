@@ -113,7 +113,7 @@ struct TidyCard: View {
               Text(moveLabel(find.path.count, find.suggestion)).foregroundStyle(color)
             }
             .font(.system(size: 16, weight: .bold))
-            Text(find.offBook ? find.reason + NOT_IN_BOOK : find.reason).font(.system(size: 13)).foregroundStyle(color).lineSpacing(2)
+            Text(find.offBook ? find.reason + RARELY_PLAYED : find.reason).font(.system(size: 13)).foregroundStyle(color).lineSpacing(2)
               .multilineTextAlignment(.leading)
           }
           Spacer(minLength: 0)

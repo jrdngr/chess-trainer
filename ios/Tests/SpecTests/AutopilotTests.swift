@@ -112,8 +112,8 @@ import Testing
   #expect(ruy.ownMoves(.w) == PrepSpan(played: 3, total: 3))
   #expect(ruy.ownMoves(.b) == PrepSpan(played: 2, total: 2))
   // Prep to 3.Bb5, the book on to 4.Ba4 Nf6 5.O-O, leaving the book after 2...Nc6.
-  let booked = PrepSpan(played: 2, total: 5, book: 4, ext: 4)
-  #expect(booked.ownMoves(.w) == PrepSpan(played: 1, total: 3, book: 2, ext: 2))
+  let booked = PrepSpan(played: 2, total: 5, book: 4)
+  #expect(booked.ownMoves(.w) == PrepSpan(played: 1, total: 3, book: 2))
   // A book stretch holding none of Black's moves adds no segment.
   #expect(PrepSpan(played: 0, total: 4, book: 1).ownMoves(.b) == PrepSpan(played: 0, total: 2))
 }

@@ -33,41 +33,6 @@
       ]
     },
     {
-      "fn": "extensionGraph.layoutGraph",
-      "about": "The Extensions review's graph of one opening: columns are half-moves, rows go depth first, your move first then book moves, rare, mistakes; their replies by share; a move into a position drawn higher up ends in a join; past 16 plies a +N cell. The Extensions filter keeps only paths to an extension.",
-      "cases": [
-      {"args":[false],"out":["- @0: c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5 Nb3 Be6","0.9 @10: h5(rare)","0.8 @9: Bg5 e6 f4 Qb6","2.9 @10: Nbd7(mistake)","0.8 @9: h3 e5 Nde2 h5 g3 h4(rare)","0.1 @2: Nc6 d4 cxd4 Nxd4 Nf6 Nc3 d6 Bg5 Qa5"]},
-      {"args":[true],"out":["- @0: c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 h5(rare)","0.8 @9: Bg5 Nbd7(mistake)","0.8 @9: h3 e5 Nde2 h5 g3 h4(rare)"]}
-      ]
-    },
-    {
-      "fn": "extensionGraph.extensionRoots",
-      "about": "Every extension's first move off the book, top of the tree first: what Keep and Remove act on.",
-      "cases": [
-      {"args":[],"out":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 h5 (rare)","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bg5 Nbd7 (mistake)","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 h3 e5 Nde2 h5 g3 h4 (rare)"]}
-      ]
-    },
-    {
-      "fn": "extensionGraph.orderedKids",
-      "about": "A position's moves in the order the graph draws them.",
-      "cases": [
-      {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"],"out":["Be3","Bg5","h3"]},
-      {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3"],"out":["e5","h5"]},
-      {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bg5"],"out":["e6","Nbd7"]},
-      {"args":["e4 c5"],"out":["Nf3"]}
-      ]
-    },
-    {
-      "fn": "extensionGraph.keptCurrent",
-      "about": "A kept extension stays reviewed until a move under it is added after the keep.",
-      "cases": [
-      {"args":[null,100],"out":false},
-      {"args":[200,100],"out":true},
-      {"args":[200,300],"out":false},
-      {"args":[50,100],"out":false}
-      ]
-    },
-    {
       "fn": "boardBuilder.bookChoices",
       "about": "Play on the board's choices: the book's moves at 5% or more, most played first.",
       "cases": [

@@ -108,11 +108,13 @@ public struct AppState: Equatable, Sendable, Codable {
   public var middlegame = SurvivalRecord()
   /// The games you played here, newest first, at most GAMES_CAP.
   public var games: [GameRecord] = []
+  /// Which `migrate` steps the save has had.
+  public var version = SAVE_VERSION
   public init() {}
 
   enum CodingKeys: String, CodingKey {
     case repertoires, repertoireOrder, cards, score, survival, mistakes, log, events, settings, strength, endgames, middlegame
-    case games
+    case games, version
   }
 
   /// A save from before a field existed takes its default.
@@ -132,6 +134,7 @@ public struct AppState: Equatable, Sendable, Codable {
     endgames = try c.decodeIfPresent(EndgameRecord.self, forKey: .endgames) ?? endgames
     middlegame = try c.decodeIfPresent(SurvivalRecord.self, forKey: .middlegame) ?? middlegame
     games = try c.decodeIfPresent([GameRecord].self, forKey: .games) ?? games
+    version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 0
   }
 
   public var repertoireList: [Repertoire] { repertoireOrder.compactMap { repertoires[$0] } }
@@ -217,7 +220,7 @@ extension AppState {
       + openings.filter { legal($0.sans) }.map { (OnboardingLine(sans: $0.sans, color: $0.color), .picker) }
     for (line, source) in lines {
       let repId = ensureRepertoire(line.color)
-      addLine(repId, line.sans, .fixed(source), via: .onboarding, lost: line.lost)
+      addLine(repId, line.sans, .fixed(source), via: .onboarding)
     }
     // The selection follows the picks the book names.
     let picks = openings.compactMap { opening -> (id: String, color: Color)? in
@@ -240,15 +243,13 @@ public struct SeedOpening: Equatable, Sendable {
   }
 }
 
-/// A line played on onboarding's board, with what each move lost, if known.
+/// A line played on onboarding's board.
 public struct OnboardingLine: Equatable, Sendable {
   public var sans: [String]
   public var color: Color
-  public var lost: [Double?]?
-  public init(sans: [String], color: Color, lost: [Double?]? = nil) {
+  public init(sans: [String], color: Color) {
     self.sans = sans
     self.color = color
-    self.lost = lost
   }
 }
 

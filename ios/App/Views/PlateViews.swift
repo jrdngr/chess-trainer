@@ -19,23 +19,20 @@ struct PrepSegmentsView: View {
       let lit = book > 0 ? prepCount : Int(JSRound(Double(min(span.played, span.total)) / Double(span.total) * Double(count)))
       HStack(spacing: 3) {
         ForEach(0..<count, id: \.self) { i in
-          segment(i, count: count, prepCount: prepCount, lit: lit, span: span)
+          segment(i, count: count, prepCount: prepCount, lit: lit)
         }
       }
       .frame(height: height)
     }
   }
 
-  @ViewBuilder private func segment(_ i: Int, count: Int, prepCount: Int, lit: Int, span: PrepSpan) -> some View {
+  @ViewBuilder private func segment(_ i: Int, count: Int, prepCount: Int, lit: Int) -> some View {
     let isBook = i >= prepCount
     let here = isBook ? i == count - 1 : i == lit
     let past = !isBook && i < lit
-    // A segment holding any ply past where the prep leaves the book is drawn outlined.
-    let ext = !isBook && span.ext != nil && Double((i + 1) * span.total) / Double(prepCount) > Double(span.ext!)
     let fill: SwiftUI.Color = isBook ? Theme.book : here ? SwiftUI.Color(hex: 0xf2f2f5) : past ? Theme.accent : SwiftUI.Color(hex: 0x3a3a48)
     RoundedRectangle(cornerRadius: 3)
-      .fill(ext ? (past ? Theme.accent.opacity(0.35) : .clear) : fill)
-      .overlay(RoundedRectangle(cornerRadius: 3).stroke(ext ? (here ? SwiftUI.Color(hex: 0xf2f2f5) : Theme.accent) : .clear, lineWidth: 1.5))
+      .fill(fill)
       .shadow(color: here ? (isBook ? Theme.book : Theme.accent).opacity(0.9) : .clear, radius: 4)
   }
 }

@@ -34,12 +34,10 @@ public struct GrowthOptions {
   public var maxPly: Int?
   /// Only holes that lead into this region, or toward it.
   public var region: (tree: OpeningTree, node: OpeningNode)?
-  public var pastBook: Bool?
-  public init(minShare: Double? = nil, maxPly: Int? = nil, region: (tree: OpeningTree, node: OpeningNode)? = nil, pastBook: Bool? = nil) {
+  public init(minShare: Double? = nil, maxPly: Int? = nil, region: (tree: OpeningTree, node: OpeningNode)? = nil) {
     self.minShare = minShare
     self.maxPly = maxPly
     self.region = region
-    self.pastBook = pastBook
   }
 }
 
@@ -58,12 +56,10 @@ public struct Hole: Equatable, Sendable {
   public var nodeId: String?
   /// In your tree already, with nothing after it.
   public var kept = false
-  /// Past the book: one of the engine's top replies, with no share.
-  public var engine = false
   /// The share of games that get to this position, 0...1.
   public var reach: Double
 
-  public init(path: [String], fen: String, san: String, share: Double, games: Double, after: String, nodeId: String?, kept: Bool = false, engine: Bool = false, reach: Double) {
+  public init(path: [String], fen: String, san: String, share: Double, games: Double, after: String, nodeId: String?, kept: Bool = false, reach: Double) {
     self.path = path
     self.fen = fen
     self.san = san
@@ -72,7 +68,6 @@ public struct Hole: Equatable, Sendable {
     self.after = after
     self.nodeId = nodeId
     self.kept = kept
-    self.engine = engine
     self.reach = reach
   }
 }
@@ -85,11 +80,10 @@ public struct Reply: Equatable, Sendable {
   public var draw: Double
   public var black: Double
   public var share: Double
-  public var engine = false
   /// Where the move leads, when the book links it.
   public var next: String?
 
-  public init(san: String, games: Double, white: Double, draw: Double, black: Double, share: Double, engine: Bool = false, next: String? = nil) {
+  public init(san: String, games: Double, white: Double, draw: Double, black: Double, share: Double, next: String? = nil) {
     self.next = next
     self.san = san
     self.games = games
@@ -97,7 +91,6 @@ public struct Reply: Equatable, Sendable {
     self.draw = draw
     self.black = black
     self.share = share
-    self.engine = engine
   }
 }
 
@@ -110,7 +103,6 @@ struct Choice {
   var prepared: Set<String>
   var answered: Set<String>
   var kept: [RepMove]
-  var bookless: Bool
 }
 
 /// What a move the book has never seen is worth, so a line through it is not lost.
@@ -134,16 +126,14 @@ func walkChoices(_ rep: Repertoire, _ index: ReferenceIndex, _ opts: GrowthOptio
     if path.count < maxPly && theirs {
       let key = positionKey(fen)
       if seen.insert(key).inserted {
-        let bookless = popularReplies(index, fen, 0).isEmpty
-        let replies = bookless ? Array(engineAsReplies(fen).prefix(ENGINE_THEIR_REPLIES)) : popularReplies(index, fen, minShare)
+        let replies = popularReplies(index, fen, minShare)
         let answered = kids.filter { childrenOf(rep, $0.id).count > 0 || preparedAt.contains(positionKey($0.fenAfter)) }
         let answeredIds = Set(answered.map(\.id))
         visit(Choice(
           path: path, fen: fen, nodeId: nodeId, reach: reach,
           replies: replies.filter { wanted(path + [$0.san]) },
           prepared: Set(kids.map(\.san)), answered: Set(answered.map(\.san)),
-          kept: kids.filter { !answeredIds.contains($0.id) && wanted(path + [$0.san]) },
-          bookless: bookless))
+          kept: kids.filter { !answeredIds.contains($0.id) && wanted(path + [$0.san]) }))
       }
     }
     if path.count >= maxPly { return }
@@ -174,11 +164,6 @@ private func shareMap(_ index: ReferenceIndex, _ fen: String, _ prepared: [Strin
   return out
 }
 
-/// The engine's moves at a position the book does not know, as replies with no share.
-private func engineAsReplies(_ fen: String) -> [Reply] {
-  (engineReplies(fen) ?? []).map { Reply(san: $0, games: 0, white: 0, draw: 0, black: 0, share: 0, engine: true) }
-}
-
 /// Every unanswered reply in a repertoire, shallowest and most popular first.
 public func findHoles(_ rep: Repertoire, _ index: ReferenceIndex, _ opts: GrowthOptions = GrowthOptions()) -> [Hole] {
   var holes: [Hole] = []
@@ -187,7 +172,7 @@ public func findHoles(_ rep: Repertoire, _ index: ReferenceIndex, _ opts: Growth
       guard let after = applySan(choice.fen, move.san) else { return }
       holes.append(Hole(
         path: choice.path, fen: choice.fen, san: move.san, share: move.share, games: move.games, after: after.after,
-        nodeId: choice.nodeId, kept: kept, engine: move.engine, reach: choice.reach))
+        nodeId: choice.nodeId, kept: kept, reach: choice.reach))
     }
     for move in choice.replies where !choice.answered.contains(move.san) { push(move, choice.prepared.contains(move.san)) }
     // A reply you kept with no answer is a hole however rarely it is played.

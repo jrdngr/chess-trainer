@@ -15,7 +15,7 @@ struct ImportView: View {
   @State private var step: Step?
   @State private var error: (message: String, blocked: Bool)?
   /// The list, with what the engine said of each of your moves in it.
-  @State private var found: (rows: [SeedRow], lost: [String: Double])?
+  @State private var found: [SeedRow]?
   @State private var picked: Set<String> = []
 
   private enum Step { case fetching, checking }
@@ -28,7 +28,7 @@ struct ImportView: View {
 
   var body: some View {
     if let found {
-      results(found.rows, found.lost)
+      results(found)
     } else {
       source
     }
@@ -64,7 +64,7 @@ struct ImportView: View {
     }
   }
 
-  private func results(_ rows: [SeedRow], _ lost: [String: Double]) -> some View {
+  private func results(_ rows: [SeedRow]) -> some View {
     let chosen = rows.filter { picked.contains($0.id) }
     return VStack(spacing: 0) {
       AppBar(title: "Your openings", onBack: { found = nil })
@@ -82,7 +82,7 @@ struct ImportView: View {
       }
       if !rows.isEmpty {
         BigButton(label: chosen.isEmpty ? "Add openings" : "Add \(plural(chosen.count, "opening"))", disabled: chosen.isEmpty) {
-          store.update { _ = $0.addSeedRows(chosen, lost: lost) }
+          store.update { _ = $0.addSeedRows(chosen) }
           toasts.show("\(plural(chosen.count, "opening")) added")
           (onAdded ?? onBack)()
         }
@@ -137,7 +137,7 @@ struct ImportView: View {
     }
     let rows = seedRows(games, index, reps, lost: lost)
     picked = Set(rows.filter(\.checked).map(\.id))
-    found = (rows, lost)
+    found = rows
     step = nil
   }
 }

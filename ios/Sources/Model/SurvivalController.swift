@@ -41,8 +41,6 @@ public struct Pop: Equatable, Sendable {
   public var found = false
   /// A book move past your prep.
   public var book = false
-  /// A prepared move that is an extension.
-  public var ext = false
   /// A moment found: the text is its bonus, shown on a filled pill.
   public var moment = false
 }
@@ -103,16 +101,10 @@ public struct RunContext {
   public var prefs: SurvivalPrefs
   /// Opened by Autopilot: prepared and book moves pop with their time.
   public var autopilot: Bool
-  /// What your move `san` is where `line` stands.
-  public var kindOf: (_ line: [String], _ san: String) -> MoveKind
-  /// What the engine said a saved move gives away, by `positionKey(fen) san`.
-  public var lossOf: (_ key: String) -> Double?
-  public init(index: ReferenceIndex, prefs: SurvivalPrefs, autopilot: Bool, kindOf: @escaping ([String], String) -> MoveKind, lossOf: @escaping (String) -> Double?) {
+  public init(index: ReferenceIndex, prefs: SurvivalPrefs, autopilot: Bool) {
     self.index = index
     self.prefs = prefs
     self.autopilot = autopilot
-    self.kindOf = kindOf
-    self.lossOf = lossOf
   }
 }
 
@@ -212,8 +204,8 @@ public func beginSession(_ begun: SurvivalStart) -> RunSession {
 private func unchanged(_ session: RunSession) -> Step { (session, []) }
 
 /// One prepared position answered: a rated result, credited to the position asked.
-private func tally(_ session: RunSession, _ line: [String], _ correct: Bool, _ kind: MoveKind, _ at: Double) -> Step {
-  let result = MoveResult(mode: .survival, line: line, color: session.state.run.color, correct: correct, rated: kind != .mistake, ext: kind != .book, at: at)
+private func tally(_ session: RunSession, _ line: [String], _ correct: Bool, _ at: Double) -> Step {
+  let result = MoveResult(mode: .survival, line: line, color: session.state.run.color, correct: correct, rated: true, at: at)
   var next = session
   next.answers.append(result)
   return (next, [.rate(result: result, earlier: session.answers)])
@@ -255,19 +247,13 @@ public func playPrepared(_ session: RunSession, _ ctx: RunContext, _ move: Legal
   let run = session.state.run
   var effects: [Effect] = [.buzz(10)]
   if let rid = run.repertoireId { effects.append(.answered(repertoireId: rid, fen: run.fen, san: move.san, grade: gradeForTime(seconds))) }
-  let kind = ctx.kindOf(run.played, move.san)
-  let lost = ctx.lossOf("\(positionKey(run.fen)) \(move.san)")
-  let cost = kind == .mistake && lost != nil ? moveScore(-lost!) : nil
-  if let cost {
-    // A saved mistake is still yours to play, and the board says what it gives away.
-    effects.append(.pop(Pop(square: move.to, text: "\u{2212}\(JSNum(-cost.cp))", tone: cost.tone)))
-  } else if ctx.autopilot {
-    effects.append(.pop(Pop(square: move.to, text: secondsText(seconds), tone: speedTone(seconds), found: true, ext: kind != .book)))
+  if ctx.autopilot {
+    effects.append(.pop(Pop(square: move.to, text: secondsText(seconds), tone: speedTone(seconds), found: true)))
   }
   var start = session
   start.prepTimes.append(seconds)
   var step: Step = (start, effects)
-  step = then(step) { tally($0, run.played, true, kind, now) }
+  step = then(step) { tally($0, run.played, true, now) }
   step = then(step) { s in
     var seen = s
     seen.prepSeen = true
@@ -285,7 +271,7 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
   let expected = prepMoves(session)
   var step = unchanged(session)
   if let first = expected.first {
-    step = tally(session, run.played, false, ctx.kindOf(run.played, first), now)
+    step = tally(session, run.played, false, now)
     step.session.prepStatus = .off
     step.session.prepEnd = nil
     if let rid = run.repertoireId { step.effects.append(.missed(repertoireId: rid, fen: run.fen, played: judged.san, expected: first)) }

@@ -60,9 +60,6 @@ private func listed(_ o: DerivedOpening) -> JSON {
         })])
       })
     },
-    "extensions.moveKind": { a in moveKind(index, after(a[0].string), a[1].string, a[2].numberOrNil).rawValue.json },
-    "extensions.lineKinds": { a in lineKinds(index, line(a[0].string), Color(rawValue: a[1].string)!).map(\.rawValue).json },
-    "extensions.bookLength": { a in bookLength(lineKinds(index, line(a[0].string), Color(rawValue: a[1].string)!)).json },
     "extensions.movedBy": { movedBy($0[0].int, Color(rawValue: $0[1].string)!).json },
     "prepFloor.withFloor": { withFloor($0[0].numbers, $0[1].array.map(\.bool)).json },
     "moveSource.sourceLabel": { sourceLabel($0[0].stringOrNil.map { MoveSource(rawValue: $0)! }).json },

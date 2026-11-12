@@ -271,8 +271,8 @@ struct EndView: View {
     let named = Set([node.id] + (familyOf(model.tree, node).map { [$0.id] } ?? []))
     return model.ratings.changes
       .filter { JSRound($0.delta) != 0 }
-      .filter { named.contains($0.id) && !(moment != nil && $0.id == model.openingId && !$0.ext) }
-      .map { RatingsList.Item(id: $0.id, ext: $0.ext, name: nodeById(model.tree, $0.id).name, delta: $0.delta, after: $0.after) }
+      .filter { named.contains($0.id) && !(moment != nil && $0.id == model.openingId) }
+      .map { RatingsList.Item(id: $0.id, name: nodeById(model.tree, $0.id).name, delta: $0.delta, after: $0.after) }
   }
 
   /// The engine's move beside the one that ended the run.

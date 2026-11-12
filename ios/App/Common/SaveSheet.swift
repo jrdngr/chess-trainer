@@ -4,9 +4,8 @@ import Shared
 import SwiftUI
 
 /// Saving a line, the same sheet everywhere a line comes in by hand.
-/// It splits the line where it leaves the book, and the
-/// engine checks the extension under it as the sheet opens; a mistake of
-/// yours is flagged, and the extension can be left out or saved too.
+/// The Playbook holds only book moves: a line that leaves the book is saved
+/// up to where it leaves, and the rest is shown as not saved.
 struct SaveSheet: View {
   var sans: [String]
   /// The side it goes in for, when the caller knows; otherwise the sheet asks.
@@ -15,39 +14,25 @@ struct SaveSheet: View {
   /// Let the line be cut short by tapping a move.
   var trim = false
   var title = "Save line"
-  /// Save the whole line in one button, with no leaving the extension out: the board editor's.
-  var whole = false
   var source: MoveSource
   /// A note for the line's last move.
   var note: String? = nil
   var onSaved: ((String, Int, [String]) -> Void)? = nil
-  /// Take the line instead of saving it, with what the engine said of its moves.
-  var onKeep: (([String], ChessCore.Color, [Double?]) -> Void)? = nil
+  /// Take the line instead of saving it.
+  var onKeep: (([String], ChessCore.Color) -> Void)? = nil
   var onClose: () -> Void
 
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
   @State private var depth: Int?
   @State private var picked: ChessCore.Color?
-  private var checks: EngineChecks { EngineChecks.shared }
-
-  /// The most an extension is checked for, from where it leaves the book.
-  static let checkPlies = 10
 
   var body: some View {
     let slice = Array(sans.prefix(min(depth ?? sans.count, sans.count)))
-    let fens = walkSan(slice).fens
-    let legal = fens.count == slice.count + 1
+    let legal = walkSan(slice).fens.count == slice.count + 1
     let side = color ?? picked ?? preferColor ?? (slice.count % 2 == 1 ? .w : .b)
-    let book = store.index.map { bookLength(lineKinds($0, slice, side)) } ?? slice.count
-    let extPlies = Array(book..<max(book, min(slice.count, book + Self.checkPlies)))
-    let checked = { (ply: Int) in legal ? checks.check(fens[ply], slice[ply]) : nil }
-    let lost = slice.indices.map { checked($0)??.lost }
-    let hasExt = book < slice.count
-    let pending = extPlies.contains { checked($0) == nil }
-    let mistake = extPlies.first { movedBy($0, side) && (checked($0)??.lost ?? 0) > BLUNDER_LIMIT }
-    let shownPly = mistake ?? extPlies.last
-    let shownEval = shownPly.flatMap { checked($0)??.after }
+    let book = store.index.map { bookLength($0, slice) } ?? slice.count
+    let leaves = book < slice.count
 
     ScrollView {
       VStack(alignment: .leading, spacing: 0) {
@@ -65,52 +50,35 @@ struct SaveSheet: View {
         if !slice.isEmpty {
           VStack(spacing: 0) {
             if book > 0 {
-              row(label: "Playbook", line: snippet(slice, 0, book), value: moveCount(book), tone: .plain, icon: nil)
+              row(label: "Playbook", line: snippet(slice, 0, book), value: moveCount(book), warn: false)
             }
-            if hasExt {
+            if leaves {
               if book > 0 { Rectangle().fill(.white.opacity(0.07)).frame(height: 1) }
-              row(
-                label: mistake != nil ? "Mistake" : "Extension",
-                line: mistake.map { plyLabel(slice, $0) } ?? snippet(slice, book, slice.count),
-                value: shownEval.map { pawns($0, side) } ?? "\u{2026}",
-                tone: mistake != nil ? .warn : pending ? .ext : .good,
-                icon: mistake != nil ? "warn" : pending ? nil : "check")
+              row(label: "Not in the book", line: snippet(slice, book, slice.count), value: "Not saved", warn: true)
             }
           }
           .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface2)).clipShape(RoundedRectangle(cornerRadius: 14))
           .padding(.top, 14)
         }
         Spacer().frame(height: 24)
-        if hasExt && book > 0 && !whole {
-          HStack(spacing: 8) {
-            SheetButton("Leave out \(plyLabel(slice, book))", style: .plain) { save(slice, book, side, lost) }.disabled(!legal)
-            SheetButton("Save both", style: .accent) { save(slice, slice.count, side, lost) }.disabled(!legal)
-          }
-        } else {
-          SheetButton("Save", style: .accent) { save(slice, slice.count, side, lost) }.disabled(!legal || slice.isEmpty)
-        }
+        SheetButton(leaves && book > 0 ? "Save \(moveCount(book))" : "Save", style: .accent) { save(slice, book, side) }
+          .disabled(!legal || book == 0)
       }
       .padding(20)
     }
-    .task(id: slice) {
-      guard legal else { return }
-      for ply in extPlies { checks.askCheck(fens[ply], slice[ply]) }
-    }
   }
 
-  private enum Tone { case plain, ext, good, warn }
-
-  private func row(label: String, line: String, value: String, tone: Tone, icon: String?) -> some View {
-    let ink: SwiftUI.Color = tone == .warn ? Theme.warn : tone == .plain ? Theme.text2 : Theme.ext
+  private func row(label: String, line: String, value: String, warn: Bool) -> some View {
+    let ink: SwiftUI.Color = warn ? Theme.warn : Theme.text2
     return HStack(spacing: 12) {
-      if let icon { Icon(name: icon, size: 18).foregroundStyle(tone == .warn ? Theme.warn : Theme.accent) }
-      Text(label).font(.system(size: 14, weight: tone == .plain ? .regular : .semibold)).foregroundStyle(ink)
+      if warn { Icon(name: "warn", size: 18).foregroundStyle(Theme.warn) }
+      Text(label).font(.system(size: 14, weight: warn ? .semibold : .regular)).foregroundStyle(ink)
         .frame(maxWidth: .infinity, alignment: .leading)
-      Text(line).font(.system(size: 13, design: .monospaced)).foregroundStyle(tone == .plain ? Theme.text : ink).lineLimit(1)
-      Text(value).font(.system(size: 13)).foregroundStyle(tone == .plain ? Theme.text3 : ink)
+      Text(line).font(.system(size: 13, design: .monospaced)).foregroundStyle(warn ? ink : Theme.text).lineLimit(1)
+      Text(value).font(.system(size: 13)).foregroundStyle(warn ? ink : Theme.text3)
     }
     .padding(.horizontal, 14).padding(.vertical, 13)
-    .background(tone == .good ? Theme.accent.opacity(0.12) : tone == .warn ? Theme.warn.opacity(0.1) : .clear)
+    .background(warn ? Theme.warn.opacity(0.1) : .clear)
   }
 
   private func sectionHead(_ title: String, aside: String? = nil) -> some View {
@@ -122,11 +90,11 @@ struct SaveSheet: View {
     .padding(.horizontal, 4).padding(.top, 8).padding(.bottom, 8)
   }
 
-  private func save(_ slice: [String], _ upTo: Int, _ side: ChessCore.Color, _ lost: [Double?]) {
+  private func save(_ slice: [String], _ upTo: Int, _ side: ChessCore.Color) {
     let line = Array(slice.prefix(upTo))
     guard !line.isEmpty else { return }
     if let onKeep {
-      onKeep(line, side, Array(lost.prefix(upTo)))
+      onKeep(line, side)
       toasts.show("Saved")
       onClose()
       return
@@ -135,7 +103,7 @@ struct SaveSheet: View {
     var repId = ""
     store.update { state in
       repId = state.ensureRepertoire(side)
-      added = state.addLine(repId, line, .fixed(source), lost: Array(lost.prefix(upTo)))
+      added = state.addLine(repId, line, .fixed(source))
       if let note, upTo == slice.count, let rep = state.repertoires[repId], let tip = nodeAtLine(rep, line) {
         state.annotate(repId, tip.id, note)
       }

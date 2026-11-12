@@ -22,28 +22,15 @@ import Model
   var onlyAnswer: String? { get }
 }
 
-/// The answers a hole offers: the book's
-/// (or the engine's past it), a familiar move pulled in from further down,
+/// The answers a hole offers: the book's, a familiar move pulled in from further down,
 /// coloured toward your patterns, ranked, and given the arrows' roles.
 extension HoleAnswers {
   var onlyAnswer: String? { nil }
 
-  /// The moves offered here; nil past the book while the engine works them out.
-  func choices(at fen: String) -> [Reply]? {
-    _ = GrowthEngine.shared.version
-    return choicesAt(index, fen, 4)
-  }
+  /// The moves offered at a hole: the book's.
+  var choices: [Reply] { atHole ? choicesAt(index, holeFen, 4) : [] }
 
-  /// The moves offered at a hole, none while the engine is still working.
-  var choices: [Reply] { atHole ? choices(at: holeFen) ?? [] : [] }
-
-  /// At a hole with nothing offered yet: the engine is finding moves.
-  var waitingForEngine: Bool { atHole && choices(at: holeFen) == nil }
-
-  /// At a hole where the book has nothing at all: the engine's moves are on offer.
-  var pastBook: Bool { atHole && optionsAt(index, holeFen, 1).isEmpty }
-
-  /// Familiar moves the book leaves out or ranks too low, each put to the engine first.
+  /// Familiar book moves ranked too low to be offered, each put to the engine first.
   var offBookAsked: [String] {
     guard atHole else { return [] }
     return familiarOffBook(answerTree, index, holePath, holeFen, nudgePrefs, minShare)
@@ -64,14 +51,14 @@ extension HoleAnswers {
   var toned: [NudgedMove] {
     guard atHole else { return [] }
     let off = offBook
-    let key = "\(holeFen)|\(off.joined(separator: " "))|\(answerTree?.nodes.count ?? 0)|\(nudgePrefs)|\(GrowthEngine.shared.version)"
+    let key = "\(holeFen)|\(off.joined(separator: " "))|\(answerTree?.nodes.count ?? 0)|\(nudgePrefs)"
     return tonedMemo.get(key) { nudged(off) }
   }
 
   private func nudged(_ off: [String]) -> [NudgedMove] {
     let options = choices
     let drawn = options.compactMap { option in applySan(holeFen, option.san).map { DrawnMove(san: option.san, from: $0.from, to: $0.to) } }
-    let candidates = (pastBook ? options : popularReplies(index, holeFen, minShare)).map { NudgeCandidate(san: $0.san, share: $0.share) }
+    let candidates = popularReplies(index, holeFen, minShare).map { NudgeCandidate(san: $0.san, share: $0.share) }
       + off.map { NudgeCandidate(san: $0, share: 0) }
     return nudgeArrows(answerTree, index, holePath, holeFen, drawn, candidates, nudgePrefs, minShare, Set(off), true)
   }
