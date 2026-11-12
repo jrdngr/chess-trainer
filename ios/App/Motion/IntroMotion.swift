@@ -1,3 +1,4 @@
+import Game
 import SwiftUI
 
 /// The announcement's cover: opaque from the first frame, so the board never

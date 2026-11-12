@@ -1,5 +1,6 @@
 import Book
 import ChessCore
+import Game
 import Model
 import SwiftUI
 
@@ -139,10 +140,7 @@ struct RootView: View {
 
   /// The tutorial's openings go in, and its first game starts.
   private func startTutorial(_ tree: OpeningTree, _ openings: TutorialOpenings) {
-    store.update {
-      $0.onboarded(tree, openings.seeds)
-      $0.settings.startTutorial(openings)
-    }
+    store.startTutorial(openings)
     tab = .home
     setupFirst = false
     mode = .play
@@ -150,10 +148,7 @@ struct RootView: View {
 
   /// The tutorial skipped from its first question: adding openings, then Home with the Playbook's tips.
   private func finishSkip(_ next: OnboardingNext?) {
-    store.update {
-      $0.settings.onboarded = true
-      $0.settings.skipTutorial()
-    }
+    store.finishSkippedTutorial()
     skippedTutorial = false
     tab = .home
     if next == .play { mode = .play }

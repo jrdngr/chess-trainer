@@ -1,12 +1,6 @@
+import Game
 import Model
 import SwiftUI
-
-/// A rating a round moved: where it stood and where it stands.
-struct RatingMoment: Equatable {
-  var name: String
-  var before: Double
-  var after: Double
-}
 
 /// The color a rating's bar fills in: its tier's, or the first rung's below it. `ScoreBar.fillColor`.
 func fillColor(_ rating: Double) -> Color {

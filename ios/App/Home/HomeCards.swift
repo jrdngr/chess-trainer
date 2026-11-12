@@ -1,4 +1,5 @@
 import ChessCore
+import Game
 import Model
 import Shared
 import SwiftUI

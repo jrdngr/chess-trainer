@@ -1,5 +1,6 @@
 import ChessCore
 import Engine
+import Game
 import Model
 import SwiftUI
 
@@ -7,34 +8,25 @@ import SwiftUI
 struct EndgameView: View {
   @Environment(AppStore.self) private var store
   let onExit: () -> Void
-  @State private var game: EndgameGame?
-  /// The positions left in a "Play due" sitting, after the one on the board.
-  @State private var queue: [EndgameEntry] = []
+  @State private var session: EndgameSession?
 
   var body: some View {
     Group {
-      if let game {
-        EndgameRoundView(game: game, hasNext: !queue.isEmpty, onNext: next, onClose: { self.game = nil; queue = [] })
+      if let session, let game = session.game {
+        EndgameRoundView(game: game, hasNext: !session.queue.isEmpty, onNext: { session.next() }, onClose: { session.close() })
           .id(game.roundId)
       } else {
-        EndgameHomeView(onPlay: { play([$0]) }, onPlayDue: { play($0) }, onExit: onExit)
+        EndgameHomeView(onPlay: { current.play([$0]) }, onPlayDue: { current.play($0) }, onExit: onExit)
       }
     }
   }
 
-  private func play(_ entries: [EndgameEntry]) {
-    guard let first = entries.first else { return }
-    queue = Array(entries.dropFirst())
-    game = EndgameGame(entry: first, store: store)
-  }
-
-  private func next() {
-    guard let first = queue.first else {
-      game = nil
-      return
-    }
-    queue.removeFirst()
-    game = EndgameGame(entry: first, store: store)
+  /// The mode's session, made on first use.
+  private var current: EndgameSession {
+    if let session { return session }
+    let made = EndgameSession(store: store)
+    session = made
+    return made
   }
 }
 

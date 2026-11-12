@@ -1,5 +1,6 @@
 import ChessCore
 import Engine
+import Game
 import Model
 import SwiftUI
 
@@ -116,7 +117,7 @@ struct RunView: View {
       Button("Keep playing", role: .cancel) {}
     }
     .onChange(of: drawing, initial: true) {
-      if drawing && analysis == nil { analysis = RunAnalysis(game: gameLine) }
+      if drawing && analysis == nil { analysis = RunAnalysis(game: gameLine, engine: HintEngine.shared) }
     }
     .task(id: drawing ? analysis?.fen : nil) { await analysis?.findTop() }
     // Your move's time stops while the app is in the background or the screen is locked.
@@ -649,10 +650,4 @@ private struct BoardShake: GeometryEffect {
   func effectValue(size: CGSize) -> ProjectionTransform {
     ProjectionTransform(CGAffineTransform(translationX: 8 * sin(animatableData * .pi * 4), y: 0))
   }
-}
-
-/// `Math.round`.
-func JSRound(_ x: Double) -> Double {
-  let down = x.rounded(.down)
-  return x - down >= 0.5 ? down + 1 : down
 }

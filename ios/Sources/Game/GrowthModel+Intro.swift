@@ -7,11 +7,11 @@ import Model
 /// recommendation skips both.
 extension GrowthModel {
   /// How long the announcement holds, unless tapped away: `ANNOUNCE_MS`.
-  static let announceMs = Int(RunModel.announceMs * 1000)
+  public static let announceMs = Int(RunModel.announceMs * 1000)
   /// The beat between replayed moves: `REPLAY_MS`.
-  static let replayMs = 400
+  public static let replayMs = 400
 
-  func planIntro() {
+  public func planIntro() {
     let catalogue = tree
     let id = deepestNodeWithin(catalogue, launch.opening, run.path).id
     introOpening = id
@@ -26,29 +26,30 @@ extension GrowthModel {
     introPath = store.state.settings.autoplay ? Array(run.path.prefix(startLength)) : []
     intro = .announce
     let key = run.fen
-    Task { [weak self] in
-      try? await Task.sleep(for: .milliseconds(Self.announceMs))
+    let clock = services.clock
+    services.spawn { [weak self] in
+      await clock.sleep(Double(Self.announceMs) / 1000)
       if self?.intro == .announce, self?.run.fen == key { self?.toBoard() }
     }
   }
 
   /// The intro's position while it runs, in place of the run's.
-  var introFen: String? {
+  public var introFen: String? {
     held ? walkSan(introPath).fens[min(introPly, introPath.count)] : nil
   }
 
-  var introLastMove: (from: String, to: String)? {
+  public var introLastMove: (from: String, to: String)? {
     lastMoveOf(Array(introPath.prefix(introPly)))
   }
 
   /// What the announcement says under "Growth".
-  var introTrail: [String] {
+  public var introTrail: [String] {
     if let introName { return [introName] }
     return store.catalog.map { selectionTrail(tree, $0, introOpening) } ?? []
   }
 
   /// Tap the announcement away.
-  func toBoard() {
+  public func toBoard() {
     guard intro == .announce else { return }
     if introPath.isEmpty {
       intro = .done
@@ -59,7 +60,7 @@ extension GrowthModel {
     }
   }
 
-  func skipIntro() {
+  public func skipIntro() {
     guard intro == .replay else { return }
     introPly = introPath.count
     intro = .done
@@ -67,8 +68,9 @@ extension GrowthModel {
   }
 
   private func replayStep() {
-    Task { [weak self] in
-      try? await Task.sleep(for: .milliseconds(Self.replayMs))
+    let clock = services.clock
+    services.spawn { [weak self] in
+      await clock.sleep(Double(Self.replayMs) / 1000)
       guard let self, self.intro == .replay else { return }
       if self.introPly < self.introPath.count {
         self.introPly += 1

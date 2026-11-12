@@ -1,4 +1,5 @@
 import ChessCore
+import Game
 import Model
 import SwiftUI
 
@@ -133,7 +134,7 @@ struct ImportView: View {
     let reps = store.state.playbookList
     var lost: [String: Double] = [:]
     for move in seedMoves(seedRows(games, index, reps)) {
-      if let cost = await EngineChecks.quickLoss(move.fen, move.san) { lost["\(positionKey(move.fen)) \(move.san)"] = cost }
+      if let cost = await EngineChecks.shared.quickLoss(move.fen, move.san) { lost["\(positionKey(move.fen)) \(move.san)"] = cost }
     }
     let rows = seedRows(games, index, reps, lost: lost)
     picked = Set(rows.filter(\.checked).map(\.id))

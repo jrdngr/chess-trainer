@@ -3,56 +3,65 @@ import Engine
 import Foundation
 import Model
 import Observation
-import UIKit
 
 /// The app's state and the book, kept on the main actor and saved as JSON.
 @MainActor @Observable
-final class AppStore {
-  private(set) var index: ReferenceIndex?
-  private(set) var tree: OpeningTree?
+public final class AppStore {
+  public private(set) var index: ReferenceIndex?
+  public private(set) var tree: OpeningTree?
   /// The opening picker's catalogue, built once from the tree.
-  private(set) var catalog: PickerCatalog?
-  var state = AppState()
+  public private(set) var catalog: PickerCatalog?
+  public var state = AppState()
   /// Play's recent rounds this session, kept across trips Home so the next round's start follows them.
-  var autoHistory = AutoHistory()
+  public var autoHistory = AutoHistory()
   /// The save exists but could not be read (locked, say): saving now would replace it with a fresh state.
   @ObservationIgnored private var saveBlocked = false
 
   /// The profiles on this device and the one in use.
-  private(set) var profiles = ProfileList()
+  public private(set) var profiles = ProfileList()
   /// Changes whenever the state is swapped out (a switch or a reset), so screens start over.
-  private(set) var session = UUID()
+  public private(set) var session = UUID()
   /// Settings was open when the session changed under it: Home opens it again.
   @ObservationIgnored private var settingsHeld = false
 
   /// This device's iCloud backup: its folder there and what it holds.
-  private(set) var device = BackupDevice(folder: "", manifest: BackupManifest(device: ""))
+  public private(set) var device = BackupDevice(folder: "", manifest: BackupManifest(device: ""))
   /// The last backup couldn't be written: iCloud is off or out of reach.
-  private(set) var iCloudOff = false
+  public private(set) var iCloudOff = false
   /// Other devices' backups, offered when a fresh install first opens.
-  var restoreOffer: [DeviceBackup] = []
-  @ObservationIgnored private let backup = ICloudBackup()
+  public var restoreOffer: [DeviceBackup] = []
+  /// The clock, the engines and where signals go.
+  @ObservationIgnored public let services: GameServices
+  @ObservationIgnored private let storage: SaveStorage
+  @ObservationIgnored private let backup: BackupDrive?
+  /// What this device is called in its backups.
+  @ObservationIgnored private let deviceName: String
   @ObservationIgnored private var pendingBackup: Task<Void, Never>?
   /// The last iCloud write, so the next one waits its turn.
   @ObservationIgnored private var lastWrite: Task<Void, Never>?
 
-  private let folder = URL.applicationSupportDirectory
-  private var deviceFile: URL { folder.appending(path: "backup-device.json") }
-  private var profilesFile: URL { folder.appending(path: "profiles.json") }
-  private var file: URL { folder.appending(path: ProfileList.savePath(profiles.active)) }
+  private let deviceFile = "backup-device.json"
+  private let profilesFile = "profiles.json"
+  private var file: String { ProfileList.savePath(profiles.active) }
+
+  /// `storage` holds the saves; `backup`, when there is one, keeps copies off the device.
+  public init(storage: SaveStorage, backup: BackupDrive? = nil, services: GameServices = GameServices(), deviceName: String = "Device") {
+    self.storage = storage
+    self.backup = backup
+    self.services = services
+    self.deviceName = deviceName
+  }
 
   /// Load the book (and build the opening tree) off the main actor, then the saved state.
-  func load() async {
+  public func load(book url: URL?) async {
     guard index == nil else { return }
     let built = await Task.detached(priority: .userInitiated) { () -> (ReferenceIndex, OpeningTree)? in
-      guard let url = Bundle.main.url(forResource: "book", withExtension: "json"),
-        let data = try? Data(contentsOf: url), let index = try? decodeBook(data)
-      else { return nil }
+      guard let url, let data = try? Data(contentsOf: url), let index = try? decodeBook(data) else { return nil }
       return (index, openingTree(index))
     }.value
-    let fresh = !exists(profilesFile) && !exists(folder.appending(path: ProfileList.savePath(ProfileList.mainId)))
+    let fresh = !storage.exists(profilesFile) && !storage.exists(ProfileList.savePath(ProfileList.mainId))
     loadDevice()
-    if let data = try? Data(contentsOf: profilesFile), let list = try? JSONDecoder().decode(ProfileList.self, from: data) {
+    if let data = try? storage.read(profilesFile), let list = try? JSONDecoder().decode(ProfileList.self, from: data) {
       profiles = list
     }
     if let built {
@@ -61,10 +70,8 @@ final class AppStore {
       catalog = pickerCatalog(built.1)
     }
     readState()
-    if fresh { Task { restoreOffer = await deviceBackups() ?? [] } }
+    if fresh && backup != nil { Task { restoreOffer = await deviceBackups() ?? [] } }
   }
-
-  private func exists(_ url: URL) -> Bool { FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) }
 
   /// Read the active profile's save into `state`; none yet is a fresh start.
   private func readState() {
@@ -72,12 +79,12 @@ final class AppStore {
     saveBlocked = false
     autoHistory = AutoHistory()
     session = UUID()
-    guard FileManager.default.fileExists(atPath: file.path(percentEncoded: false)) else { return }
-    if let data = try? Data(contentsOf: file) {
+    guard storage.exists(file) else { return }
+    if let data = try? storage.read(file) {
       decode(data)
       if let index, state.migrate(index) { save() }
     } else {
-      print("load failed: \(file.lastPathComponent) could not be read")
+      print("load failed: \(file) could not be read")
       saveBlocked = true
     }
   }
@@ -96,21 +103,19 @@ final class AppStore {
   /// A save this version cannot read, kept as `playbook-unreadable-<time>.json`.
   private func keepUnreadable(_ data: Data) {
     let stamp = Int(Date().timeIntervalSince1970)
-    let copy = file.deletingLastPathComponent().appending(path: "playbook-unreadable-\(stamp).json")
-    try? data.write(to: copy, options: .atomic)
+    try? storage.write(sibling(file, "playbook-unreadable-\(stamp).json"), data)
   }
 
   private func saveProfiles() {
     do {
-      try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-      try JSONEncoder().encode(profiles).write(to: profilesFile, options: .atomic)
+      try storage.write(profilesFile, JSONEncoder().encode(profiles))
     } catch {
       print("save failed: \(error)")
     }
   }
 
   /// Save this profile and open another.
-  func switchProfile(_ id: String) {
+  public func switchProfile(_ id: String) {
     guard id != profiles.active else { return }
     save()
     backUpNow()
@@ -120,7 +125,7 @@ final class AppStore {
   }
 
   /// A new profile, opened on a fresh start.
-  func createProfile(_ name: String) {
+  public func createProfile(_ name: String) {
     save()
     backUpNow()
     profiles.add(name, id: UUID().uuidString.lowercased())
@@ -128,7 +133,7 @@ final class AppStore {
     readState()
   }
 
-  func renameProfile(_ id: String, _ name: String) {
+  public func renameProfile(_ id: String, _ name: String) {
     profiles.rename(id, name)
     saveProfiles()
     send(profileId: nil, save: nil)
@@ -136,7 +141,7 @@ final class AppStore {
 
   /// Delete a profile and its save. Deleting the one in use opens the next,
   /// and Settings opens again over its Home.
-  func deleteProfile(_ id: String) {
+  public func deleteProfile(_ id: String) {
     let wasActive = id == profiles.active
     if !wasActive { save() }
     guard profiles.remove(id) else { return }
@@ -151,27 +156,26 @@ final class AppStore {
   }
 
   /// Whether Settings should open again on the new session, asked once.
-  func takeSettingsHeld() -> Bool {
+  public func takeSettingsHeld() -> Bool {
     defer { settingsHeld = false }
     return settingsHeld
   }
 
   /// Wipe the profile in use: a fresh start under the same name.
-  func resetProfile() {
+  public func resetProfile() {
     release(profiles.active)
     removeSave(profiles.active)
     readState()
   }
 
   private func removeSave(_ id: String) {
-    try? FileManager.default.removeItem(at: folder.appending(path: ProfileList.savePath(id)).deletingLastPathComponent())
+    storage.remove(folderOf(ProfileList.savePath(id)))
   }
 
-  func save() {
+  public func save() {
     guard !saveBlocked else { return }
     do {
-      try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-      try JSONEncoder().encode(state).write(to: file, options: .atomic)
+      try storage.write(file, JSONEncoder().encode(state))
       scheduleBackup()
     } catch {
       print("save failed: \(error)")
@@ -182,21 +186,21 @@ final class AppStore {
 
   /// This device's backup folder, made up on first launch.
   private func loadDevice() {
-    if let data = try? Data(contentsOf: deviceFile), let saved = try? JSONDecoder().decode(BackupDevice.self, from: data) {
+    if let data = try? storage.read(deviceFile), let saved = try? JSONDecoder().decode(BackupDevice.self, from: data) {
       device = saved
     } else {
-      device = BackupDevice(folder: String(UUID().uuidString.prefix(8)), manifest: BackupManifest(device: UIDevice.current.model))
+      device = BackupDevice(folder: String(UUID().uuidString.prefix(8)), manifest: BackupManifest(device: deviceName))
       saveDevice()
     }
   }
 
   private func saveDevice() {
-    try? JSONEncoder().encode(device).write(to: deviceFile, options: .atomic)
+    try? storage.write(deviceFile, JSONEncoder().encode(device))
   }
 
   /// Back up the profile in use a little after a change: every change saves, many a minute.
   private func scheduleBackup() {
-    guard pendingBackup == nil else { return }
+    guard backup != nil, pendingBackup == nil else { return }
     pendingBackup = Task { [weak self] in
       try? await Task.sleep(for: .seconds(15))
       guard !Task.isCancelled else { return }
@@ -206,7 +210,7 @@ final class AppStore {
 
   /// Back up the profile in use now: on leaving the app, and before opening another profile.
   /// A profile whose save failed to load stays held.
-  func backUpNow() {
+  public func backUpNow() {
     pendingBackup?.cancel()
     pendingBackup = nil
     guard !saveBlocked, !backupHeld, let data = try? JSONEncoder().encode(state) else { return }
@@ -214,7 +218,7 @@ final class AppStore {
   }
 
   /// The profile in use isn't being backed up: its save failed to load, so it opened on a fresh start.
-  var backupHeld: Bool { device.held.contains(profiles.active) }
+  public var backupHeld: Bool { device.held.contains(profiles.active) }
 
   private func hold(_ id: String) {
     guard !device.held.contains(id) else { return }
@@ -230,12 +234,12 @@ final class AppStore {
   /// Write a save (or just the profile list after a rename or delete) to this device's backup,
   /// after any write still going.
   private func send(profileId: String?, save: Data?) {
+    guard let drive = backup else { return }
     let now = Env.now()
     let day = backupDay(now)
     let old = device.manifest
     device.manifest = old.updated(profiles, saved: profileId, at: now, day: day)
     saveDevice()
-    let drive = backup
     let folder = device.folder
     let manifest = device.manifest
     let gone = old.files.subtracting(manifest.files)
@@ -248,8 +252,8 @@ final class AppStore {
   }
 
   /// Backups to restore from, this device's own first; nil when iCloud is off.
-  func deviceBackups() async -> [DeviceBackup]? {
-    guard let urls = await findBackupManifests() else {
+  public func deviceBackups() async -> [DeviceBackup]? {
+    guard let backup, let urls = await backup.findManifests() else {
       iCloudOff = true
       return nil
     }
@@ -263,15 +267,13 @@ final class AppStore {
   }
 
   private func writeSave(_ data: Data, _ profileId: String) {
-    let url = folder.appending(path: ProfileList.savePath(profileId))
-    try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-    try? data.write(to: url, options: .atomic)
+    try? storage.write(ProfileList.savePath(profileId), data)
   }
 
   /// One profile from a backup, its latest save or `day`'s snapshot, falling back to older copies
   /// when that one can't be read. It replaces the profile with its id, or is added, and opens.
-  func restore(_ backed: BackedUpProfile, from source: DeviceBackup, day: String?) async -> RestoreOutcome {
-    guard let found = await backup.read(folder: source.folder, files: backed.restoreFiles(from: day)) else { return .failed }
+  public func restore(_ backed: BackedUpProfile, from source: DeviceBackup, day: String?) async -> RestoreOutcome {
+    guard let backup, let found = await backup.read(folder: source.folder, files: backed.restoreFiles(from: day)) else { return .failed }
     restoreOffer = []
     save()
     backUpNow()
@@ -285,7 +287,8 @@ final class AppStore {
   }
 
   /// Every profile in a device's backup, each its newest readable copy, in place of this device's.
-  func restoreAll(_ source: DeviceBackup) async -> RestoreOutcome {
+  public func restoreAll(_ source: DeviceBackup) async -> RestoreOutcome {
+    guard let backup else { return .failed }
     var saves: [(id: String, data: Data)] = []
     var fellBack: String?
     for profile in source.manifest.profiles {
@@ -312,23 +315,53 @@ final class AppStore {
   }
 
   /// The next round's selection, without taking it: `peekRoundSelection`.
-  func peekRoundSelection() -> Selection { state.settings.selection }
+  public func peekRoundSelection() -> Selection { state.settings.selection }
 
   /// The same, for a state not saved yet, such as onboarding's Playbook before it goes in.
-  func peekRoundSelection(_ state: AppState) -> Selection { state.settings.selection }
+  public func peekRoundSelection(_ state: AppState) -> Selection { state.settings.selection }
 
   /// The next round's selection, taken.
-  func takeRoundSelection() -> Selection { state.settings.selection }
+  public func takeRoundSelection() -> Selection { state.settings.selection }
 
   /// Your openings, most worth focusing on first: `yourOpenings`.
-  func yourOpenings() -> [YourOpening] {
+  public func yourOpenings() -> [YourOpening] {
     guard let tree else { return [] }
     return Model.yourOpenings(state.playbookList, tree, state.score)
   }
 
   /// Change the state and save it.
-  func update(_ change: (inout AppState) -> Void) {
+  public func update(_ change: (inout AppState) -> Void) {
     change(&state)
     save()
   }
+
+  /* ── onboarding ── */
+
+  /// Onboarding's openings go in, and the tutorial's first game is next.
+  public func startTutorial(_ openings: TutorialOpenings) {
+    guard let tree else { return }
+    update {
+      $0.onboarded(tree, openings.seeds)
+      $0.settings.startTutorial(openings)
+    }
+  }
+
+  /// The tutorial skipped from its first question, once the openings are added.
+  public func finishSkippedTutorial() {
+    update {
+      $0.settings.onboarded = true
+      $0.settings.skipTutorial()
+    }
+  }
+}
+
+/// The folder a path is in: "" at the top.
+private func folderOf(_ path: String) -> String {
+  path.split(separator: "/").dropLast().joined(separator: "/")
+}
+
+/// A file named `name` beside `path`.
+private func sibling(_ path: String, _ name: String) -> String {
+  let folder = folderOf(path)
+  return folder.isEmpty ? name : folder + "/" + name
 }

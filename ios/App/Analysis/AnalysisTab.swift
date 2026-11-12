@@ -1,6 +1,7 @@
 import Book
 import ChessCore
 import Engine
+import Game
 import Model
 import SwiftUI
 

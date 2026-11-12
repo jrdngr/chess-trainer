@@ -30,11 +30,19 @@ docker run --rm -v "$PWD":/src -w /src swift:6.4-noble swift test
 rm -rf .build  # root-owned build output from the container
 ```
 
-Linux builds the package only (ChessCore, Book, Model, Engine, Caissa and their
-tests), not the SwiftUI app in `ios/App`. Keep package code portable: guard
+Linux builds the package only (ChessCore, Book, Model, Engine, Caissa, Game,
+the `playbook` CLI and their tests), not the SwiftUI app in `ios/App`. Keep
+logic out of `ios/App`: anything a tap sets off belongs in `Game`, so it builds
+and is tested on Linux. Keep package code portable: guard
 Apple-only APIs with `#if canImport(...)`, and import `FoundationNetworking`
 where URLSession is used. Xcode Cloud builds the whole app on every push to
 `main` and then runs the tests (`ios/ci_scripts/ci_post_xcodebuild.sh`).
+
+To try a change the way a player would, play it headless: `HeadlessApp` in
+the `Game` target drives every mode from code, and `swift run playbook` (run
+through Docker on Linux) plays the app from stdin. New user flows get a test
+in `ios/Tests/FlowTests/`. See "Playing without the screens" in
+`ios/README.md`.
 
 `ios/Tests/SpecTests/Golden/` holds recorded answers the model must keep
 giving. When a change to the app's behavior is intended, update the affected

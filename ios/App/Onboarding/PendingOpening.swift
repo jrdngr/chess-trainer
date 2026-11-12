@@ -1,4 +1,5 @@
 import ChessCore
+import Game
 import Model
 
 /// An opening waiting to go in, as the ready screen and the picked list show it.

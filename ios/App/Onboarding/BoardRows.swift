@@ -1,5 +1,6 @@
 import Book
 import ChessCore
+import Game
 import Model
 
 /// What the board would put in, as the Playbook would list it: each opening a

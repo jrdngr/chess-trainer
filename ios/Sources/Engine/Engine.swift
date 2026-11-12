@@ -24,6 +24,13 @@ public struct EngineSnapshot: Sendable {
   public var nodes: Int
   public var thinking: Bool
   public var fen: String
+  public init(lines: [EngineLine], depth: Int, nodes: Int, thinking: Bool, fen: String) {
+    self.lines = lines
+    self.depth = depth
+    self.nodes = nodes
+    self.thinking = thinking
+    self.fen = fen
+  }
 }
 
 /// An engine behind one protocol. `onUpdate` sees each finished depth; the result is the last word.

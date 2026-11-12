@@ -9,53 +9,53 @@ import Observation
 /// draft until Save Line. The answers on offer are `HoleAnswers.swift`,
 /// the announcement `GrowthModel+Intro.swift`.
 @MainActor @Observable
-final class GrowthModel {
+public final class GrowthModel {
   /// How a sitting is opened.
-  struct Launch {
-    var row: GrowthRow
+  public struct Launch {
+    public var row: GrowthRow
     /// Start standing on this hole rather than the row's.
-    var hole: Hole?
+    public var hole: Hole?
     /// The opening grown in: what the round is logged under.
-    var opening: OpeningNode
+    public var opening: OpeningNode
     /// What the run looks for holes with.
-    var find: GrowthOptions
+    public var find: GrowthOptions
     /// What a batch is sized by.
-    var maxPly: Int
+    public var maxPly: Int
     /// The selection's opening as the subtitle names it, when not `opening`'s.
-    var regionId: String? = nil
+    public var regionId: String? = nil
     /// A line kept with the sitting's moves from the start: the chosen opening's own.
-    var keep: (sans: [String], source: MoveSource)? = nil
+    public var keep: (sans: [String], source: MoveSource)? = nil
     /// The recommendation being filled: the sitting also stops where its named opening ends.
-    var gap: Gap? = nil
+    public var gap: Gap? = nil
   }
 
-  enum Intro { case announce, replay, done }
+  public enum Intro { case announce, replay, done }
 
-  let launch: Launch
-  let index: ReferenceIndex
-  let tree: OpeningTree
-  let store: AppStore
+  public let launch: Launch
+  public let index: ReferenceIndex
+  public let tree: OpeningTree
+  public let store: AppStore
   /// The tree as it was when the sitting began, with the kept line, so adding cannot re-steer it.
-  let start: Playbook
+  public let start: Playbook
   /// The sitting's moves, written only by Save Line.
-  private(set) var draft: GrowthDraft
-  private(set) var session: GrowthSession
+  public private(set) var draft: GrowthDraft
+  public private(set) var session: GrowthSession
   /// The opponent is about to move.
-  private(set) var thinking = false
+  public private(set) var thinking = false
   /// "End of the book", flashed over the board.
-  private(set) var flash = false
+  public private(set) var flash = false
   /// Play's own toast, over the board; Growth's go to `onToast`.
-  private(set) var toast: String?
-  @ObservationIgnored var onToast: ((String) -> Void)?
+  public private(set) var toast: String?
+  @ObservationIgnored public var onToast: ((String) -> Void)?
 
-  var intro = Intro.done
-  var introPly = 0
+  public var intro = Intro.done
+  public var introPly = 0
   /// The moves the announcement plays out, and the opening it names.
-  @ObservationIgnored var introPath: [String] = []
-  @ObservationIgnored var introOpening = ""
-  @ObservationIgnored var introName: String?
+  @ObservationIgnored public var introPath: [String] = []
+  @ObservationIgnored public var introOpening = ""
+  @ObservationIgnored public var introName: String?
   /// The path's length when the run began: a longer one means you have moved.
-  @ObservationIgnored var startLength = 0
+  @ObservationIgnored public var startLength = 0
 
   /// The sitting has been left: nothing more happens between taps.
   @ObservationIgnored private var left = false
@@ -64,9 +64,9 @@ final class GrowthModel {
   @ObservationIgnored private var timer: Task<Void, Never>?
   @ObservationIgnored private var timerFor: GrowthSession?
   @ObservationIgnored private var offeredAt: String?
-  @ObservationIgnored let tonedMemo = Memo<[NudgedMove]>()
+  @ObservationIgnored public let tonedMemo = Memo<[NudgedMove]>()
 
-  init?(launch: Launch, store: AppStore, tree: OpeningTree, index: ReferenceIndex) {
+  public init?(launch: Launch, store: AppStore, tree: OpeningTree, index: ReferenceIndex) {
     guard let saved = store.state.playbooks[launch.row.playbookId] else { return nil }
     self.launch = launch
     self.store = store
@@ -81,7 +81,7 @@ final class GrowthModel {
   }
 
   /// Grown from the offer at the end of an Play or Run run, on Growth's own settings.
-  convenience init?(offer: GrowOffer, store: AppStore, tree: OpeningTree, index: ReferenceIndex) {
+  public convenience init?(offer: GrowOffer, store: AppStore, tree: OpeningTree, index: ReferenceIndex) {
     let prefs = store.state.settings.growth
     let widened = offer.launch.widened
     let find = GrowthOptions(minShare: widened?.minShare ?? prefs.minShare, maxPly: widened?.maxPly ?? prefs.maxPly)
@@ -93,7 +93,7 @@ final class GrowthModel {
 
   /// Filling a recommendation from Home: the sitting starts at its reply, or
   /// at move one for a side's first move. A side with no tree yet gets one.
-  convenience init?(gap: Gap, store: AppStore, tree: OpeningTree, index: ReferenceIndex) {
+  public convenience init?(gap: Gap, store: AppStore, tree: OpeningTree, index: ReferenceIndex) {
     var gap = gap
     if store.state.playbooks[gap.playbookId] == nil {
       var repId = ""
@@ -107,32 +107,33 @@ final class GrowthModel {
       store: store, tree: tree, index: index)
   }
 
-  var run: GrowthRun { session.run }
-  var phase: GrowthPhase { session.phase }
+  public var services: GameServices { store.services }
+  public var run: GrowthRun { session.run }
+  public var phase: GrowthPhase { session.phase }
   /// One fill's size, the same everywhere: the New moves per round setting.
-  var allowance: Int { store.state.settings.movesPerFill }
-  var added: Int { inBatch(session) }
-  var done: Bool { phase == .done || phase == .lost }
-  var fen: String { run.fen }
-  var held: Bool { intro != .done }
-  var prefs: GrowthPrefs { store.state.settings.growth }
+  public var allowance: Int { store.state.settings.movesPerFill }
+  public var added: Int { inBatch(session) }
+  public var done: Bool { phase == .done || phase == .lost }
+  public var fen: String { run.fen }
+  public var held: Bool { intro != .done }
+  public var prefs: GrowthPrefs { store.state.settings.growth }
   /// The side's tree as it is now, with this sitting's moves in it.
-  var live: Playbook? { draft.rep }
+  public var live: Playbook? { draft.rep }
   /// Answers that X would throw away.
-  var unsaved: Int { session.history.count }
-  var minShare: Double { launch.find.minShare ?? DEFAULT_MIN_SHARE }
-  var nudgePrefs: NudgePrefs { NudgePrefs(priority: prefs.nudgePriority, pawns: prefs.nudgePawns) }
+  public var unsaved: Int { session.history.count }
+  public var minShare: Double { launch.find.minShare ?? DEFAULT_MIN_SHARE }
+  public var nudgePrefs: NudgePrefs { NudgePrefs(priority: prefs.nudgePriority, pawns: prefs.nudgePawns) }
   /// The moves this sitting added, in order.
-  var addedSans: [String] { session.added.compactMap { $0 < run.path.count ? run.path[$0] : nil } }
+  public var addedSans: [String] { session.added.compactMap { $0 < run.path.count ? run.path[$0] : nil } }
 
   /* ── taps ── */
 
-  func pick(_ san: String) {
+  public func pick(_ san: String) {
     apply(choose(session, san, allowance, ranked.map(\.san)))
   }
 
   /// A move on the board: at a hole only the listed answers, on the walk your prep.
-  func play(_ move: LegalMove) {
+  public func play(_ move: LegalMove) {
     if phase == .hole {
       if listed.contains(where: { $0.san == move.san }) { pick(move.san) }
       return
@@ -140,26 +141,26 @@ final class GrowthModel {
     apply(walk(session, start, move.san))
   }
 
-  func undoLast() {
+  public func undoLast() {
     guard !session.history.isEmpty else { return }
     if session.history.count == 1 { pending = nil }
     apply(undo(session, draft.rep))
   }
 
-  func finish() { update(stop(session)) }
+  public func finish() { update(stop(session)) }
 
   /// What another batch would answer, once the run has come to rest; nil with nothing left.
-  var more: GrowthRun? {
+  public var more: GrowthRun? {
     phase == .done ? resumeAdding(start, index, run) : nil
   }
 
-  func addMore() {
+  public func addMore() {
     guard let more else { return }
     apply(anotherBatch(session, start, more))
   }
 
   /// Save Line: the sitting's moves into the Playbook, and its round logged.
-  func save() {
+  public func save() {
     let id = start.id
     let lines = self.draft
     let round = pending
@@ -171,14 +172,14 @@ final class GrowthModel {
   }
 
   /// Leaving the sitting: nothing more happens between taps. Unsaved moves are dropped.
-  func leave() {
+  public func leave() {
     left = true
     timer?.cancel()
   }
 
   /* ── what happens between taps ── */
 
-  func update(_ next: GrowthSession) {
+  public func update(_ next: GrowthSession) {
     guard next != session else { return }
     session = next
     settle()
@@ -193,7 +194,7 @@ final class GrowthModel {
       case .removeLine(let id): draft.remove(id)
       case .toast(let text): show(text)
       case .edgeFlash: showFlash()
-      case .buzz(let ms): Haptics.buzz(ms, on: store.state.settings.hapticFeedback)
+      case .buzz(let ms): services.emit(.buzz(ms))
       case .log(let kind, let color, let line, let picked, let offered, let all):
         let undo = kind == "growth-undo"
         log(AppEvent(
@@ -204,9 +205,9 @@ final class GrowthModel {
     if settling { settle() }
   }
 
-  func log(_ event: AppEvent) { store.update { $0.logEvent(event) } }
+  public func log(_ event: AppEvent) { store.update { $0.logEvent(event) } }
 
-  func settle() {
+  public func settle() {
     guard !left else { return }
     settlePaced()
   }
@@ -250,8 +251,9 @@ final class GrowthModel {
 
   private func after(_ ms: Int, _ then: @escaping (GrowthModel) -> Void) {
     timerFor = session
-    timer = Task { [weak self] in
-      try? await Task.sleep(for: .milliseconds(ms))
+    let clock = services.clock
+    timer = services.spawn { [weak self] in
+      await clock.sleep(Double(ms) / 1000)
       guard !Task.isCancelled, let self else { return }
       self.timer = nil
       self.timerFor = nil
@@ -260,7 +262,7 @@ final class GrowthModel {
   }
 
   /// What each hole put in front of you, logged once per position when its moves are in.
-  func logOffer() {
+  public func logOffer() {
     guard phase == .hole, offeredAt != run.fen else { return }
     let offered = listed.map(\.san)
     guard !offered.isEmpty else { return }
@@ -271,27 +273,31 @@ final class GrowthModel {
   }
 
   private func show(_ text: String) {
+    services.emit(.toast(text))
     if let onToast { return onToast(text) }
     toast = text
-    Task { @MainActor [weak self] in
-      try? await Task.sleep(for: .seconds(1.6))
+    let clock = services.clock
+    services.spawn { [weak self] in
+      await clock.sleep(1.6)
       if self?.toast == text { self?.toast = nil }
     }
   }
 
   private func showFlash() {
     flash = true
-    Task { @MainActor [weak self] in
-      try? await Task.sleep(for: .seconds(1.5))
+    services.emit(.edgeFlash)
+    let clock = services.clock
+    services.spawn { [weak self] in
+      await clock.sleep(1.5)
       self?.flash = false
     }
   }
 }
 
 extension GrowthModel: HoleAnswers {
-  var atHole: Bool { phase == .hole }
-  var holeFen: String { run.fen }
-  var holePath: [String] { run.path }
-  var answerColor: ChessCore.Color { run.color }
-  var answerTree: Playbook? { live }
+  public var atHole: Bool { phase == .hole }
+  public var holeFen: String { run.fen }
+  public var holePath: [String] { run.path }
+  public var answerColor: ChessCore.Color { run.color }
+  public var answerTree: Playbook? { live }
 }

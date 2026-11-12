@@ -1,9 +1,10 @@
 import Foundation
+import Game
 import Model
 
 /// The app's iCloud Drive folder: each device keeps a copy of its profile saves in a folder
 /// of its own, `Documents/<folder>/`, with a `backup.json` listing them.
-actor ICloudBackup {
+actor ICloudBackup: BackupDrive {
   static let container = "iCloud.com.jordangrace.chessplaybook"
 
   private var documents: URL?
@@ -63,6 +64,8 @@ actor ICloudBackup {
     return nil
   }
 
+  func findManifests() async -> [URL]? { await findBackupManifests() }
+
   private func coordinatedWrite(_ data: Data, to file: URL) throws {
     var failure: NSError?
     var writeError: Error?
@@ -100,42 +103,4 @@ func findBackupManifests() async -> [URL]? {
   let urls = (0..<query.resultCount).compactMap { (query.result(at: $0) as? NSMetadataItem)?.value(forAttribute: NSMetadataItemURLKey) as? URL }
   query.stop()
   return urls
-}
-
-/// This device's backup folder and its manifest, kept beside the saves.
-struct BackupDevice: Codable, Equatable {
-  var folder: String
-  var manifest: BackupManifest
-  /// Profiles whose save failed to load here: not backed up until restored or reset, so the
-  /// fresh start they opened on doesn't replace their backup.
-  var held: [String] = []
-
-  init(folder: String, manifest: BackupManifest) {
-    self.folder = folder
-    self.manifest = manifest
-  }
-
-  enum CodingKeys: String, CodingKey { case folder, manifest, held }
-
-  init(from decoder: Decoder) throws {
-    let c = try decoder.container(keyedBy: CodingKeys.self)
-    folder = try c.decode(String.self, forKey: .folder)
-    manifest = try c.decode(BackupManifest.self, forKey: .manifest)
-    held = try c.decodeIfPresent([String].self, forKey: .held) ?? []
-  }
-}
-
-/// How a restore went: nothing readable, or restored, from an older copy than the one asked for
-/// when that one couldn't be read.
-enum RestoreOutcome: Equatable {
-  case failed
-  case restored(olderDay: String?)
-}
-
-/// Today, `yyyy-MM-dd` on this device's calendar: the day a snapshot is filed under.
-func backupDay(_ ms: Double) -> String {
-  let formatter = DateFormatter()
-  formatter.locale = Locale(identifier: "en_US_POSIX")
-  formatter.dateFormat = "yyyy-MM-dd"
-  return formatter.string(from: Date(timeIntervalSince1970: ms / 1000))
 }

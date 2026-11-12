@@ -5,7 +5,7 @@ import Model
 
 /// The engine and the book as a handoff build asks for them. Band checks search
 /// shallow and briefly: they only need to tell a sound move from one that tips the game.
-func handoffTools(_ engine: ChessEngine, _ index: ReferenceIndex, _ level: Level) -> HandoffTools {
+public func handoffTools(_ engine: ChessEngine, _ index: ReferenceIndex, _ level: Level) -> HandoffTools {
   let quick = EngineLimits(depth: HANDOFF_DEPTH, movetime: 400, multiPv: 1)
   return HandoffTools(
     book: { bookCandidates(index, $0) },

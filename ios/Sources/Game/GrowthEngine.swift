@@ -6,13 +6,17 @@ import Observation
 /// What Growth asks the engine: the eval bar, with what each answer on
 /// offer does to it.
 @MainActor @Observable
-final class GrowthEngine {
-  static let shared = GrowthEngine()
+public final class GrowthEngine {
+  @ObservationIgnored private unowned let services: GameServices
+
+  public init(services: GameServices) {
+    self.services = services
+  }
 
   /// The eval of a position, and of the moves offered there, centipawns from White's side.
-  struct Evals: Equatable {
-    var position: Double?
-    var moves: [String: Double] = [:]
+  public struct Evals: Equatable {
+    public var position: Double?
+    public var moves: [String: Double] = [:]
   }
 
   private var known: [String: Evals] = [:]
@@ -31,18 +35,18 @@ final class GrowthEngine {
   }
 
   /// The eval of a position and its moves as far as worked out, asking for the rest.
-  func evals(_ fen: String, _ sans: [String]) -> Evals {
+  public func evals(_ fen: String, _ sans: [String]) -> Evals {
     if let full = known[Self.key(fen, sans)] { return full }
     return Evals(position: positions[positionKey(fen)])
   }
 
   /// Only the position being looked at is worked out: a newer ask replaces one still waiting.
-  func askEvals(_ fen: String, _ sans: [String]) {
+  public func askEvals(_ fen: String, _ sans: [String]) {
     guard known[Self.key(fen, sans)] == nil else { return }
     evalWaiting = (fen, sans)
     guard !evalBusy else { return }
     evalBusy = true
-    Task {
+    services.spawn { [self] in
       while let next = evalWaiting {
         evalWaiting = nil
         if known[Self.key(next.fen, next.sans)] == nil { await evaluate(next.fen, next.sans) }
@@ -52,7 +56,7 @@ final class GrowthEngine {
   }
 
   private func evaluate(_ fen: String, _ sans: [String]) async {
-    let engine = HintEngine.shared
+    let engine = services.hints
     var position = positions[positionKey(fen)]
     if position == nil {
       let snap = await engine.analyse(fen, EngineLimits(depth: Self.depth, movetime: Self.evalMs, multiPv: 1))

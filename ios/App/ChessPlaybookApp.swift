@@ -1,8 +1,9 @@
+import Game
 import SwiftUI
 
 @main
 struct ChessPlaybookApp: App {
-  @State private var store = AppStore()
+  @State private var store = AppStore.live()
   @State private var toasts = Toasts()
   @Environment(\.scenePhase) private var scenePhase
 
