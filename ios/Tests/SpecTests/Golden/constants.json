@@ -2608,8 +2608,6 @@
         "failed": 0
       }
     },
-    "PLAN_SLACK": 100,
-    "PLAN_WINDOW": 8,
     "RECENT_RUNS": 5,
     "SCORE_SLIGHT": 40,
     "SURVIVAL_STEERS": [

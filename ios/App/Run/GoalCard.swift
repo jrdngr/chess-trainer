@@ -36,7 +36,6 @@ struct GoalCard: View {
     case .edge, .convert: return Theme.good
     case .lead: return Theme.accent
     case .dig: return Theme.warn
-    case .plan: return PlanColors.plan
     }
   }
 }

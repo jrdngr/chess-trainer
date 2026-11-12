@@ -3,7 +3,7 @@ import ChessCore
 /// Past the opening: missions, and the extras a judged move earns.
 
 public enum MissionKind: String, Sendable, Codable {
-  case edge, lead, dig, plan, convert
+  case edge, lead, dig, convert
 }
 
 public struct PieceCount: Equatable, Sendable, Codable {
@@ -18,22 +18,13 @@ public struct Mission: Equatable, Sendable, Codable {
   public var moves: Int
   /// Keep your edge: your moves at +1 or better so far.
   public var held: Int
-  /// Follow the plan: every square the plan names.
-  public var goals: [Goal]?
-  /// Follow the plan as saved before it took every step's squares.
-  public var goal: Goal?
-  /// Follow the plan: where you stood when it was set.
-  public var start: Double?
   /// Convert it: each side's pieces when it was set.
   public var pieces: PieceCount?
 
-  public init(kind: MissionKind, moves: Int = 0, held: Int = 0, goals: [Goal]? = nil, goal: Goal? = nil, start: Double? = nil, pieces: PieceCount? = nil) {
+  public init(kind: MissionKind, moves: Int = 0, held: Int = 0, pieces: PieceCount? = nil) {
     self.kind = kind
     self.moves = moves
     self.held = held
-    self.goals = goals
-    self.goal = goal
-    self.start = start
     self.pieces = pieces
   }
 }
@@ -42,8 +33,6 @@ public let EDGE_MOVES = 10
 public let MISSION_WINDOW = 15
 public let MISSION_LEAD: Double = 100
 public let MISSION_DUG: Double = -50
-public let PLAN_WINDOW = 8
-public let PLAN_SLACK: Double = 100
 public let CONVERT_FROM: Double = 200
 public let CONVERT_WINDOW = 6
 public let MISSION_BONUS = 15
@@ -73,7 +62,6 @@ public func missionTitle(_ kind: MissionKind) -> String {
   case .edge: return "Keep your edge"
   case .lead: return "Take the lead"
   case .dig: return "Dig in"
-  case .plan: return "Follow the plan"
   case .convert: return "Convert it"
   }
 }
@@ -84,7 +72,6 @@ public func missionTarget(_ kind: MissionKind) -> String {
   case .edge: return "Stay at +1 or better"
   case .lead: return "Reach +1"
   case .dig: return "Get back to \u{2212}0.5"
-  case .plan: return "Reach a step of the plan"
   case .convert: return "Trade a piece"
   }
 }
@@ -93,7 +80,6 @@ public func missionTarget(_ kind: MissionKind) -> String {
 public func missionTurnsLeft(_ mission: Mission) -> Int {
   switch mission.kind {
   case .edge: return EDGE_MOVES - mission.held
-  case .plan: return PLAN_WINDOW - mission.moves
   case .convert: return CONVERT_WINDOW - mission.moves
   default: return MISSION_WINDOW - mission.moves
   }
@@ -117,11 +103,6 @@ public func stepMission(_ mission: Mission, _ color: Color, _ cp: Double, _ fen:
   case .dig:
     if at >= MISSION_DUG { return (next, .done) }
     return (next, next.moves >= MISSION_WINDOW ? .failed : nil)
-  case .plan:
-    if at < (mission.start ?? 0) - PLAN_SLACK { return (next, .failed) }
-    let goals = mission.goals ?? (mission.goal.map { [$0] } ?? [])
-    if let fen, goals.contains(where: { goalRoute(fen, color, $0).done }) { return (next, .done) }
-    return (next, next.moves >= PLAN_WINDOW ? .failed : nil)
   case .convert:
     if at < MISSION_LEAD { return (next, .failed) }
     // Traded: each side a piece fewer than when it was set, the lead held through it.

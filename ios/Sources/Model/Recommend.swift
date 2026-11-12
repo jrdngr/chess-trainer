@@ -194,8 +194,8 @@ public func candidates(_ input: RecommendInput) -> [Candidate] {
   let region = nodeById(tree, input.selection.opening)
   let nodes = [region] + descendantsOf(region)
   var out: [Candidate] = []
-  let lastAt = { (id: String) in nodeStats(score, id).byMode[.oldPlay]?.lastAt }
-  let everRun = (score.global.byMode[.oldPlay]?.rounds ?? 0) > 0
+  let lastAt = { (id: String) in nodeStats(score, id).byMode[.run]?.lastAt }
+  let everRun = (score.global.byMode[.run]?.rounds ?? 0) > 0
   func push(_ focus: Focus, _ node: OpeningNode, _ color: Color, _ need: Double, _ work: Int) {
     if need <= 0 { return }
     out.append(Candidate(

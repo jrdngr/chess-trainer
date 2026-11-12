@@ -97,18 +97,22 @@ private func playRuns(_ state: inout AppState, _ selection: Selection, _ count: 
     #expect(abs(testNeed(10, true, 0) - 0.6 * TEST_FLOOR) < 1e-9)
   }
 
-  /// Rule 6: Test reads the old Play mode's runs, so a Play run changes nothing it weighs.
-  @Test func testNeedIgnoresPlayRuns() throws {
+  /// Rule 6: a Play run counts as the opening's last run: moves added before it are no longer new.
+  @Test func testNeedCountsPlayRuns() throws {
     let tree = openingTree(bookIndex)
     var state = AppState()
     state.addLine(state.ensurePlaybook(.b), line("d4 d5 c4 e6"), .fixed(.book))
     let selection = Selection(color: .b, opening: try #require(tree.byId["d4 d5 c4 e6"]).id)
-    let before = candidates(recommendInput(state, tree, selection, AutoHistory())).first { $0.focus == .test }
+    let test = { (state: AppState) in candidates(recommendInput(state, tree, selection, AutoHistory())).first { $0.focus == .test } }
+    let before = try #require(test(state))
+    #expect(before.lastAt == nil)
+    let ranAt = lastAddedAt(state.playbookList) + 1
     state.score = recordRound(
       state.score, tree,
-      RoundRecord(mode: .run, openingId: selection.opening, color: .b, answered: 2, correct: 2, perfect: true, at: Env.now()))
-    let after = candidates(recommendInput(state, tree, selection, AutoHistory())).first { $0.focus == .test }
-    #expect(before?.need == after?.need && after?.lastAt == nil)
+      RoundRecord(mode: .run, openingId: selection.opening, color: .b, answered: 2, correct: 2, perfect: true, at: ranAt, line: line("d4 d5 c4 e6")))
+    let after = try #require(test(state))
+    #expect(after.lastAt == ranAt)
+    #expect(after.need < before.need)
   }
 
   /// Rule 7: the score, and the brake on a focus played recently.

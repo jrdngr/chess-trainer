@@ -32,8 +32,6 @@ import Testing
   expect(s, "MOMENT_GAP", MOMENT_GAP)
   expect(s, "MOMENT_STREAK_BONUS", MOMENT_STREAK_BONUS)
   expect(s, "NO_EXTRAS", encoded(NO_EXTRAS))
-  expect(s, "PLAN_SLACK", PLAN_SLACK)
-  expect(s, "PLAN_WINDOW", PLAN_WINDOW)
   expect(s, "RECENT_RUNS", RECENT_RUNS)
   expect(s, "SCORE_SLIGHT", SCORE_SLIGHT)
 

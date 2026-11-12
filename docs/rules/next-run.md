@@ -32,11 +32,9 @@ questions in `Recommendations.swift`; the first two steps are in
    with a need of 1 or more (see [scheduling](scheduling.md)) or that your
    own games went off prep at, and new counts positions never asked, at most 8.
 6. **Test's need** is 0.4 + 0.4 × added ⁄ (added + 10), at least 0.55
-   before your first run, times 0.25 + 0.75 × how long your stalest line in
-   the opening has been left (0 to 1). "Added" counts your moves in the opening
-   added since its last run, and "your first run" means any run at all. Both
-   read the run history under the old Play mode's name, which no round
-   records any more. So every move counts as added and no run as played.
+   before your first Play run, times 0.25 + 0.75 × how long your stalest line
+   in the opening has been left (0 to 1). "Added" counts your moves in the
+   opening added since its last Play run.
 7. **Score.** need × (1 + 2 × freshness) × 0.6^levels × 0.5^recent:
    - freshness is 1 for the candidate run longest ago, falling evenly to 0
      for the most recent;

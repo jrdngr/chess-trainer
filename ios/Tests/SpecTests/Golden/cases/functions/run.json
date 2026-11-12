@@ -1296,7 +1296,6 @@
       {"args":["edge"],"out":"Keep your edge"},
       {"args":["lead"],"out":"Take the lead"},
       {"args":["dig"],"out":"Dig in"},
-      {"args":["plan"],"out":"Follow the plan"},
       {"args":["convert"],"out":"Convert it"}
       ]
     },

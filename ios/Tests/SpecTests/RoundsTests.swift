@@ -63,7 +63,7 @@ import Testing
     var score = ScoreState()
     for (i, l) in played.enumerated() {
       score = recordRound(score, tree, RoundRecord(
-        mode: .oldPlay, openingId: selection.opening, color: .w, answered: 1, correct: 1, perfect: false,
+        mode: .run, openingId: selection.opening, color: .w, answered: 1, correct: 1, perfect: false,
         at: t - 3_600_000 - Double(played.count - 1 - i) * DAY, line: line(l)))
     }
     var cards: [String: Card] = [:]
