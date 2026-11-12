@@ -16,6 +16,8 @@ enum Theme {
   /// The two cards under Home's Play button, top one first.
   static let deck2 = Color(hex: 0x6163cf)
   static let deck3 = Color(hex: 0x41439a)
+  /// The outline around the white words on Home's Play button.
+  static let playOutline = Color(hex: 0x23246b)
   static let good = Color(hex: 0x4ade80)
   static let bad = Color(hex: 0xfb7185)
   static let warn = Color(hex: 0xfbbf24)

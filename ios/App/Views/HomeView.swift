@@ -165,11 +165,20 @@ struct HomeView: View {
 /// The word on Home's Play button.
 struct PlayLabel: View {
   var body: some View {
-    HStack(spacing: 10) {
+    let label = HStack(spacing: 10) {
       Image(systemName: "play.fill").font(.system(size: 18, weight: .bold))
       Text("Play").font(.system(size: 21, weight: .heavy))
     }
-    .foregroundStyle(Theme.accentInk)
+    ZStack {
+      // The outline: sixteen copies in the outline color, pushed out in a ring.
+      ForEach(0..<16, id: \.self) { i in
+        let angle = Double(i) / 16 * 2 * .pi
+        label.foregroundStyle(Theme.playOutline)
+          .offset(x: cos(angle) * 1.75, y: sin(angle) * 1.75)
+          .accessibilityHidden(true)
+      }
+      label.foregroundStyle(.white)
+    }
   }
 }
 
