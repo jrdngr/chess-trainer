@@ -74,12 +74,21 @@ public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selec
   return AutoRound(pick: pick, at: nil, aim: gap?.line, grow: gap)
 }
 
-/// A Freeform round: the side the recommendation picks, from move one, steered only
-/// toward the opening picked on Home. Gaps due a new move are leaned toward, never set as the goal.
+/// A Freeform round, from move one, steered only toward the opening picked on Home: the
+/// picked side, or on Either the side the recommendation picks. Gaps due a new move are
+/// leaned toward, never set as the goal.
 func freeRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _ history: AutoHistory) -> AutoRound? {
-  guard let recommended = recommend(recommendInput(state, tree, selection, history)) else { return nil }
-  let pick = Recommendation(focus: recommended.focus, opening: nodeById(tree, selection.opening), color: recommended.color)
-  return AutoRound(pick: pick, at: nil, free: true, due: dueGapLines(state, tree, selection, color: recommended.color))
+  let recommended = recommend(recommendInput(state, tree, selection, history))
+  let color: Color
+  switch selection.color {
+  case .w: color = .w
+  case .b: color = .b
+  case .either:
+    guard let recommended else { return nil }
+    color = recommended.color
+  }
+  let pick = Recommendation(focus: recommended?.focus ?? .test, opening: nodeById(tree, selection.opening), color: color)
+  return AutoRound(pick: pick, at: nil, free: true, due: dueGapLines(state, tree, selection, color: color))
 }
 
 /// A run played: what the session remembers of it.

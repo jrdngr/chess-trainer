@@ -420,7 +420,7 @@ private func drawHole(_ rep: Repertoire, _ tree: OpeningTree, _ aim: OpeningNode
 /// Resolve "random" once, up front.
 public func resolveColor(_ color: ColorChoice, _ rand: () -> Double) -> Color {
   switch color {
-  case .random: return rand() < 0.5 ? .w : .b
+  case .either: return rand() < 0.5 ? .w : .b
   case .w: return .w
   case .b: return .b
   }

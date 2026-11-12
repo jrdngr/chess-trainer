@@ -258,6 +258,6 @@ public func seedFor(_ sans: [String], _ color: Color? = nil) -> SeedOpening {
 public func selectionFor(_ picks: [(id: String, color: Color)]) -> Selection {
   guard let first = picks.first else { return DEFAULT_SELECTION }
   let colors = Set(picks.map(\.color))
-  let color: ColorChoice = colors.count == 1 ? (first.color == .w ? .w : .b) : .random
+  let color: ColorChoice = colors.count == 1 ? (first.color == .w ? .w : .b) : .either
   return Selection(color: color, opening: picks.count == 1 ? first.id : ANY_OPENING)
 }

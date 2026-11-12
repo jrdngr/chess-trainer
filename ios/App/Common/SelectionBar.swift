@@ -107,12 +107,12 @@ struct ColorPickerSheet: View {
     VStack(alignment: .leading, spacing: 14) {
       Text("Play as").font(.system(size: 22, weight: .heavy)).foregroundStyle(Theme.text)
       VStack(spacing: 0) {
-        ForEach([ColorChoice.w, .b, .random], id: \.self) { choice in
+        ForEach([ColorChoice.w, .b, .either], id: \.self) { choice in
           Button {
             store.update { $0.settings.selection.color = choice }
             onClose()
           } label: {
-            ChoiceRow(title: colorLabel(choice), meta: choice == .random ? "A coin flip each game" : nil,
+            ChoiceRow(title: colorLabel(choice), meta: nil,
                       selected: store.state.settings.selection.color == choice) { ColorSquare(choice: choice, size: 22) }
           }
           .buttonStyle(.plain)
@@ -147,7 +147,7 @@ struct ChoiceRow<Leading: View>: View {
 
 /// The few picks most sessions want, one tap each: Any Opening, your
 /// openings (most worth focusing on first), openings you picked lately, and
-/// the common first moves. White and Black list that side's openings, Random both
+/// the common first moves. White and Black list that side's openings, Either both
 /// in a column each. Recent's More opens the whole history in place. `QuickPicker`.
 struct QuickPicker: View {
   @Environment(AppStore.self) private var store
@@ -158,7 +158,7 @@ struct QuickPicker: View {
   @State private var history = false
 
   static let firstMoves = ["e4", "d4", "c4", "Nf3"]
-  /// Your openings shown before More: six on a side's tab, four a column on Random.
+  /// Your openings shown before More: six on a side's tab, four a column on Either.
   private func shownCount(_ side: ChessCore.Color?) -> Int { side == nil ? 8 : 6 }
 
   var body: some View {
@@ -179,8 +179,8 @@ struct QuickPicker: View {
         Text("Opening").font(.system(size: 22, weight: .heavy)).foregroundStyle(Theme.text)
         SegmentedControl(
           value: Binding(get: { selection.color }, set: { c in store.update { $0.settings.selection.color = c } }),
-          options: [ColorChoice.w, .b, .random].map { ($0, colorLabel($0)) })
-        tile("Any Opening", chosen: selection.opening == ANY_OPENING) { choose(ANY_OPENING, nil, color: .random) }
+          options: [ColorChoice.w, .b, .either].map { ($0, colorLabel($0)) })
+        tile("Any Opening", chosen: selection.opening == ANY_OPENING) { choose(ANY_OPENING, nil, color: .either) }
         let side = shownSide(selection)
         let yours = mine.filter { side == nil || $0.side == side }
         if !yours.isEmpty {
@@ -272,13 +272,13 @@ struct QuickPicker: View {
     .buttonStyle(.plain)
   }
 
-  /// The side the tab lists, or nil for both: Random, and the tutorial's step that needs a Black row.
+  /// The side the tab lists, or nil for both: Either, and the tutorial's step that needs a Black row.
   private func shownSide(_ selection: Selection) -> ChessCore.Color? {
     if d4Step { return nil }
     switch selection.color {
     case .w: return .w
     case .b: return .b
-    case .random: return nil
+    case .either: return nil
     }
   }
 
@@ -364,12 +364,12 @@ func moveText(_ sans: [String]) -> String {
 /// A line written as moves separated by spaces.
 func line(_ text: String) -> [String] { text.isEmpty ? [] : text.split(separator: " ").map(String.init) }
 
-/// The side a recent pick shows: the one it was played as, or the opening's own under Random.
+/// The side a recent pick shows: the one it was played as, or the opening's own under Either.
 func recentSide(_ pick: RecentPick, _ catalog: PickerCatalog, _ node: OpeningNode) -> ChessCore.Color {
   switch pick.color {
   case .w: .w
   case .b: .b
-  case .random: sideForPick(catalog, node) ?? .w
+  case .either: sideForPick(catalog, node) ?? .w
   }
 }
 

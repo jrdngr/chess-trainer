@@ -66,7 +66,7 @@ struct SideDot: View {
   }
 }
 
-/// A side as a small square: white, black, or split diagonally for random. `ColorSquare`.
+/// A side as a small square: white, black, or split diagonally for Either. `ColorSquare`.
 struct ColorSquare: View {
   var choice: ColorChoice
   var size: CGFloat = 18
@@ -75,7 +75,7 @@ struct ColorSquare: View {
     RoundedRectangle(cornerRadius: 5)
       .fill(choice == .b ? SwiftUI.Color.black : SwiftUI.Color(hex: 0xf2f2f4))
       .overlay {
-        if choice == .random {
+        if choice == .either {
           Path { p in
             p.move(to: CGPoint(x: size, y: 0))
             p.addLine(to: CGPoint(x: size, y: size))

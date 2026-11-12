@@ -289,7 +289,7 @@
       "cases": [
       {"args":["w"],"out":["w"]},
       {"args":["b"],"out":["b"]},
-      {"args":["random"],"out":["w","b"]}
+      {"args":["either"],"out":["w","b"]}
       ]
     },
     {
@@ -298,7 +298,7 @@
       "cases": [
       {"args":["w"],"out":"White"},
       {"args":["b"],"out":"Black"},
-      {"args":["random"],"out":"Random"}
+      {"args":["either"],"out":"Either"}
       ]
     },
     {

@@ -58,3 +58,22 @@ import Testing
   let settings = try JSONDecoder().decode(Settings.self, from: data)
   #expect(settings.start == .drill)
 }
+
+/// A save that called Either "random" still opens on Either.
+@Test func randomSideReadsAsEither() throws {
+  let data = Data(#"{"color":"random","opening":""}"#.utf8)
+  #expect(try JSONDecoder().decode(Selection.self, from: data).color == .either)
+}
+
+/// Freeform plays the picked side even with nothing to recommend there; only Either takes the recommendation's side.
+@Test func freeformPlaysThePickedSide() throws {
+  let tree = openingTree(bookIndex)
+  var state = AppState()
+  state.settings.start = .freeform
+  state.addLine(state.ensureRepertoire(.b), line("e4 c5 d4 cxd4"), .fixed(.book))
+  state.addLine(state.ensureRepertoire(.b), line("d4 d5"), .fixed(.book))
+  let white = try #require(nextRound(state, tree, Selection(color: .w, opening: ANY_OPENING), AutoHistory()))
+  #expect(white.free && white.pick.color == .w)
+  let either = try #require(nextRound(state, tree, Selection(color: .either, opening: ANY_OPENING), AutoHistory()))
+  #expect(either.pick.color == .b)
+}

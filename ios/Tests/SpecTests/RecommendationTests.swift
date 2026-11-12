@@ -86,7 +86,7 @@ import Testing
   let qgd = try #require(tree.byId["d4 d5 c4 e6"])
   #expect(blackFirstGap(state, tree, Selection(color: .b, opening: qgd.id)) == nil)
   #expect(blackFirstGap(state, tree, Selection(color: .w, opening: ANY_OPENING)) == nil)
-  for color in [ColorChoice.b, .random] {
+  for color in [ColorChoice.b, .either] {
     let round = try #require(nextRound(state, tree, Selection(color: color, opening: ANY_OPENING), AutoHistory()))
     #expect(round.pick.color == .b && round.at == nil && round.aim == line("e4") && round.grow?.line == line("e4"))
   }

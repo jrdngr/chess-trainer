@@ -1255,7 +1255,7 @@
   },
   "src/model/selection.ts": {
     "DEFAULT_SELECTION": {
-      "color": "random",
+      "color": "either",
       "opening": ""
     }
   },

@@ -16,7 +16,7 @@
       "cases": [
       {"args":["lines","popular","w",""],"out":["w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [] e4 c6 d4 d5 e5 Bf5 Nf3","w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [] e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","w [] e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O","w [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3","w [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3","w [] e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","w [] e4 e5 Nf3 Nc6 Bb5 Nf6 O-O","w [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3"]},
       {"args":["lines","popular","b",""],"out":["b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"]},
-      {"args":["lines","weak","random",""],"out":["b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","w [] e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O","w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [] e4 c6 d4 d5 e5 Bf5 Nf3","b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","w [] e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O"]},
+      {"args":["lines","weak","either",""],"out":["b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","w [] e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O","w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4","w [] e4 c6 d4 d5 e5 Bf5 Nf3","b [] d4 Nf6 c4 g6 Nc3 Bg7 e4 d6","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","w [] e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O"]},
       {"args":["gaps",null,"w","e4"],"out":["w [] e4 c6 d4 d5 e5 Bf5 Nf3 e6","w [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6","w [] e4 c6 d4 d5 e5 Bf5 Nf3 e6","w [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6","w [] e4 c6 d4 d5 e5 Bf5 Nf3 e6","w [] e4 e5 Nf3 Nc6 Bb5 Nf6 O-O Nxe4","w [] e4 d6","w [] e4 e5 Nf3 Nf6","w [] e4 e6 d4 d5 e5 c5","w [] e4 c6 d4 d5 e5 c5","w [] e4 c6 d4 d5 e5 c5","w [] e4 e6 d4 d5 e5 c5"]},
       {"args":["gaps",null,"b","e4 c5"],"out":["b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3","b [] e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bg5","b [] e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3","b [] e4 c5 Nf3 Nc6 Nc3","b [] e4 c5 c3 Nf6 e5","b [] e4 c5 Nf3 Nc6 Bb5","b [] e4 c5 Nf3 Nc6 Bb5","b [] e4 c5 Nf3 Nc6 c3","b [] e4 c5 Nf3 Nc6 c3","b [] e4 c5 Nf3 Nc6 Bb5"]},
       {"args":["book",null,"w","e4 e6"],"out":["w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6","w [] e4 e6"]}
@@ -104,7 +104,7 @@
     },
     {
       "fn": "openingRun.resolveColor",
-      "about": "Random is resolved once, up front: White under 0.5.",
+      "about": "Either is resolved once, up front: White under 0.5.",
       "cases": [
       {"args":["w",0],"out":"w"},
       {"args":["w",0.499],"out":"w"},
@@ -114,10 +114,10 @@
       {"args":["b",0.499],"out":"b"},
       {"args":["b",0.5],"out":"b"},
       {"args":["b",0.99],"out":"b"},
-      {"args":["random",0],"out":"w"},
-      {"args":["random",0.499],"out":"w"},
-      {"args":["random",0.5],"out":"b"},
-      {"args":["random",0.99],"out":"b"}
+      {"args":["either",0],"out":"w"},
+      {"args":["either",0.499],"out":"w"},
+      {"args":["either",0.5],"out":"b"},
+      {"args":["either",0.99],"out":"b"}
       ]
     },
     {
