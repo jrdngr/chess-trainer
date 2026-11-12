@@ -4,28 +4,21 @@ import Shared
 /// Autopilot: one Survival run after another, each decided for you,
 /// including where it starts.
 
-/// Your positions on the way into an opening, and the ones inside it.
-public func splitItems(_ items: [TrainingItem], _ openingPlies: Int) -> (wayIn: [TrainingItem], inside: [TrainingItem]) {
-  (items.filter { $0.pathSans.count < openingPlies }, items.filter { $0.pathSans.count > openingPlies })
-}
-
-/// Where an inside start would begin, and how much it wants it.
-public func insideStart(_ inside: [TrainingItem], _ cards: [String: Card], accuracy: Double?, round: Int, now: Double? = nil) -> (item: TrainingItem, need: Double)? {
+/// Where a Drill run starts: the position of your move most due, the moves to it played for
+/// you; see `docs/gameplay.md`. A move never asked is the most due. With none due, your weakest
+/// while your prep keeps missing, else the one closest to due. Never your first move as White,
+/// so a Drill run never starts from move one. Nil with no moves of yours to start at.
+public func drillStart(_ items: [TrainingItem], _ cards: [String: Card], accuracy: Double?, round: Int, now: Double? = nil) -> (item: TrainingItem, need: Double)? {
   let now = now ?? Env.now()
-  let due = inside
-    .filter { cards[$0.cardId] != nil }
-    .map { (item: $0, need: runNeed(cards[$0.cardId]!, round, now)) }
-    .filter { $0.need >= 1 }
-    .jsSorted { $1.need - $0.need }
-  if let first = due.first { return first }
-  if missingPrep(accuracy) == 0 { return nil }
-  return weakestFirst(inside.filter { cards[$0.cardId] != nil }, cards).first.map { ($0, 1) }
-}
-
-/// Where the next Drill run starts: see `docs/gameplay.md`. Drill never starts from move one.
-public func chooseStart(recent: [StartKind], inside: Double?, firstTime: Bool = false) -> StartKind {
-  if firstTime { return .position }
-  return recent.last != .inside && (inside ?? 0) >= 1 ? .inside : .position
+  let candidates = items.filter { !$0.pathSans.isEmpty }
+  let ranked = candidates
+    .map { item in (item: item, need: cards[item.cardId].map { runNeed($0, round, now) } ?? .infinity) }
+    .jsSorted { cmp($1.need, $0.need) }
+  if let first = ranked.first, first.need >= 1 { return first }
+  if missingPrep(accuracy) > 0, let weakest = weakestFirst(candidates.filter { cards[$0.cardId] != nil }, cards).first {
+    return (weakest, ranked.first { $0.item.cardId == weakest.cardId }?.need ?? 0)
+  }
+  return ranked.first
 }
 
 /// The kind of start a round was given.

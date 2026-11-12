@@ -12,8 +12,8 @@ import Testing
   #expect(state.settings.selection.opening == ANY_OPENING)
   let selection = state.settings.selection
   let round = try #require(nextRound(state, tree, selection, AutoHistory()))
-  // The first run of an opening is always a position start.
-  #expect(round.at == nil)
+  // Drill starts at one of your moves, never from move one.
+  #expect(round.at?.isEmpty == false)
   let begun = startSurvival(survivalOptions(round, state, tree, selection, seed: 1))
   #expect(begun != nil)
 

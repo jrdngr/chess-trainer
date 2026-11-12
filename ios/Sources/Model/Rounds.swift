@@ -42,32 +42,31 @@ public func prepAccuracy(_ rounds: [RoundRecord], _ colors: [Color]) -> Double? 
   return asked > 0 ? Double(recent.reduce(0) { $0 + $1.prep!.found }) / Double(asked) : nil
 }
 
-/// Rounds of any mode an opening has had.
-public func roundsIn(_ score: ScoreState, _ openingId: String) -> Int {
-  nodeStats(score, openingId).byMode.values.reduce(0) { $0 + $1.rounds }
-}
-
 /// Autopilot's next run, or nil with nothing prepared inside the selection.
 public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _ history: AutoHistory) -> AutoRound? {
   if state.settings.start == .freeform { return freeRound(state, tree, selection, history) }
-  // A new move is due: the run heads for the gap that most wants one.
+  let accuracy = { (color: Color) in prepAccuracy(state.score.rounds, [color]) }
+  // A new move is due: the run heads for the gap that most wants one, from your move most due on its line.
   if let gap = steerGap(state, tree, selection) {
     let region = nodeById(tree, selection.opening)
     let opening = deepestNodeWithin(tree, region, gap.path)
-    return AutoRound(pick: Recommendation(focus: .test, opening: opening, color: gap.color, start: .first), at: nil, aim: gap.line)
+    let line = gap.line
+    let onLine = state.repertoireList.filter { $0.id == gap.repertoireId }.flatMap { allItems([$0]) }.filter { item in
+      item.pathSans.count < gap.hole.path.count && Array(line.prefix(item.pathSans.count)) == item.pathSans
+        && item.expected.contains { $0.san == line[item.pathSans.count] }
+    }
+    let start = drillStart(onLine, state.cards, accuracy: accuracy(gap.color), round: state.score.lineRounds)
+    let pick = Recommendation(focus: .test, opening: opening, color: gap.color, start: .inside)
+    // With no move of yours on the line to start at, past your first move as White, the run starts at the hole.
+    return AutoRound(pick: pick, at: start?.item.pathSans ?? gap.hole.path, aim: line)
   }
   guard let recommended = recommend(recommendInput(state, tree, selection, history)) else { return nil }
   let rep = state.repertoireList.first { $0.color == recommended.color }
   let items = rep.map { itemsInRegion(tree, recommended.opening, allItems([$0])) } ?? []
-  let inside = splitItems(items, recommended.opening.sans.count).inside
-  let deeper = insideStart(inside, state.cards, accuracy: prepAccuracy(state.score.rounds, [recommended.color]), round: state.score.lineRounds)
-  let firstTime = roundsIn(state.score, recommended.opening.id) == 0
-  let kind = chooseStart(recent: state.score.starts, inside: deeper?.need, firstTime: firstTime)
-  // Drill starts at the opening's own position at the earliest, never from move one.
   var pick = recommended
   pick.start = .inside
-  if kind == .inside, let deeper { return AutoRound(pick: pick, at: deeper.item.pathSans) }
-  return AutoRound(pick: pick, at: nil)
+  let start = drillStart(items, state.cards, accuracy: accuracy(recommended.color), round: state.score.lineRounds)
+  return AutoRound(pick: pick, at: start?.item.pathSans)
 }
 
 /// A Freeform round: the side the recommendation picks, from move one, steered only

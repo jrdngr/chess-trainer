@@ -24,26 +24,18 @@ import Testing
     return out
   }
   let decks = [deck { _ in nil }, deck { _ in 1 }, deck { $0 % 4 == 0 ? 8 : 2 }, deck({ $0 }, .learning)]
-  func kinds(_ j: JSON) -> [StartKind] { j.array.map { StartKind(rawValue: $0.string)! } }
 
   try check("autopilot", [
-    "autopilot.chooseStart": { a in
-      chooseStart(recent: kinds(a[0]), inside: a[1].numberOrNil, firstTime: a[2].bool).rawValue.json
-    },
     "autopilot.startKind": { a in
       startKind(start: Start(rawValue: a[0]["pick"]["start"].string)!, at: a[0]["at"] == .null ? nil : a[0]["at"].strings).rawValue.json
     },
-    "autopilot.splitItems": { a in
-      let split = splitItems(items, a[0].int)
-      return obj(["wayIn": split.wayIn.map(\.cardId), "inside": split.inside.map(\.cardId)])
-    },
-    "autopilot.insideStart": { a in
-      insideStart(splitItems(items, a[0].int).inside, decks[a[1].int], accuracy: a[2].numberOrNil, round: a[3].int, now: now)
+    "autopilot.drillStart": { a in
+      drillStart(items, decks[a[0].int], accuracy: a[1].numberOrNil, round: a[2].int, now: now)
         .map { obj(["item": $0.item.cardId, "need": $0.need]) } ?? .null
     },
     "recommend.missingPrep": { missingPrep($0[0].numberOrNil).json },
     "autopilot.prepDepth": { a in prepDepth(line(a[0].string), color(a[1]), prepAt, a[2].int).json },
-  ], only: ["autopilot.chooseStart", "autopilot.startKind", "autopilot.splitItems", "autopilot.insideStart", "recommend.missingPrep", "autopilot.prepDepth"])
+  ], only: ["autopilot.startKind", "autopilot.drillStart", "recommend.missingPrep", "autopilot.prepDepth"])
 }
 
 /// Golden/cases/functions/recommend.json

@@ -61,26 +61,26 @@ Every change should pass these tests:
 
 ## How a run starts
 
-| Start | What happens | When |
-| --- | --- | --- |
-| Position start | The moves up to the opening's own position are played for you | Default |
-| Inside start | The moves to one position deeper inside the opening are played for you: the one most overdue, or, with nothing due while your prep keeps missing, the one you answer worst | When a position inside is due, never two runs in a row |
+A Drill run starts at one of your moves: the moves to it are played for you,
+and that move is yours to play. It is your move most due in the run's
+opening, from the way in to the end of your line. A move never asked is the
+most due. With nothing due, it is your weakest move while your prep keeps
+missing, else the move closest to due. Your first move as White is never the
+start, so a Drill run never starts from move one: with two openings on the
+same first move, that would ask you to remember which one the run wants by
+name, and learning names is not a goal. Nor does a run start at the opening's
+named position just because it is named.
 
 Under Home's Play button, a switch picks how runs start, for any selection:
 
-- **Drill** (the default): the starts in the table above. A Drill run never
-  starts from move one: with two openings on the same first move, that would
-  ask you to remember which one the run wants by name, and learning names is
-  not a goal.
+- **Drill** (the default): the start above.
 - **Freeform**: every run starts from move one. Nothing is played for you, and
   the opponent steers toward what needs work.
 
-The first run of an opening added from a menu is always a position start,
-whatever is owed.
 A run that starts inside its line opens on that position; nothing is played
 out by itself. Until your first move, a Replay moves button under the board
 puts the board back to move one and plays the moves up to the position, then
-hands it back. Inside starts go to any position you have a card for.
+hands it back.
 
 Need is counted in runs, not days. Someone who plays thirty runs a day and
 someone who plays one a week both get repetition that fits how much they
@@ -89,8 +89,6 @@ play:
 - A position's need grows with every run that didn't ask it, and resets when
   a run does. A position still being learned comes back every other run; a
   known one after its interval in runs, three runs for each day of it.
-- Where runs started is saved, so the never-two-inside-starts-in-a-row rule
-  holds across sessions.
 
 ## What the next run is
 
@@ -108,9 +106,10 @@ after the first game, the next one plays the White opening it grew.
 When a new move is due (see below), the next run steers toward the gap in the
 selection with the highest p × m² × g, among the gaps past at least one move of
 yours. A White first move you have no answer to is left to Home's
-Recommendations: a run never steers there or grows there: the opponent follows that gap's line
-to its reply, so new moves land on strong lines at a steady pace instead of
-whenever chance allows.
+Recommendations: a run never steers there or grows there. The run starts at
+your move most due on the gap's line before the reply, by the rule in How a
+run starts, and the opponent follows that gap's line to its reply, so new
+moves land on strong lines at a steady pace instead of whenever chance allows.
 
 ## Growing inside a run
 

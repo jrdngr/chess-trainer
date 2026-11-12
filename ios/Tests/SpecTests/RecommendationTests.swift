@@ -185,6 +185,9 @@ import Testing
   #expect(runsSinceAdded(state.games, state.repertoireList) == 5)
   let due = try #require(nextRound(state, tree, selection, AutoHistory()))
   #expect(due.aim == line("e4 c5 d4 cxd4 c3 dxc3"))
+  // It starts at one of your moves on the gap's line, not from move one.
+  let at = try #require(due.at)
+  #expect([line("e4 c5"), line("e4 c5 d4 cxd4")].contains(at))
   let begun = try #require(startSurvival(survivalOptions(due, state, tree, selection, seed: 1)))
   #expect(begun.state.run.target == line("e4 c5 d4 cxd4 c3 dxc3"))
   let hole = try #require(growAtHole(state, tree, selection, color: .w, line: line("e4 c5 d4 cxd4 c3 dxc3")))
@@ -192,7 +195,8 @@ import Testing
   #expect(hole.gap.kind == .tooShort)
 }
 
-/// Drill never starts from move one, even with a prep that ends at the opening's own position.
+/// Drill never starts from move one, even with a prep that ends at the opening's own position:
+/// every run starts at one of your moves.
 @Test func drillNeverStartsFromMoveOne() throws {
   let tree = openingTree(bookIndex)
   var state = AppState()
@@ -201,13 +205,13 @@ import Testing
   let opening = try #require(tree.byId["d4 d5 c4 e6"])
   let selection = Selection(color: .b, opening: opening.id)
   let first = try #require(nextRound(state, tree, selection, AutoHistory()))
-  #expect(first.pick.start == .inside)
+  #expect([line("d4"), line("d4 d5 c4")].contains(first.at ?? []))
   for _ in 0..<4 {
     state.score = recordRound(
       state.score, tree,
       RoundRecord(mode: .survival, openingId: opening.id, color: .b, answered: 2, correct: 2, perfect: true, at: Env.now()))
     let later = try #require(nextRound(state, tree, selection, AutoHistory()))
-    #expect(later.pick.start == .inside)
+    #expect([line("d4"), line("d4 d5 c4")].contains(later.at ?? []))
     state.score.starts.append(startKind(start: later.pick.start, at: later.at))
   }
 }
