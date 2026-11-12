@@ -53,11 +53,6 @@ import Testing
   expect("evalDelta", "EVEN_CP", EVEN_CP)
   expect("autopilotPrefs", "AUTO_GROWTH", encoded(AUTO_GROWTH))
   expect("autopilotPrefs", "DEFAULT_AUTOPILOT", encoded(DEFAULT_AUTOPILOT))
-  // DEFAULT_PLAY differs on purpose: levels are ratings now (PlayTests).
-  var play = DEFAULT_PLAY
-  play.level = "club"
-  expect("modes", "DEFAULT_PLAY", encoded(play))
-  #expect(levelById(DEFAULT_PLAY.level) == levelById("club"))
   expect("openingRun", "CLOCK_MODES", CLOCK_MODES.map(\.rawValue))
   expect("openingRun", "DRAW_WINDOW", DRAW_WINDOW)
   expect("growth", "DEFAULT_MAX_PLY", DEFAULT_MAX_PLY)

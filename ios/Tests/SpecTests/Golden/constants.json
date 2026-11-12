@@ -463,13 +463,6 @@
       "nudgePriority": "transposition",
       "nudgePawns": false
     },
-    "DEFAULT_PLAY": {
-      "level": "club",
-      "save": true,
-      "warnOffBook": true,
-      "showEval": false,
-      "takeBacks": true
-    },
     "DRAW_LABELS": {
       "due": "Scheduled",
       "new": "New only",

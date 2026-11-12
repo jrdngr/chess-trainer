@@ -32,9 +32,6 @@ public struct Settings: Equatable, Sendable, Codable {
   public var tips: [TutorialTip] = []
   /// The tutorial in progress; nil once done or skipped, and for a profile from before it.
   public var tutorial: Tutorial?
-  public var play = DEFAULT_PLAY
-  /// Survival's own setup, as its setup screen leaves it.
-  public var survival = DEFAULT_SURVIVAL
   /// Middlegame mode's setup.
   public var middlegame = DEFAULT_MIDDLEGAME
   /// How Play's runs start: from move one, or wherever your prep needs work.
@@ -43,9 +40,8 @@ public struct Settings: Equatable, Sendable, Codable {
 
   enum CodingKeys: String, CodingKey {
     case selection, favoriteOpenings, autopilot, hapticFeedback, showCoordinates, onboarded, seenIntro, autoplay
-    case boardTheme, lichessUsername, chesscomUsername, growth, play
+    case boardTheme, lichessUsername, chesscomUsername, growth
     case movesPerFill, seenAutoplayNote, seenDeckTip, tips, tutorial
-    case survival
     case middlegame
     case start
   }
@@ -70,13 +66,11 @@ public struct Settings: Equatable, Sendable, Codable {
     // How common and how deep are no longer settings.
     growth.minShare = DEFAULT_GROWTH.minShare
     growth.maxPly = DEFAULT_GROWTH.maxPly
-    play = try c.decodeIfPresent(PlayPrefs.self, forKey: .play) ?? play
     movesPerFill = try c.decodeIfPresent(Int.self, forKey: .movesPerFill) ?? movesPerFill
     seenAutoplayNote = try c.decodeIfPresent(Bool.self, forKey: .seenAutoplayNote) ?? seenAutoplayNote
     seenDeckTip = try c.decodeIfPresent(Bool.self, forKey: .seenDeckTip) ?? seenDeckTip
     tips = try c.decodeIfPresent([String].self, forKey: .tips).map(TutorialTip.decoded) ?? tips
     tutorial = try c.decodeIfPresent(Tutorial.self, forKey: .tutorial)
-    survival = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .survival) ?? survival
     middlegame = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .middlegame) ?? middlegame
     start = try c.decodeIfPresent(RunStart.self, forKey: .start) ?? start
   }
