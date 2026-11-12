@@ -38,8 +38,6 @@ import Testing
   expect(s, "SCORE_SLIGHT", SCORE_SLIGHT)
   expect(s, "SURVIVAL_STEERS", SURVIVAL_STEERS.map(\.rawValue))
 
-  expect("autopilot", "COLD_EVERY", COLD_EVERY)
-  expect("autopilot", "COLD_GAP", COLD_GAP)
   expect("autopilot", "LEAN_FOR", Dictionary(uniqueKeysWithValues: LEAN_FOR.map { ($0.key.rawValue, $0.value.rawValue) }))
 
   let r = "recommend"

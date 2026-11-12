@@ -3,8 +3,6 @@
     "ROLE_ARROWS": 3
   },
   "src/model/autopilot.ts": {
-    "COLD_EVERY": 3,
-    "COLD_GAP": 6,
     "LEAN_FOR": {
       "test": "popular",
       "review": "weak"

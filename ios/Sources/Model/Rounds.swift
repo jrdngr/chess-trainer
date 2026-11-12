@@ -57,25 +57,17 @@ public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selec
     return AutoRound(pick: Recommendation(focus: .test, opening: opening, color: gap.color, start: .first), at: nil, aim: gap.line)
   }
   guard let recommended = recommend(recommendInput(state, tree, selection, history)) else { return nil }
-  if recommended.start == .first { return AutoRound(pick: recommended, at: nil) }
   let rep = state.repertoireList.first { $0.color == recommended.color }
   let items = rep.map { itemsInRegion(tree, recommended.opening, allItems([$0])) } ?? []
-  let (wayIn, inside) = splitItems(items, recommended.opening.sans.count)
-  let round = state.score.lineRounds
-  let deeper = insideStart(inside, state.cards, accuracy: prepAccuracy(state.score.rounds, [recommended.color]), round: round)
+  let inside = splitItems(items, recommended.opening.sans.count).inside
+  let deeper = insideStart(inside, state.cards, accuracy: prepAccuracy(state.score.rounds, [recommended.color]), round: state.score.lineRounds)
   let firstTime = roundsIn(state.score, recommended.opening.id) == 0
-  let kind = chooseStart(
-    recent: state.score.starts, cold: coldNeed(wayIn, state.cards, round), inside: deeper?.need, firstTime: firstTime)
-  // With none of your moves past the opening's own position, a position start would play
-  // your whole prep for you: the run starts from move one instead.
-  let nothingInside = inside.isEmpty && !firstTime
-  if kind == .cold || (kind == .position && nothingInside) {
-    var pick = recommended
-    pick.start = .first
-    return AutoRound(pick: pick, at: nil)
-  }
-  if kind == .inside, let deeper { return AutoRound(pick: recommended, at: deeper.item.pathSans) }
-  return AutoRound(pick: recommended, at: nil)
+  let kind = chooseStart(recent: state.score.starts, inside: deeper?.need, firstTime: firstTime)
+  // Drill starts at the opening's own position at the earliest, never from move one.
+  var pick = recommended
+  pick.start = .inside
+  if kind == .inside, let deeper { return AutoRound(pick: pick, at: deeper.item.pathSans) }
+  return AutoRound(pick: pick, at: nil)
 }
 
 /// A Freeform round: the side the recommendation picks, from move one, steered only

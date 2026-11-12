@@ -63,19 +63,20 @@ Every change should pass these tests:
 
 | Start | What happens | When |
 | --- | --- | --- |
-| Position start | The moves up to the opening's own position are played for you | Default, when you have moves of your own past that position |
-| Inside start | The moves to one position deeper inside the opening are played for you: the one most overdue, or, with nothing due while your prep keeps missing, the one you answer worst | When it needs it more than a cold start does, never two runs in a row |
-| Cold start | Nothing is played for you. The run starts from move one and the opponent steers toward the opening | When the way in has gone unplayed long enough, never two runs in a row, and at least every 3rd run. Also whenever your prep ends at the opening's own position, so a run never plays your whole prep for you |
+| Position start | The moves up to the opening's own position are played for you | Default |
+| Inside start | The moves to one position deeper inside the opening are played for you: the one most overdue, or, with nothing due while your prep keeps missing, the one you answer worst | When a position inside is due, never two runs in a row |
 
 Under Home's Play button, a switch picks how runs start, for any selection:
 
-- **Drill** (the default): the starts in the table above.
-- **Freeform**: every run is a cold start. Nothing is played for you, and the
-  opponent steers toward what needs work.
+- **Drill** (the default): the starts in the table above. A Drill run never
+  starts from move one: with two openings on the same first move, that would
+  ask you to remember which one the run wants by name, and learning names is
+  not a goal.
+- **Freeform**: every run starts from move one. Nothing is played for you, and
+  the opponent steers toward what needs work.
 
 The first run of an opening added from a menu is always a position start,
-whatever is owed, so you see how the opening is reached before you are asked
-to reach it yourself. An opening grown by playing moves needs no such start.
+whatever is owed.
 A run that starts inside its line opens on that position; nothing is played
 out by itself. Until your first move, a Replay moves button under the board
 puts the board back to move one and plays the moves up to the position, then
@@ -88,10 +89,8 @@ play:
 - A position's need grows with every run that didn't ask it, and resets when
   a run does. A position still being learned comes back every other run; a
   known one after its interval in runs, three runs for each day of it.
-- The way in is needed when its stalest move has gone 6 runs without you
-  playing it yourself.
-- Where runs started is saved, so the every-3rd-run cold start counts across
-  sessions.
+- Where runs started is saved, so the never-two-inside-starts-in-a-row rule
+  holds across sessions.
 
 ## What the next run is
 

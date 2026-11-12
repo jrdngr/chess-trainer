@@ -192,9 +192,8 @@ import Testing
   #expect(hole.gap.kind == .tooShort)
 }
 
-/// A prep that ends at the opening's own position is never played out for you:
-/// after its first run, every run starts from move one.
-@Test func prepEndingAtTheOpeningStartsFromMoveOne() throws {
+/// Drill never starts from move one, even with a prep that ends at the opening's own position.
+@Test func drillNeverStartsFromMoveOne() throws {
   let tree = openingTree(bookIndex)
   var state = AppState()
   let id = state.ensureRepertoire(.b)
@@ -203,12 +202,14 @@ import Testing
   let selection = Selection(color: .b, opening: opening.id)
   let first = try #require(nextRound(state, tree, selection, AutoHistory()))
   #expect(first.pick.start == .inside)
-  state.score = recordRound(
-    state.score, tree,
-    RoundRecord(mode: .survival, openingId: opening.id, color: .b, answered: 2, correct: 2, perfect: true, at: Env.now()))
-  let later = try #require(nextRound(state, tree, selection, AutoHistory()))
-  #expect(later.pick.start == .first)
-  #expect(later.at == nil)
+  for _ in 0..<4 {
+    state.score = recordRound(
+      state.score, tree,
+      RoundRecord(mode: .survival, openingId: opening.id, color: .b, answered: 2, correct: 2, perfect: true, at: Env.now()))
+    let later = try #require(nextRound(state, tree, selection, AutoHistory()))
+    #expect(later.pick.start == .inside)
+    state.score.starts.append(startKind(start: later.pick.start, at: later.at))
+  }
 }
 
 /// A Play run never steers to a White first move you have no answer to, nor grows there:

@@ -28,7 +28,7 @@ import Testing
 
   try check("autopilot", [
     "autopilot.chooseStart": { a in
-      chooseStart(recent: kinds(a[0]), cold: a[1].number, inside: a[2].numberOrNil, firstTime: a[3].bool).rawValue.json
+      chooseStart(recent: kinds(a[0]), inside: a[1].numberOrNil, firstTime: a[2].bool).rawValue.json
     },
     "autopilot.startKind": { a in
       startKind(start: Start(rawValue: a[0]["pick"]["start"].string)!, at: a[0]["at"] == .null ? nil : a[0]["at"].strings).rawValue.json
@@ -37,14 +37,13 @@ import Testing
       let split = splitItems(items, a[0].int)
       return obj(["wayIn": split.wayIn.map(\.cardId), "inside": split.inside.map(\.cardId)])
     },
-    "autopilot.coldNeed": { a in coldNeed(splitItems(items, a[0].int).wayIn, decks[a[1].int], a[2].int).json },
     "autopilot.insideStart": { a in
       insideStart(splitItems(items, a[0].int).inside, decks[a[1].int], accuracy: a[2].numberOrNil, round: a[3].int, now: now)
         .map { obj(["item": $0.item.cardId, "need": $0.need]) } ?? .null
     },
     "recommend.missingPrep": { missingPrep($0[0].numberOrNil).json },
     "autopilot.prepDepth": { a in prepDepth(line(a[0].string), color(a[1]), prepAt, a[2].int).json },
-  ], only: ["autopilot.chooseStart", "autopilot.startKind", "autopilot.splitItems", "autopilot.coldNeed", "autopilot.insideStart", "recommend.missingPrep", "autopilot.prepDepth"])
+  ], only: ["autopilot.chooseStart", "autopilot.startKind", "autopilot.splitItems", "autopilot.insideStart", "recommend.missingPrep", "autopilot.prepDepth"])
 }
 
 /// Golden/cases/functions/recommend.json

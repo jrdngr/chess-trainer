@@ -4,24 +4,9 @@ import Shared
 /// Autopilot: one Survival run after another, each decided for you,
 /// including where it starts.
 
-/// Runs the way in goes unplayed before a cold start wants it.
-public let COLD_GAP: Double = 6
-/// A cold start every this many runs at the latest.
-public let COLD_EVERY = 3
-
 /// Your positions on the way into an opening, and the ones inside it.
 public func splitItems(_ items: [TrainingItem], _ openingPlies: Int) -> (wayIn: [TrainingItem], inside: [TrainingItem]) {
   (items.filter { $0.pathSans.count < openingPlies }, items.filter { $0.pathSans.count > openingPlies })
-}
-
-/// How much the way in wants playing: runs since its stalest move, over the cold gap.
-public func coldNeed(_ wayIn: [TrainingItem], _ cards: [String: Card], _ round: Int) -> Double {
-  if wayIn.isEmpty { return 0 }
-  let since = wayIn.map { item -> Double in
-    guard let tested = cards[item.cardId]?.testedRound else { return .infinity }
-    return Double(round - tested)
-  }
-  return since.max()! / COLD_GAP
 }
 
 /// Where an inside start would begin, and how much it wants it.
@@ -37,16 +22,10 @@ public func insideStart(_ inside: [TrainingItem], _ cards: [String: Card], accur
   return weakestFirst(inside.filter { cards[$0.cardId] != nil }, cards).first.map { ($0, 1) }
 }
 
-/// Where the next run starts: see `docs/gameplay.md`.
-public func chooseStart(recent: [StartKind], cold: Double, inside: Double?, firstTime: Bool = false) -> StartKind {
+/// Where the next Drill run starts: see `docs/gameplay.md`. Drill never starts from move one.
+public func chooseStart(recent: [StartKind], inside: Double?, firstTime: Bool = false) -> StartKind {
   if firstTime { return .position }
-  let last = recent.last
-  let tail = recent.suffix(COLD_EVERY - 1)
-  if tail.count == COLD_EVERY - 1 && !tail.contains(.cold) { return .cold }
-  let c = last != .cold && cold >= 1 ? cold : 0
-  let i = last != .inside && inside != nil && inside! >= 1 ? inside! : 0
-  if c == 0 && i == 0 { return .position }
-  return c >= i ? .cold : .inside
+  return recent.last != .inside && (inside ?? 0) >= 1 ? .inside : .position
 }
 
 /// The kind of start a round was given.
