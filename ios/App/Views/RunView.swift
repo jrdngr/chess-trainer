@@ -44,6 +44,14 @@ struct RunView: View {
   /// The run is over and stays on the board, with the deck to draw the next one from.
   var drawing: Bool { onDraw != nil && model.finish != nil && !model.advancing }
 
+  /// The tip over the deck, the first time a Play round ends on it.
+  private static let deckTip = "Tap the deck to deal your next game."
+
+  /// The X is the way on: a tutorial game asks you to end it, or is over.
+  private var xCued: Bool {
+    (model.endCued && !model.nextRunShown) || (model.tutorialGame != nil && model.finish != nil && model.tip != .blunder)
+  }
+
   /// The game as played, the move that ended it last.
   private var gameLine: [String] {
     if case .blunder(let played, _, _, _, _) = model.session.ending { return model.run.played + [played] }
@@ -93,15 +101,18 @@ struct RunView: View {
         .transition(.identity)
       } else if drawing {
         GeometryReader { geo in
-          RoundDeal(board: anchor.map { geo[$0] }, draw: onDraw, onDone: onDealt, steps: deckSteps)
+          RoundDeal(
+            board: anchor.map { geo[$0] }, draw: onDraw, onDone: onDealt, steps: deckSteps,
+            tip: store.state.settings.seenDeckTip ? nil : Self.deckTip,
+            onTip: { store.update { $0.settings.seenDeckTip = true } })
         }
         .transition(.identity)
       }
     }
     .contentShape(Rectangle())
     .onTapGesture { if model.intro == .announce { model.toBoard() } }
-    .confirmationDialog(model.tutorialGame == nil ? "End session?" : "End this round?", isPresented: $askingToEnd, titleVisibility: .visible) {
-      Button(model.tutorialGame == nil ? "End session" : "End round", role: .destructive) { end() }
+    .confirmationDialog("End session?", isPresented: $askingToEnd, titleVisibility: .visible) {
+      Button("End session", role: .destructive) { end() }
       Button("Keep playing", role: .cancel) {}
     }
     .onChange(of: drawing, initial: true) {
@@ -308,8 +319,8 @@ struct RunView: View {
       HStack {
         Button(action: close) {
           Image(systemName: "xmark").font(.headline).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
-            // The tutorial asks for the X once its game is done, where Next run doesn't take its place.
-            .overlay { if model.endCued && !model.nextRunShown { Circle().strokeBorder(Theme.accent, lineWidth: 2) } }
+            // The tutorial asks for the X once its game is done, where Next run doesn't take its place, and once it is over.
+            .overlay { if xCued { Circle().strokeBorder(Theme.accent, lineWidth: 2) } }
         }
         .foregroundStyle(Theme.text).buttonStyle(.plain)
         Spacer()
@@ -404,9 +415,9 @@ struct RunView: View {
   }
 
   /// The X: once play is under way it asks, then ends the round and goes Home; before that it leaves.
-  /// A tutorial game ends on its end screen instead. A run over on the board, with the deck under it, leaves.
+  /// A run over on the board, with the deck under it or in the tutorial, leaves.
   private func close() {
-    if drawing {
+    if drawing || (model.finish != nil && model.tutorialGame != nil) {
       onExit()
     } else if model.blunder != nil {
       model.continueToEnd()
@@ -418,10 +429,10 @@ struct RunView: View {
     }
   }
 
-  /// The round ends where it stands: Home, or a tutorial game's end screen.
+  /// The round ends where it stands, and Home.
   private func end() {
     model.endRound()
-    if model.tutorialGame == nil { onExit() }
+    onExit()
   }
 
   /// One fixed-height slot: the moves played for you while they replay, else the goal.
@@ -508,7 +519,7 @@ struct RunView: View {
   }
 
   /// A blunder ends the run: its name under the board for a beat, the threat drawn on it,
-  /// then the end screen, which has Analyze. A tutorial tip holds it until it is put away.
+  /// then the end screen, which has Analyze; a tutorial game's stays until its X. A tutorial tip holds it until it is put away.
   /// With the deck, the run stays here as analysis: its ending's name at the game's end, else the move and who is to play.
   @ViewBuilder private var ending: some View {
     if drawing {
@@ -527,9 +538,10 @@ struct RunView: View {
         .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
         .padding(.top, 16)
         .contentShape(Rectangle())
-        .onTapGesture { if model.tip != .blunder { model.continueToEnd() } }
+        // A tutorial game has no end screen: its blunder stays until the X.
+        .onTapGesture { if model.tip != .blunder && model.tutorialGame == nil { model.continueToEnd() } }
         .task(id: model.tip == .blunder) {
-          guard model.tip != .blunder else { return }
+          guard model.tip != .blunder, model.tutorialGame == nil else { return }
           try? await Task.sleep(for: .seconds(2))
           if !Task.isCancelled { model.continueToEnd() }
         }

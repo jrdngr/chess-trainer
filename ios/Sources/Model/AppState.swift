@@ -26,6 +26,8 @@ public struct Settings: Equatable, Sendable, Codable {
   public var movesPerFill = DEFAULT_MOVES_PER_FILL
   /// Whether the note on autoplay has been shown.
   public var seenAutoplayNote = false
+  /// Whether the tip on drawing from the deck after a Play round has been put away.
+  public var seenDeckTip = false
   /// The tutorial's tips still to show: the game's in play, or the Playbook tab's at its end.
   public var tips: [TutorialTip] = []
   /// The tutorial in progress; nil once done or skipped, and for a profile from before it.
@@ -45,7 +47,7 @@ public struct Settings: Equatable, Sendable, Codable {
   enum CodingKeys: String, CodingKey {
     case selection, favoriteOpenings, autopilot, hapticFeedback, showCoordinates, onboarded, seenIntro, autoplay
     case boardTheme, lichessUsername, chesscomUsername, growth, play
-    case movesPerFill, seenAutoplayNote, tips, tutorial
+    case movesPerFill, seenAutoplayNote, seenDeckTip, tips, tutorial
     case survival
     case middlegame
     case drill
@@ -76,6 +78,7 @@ public struct Settings: Equatable, Sendable, Codable {
     play = try c.decodeIfPresent(PlayPrefs.self, forKey: .play) ?? play
     movesPerFill = try c.decodeIfPresent(Int.self, forKey: .movesPerFill) ?? movesPerFill
     seenAutoplayNote = try c.decodeIfPresent(Bool.self, forKey: .seenAutoplayNote) ?? seenAutoplayNote
+    seenDeckTip = try c.decodeIfPresent(Bool.self, forKey: .seenDeckTip) ?? seenDeckTip
     tips = try c.decodeIfPresent([String].self, forKey: .tips).map(TutorialTip.decoded) ?? tips
     tutorial = try c.decodeIfPresent(Tutorial.self, forKey: .tutorial)
     survival = try c.decodeIfPresent(SurvivalPrefs.self, forKey: .survival) ?? survival

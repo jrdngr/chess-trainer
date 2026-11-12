@@ -6,7 +6,7 @@ import SwiftUI
 
 /// Autopilot: a Survival run decided for you. A finished round stays on its board with
 /// the deck under it, and the next round is drawn from the deck; the close button leaves.
-/// The tutorial's games keep the end screen, which goes back Home.
+/// A tutorial game also stays on its board when it ends, with no deck: its X goes back Home.
 struct AutopilotView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
@@ -30,7 +30,7 @@ struct AutopilotView: View {
       if analyzing, let model {
         AnalysisTab(tree: tree, index: index, line: model.run.played, orientation: model.run.color) { analyzing = false }
       } else if let model {
-        if model.phase == .over, let finish = model.finish, !model.advancing, !deals(model) {
+        if model.phase == .over, let finish = model.finish, !model.advancing, !deals(model), model.tutorialGame == nil {
           EndView(model: model, finish: finish, onNext: home, onAnalyze: { analyzing = true }, onExit: home)
         } else {
           runView(model)

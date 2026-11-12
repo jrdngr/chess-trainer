@@ -5,6 +5,7 @@ import ChessCore
 /// (one for White, Black's answers to 1.e4 and 1.d4), and five games teach
 /// the game on them. Between games Home asks for one step at a time; after
 /// the fifth, the Playbook tab's tips, and then everything is unlocked.
+/// A game that ends stays on its board, with no end screen or deck; its X goes back Home.
 ///
 /// 1. White, your line played through, then a few common moves; Next run ends it.
 /// 2. White again, with growth: one answer offered at each step.
@@ -313,7 +314,7 @@ public enum TutorialTip: String, Sendable, Codable, CaseIterable {
     case .playbookTab: "Your openings live in the Playbook."
     case .playbookAdd: "Tap + to add openings you already know."
     case .playbookMore: "Import your games."
-    case .playbookRow: "Tap an opening to see its lines. Swipe left on it to remove it."
+    case .playbookRow: "Tap an opening to see its lines. Swipe left on it to delete it."
     }
   }
 

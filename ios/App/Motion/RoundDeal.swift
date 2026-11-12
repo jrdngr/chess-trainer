@@ -53,6 +53,9 @@ struct RoundDeal: View {
   var onDone: (() -> Void)? = nil
   /// With the deck under a finished run: swipes step through its game.
   var steps: DeckSteps? = nil
+  /// A tip over the deck, until it is tapped or the deck is touched; `onTip` puts it away.
+  var tip: String? = nil
+  var onTip: () -> Void = {}
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   /// How far the card has come from the deck, 0...1, small and face up at 1.
   @State private var dealt = 0.0
@@ -118,6 +121,10 @@ struct RoundDeal: View {
         .accessibilityAction { if draw != nil { tapped() } }
         .position(deck)
         .opacity(grown ? 0 : 1)
+        // Hung over the deck's top edge, the width of the screen less its margins.
+        Color.clear.frame(width: max(0, geo.size.width - 32), height: 0)
+          .tip(text: draw != nil && !committed && dealt == 0 ? tip : nil, arrow: .down, onDismiss: onTip)
+          .position(x: geo.size.width / 2, y: deck.y - 60)
         if let shown {
           face(shown, size: full, inset: inset, scale: scale)
             .modifier(DealFlip(progress: dealt, radius: 29 / scale, thickness: grown ? 0 : (full + 2 * inset) * 0.035))
@@ -156,6 +163,7 @@ struct RoundDeal: View {
         let t = value.translation
         if sideways == nil {
           guard abs(t.width) + abs(t.height) > 8 else { return }
+          if tip != nil { onTip() }
           sideways = steps != nil && abs(t.width) > abs(t.height)
           if sideways == true { tucks += 1 }
         }
@@ -257,6 +265,7 @@ struct RoundDeal: View {
   }
 
   private func tapped() {
+    if tip != nil { onTip() }
     guard !committed, !over, take() else { return }
     commit()
   }
