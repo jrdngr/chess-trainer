@@ -137,7 +137,10 @@ struct RunView: View {
         header
           .clearsLens($lens)
           // One tip modifier per view: a second one's layering would lose to the first's.
-          .tip(model.tip, when: Self.headerTips.contains(model.tip), arrowAt: headerArrowAt, inset: 16, onDismiss: model.dismissTip)
+          // The tip pointing Home goes Home when tapped, as the X does.
+          .tip(model.tip, when: Self.headerTips.contains(model.tip), arrowAt: headerArrowAt, inset: 16, onDismiss: {
+            if model.tip == .goHome { close() } else { model.dismissTip() }
+          })
       }
       // The Eval lens's bar takes the captured row's place, so the board never moves.
       // While adding moves Growth's eval bar takes the row, with the engine's word on the answers.
@@ -544,8 +547,11 @@ struct RunView: View {
         .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
         .padding(.top, 16)
         .contentShape(Rectangle())
-        // A tutorial game has no end screen: its blunder stays until the X.
-        .onTapGesture { if model.tip != .blunder && model.tutorialGame == nil { model.continueToEnd() } }
+        // A tutorial game has no end screen: once its blunder tip is put away, a tap here goes Home as the X does.
+        .onTapGesture {
+          if model.tip == .blunder { return }
+          if model.tutorialGame != nil { close() } else { model.continueToEnd() }
+        }
         .task(id: model.tip == .blunder) {
           guard model.tip != .blunder, model.tutorialGame == nil else { return }
           try? await Task.sleep(for: .seconds(2))
