@@ -844,8 +844,8 @@ public final class RunModel {
       if case .ended = f.how { ended = true }
       // Ended by hand before its end, the game is played again.
       let counted = endCued || game.number >= 4 || !ended
-      // Ended on its own board, the game points at its X, after the blunder tip where it has one.
-      tip = blundered && game.tips.contains(.blunder) ? .blunder : ended ? nil : .goHome
+      // Ended on its own board, the game points at its X, after the blunder tip on a blunder.
+      tip = blundered ? .blunder : ended ? nil : .goHome
       store.update { $0.settings.finishTutorialGame(counted: counted) }
     }
     before = handoff != nil ? store.state.middlegame : store.state.runRecord

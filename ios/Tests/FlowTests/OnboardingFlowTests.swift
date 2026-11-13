@@ -24,19 +24,24 @@ import Testing
 }
 
 /// A tutorial game ended by a blunder stays on its board: the blunder tip, then a tip pointing at the X to go Home.
-@MainActor @Test func tutorialBlunderPointsAtTheX() async throws {
+/// Every tutorial game where you can blunder does this, not only the one whose tips teach blunders.
+@MainActor @Test(arguments: [3, 4, 5]) func tutorialBlunderPointsAtTheX(game number: Int) async throws {
   try await headless { app in
     await app.recommendOpenings()
-    for _ in 0..<2 {
+    for _ in 1..<number {
       try await playTutorialGame(app)
       try await app.next()
     }
     let run = try #require(app.run)
-    #expect(run.tutorialGame?.number == 3)
+    #expect(run.tutorialGame?.number == number)
     for _ in 0..<40 {
-      guard run.live, run.expected != nil || !run.prepNow.isEmpty else { break }
       if run.tip != nil { run.dismissTip() }
-      try await app.move(try #require(run.expected ?? run.prepNow.first))
+      if run.fill != nil, let answer = app.choices.first {
+        try await app.move(answer)
+        continue
+      }
+      guard run.live, let move = run.expected ?? run.prepNow.first else { break }
+      try await app.move(move)
     }
     if run.tip != nil { run.dismissTip() }
     try await app.move(try #require(freeCapture(run.run.fen)))
