@@ -151,7 +151,7 @@ private func playThrough(_ game: TutorialGame) -> (played: [String], line: [Stri
 }
 
 /// A game counts when it reached its end; the last leaves the Playbook's
-/// tips, and the tutorial ends with the last of them.
+/// tips, and the tutorial ends with the last of them, which goes back Home.
 @Test func tutorialEndsWithThePlaybookTips() {
   var settings = Settings()
   settings.startTutorial(RECOMMENDED_OPENINGS)
@@ -163,13 +163,16 @@ private func playThrough(_ game: TutorialGame) -> (played: [String], line: [Stri
   #expect(settings.tutorial?.next == nil)
   #expect(homeTip(settings.tips) == .playbookTab)
   #expect(playbookTip(settings.tips, hasRows: true) == nil)
-  settings.putAway(.playbookTab)
+  let afterTab = settings.putAway(.playbookTab)
+  #expect(!afterTab)
   #expect(playbookTip(settings.tips, hasRows: false) == .playbookAdd)
-  settings.putAway(.playbookAdd)
-  settings.putAway(.playbookMore)
+  let afterAdd = settings.putAway(.playbookAdd)
+  let afterMore = settings.putAway(.playbookMore)
+  #expect(!afterAdd && !afterMore)
   #expect(playbookTip(settings.tips, hasRows: false) == nil)
   #expect(settings.tutorial != nil)
-  settings.putAway(.playbookRow)
+  let afterRow = settings.putAway(.playbookRow)
+  #expect(afterRow, "the Playbook tab's last tip sends the player back Home")
   #expect(settings.tutorial == nil)
 }
 

@@ -435,12 +435,14 @@ extension Settings {
     tips = TutorialTip.afterGames
   }
 
-  /// A tip put away. The tutorial ends with the Playbook tab's last.
-  public mutating func putAway(_ tip: TutorialTip) {
+  /// A tip put away. The tutorial ends with the Playbook tab's last. True when
+  /// this was the Playbook tab's last tip, and the player goes back Home.
+  @discardableResult public mutating func putAway(_ tip: TutorialTip) -> Bool {
     tips.removeAll { $0 == tip }
     if let tutorial, tutorial.played >= TUTORIAL_GAMES, !tips.contains(where: { TutorialTip.afterGames.contains($0) }) {
       self.tutorial = nil
     }
+    return TutorialTip.playbook.contains(tip) && !tips.contains(where: TutorialTip.playbook.contains)
   }
 }
 

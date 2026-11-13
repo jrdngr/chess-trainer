@@ -40,5 +40,6 @@ target can be covered by `HeadlessApp` flow tests.
    with the X three times. When a tutorial game ends, it stays on its board
    with no deck, and the X goes Home. A game that ended on its own (a
    blunder, mate or draw) points a tip at the X to go Home. A blunder
-   shows "A blunder ends the game." first, in every tutorial game. `Tutorial.swift` holds each game's
-   setup.
+   shows "A blunder ends the game." first, in every tutorial game. After the games, tips walk through the
+   Playbook tab; putting its last one away goes back Home. `Tutorial.swift`
+   holds each game's setup.

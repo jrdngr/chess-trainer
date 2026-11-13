@@ -104,7 +104,8 @@ struct PlaybookView: View {
     let rep = reps.first { $0.color == side }
     let rows = rep.map { playbookRows($0, index) } ?? []
     let tip = playbookTip(store.state.settings.tips, hasRows: !rows.isEmpty)
-    let putAway = { dismissTip(store, tip) }
+    // The Playbook tab's last tip put away, the tutorial is over: back Home.
+    let putAway = { if dismissTip(store, tip) { onHome() } }
     let untidy = scan.count ?? 0
     return VStack(spacing: 0) {
       AppBar(title: "Playbook", large: true) {

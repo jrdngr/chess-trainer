@@ -115,10 +115,13 @@ struct TipLayer: ViewModifier {
   }
 }
 
-/// A tip off the board put away for good, so the next one shows.
-@MainActor func dismissTip(_ store: AppStore, _ tip: TutorialTip?) {
-  guard let tip else { return }
+/// A tip off the board put away for good, so the next one shows. True when it
+/// was the Playbook tab's last.
+@discardableResult @MainActor func dismissTip(_ store: AppStore, _ tip: TutorialTip?) -> Bool {
+  guard let tip else { return false }
+  var last = false
   withAnimation(.easeOut(duration: 0.15)) {
-    store.update { $0.settings.putAway(tip) }
+    store.update { last = $0.settings.putAway(tip) }
   }
+  return last
 }
