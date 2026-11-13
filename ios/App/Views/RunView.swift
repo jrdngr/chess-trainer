@@ -544,14 +544,15 @@ struct RunView: View {
       .frame(maxWidth: .infinity)
     } else {
       endingName
-        .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
-        .padding(.top, 16)
         .contentShape(Rectangle())
         // A tutorial game has no end screen: once its blunder tip is put away, a tap here goes Home as the X does.
         .onTapGesture {
           if model.tip == .blunder { return }
           if model.tutorialGame != nil { close() } else { model.continueToEnd() }
         }
+        // After the tap area's shape: a content shape would clip the tip, which hangs outside it, out of hit testing.
+        .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
+        .padding(.top, 16)
         .task(id: model.tip == .blunder) {
           guard model.tip != .blunder, model.tutorialGame == nil else { return }
           try? await Task.sleep(for: .seconds(2))
