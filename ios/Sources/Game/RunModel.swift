@@ -737,6 +737,20 @@ public final class RunModel {
     store.update { $0.settings.tips.removeAll { $0 == found } }
   }
 
+  /// A finished tutorial game holds its board until you leave, and a tap anywhere moves it on.
+  public var tapsLeave: Bool { tutorialGame != nil && finish != nil }
+
+  /// A tap anywhere on a finished tutorial game: the blunder tip is put away
+  /// (the tip on the X follows), else true, and the game is left for Home.
+  public func tapFinished() -> Bool {
+    guard tapsLeave else { return false }
+    if tip == .blunder {
+      dismissTip()
+      return false
+    }
+    return true
+  }
+
   /// A tap on the tip, or your next move: some tips lead to the next.
   public func dismissTip() {
     guard let current = tip else { return }

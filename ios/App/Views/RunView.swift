@@ -87,6 +87,13 @@ struct RunView: View {
   var body: some View {
     ZStack {
       board
+      // A finished tutorial game: one layer over everything takes every tap, so nothing on the screen
+      // can sit over its tips. A tap puts the blunder tip away, then the next goes Home.
+      if model.tapsLeave {
+        Color.clear.contentShape(Rectangle()).ignoresSafeArea()
+          .onTapGesture { if model.tapFinished() { close() } }
+          .zIndex(10)
+      }
       if model.intro == .announce {
         if standalone {
           PlayIntroCover(trail: introTrail, mode: "Middlegame")
@@ -137,10 +144,7 @@ struct RunView: View {
         header
           .clearsLens($lens)
           // One tip modifier per view: a second one's layering would lose to the first's.
-          // The tip pointing Home goes Home when tapped, as the X does.
-          .tip(model.tip, when: Self.headerTips.contains(model.tip), arrowAt: headerArrowAt, inset: 16, onDismiss: {
-            if model.tip == .goHome { close() } else { model.dismissTip() }
-          })
+          .tip(model.tip, when: Self.headerTips.contains(model.tip), arrowAt: headerArrowAt, inset: 16, onDismiss: model.dismissTip)
       }
       // The Eval lens's bar takes the captured row's place, so the board never moves.
       // While adding moves Growth's eval bar takes the row, with the engine's word on the answers.
@@ -544,15 +548,11 @@ struct RunView: View {
       .frame(maxWidth: .infinity)
     } else {
       endingName
-        .contentShape(Rectangle())
-        // A tutorial game has no end screen: once its blunder tip is put away, a tap here goes Home as the X does.
-        .onTapGesture {
-          if model.tip == .blunder { return }
-          if model.tutorialGame != nil { close() } else { model.continueToEnd() }
-        }
-        // After the tap area's shape: a content shape would clip the tip, which hangs outside it, out of hit testing.
         .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
         .padding(.top, 16)
+        .contentShape(Rectangle())
+        // A tutorial game has no end screen; its taps go to the layer over the whole screen.
+        .onTapGesture { if model.tutorialGame == nil { model.continueToEnd() } }
         .task(id: model.tip == .blunder) {
           guard model.tip != .blunder, model.tutorialGame == nil else { return }
           try? await Task.sleep(for: .seconds(2))

@@ -50,8 +50,10 @@ import Testing
       return
     }
     #expect(run.tip == .blunder)
-    run.dismissTip()
+    #expect(run.tapsLeave)
+    #expect(!run.tapFinished(), "the first tap puts the blunder tip away")
     #expect(run.tip == .goHome)
+    #expect(run.tapFinished(), "the next tap goes Home")
   }
 }
 
