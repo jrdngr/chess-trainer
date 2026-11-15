@@ -53,6 +53,19 @@ Every change should pass these tests:
 - **It is the whole product.** If a player can't get somewhere without
   Middlegame or Endgames, Play has a gap.
 
+## Pawns and the Pawn Shop
+
+Added 2026-11-15. Good play earns pawns: a prep finished clean, a prep
+played fast, a blunder punished, a moment found, a mission met, reaching
+the endgame, a mate, an Endgames goal, and the first game of each day in a
+streak. Pawns buy features in the Pawn Shop, in an order that teaches the
+game. A new player starts on White Drill with Any Opening, then buys the
+side picker, the lenses, the opening picker, Freeform, Recommendations,
+Middlegame and Endgames. There is no tutorial: a tip explains each thing
+the first time it comes up. Each opening shows its form as signal bars
+instead of a rating. The rules: [pawns](rules/pawns.md),
+[the Pawn Shop](rules/shop.md), [tips](rules/tips.md), [form](rules/form.md).
+
 ## What it is not
 
 - It is not a mode picker. Freeform and Drill are one kind of round that
