@@ -354,7 +354,7 @@ struct RunView: View {
       // Gives way before the board does: what doesn't fit is cut, never pushed up, and can't take a touch outside it.
       // A blunder's tip hangs above its name, over the lenses, so nothing is cut then.
       .frame(minHeight: 0, maxHeight: .infinity, alignment: .top)
-      .clipShape(Rectangle().inset(by: tipAbove ? -200 : 0)).contentShape(Rectangle())
+      .clipShape(Rectangle().inset(by: tipAbove ? -200 : 0)).contentShape(Rectangle().inset(by: tipAbove ? -200 : 0))
       // Over the lenses' row while a blunder's tip hangs above its name, or the mission tip above the goal.
       .zIndex(tipAbove ? 2 : 0)
       footer.padding(.top, 10).padding(.bottom, 8).opacity(model.blunder == nil && !drawing ? 1 : 0)

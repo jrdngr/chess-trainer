@@ -800,7 +800,9 @@ public final class RunModel {
 
   /// What floats over the board goes, and the blunder or the end screen comes up.
   private func settle(_ f: Finish) {
+    // The run's timers stop with it, so nothing would clear these later.
     pop = nil
+    callout = nil
     miss = nil
     flash = nil
     thinking = false
