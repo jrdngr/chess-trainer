@@ -204,8 +204,8 @@ public func beginSession(_ begun: RunBegun) -> RunSession {
 private func unchanged(_ session: RunSession) -> Step { (session, []) }
 
 /// One prepared position answered: a rated result, credited to the position asked.
-private func tally(_ session: RunSession, _ line: [String], _ correct: Bool, _ at: Double) -> Step {
-  let result = MoveResult(mode: .run, line: line, color: session.state.run.color, correct: correct, rated: true, at: at)
+private func tally(_ session: RunSession, _ line: [String], _ correct: Bool, _ at: Double, seconds: Double? = nil) -> Step {
+  let result = MoveResult(mode: .run, line: line, color: session.state.run.color, correct: correct, rated: true, at: at, seconds: seconds)
   var next = session
   next.answers.append(result)
   return (next, [.rate(result: result, earlier: session.answers)])
@@ -274,7 +274,7 @@ public func playPrepared(_ session: RunSession, _ ctx: RunContext, _ move: Legal
   var start = session
   start.prepTimes.append(seconds)
   var step: Step = (start, effects)
-  step = then(step) { tally($0, run.played, true, now) }
+  step = then(step) { tally($0, run.played, true, now, seconds: seconds) }
   step = then(step) { s in
     var seen = s
     seen.prepSeen = true

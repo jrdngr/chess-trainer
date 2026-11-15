@@ -16,6 +16,7 @@ Play:
 - [Past prep](past-prep.md): misses, blunders, the book phase and endgame rules.
 - [Scoring](scoring.md): moments and missions.
 - [Pawns](pawns.md): what earns them, and the daily streak.
+- [Form](form.md): each opening's signal bars.
 - [Scheduling](scheduling.md): cards, need, staleness and weakness, in runs.
 - [Play screen](play-screen.md): how a run is shown and ended.
 

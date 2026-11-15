@@ -201,14 +201,17 @@ public struct MoveResult: Equatable, Sendable {
   /// Whether this moves ratings: only a prepared position answered in a run.
   public var rated: Bool
   public var at: Double
+  /// How long a right answer took; nil for a miss.
+  public var seconds: Double?
 
-  public init(mode: ActivityMode, line: [String], color: Color, correct: Bool, rated: Bool, at: Double) {
+  public init(mode: ActivityMode, line: [String], color: Color, correct: Bool, rated: Bool, at: Double, seconds: Double? = nil) {
     self.mode = mode
     self.line = line
     self.color = color
     self.correct = correct
     self.rated = rated
     self.at = at
+    self.seconds = seconds
   }
 }
 

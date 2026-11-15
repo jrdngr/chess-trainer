@@ -100,6 +100,8 @@ public struct AppState: Equatable, Sendable, Codable {
   public var endgames = EndgameRecord()
   /// Middlegame mode's moves survived, per opening and overall.
   public var middlegame = RunRecord()
+  /// Each opening's form: its last prep answers.
+  public var form = FormRecord()
   /// Pawns to spend in the Pawn Shop.
   public var pawns = 0
   /// The days in a row with a game, for streak pawns.
@@ -112,7 +114,7 @@ public struct AppState: Equatable, Sendable, Codable {
 
   enum CodingKeys: String, CodingKey {
     case playbooks, playbookOrder, cards, score, runRecord, mistakes, log, events, settings, strength, endgames, middlegame
-    case games, version, pawns, pawnStreak
+    case games, version, pawns, pawnStreak, form
   }
 
   /// A save from before a field existed takes its default.
@@ -132,6 +134,7 @@ public struct AppState: Equatable, Sendable, Codable {
     endgames = try c.decodeIfPresent(EndgameRecord.self, forKey: .endgames) ?? endgames
     middlegame = try c.decodeIfPresent(RunRecord.self, forKey: .middlegame) ?? middlegame
     games = try c.decodeIfPresent([GameRecord].self, forKey: .games) ?? games
+    form = try c.decodeIfPresent(FormRecord.self, forKey: .form) ?? form
     pawns = try c.decodeIfPresent(Int.self, forKey: .pawns) ?? pawns
     pawnStreak = try c.decodeIfPresent(PawnStreak.self, forKey: .pawnStreak) ?? pawnStreak
     version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 0
@@ -143,6 +146,7 @@ public struct AppState: Equatable, Sendable, Codable {
 extension AppState {
   /// A rated answer: `useStore.recordMove`.
   public mutating func recordMove(_ tree: OpeningTree, _ result: MoveResult, _ earlier: [MoveResult]) -> [RatingMove] {
+    if result.rated { form.add(tree, result) }
     let applied = applyResult(score, tree, result, earlier)
     score = applied.state
     return applied.moves

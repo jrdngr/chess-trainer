@@ -196,9 +196,11 @@ public struct EndgameRecord: Equatable, Sendable, Codable {
   public var saved: [SavedEndgame] = []
   /// Endgame rounds played: the clock cards are scheduled on.
   public var rounds = 0
+  /// Each family's last rounds, newest last: whether the goal was met.
+  public var results: [String: [Bool]] = [:]
   public init() {}
 
-  enum CodingKeys: String, CodingKey { case cards, ratings, rated, seenIntros, saved, rounds }
+  enum CodingKeys: String, CodingKey { case cards, ratings, rated, seenIntros, saved, rounds, results }
 
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -208,7 +210,11 @@ public struct EndgameRecord: Equatable, Sendable, Codable {
     seenIntros = try c.decodeIfPresent([String].self, forKey: .seenIntros) ?? []
     saved = try c.decodeIfPresent([SavedEndgame].self, forKey: .saved) ?? []
     rounds = try c.decodeIfPresent(Int.self, forKey: .rounds) ?? 0
+    results = try c.decodeIfPresent([String: [Bool]].self, forKey: .results) ?? [:]
   }
+
+  /// A family's form: signal bars from its last rounds, or nil before it has enough.
+  public func formBars(_ family: String) -> Int? { endgameFormBars(results[family] ?? []) }
 
   /// Every position to play: the library, then your saved ones.
   public var entries: [EndgameEntry] { ENDGAME_LIBRARY + saved.map(\.entry) }
@@ -252,6 +258,7 @@ extension EndgameRecord {
       card.dueRound = rounds
     }
     cards[entry.id] = card
+    results[entry.family] = Array(((results[entry.family] ?? []) + [success]).suffix(FORM_ROUNDS))
     let delta = success ? ENDGAME_SUCCESS_POINTS + (mission ? ENDGAME_MISSION_POINTS : 0) : -ENDGAME_FAIL_POINTS
     ratings[entry.family] = max(0, (ratings[entry.family] ?? 0) + delta)
     rated[entry.family, default: 0] += 1
