@@ -2,7 +2,7 @@ import Game
 import Model
 import SwiftUI
 
-/// The tab's own page: your openings with this week's rating change on top,
+/// The tab's own page: your openings and their form on top,
 /// then the graphs (the activity hero with the window's switch, Run's
 /// last runs and accuracy).
 struct YourOpeningsView: View {

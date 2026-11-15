@@ -119,7 +119,7 @@ public struct RunSession {
   public var bookMoves = 0
   /// The line as it stood when your prep ran out without a miss.
   public var prepEnd: [String]?
-  /// This run's rated answers.
+  /// This run's prep answers.
   public var answers: [MoveResult] = []
   /// How long each prepared move you found took, in seconds.
   public var prepTimes: [Double] = []
@@ -175,8 +175,8 @@ public struct Finish {
 
 /// Something for the screen to do, in order.
 public enum Effect {
-  /// Rate one answered prepared position; `earlier` is the run's answers before it.
-  case rate(result: MoveResult, earlier: [MoveResult])
+  /// One prepared position answered: activity for its openings, and their form.
+  case answer(MoveResult)
   /// A prepared position answered: review its card.
   case answered(playbookId: String, fen: String, san: String, grade: Grade)
   /// A prepared position missed: log it for review.
@@ -203,12 +203,12 @@ public func beginSession(_ begun: RunBegun) -> RunSession {
 
 private func unchanged(_ session: RunSession) -> Step { (session, []) }
 
-/// One prepared position answered: a rated result, credited to the position asked.
+/// One prepared position answered, credited to the position asked.
 private func tally(_ session: RunSession, _ line: [String], _ correct: Bool, _ at: Double, seconds: Double? = nil) -> Step {
   let result = MoveResult(mode: .run, line: line, color: session.state.run.color, correct: correct, rated: true, at: at, seconds: seconds)
   var next = session
   next.answers.append(result)
-  return (next, [.rate(result: result, earlier: session.answers)])
+  return (next, [.answer(result)])
 }
 
 /// The run is over: say how, once.

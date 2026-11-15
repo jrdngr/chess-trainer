@@ -8,7 +8,7 @@ import SwiftUI
 /// The end of a run. Final position and End of prep to switch
 /// between, the board, Grow this line, Analyze and Back Home (Next run in
 /// Run and Middlegame), then what
-/// the run came to and the rating it moved. A run you set up
+/// the run came to. A run you set up
 /// (no Play round) adds its own parts: `RunEndParts`. A Middlegame
 /// run names its start Handoff and offers Same line.
 struct EndView: View {
@@ -25,9 +25,6 @@ struct EndView: View {
   @Environment(\.openTidy) private var openTidy
   /// How many of the run's moves are on the board.
   @State private var cursor: Int
-  /// Where the rating card is: playing over the board (once the verdict clears), fading on its way down, or in its place.
-  @State private var card: RatingStage = .play
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var lens: LensKind?
   @State private var evalLine: EngineLine?
   /// The verdict over the board as the screen opens; a blunder was shown on the board already.
@@ -47,7 +44,6 @@ struct EndView: View {
     var blunder = false
     if case .blunder = finish.how { blunder = true }
     _flashing = State(initialValue: !blunder && !model.endSeen)
-    _card = State(initialValue: model.endSeen ? .placed(arriving: false) : .play)
   }
 
   /// Run opened from Home, not Play's round.
@@ -90,15 +86,7 @@ struct EndView: View {
       }
       scroll.modifier(RunDebugScroll())
     }
-    .onAppear {
-      if reduceMotion { card = .placed(arriving: false) }
-      model.endSeen = true
-    }
-    .task(id: card) {
-      guard card == .leave else { return }
-      try? await Task.sleep(for: .seconds(0.32))
-      card = .placed(arriving: true)
-    }
+    .onAppear { model.endSeen = true }
     .task {
       guard flashing else { return }
       try? await Task.sleep(for: .seconds(1.5))
@@ -135,11 +123,6 @@ struct EndView: View {
           lastMove: onBlunder || missAt != nil ? nil : lastMoveOf(Array(run.played.prefix(cursor))),
           highlights: highlights(missAt), marks: marks, onMove: { _ in })
           .clearsLens($lens)
-          .overlay {
-            if !flashing, let moment, card == .play || card == .leave {
-              RatingOverBoard(moment: moment, leaving: card == .leave) { if card == .play { card = .leave } }
-            }
-          }
         // The verdict fades out before the lenses fade in, so the two never show through each other.
         LensBar(held: $lens)
           .opacity(flashing ? 0 : 1).allowsHitTesting(!flashing)
@@ -191,8 +174,6 @@ struct EndView: View {
       .lineLimit(1)
       .minimumScaleFactor(0.8)
       MoveStrip(items: strip, cursor: cursor, max: last, onSeek: seek)
-      ratingCard
-      RatingsList(items: moved).padding(.top, 10)
       if standalone {
         RunSummary(finish: finish, prefs: model.prefs, before: model.before ?? RunRecord())
       } else {
@@ -260,18 +241,6 @@ struct EndView: View {
       if let best = blunder.best { items.append(StripItem(san: best, label: label(last), tone: .good, seek: last)) }
     }
     return items
-  }
-
-  /// The ratings this run moved that the end screen names: the opening it was
-  /// played in and that opening's family, not every opening above it. The
-  /// run's own opening plays on its own card instead.
-  private var moved: [RatingsList.Item] {
-    let node = deepestNodeWithin(model.tree, nodeById(model.tree, run.openingId), run.played)
-    let named = Set([node.id] + (familyOf(model.tree, node).map { [$0.id] } ?? []))
-    return model.ratings.changes
-      .filter { JSRound($0.delta) != 0 }
-      .filter { named.contains($0.id) && !(moment != nil && $0.id == model.openingId) }
-      .map { RatingsList.Item(id: $0.id, name: nodeById(model.tree, $0.id).name, delta: $0.delta, after: $0.after) }
   }
 
   /// The engine's move beside the one that ended the run.
@@ -372,21 +341,6 @@ struct EndView: View {
     if case .lost = finish.how { return true }
     return false
   }
-
-  /// The opening's own rating, as this run moved it.
-  private var moment: RatingMoment? { model.ratingMoment }
-
-  @ViewBuilder private var ratingCard: some View {
-    if let moment, case .placed(let arriving) = card {
-      RestingRatingCard(moment: moment, arriving: arriving).padding(.top, 12)
-    }
-  }
-}
-
-/// The rating card's place on the end screen.
-enum RatingStage: Equatable {
-  case play, leave
-  case placed(arriving: Bool)
 }
 
 /// Icon and title close together, so a label fits a third of the row.

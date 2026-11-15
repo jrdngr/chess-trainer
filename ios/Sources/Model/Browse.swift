@@ -116,7 +116,7 @@ private func underName(_ name: String, _ parent: String?) -> String {
   return name
 }
 
-/// The tree node standing at a line's last position, for ratings.
+/// The tree node standing at a line's last position, where its form and stats are kept.
 public func nodeAt(_ tree: OpeningTree, _ sans: [String]) -> OpeningNode? {
   if let exact = tree.byId[sans.joined(separator: " ")] { return exact }
   let fens = walkSan(sans).fens

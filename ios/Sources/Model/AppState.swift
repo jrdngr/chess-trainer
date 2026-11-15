@@ -96,7 +96,7 @@ public struct AppState: Equatable, Sendable, Codable {
   public var settings = Settings()
   /// Your playing strength, from the moves the judge weighed.
   public var strength = PlayerStrength()
-  /// Endgame mode: its cards, family ratings and saved positions.
+  /// Endgame mode: its cards, family results and saved positions.
   public var endgames = EndgameRecord()
   /// Middlegame mode's moves survived, per opening and overall.
   public var middlegame = RunRecord()
@@ -144,19 +144,10 @@ public struct AppState: Equatable, Sendable, Codable {
 }
 
 extension AppState {
-  /// A rated answer: `useStore.recordMove`.
-  public mutating func recordMove(_ tree: OpeningTree, _ result: MoveResult, _ earlier: [MoveResult]) -> [RatingMove] {
+  /// An answer: activity for its openings and, for a prep answer in a run, their form.
+  public mutating func recordMove(_ tree: OpeningTree, _ result: MoveResult) {
     if result.rated { form.add(tree, result) }
-    let applied = applyResult(score, tree, result, earlier)
-    score = applied.state
-    return applied.moves
-  }
-
-  /// The run's line went further than its last answer.
-  public mutating func settleRun(_ tree: OpeningTree, _ earlier: [MoveResult], _ line: [String]) -> [RatingMove] {
-    let settled = Model.settleRun(score, tree, earlier, line)
-    score = settled.state
-    return settled.moves
+    score = applyResult(score, tree, result)
   }
 
   public mutating func endRound(_ tree: OpeningTree, _ round: RoundRecord) {

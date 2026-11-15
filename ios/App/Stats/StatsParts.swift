@@ -27,25 +27,6 @@ struct StatsCard<Content: View>: View {
   }
 }
 
-/// The big number at the top of a page: `.hero`.
-struct StatsHero<Content: View>: View {
-  var big: String
-  var label: String
-  @ViewBuilder var content: Content
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      Text(big).font(.system(size: 56, weight: .heavy).monospacedDigit()).tracking(-2.24).foregroundStyle(Theme.text)
-        .frame(height: 56)
-      Text(label).font(.system(size: 15)).foregroundStyle(Theme.text2).padding(.top, 4)
-      content
-    }
-    .padding(.horizontal, 20).padding(.top, 22).padding(.bottom, 18)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background(RoundedRectangle(cornerRadius: 22).fill(Theme.surface))
-  }
-}
-
 /// Small print under a control: `.note`.
 struct StatsNote: View {
   var text: Text

@@ -241,13 +241,13 @@ struct PlaybookView: View {
 
 struct RepRef: Identifiable { var id: String }
 
-/// The book's opening a Playbook row stands for, where its rating is kept:
+/// The book's opening a Playbook row stands for, where its form is kept:
 /// the shallowest node of that name, else the node at the row's first move order.
 @MainActor func openingNode(_ tree: OpeningTree, _ row: PlaybookRow) -> OpeningNode? {
   row.parts.first.flatMap { familyNode(tree, row.name, path: $0.path) }
 }
 
-/// One opening on the tab: its name over its tier bar, the tier's name, and its line count.
+/// One opening on the tab: its name, its form, and its line count.
 struct PlaybookRowView: View {
   let tree: OpeningTree
   let row: PlaybookRow
@@ -259,16 +259,11 @@ struct PlaybookRowView: View {
 
   var body: some View {
     let node = openingNode(tree, row)
-    let stats = node.map { nodeStats(store.state.score, $0.id) } ?? NodeStats()
-    let rank = rankOf(stats.rating, stats.rated)
     Button(action: onOpen) {
       HStack(spacing: 10) {
-        VStack(alignment: .leading, spacing: 0) {
-          Text(name ?? row.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
-          TierBar(rating: stats.rating, rated: stats.rated, label: false)
-        }
-        Text(stats.rated == 0 ? NEW_LABEL : rank.heldLabel).font(.system(size: 13)).foregroundStyle(Theme.text2)
-          .lineLimit(1).frame(width: 64, alignment: .trailing)
+        Text(name ?? row.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
+          .frame(maxWidth: .infinity, alignment: .leading)
+        FormBars(bars: node.flatMap { store.state.form.bars($0.id) }).frame(width: 32, alignment: .trailing)
         Text("\(row.lines)").font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text)
           .frame(width: 40, alignment: .trailing)
         Icon(name: "chevron", size: 18).foregroundStyle(Theme.text3)
@@ -279,24 +274,19 @@ struct PlaybookRowView: View {
   }
 }
 
-/// The opening of yours that the rows under it answer: its name, its own tier, and their lines together.
+/// The opening of yours that the rows under it answer: its name, its own form, and their lines together.
 struct FamilyRowView: View {
   let name: String
-  /// The book position it is named for, where its rating is kept.
+  /// The book position it is named for, where its form is kept.
   let nodeId: String
   let lines: Int
   @Environment(AppStore.self) private var store
 
   var body: some View {
-    let stats = nodeStats(store.state.score, nodeId)
-    let rank = rankOf(stats.rating, stats.rated)
     HStack(spacing: 10) {
-      VStack(alignment: .leading, spacing: 0) {
-        Text(name).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text).lineLimit(1)
-        TierBar(rating: stats.rating, rated: stats.rated, label: false)
-      }
-      Text(stats.rated == 0 ? NEW_LABEL : rank.heldLabel).font(.system(size: 13)).foregroundStyle(Theme.text2)
-        .lineLimit(1).frame(width: 64, alignment: .trailing)
+      Text(name).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text).lineLimit(1)
+        .frame(maxWidth: .infinity, alignment: .leading)
+      FormBars(bars: store.state.form.bars(nodeId)).frame(width: 32, alignment: .trailing)
       Text("\(lines)").font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text)
         .frame(width: 40, alignment: .trailing)
       Spacer().frame(width: 18)

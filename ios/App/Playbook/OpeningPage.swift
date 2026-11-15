@@ -34,7 +34,6 @@ struct OpeningPage: View {
   private func content(_ rep: Playbook, _ row: PlaybookRow) -> some View {
     let lines = linesOf(rep, row, index)
     let node = openingNode(tree, row)
-    let stats = node.map { nodeStats(store.state.score, $0.id) } ?? NodeStats()
     let removes = row.parts.reduce(0) { $0 + $1.removes }
     return VStack(spacing: 0) {
       AppBar(title: "", onBack: onBack) {
@@ -47,7 +46,7 @@ struct OpeningPage: View {
       }
       ScrollView {
         VStack(spacing: 0) {
-          hero(row, stats)
+          hero(row, node.flatMap { store.state.form.bars($0.id) })
           VStack(spacing: 8) {
             SheetButton("Select", icon: "check", style: .accent) { select(rep, node) }
               .disabled(node == nil)
@@ -87,15 +86,13 @@ struct OpeningPage: View {
     }
   }
 
-  private func hero(_ row: PlaybookRow, _ stats: NodeStats) -> some View {
+  private func hero(_ row: PlaybookRow, _ bars: Int?) -> some View {
     HStack(spacing: 14) {
       MiniBoard(sans: row.parts.first?.path ?? [], orientation: row.color, size: 116, lastMove: true)
         .clipShape(RoundedRectangle(cornerRadius: 6))
       VStack(alignment: .leading, spacing: 0) {
         Text(row.name).font(.system(size: 20, weight: .heavy)).foregroundStyle(Theme.text).lineLimit(2)
-        Text(stats.rated == 0 ? "\u{2014}" : ratingText(stats.rating))
-          .font(.system(size: 38, weight: .heavy).monospacedDigit()).tracking(-1.2).foregroundStyle(Theme.text).padding(.top, 8)
-        TierBar(rating: stats.rating, rated: stats.rated)
+        FormBars(bars: bars, scale: 2).padding(.top, 12)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }

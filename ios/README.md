@@ -11,7 +11,7 @@ Swift package, `ChessPlaybook`:
 | `Shared` | Number formatting, string ordering, a stable sort and an insertion-ordered map, matched to the golden cases' JavaScript origin |
 | `ChessCore` | Board, legal moves, SAN, FEN |
 | `Book` | The 2200+ book, decoded from `book.json`, and reading it: names, families |
-| `Model` | The opening tree and regions, the Playbook tree and its openings, the prepared floor, SRS cards, ratings, the selection, the picker catalogue and its browse lists; Play, Run, Middlegame, Endgames and Growth as pure controllers; missions, lenses and structures; import; save migrations |
+| `Model` | The opening tree and regions, the Playbook tree and its openings, the prepared floor, SRS cards, form and pawns, the selection, the picker catalogue and its browse lists; Play, Run, Middlegame, Endgames and Growth as pure controllers; missions, lenses and structures; import; save migrations |
 | `Fathom` | Syzygy tablebase probing (vendored C) |
 | `Caissa` | The Caissa engine and its net (vendored C++) |
 | `Engine` | Caissa behind the app's engine interface, the judge, tablebases, book scores and the Pawns lens's best breaks; the human-like levels are in `Model/Play.swift` and `Model/Strength.swift` |

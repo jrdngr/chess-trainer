@@ -187,9 +187,6 @@ public struct EndgameCard: Equatable, Sendable, Codable {
 
 public struct EndgameRecord: Equatable, Sendable, Codable {
   public var cards: [String: EndgameCard] = [:]
-  /// One rating per family.
-  public var ratings: [String: Double] = [:]
-  public var rated: [String: Int] = [:]
   /// The positions whose intro card has been shown.
   public var seenIntros: [String] = []
   /// Newest first.
@@ -200,13 +197,11 @@ public struct EndgameRecord: Equatable, Sendable, Codable {
   public var results: [String: [Bool]] = [:]
   public init() {}
 
-  enum CodingKeys: String, CodingKey { case cards, ratings, rated, seenIntros, saved, rounds, results }
+  enum CodingKeys: String, CodingKey { case cards, seenIntros, saved, rounds, results }
 
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
     cards = try c.decodeIfPresent([String: EndgameCard].self, forKey: .cards) ?? [:]
-    ratings = try c.decodeIfPresent([String: Double].self, forKey: .ratings) ?? [:]
-    rated = try c.decodeIfPresent([String: Int].self, forKey: .rated) ?? [:]
     seenIntros = try c.decodeIfPresent([String].self, forKey: .seenIntros) ?? []
     saved = try c.decodeIfPresent([SavedEndgame].self, forKey: .saved) ?? []
     rounds = try c.decodeIfPresent(Int.self, forKey: .rounds) ?? 0
@@ -218,9 +213,6 @@ public struct EndgameRecord: Equatable, Sendable, Codable {
 
   /// Every position to play: the library, then your saved ones.
   public var entries: [EndgameEntry] { ENDGAME_LIBRARY + saved.map(\.entry) }
-
-  /// The family's place on the tier ladder.
-  public func rank(_ family: String) -> Rank { rankOf(ratings[family] ?? 0, rated[family] ?? 0) }
 
   /// Positions due now, oldest due first. A position never played is not due: it waits to be started.
   public var due: [EndgameEntry] {
@@ -236,16 +228,12 @@ public struct EndgameRecord: Equatable, Sendable, Codable {
 
 /// Endgame rounds a first success waits.
 public let ENDGAME_FIRST_INTERVAL: Double = 3
-/// What a round is worth to its family's rating.
-public let ENDGAME_SUCCESS_POINTS: Double = 40
-public let ENDGAME_MISSION_POINTS: Double = 20
-public let ENDGAME_FAIL_POINTS: Double = 30
 
 extension EndgameRecord {
-  /// A round played: the card moves on its schedule and the family's rating moves.
+  /// A round played: the card moves on its schedule and the family keeps the result for its form.
   /// A success pushes the card out (3 Endgame rounds, then 2.5 times as far each
   /// time); a failure brings it back due at once.
-  public mutating func review(_ entry: EndgameEntry, success: Bool, mission: Bool) {
+  public mutating func review(_ entry: EndgameEntry, success: Bool) {
     rounds += 1
     var card = cards[entry.id] ?? EndgameCard(dueRound: rounds, interval: 0, reps: 0, lapses: 0)
     card.reps += 1
@@ -259,9 +247,6 @@ extension EndgameRecord {
     }
     cards[entry.id] = card
     results[entry.family] = Array(((results[entry.family] ?? []) + [success]).suffix(FORM_ROUNDS))
-    let delta = success ? ENDGAME_SUCCESS_POINTS + (mission ? ENDGAME_MISSION_POINTS : 0) : -ENDGAME_FAIL_POINTS
-    ratings[entry.family] = max(0, (ratings[entry.family] ?? 0) + delta)
-    rated[entry.family, default: 0] += 1
   }
 
   public mutating func sawIntro(_ id: String) {

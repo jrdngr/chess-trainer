@@ -5,7 +5,7 @@ import Testing
 
 @Test func endgamesSaveWithTheState() throws {
   var state = AppState()
-  state.endgames.review(ENDGAME_LIBRARY[0], success: true, mission: true)
+  state.endgames.review(ENDGAME_LIBRARY[0], success: true)
   state.endgames.sawIntro(ENDGAME_LIBRARY[0].id)
   let data = try JSONEncoder().encode(state)
   #expect(try JSONDecoder().decode(AppState.self, from: data) == state)

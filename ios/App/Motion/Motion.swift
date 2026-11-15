@@ -12,7 +12,7 @@ enum Motion {
 }
 
 extension View {
-  /// Arrives from below and fades in: `riOpening` and `ratingArrive`.
+  /// Arrives from below and fades in: `riOpening`.
   func arriving(offset: CGFloat = 14, scale: CGFloat = 1, duration: Double = 0.6, delay: Double = 0) -> some View {
     modifier(Arriving(offset: offset, scale: scale, duration: duration, delay: delay))
   }

@@ -1,6 +1,6 @@
 import Foundation
 
-/// One set of app data: its own Playbook, ratings, stats, cards and settings.
+/// One set of app data: its own Playbook, form, stats, cards and settings.
 public struct Profile: Equatable, Sendable, Codable, Identifiable {
   public var id: String
   public var name: String

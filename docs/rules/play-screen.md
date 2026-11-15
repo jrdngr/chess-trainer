@@ -14,7 +14,7 @@ target can be covered by `HeadlessApp` flow tests.
    straight there. Freeform shows no segments, but Home's button still
    names the opening the opponent steers toward.
 3. **During a run,** the app bar shows the opening, the segments counting up
-   as you play, and the rating the run has gained so far. Over a name
+   as you play, and the pawns the run has earned so far. Over a name
    deeper than its family, a smaller line names the family ("Sicilian
    Defence" over "Sicilian Defence: Najdorf Variation").
 4. **Replay moves.** A run that starts inside its line opens on that

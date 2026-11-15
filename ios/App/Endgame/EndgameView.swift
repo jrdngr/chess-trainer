@@ -70,7 +70,7 @@ struct EndgameHomeView: View {
       HStack(spacing: 12) {
         Text(family.name).font(.system(size: 17, weight: .heavy)).foregroundStyle(Theme.text)
         Spacer()
-        TierBar(rating: record.ratings[family.id] ?? 0, rated: record.rated[family.id] ?? 0, label: false).frame(width: 110)
+        FormBars(bars: record.formBars(family.id))
       }
       .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 6)
       ForEach(rows, id: \.id) { entry in
@@ -247,8 +247,10 @@ struct EndgameRoundView: View {
         Text(mission ? "\(game.entry.mission.text): done" : "\(game.entry.mission.text): missed")
           .font(.system(size: 14)).foregroundStyle(Theme.text2)
       }
-      Text("\(game.entry.family == "games" ? "From your games" : familyName) \u{2014} \(store.state.endgames.rank(game.entry.family).heldLabel)")
-        .font(.system(size: 13)).foregroundStyle(Theme.text3)
+      HStack(spacing: 8) {
+        Text(game.entry.family == "games" ? "From your games" : familyName).font(.system(size: 13)).foregroundStyle(Theme.text3)
+        FormBars(bars: store.state.endgames.formBars(game.entry.family))
+      }
       HStack(spacing: 8) {
         Button(action: onClose) { Text("Library").frame(maxWidth: .infinity) }
           .buttonStyle(PlayButtonStyle(kind: .soft, block: true))

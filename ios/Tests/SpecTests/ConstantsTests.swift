@@ -26,10 +26,6 @@ import Testing
 
   expect("scoring", "ACTIVITY_MODES", ACTIVITY_MODES.map(\.rawValue).json)
   expect("scoring", "EMPTY_SCORE", encoded(ScoreState()))
-  expect("scoring", "NEW_LABEL", NEW_LABEL.json)
-  expect("scoring", "RATING", obj(["start": RATING.start, "floor": RATING.floor, "step": RATING.step, "scale": RATING.scale]))
-  expect("scoring", "TIERS", encoded(TIERS))
-  expect("scoring", "UNRATED", encoded(UNRATED))
 
   expect("prepFloor", "MAX_LIFTED", MAX_LIFTED.json)
   expect("prepFloor", "PREPARED_FLOOR", PREPARED_FLOOR.json)

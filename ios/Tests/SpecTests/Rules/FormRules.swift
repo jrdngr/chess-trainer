@@ -39,7 +39,7 @@ private func answer(_ line: String, correct: Bool = true, seconds: Double? = 1) 
     #expect(formBars([0.5, 0.5, 0.5, 0.5, 0]) == 1)
     let tree = openingTree(bookIndex)
     var state = AppState()
-    for i in 0..<5 { _ = state.recordMove(tree, answer("e4 e5", seconds: Double(i)), []) }
+    for i in 0..<5 { state.recordMove(tree, answer("e4 e5", seconds: Double(i))) }
     let id = try #require(deepestNodeAlong(tree, line("e4 e5"))).id
     #expect(state.form.bars(id) == 3)
   }
@@ -54,7 +54,7 @@ private func answer(_ line: String, correct: Bool = true, seconds: Double? = 1) 
     #expect(endgameFormBars([false, false, false, false, false, true, true, true, true]) == 3)
     var record = EndgameRecord()
     let entry = ENDGAME_LIBRARY[0]
-    for success in [true, false, true, true, true, true] { record.review(entry, success: success, mission: false) }
+    for success in [true, false, true, true, true, true] { record.review(entry, success: success) }
     #expect(record.results[entry.family] == [false, true, true, true, true])
     #expect(record.formBars(entry.family) == 3)
   }

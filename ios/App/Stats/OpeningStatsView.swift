@@ -3,7 +3,7 @@ import Model
 import Shared
 import SwiftUI
 
-/// One opening's page: its rating and tier, its charts, its modes and its
+/// One opening's page: its form and numbers, its charts, its modes and its
 /// played variations.
 struct OpeningStatsView: View {
   let tree: OpeningTree
@@ -24,18 +24,13 @@ struct OpeningStatsView: View {
           hero(stats)
           selectButton.padding(.top, 12)
           SegmentedControl(value: $days, options: STATS_WINDOWS).padding(.top, 24)
-          let climb = ratingOverTime(stats, days)
-          if !climb.isEmpty {
-            StatsSection(title: "Rating over time", first: true)
-            StatsCard { LineChart(points: climb, color: Theme.accent) }
-          }
           AccuracySection(stats: stats, days: days)
           StatsSection(title: "By mode", aside: "rounds")
           ListCard { ForEach(ACTIVITY_MODES, id: \.self) { modeRow($0, stats.byMode[$0]) } }
           children(score)
           if stats.lastAt != nil {
             StatsNote(
-              text: Text("\(colorSquare) Rounds and accuracy here count every game played through this position, in any mode. Only Play moves the rating."),
+              text: Text("\(colorSquare) Rounds and accuracy here count every game played through this position, in any mode."),
               center: true
             )
             .padding(.top, 12)
@@ -47,19 +42,12 @@ struct OpeningStatsView: View {
     }
   }
 
-  /// The rating and its tier, one bar toward the next tier, then the opening's numbers in a row.
+  /// The opening's form, then its numbers in a row.
   private func hero(_ stats: NodeStats) -> some View {
-    let rank = rankOf(stats.rating, stats.rated)
     let rounds = roundsOf(stats)
     let acc = accuracy(answered: stats.answered, correct: stats.correct)
-    return StatsHero(big: stats.rated == 0 ? "\u{2014}" : ratingText(stats.rating), label: rank.heldLabel) {
-      TierBar(rating: stats.rating, rated: stats.rated, label: false).padding(.top, 10)
-      HStack {
-        Text(ratingText(rank.floor))
-        Spacer()
-        if let next = rank.nextLabel { Text("\(next) at \(ratingText(rank.ceiling))") }
-      }
-      .font(.system(size: 12).monospacedDigit()).foregroundStyle(Theme.text3)
+    return VStack(alignment: .leading, spacing: 0) {
+      FormBars(bars: store.state.form.bars(node.id), scale: 3)
       HStack(alignment: .top, spacing: 0) {
         figure("\(rounds)", rounds == 1 ? "round" : "rounds")
         if let acc { figure(percentText(acc), "accuracy") }
@@ -67,6 +55,9 @@ struct OpeningStatsView: View {
       }
       .padding(.top, 18)
     }
+    .padding(.horizontal, 20).padding(.top, 22).padding(.bottom, 18)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(RoundedRectangle(cornerRadius: 22).fill(Theme.surface))
   }
 
   private func figure(_ value: String, _ label: String) -> some View {
@@ -108,9 +99,9 @@ struct OpeningStatsView: View {
         ForEach(kids, id: \.id) { kid in
           let stats = nodeStats(score, kid.id)
           StatsRow(
-            dot: rankOf(stats.rating).held.map { Color(hexString: $0.color) }, title: kid.name,
+            dot: nil, title: kid.name,
             meta: (kid.eco.map { "\($0) \u{00b7} " } ?? "") + bookMoveText(kid.sans),
-            value: "\(roundsOf(stats))", dotTrailing: true
+            value: "\(roundsOf(stats))"
           ) { onOpen(kid.id) }
         }
       }

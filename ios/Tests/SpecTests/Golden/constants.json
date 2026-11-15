@@ -1155,8 +1155,6 @@
     ],
     "EMPTY_SCORE": {
       "global": {
-        "rating": 0,
-        "rated": 0,
         "answered": 0,
         "correct": 0,
         "byMode": {
@@ -1199,50 +1197,6 @@
       "rounds": [],
       "seen": {},
       "lineRounds": 0
-    },
-    "NEW_LABEL": "New",
-    "RATING": {
-      "start": 0,
-      "floor": 0,
-      "step": 20,
-      "scale": 450
-    },
-    "TIERS": [
-      {
-        "name": "Learning",
-        "color": "#94a3b8",
-        "at": 100
-      },
-      {
-        "name": "Familiar",
-        "color": "#4ade80",
-        "at": 250
-      },
-      {
-        "name": "Solid",
-        "color": "#2dd4bf",
-        "at": 400
-      },
-      {
-        "name": "Strong",
-        "color": "#3b82f6",
-        "at": 550
-      },
-      {
-        "name": "Fluent",
-        "color": "#a855f7",
-        "at": 700
-      },
-      {
-        "name": "Mastered",
-        "color": "#facc15",
-        "at": 850
-      }
-    ],
-    "UNRATED": {
-      "name": "Shaky",
-      "color": "#4b4b55",
-      "at": 0
     }
   },
   "src/model/selection.ts": {

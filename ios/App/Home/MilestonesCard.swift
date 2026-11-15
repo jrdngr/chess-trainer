@@ -9,7 +9,7 @@ struct MilestonesCard: View {
   @State private var open = false
 
   var body: some View {
-    let list = store.tree.map { milestones(store.state.score, store.state.runRecord, $0) } ?? []
+    let list = milestones(store.state.score, store.state.runRecord)
     let days = streak(store.state.score.global)
     let done = list.filter(earned).count
     // The streak always leads; the three closest of the rest follow it.
@@ -90,7 +90,7 @@ struct MilestoneBadge: View {
 
   var body: some View {
     let won = earned(milestone)
-    let tint = milestone.color.map { SwiftUI.Color(hexString: $0) } ?? (milestone.kind == .streak ? Theme.warn : Theme.accent)
+    let tint = milestone.kind == .streak ? Theme.warn : Theme.accent
     VStack(spacing: 4) {
       Ring(share: won ? 0 : progress(milestone), tint: tint, solid: won) {
         glyph(won).foregroundStyle(won ? tint : Theme.text3)
@@ -102,8 +102,6 @@ struct MilestoneBadge: View {
   @ViewBuilder private func glyph(_ won: Bool) -> some View {
     switch milestone.kind {
     case .streak: Icon(name: "flame", size: 20, filled: won)
-    case .tier: Icon(name: "star", size: 20, filled: won)
-    case .breadth: Icon(name: "tree", size: 20)
     case .run: Text("\(Int(milestone.target))").font(.system(size: 13, weight: .heavy).monospacedDigit())
     case .rounds:
       Text(milestone.target >= 1000 ? "\(Int(milestone.target) / 1000)k" : "\(Int(milestone.target))")

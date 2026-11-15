@@ -22,9 +22,6 @@ func roundsOf(_ stats: NodeStats) -> Int {
   ACTIVITY_MODES.reduce(0) { $0 + (stats.byMode[$1]?.rounds ?? 0) }
 }
 
-/// A rating as it is shown: `ratingText`.
-func ratingText(_ rating: Double) -> String { "\(Int(JSRound(rating)))" }
-
 /// A share as a whole percentage.
 func percentText(_ share: Double) -> String { "\(Int(JSRound(share * 100)))%" }
 

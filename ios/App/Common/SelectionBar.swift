@@ -259,13 +259,13 @@ struct QuickPicker: View {
     onClose()
   }
 
-  /// An opening's tile: its name and its rating bar. The column or tab says its side.
+  /// An opening's tile: its name and its form. The column or tab says its side.
   private func openingTile(_ id: String, _ label: String, chosen: Bool, action: @escaping () -> Void) -> some View {
-    let stats = store.state.score.nodes[id]
-    return Button(action: action) {
-      VStack(alignment: .leading, spacing: 6) {
+    Button(action: action) {
+      HStack(spacing: 8) {
         Text(label).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
-        TierBar(rating: stats?.rating ?? 0, rated: stats?.rated ?? 0, label: false)
+          .frame(maxWidth: .infinity, alignment: .leading)
+        FormBars(bars: store.state.form.bars(id))
       }
       .padding(.horizontal, 12).padding(.vertical, 10).frame(maxWidth: .infinity, alignment: .leading)
       .background(tileBackground(chosen))
@@ -412,14 +412,13 @@ struct RecentHistory: View {
   }
 
   private func row(_ pick: RecentPick, _ node: OpeningNode, _ catalog: PickerCatalog, chosen: Bool) -> some View {
-    let stats = store.state.score.nodes[pick.opening]
-    return Button { onPick(pick) } label: {
+    Button { onPick(pick) } label: {
       HStack(spacing: 10) {
         SideDot(side: recentSide(pick, catalog, node))
         Text(openingLabel(catalog, node)).font(.system(size: 15, weight: .semibold))
           .foregroundStyle(chosen ? Theme.accent : Theme.text).lineLimit(1)
         Spacer(minLength: 4)
-        TierBar(rating: stats?.rating ?? 0, rated: stats?.rated ?? 0).frame(width: 96)
+        FormBars(bars: store.state.form.bars(pick.opening))
       }
       .padding(.horizontal, 14).frame(minHeight: 50).contentShape(Rectangle())
     }

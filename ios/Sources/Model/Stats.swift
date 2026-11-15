@@ -21,29 +21,6 @@ private func dayStart(_ now: Double, _ back: Int) -> Double {
   return day.timeIntervalSince1970 * 1000
 }
 
-/// The rating as it stood at the end of each day in the window.
-///
-/// A day the rating never moved holds the day before's, so the line is
-/// continuous. It starts from wherever the rating stood going into the
-/// window, and an opening that has never been rated has no line at all.
-public func ratingOverTime(_ stats: NodeStats, _ days: Int, _ now: Double = Env.now()) -> [DayPoint] {
-  if stats.rated == 0 { return [] }
-  let first = dayKey(dayStart(now, days - 1))
-  var running = RATING.start
-  var latest = ""
-  for (key, day) in stats.days {
-    guard key < first, let rating = day.rating, key > latest else { continue }
-    latest = key
-    running = rating
-  }
-  return stride(from: days - 1, through: 0, by: -1).map { back in
-    let at = dayStart(now, back)
-    let key = dayKey(at)
-    if let rating = stats.days[key]?.rating { running = rating }
-    return DayPoint(at: at, key: key, value: running)
-  }
-}
-
 /// Accuracy over the window, smoothed: each day is the share of the answers
 /// over the seven days ending there that were right. Days with nothing to
 /// average over are left out rather than drawn as zero.
@@ -67,27 +44,6 @@ public func rollingAccuracy(_ stats: NodeStats, _ days: Int, _ now: Double = Env
 /// Rounds in the last `days` days.
 public func recentRounds(_ stats: NodeStats, _ days: Int, _ now: Double = Env.now()) -> Int {
   stride(from: days - 1, through: 0, by: -1).reduce(0) { $0 + (stats.days[dayKey(dayStart(now, $1))]?.rounds ?? 0) }
-}
-
-/* ── the openings that matter ── */
-
-public struct Ranked: Sendable {
-  public var node: OpeningNode
-  public var stats: NodeStats
-  public var trail: String
-}
-
-private func ranked(_ tree: OpeningTree, _ score: ScoreState, _ id: String) -> Ranked {
-  Ranked(
-    node: nodeById(tree, id), stats: nodeStats(score, id),
-    trail: ancestorsOf(tree, id).dropLast().map(\.name).joined(separator: " \u{203a} "))
-}
-
-private func byRating(_ a: Ranked, _ b: Ranked) -> Double {
-  let r = b.stats.rating - a.stats.rating
-  if r != 0 { return r }
-  let d = cmp(a.node.depth, b.node.depth)
-  return d != 0 ? d : Double(JS.localeCompare(a.node.name, b.node.name))
 }
 
 /// Ticks for an axis: a few round numbers that cover the range.

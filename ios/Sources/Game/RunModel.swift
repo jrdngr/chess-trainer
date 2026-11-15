@@ -50,10 +50,8 @@ public final class RunModel {
   public private(set) var pending: LegalMove?
   public private(set) var thinking = false
   public private(set) var baseline: Baseline?
-  /// Each opening's rating this run: where it stood before, and where it is now.
-  public private(set) var ratings = OrderedRatings()
   public private(set) var finish: Finish?
-  /// The end screen has opened once: its verdict and rating change have played, and stay at rest after.
+  /// The end screen has opened once: its verdict has played, and stays at rest after.
   public var endSeen = false
   /// Moves being added to the Playbook mid-run, at the gap the run reached.
   public struct Fill {
@@ -282,18 +280,6 @@ public final class RunModel {
     guard round != nil, live, intro == .done, fill == nil, session.prepStatus != .on else { return false }
     if let tutorialGame { return tutorialGame.number >= TUTORIAL_GAMES || (endCued && tutorialGame.tips.contains(.nextRun)) }
     return true
-  }
-
-  /// The opening's own rating, as this run moved it.
-  public var ratingMoment: RatingMoment? {
-    #if DEBUG
-      // `RATING_MOMENT=240,262` plays that change, for checking the playback.
-      if let raw = ProcessInfo.processInfo.environment["RATING_MOMENT"]?.split(separator: ",").compactMap({ Double($0) }), raw.count == 2 {
-        return RatingMoment(name: openingName(tree, openingId), before: raw[0], after: raw[1])
-      }
-    #endif
-    guard let r = ratings.byKey[openingId], JSRound(r.after - r.before) != 0, nodeById(tree, openingId).depth > 0 else { return nil }
-    return RatingMoment(name: openingName(tree, openingId), before: r.before, after: r.after)
   }
 
   /// A word over the board for a moment: leaving your prep, or a find.
@@ -826,10 +812,8 @@ public final class RunModel {
   private func perform(_ effects: [Effect]) {
     for effect in effects {
       switch effect {
-      case .rate(let result, let earlier):
-        var moves: [RatingMove] = []
-        store.update { moves = $0.recordMove(tree, result, earlier) }
-        ratings.track(moves)
+      case .answer(let result):
+        store.update { $0.recordMove(tree, result) }
       case .answered(let rid, let fen, let san, let grade):
         store.update { $0.answered(rid, fen, san, grade) }
       case .missed(let rid, let fen, let played, let expected):
@@ -887,7 +871,7 @@ public final class RunModel {
     let record = game(f)
     store.update { $0.recordGame(record) }
     if let handoff {
-      // Counted against the openings your own line went through. No prep was asked, so no rating or card moves.
+      // Counted against the openings your own line went through. No prep was asked, so no form or card moves.
       let yours = Array(handoff.line.prefix(handoff.prep))
       store.update { state in
         if case .ended = f.how { state.endMiddlegameEarly(tree, yours) } else { state.endMiddlegame(tree, yours, f.ended.moves) }
@@ -902,7 +886,6 @@ public final class RunModel {
       } else {
         state.recordRunEnd(tree, line, f.ended.moves)
       }
-      ratings.track(state.settleRun(tree, f.answers, line))
       state.endRound(tree, runRound(f, tree, at: Env.now()))
       if let given { state.endgames.save(given) }
     }
@@ -980,47 +963,6 @@ public final class RunModel {
   private func spawn(_ work: @escaping @MainActor () async -> Void) {
     tasks.removeAll { $0.isCancelled }
     tasks.append(services.spawn(work))
-  }
-}
-
-/// Each opening's rating over a run: where it stood before its first move, and after its last.
-/// `changes` lists them in the order first moved.
-/// A rating a round moved: where it stood and where it stands.
-public struct RatingMoment: Equatable, Sendable {
-  public var name: String
-  public var before: Double
-  public var after: Double
-  public init(name: String, before: Double, after: Double) {
-    self.name = name
-    self.before = before
-    self.after = after
-  }
-}
-
-public struct OrderedRatings {
-  public struct Change {
-    public var id: String
-    public var before: Double
-    public var after: Double
-    public var delta: Double { after - before }
-  }
-
-  public private(set) var changes: [Change] = []
-
-  public init() {}
-
-  public var byKey: [String: (before: Double, after: Double)] {
-    Dictionary(changes.map { ($0.id, ($0.before, $0.after)) }, uniquingKeysWith: { a, _ in a })
-  }
-
-  public mutating func track(_ moves: [RatingMove]) {
-    for move in moves {
-      if let i = changes.firstIndex(where: { $0.id == move.id }) {
-        changes[i].after = move.after
-      } else {
-        changes.append(Change(id: move.id, before: move.before, after: move.after))
-      }
-    }
   }
 }
 

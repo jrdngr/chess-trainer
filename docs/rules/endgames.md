@@ -29,5 +29,5 @@ Play run are in [past prep](past-prep.md).
    it due at once.
 6. **The next round** is the position due longest, else the first never
    played. A position never played isn't due; it waits its turn.
-7. **Each family has a tier rating:** +40 for a success, +20 more with the
-   mission, −30 for a failure, never below 0.
+7. **Each family has a form:** its last rounds, read as signal bars (see
+   [form](form.md)). A goal met pays a pawn (see [pawns](pawns.md)).

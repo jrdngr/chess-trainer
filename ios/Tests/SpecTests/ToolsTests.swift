@@ -45,31 +45,29 @@ private enum Tools {
       path: line(l), played: played, expected: expected)
   }
 
-  /// One opening's per-day stats: [day, rounds, answered, correct, rating or nil].
-  static func stats(_ days: [(String, Int, Int, Int, Double?)], rating: Double = 0) -> NodeStats {
+  /// One opening's per-day stats: [day, rounds, answered, correct].
+  static func stats(_ days: [(String, Int, Int, Int)]) -> NodeStats {
     var s = NodeStats()
-    s.rating = rating
-    s.rated = days.contains { $0.4 != nil } ? 20 : 0
-    for d in days { s.days[d.0] = DayTally(answered: d.2, correct: d.3, rounds: d.1, rating: d.4) }
+    for d in days { s.days[d.0] = DayTally(answered: d.2, correct: d.3, rounds: d.1) }
     return s
   }
 
   static let HISTORY = stats([
-    ("2026-10-20", 2, 10, 8, 120),
-    ("2026-10-22", 1, 6, 3, 110),
-    ("2026-10-25", 3, 14, 12, 160),
-    ("2026-10-29", 1, 5, 5, nil),
-    ("2026-10-30", 2, 9, 6, 175),
-  ], rating: 175)
+    ("2026-10-20", 2, 10, 8),
+    ("2026-10-22", 1, 6, 3),
+    ("2026-10-25", 3, 14, 12),
+    ("2026-10-29", 1, 5, 5),
+    ("2026-10-30", 2, 9, 6),
+  ])
 
   static let SCORE: ScoreState = {
     var s = ScoreState()
     s.nodes = [
-      "e4 c5": stats([("2026-10-30", 5, 20, 15, 300)], rating: 300),
-      "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6": stats([("2026-10-30", 3, 12, 10, 420)], rating: 420),
-      "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6": stats([("2026-10-28", 1, 5, 2, 90)], rating: 90),
-      "e4 c5 Nf3 Nc6": stats([("2026-09-01", 4, 12, 9, 200)], rating: 200),
-      "d4 Nf6 c4 g6 Nc3": stats([("2026-10-29", 2, 8, 6, 260)], rating: 260),
+      "e4 c5": stats([("2026-10-30", 5, 20, 15)]),
+      "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6": stats([("2026-10-30", 3, 12, 10)]),
+      "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6": stats([("2026-10-28", 1, 5, 2)]),
+      "e4 c5 Nf3 Nc6": stats([("2026-09-01", 4, 12, 9)]),
+      "d4 Nf6 c4 g6 Nc3": stats([("2026-10-29", 2, 8, 6)]),
     ]
     return s
   }()
@@ -102,7 +100,6 @@ private func noon(_ key: String) -> Double {
   func series(_ days: Int, _ today: String) -> JSON {
     let now = noon(today)
     return obj([
-      "rating": ratingOverTime(T.HISTORY, days, now).map { JS.string($0.value) },
       "accuracy": rollingAccuracy(T.HISTORY, days, now).map { JS.toFixed($0.value, 3) },
       "recent": recentRounds(T.HISTORY, days, now),
     ])

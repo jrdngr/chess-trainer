@@ -1,0 +1,29 @@
+{
+  "area": "scoring",
+  "functions": [
+    {
+      "fn": "scoring.creditedNodes",
+      "about": "The openings a line counts for: the deepest the book names along it, and every one above.",
+      "cases": [
+      {"args":[""],"out":[]},
+      {"args":["e4"],"out":["e4"]},
+      {"args":["e4 c5"],"out":["e4","e4 c5"]},
+      {"args":["e4 c5 Nf3 d6"],"out":["e4","e4 c5","e4 c5 Nf3 d6"]},
+      {"args":["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"],"out":["e4","e4 c5","e4 c5 Nf3 d6","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"]},
+      {"args":["d4 Nf6 c4 g6 Nc3 Bg7 e4 d6"],"out":["d4","d4 Nf6","d4 Nf6 c4","d4 Nf6 c4 g6","d4 Nf6 c4 g6 Nc3","d4 Nf6 c4 g6 Nc3 Bg7 e4"]},
+      {"args":["e4 d6 d4 Nf6 Nc3 g6 Nf3 Bg7"],"out":["e4","e4 d6","e4 d6 d4 Nf6 Nc3 g6 Nf3 Bg7"]},
+      {"args":["a3 a6 b3"],"out":["a3"]}
+      ]
+    },
+    {
+      "fn": "scoring.applyResult (a run)",
+      "about": "A run's answers counted into every opening its line has reached.",
+      "cases": [
+      {"args":[[{"line":"","correct":true},{"line":"e4 c5","correct":true},{"line":"e4 c5 Nf3 d6","correct":true},{"line":"e4 c5 Nf3 d6 d4 cxd4","correct":true},{"line":"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6","correct":false}],null],"out":{"e4 c5 Nf3 d6":{"answered":3,"correct":2},"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6":{"answered":1,"correct":0},"e4":{"correct":3,"answered":4},"e4 c5":{"correct":3,"answered":4}}},
+      {"args":[[{"line":"","correct":true},{"line":"e4 c5","correct":true}],"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"],"out":{"e4 c5":{"correct":1,"answered":1},"e4":{"correct":1,"answered":1}}},
+      {"args":[[{"line":"","correct":true},{"line":"e4 c5","correct":false}],"e4 c5 Nf3 d6 d4"],"out":{"e4 c5":{"correct":0,"answered":1},"e4":{"correct":0,"answered":1}}},
+      {"args":[[],"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"],"out":{}}
+      ]
+    }
+  ]
+}

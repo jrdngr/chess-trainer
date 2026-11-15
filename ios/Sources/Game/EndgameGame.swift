@@ -150,12 +150,9 @@ public final class EndgameGame {
     thinking = false
     outcome = result
     phase = .over
-    let success: Bool, mission: Bool
-    switch result {
-    case .success(_, let m): (success, mission) = (true, m)
-    case .failure: (success, mission) = (false, false)
-    }
-    store.update { $0.endgames.review(entry, success: success, mission: mission) }
+    var success = false
+    if case .success = result { success = true }
+    store.update { $0.endgames.review(entry, success: success) }
     if success { store.pay(PawnAward(.endgameGoal, .board)) }
     store.finishedGame()
   }

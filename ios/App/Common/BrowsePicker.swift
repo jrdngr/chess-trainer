@@ -121,12 +121,11 @@ struct BrowsePicker: View {
 
   private func rowView(_ ctx: BrowseContext, _ row: BrowseRow) -> some View {
     let at = nodeAt(ctx.tree, row.sans)
-    let stats = at.flatMap { ctx.state.score.nodes[$0.id] }
-    let held = stats.flatMap { $0.rated > 0 ? rankOf($0.rating, $0.rated).held : nil }
+    let bars = at.flatMap { ctx.state.form.bars($0.id) }
     return Button { tapRow(row) } label: {
       HStack(spacing: 12) {
         BrowseRowLabel(row: row)
-        if let held { Text(held.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(SwiftUI.Color(hexString: held.color)) }
+        if bars != nil { FormBars(bars: bars) }
       }
       .padding(.horizontal, 14).padding(.vertical, 8).frame(minHeight: 56).contentShape(Rectangle())
       .modifier(RowTint(on: previewed == row.key))

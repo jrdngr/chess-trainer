@@ -32,8 +32,8 @@ private func sourceJSON(_ source: PawnSource) -> JSON {
 
 private func effectJSON(_ effect: Effect, _ tree: OpeningTree) -> JSON {
   switch effect {
-  case .rate(let result, let earlier):
-    return obj(["kind": "rate", "result": result.json, "earlier": earlier.count])
+  case .answer(let result):
+    return obj(["kind": "answer", "result": result.json])
   case .answered(let rid, let fen, let san, let grade):
     return obj(["kind": "answered", "playbookId": rid, "fen": fen, "san": san, "grade": grade.rawValue])
   case .missed(let rid, let fen, let played, let expected):

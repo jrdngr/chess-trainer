@@ -77,38 +77,42 @@ private func coordsOf(_ square: String) -> (Int, Int) {
     }
   }
 
-  /// Rules 5 and 7.
+  /// Rule 5.
   @Test func successesSpreadOutAndMissesComeBack() {
     var record = EndgameRecord()
     let entry = ENDGAME_LIBRARY[0]
-    record.review(entry, success: true, mission: true)
+    record.review(entry, success: true)
     #expect(record.cards[entry.id]?.dueRound == 1 + 3)
     #expect(record.due.isEmpty)
-    record.review(entry, success: true, mission: false)
+    record.review(entry, success: true)
     #expect(record.cards[entry.id]?.interval == 7.5)
     #expect(record.cards[entry.id]?.dueRound == 2 + 8)
-    #expect(record.ratings[entry.family] == 2 * ENDGAME_SUCCESS_POINTS + ENDGAME_MISSION_POINTS)
-    record.review(entry, success: false, mission: false)
+    record.review(entry, success: false)
     #expect(record.cards[entry.id]?.dueRound == 3)
     #expect(record.cards[entry.id]?.lapses == 1)
     #expect(record.due.map(\.id) == [entry.id])
-    // A family's rating never drops below zero.
-    var fresh = EndgameRecord()
-    fresh.review(entry, success: false, mission: false)
-    #expect(fresh.ratings[entry.family] == 0)
-    #expect(fresh.rank(entry.family).heldLabel == UNRATED.name)
+  }
+
+  /// Rule 7: a family's form is its last rounds (see the form suite).
+  @Test func aFamilyKeepsItsResults() {
+    var record = EndgameRecord()
+    let entry = ENDGAME_LIBRARY[0]
+    record.review(entry, success: true)
+    record.review(entry, success: false)
+    #expect(record.results[entry.family] == [true, false])
+    #expect(record.formBars(entry.family) == nil)
   }
 
   /// Rule 6.
   @Test func theNextPositionIsTheFirstDueThenTheFirstNew() {
     var record = EndgameRecord()
     #expect(record.next?.id == ENDGAME_LIBRARY[0].id)
-    record.review(ENDGAME_LIBRARY[0], success: true, mission: true)
+    record.review(ENDGAME_LIBRARY[0], success: true)
     #expect(record.next?.id == ENDGAME_LIBRARY[1].id)
-    record.review(ENDGAME_LIBRARY[3], success: false, mission: false)
+    record.review(ENDGAME_LIBRARY[3], success: false)
     #expect(record.next?.id == ENDGAME_LIBRARY[3].id)
     // Three rounds on, the first success is due again, after the miss due since round 2.
-    for entry in ENDGAME_LIBRARY[4...6] { record.review(entry, success: false, mission: false) }
+    for entry in ENDGAME_LIBRARY[4...6] { record.review(entry, success: false) }
     #expect(record.due.first?.id == ENDGAME_LIBRARY[3].id)
     #expect(record.due.map(\.id).contains(ENDGAME_LIBRARY[0].id))
   }

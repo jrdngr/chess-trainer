@@ -2,11 +2,7 @@ import ChessCore
 import Foundation
 import Shared
 
-/// The rating: how well you know one opening.
-///
-/// A rating moves like a chess rating: each prepared position answered in a
-/// run is one result against that opening, sized by how well the rating
-/// already expects you to do.
+/// The record: what each opening, and the whole game, has done, day by day.
 
 /// The modes whose activity is tallied. `run` and `repair` are kept for history.
 public enum ActivityMode: String, Sendable, Codable, CaseIterable {
@@ -14,82 +10,6 @@ public enum ActivityMode: String, Sendable, Codable, CaseIterable {
 }
 
 public let ACTIVITY_MODES = ActivityMode.allCases
-
-public enum RATING {
-  /// Where an opening starts.
-  public static let start: Double = 0
-  /// It never goes below this.
-  public static let floor: Double = 0
-  /// The most one result can move a rating.
-  public static let step: Double = 20
-  /// Ratings this far apart differ by ten to one in odds.
-  public static let scale: Double = 450
-  /// A miss costs at most this many right answers' worth of rating.
-  public static let missCap: Double = 5
-}
-
-/// The share of answers a rating expects to be right.
-public func expectedAccuracy(_ rating: Double) -> Double {
-  1 / (1 + pow(10, -rating / RATING.scale))
-}
-
-/// The rating a result leaves behind, kept to two decimals.
-public func ratingAfter(_ rating: Double, _ correct: Bool) -> Double {
-  let expected = expectedAccuracy(rating)
-  let gain = RATING.step * (1 - expected)
-  let moved = correct ? rating + gain : rating - min(RATING.step * expected, RATING.missCap * gain)
-  return JS.round(max(RATING.floor, moved) * 100) / 100
-}
-
-public struct Tier: Equatable, Sendable, Codable {
-  public var name: String
-  public var color: String
-  /// The rating that reaches it.
-  public var at: Double
-}
-
-/// The ladder, named for how well you know the opening.
-public let TIERS: [Tier] = [
-  Tier(name: "Learning", color: "#94a3b8", at: 100),
-  Tier(name: "Familiar", color: "#4ade80", at: 250),
-  Tier(name: "Solid", color: "#2dd4bf", at: 400),
-  Tier(name: "Strong", color: "#3b82f6", at: 550),
-  Tier(name: "Fluent", color: "#a855f7", at: 700),
-  Tier(name: "Mastered", color: "#facc15", at: 850),
-]
-
-/// Below the first rung, once rated: New until then.
-public let UNRATED = Tier(name: "Shaky", color: "#4b4b55", at: 0)
-public let NEW_LABEL = "New"
-
-public struct Rank: Equatable, Sendable, Codable {
-  public var rating: Double
-  /// Tiers reached; 0 is unrated.
-  public var reached: Int
-  public var held: Tier?
-  public var next: Tier?
-  public var heldLabel: String
-  public var nextLabel: String?
-  public var floor: Double
-  public var ceiling: Double
-  /// 0...1 of the way from the tier held to the next.
-  public var progress: Double
-}
-
-/// Where a rating stands on the ladder. `rated` decides New or Shaky below the first rung.
-public func rankOf(_ rating: Double, _ rated: Int = 1) -> Rank {
-  var reached = 0
-  while reached < TIERS.count && rating >= TIERS[reached].at { reached += 1 }
-  let held = reached == 0 ? nil : TIERS[reached - 1]
-  let next = reached < TIERS.count ? TIERS[reached] : nil
-  let floor = held?.at ?? 0
-  let ceiling = next?.at ?? held?.at ?? TIERS[0].at
-  return Rank(
-    rating: rating, reached: reached, held: held, next: next,
-    heldLabel: held?.name ?? (rated > 0 ? UNRATED.name : NEW_LABEL), nextLabel: next?.name,
-    floor: floor, ceiling: ceiling,
-    progress: next != nil ? max(0, min(1, (rating - floor) / (ceiling - floor))) : 1)
-}
 
 /* ── the record ── */
 
@@ -104,22 +24,16 @@ public struct DayTally: Equatable, Sendable, Codable {
   public var answered = 0
   public var correct = 0
   public var rounds = 0
-  /// Where the rating stood at the end of the day, or nil if it never moved.
-  public var rating: Double?
 
-  public init(answered: Int = 0, correct: Int = 0, rounds: Int = 0, rating: Double? = nil) {
+  public init(answered: Int = 0, correct: Int = 0, rounds: Int = 0) {
     self.answered = answered
     self.correct = correct
     self.rounds = rounds
-    self.rating = rating
   }
 }
 
 /// Everything one opening, or the whole game, has done.
 public struct NodeStats: Equatable, Sendable, Codable {
-  public var rating = RATING.start
-  /// Rated results this opening has had.
-  public var rated = 0
   public var answered = 0
   public var correct = 0
   public var byMode: [ActivityMode: ModeTally] = Dictionary(uniqueKeysWithValues: ActivityMode.allCases.map { ($0, ModeTally()) })
@@ -198,7 +112,7 @@ public struct MoveResult: Equatable, Sendable {
   public var line: [String]
   public var color: Color
   public var correct: Bool
-  /// Whether this moves ratings: only a prepared position answered in a run.
+  /// A prepared position answered in a run: only these count for form.
   public var rated: Bool
   public var at: Double
   /// How long a right answer took; nil for a miss.
@@ -215,25 +129,11 @@ public struct MoveResult: Equatable, Sendable {
   }
 }
 
-/// How one opening's rating moved.
-public struct RatingMove: Equatable, Sendable {
-  public var id: String
-  public var before: Double
-  public var after: Double
-  /// 1 promoted a tier, -1 demoted, 0 neither.
-  public var promotion: Int
-}
-
 /// The openings an answer counts as activity for: the deepest its line goes
 /// through and every one above, shallowest first.
 public func creditedNodes(_ tree: OpeningTree, _ line: [String]) -> [String] {
   guard let deepest = deepestNodeAlong(tree, line) else { return [] }
   return ancestorsOf(tree, deepest.id).map(\.id)
-}
-
-/// The openings a rated answer counts for: every one its line has reached.
-public func ratedNodes(_ tree: OpeningTree, _ line: [String]) -> [String] {
-  creditedNodes(tree, line)
 }
 
 private func tallyAnswer(_ stats: NodeStats, _ result: MoveResult) -> NodeStats {
@@ -255,67 +155,12 @@ private func tallyAnswer(_ stats: NodeStats, _ result: MoveResult) -> NodeStats 
   return out
 }
 
-private func tallyRating(_ stats: NodeStats, _ result: MoveResult) -> NodeStats {
-  var out = stats
-  let after = ratingAfter(stats.rating, result.correct)
-  let key = dayKey(result.at)
-  var day = stats.days[key] ?? DayTally()
-  day.rating = after
-  out.rating = after
-  out.rated += 1
-  out.days[key] = day
-  return out
-}
-
-/// Rate one run's answers into the openings `line` has reached. An opening
-/// reached for the first time takes the run's earlier answers first, then
-/// `result` rates every opening reached. One move per rating touched.
-private func rateRun(
-  _ nodes: inout [String: NodeStats], _ tree: OpeningTree, _ earlier: [MoveResult], _ line: [String], _ result: MoveResult?
-) -> [RatingMove] {
-  var before = OrderedMap<String, Double>()
-  func rate(_ id: String, _ answer: MoveResult) {
-    let stats = nodes[id] ?? NodeStats()
-    if !before.has(id) { before[id] = stats.rating }
-    nodes[id] = tallyRating(stats, answer)
-  }
-  let reached = ratedNodes(tree, line)
-  let counted = earlier.filter(\.rated)
-  // Lines only grow within a run: an opening an earlier answer reached has every answer before it.
-  let rated = Set(counted.flatMap { ratedNodes(tree, $0.line) })
-  for id in reached where !rated.contains(id) { for answer in counted { rate(id, answer) } }
-  if let result, result.rated { for id in reached { rate(id, result) } }
-  return before.keys.map { id in
-    let was = before[id]!
-    let after = nodes[id]!.rating
-    let climbed = rankOf(after).reached - rankOf(was).reached
-    return RatingMove(id: id, before: was, after: after, promotion: climbed > 0 ? 1 : climbed < 0 ? -1 : 0)
-  }
-}
-
-/// Apply one answer: activity for the openings its line names and, when rated,
-/// the rating of every opening its line has reached. `earlier` is the run's
-/// answers before this one.
-public func applyResult(_ state: ScoreState, _ tree: OpeningTree, _ result: MoveResult, _ earlier: [MoveResult] = []) -> (state: ScoreState, moves: [RatingMove]) {
-  var nodes = state.nodes
-  for id in creditedNodes(tree, result.line) { nodes[id] = tallyAnswer(nodes[id] ?? NodeStats(), result) }
-  let moves = result.rated ? rateRun(&nodes, tree, earlier, result.line, result) : []
+/// Apply one answer: activity for the openings its line names.
+public func applyResult(_ state: ScoreState, _ tree: OpeningTree, _ result: MoveResult) -> ScoreState {
   var next = state
+  for id in creditedNodes(tree, result.line) { next.nodes[id] = tallyAnswer(next.nodes[id] ?? NodeStats(), result) }
   next.global = tallyAnswer(state.global, result)
-  next.nodes = nodes
-  return (next, moves)
-}
-
-/// A run is over and its line went further than its last answer: the
-/// openings only that stretch reached take the run's rated answers too.
-public func settleRun(_ state: ScoreState, _ tree: OpeningTree, _ earlier: [MoveResult], _ line: [String]) -> (state: ScoreState, moves: [RatingMove]) {
-  if earlier.isEmpty { return (state, []) }
-  var nodes = state.nodes
-  let moves = rateRun(&nodes, tree, earlier, line, nil)
-  guard !moves.isEmpty else { return (state, moves) }
-  var next = state
-  next.nodes = nodes
-  return (next, moves)
+  return next
 }
 
 private func tallyRound(_ stats: NodeStats, _ round: RoundRecord, _ lineRounds: Int) -> NodeStats {
@@ -374,25 +219,6 @@ public func streak(_ stats: NodeStats, _ now: Double = Env.now(), calendar: Cale
     day = before(day)
   }
   return count
-}
-
-/// Where a rating stood at the end of a day: the last day at or before it that moved it.
-public func ratingOn(_ stats: NodeStats, _ key: String) -> Double {
-  var at: String?
-  var rating = RATING.start
-  for (day, tally) in stats.days {
-    guard let r = tally.rating, day <= key, at == nil || day >= at! else { continue }
-    at = day
-    rating = r
-  }
-  return rating
-}
-
-/// How far a rating has moved over the last `days` days.
-public func ratingChange(_ stats: NodeStats, _ days: Double, _ now: Double = Env.now(), calendar: Calendar = .current) -> Double {
-  let date = Date(timeIntervalSince1970: now / 1000)
-  let then = calendar.date(byAdding: .day, value: -Int(days), to: date) ?? date.addingTimeInterval(-days * DAY / 1000)
-  return stats.rating - ratingOn(stats, dayKey(then.timeIntervalSince1970 * 1000, calendar))
 }
 
 // Keyed by mode name when saved.
