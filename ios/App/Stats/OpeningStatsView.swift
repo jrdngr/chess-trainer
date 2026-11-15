@@ -22,7 +22,7 @@ struct OpeningStatsView: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
           hero(stats)
-          selectButton.padding(.top, 12)
+          selectButton.unlockedBy(.openingPicker).padding(.top, 12)
           SegmentedControl(value: $days, options: STATS_WINDOWS).padding(.top, 24)
           AccuracySection(stats: stats, days: days)
           StatsSection(title: "By mode", aside: "rounds")

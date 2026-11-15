@@ -218,7 +218,7 @@ public final class HeadlessApp: SignalSink {
   public func buy(_ id: String) throws {
     guard let item = shopItem(id) else { throw Failure.notHere("No item \"\(id)\" in the Pawn Shop") }
     switch state.status(item) {
-    case .buyable: store.update { $0.buy(id) }
+    case .buyable: store.buy(id)
     case .owned: throw Failure.notHere("\(item.name) is already yours")
     case .short(let by): throw Failure.notHere("\(item.name) needs \(by) more pawn\(by == 1 ? "" : "s")")
     case .locked: throw Failure.notHere("\(item.name) needs \(item.needs.compactMap { shopItem($0)?.name }.joined(separator: " and ")) first")

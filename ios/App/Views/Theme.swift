@@ -21,6 +21,8 @@ enum Theme {
   static let good = Color(hex: 0x4ade80)
   static let bad = Color(hex: 0xfb7185)
   static let warn = Color(hex: 0xfbbf24)
+  /// Pawns, their prices and the balance.
+  static let pawn = Color(hex: 0xfbbf24)
   /// The book's blue and the extension's purple.
   static let book = Color(hex: 0x4fb3ff)
   static let ext = Color(hex: 0x8a8cff)

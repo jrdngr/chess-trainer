@@ -125,6 +125,7 @@ struct EndView: View {
           .clearsLens($lens)
         // The verdict fades out before the lenses fade in, so the two never show through each other.
         LensBar(held: $lens)
+          .unlockedBy(.lenses)
           .opacity(flashing ? 0 : 1).allowsHitTesting(!flashing)
           .animation(.easeIn(duration: 0.2).delay(0.25), value: flashing)
           .overlay(alignment: .top) {

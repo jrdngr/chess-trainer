@@ -32,6 +32,8 @@ struct RootView: View {
   @State private var middlegameLine: MiddlegameLine?
   /// Onboarding: the tutorial skipped for adding openings, or its openings being chosen.
   @State private var skippedTutorial = false
+  /// The Pawn Shop item to open, from a locked control.
+  @State private var shopFocus: String?
   @State private var choosingOpenings = false
 
   var body: some View {
@@ -121,8 +123,17 @@ struct RootView: View {
         AnalysisTab(tree: tree, index: index, line: explore?.sans ?? [], orientation: explore?.side ?? .w)
           .id(explore?.sans.joined(separator: " ") ?? "")
           .tabItem { Label(Tab.analysis.label, systemImage: Tab.analysis.symbol) }.tag(Tab.analysis)
+        ShopView(focus: $shopFocus) { feature in
+          // A feature with a place on Home shows itself off there; the lenses wait for the next game.
+          if feature != .lenses { tab = .home }
+        }
+          .tabItem { Label { Text(Tab.shop.label) } icon: { Image.pawn } }.tag(Tab.shop)
       }
       .tint(Theme.accent)
+      .environment(\.openShop) { id in
+        shopFocus = id
+        tab = .shop
+      }
     }
   }
 

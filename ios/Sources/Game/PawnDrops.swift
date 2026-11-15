@@ -47,3 +47,19 @@ extension AppStore {
     if streak > 0 { pay(PawnAward(.streak, .counter, count: streak), paid: true) }
   }
 }
+
+extension AppStore {
+  /// Buy an item in the Pawn Shop. Returns whether it was bought.
+  @discardableResult
+  public func buy(_ id: String) -> Bool {
+    var bought = false
+    update { bought = $0.buy(id) }
+    if bought, let feature = shopItem(id)?.feature { justUnlocked = feature }
+    return bought
+  }
+
+  /// A feature's place showed it off: it is no longer new.
+  public func shownUnlock(_ feature: ShopFeature) {
+    if justUnlocked == feature { justUnlocked = nil }
+  }
+}

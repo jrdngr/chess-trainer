@@ -20,6 +20,7 @@ import Testing
     #expect(throws: HeadlessApp.Failure.self) { try app.buy("freeform") }
     try app.buy("sidePicker")
     #expect(app.state.pawns == 55)
+    #expect(app.store.justUnlocked == .sidePicker, "Home shows it off next")
     try app.select(side: .b)
     #expect(app.state.settings.selection.color == .b)
     #expect(throws: HeadlessApp.Failure.self) { try app.select(side: .either) }

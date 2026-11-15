@@ -113,5 +113,52 @@ extension Icon {
       IconPart(.path("M4 7h9M17 7h3M4 17h3M11 17h9"), fill: .none, stroke: .current, opacity: (1, 1)),
       IconPart(.circle(15, 7, 2), fill: .whenFilled, stroke: .current, opacity: (1, 1)),
       IconPart(.circle(9, 17, 2), fill: .whenFilled, stroke: .current, opacity: (1, 1))]),
+    "pawn": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.circle(12, 6.5, 3.7), fill: .current, stroke: .none, opacity: (1, 1)),
+      IconPart(.path("M8 11h8v1.7h-2.2c.3 3 1.5 4.6 3.2 6H7c1.7-1.4 2.9-3 3.2-6H8z"), fill: .current, stroke: .none, opacity: (1, 1)),
+      IconPart(.rect(5.5, 19.5, 13, 2.7, 1), fill: .current, stroke: .none, opacity: (1, 1))]),
+    "lock": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.rect(5, 11, 14, 9, 2.5), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.path("M8 11V8a4 4 0 0 1 8 0v3"), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "shop.sidePicker": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.rect(4, 4, 16, 16, 3.5), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.path("M12 4h4.5A3.5 3.5 0 0 1 20 7.5v9a3.5 3.5 0 0 1-3.5 3.5H12z"), fill: .current, stroke: .none, opacity: (1, 1))]),
+    "shop.lenses": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.path("M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.circle(12, 12, 2.6), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "shop.openingPicker": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.path("M5 7h14M5 12h14M5 17h8M16 16l2 2 2-2"), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "shop.freeform": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.path("M3.5 17c3-10 5.5-10 7.5-3s4.5 6 9.5-7"), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "shop.recommendations": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.circle(7, 5.5, 2), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.circle(7, 18.5, 2), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.circle(17, 9, 2), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.path("M7 7.5v9M17 11c0 3.5-5 3-9 4.5"), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "shop.middlegame": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.path("M12 21v-8M12 13L6.5 5.5M12 13l5.5-7.5M4.5 8.5l2-3 3 1.3M19.5 8.5l-2-3-3 1.3"), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "shop.endgames": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.path("M6 21V4h11.5l-2.5 4 2.5 4H6"), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "shop.guides": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.path("M5 5.5A2.5 2.5 0 0 1 7.5 3H19v15H7.5A2.5 2.5 0 0 0 5 20.5zM5 20.5A1.5 1.5 0 0 0 6.5 22H19v-4"), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "shop.personalities": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.circle(12, 8, 3.5), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.path("M5 20c1-4 4-5.5 7-5.5s6 1.5 7 5.5"), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "shop.boards": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.rect(4, 4, 16, 16, 2.5), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.path("M12 4v16M4 12h16"), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "shop.pieces": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.circle(12, 6.5, 3.7), fill: .current, stroke: .none, opacity: (1, 1)),
+      IconPart(.path("M8 11h8v1.7h-2.2c.3 3 1.5 4.6 3.2 6H7c1.7-1.4 2.9-3 3.2-6H8z"), fill: .current, stroke: .none, opacity: (1, 1)),
+      IconPart(.rect(5.5, 19.5, 13, 2.7, 1), fill: .current, stroke: .none, opacity: (1, 1))]),
+    "shop.decks": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.rect(4, 7, 11, 14, 2), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.path("M9 7V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-4"), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "shop.styles": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.rect(3, 5, 18, 14, 3), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.path("M3 10h18"), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "shop.icons": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.rect(4, 4, 16, 16, 5), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.circle(12, 12, 3), fill: .none, stroke: .current, opacity: (1, 1))]),
   ]
 }

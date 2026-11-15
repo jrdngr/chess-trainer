@@ -351,6 +351,7 @@ struct RunView: View {
         held: $lens, lenses: LENSES, enabled: lensEnabled, plan: $planOpen, planEnabled: lensEnabled && plan != nil,
         planPulse: planSeeded && plan != nil && plan != planSeen, spotlight: model.tip == .lens ? .pawns : nil
       )
+      .unlockedBy(.lenses)
       .opacity(model.held || lensesAway || called || drawing ? 0 : 1).allowsHitTesting(!(model.held || lensesAway || called || drawing))
       // A finished run being analysed shows its moves in the lenses' place.
       .overlay {

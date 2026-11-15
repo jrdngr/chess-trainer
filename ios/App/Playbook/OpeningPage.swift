@@ -50,11 +50,13 @@ struct OpeningPage: View {
           VStack(spacing: 8) {
             SheetButton("Select", icon: "check", style: .accent) { select(rep, node) }
               .disabled(node == nil)
+              .unlockedBy(.openingPicker)
             HStack(spacing: 8) {
               SheetButton("Middlegame", icon: "middlegame", style: .plain) {
                 if let main = lines.first { onMiddlegame(rep.color, main.path) }
               }
               .disabled(lines.isEmpty)
+              .unlockedBy(.middlegame)
               SheetButton("Grow", icon: "sprout", style: .plain) { grow(rep, node) }
             }
           }

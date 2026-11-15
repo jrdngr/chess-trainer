@@ -16,6 +16,8 @@ public final class AppStore {
   public var autoHistory = AutoHistory()
   /// Pawns earned and on their way to the counter.
   public internal(set) var pawnDrops: [PawnDrop] = []
+  /// The feature just bought, until its place shows it off.
+  public internal(set) var justUnlocked: ShopFeature?
   @ObservationIgnored var dropCount = 0
   /// The save exists but could not be read (locked, say): saving now would replace it with a fresh state.
   @ObservationIgnored private var saveBlocked = false

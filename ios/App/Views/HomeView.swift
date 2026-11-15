@@ -62,11 +62,11 @@ struct HomeView: View {
         .padding(.bottom, 10)
         Group {
           LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 10) {
-            tile("Middlegame", "middlegame", .middlegame, held: true)
-            tile("Endgames", "flag", .endgame)
+            tile("Middlegame", "middlegame", .middlegame, held: true).unlockedBy(.middlegame)
+            tile("Endgames", "flag", .endgame).unlockedBy(.endgames)
           }
           VStack(spacing: 10) {
-            RecommendationsCard(tree: tree, onPick: onGap)
+            RecommendationsCard(tree: tree, onPick: onGap).unlockedBy(.recommendations)
             MilestonesCard()
           }
           .padding(.top, 10)
@@ -232,12 +232,14 @@ private struct PlayFooter: View {
           .contentShape(RoundedRectangle(cornerRadius: 12))
         }
         .accessibilityLabel("Side")
+        .unlockedBy(.sidePicker)
         .disabled(locked && step?.step != .side).opacity(locked && step?.step != .side ? 0.35 : 1)
         // The side button is narrow: the tip keeps a readable width, its arrow at the button.
         .tip(text: step?.step == .side ? step?.tip : nil, arrowAt: 0.13, minWidth: 240)
         SegmentedControl(
           value: Binding(get: { settings.start }, set: { start in store.update { $0.settings.start = start } }),
           options: [(RunStart.freeform, "Freeform"), (RunStart.drill, "Drill")], track: Theme.background)
+          .unlockedBy(.freeform)
           .disabled(locked).opacity(locked ? 0.35 : 1)
       }
       .zIndex(1)
@@ -250,6 +252,7 @@ private struct PlayFooter: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface2))
         .contentShape(RoundedRectangle(cornerRadius: 12))
       }
+      .unlockedBy(.openingPicker)
       .disabled(locked && step?.step != .opening).opacity(locked && step?.step != .opening ? 0.35 : 1)
       .tip(text: step?.step == .opening ? step?.tip : nil)
     }
