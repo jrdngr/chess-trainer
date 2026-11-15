@@ -130,7 +130,7 @@ struct PlaybookView: View {
           SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")])
           if let rep, !rows.isEmpty {
             let groups = playbookGroups(rows, tree)
-            ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
+            ForEach(Array(groups.enumerated()), id: \.offset) { at, group in
               HStack {
                 Text(group.move).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
                 Spacer()
