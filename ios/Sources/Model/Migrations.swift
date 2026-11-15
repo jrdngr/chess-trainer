@@ -3,7 +3,7 @@ import Foundation
 
 /// The save's version. A save from before it is brought up by `decodeSave`
 /// and `migrate`; a new save starts at it.
-public let SAVE_VERSION = 4
+public let SAVE_VERSION = 5
 
 /// Runs a day of a card's interval stood for, when intervals were days.
 let RUNS_PER_DAY: Double = 3
@@ -15,12 +15,14 @@ extension AppState {
   /// 2: schedules count runs, not days.
   /// 3: names are Play, Playbook and Run (done on the JSON by `decodeSave`).
   /// 4: Middlegame's record counts moves survived, not points.
+  /// 5: a profile from before the Pawn Shop owns every feature.
   @discardableResult
   public mutating func migrate(_ index: ReferenceIndex) -> Bool {
     if version >= SAVE_VERSION { return false }
     if version < 1 { removeNonBookMoves(index) }
     if version < 2 { scheduleByRuns() }
     if version < 4 { middlegame = middlegameInMoves(middlegame) }
+    if version < 5 { unlockAll() }
     version = SAVE_VERSION
     return true
   }

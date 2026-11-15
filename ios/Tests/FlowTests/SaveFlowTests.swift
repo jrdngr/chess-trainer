@@ -37,7 +37,7 @@ import Testing
 /// The same seed plays the same game: a headless run replays exactly.
 @MainActor @Test func theSameSeedReplaysTheSameGame() async throws {
   func game(_ seed: UInt32) async throws -> [String] {
-    try await HeadlessApp.run(book: BOOK, seed: seed) { app in
+    try await headless(seed: seed) { app in
       try app.skipTutorial(starter: "classical")
       try app.select(side: .b, start: .freeform)
       await app.openPlay()

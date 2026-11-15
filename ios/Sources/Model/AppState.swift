@@ -106,6 +106,8 @@ public struct AppState: Equatable, Sendable, Codable {
   public var pawns = 0
   /// The days in a row with a game, for streak pawns.
   public var pawnStreak = PawnStreak()
+  /// What the Pawn Shop sold you, by item id.
+  public var unlocked: Set<String> = []
   /// The games you played here, newest first, at most GAMES_CAP.
   public var games: [GameRecord] = []
   /// Which `migrate` steps the save has had.
@@ -114,7 +116,7 @@ public struct AppState: Equatable, Sendable, Codable {
 
   enum CodingKeys: String, CodingKey {
     case playbooks, playbookOrder, cards, score, runRecord, mistakes, log, events, settings, strength, endgames, middlegame
-    case games, version, pawns, pawnStreak, form
+    case games, version, pawns, pawnStreak, form, unlocked
   }
 
   /// A save from before a field existed takes its default.
@@ -137,6 +139,7 @@ public struct AppState: Equatable, Sendable, Codable {
     form = try c.decodeIfPresent(FormRecord.self, forKey: .form) ?? form
     pawns = try c.decodeIfPresent(Int.self, forKey: .pawns) ?? pawns
     pawnStreak = try c.decodeIfPresent(PawnStreak.self, forKey: .pawnStreak) ?? pawnStreak
+    unlocked = try c.decodeIfPresent(Set<String>.self, forKey: .unlocked) ?? unlocked
     version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 0
   }
 

@@ -105,4 +105,13 @@ import Testing
     #expect(renamedSave(data) == data)
     #expect(try decodeSave(data) == state)
   }
+
+  /// Rule 6: version 5 gives a profile from before the Pawn Shop every feature; a new one owns none.
+  @Test func profilesFromBeforeTheShopOwnEveryFeature() throws {
+    #expect(AppState().unlocked.isEmpty)
+    var old = try decodeSave(Data(#"{"version":4,"pawns":3}"#.utf8))
+    old.migrate(bookIndex)
+    #expect(ShopFeature.allCases.allSatisfy(old.owns))
+    #expect(old.pawns == 3)
+  }
 }

@@ -29,7 +29,7 @@ import Testing
 @MainActor @Test func endgameRoundsEndOnASlip() async throws {
   try await headless { app in
     try app.skipTutorial(starter: "classical")
-    app.openEndgames()
+    try app.openEndgames()
     try await app.practice()
     let game = try #require(app.endgame?.game)
     #expect(game.phase == .playing && game.myTurn)
@@ -50,7 +50,7 @@ import Testing
 @MainActor @Test func middlegameHandsOverAfterYourLine() async throws {
   try await headless { app in
     try app.skipTutorial(starter: "classical")
-    await app.openMiddlegame()
+    try await app.openMiddlegame()
     #expect(app.screen == .middlegame)
     let run = try #require(app.run)
     let handoff = try #require(run.handoff)

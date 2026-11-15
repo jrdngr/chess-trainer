@@ -15,7 +15,7 @@ let HELP = """
   Anywhere:  state · help · quit · home · hint (the engine's move here)
   Start:     intro · recommend · skip [classical|system|solid|aggressive] · end-tutorial
   Home:      select [w|b|either] [drill|freeform] [opening id or moves, "any" for Any Opening]
-             play · recs · grow N · endgames · middlegame
+             play · recs · grow N · endgames · middlegame · shop · buy ID
   Board:     <san> (or move <san> <san>...) · think SECONDS
   Play:      end · continue · next · undo · done · grow · replay
   Growth:    save · more · play-on · back
@@ -80,8 +80,12 @@ func perform(_ app: HeadlessApp, _ words: [String]) async throws -> Bool {
     } else {
       await app.growHere()
     }
-  case "endgames": app.openEndgames()
-  case "middlegame": await app.openMiddlegame()
+  case "endgames": try app.openEndgames()
+  case "middlegame": try await app.openMiddlegame()
+  case "shop": print(app.shopReport())
+  case "buy":
+    guard let id = rest.first else { throw HeadlessApp.Failure.notHere("Buy what? `shop` lists the items") }
+    try app.buy(id)
   case "home": await app.home()
   case "move": for san in rest { try await app.move(san) }
   case "think": await app.think(rest.first.flatMap(Double.init) ?? 1)

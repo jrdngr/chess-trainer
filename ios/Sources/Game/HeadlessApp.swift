@@ -186,6 +186,10 @@ public final class HeadlessApp: SignalSink {
       }
       node = found.id
     }
+    if let side, side != .w, !state.owns(.sidePicker) { throw Failure.notHere("Black is locked: the side picker is in the Pawn Shop") }
+    if side == .either, !state.owns(.freeform) { throw Failure.notHere("Either is locked: Freeform is in the Pawn Shop") }
+    if start == .freeform, !state.owns(.freeform) { throw Failure.notHere("Freeform is locked: it is in the Pawn Shop") }
+    if let node, node != ANY_OPENING, !state.owns(.openingPicker) { throw Failure.notHere("Openings are locked: the opening picker is in the Pawn Shop") }
     store.update { state in
       if let side { state.settings.selection.color = side }
       if let start { state.settings.start = start }
@@ -207,8 +211,20 @@ public final class HeadlessApp: SignalSink {
     await idle()
   }
 
-  /// Home's Recommendations, most needed first.
-  public var recommendations: [Gap] { playbookGaps(state, tree) }
+  /// Home's Recommendations, most needed first; none until they are bought.
+  public var recommendations: [Gap] { state.owns(.recommendations) ? playbookGaps(state, tree) : [] }
+
+  /// Buy an item in the Pawn Shop.
+  public func buy(_ id: String) throws {
+    guard let item = shopItem(id) else { throw Failure.notHere("No item \"\(id)\" in the Pawn Shop") }
+    switch state.status(item) {
+    case .buyable: store.update { $0.buy(id) }
+    case .owned: throw Failure.notHere("\(item.name) is already yours")
+    case .short(let by): throw Failure.notHere("\(item.name) needs \(by) more pawn\(by == 1 ? "" : "s")")
+    case .locked: throw Failure.notHere("\(item.name) needs \(item.needs.compactMap { shopItem($0)?.name }.joined(separator: " and ")) first")
+    case .soon: throw Failure.notHere("\(item.name) isn't for sale yet")
+    }
+  }
 
   /// Fill a recommendation in Growth.
   public func grow(_ gap: Gap) async throws {
@@ -227,13 +243,15 @@ public final class HeadlessApp: SignalSink {
   }
 
   /// Endgames, on its library.
-  public func openEndgames() {
+  public func openEndgames() throws {
+    guard state.owns(.endgames) else { throw Failure.notHere("Endgames is locked: it is in the Pawn Shop") }
     closeModes()
     endgame = EndgameSession(store: store)
   }
 
   /// Middlegame mode: a line drawn from your setup, or `line` exactly, built and started.
-  public func openMiddlegame(line: MiddlegameLine? = nil) async {
+  public func openMiddlegame(line: MiddlegameLine? = nil) async throws {
+    guard state.owns(.middlegame) else { throw Failure.notHere("Middlegame is locked: it is in the Pawn Shop") }
     closeModes()
     let session = MiddlegameSession(store: store, tree: tree, index: index, exact: line)
     middlegame = session

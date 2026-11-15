@@ -335,6 +335,7 @@ public final class AppStore {
   /// Change the state and save it.
   public func update(_ change: (inout AppState) -> Void) {
     change(&state)
+    state.holdToUnlocks()
     save()
   }
 

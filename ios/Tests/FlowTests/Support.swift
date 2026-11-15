@@ -8,10 +8,14 @@ let BOOK = URL(fileURLWithPath: #filePath)
   .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
   .appendingPathComponent("Resources/book.json")
 
-/// A fresh install, played headless with the scripted engine.
+/// A fresh install, played headless with the scripted engine. `everything` gives it every
+/// feature the Pawn Shop sells, as a profile from before the shop has.
 @MainActor
-func headless<T>(seed: UInt32 = 1, _ body: (HeadlessApp) async throws -> T) async throws -> T {
-  try await HeadlessApp.run(book: BOOK, seed: seed, body)
+func headless<T>(seed: UInt32 = 1, everything: Bool = true, _ body: (HeadlessApp) async throws -> T) async throws -> T {
+  try await HeadlessApp.run(book: BOOK, seed: seed) { app in
+    if everything { app.store.update { $0.unlockAll() } }
+    return try await body(app)
+  }
 }
 
 /// The scripted engine's move here, as SAN.

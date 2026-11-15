@@ -25,6 +25,8 @@ extension HeadlessApp {
     let selection = state.settings.selection
     var lines = ["Pawns: \(state.pawns)", "Play: \(colorLabel(selection.color)), \(state.settings.start.rawValue), \(openingName(tree, selection.opening))"]
     if let tutorial = state.settings.tutorial { lines.append("Tutorial: \(tutorial.played) of \(TUTORIAL_GAMES) games played") }
+    let locked = ShopFeature.allCases.filter { !state.owns($0) }.compactMap { shopItem($0.rawValue)?.name }
+    if !locked.isEmpty { lines.append("Locked: \(locked.joined(separator: ", ")). `shop` lists the Pawn Shop.") }
     let recs = recommendations.prefix(5)
     if !recs.isEmpty {
       lines.append("Recommendations:")
@@ -104,6 +106,26 @@ extension HeadlessApp {
       lines.append(game.myTurn ? "Your move." : "Opponent thinking.")
     }
     return lines
+  }
+
+  /// The Pawn Shop: every item, its price and where it stands for you.
+  public func shopReport() -> String {
+    var lines = ["Pawn Shop · \(state.pawns) pawns"]
+    for shelf in ShopShelf.allCases {
+      lines.append(shelf.rawValue.capitalized + ":")
+      for item in SHOP where item.shelf == shelf {
+        let status: String
+        switch state.status(item) {
+        case .owned: status = "yours"
+        case .buyable: status = "\(item.price), `buy \(item.id)`"
+        case .short(let by): status = "\(item.price), \(by) short"
+        case .locked: status = "needs " + item.needs.compactMap { shopItem($0)?.name }.joined(separator: ", ")
+        case .soon: status = "\(item.price)\(item.each ? " each" : ""), coming"
+        }
+        lines.append("  \(item.name): \(status)")
+      }
+    }
+    return lines.joined(separator: "\n")
   }
 
   /// The board from `side`'s seat, uppercase White, with coordinates.

@@ -4,7 +4,7 @@ How an older save is brought up to date when it loads. Code:
 `Migrations.swift`. Tests: the `docs/rules/saves.md` suite in
 `Tests/SpecTests/Rules/SavesRules.swift`.
 
-1. **Every save has a version.** A new save starts at the current one (4).
+1. **Every save has a version.** A new save starts at the current one (5).
    A save written before versions existed counts as 0. Each step below runs
    once, in order, and the save is written back after.
 2. **Version 1: book moves only.** See [playbook](playbook.md).
@@ -17,3 +17,5 @@ How an older save is brought up to date when it loads. Code:
 5. **Version 4: Middlegame counts moves.** Middlegame's record kept points;
    its bests and recent runs are dropped, and how many runs were played and
    ended stays.
+6. **Version 5: the Pawn Shop.** A profile from before it owns every
+   feature the shop sells. A new profile owns none.
