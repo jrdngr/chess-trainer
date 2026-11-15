@@ -5,3 +5,4 @@ ios/ChessPlaybook.xcodeproj/
 ios/build/
 *.tar.gz
 *.whl
+ios/.golden-out/

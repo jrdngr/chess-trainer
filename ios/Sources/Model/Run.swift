@@ -68,25 +68,7 @@ public struct Glow: Equatable, Sendable, Codable {
   public var strength: Double
 }
 
-/* ── points, moments, combo ── */
-
-public let COMBO_CLEAN: Double = 20
-public let COMBO_HOLD: Double = 40
-
-/// The combo after a judged move that cost `lost` against the best.
-public func comboAfter(_ streak: Int, _ lost: Double) -> Int {
-  if lost <= COMBO_CLEAN { return streak + 1 }
-  if lost <= COMBO_HOLD { return streak }
-  return 0
-}
-
-/// What each move earns at this combo.
-public func comboMultiplier(_ streak: Int) -> Int {
-  if streak >= 10 { return 4 }
-  if streak >= 6 { return 3 }
-  if streak >= 3 { return 2 }
-  return 1
-}
+/* ── moments ── */
 
 public let MOMENT_GAP: Double = 150
 public let MOMENT_FLOOR: Double = 100

@@ -17,8 +17,8 @@ Tests: the `docs/rules/past-prep.md` suite in
 4. **The book phase.** Once your prep runs out without a miss, the run is in
    the book phase for as long as the position is in the book.
 5. **A book move** is played in at least 5% of strong players' games there
-   and gives away 40 centipawns or less. It gets a quiet tick with its time,
-   keeps the combo going as if it cost nothing, and never moves a card.
+   and gives away 40 centipawns or less. It gets a quiet tick with its time
+   and never moves a card.
 6. **Any other move ends the book phase,** and costs nothing for it. So
    does a position the book has nothing for.
 7. **Moments only count past your prep.**

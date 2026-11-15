@@ -218,9 +218,9 @@ private func engineCandidates(_ fen: String, _ tools: HandoffTools) async -> [Ha
 /// What a Middlegame run's opponent steers toward: one of your lines, or one ending where your prep has a gap.
 public let MIDDLEGAME_STEERS: [RunSteer] = [.lines, .gaps]
 
-/// Middlegame mode's setup. It is scored in points, so moments, missions and the combo are always on.
+/// Middlegame mode's setup. Moments and missions are always on.
 public let DEFAULT_MIDDLEGAME = RunPrefs(
-  steer: .lines, clock: .off, moveScores: true, moments: true, missions: true, combo: true,
+  steer: .lines, clock: .off, moveScores: true, moments: true, missions: true,
   undefendedFlash: false)
 
 /// A setup as the mode plays it: a steer it knows, and the extras on.
@@ -229,7 +229,6 @@ public func middlegamePrefs(_ prefs: RunPrefs) -> RunPrefs {
   if !MIDDLEGAME_STEERS.contains(out.steer) { out.steer = .lines }
   out.moments = true
   out.missions = true
-  out.combo = true
   return out
 }
 

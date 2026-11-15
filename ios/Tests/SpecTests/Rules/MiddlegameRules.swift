@@ -203,10 +203,10 @@ private func handoffRun() throws -> (session: RunSession, tree: OpeningTree) {
   @Test func theModeAlwaysScoresInPoints() {
     var prefs = DEFAULT_RUN
     prefs.steer = .book
-    prefs.combo = false
+    prefs.missions = false
     let played = middlegamePrefs(prefs)
     #expect(played.steer == .lines)
-    #expect(played.moments && played.missions && played.combo)
+    #expect(played.moments && played.missions)
   }
 
   /// Rule 10.

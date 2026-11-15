@@ -61,14 +61,13 @@ struct CalloutStrip: View {
 }
 
 /// Whose move, under a screen's title: the side's dot (a spinner while the
-/// engine works), the words, and the combo when there is one. While the board
+/// engine works) and the words. While the board
 /// has a rim the words name it, in the rim's color.
 struct StatusLine: View {
   /// White's dot when true, Black's when false.
   var white: Bool
   var text: String
   var busy = false
-  var combo: Int?
   var tone: Color = Theme.text2
 
   var body: some View {
@@ -79,9 +78,6 @@ struct StatusLine: View {
         Circle().fill(white ? Color.white : Color.black).frame(width: 9, height: 9).overlay(Circle().stroke(Theme.text3))
       }
       Text(text).font(.system(size: 13, weight: .semibold)).foregroundStyle(tone)
-      if let combo, combo > 1 {
-        Text("\u{00d7}\(combo)").font(.system(size: 13, weight: .heavy).monospacedDigit()).foregroundStyle(Theme.good)
-      }
     }
     .lineLimit(1)
     .frame(height: 16)

@@ -78,6 +78,8 @@ private func sessionJSON(_ s: RunSession) -> JSON {
   let file = try JSON.parse(Data(contentsOf: Cases.golden.appendingPathComponent("cases/scenarios/run.json")))
   var replayed = 0
   defer { #expect(replayed == file["scenarios"].array.reduce(0) { $0 + $1["steps"].array.count }) }
+  var written: [String: JSON] = [:]
+  defer { if Cases.writing { Cases.write("scenarios-run", .object(written)) } }
   for scenario in file["scenarios"].array {
     let name = scenario["name"].string
     let setup = scenario["setup"]
@@ -96,6 +98,8 @@ private func sessionJSON(_ s: RunSession) -> JSON {
     let ctx = RunContext(index: index, prefs: prefs, play: setup["play"].bool)
     let picker = mulberry32(seed: setup["picker"].number)
     var session = beginSession(begun)
+    var steps: [JSON] = []
+    defer { written[name] = .array(steps) }
 
     for (i, step) in scenario["steps"].array.enumerated() {
       let call = step["call"]
@@ -122,6 +126,8 @@ private func sessionJSON(_ s: RunSession) -> JSON {
       default: Issue.record("\(name): unknown call \(call["fn"].string)")
       }
       let gotEffects = JSON.array(effects.map { effectJSON($0, tree) })
+      steps.append(obj(["effects": gotEffects, "after": sessionJSON(session)]))
+      if Cases.writing { continue }
       if !matches(gotEffects, step["effects"]) {
         Issue.record("\(name) step \(i) \(call["fn"].string) effects\n  expected \(step["effects"])\n  got      \(gotEffects)")
         break

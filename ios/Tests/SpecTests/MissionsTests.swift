@@ -9,7 +9,6 @@ extension Earned {
       "points": points,
       "moment": moment.map { obj(["found": $0.found, "bonus": $0.bonus]) } ?? .null,
       "mission": mission.map { obj(["kind": $0.kind.rawValue, "result": $0.result.rawValue, "bonus": $0.bonus]) } ?? .null,
-      "combo": combo,
     ])
   }
 }
@@ -17,7 +16,7 @@ extension Earned {
 /// Golden/cases/functions/missions.json
 @Test func missions() throws {
   func prefs(_ j: JSON) -> ExtrasPrefs {
-    ExtrasPrefs(moments: j["moments"].bool, missions: j["missions"].bool, combo: j["combo"].bool)
+    ExtrasPrefs(moments: j["moments"].bool, missions: j["missions"].bool)
   }
   try check("missions", [
     "run.missionFor": { a in encoded(missionFor(color(a[0]), a[1].number, a.count > 2 ? a[2].stringOrNil : nil)) },

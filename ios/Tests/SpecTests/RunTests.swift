@@ -25,8 +25,6 @@ func color(_ j: JSON) -> Color { Color(rawValue: j.string)! }
     "run.evalSwing": { evalSwing(color($0[0]), $0[1].number, $0[2].number).json },
     "run.speedTone": { speedTone($0[0].number).rawValue.json },
     "run.secondsText": { secondsText($0[0].number).json },
-    "run.comboAfter": { comboAfter($0[0].int, $0[1].number).json },
-    "run.comboMultiplier": { comboMultiplier($0[0].int).json },
     "run.isMoment": { isMoment(color($0[0]), $0[1].number, $0[2].numberOrNil).json },
     "run.momentBonus": { momentBonus($0[0].int).json },
     "run.missionTitle": { missionTitle(MissionKind(rawValue: $0[0].string)!).json },

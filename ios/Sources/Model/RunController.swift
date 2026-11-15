@@ -304,7 +304,7 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     let score = prefs.moveScores && swing != nil ? moveScore(swing!) : nil
     let landed = applySan(run.fen, judged.san)
     if let landed { s.lastJudged = JudgedMark(ply: run.played.count, san: judged.san, from: landed.from, to: landed.to, swing: swing) }
-    // Moments are a thing past your prep; a book move keeps the combo going.
+    // Moments are a thing past your prep; a book move gives nothing away.
     let scored = judgedExtras(s.state.extras, ExtrasPrefs(prefs), run.color, JudgedMove(
       lost: book ? 0 : judged.lost, after: judged.after, moment: judged.moment && expected.isEmpty, found: judged.found, fen: landed?.after))
     if let moment = scored.earned.moment, moment.found, let landed {
@@ -445,7 +445,7 @@ public func prepLabel(_ session: RunSession) -> PrepLabel? {
 }
 
 /// What a judged move earned, said over the board, one thing at a time: a missed moment first
-/// (its move is shown on the board), then the mission, then a broken combo. A found moment says
+/// (its move is shown on the board), then the mission. A found moment says
 /// nothing here: the board pulses, its bonus pops and the status line says Found it.
 public func noteFor(_ earned: Earned) -> Note? {
   if let moment = earned.moment, !moment.found { return Note(text: "Missed it", tone: "bad") }
@@ -453,7 +453,6 @@ public func noteFor(_ earned: Earned) -> Note? {
     let done = mission.result == .done
     return Note(text: "\(missionTitle(mission.kind)) \(done ? "complete" : "failed")", tone: done ? "good" : "bad")
   }
-  if earned.moment == nil && earned.combo == "broke" { return Note(text: "Combo broken", tone: "bad") }
   return nil
 }
 

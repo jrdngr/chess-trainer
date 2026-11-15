@@ -7,7 +7,7 @@ Tests: the `docs/rules/middlegame.md` suite in
 `Tests/SpecTests/Rules/MiddlegameRules.swift`.
 
 1. **Setup.** The opponent steers toward one of your lines, or a line that
-   ends at a gap. Moments, missions and the combo are always on, so the
+   ends at a gap. Moments and missions are always on, so the
    mode always scores in points.
 2. **The line** is the one the draw picked (see [opponent](opponent.md)),
    to its end. A draw that finds no line of yours plays nothing out.

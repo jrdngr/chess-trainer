@@ -519,7 +519,7 @@ struct RunView: View {
     return MoveStrip(items: items, cursor: analysis.ply, max: analysis.line.count) { analysis.seek($0) }.padding(.horizontal, 16)
   }
 
-  /// Under the prep bar: the rim's name in its color while the board has one, else whose move; and the combo.
+  /// Under the prep bar: the rim's name in its color while the board has one, else whose move.
   private var headerStatus: some View {
     let turn = model.endCued ? "Round over" : model.pending != nil ? "Judging" : model.myTurn && !model.thinking ? "Your move" : "Reply"
     let named = model.endCued ? nil : rim
@@ -527,7 +527,6 @@ struct RunView: View {
       white: model.run.color == .w,
       text: named?.label ?? turn,
       busy: model.thinking || model.pending != nil,
-      combo: model.prefs.combo ? comboMultiplier(model.session.state.extras.combo) : nil,
       tone: named?.color ?? Theme.text2)
   }
 

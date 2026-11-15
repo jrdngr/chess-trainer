@@ -44,7 +44,6 @@ public struct RunPrefs: Equatable, Sendable, Codable {
   public var moveScores: Bool
   public var moments: Bool
   public var missions: Bool
-  public var combo: Bool
   /// Before your move lands, what it leaves undefended flashes.
   public var undefendedFlash: Bool
   /// Who plays the other side past the book: `OPPONENT_MATCH` for your own
@@ -63,7 +62,7 @@ extension RunPrefs {
 }
 
 public let DEFAULT_RUN = RunPrefs(
-  steer: .lines, clock: .off, moveScores: true, moments: true, missions: true, combo: true,
+  steer: .lines, clock: .off, moveScores: true, moments: true, missions: true,
   undefendedFlash: false)
 
 extension RunPrefs {
@@ -77,7 +76,6 @@ extension RunPrefs {
       moveScores: try c.decodeIfPresent(Bool.self, forKey: .moveScores) ?? d.moveScores,
       moments: try c.decodeIfPresent(Bool.self, forKey: .moments) ?? d.moments,
       missions: try c.decodeIfPresent(Bool.self, forKey: .missions) ?? d.missions,
-      combo: try c.decodeIfPresent(Bool.self, forKey: .combo) ?? d.combo,
       undefendedFlash: try c.decodeIfPresent(Bool.self, forKey: .undefendedFlash) ?? d.undefendedFlash,
       opponent: try c.decodeIfPresent(String.self, forKey: .opponent) ?? d.opponent)
   }
@@ -119,6 +117,6 @@ public let AUTO_GROWTH = GrowthPrefs(minShare: 1, maxPly: 18, nudgePriority: .tr
 public func autoRun(_ prefs: PlayPrefs) -> RunPrefs {
   RunPrefs(
     steer: .lines, clock: .off, moveScores: prefs.moveScores, moments: true,
-    missions: true, combo: true, undefendedFlash: false)
+    missions: true, undefendedFlash: false)
 }
 

@@ -2559,8 +2559,6 @@
   },
   "src/model/run.ts": {
     "BOOK_SHARE": 0.05,
-    "COMBO_CLEAN": 20,
-    "COMBO_HOLD": 40,
     "CONVERT_FROM": 200,
     "CONVERT_WINDOW": 6,
     "DEFAULT_RUN": {
@@ -2569,7 +2567,6 @@
       "moveScores": true,
       "moments": true,
       "missions": true,
-      "combo": true,
       "undefendedFlash": false
     },
     "EDGE_MOVES": 10,
@@ -2594,8 +2591,6 @@
     "MOMENT_STREAK_BONUS": 5,
     "NO_EXTRAS": {
       "points": 0,
-      "combo": 0,
-      "bestCombo": 0,
       "moments": {
         "found": 0,
         "missed": 0,

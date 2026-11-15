@@ -200,8 +200,8 @@ public final class RunModel {
   public var opponentLevel: Level {
     round != nil ? levelMatching(store.state.strength) : prefs.opponentLevel(store.state.strength)
   }
-  /// With moments, missions or the combo on, a run is scored in points as well as moves.
-  public var scoredInPoints: Bool { prefs.moments || prefs.missions || prefs.combo }
+  /// With moments or missions on, a run is scored in points as well as moves.
+  public var scoredInPoints: Bool { prefs.moments || prefs.missions }
   /// Announcing or replaying: the board is locked, and the opponent waits.
   public var held: Bool { intro != .done }
   /// The moves the intro plays out: a Middlegame run's handoff always; a Play run's way in when Replay moves asks.

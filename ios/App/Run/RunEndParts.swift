@@ -4,8 +4,8 @@ import Model
 import SwiftUI
 import UIKit
 
-/// What a run you set up came to, in points when moments, missions
-/// or the combo were on, else in moves; and a new best.
+/// What a run you set up came to, in points when moments or missions
+/// were on, else in moves; and a new best.
 struct RunSummary: View {
   let finish: Finish
   let prefs: RunPrefs
@@ -60,7 +60,6 @@ struct RunSummary: View {
     if prefs.moments && moments > 0 { out.append("Moments \(x.moments.found) of \(moments)") }
     let missions = x.missions.done + x.missions.failed
     if prefs.missions && missions > 0 { out.append("Missions \(x.missions.done) of \(missions)") }
-    if prefs.combo && x.bestCombo >= 3 { out.append("Best combo \u{00d7}\(comboMultiplier(x.bestCombo))") }
     return out
   }
 }

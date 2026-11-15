@@ -13,8 +13,6 @@ import Testing
   }
   let s = "run"
   expect(s, "BOOK_SHARE", BOOK_SHARE)
-  expect(s, "COMBO_CLEAN", COMBO_CLEAN)
-  expect(s, "COMBO_HOLD", COMBO_HOLD)
   expect(s, "CONVERT_FROM", CONVERT_FROM)
   expect(s, "CONVERT_WINDOW", CONVERT_WINDOW)
   expect(s, "DEFAULT_RUN", webEncoded(DEFAULT_RUN))

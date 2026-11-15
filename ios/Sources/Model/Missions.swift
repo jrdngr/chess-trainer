@@ -140,8 +140,6 @@ public struct MissionTally: Equatable, Sendable, Codable {
 /// Where a run's extras stand.
 public struct Extras: Equatable, Sendable, Codable {
   public var points = 0
-  public var combo = 0
-  public var bestCombo = 0
   public var moments = Moments()
   public var mission: Mission?
   /// Your judged moves still to go before the next mission is set.
@@ -157,11 +155,9 @@ public struct Earned: Equatable, Sendable {
   public var points: Int
   public var moment: (found: Bool, bonus: Int)?
   public var mission: (kind: MissionKind, result: MissionResult, bonus: Int)?
-  /// "up" when the combo went up a multiplier, "broke" when it broke.
-  public var combo: String?
 
   public static func == (a: Earned, b: Earned) -> Bool {
-    a.points == b.points && a.combo == b.combo && a.moment?.found == b.moment?.found && a.moment?.bonus == b.moment?.bonus
+    a.points == b.points && a.moment?.found == b.moment?.found && a.moment?.bonus == b.moment?.bonus
       && a.mission?.kind == b.mission?.kind && a.mission?.result == b.mission?.result && a.mission?.bonus == b.mission?.bonus
   }
 }
@@ -169,14 +165,12 @@ public struct Earned: Equatable, Sendable {
 public struct ExtrasPrefs: Sendable {
   public var moments: Bool
   public var missions: Bool
-  public var combo: Bool
-  public init(moments: Bool, missions: Bool, combo: Bool) {
+  public init(moments: Bool, missions: Bool) {
     self.moments = moments
     self.missions = missions
-    self.combo = combo
   }
   public init(_ prefs: RunPrefs) {
-    self.init(moments: prefs.moments, missions: prefs.missions, combo: prefs.combo)
+    self.init(moments: prefs.moments, missions: prefs.missions)
   }
 }
 
@@ -195,10 +189,8 @@ public struct JudgedMove: Sendable {
   }
 }
 
-/// One of your moves the engine judged: the combo moves, the move earns, a moment settles, a mission steps.
+/// One of your moves the engine judged: the move earns, a moment settles, a mission steps.
 public func judgedExtras(_ extras: Extras, _ prefs: ExtrasPrefs, _ color: Color, _ move: JudgedMove) -> (extras: Extras, earned: Earned) {
-  let was = extras.combo
-  var combo = prefs.combo ? comboAfter(was, move.lost) : 0
   var moments = extras.moments
   var momentEarned: (found: Bool, bonus: Int)?
   if prefs.moments && move.moment {
@@ -211,10 +203,9 @@ public func judgedExtras(_ extras: Extras, _ prefs: ExtrasPrefs, _ color: Color,
       moments.missed += 1
       moments.streak = 0
       momentEarned = (false, 0)
-      combo = 0
     }
   }
-  var points = extras.points + comboMultiplier(combo) + (momentEarned?.bonus ?? 0)
+  var points = extras.points + 1 + (momentEarned?.bonus ?? 0)
   var mission = extras.mission
   var missionBreak = extras.missionBreak
   var missions = extras.missions
@@ -237,17 +228,13 @@ public func judgedExtras(_ extras: Extras, _ prefs: ExtrasPrefs, _ color: Color,
       if missionBreak == 0 { mission = missionFor(color, move.after, move.fen) }
     }
   }
-  let up = comboMultiplier(combo) > comboMultiplier(was)
-  let broke = prefs.combo && was >= 3 && combo == 0
   var out = Extras()
   out.points = points
-  out.combo = combo
-  out.bestCombo = max(extras.bestCombo, combo)
   out.moments = moments
   out.mission = mission
   out.missionBreak = missionBreak
   out.missions = missions
-  return (out, Earned(points: points - extras.points, moment: momentEarned, mission: missionEarned, combo: up ? "up" : broke ? "broke" : nil))
+  return (out, Earned(points: points - extras.points, moment: momentEarned, mission: missionEarned))
 }
 
 /// The opponent's move: a Convert it mission may settle on it.
@@ -259,10 +246,10 @@ public func theirExtras(_ extras: Extras, _ color: Color, _ cp: Double, _ fen: S
   if result == .done { out.missions.done += 1 } else { out.missions.failed += 1 }
   out.mission = nil
   out.missionBreak = MISSION_BREAK
-  return (out, Earned(points: bonus, moment: nil, mission: (current.kind, result, bonus), combo: nil))
+  return (out, Earned(points: bonus, moment: nil, mission: (current.kind, result, bonus)))
 }
 
-/// A move your prep answered: a point, at ×1.
+/// A move your prep answered: a point.
 public func prepExtras(_ extras: Extras) -> Extras {
   var out = extras
   out.points += 1

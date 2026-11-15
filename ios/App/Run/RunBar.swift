@@ -29,7 +29,7 @@ struct RunBar<Actions: View>: View {
 /// The run's score in the app bar, said with its unit.
 struct RunCount: View {
   var value: Int
-  /// Points, when moments, missions or the combo score; else moves survived.
+  /// Points, when moments or missions score; else moves survived.
   var points: Bool
   var body: some View {
     Text("\(value) \(points ? "pt" : "move")\(value == 1 ? "" : "s")")

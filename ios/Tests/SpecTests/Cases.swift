@@ -22,6 +22,18 @@ enum Cases {
     }
     return out
   }
+
+  /// With `GOLDEN_WRITE=1`, what the ports answered is written to `ios/.golden-out/`, for
+  /// `Golden/rewrite.py` to put in the cases when a change in behavior is intended.
+  static let writing = ProcessInfo.processInfo.environment["GOLDEN_WRITE"] == "1"
+
+  static func write(_ name: String, _ value: JSON) {
+    let dir = golden.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+      .appendingPathComponent(".golden-out")
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    let data = try? JSONSerialization.data(withJSONObject: value.anyValue, options: [.fragmentsAllowed])
+    try? data?.write(to: dir.appendingPathComponent("\(name).json"))
+  }
 }
 
 /// Runs every case of the named functions in one area through their Swift
@@ -29,6 +41,8 @@ enum Cases {
 func check(_ area: String, _ ports: [String: ([JSON]) -> JSON], only: Set<String>? = nil) throws {
   let file = try Cases.file(area)
   let wanted = only ?? Set(file.keys)
+  var written: [String: JSON] = [:]
+  defer { if Cases.writing { Cases.write("functions-\(area)", .object(written)) } }
   for fn in wanted.sorted() {
     guard let cases = file[fn] else {
       Issue.record("\(area): no cases for \(fn)")
@@ -39,8 +53,11 @@ func check(_ area: String, _ ports: [String: ([JSON]) -> JSON], only: Set<String
       continue
     }
     var failures = 0
+    var outs: [JSON] = []
+    defer { written[fn] = .array(outs) }
     for (i, c) in cases.enumerated() {
       let got = port(c.args)
+      outs.append(got)
       if !matches(got, c.out) {
         failures += 1
         if failures <= 3 {
