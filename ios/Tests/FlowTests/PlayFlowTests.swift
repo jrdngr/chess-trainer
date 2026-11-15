@@ -140,6 +140,7 @@ private func quietMove(_ fen: String) -> String? {
     await app.openPlay()
     let run = try #require(app.run)
     #expect(run.firstGame && run.fill != nil)
+    #expect(run.tip == .growth, "growth's tip shows as the fill opens")
     #expect(app.choices.contains("e4"))
 
     try await app.move("e4")

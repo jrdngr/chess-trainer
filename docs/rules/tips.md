@@ -4,7 +4,7 @@ Tips teach the game as it comes up: no tutorial, no forced moves. Code:
 `Tips.swift` in Model, `RunModel` and `EndgameGame` in Game. Tests: the
 `docs/rules/tips.md` suite in `Tests/SpecTests/Rules/TipsRules.swift`, and
 `tipsShowAtTheirTriggersOnce` in `Tests/FlowTests/OnboardingFlowTests.swift`
-for rule 2.
+and `firstGameGrowsThePlaybookFromMoveOne` in `PlayFlowTests.swift` for rule 2.
 
 1. **A tip shows once.** A tip in a game is seen the moment it shows; one
    off the board (Home, the Playbook tab) once it is put away. The save
@@ -12,7 +12,8 @@ for rule 2.
    it away.
 2. **One trigger each, one tip at a time.** A tip shows the first time its
    trigger comes while no other tip is up; if one is up, it waits for its
-   trigger to come again. In a game:
+   trigger to come again. Growth is the one exception: opening it puts
+   away any tip that is up, so its own shows. In a game:
    - a Play game starts on your prep: your openings are flashcards
    - a prep move played: the prep bar
    - your prep runs out without a miss: the ✓ marks common moves

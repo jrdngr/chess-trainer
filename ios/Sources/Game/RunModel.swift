@@ -582,6 +582,8 @@ public final class RunModel {
     holeGap = nil
     fill = Fill(gap: gap, size: store.state.settings.movesPerFill)
     pulseEdge()
+    // Adding moves takes the screen: whatever tip was up gives way to growth's.
+    tip = nil
     offer(.growth)
     store.update { $0.logEvent(AppEvent(kind: "inline-grow", via: .play, color: gap.color, line: gap.line.joined(separator: " "))) }
   }

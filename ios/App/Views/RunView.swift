@@ -112,6 +112,8 @@ struct RunView: View {
       if drawing && analysis == nil { analysis = RunAnalysis(game: gameLine, engine: HintEngine.shared) }
     }
     .task(id: drawing ? analysis?.fen : nil) { await analysis?.findTop() }
+    // Stepping away from the game's end puts the blunder tip away, so the deck's tip can follow.
+    .onChange(of: atGameEnd) { if !atGameEnd && model.tip == .blunder { model.dismissTip() } }
     // Your move's time stops while the app is in the background or the screen is locked.
     .onChange(of: scenePhase) {
       if scenePhase == .active { model.appReturned() } else { model.appLeft() }
@@ -321,7 +323,8 @@ struct RunView: View {
       .opacity(model.held || lensesAway || called || drawing ? 0 : 1).allowsHitTesting(!(model.held || lensesAway || called || drawing))
       // A finished run being analysed shows its moves in the lenses' place.
       .overlay {
-        if drawing, let analysis { analysisStrip(analysis).opacity(called ? 0 : 1) }
+        // The blunder tip hangs over the strip: a tap on it puts the tip away, not a step back.
+        if drawing, let analysis { analysisStrip(analysis).opacity(called ? 0 : 1).allowsHitTesting(model.tip != .blunder) }
       }
       .overlay(alignment: .top) { calloutLayer.animation(.easeOut(duration: 0.25), value: model.shownCallout?.id) }
       // The callout runs past the lenses' row, over the panel under it (Undo and Done while adding moves).
