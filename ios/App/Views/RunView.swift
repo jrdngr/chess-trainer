@@ -94,7 +94,8 @@ struct RunView: View {
         GeometryReader { geo in
           RoundDeal(
             board: anchor.map { geo[$0] }, draw: onDraw, onDone: onDealt, steps: deckSteps,
-            tip: store.state.settings.seenDeckTip ? nil : Self.deckTip,
+            // Waits for any tip on the game, such as the blunder's.
+            tip: store.state.settings.seenDeckTip || model.tip != nil ? nil : Self.deckTip,
             onTip: { store.update { $0.settings.seenDeckTip = true } })
         }
         .transition(.identity)
@@ -191,7 +192,7 @@ struct RunView: View {
   }
 
   /// The tips hung from the board.
-  private static let boardTips: Set<GameTip?> = [.flashCards, .prepDone, .scores, .moment, .freeformGame, .middlegameRound]
+  private static let boardTips: Set<GameTip?> = [.flashCards, .scores, .moment, .freeformGame, .middlegameRound]
 
   /// The tips hung from the header: at the prep bar, or at the pawn counter.
   private static let headerTips: Set<GameTip?> = [.prepBar, .pawns]
@@ -211,17 +212,18 @@ struct RunView: View {
   /// The lenses are away: moves are being played for you or added, or there is a moment to find without them.
   private var lensesAway: Bool { model.intro == .replay || adding || (model.blunder == nil && model.momentHere) }
 
-  /// A tip hangs above the dock's top: the blunder's over its name, the mission's over the goal.
-  private var tipAbove: Bool { model.blunder != nil || model.tip == .mission }
+  /// A tip hangs above the dock's top: the blunder's over its name, the mission's over the goal, growth's over Done.
+  private var tipAbove: Bool { model.blunder != nil || model.tip == .blunder || model.tip == .mission || model.tip == .growth }
 
   /// A callout is up in the lenses' place.
   private var called: Bool { model.shownCallout != nil }
 
-  /// Prep complete, Off prep or Found it, in the lenses' place for a moment.
+  /// Prep complete, Off prep or Found it, in the lenses' place for a moment. The end-of-prep tip hangs from it.
   @ViewBuilder private var calloutLayer: some View {
     if let callout = model.shownCallout {
       CalloutStrip(text: callout.text, good: callout.good)
         .padding(.top, 8)
+        .tip(model.tip, when: model.tip == .prepDone, onDismiss: model.dismissTip)
         .transition(.opacity.combined(with: .offset(y: -6)))
         .id(callout.id)
     }
@@ -504,7 +506,7 @@ struct RunView: View {
           analysisStatus
         } else if model.session.ending != .ended {
           // Ended by hand, the run needs no name for how it ended.
-          endingName
+          endingName.tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
         }
       }
       .padding(.top, 16)

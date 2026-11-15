@@ -33,7 +33,8 @@ struct InlineFillPanel: View {
           .frame(maxWidth: .infinity, alignment: .trailing)
       }
       .zIndex(1)
-      .tip(model.tip, when: model.tip == .growth, arrowAt: 0.9, onDismiss: model.dismissTip)
+      // Over the row, so the answers under it stay in view.
+      .tip(model.tip, when: model.tip == .growth, arrow: .down, arrowAt: 0.9, onDismiss: model.dismissTip)
       if !ranked.isEmpty {
         HStack(spacing: 10) {
           Text("Answer it")

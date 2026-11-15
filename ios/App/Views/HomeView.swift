@@ -55,7 +55,7 @@ struct HomeView: View {
           .zIndex(tip == .middlegame || tip == .endgames ? 1 : 0)
           VStack(spacing: 10) {
             RecommendationsCard(tree: tree, onPick: onGap).unlockedBy(.recommendations)
-              .tip(text: tip == .recommendations ? tip?.text : nil, arrow: .down) { nextHomeTip(store) }
+              .tip(text: tip == .recommendations ? tip?.text : nil) { nextHomeTip(store) }
             MilestonesCard()
           }
           .padding(.top, 10)
@@ -78,8 +78,8 @@ struct HomeView: View {
           .padding(.horizontal, 16).padding(.bottom, 12)
       }
     }
-    // Leaving Home by the tab the tip points at puts it away.
-    .onDisappear { if tip == .shop { nextHomeTip(store) } }
+    // Leaving Home puts its tip away, so a later one never waits behind it.
+    .onDisappear { nextHomeTip(store) }
     .sheet(isPresented: $settings) { SettingsSheet().presentationBackground(Theme.background) }
     .onAppear {
       guard store.takeSettingsHeld() else { return }

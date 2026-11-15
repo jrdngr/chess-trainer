@@ -32,6 +32,7 @@ struct ShopView: View {
           .padding(.horizontal, 16).padding(.bottom, selected == nil ? 24 : 280)
       }
     }
+    .background(Theme.background.ignoresSafeArea())
     .overlay { FlightLayer(flights: flights) }
     .coordinateSpace(name: Self.space)
     .sheet(isPresented: Binding(get: { selected != nil }, set: { if !$0, purchase == nil { selected = nil } })) {
@@ -134,10 +135,10 @@ private struct ShopTree: View {
           if let spot = Self.spots[item.id] {
             ShopNode(item: item, status: store.state.status(item), selected: selected == item.id,
               purchase: purchase?.id == item.id ? purchase : nil, balance: store.state.pawns)
-              .frame(width: 88)
+              .frame(width: 100)
               .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(ShopView.space)) } action: { frames[item.id] = medallion($0) }
               .opacity(lit == nil || lit!.contains(item.id) ? 1 : 0.28)
-              .offset(x: spot.x * k - 44, y: spot.y)
+              .offset(x: spot.x * k - 50, y: spot.y)
               .onTapGesture { onTap(item.id) }
           }
         }
@@ -171,7 +172,8 @@ private struct ShopNode: View {
     VStack(spacing: 0) {
       medallion.padding(.bottom, 6)
       Text(item.name.replacingOccurrences(of: " styles", with: "")).font(.system(size: 12, weight: .semibold))
-        .foregroundStyle(dim ? Theme.text3 : Theme.text).lineLimit(1).fixedSize()
+        .foregroundStyle(dim ? Theme.text3 : Theme.text).lineLimit(2).minimumScaleFactor(0.85)
+        .multilineTextAlignment(.center).frame(maxWidth: 100).fixedSize(horizontal: false, vertical: true)
       price.frame(height: 16)
     }
     .contentShape(Rectangle())

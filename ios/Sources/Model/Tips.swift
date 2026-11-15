@@ -56,7 +56,7 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     case .moment: "When the board glows, there\u{2019}s a strong move. Find it."
     case .lens: "Tap a lens for hints."
     case .freeformGame: "Play any of your lines. Your opponent follows what you play."
-    case .middlegameRound: "Your line plays out to the middlegame. The plan card says what to aim for."
+    case .middlegameRound: "Your line plays itself out to the middlegame. Then the game is yours."
     case .endgamesRound: "Win it or hold it: the card says which."
     case .shop: "You have enough pawns for something in the Pawn Shop."
     case .sidePicker: "Pick White or Black here."

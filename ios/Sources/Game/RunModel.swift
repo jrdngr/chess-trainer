@@ -265,18 +265,21 @@ public final class RunModel {
     public var id: Int
   }
   public private(set) var callout: Callout?
+  /// The last callout for leaving your prep, kept up while the end-of-prep tip hangs from it.
+  private var prepCallout: Callout?
   private var calloutCount = 0
   /// How long a callout stays.
   public static let calloutMs = 1.5
 
-  /// The callout on the board.
-  public var shownCallout: Callout? { callout }
+  /// The callout on the board: the end-of-prep tip keeps its callout up.
+  public var shownCallout: Callout? { callout ?? (tip == .prepDone ? prepCallout : nil) }
 
-  private func show(callout text: String, good: Bool) {
+  private func show(callout text: String, good: Bool, prep: Bool = false) {
     calloutCount += 1
     let shown = Callout(text: text, good: good, id: calloutCount)
     callout = shown
     services.emit(.callout(text, good: good))
+    if prep { prepCallout = shown }
     later(Self.calloutMs) { model in
       if model.callout == shown { model.callout = nil }
     }
@@ -285,7 +288,7 @@ public final class RunModel {
   /// Your prep just ended, finished or missed: a Play run says so over the board.
   private func noteLeft(_ was: PrepLabel?) {
     guard round != nil, was == .on, session.prepStatus != .on else { return }
-    show(callout: session.prepStatus == .off ? "Off prep" : "Prep complete", good: session.prepStatus != .off)
+    show(callout: session.prepStatus == .off ? "Off prep" : "Prep complete", good: session.prepStatus != .off, prep: true)
     if session.prepStatus != .off { offer(.prepDone) }
   }
 
@@ -579,6 +582,7 @@ public final class RunModel {
     holeGap = nil
     fill = Fill(gap: gap, size: store.state.settings.movesPerFill)
     pulseEdge()
+    offer(.growth)
     store.update { $0.logEvent(AppEvent(kind: "inline-grow", via: .play, color: gap.color, line: gap.line.joined(separator: " "))) }
   }
 
