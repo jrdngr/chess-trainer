@@ -119,6 +119,12 @@ struct EndgameRoundView: View {
     }
     .animation(.easeOut(duration: 0.3), value: game.phase)
     .pawnFlights(orientation: game.color)
+    // While the tip is up, the next tap anywhere only puts it away.
+    .overlay {
+      if game.tip != nil {
+        SwiftUI.Color.clear.contentShape(Rectangle()).ignoresSafeArea().onTapGesture { game.dismissTip() }.accessibilityHidden(true)
+      }
+    }
     .onAppear { if game.phase == .playing { game.engineTurn() } }
     .onChange(of: game.phase) { if game.phase == .playing { game.engineTurn() } }
     .onDisappear { game.stop() }

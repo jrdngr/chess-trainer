@@ -42,6 +42,8 @@ struct RunView: View {
 
   /// The tip over the deck, the first time a Play round ends on it.
   private static let deckTip = "Tap the deck to deal your next game."
+  /// The deck's tip is up: no tip on the game, and the deck under a finished run for the first time.
+  private var deckTipUp: Bool { drawing && model.tip == nil && !store.state.settings.seenDeckTip }
 
   /// The game as played, the move that ended it last.
   private var gameLine: [String] {
@@ -95,13 +97,23 @@ struct RunView: View {
           RoundDeal(
             board: anchor.map { geo[$0] }, draw: onDraw, onDone: onDealt, steps: deckSteps,
             // Waits for any tip on the game, such as the blunder's.
-            tip: store.state.settings.seenDeckTip || model.tip != nil ? nil : Self.deckTip,
+            tip: deckTipUp ? Self.deckTip : nil,
             onTip: { store.update { $0.settings.seenDeckTip = true } })
         }
         .transition(.identity)
       }
     }
     .pawnFlights(orientation: model.run.color)
+    // While a tip is up, the next tap anywhere only puts it away.
+    .overlay {
+      if model.tip != nil || deckTipUp {
+        SwiftUI.Color.clear.contentShape(Rectangle()).ignoresSafeArea()
+          .onTapGesture {
+            if model.tip != nil { model.dismissTip() } else { store.update { $0.settings.seenDeckTip = true } }
+          }
+          .accessibilityHidden(true)
+      }
+    }
     .contentShape(Rectangle())
     .onTapGesture { if model.intro == .announce { model.toBoard() } }
     .confirmationDialog("End session?", isPresented: $askingToEnd, titleVisibility: .visible) {
@@ -112,8 +124,6 @@ struct RunView: View {
       if drawing && analysis == nil { analysis = RunAnalysis(game: gameLine, engine: HintEngine.shared) }
     }
     .task(id: drawing ? analysis?.fen : nil) { await analysis?.findTop() }
-    // Stepping away from the game's end puts the blunder tip away, so the deck's tip can follow.
-    .onChange(of: atGameEnd) { if !atGameEnd && model.tip == .blunder { model.dismissTip() } }
     // Your move's time stops while the app is in the background or the screen is locked.
     .onChange(of: scenePhase) {
       if scenePhase == .active { model.appReturned() } else { model.appLeft() }
@@ -323,15 +333,11 @@ struct RunView: View {
       .opacity(model.held || lensesAway || called || drawing ? 0 : 1).allowsHitTesting(!(model.held || lensesAway || called || drawing))
       // A finished run being analysed shows its moves in the lenses' place.
       .overlay {
-        // The blunder tip hangs over the strip: a tap on it puts the tip away, not a step back.
-        if drawing, let analysis { analysisStrip(analysis).opacity(called ? 0 : 1).allowsHitTesting(model.tip != .blunder) }
+        if drawing, let analysis { analysisStrip(analysis).opacity(called ? 0 : 1) }
       }
       .overlay(alignment: .top) { calloutLayer.animation(.easeOut(duration: 0.25), value: model.shownCallout?.id) }
       // The callout runs past the lenses' row, over the panel under it (Undo and Done while adding moves).
-      // Once a lens is on, the tip points up at the board to say how to turn it off; turning it off puts the tip away.
-      .tip(
-        text: model.tip == .lens ? (lens == nil ? GameTip.lens.text : GameTip.lensOff) : nil,
-        arrow: lens == nil ? .up : .down, arrowAt: lens == nil ? 0.1 : 0.5, rest: 1, onDismiss: model.dismissTip)
+      .tip(model.tip, when: model.tip == .lens, arrowAt: 0.1, rest: 1, onDismiss: model.dismissTip)
       VStack(spacing: 0) {
         if lens == .eval {
           EvalRunCard(trail: model.session.evalTrail, last: model.session.lastJudged, color: model.run.color)
@@ -354,7 +360,7 @@ struct RunView: View {
       // Gives way before the board does: what doesn't fit is cut, never pushed up, and can't take a touch outside it.
       // A blunder's tip hangs above its name, over the lenses, so nothing is cut then.
       .frame(minHeight: 0, maxHeight: .infinity, alignment: .top)
-      .clipShape(Rectangle().inset(by: tipAbove ? -200 : 0)).contentShape(Rectangle().inset(by: tipAbove ? -200 : 0))
+      .clipShape(Rectangle().inset(by: tipAbove ? -200 : 0)).contentShape(Rectangle())
       // Over the lenses' row while a blunder's tip hangs above its name, or the mission tip above the goal.
       .zIndex(tipAbove ? 2 : 0)
       footer.padding(.top, 10).padding(.bottom, 8).opacity(model.blunder == nil && !drawing ? 1 : 0)
@@ -367,10 +373,6 @@ struct RunView: View {
       }
     }
     .onChange(of: planOpen) { if planOpen { planSeen = plan } }
-    // The lens tip's lesson ends once a lens is turned off again.
-    .onChange(of: lens) { old, new in
-      if old != nil && new == nil && model.tip == .lens { model.dismissTip() }
-    }
     // Lenses that go away take any held lens with them.
     .onChange(of: lensesAway) {
       if lensesAway {

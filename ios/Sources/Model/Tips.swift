@@ -69,9 +69,6 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     }
   }
 
-  /// The lens tip's second half, once a lens is on: it stays up until the lens is off.
-  public static let lensOff = "Tap the board to turn the lens off."
-
   /// The Home tip for a feature bought; the lenses have theirs in a game.
   public static func bought(_ feature: ShopFeature) -> GameTip? {
     switch feature {

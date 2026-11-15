@@ -8,8 +8,8 @@ and `firstGameGrowsThePlaybookFromMoveOne` in `PlayFlowTests.swift` for rule 2.
 
 1. **A tip shows once.** A tip in a game is seen the moment it shows; one
    off the board (Home, the Playbook tab) once it is put away. The save
-   keeps what has been seen. A tap on it, or the player's next move, puts
-   it away.
+   keeps what has been seen. While a tip is up, the next tap anywhere on
+   the screen puts it away and does nothing else.
 2. **One trigger each, one tip at a time.** A tip shows the first time its
    trigger comes while no other tip is up; if one is up, it waits for its
    trigger to come again. Growth is the one exception: opening it puts
