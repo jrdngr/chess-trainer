@@ -4,7 +4,7 @@ import Game
 import Model
 import SwiftUI
 
-/// One opening of the Playbook: its board and rating, Select,
+/// One opening of the Playbook: its board and form, Select,
 /// Middlegame and Grow, and its lines, each opening in the tree. Its menu deletes it.
 struct OpeningPage: View {
   let tree: OpeningTree

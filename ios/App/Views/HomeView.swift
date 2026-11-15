@@ -39,6 +39,7 @@ struct HomeView: View {
             TutorialStrip(played: tutorial.played) { confirmSkip = true }
           }
           Spacer()
+          HomePawns()
           Button { settings = true } label: {
             Icon(name: "gear", size: 20).foregroundStyle(Theme.text2).padding(.horizontal, 11).frame(minWidth: 44, minHeight: 44)
               .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface))
@@ -279,5 +280,22 @@ private struct TutorialStrip: View {
       Button("Skip", action: onSkip).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text2)
         .buttonStyle(.plain).frame(minHeight: 44)
     }
+  }
+}
+
+/// Your pawns beside the gear: a tap opens the Pawn Shop.
+private struct HomePawns: View {
+  @Environment(AppStore.self) private var store
+  @Environment(\.openShop) private var openShop
+
+  var body: some View {
+    Button { openShop?("") } label: {
+      PawnAmount(count: store.shownPawns)
+        .padding(.horizontal, 12).frame(minHeight: 44)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface))
+        .contentShape(RoundedRectangle(cornerRadius: 14))
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("\(store.shownPawns) pawns, Pawn Shop")
   }
 }

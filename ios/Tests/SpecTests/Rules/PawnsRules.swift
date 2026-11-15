@@ -148,4 +148,14 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
     let record = recordRun(recordRun(RunRecord(), tree, line("e4 e5"), 12), tree, line("e4 e5"), 8)
     #expect(record.global.best == 12)
   }
+
+  /// Rule 8: before today's game the ring shows the day it will make and what it will pay; after, the day it made.
+  @Test func theStreakRingShowsToday() {
+    let nine = PawnStreak(day: "d9", days: 9)
+    #expect(streakToday(nine, today: "d10", yesterday: "d9") == StreakToday(day: 10, paid: false, pawns: 2))
+    #expect(streakToday(nine, today: "d10", yesterday: "d9").weekday == 3)
+    #expect(streakToday(nine, today: "d9", yesterday: "d8") == StreakToday(day: 9, paid: true, pawns: 2))
+    #expect(streakToday(nine, today: "d12", yesterday: "d11") == StreakToday(day: 1, paid: false, pawns: 1))
+    #expect(streakToday(PawnStreak(day: "d7", days: 7), today: "d7", yesterday: "d6").weekday == 7)
+  }
 }

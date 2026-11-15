@@ -45,7 +45,8 @@ struct ShopView: View {
     }
     .onChange(of: focus, initial: true) {
       guard let focus else { return }
-      selected = focus
+      // An empty focus opens the shop on no item.
+      if shopItem(focus) != nil { selected = focus }
       self.focus = nil
     }
   }

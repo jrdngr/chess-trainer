@@ -117,6 +117,7 @@ struct RunView: View {
         .transition(.identity)
       }
     }
+    .pawnFlights(orientation: model.run.color)
     .contentShape(Rectangle())
     .onTapGesture { if model.intro == .announce { model.toBoard() } }
     .confirmationDialog("End session?", isPresented: $askingToEnd, titleVisibility: .visible) {
@@ -176,6 +177,7 @@ struct RunView: View {
       // Under Play's deal the card stands in for the board until it has grown onto it.
       .opacity(model.intro == .announce && !standalone ? 0 : 1)
       .anchorPreference(key: BoardFrameKey.self, value: .bounds) { $0 }
+      .pawnSpot("board")
       .clearsLens($lens)
       .overlay { if let pulse = model.edgePulse { EdgePulse(color: pulse.found ? Theme.good : Theme.bad).id(pulse.id) } }
       .overlay(alignment: .top) { flash }
@@ -323,7 +325,7 @@ struct RunView: View {
           // Endgame rules, on for the rest of the game once it reaches an endgame: moves are judged by the result they keep.
           Text("ENDGAME").font(.system(size: 11, weight: .bold)).tracking(0.7).foregroundStyle(Theme.text2)
         } else {
-          PrepSegmentsView(span: model.span, height: 4).frame(maxWidth: 150)
+          PrepSegmentsView(span: model.span, height: 4).frame(maxWidth: 150).pawnSpot("prep")
         }
         // Kept in place while analysing a finished run, so the board doesn't move, but not shown.
         headerStatus.opacity(drawing ? 0 : 1)
@@ -337,6 +339,7 @@ struct RunView: View {
         }
         .foregroundStyle(Theme.text).buttonStyle(.plain)
         Spacer()
+        PawnCounter()
       }
     }
     .padding(.horizontal).padding(.vertical, 10)
@@ -457,7 +460,7 @@ struct RunView: View {
       } else if model.intro == .replay {
         movesLine(sansToMoveText(Array(model.introPath.prefix(model.introPly))))
       } else if !model.held, model.prefs.missions, !model.tipsInPlay, let mission = model.session.state.extras.mission {
-        GoalCard(mission: mission)
+        GoalCard(mission: mission).pawnSpot("goal")
       } else {
         Color.clear
       }

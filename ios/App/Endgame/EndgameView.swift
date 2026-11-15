@@ -118,6 +118,7 @@ struct EndgameRoundView: View {
       }
     }
     .animation(.easeOut(duration: 0.3), value: game.phase)
+    .pawnFlights(orientation: game.color)
     .onAppear { if game.phase == .playing { game.engineTurn() } }
     .onChange(of: game.phase) { if game.phase == .playing { game.engineTurn() } }
     .onDisappear { game.stop() }
@@ -136,6 +137,7 @@ struct EndgameRoundView: View {
           Button { game.replayIntro() } label: { Icon(name: "pages", size: 20).foregroundStyle(Theme.text2) }
             .buttonStyle(.plain)
         }
+        PawnCounter()
       }
       // As in Play: ENDGAME, then whose move, under the title.
       VStack(spacing: 6) {
@@ -156,6 +158,7 @@ struct EndgameRoundView: View {
             highlights: highlights, marks: marks, onMove: game.play)
             .dimmed(game.phase == .over)
             .clearsLens($lens)
+            .pawnSpot("board")
           LensBar(held: $lens, lenses: LENSES, enabled: game.phase == .playing, plan: $plan, planEnabled: livePlan != nil)
             .unlockedBy(.lenses)
             .opacity(called == nil ? 1 : 0).allowsHitTesting(called == nil)

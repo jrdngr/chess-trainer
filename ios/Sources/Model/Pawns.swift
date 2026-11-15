@@ -108,6 +108,28 @@ public func streakDay(_ streak: PawnStreak, today: String, yesterday: String) ->
   return (PawnStreak(day: today, days: days), streakPawns(days))
 }
 
+/// Where the streak stands on `today`, for its ring: the day today is or will be, whether
+/// today's game has paid yet, and what it pays.
+public struct StreakToday: Equatable, Sendable {
+  /// Today's day in the streak: counted once today's game is played, the next one before.
+  public var day: Int
+  public var paid: Bool
+  public var pawns: Int
+  public init(day: Int, paid: Bool, pawns: Int) {
+    self.day = day
+    self.paid = paid
+    self.pawns = pawns
+  }
+  /// Today's place in its week of the streak, 1 to 7.
+  public var weekday: Int { (day - 1) % 7 + 1 }
+}
+
+public func streakToday(_ streak: PawnStreak, today: String, yesterday: String) -> StreakToday {
+  if streak.day == today { return StreakToday(day: streak.days, paid: true, pawns: streakPawns(streak.days)) }
+  let day = streak.day == yesterday ? streak.days + 1 : 1
+  return StreakToday(day: day, paid: false, pawns: streakPawns(day))
+}
+
 /// The local calendar day before `day`.
 public func dayBefore(_ at: Double, _ calendar: Calendar = .current) -> String {
   let date = Date(timeIntervalSince1970: at / 1000)

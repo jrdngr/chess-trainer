@@ -10,7 +10,8 @@ struct MilestonesCard: View {
 
   var body: some View {
     let list = milestones(store.state.score, store.state.runRecord)
-    let days = streak(store.state.score.global)
+    let now = Env.now()
+    let today = streakToday(store.state.pawnStreak, today: dayKey(now), yesterday: dayBefore(now))
     let done = list.filter(earned).count
     // The streak always leads; the three closest of the rest follow it.
     let rest = list.filter { $0.kind != .streak }
@@ -18,7 +19,7 @@ struct MilestonesCard: View {
     Button { open = true } label: {
       HomeCard(title: "Milestones", aside: "\(done) of \(list.count)") {
         HStack(spacing: 6) {
-          StreakBadge(days: days).frame(maxWidth: .infinity)
+          StreakBadge(today: today).frame(maxWidth: .infinity)
           ForEach(next.isEmpty ? Array(rest.suffix(3)) : next, id: \.id) { MilestoneBadge(milestone: $0).frame(maxWidth: .infinity) }
         }
       }
@@ -62,24 +63,67 @@ private struct Ring<Glyph: View>: View {
   }
 }
 
-/// Your current streak: the days in the middle, ringed toward the next streak milestone.
+/// The streak's week: a ring in seven parts, one a day, with the flame and the day in the middle,
+/// and under it today's pawns, outlined until today's game pays them.
 struct StreakBadge: View {
-  var days: Int
-  static let steps = [3, 7, 30]
+  var today: StreakToday
 
   var body: some View {
-    let goal = Self.steps.first { $0 > days }
-    let share = goal.map { Double(days) / Double($0) } ?? 1
-    let lit = days > 0
+    let lit = today.paid
     VStack(spacing: 4) {
-      Ring(share: share, tint: Theme.warn) {
-        VStack(spacing: 0) {
-          Icon(name: "flame", size: 13, filled: lit)
-          Text("\(days)").font(.system(size: 13, weight: .heavy).monospacedDigit())
+      ZStack {
+        ForEach(0..<7, id: \.self) { i in
+          let part = 1.0 / 7
+          let gap = 1.6 / (2 * .pi * ringRadius)
+          Circle().trim(from: Double(i) * part + gap, to: Double(i + 1) * part - gap)
+            .stroke(color(i), style: StrokeStyle(lineWidth: 3.5))
+            .rotationEffect(.degrees(-90))
+            .frame(width: ringRadius * 2, height: ringRadius * 2)
         }
-        .foregroundStyle(lit ? Theme.warn : Theme.text3)
+        VStack(spacing: 0) {
+          Icon(name: "flame", size: 12, filled: lit).foregroundStyle(lit ? Theme.warn : Theme.text2)
+          Text("\(today.day)").font(.system(size: 13, weight: .heavy).monospacedDigit()).foregroundStyle(Theme.text)
+        }
       }
-      Text(days == 1 ? "1 day" : "\(days) days").font(.system(size: 11)).foregroundStyle(lit ? Theme.text2 : Theme.text3).lineLimit(1)
+      .frame(width: 52, height: 52)
+      .animation(.easeOut(duration: 0.45), value: lit)
+      HStack(spacing: 1) {
+        ForEach(0..<today.pawns, id: \.self) { _ in
+          PawnMark(filled: lit).frame(width: 12, height: 12)
+        }
+      }
+      .frame(height: 13)
+      .foregroundStyle(Theme.pawn)
+    }
+    .accessibilityElement()
+    .accessibilityLabel("Streak day \(today.day), \(today.pawns) pawn\(today.pawns == 1 ? "" : "s") a day\(lit ? ", today's paid" : "")")
+  }
+
+  /// Days before today in the week are lit; today's part is dim until its game pays.
+  private func color(_ i: Int) -> SwiftUI.Color {
+    let at = today.weekday - 1
+    if i < at { return Theme.pawn }
+    if i == at { return today.paid ? Theme.pawn : SwiftUI.Color(hex: 0x6b5a2a) }
+    return Theme.surface3
+  }
+}
+
+/// A small pawn, filled or as an outline.
+private struct PawnMark: View {
+  var filled: Bool
+
+  var body: some View {
+    let parts = Icon.specs["pawn"]?.parts ?? []
+    Canvas { context, canvas in
+      let k = canvas.width / 24
+      context.scaleBy(x: k, y: k)
+      for part in parts {
+        if filled {
+          context.fill(part.shape.path, with: .foreground)
+        } else {
+          context.stroke(part.shape.path, with: .foreground, style: StrokeStyle(lineWidth: 1.8, lineJoin: .round))
+        }
+      }
     }
   }
 }

@@ -26,15 +26,6 @@ struct RunBar<Actions: View>: View {
   }
 }
 
-/// The run's score in the app bar: the pawns it has earned.
-struct RunCount: View {
-  var value: Int
-  var body: some View {
-    Text("\(value) pawn\(value == 1 ? "" : "s")")
-      .font(.system(size: 13, weight: .semibold).monospacedDigit()).foregroundStyle(Theme.text2).fixedSize()
-  }
-}
-
 /// The move clock: a ring that empties as the budget goes, then greys out
 /// at nothing. Running out ends nothing.
 struct RunClock: View {
@@ -66,19 +57,18 @@ struct RunClock: View {
 }
 
 /// The app bar over a run: the opening it is in, the clock on your
-/// turn, and the pawns the run has earned.
+/// turn, and your pawns.
 struct RunHeaderBar: View {
   let model: RunModel
   let onExit: () -> Void
 
   var body: some View {
-    let state = model.session.state
     RunBar(title: "Middlegame", subtitle: openingName(model.tree, model.openingId), onClose: onExit) {
       if let budget = clockSeconds(model.prefs.clock), model.live, !model.held, model.myTurn {
         RunClock(budget: budget, since: model.turnStarted).id(model.turnStarted)
       }
-      RunCount(value: state.extras.pawns)
       ModeSettingsButton()
+      PawnCounter()
     }
   }
 }

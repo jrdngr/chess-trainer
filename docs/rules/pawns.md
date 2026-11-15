@@ -25,3 +25,7 @@ target. Tests: the `docs/rules/pawns.md` suite in
    the counter on screen takes it when it arrives. A run's score is the
    pawns its events earned, the streak's aside.
 7. **A personal best is moves survived,** for Play and for Middlegame alike.
+8. **The streak ring** on Milestones has a part for each day of the
+   streak's week. Before today's game it shows the day the game will make
+   and the pawns it will pay as outlines; once played, the day it made and
+   the pawns filled in.

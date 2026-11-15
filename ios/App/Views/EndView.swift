@@ -81,11 +81,12 @@ struct EndView: View {
     VStack(spacing: 0) {
       if standalone {
         RunBar(title: "Middlegame", subtitle: openingName(model.tree, run.enteredIn ?? run.openingId), onClose: onExit) {
-          EmptyView()
+          PawnCounter()
         }
       }
       scroll.modifier(RunDebugScroll())
     }
+    .pawnFlights(orientation: run.color)
     .onAppear { model.endSeen = true }
     .task {
       guard flashing else { return }
@@ -284,8 +285,7 @@ struct EndView: View {
       Spacer()
       Text(openingName(model.tree, playedNode.id)).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
       Spacer()
-      // Balances the close button, so the title sits centered.
-      Color.clear.frame(width: 38, height: 38)
+      PawnCounter()
     }
   }
 
