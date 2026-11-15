@@ -35,3 +35,10 @@ extension Color {
     self.init(red: Double((hex >> 16) & 0xff) / 255, green: Double((hex >> 8) & 0xff) / 255, blue: Double(hex & 0xff) / 255)
   }
 }
+
+extension Color {
+  /// A color from "#rrggbb".
+  init(hexString: String) {
+    self.init(hex: UInt32(hexString.dropFirst(), radix: 16) ?? 0)
+  }
+}
