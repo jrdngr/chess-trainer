@@ -4,32 +4,23 @@ import Model
 import SwiftUI
 import UIKit
 
-/// What a run you set up came to, in points when moments or missions
-/// were on, else in moves; and a new best.
+/// What a run you set up came to: the pawns it earned, the moves it survived, and a new best.
 struct RunSummary: View {
   let finish: Finish
   let prefs: RunPrefs
-  let scoredInPoints: Bool
   /// The record as it stood before this run.
   let before: RunRecord
-  /// The record keeps points alone (Middlegame's), so only a points best counts.
-  var pointsOnly = false
 
   var body: some View {
     let state = finish.ended
     let extras = state.extras
     VStack(spacing: 4) {
       Text(endingTitle(finish.how, state.run.played.count)).font(.system(size: 13)).foregroundStyle(Theme.text2)
-      if scoredInPoints {
-        Text("\(extras.points) point\(extras.points == 1 ? "" : "s")").font(.system(size: 26, weight: .bold).monospacedDigit())
-          .foregroundStyle(Theme.text).padding(.top, 4)
-        Text("Survived \(state.moves) move\(state.moves == 1 ? "" : "s")").font(.system(size: 13)).foregroundStyle(Theme.text)
-        if !extraStats.isEmpty {
-          Text(extraStats.joined(separator: " \u{00b7} ")).font(.system(size: 13)).foregroundStyle(Theme.text2)
-        }
-      } else {
-        Text("Survived \(state.moves) move\(state.moves == 1 ? "" : "s")").font(.system(size: 22, weight: .bold))
-          .foregroundStyle(Theme.text).padding(.top, 4)
+      Text("\(extras.pawns) pawn\(extras.pawns == 1 ? "" : "s")").font(.system(size: 26, weight: .bold).monospacedDigit())
+        .foregroundStyle(Theme.text).padding(.top, 4)
+      Text("Survived \(state.moves) move\(state.moves == 1 ? "" : "s")").font(.system(size: 13)).foregroundStyle(Theme.text)
+      if !extraStats.isEmpty {
+        Text(extraStats.joined(separator: " \u{00b7} ")).font(.system(size: 13)).foregroundStyle(Theme.text2)
       }
       if let best = newBestText {
         Text(best).font(.system(size: 13)).foregroundStyle(Theme.good).padding(.top, 4)
@@ -45,12 +36,8 @@ struct RunSummary: View {
   }
 
   private var newBestText: String? {
-    let moves = finish.ended.moves, points = finish.ended.extras.points
-    let moveBest = !pointsOnly && !ended && moves > 0 && moves > before.global.best
-    let pointBest = scoredInPoints && !ended && points > 0 && points > before.global.bestPoints
-    if moveBest && pointBest { return "New best, in points and moves" }
-    if pointBest { return pointsOnly ? "New best" : "New best score" }
-    return moveBest ? "New best" : nil
+    let moves = finish.ended.moves
+    return !ended && moves > 0 && moves > before.global.best ? "New best" : nil
   }
 
   private var extraStats: [String] {
@@ -106,7 +93,6 @@ struct MovesSurvivedList: View {
   let opening: String
   let record: RunRecord
   let moves: Int
-  /// What the record counts: moves survived, or Middlegame's points.
   var title = "Moves survived"
 
   var body: some View {

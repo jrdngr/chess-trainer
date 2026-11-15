@@ -73,8 +73,6 @@ public struct Glow: Equatable, Sendable, Codable {
 public let MOMENT_GAP: Double = 150
 public let MOMENT_FLOOR: Double = 100
 public let MOMENT_FOUND: Double = 50
-public let MOMENT_BONUS = 10
-public let MOMENT_STREAK_BONUS = 5
 
 private let MATE: Double = 10_000
 
@@ -85,11 +83,6 @@ public func isMoment(_ color: Color, _ best: Double, _ second: Double?) -> Bool 
   let next = color == .w ? second : -second
   if top >= MATE { return next < MATE }
   return top >= MOMENT_FLOOR && top - next >= MOMENT_GAP
-}
-
-/// The bonus for a moment found, with `streak` found in a row before it.
-public func momentBonus(_ streak: Int) -> Int {
-  MOMENT_BONUS + MOMENT_STREAK_BONUS * streak
 }
 
 /* ── a run ── */
@@ -189,7 +182,7 @@ public func playYours(_ state: RunTally, _ san: String, _ missed: String? = nil,
   next.run.played.append(san)
   next.run.survived += 1
   next.moves += 1
-  next.extras = extras ?? prepExtras(state.extras)
+  next.extras = extras ?? state.extras
   if let missed { next.misses.append(Miss(ply: run.played.count, fen: run.fen, played: san, expected: missed)) }
   return next
 }
@@ -242,7 +235,6 @@ public struct RunScore: Equatable, Sendable, Codable {
   public var runs = 0
   /// Runs you ended yourself.
   public var ended = 0
-  public var bestPoints = 0
   public init() {}
 }
 
@@ -262,21 +254,20 @@ public func openingsAlong(_ tree: OpeningTree, _ line: [String]) -> [String] {
   return out.keys
 }
 
-private func scored(_ score: RunScore?, _ moves: Int, _ points: Int) -> RunScore {
+private func scored(_ score: RunScore?, _ moves: Int) -> RunScore {
   var out = score ?? RunScore()
   out.best = max(out.best, moves)
   out.recent = Array((out.recent + [moves]).suffix(RECENT_RUNS))
   out.history = Array((out.history + [moves]).suffix(HISTORY_RUNS))
   out.runs += 1
-  out.bestPoints = max(out.bestPoints, points)
   return out
 }
 
 /// Log a finished run against the global record and every opening it went through.
-public func recordRun(_ record: RunRecord, _ tree: OpeningTree, _ line: [String], _ moves: Int, _ points: Int? = nil) -> RunRecord {
+public func recordRun(_ record: RunRecord, _ tree: OpeningTree, _ line: [String], _ moves: Int) -> RunRecord {
   var out = record
-  for id in openingsAlong(tree, line) { out.openings[id] = scored(out.openings[id], moves, points ?? moves) }
-  out.global = scored(record.global, moves, points ?? moves)
+  for id in openingsAlong(tree, line) { out.openings[id] = scored(out.openings[id], moves) }
+  out.global = scored(record.global, moves)
   return out
 }
 
@@ -314,7 +305,6 @@ extension RunScore {
     history = Array((try c.decodeIfPresent([Int].self, forKey: .history) ?? recent).suffix(HISTORY_RUNS))
     runs = try c.decodeIfPresent(Int.self, forKey: .runs) ?? 0
     ended = try c.decodeIfPresent(Int.self, forKey: .ended) ?? 0
-    bestPoints = try c.decodeIfPresent(Int.self, forKey: .bestPoints) ?? 0
   }
 }
 

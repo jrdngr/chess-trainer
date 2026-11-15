@@ -2575,22 +2575,19 @@
       "recent": [],
       "history": [],
       "runs": 0,
-      "ended": 0,
-      "bestPoints": 0
+      "ended": 0
     },
     "HISTORY_RUNS": 16,
-    "MISSION_BONUS": 15,
     "MISSION_BREAK": 3,
     "MISSION_DUG": -50,
     "MISSION_LEAD": 100,
     "MISSION_WINDOW": 15,
-    "MOMENT_BONUS": 10,
     "MOMENT_FLOOR": 100,
     "MOMENT_FOUND": 50,
     "MOMENT_GAP": 150,
-    "MOMENT_STREAK_BONUS": 5,
     "NO_EXTRAS": {
-      "points": 0,
+      "pawns": 0,
+      "endgame": false,
       "moments": {
         "found": 0,
         "missed": 0,

@@ -6,7 +6,7 @@ import Testing
 extension Earned {
   var json: JSON {
     obj([
-      "points": points,
+      "pawns": pawns,
       "moment": moment.map { obj(["found": $0.found, "bonus": $0.bonus]) } ?? .null,
       "mission": mission.map { obj(["kind": $0.kind.rawValue, "result": $0.result.rawValue, "bonus": $0.bonus]) } ?? .null,
     ])
@@ -30,11 +30,10 @@ extension Earned {
       let r = judgedExtras(a[0].decoded(Extras.self), prefs(a[1]), color(a[2]), move)
       return obj(["extras": encoded(r.extras), "earned": r.earned.json])
     },
-    "run.prepExtras": { encoded(prepExtras($0[0].decoded(Extras.self))) },
     "run.firstMission": { a in
       encoded(firstMission(a[0].decoded(Extras.self), missions: a[1]["missions"].bool, color(a[2]), a[3].number, a.count > 4 ? a[4].stringOrNil : nil))
     },
-  ], only: ["run.missionFor", "run.stepMission", "run.judgedExtras", "run.prepExtras"])
+  ], only: ["run.missionFor", "run.stepMission", "run.judgedExtras"])
   // firstMission no longer matches the web: the first mission comes from the
   // eval even where the pawns form a plan. Its own tests are below.
 }
@@ -81,7 +80,7 @@ extension Earned {
   extras.mission = early
   let settled = theirExtras(extras, .w, 250, walk("e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 dxc6"))
   #expect(settled.earned?.mission?.result == .done)
-  #expect(settled.extras.points == MISSION_BONUS)
+  #expect(settled.extras.pawns == pawnsFor(.mission))
   #expect(settled.extras.missions.done == 1)
   #expect(settled.extras.mission == nil)
   #expect(settled.extras.missionBreak == MISSION_BREAK)

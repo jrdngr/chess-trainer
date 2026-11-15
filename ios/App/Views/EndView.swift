@@ -10,7 +10,7 @@ import SwiftUI
 /// Run and Middlegame), then what
 /// the run came to and the rating it moved. A run you set up
 /// (no Play round) adds its own parts: `RunEndParts`. A Middlegame
-/// run names its start Handoff, scores in points and offers Same line.
+/// run names its start Handoff and offers Same line.
 struct EndView: View {
   let model: RunModel
   let finish: Finish
@@ -194,9 +194,7 @@ struct EndView: View {
       ratingCard
       RatingsList(items: moved).padding(.top, 10)
       if standalone {
-        RunSummary(
-          finish: finish, prefs: model.prefs, scoredInPoints: model.scoredInPoints, before: model.before ?? RunRecord(),
-          pointsOnly: middlegame)
+        RunSummary(finish: finish, prefs: model.prefs, before: model.before ?? RunRecord())
       } else {
         summary
       }
@@ -207,7 +205,7 @@ struct EndView: View {
           if let handoff = model.handoff {
             MovesSurvivedList(
               tree: model.tree, line: Array(handoff.line.prefix(handoff.prep)), opening: playedNode.id,
-              record: store.state.middlegame, moves: finish.ended.extras.points, title: "Middlegame points")
+              record: store.state.middlegame, moves: finish.ended.moves)
           } else {
             MovesSurvivedList(
               tree: model.tree, line: run.played, opening: playedNode.id, record: store.state.runRecord,
@@ -336,11 +334,11 @@ struct EndView: View {
     let answers = model.session.answers
     let found = answers.filter(\.correct).count
     let times = model.session.prepTimes
-    let scored = state.moves > 0 || state.extras.points > 0
+    let scored = state.moves > 0 || state.extras.pawns > 0
     let title = endingTitle(finish.how, state.run.played.count)
     return VStack(spacing: 6) {
       if scored {
-        Text("\(state.extras.points) point\(state.extras.points == 1 ? "" : "s")").font(.largeTitle.bold()).foregroundStyle(Theme.text)
+        Text("\(state.extras.pawns) pawn\(state.extras.pawns == 1 ? "" : "s")").font(.largeTitle.bold()).foregroundStyle(Theme.text)
         Text(title).font(.subheadline).foregroundStyle(isBad ? Theme.bad : Theme.text2)
       } else if !answers.isEmpty && found == answers.count {
         Text("Prep complete").font(.title.bold()).foregroundStyle(Theme.text)

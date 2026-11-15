@@ -56,7 +56,7 @@ import Testing
     var old = String(decoding: try JSONEncoder().encode(state), as: UTF8.self)
     for (new, was) in [
       ("\"playbookId\"", "\"repertoireId\""), ("\"playbooks\"", "\"repertoires\""), ("\"playbookOrder\"", "\"repertoireOrder\""),
-      ("\"runRecord\"", "\"survival\""), ("\"version\":3", "\"version\":2"), ("\"run\":{", "\"survival\":{"), ("\"oldPlay\":{", "\"run\":{"),
+      ("\"runRecord\"", "\"survival\""), ("\"version\":\(SAVE_VERSION)", "\"version\":2"), ("\"run\":{", "\"survival\":{"), ("\"oldPlay\":{", "\"run\":{"),
       ("\"mode\":\"run\"", "\"mode\":\"survival\""), ("\"mode\":\"play\"", "\"mode\":\"autopilot\""), ("\"via\":\"playbook\"", "\"via\":\"repertoire\""),
       ("\"remove-playbook\"", "\"remove-repertoire\""),
       ("\"play\":{", "\"autopilot\":{"), ("\"either\"", "\"random\""),
@@ -68,6 +68,19 @@ import Testing
     #expect(read.version == 2)
     read.version = SAVE_VERSION
     #expect(read == state)
+  }
+
+  /// Rule 5: version 4 drops Middlegame's bests in points and keeps its counts.
+  @Test func middlegameRecordsDropTheirPoints() throws {
+    var state = AppState()
+    state.version = 3
+    let tree = openingTree(bookIndex)
+    state.middlegame = recordRun(RunRecord(), tree, line("d4 d5 c4"), 140)
+    state.middlegame = recordEndedRun(state.middlegame, tree, line("d4 d5 c4"))
+    state.migrate(bookIndex)
+    #expect(state.middlegame.global.best == 0 && state.middlegame.global.recent.isEmpty)
+    #expect(state.middlegame.global.runs == 1 && state.middlegame.global.ended == 1)
+    #expect(state.middlegame.openings.values.allSatisfy { $0.best == 0 && $0.runs == 1 })
   }
 
   /// A current save reads as it is.

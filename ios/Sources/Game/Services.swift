@@ -35,6 +35,8 @@ public enum GameSignal: Equatable, Sendable {
   case toast(String)
   /// "End of the book" over a Growth sitting's board.
   case edgeFlash
+  /// Pawns earned.
+  case pawns(PawnAward)
 }
 
 /// Where the game sends its signals: the app turns buzzes into haptics; a headless game keeps them all.

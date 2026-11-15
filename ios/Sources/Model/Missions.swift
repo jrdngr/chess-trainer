@@ -35,7 +35,6 @@ public let MISSION_LEAD: Double = 100
 public let MISSION_DUG: Double = -50
 public let CONVERT_FROM: Double = 200
 public let CONVERT_WINDOW = 6
-public let MISSION_BONUS = 15
 public let MISSION_BREAK = 3
 
 private func mine(_ color: Color, _ cp: Double) -> Double { color == .w ? cp : -cp }
@@ -139,7 +138,10 @@ public struct MissionTally: Equatable, Sendable, Codable {
 
 /// Where a run's extras stand.
 public struct Extras: Equatable, Sendable, Codable {
-  public var points = 0
+  /// Pawns this run has earned: its score.
+  public var pawns = 0
+  /// The game has reached endgame rules, and paid for it.
+  public var endgame = false
   public var moments = Moments()
   public var mission: Mission?
   /// Your judged moves still to go before the next mission is set.
@@ -150,14 +152,14 @@ public struct Extras: Equatable, Sendable, Codable {
 
 public let NO_EXTRAS = Extras()
 
-/// What a judged move did, for the screen to show.
+/// What a judged move did, for the screen to show. A bonus is the pawns it paid.
 public struct Earned: Equatable, Sendable {
-  public var points: Int
+  public var pawns: Int
   public var moment: (found: Bool, bonus: Int)?
   public var mission: (kind: MissionKind, result: MissionResult, bonus: Int)?
 
   public static func == (a: Earned, b: Earned) -> Bool {
-    a.points == b.points && a.moment?.found == b.moment?.found && a.moment?.bonus == b.moment?.bonus
+    a.pawns == b.pawns && a.moment?.found == b.moment?.found && a.moment?.bonus == b.moment?.bonus
       && a.mission?.kind == b.mission?.kind && a.mission?.result == b.mission?.result && a.mission?.bonus == b.mission?.bonus
   }
 }
@@ -189,13 +191,13 @@ public struct JudgedMove: Sendable {
   }
 }
 
-/// One of your moves the engine judged: the move earns, a moment settles, a mission steps.
+/// One of your moves the engine judged: a moment settles, a mission steps, and either may pay.
 public func judgedExtras(_ extras: Extras, _ prefs: ExtrasPrefs, _ color: Color, _ move: JudgedMove) -> (extras: Extras, earned: Earned) {
   var moments = extras.moments
   var momentEarned: (found: Bool, bonus: Int)?
   if prefs.moments && move.moment {
     if move.found {
-      let bonus = momentBonus(moments.streak)
+      let bonus = pawnsFor(.moment)
       moments.found += 1
       moments.streak += 1
       momentEarned = (true, bonus)
@@ -205,7 +207,7 @@ public func judgedExtras(_ extras: Extras, _ prefs: ExtrasPrefs, _ color: Color,
       momentEarned = (false, 0)
     }
   }
-  var points = extras.points + 1 + (momentEarned?.bonus ?? 0)
+  var pawns = extras.pawns + (momentEarned?.bonus ?? 0)
   var mission = extras.mission
   var missionBreak = extras.missionBreak
   var missions = extras.missions
@@ -214,9 +216,9 @@ public func judgedExtras(_ extras: Extras, _ prefs: ExtrasPrefs, _ color: Color,
     if let current = mission {
       let stepped = stepMission(current, color, move.after, move.fen)
       if let result = stepped.result {
-        let bonus = result == .done ? MISSION_BONUS : 0
+        let bonus = result == .done ? pawnsFor(.mission) : 0
         missionEarned = (current.kind, result, bonus)
-        points += bonus
+        pawns += bonus
         if result == .done { missions.done += 1 } else { missions.failed += 1 }
         mission = nil
         missionBreak = MISSION_BREAK
@@ -228,32 +230,25 @@ public func judgedExtras(_ extras: Extras, _ prefs: ExtrasPrefs, _ color: Color,
       if missionBreak == 0 { mission = missionFor(color, move.after, move.fen) }
     }
   }
-  var out = Extras()
-  out.points = points
+  var out = extras
+  out.pawns = pawns
   out.moments = moments
   out.mission = mission
   out.missionBreak = missionBreak
   out.missions = missions
-  return (out, Earned(points: points - extras.points, moment: momentEarned, mission: missionEarned))
+  return (out, Earned(pawns: pawns - extras.pawns, moment: momentEarned, mission: missionEarned))
 }
 
 /// The opponent's move: a Convert it mission may settle on it.
 public func theirExtras(_ extras: Extras, _ color: Color, _ cp: Double, _ fen: String) -> (extras: Extras, earned: Earned?) {
   guard let current = extras.mission, let result = theirMoveMission(current, color, cp, fen) else { return (extras, nil) }
-  let bonus = result == .done ? MISSION_BONUS : 0
+  let bonus = result == .done ? pawnsFor(.mission) : 0
   var out = extras
-  out.points += bonus
+  out.pawns += bonus
   if result == .done { out.missions.done += 1 } else { out.missions.failed += 1 }
   out.mission = nil
   out.missionBreak = MISSION_BREAK
-  return (out, Earned(points: bonus, moment: nil, mission: (current.kind, result, bonus)))
-}
-
-/// A move your prep answered: a point.
-public func prepExtras(_ extras: Extras) -> Extras {
-  var out = extras
-  out.points += 1
-  return out
+  return (out, Earned(pawns: bonus, moment: nil, mission: (current.kind, result, bonus)))
 }
 
 /// The first mission, set from the eval where the prep runs out.

@@ -26,13 +26,11 @@ struct RunBar<Actions: View>: View {
   }
 }
 
-/// The run's score in the app bar, said with its unit.
+/// The run's score in the app bar: the pawns it has earned.
 struct RunCount: View {
   var value: Int
-  /// Points, when moments or missions score; else moves survived.
-  var points: Bool
   var body: some View {
-    Text("\(value) \(points ? "pt" : "move")\(value == 1 ? "" : "s")")
+    Text("\(value) pawn\(value == 1 ? "" : "s")")
       .font(.system(size: 13, weight: .semibold).monospacedDigit()).foregroundStyle(Theme.text2).fixedSize()
   }
 }
@@ -68,7 +66,7 @@ struct RunClock: View {
 }
 
 /// The app bar over a run: the opening it is in, the clock on your
-/// turn, and the run's points (or moves, with no extras on).
+/// turn, and the pawns the run has earned.
 struct RunHeaderBar: View {
   let model: RunModel
   let onExit: () -> Void
@@ -79,7 +77,7 @@ struct RunHeaderBar: View {
       if let budget = clockSeconds(model.prefs.clock), model.live, !model.held, model.myTurn {
         RunClock(budget: budget, since: model.turnStarted).id(model.turnStarted)
       }
-      RunCount(value: model.scoredInPoints ? state.extras.points : state.moves, points: model.scoredInPoints)
+      RunCount(value: state.extras.pawns)
       ModeSettingsButton()
     }
   }

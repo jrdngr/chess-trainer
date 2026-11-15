@@ -40,7 +40,7 @@ struct MiddlegameSetupView: View {
             ToggleRow(label: "Undefended flash", on: prefs.undefendedFlash) { set { $0.undefendedFlash.toggle() } }
           }
           if record.global.runs > 0 {
-            PlaySection(title: "Middlegame points")
+            PlaySection(title: "Moves survived")
             ListCard {
               if let opening { ScoreRow(name: opening.name, score: runFor(record, opening.id)) }
               ScoreRow(name: "All openings", score: record.global)

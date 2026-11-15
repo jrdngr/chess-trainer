@@ -10,17 +10,7 @@ private func move(lost: Double, after: Double = 0, moment: Bool = false, found: 
 }
 
 @Suite("docs/rules/scoring.md") struct ScoringRules {
-  /// Rule 1: a prepared move is a point, a judged move a point, a mission done 15 more.
-  @Test func points() {
-    #expect(prepExtras(NO_EXTRAS).points == 1)
-    #expect(judgedExtras(NO_EXTRAS, ALL, .w, move(lost: 300)).earned.points == 1)
-    var edge = NO_EXTRAS
-    edge.mission = Mission(kind: .edge, held: EDGE_MOVES - 1)
-    let done = judgedExtras(edge, ALL, .w, move(lost: 0, after: 150))
-    #expect(done.earned.points == 1 + 15 && done.extras.missions.done == 1)
-  }
-
-  /// Rule 2: what a moment is, what finding one is worth, and what missing one breaks.
+  /// Rule 1: what a moment is, what finding one pays, and what missing one breaks.
   @Test func moments() {
     #expect(isMoment(.w, 250, 100))
     #expect(!isMoment(.w, 249, 100))
@@ -29,16 +19,15 @@ private func move(lost: Double, after: Double = 0, moment: Bool = false, found: 
     #expect(isMoment(.w, 10_000, 300))
     #expect(!isMoment(.w, 10_000, 10_000))
     #expect(MOMENT_FOUND == 50)
-    #expect(momentBonus(0) == 10 && momentBonus(2) == 20)
     var extras = NO_EXTRAS
     extras.moments.streak = 2
     let missed = judgedExtras(extras, ALL, .w, move(lost: 300, moment: true, found: false))
     #expect(missed.extras.moments.streak == 0)
     let found = judgedExtras(extras, ALL, .w, move(lost: 0, moment: true, found: true))
-    #expect(found.earned.moment?.bonus == 20 && found.extras.moments.streak == 3)
+    #expect(found.earned.pawns == 2 && found.extras.pawns == 2 && found.extras.moments.streak == 3)
   }
 
-  /// Rule 3: the first mission is set from the eval where the prep runs out.
+  /// Rule 2: the first mission is set from the eval where the prep runs out.
   @Test func firstMissionFromTheEval() {
     let pieces = "r3k3/8/8/8/8/8/8/R3K3 w - - 0 1"
     #expect(firstMission(NO_EXTRAS, missions: true, .w, 200, pieces).mission?.kind == .convert)
@@ -52,7 +41,7 @@ private func move(lost: Double, after: Double = 0, moment: Bool = false, found: 
     #expect(stepMission(Mission(kind: .convert, pieces: PieceCount(mine: 1, theirs: 1)), .w, 99, pieces).result == .failed)
   }
 
-  /// Rule 4: three judged moves after a mission settles, the next is set.
+  /// Rule 3: three judged moves after a mission settles, the next is set. A mission done pays 2 pawns.
   @Test func missionsFollowEachOther() {
     var extras = NO_EXTRAS
     extras.mission = Mission(kind: .edge)
@@ -63,5 +52,10 @@ private func move(lost: Double, after: Double = 0, moment: Bool = false, found: 
     #expect(extras.mission == nil)
     extras = judgedExtras(extras, ALL, .w, move(lost: 0, after: -200)).extras
     #expect(extras.mission?.kind == .dig)
+    #expect(extras.pawns == 0)
+    var edge = NO_EXTRAS
+    edge.mission = Mission(kind: .edge, held: EDGE_MOVES - 1)
+    let done = judgedExtras(edge, ALL, .w, move(lost: 0, after: 150))
+    #expect(done.earned.pawns == 2 && done.extras.missions.done == 1)
   }
 }

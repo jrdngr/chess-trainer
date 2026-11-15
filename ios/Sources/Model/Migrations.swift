@@ -3,7 +3,7 @@ import Foundation
 
 /// The save's version. A save from before it is brought up by `decodeSave`
 /// and `migrate`; a new save starts at it.
-public let SAVE_VERSION = 3
+public let SAVE_VERSION = 4
 
 /// Runs a day of a card's interval stood for, when intervals were days.
 let RUNS_PER_DAY: Double = 3
@@ -14,11 +14,13 @@ extension AppState {
   /// 1: the Playbook holds only book moves.
   /// 2: schedules count runs, not days.
   /// 3: names are Play, Playbook and Run (done on the JSON by `decodeSave`).
+  /// 4: Middlegame's record counts moves survived, not points.
   @discardableResult
   public mutating func migrate(_ index: ReferenceIndex) -> Bool {
     if version >= SAVE_VERSION { return false }
     if version < 1 { removeNonBookMoves(index) }
     if version < 2 { scheduleByRuns() }
+    if version < 4 { middlegame = middlegameInMoves(middlegame) }
     version = SAVE_VERSION
     return true
   }
@@ -34,6 +36,20 @@ extension AppState {
       endgames.cards[id] = card
     }
   }
+}
+
+/// A Middlegame record kept in points, with its points dropped: runs played and ended stay.
+func middlegameInMoves(_ record: RunRecord) -> RunRecord {
+  func counts(_ score: RunScore) -> RunScore {
+    var out = RunScore()
+    out.runs = score.runs
+    out.ended = score.ended
+    return out
+  }
+  var out = RunRecord()
+  out.global = counts(record.global)
+  out.openings = record.openings.mapValues(counts)
+  return out
 }
 
 /// Reads a saved state, renaming what a save from before version 3 calls

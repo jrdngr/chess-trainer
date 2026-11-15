@@ -25,7 +25,7 @@ private func has(_ effects: [Effect], _ match: (Effect) -> Bool) -> Bool { effec
 
 /// At the end of the Ruy Lopez prep, on White's turn with nothing prepared.
 private func prepDone() throws -> RunSession {
-  prepRanOut(try session(at: line("e4 e5 Nf3 Nc6 Bb5 a6")), bookIndex)
+  prepRanOut(try session(at: line("e4 e5 Nf3 Nc6 Bb5 a6")), bookIndex).session
 }
 
 private let START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -73,7 +73,7 @@ private let ROOKS = "r1r3k1/5ppp/8/8/8/8/5PPP/R1R3K1 w - - 0 1"
     #expect(has(step.effects) { if case .pop(let pop) = $0 { pop.book } else { false } })
     var missed = try session(at: line("e4 e5 Nf3 Nc6 Bb5 a6"))
     missed.prepStatus = .off
-    #expect(prepRanOut(missed, bookIndex).bookTo == nil)
+    #expect(prepRanOut(missed, bookIndex).session.bookTo == nil)
   }
 
   /// Rule 6: a costlier or uncommon move ends the book phase without ending the run.

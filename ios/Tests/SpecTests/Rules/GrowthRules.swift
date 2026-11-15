@@ -24,10 +24,10 @@ private func morra() -> (AppState, String) {
     let (state, _) = morra()
     let begun = try #require(startRun(StartOptions(steer: .lines, tree: tree, reps: state.playbookList, node: tree.root, color: .w)))
     let clean = beginSession(begun)
-    #expect(prepRanOut(clean, bookIndex).prepEnd == clean.state.run.played)
+    #expect(prepRanOut(clean, bookIndex).session.prepEnd == clean.state.run.played)
     var missed = clean
     missed.state = playYours(clean.state, "d4", "e4")
-    #expect(prepRanOut(missed, bookIndex).prepEnd == nil)
+    #expect(prepRanOut(missed, bookIndex).session.prepEnd == nil)
   }
 
   /// Rules 3 and 4: the hole's answer turns yes once the pace reaches 1 on a known line.

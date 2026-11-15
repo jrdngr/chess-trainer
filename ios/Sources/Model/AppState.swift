@@ -98,8 +98,12 @@ public struct AppState: Equatable, Sendable, Codable {
   public var strength = PlayerStrength()
   /// Endgame mode: its cards, family ratings and saved positions.
   public var endgames = EndgameRecord()
-  /// Middlegame mode's points, per opening and overall: a Run record kept in points.
+  /// Middlegame mode's moves survived, per opening and overall.
   public var middlegame = RunRecord()
+  /// Pawns to spend in the Pawn Shop.
+  public var pawns = 0
+  /// The days in a row with a game, for streak pawns.
+  public var pawnStreak = PawnStreak()
   /// The games you played here, newest first, at most GAMES_CAP.
   public var games: [GameRecord] = []
   /// Which `migrate` steps the save has had.
@@ -108,7 +112,7 @@ public struct AppState: Equatable, Sendable, Codable {
 
   enum CodingKeys: String, CodingKey {
     case playbooks, playbookOrder, cards, score, runRecord, mistakes, log, events, settings, strength, endgames, middlegame
-    case games, version
+    case games, version, pawns, pawnStreak
   }
 
   /// A save from before a field existed takes its default.
@@ -128,6 +132,8 @@ public struct AppState: Equatable, Sendable, Codable {
     endgames = try c.decodeIfPresent(EndgameRecord.self, forKey: .endgames) ?? endgames
     middlegame = try c.decodeIfPresent(RunRecord.self, forKey: .middlegame) ?? middlegame
     games = try c.decodeIfPresent([GameRecord].self, forKey: .games) ?? games
+    pawns = try c.decodeIfPresent(Int.self, forKey: .pawns) ?? pawns
+    pawnStreak = try c.decodeIfPresent(PawnStreak.self, forKey: .pawnStreak) ?? pawnStreak
     version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 0
   }
 
@@ -153,17 +159,17 @@ extension AppState {
     score = recordRound(score, tree, round)
   }
 
-  public mutating func recordRunEnd(_ tree: OpeningTree, _ line: [String], _ moves: Int, _ points: Int) {
-    runRecord = recordRun(runRecord, tree, line, moves, points)
+  public mutating func recordRunEnd(_ tree: OpeningTree, _ line: [String], _ moves: Int) {
+    runRecord = recordRun(runRecord, tree, line, moves)
   }
 
   public mutating func endRunEarly(_ tree: OpeningTree, _ line: [String]) {
     runRecord = recordEndedRun(runRecord, tree, line)
   }
 
-  /// A Middlegame run, logged in points against every opening your line went through.
-  public mutating func endMiddlegame(_ tree: OpeningTree, _ line: [String], _ points: Int) {
-    middlegame = recordRun(middlegame, tree, line, points, points)
+  /// A Middlegame run, logged in moves survived against every opening your line went through.
+  public mutating func endMiddlegame(_ tree: OpeningTree, _ line: [String], _ moves: Int) {
+    middlegame = recordRun(middlegame, tree, line, moves)
   }
 
   public mutating func endMiddlegameEarly(_ tree: OpeningTree, _ line: [String]) {

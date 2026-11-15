@@ -41,8 +41,6 @@ public struct Pop: Equatable, Sendable {
   public var found = false
   /// A book move past your prep.
   public var book = false
-  /// A moment found: the text is its bonus, shown on a filled pill.
-  public var moment = false
 }
 
 /// A miss being shown: the prepared move, drawn as a green arrow.
@@ -191,6 +189,8 @@ public enum Effect {
   case moment(found: Bool)
   /// The moment's move you missed, its squares red until your next move.
   case missedBest((from: String, to: String)?)
+  /// Pawns earned: onto the balance, popping out where they were earned.
+  case pawns(PawnAward)
   case finish(Finish)
 }
 
@@ -220,14 +220,35 @@ private func finish(_ session: RunSession, _ ended: RunTally, _ how: Ending) -> 
   return (next, [.finish(Finish(how: how, ended: ended, clean: clean, stub: clean != nil && session.answers.isEmpty, answers: session.answers))])
 }
 
-/// After any move: a finished game ends the run.
+/// After any move: reaching endgame rules pays once, a checkmate you gave pays, and a finished game ends the run.
 private func afterMove(_ session: RunSession, _ state: RunTally) -> Step {
+  var state = state
+  var effects: [Effect] = []
+  let fen = state.run.fen
+  if !state.extras.endgame && isEndgame(fen) {
+    state.extras.endgame = true
+    effects.append(earn(&state, PawnAward(.endgame, .board)))
+  }
+  let status = positionStatus(fen)
+  let won = status.checkmate && fenTurn(fen) != state.run.color
+  if won { effects.append(earn(&state, PawnAward(.checkmate, kingSquare(fen, fenTurn(fen)).map(PawnSource.square) ?? .board))) }
   var next = session
   next.state = state
-  let status = positionStatus(state.run.fen)
-  if !status.gameOver { return unchanged(next) }
-  if status.checkmate { return finish(next, state, fenTurn(state.run.fen) == state.run.color ? .lost : .won) }
-  return finish(next, state, .draw)
+  let ended: Step
+  if !status.gameOver {
+    ended = unchanged(next)
+  } else if status.checkmate {
+    ended = finish(next, state, won ? .won : .lost)
+  } else {
+    ended = finish(next, state, .draw)
+  }
+  return (ended.session, effects + ended.effects)
+}
+
+/// Pawns earned: counted on the run, and an effect to pay them out.
+private func earn(_ state: inout RunTally, _ award: PawnAward) -> Effect {
+  state.extras.pawns += award.count
+  return .pawns(award)
 }
 
 private func then(_ step: Step, _ more: (RunSession) -> Step) -> Step {
@@ -296,6 +317,7 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
       s.bookMoves += 1
     }
     effects.append(.buzz(expected.isEmpty ? 10 : 14))
+    let lastScored = s.lastScored
     let swing = evalSwing(run.color, s.lastScored ?? judged.before, judged.after)
     s.evalCp = judged.after
     if s.evalTrail.isEmpty { s.evalTrail.append(s.lastScored ?? judged.before) }
@@ -305,11 +327,9 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     let landed = applySan(run.fen, judged.san)
     if let landed { s.lastJudged = JudgedMark(ply: run.played.count, san: judged.san, from: landed.from, to: landed.to, swing: swing) }
     // Moments are a thing past your prep; a book move gives nothing away.
-    let scored = judgedExtras(s.state.extras, ExtrasPrefs(prefs), run.color, JudgedMove(
+    var scored = judgedExtras(s.state.extras, ExtrasPrefs(prefs), run.color, JudgedMove(
       lost: book ? 0 : judged.lost, after: judged.after, moment: judged.moment && expected.isEmpty, found: judged.found, fen: landed?.after))
-    if let moment = scored.earned.moment, moment.found, let landed {
-      effects.append(.pop(Pop(square: landed.to, text: "+\(moment.bonus)", tone: .up, found: true, moment: true)))
-    } else if book && ctx.play, let landed {
+    if book && ctx.play, let landed {
       effects.append(.pop(Pop(square: landed.to, text: secondsText(seconds), tone: speedTone(seconds), found: true, book: true)))
     } else if let score, let landed {
       effects.append(.pop(Pop(square: landed.to, text: score.cp > 0 ? "+\(JSNum(score.cp))" : "\u{2212}\(JSNum(-score.cp))", tone: score.tone)))
@@ -324,6 +344,14 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     if mateMissed { effects.append(.moment(found: false)) }
     let shown = scored.earned.moment.map { !$0.found } == true || mateMissed ? judged.best.flatMap { applySan(run.fen, $0) } : nil
     effects.append(.missedBest(shown.map { ($0.from, $0.to) }))
+    // What the move paid, from its square; a mission's from the goal card.
+    let at = landed.map { PawnSource.square($0.to) } ?? .board
+    if expected.isEmpty && punished(run.color, lastScored: lastScored, before: judged.before, lost: judged.lost) {
+      scored.extras.pawns += pawnsFor(.blunderPunished)
+      effects.append(.pawns(PawnAward(.blunderPunished, at)))
+    }
+    if let moment = scored.earned.moment, moment.found { effects.append(.pawns(PawnAward(.moment, at))) }
+    if let mission = scored.earned.mission, mission.result == .done { effects.append(.pawns(PawnAward(.mission, .goal))) }
     let moved = afterMove(s, playYours(s.state, judged.san, expected.first, scored.extras))
     return (moved.session, effects + moved.effects)
   }
@@ -370,6 +398,7 @@ private func theirMove(_ session: RunSession, _ state: RunTally) -> Step {
     if let earned = settled.earned {
       state.extras = settled.extras
       effects.append(.note(noteFor(earned)))
+      if earned.mission?.result == .done { effects.append(.pawns(PawnAward(.mission, .goal))) }
     }
   }
   let moved = afterMove(session, state)
@@ -377,14 +406,16 @@ private func theirMove(_ session: RunSession, _ state: RunTally) -> Step {
 }
 
 /// Your turn with nothing prepared, having followed your prep so far: the line is done.
-public func prepRanOut(_ session: RunSession, _ index: ReferenceIndex) -> RunSession {
-  if session.prepStatus != .on { return session }
+/// Prep that asked something and was never missed pays, and a little more when every answer was fast.
+public func prepRanOut(_ session: RunSession, _ index: ReferenceIndex) -> Step {
+  if session.prepStatus != .on { return unchanged(session) }
   var next = session
   next.prepStatus = .complete
   if inTheBook(index, session.state.run.fen) { next.bookTo = session.state.run.played.count } else { next.bookOver = true }
   // Where growing would start, even when the prep asked you nothing.
   if session.state.misses.isEmpty { next.prepEnd = session.state.run.played }
-  return next
+  let effects = prepPawns(misses: session.state.misses.count, times: session.prepTimes).map { earn(&next.state, PawnAward($0, .prep)) }
+  return (next, effects)
 }
 
 /// Whether the book phase has reached a position the book has nothing for.

@@ -23,7 +23,7 @@ extension HeadlessApp {
 
   private func homeLines() -> [String] {
     let selection = state.settings.selection
-    var lines = ["Play: \(colorLabel(selection.color)), \(state.settings.start.rawValue), \(openingName(tree, selection.opening))"]
+    var lines = ["Pawns: \(state.pawns)", "Play: \(colorLabel(selection.color)), \(state.settings.start.rawValue), \(openingName(tree, selection.opening))"]
     if let tutorial = state.settings.tutorial { lines.append("Tutorial: \(tutorial.played) of \(TUTORIAL_GAMES) games played") }
     let recs = recommendations.prefix(5)
     if !recs.isEmpty {
@@ -38,7 +38,7 @@ extension HeadlessApp {
   private func runLines() -> [String] {
     if let building = middlegame?.building { return ["Building the handoff: \(building.joined(separator: " › "))"] }
     guard let model = run else { return [play?.nothing == true ? "Nothing to practice yet: the Playbook has no lines in this selection." : "No round."] }
-    var lines = ["\(model.headerName) · you play \(model.run.color == .w ? "White" : "Black")"]
+    var lines = ["\(model.headerName) · you play \(model.run.color == .w ? "White" : "Black") · \(model.session.state.extras.pawns) pawns this run, \(state.pawns) in all"]
     lines.append(board(model.shownFen, model.run.color))
     lines.append("Moves: \(sansToMoveText(model.run.played))")
     if let label = model.label { lines.append("Prep: \(label.rawValue)") }
@@ -130,6 +130,7 @@ extension HeadlessApp {
     case .pop(let pop): return "\(pop.book ? "book" : pop.found ? "✓" : "score") \(pop.text) on \(pop.square)"
     case .miss(let miss): return "missed: \(miss.expected) was prepared"
     case .toast(let text): return text
+    case .pawns(let award): return "+\(award.count) pawn\(award.count == 1 ? "" : "s"): \(award.event.rawValue)"
     }
   }
 }

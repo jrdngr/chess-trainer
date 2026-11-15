@@ -37,7 +37,8 @@ Every change should pass these tests:
   tick in the book's color, and any other move the engine's move score.
   When there's a strong move to find, the board glows green, and it pulses
   green or red once you've found or missed it.
-- **Speed decides what you drill.** It never costs points or ends a run. It
+- **Speed decides what you drill.** It never costs pawns or ends a run,
+  though a prep played fast all the way earns one more. It
   grades the position's card, and the cards decide which positions runs
   start at and steer toward. Speed and accuracy also decide when a line gets
   new moves: mastery is a weight, never a gate.

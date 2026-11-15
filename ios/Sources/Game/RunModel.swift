@@ -200,8 +200,6 @@ public final class RunModel {
   public var opponentLevel: Level {
     round != nil ? levelMatching(store.state.strength) : prefs.opponentLevel(store.state.strength)
   }
-  /// With moments or missions on, a run is scored in points as well as moves.
-  public var scoredInPoints: Bool { prefs.moments || prefs.missions }
   /// Announcing or replaying: the board is locked, and the opponent waits.
   public var held: Bool { intro != .done }
   /// The moves the intro plays out: a Middlegame run's handoff always; a Play run's way in when Replay moves asks.
@@ -502,7 +500,11 @@ public final class RunModel {
       showTip()
       return
     }
-    if prepNow.isEmpty { update(prepRanOut(session, index)) }
+    if prepNow.isEmpty {
+      let ran = prepRanOut(session, index)
+      update(ran.session)
+      perform(ran.effects)
+    }
     update(closeBook(session, index))
     askAtHole()
     if let game = tutorialGame {
@@ -816,7 +818,13 @@ public final class RunModel {
     let was = prepLabel(session)
     session = step.session
     noteLeft(was)
-    for effect in step.effects {
+    perform(step.effects)
+    advance()
+  }
+
+  /// The controller's effects, in order.
+  private func perform(_ effects: [Effect]) {
+    for effect in effects {
       switch effect {
       case .rate(let result, let earlier):
         var moves: [RatingMove] = []
@@ -841,11 +849,19 @@ public final class RunModel {
         pulse(found: found)
       case .missedBest(let move):
         missedBest = move
+      case .pawns(let award):
+        pay(award)
       case .finish(let f):
         finished(f)
       }
     }
-    advance()
+  }
+
+  /* ── pawns ── */
+
+  /// Pawns earned go straight onto the balance, and fly to the counter.
+  private func pay(_ award: PawnAward) {
+    store.pay(award)
   }
 
   private func finished(_ f: Finish) {
@@ -864,7 +880,7 @@ public final class RunModel {
     }
     before = handoff != nil ? store.state.middlegame : store.state.runRecord
     let line = f.ended.run.played
-    let points = scoredInPoints ? f.ended.extras.points : f.ended.moves
+    store.finishedGame()
     // An endgame result that slipped away is kept for Endgame mode, from the position before the move.
     let given = endgameGivenAway(f.how, fen: f.ended.run.fen, name: openingName(tree, f.ended.run.openingId), at: Env.now())
     // Built before the update: reading the store inside its own update is an exclusivity crash.
@@ -874,7 +890,7 @@ public final class RunModel {
       // Counted against the openings your own line went through. No prep was asked, so no rating or card moves.
       let yours = Array(handoff.line.prefix(handoff.prep))
       store.update { state in
-        if case .ended = f.how { state.endMiddlegameEarly(tree, yours) } else { state.endMiddlegame(tree, yours, points) }
+        if case .ended = f.how { state.endMiddlegameEarly(tree, yours) } else { state.endMiddlegame(tree, yours, f.ended.moves) }
         if let given { state.endgames.save(given) }
       }
       settle(f)
@@ -884,7 +900,7 @@ public final class RunModel {
       if case .ended = f.how {
         state.endRunEarly(tree, line)
       } else {
-        state.recordRunEnd(tree, line, f.ended.moves, points)
+        state.recordRunEnd(tree, line, f.ended.moves)
       }
       ratings.track(state.settleRun(tree, f.answers, line))
       state.endRound(tree, runRound(f, tree, at: Env.now()))

@@ -187,13 +187,13 @@ private func handoffRun() throws -> (session: RunSession, tree: OpeningTree) {
   }
 
   /// Rule 9.
-  @Test func middlegamePointsAreKeptApartFromRuns() throws {
+  @Test func middlegameMovesAreKeptApartFromRuns() throws {
     let (_, tree) = try handoffRun()
     var state = AppState()
-    state.endMiddlegame(tree, YOURS, 120)
-    state.endMiddlegame(tree, YOURS, 80)
-    #expect(state.middlegame.global.bestPoints == 120)
-    #expect(state.middlegame.global.recent == [120, 80])
+    state.endMiddlegame(tree, YOURS, 12)
+    state.endMiddlegame(tree, YOURS, 8)
+    #expect(state.middlegame.global.best == 12)
+    #expect(state.middlegame.global.recent == [12, 8])
     #expect(state.runRecord == RunRecord())
     let data = try JSONEncoder().encode(state)
     #expect(try JSONDecoder().decode(AppState.self, from: data) == state)

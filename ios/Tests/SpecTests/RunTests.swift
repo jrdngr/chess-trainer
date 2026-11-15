@@ -15,7 +15,7 @@ func color(_ j: JSON) -> Color { Color(rawValue: j.string)! }
       if run.object["ended"] != nil {
         rec = recordEndedRun(rec, tree, l)
       } else {
-        rec = recordRun(rec, tree, l, run["moves"].int, run["points"].numberOrNil.map(Int.init))
+        rec = recordRun(rec, tree, l, run["moves"].int)
       }
       return obj(["global": encoded(rec.global), "opening": encoded(runFor(rec, opening)), "form": recentForm(rec.global)])
     })
@@ -26,7 +26,6 @@ func color(_ j: JSON) -> Color { Color(rawValue: j.string)! }
     "run.speedTone": { speedTone($0[0].number).rawValue.json },
     "run.secondsText": { secondsText($0[0].number).json },
     "run.isMoment": { isMoment(color($0[0]), $0[1].number, $0[2].numberOrNil).json },
-    "run.momentBonus": { momentBonus($0[0].int).json },
     "run.missionTitle": { missionTitle(MissionKind(rawValue: $0[0].string)!).json },
     "run.moveNumber": { moveNumber($0[0].int).json },
     "run.runSteerLabel": { runSteerLabel(RunSteer(rawValue: $0[0].string)!).json },

@@ -156,5 +156,7 @@ public final class EndgameGame {
     case .failure: (success, mission) = (false, false)
     }
     store.update { $0.endgames.review(entry, success: success, mission: mission) }
+    if success { store.pay(PawnAward(.endgameGoal, .board)) }
+    store.finishedGame()
   }
 }

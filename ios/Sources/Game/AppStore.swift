@@ -14,6 +14,9 @@ public final class AppStore {
   public var state = AppState()
   /// Play's recent rounds this session, kept across trips Home so the next round's start follows them.
   public var autoHistory = AutoHistory()
+  /// Pawns earned and on their way to the counter.
+  public internal(set) var pawnDrops: [PawnDrop] = []
+  @ObservationIgnored var dropCount = 0
   /// The save exists but could not be read (locked, say): saving now would replace it with a fresh state.
   @ObservationIgnored private var saveBlocked = false
 

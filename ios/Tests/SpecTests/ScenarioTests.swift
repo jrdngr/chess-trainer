@@ -20,6 +20,16 @@ private func endingJSON(_ e: Ending) -> JSON {
   }
 }
 
+private func sourceJSON(_ source: PawnSource) -> JSON {
+  switch source {
+  case .square(let square): return .string(square)
+  case .prep: return "prep".json
+  case .goal: return "goal".json
+  case .board: return "board".json
+  case .counter: return "counter".json
+  }
+}
+
 private func effectJSON(_ effect: Effect, _ tree: OpeningTree) -> JSON {
   switch effect {
   case .rate(let result, let earlier):
@@ -33,7 +43,7 @@ private func effectJSON(_ effect: Effect, _ tree: OpeningTree) -> JSON {
   case .pop(let p):
     return obj(["kind": "pop", "pop": obj([
       "square": p.square, "text": p.text, "tone": p.tone.rawValue,
-      "found": p.found ? true : nil, "book": p.book ? true : nil, "moment": p.moment ? true : nil,
+      "found": p.found ? true : nil, "book": p.book ? true : nil,
     ])])
   case .note(let note):
     return obj(["kind": "note", "note": note.map { obj(["text": $0.text, "tone": $0.tone]) } ?? .null])
@@ -43,6 +53,8 @@ private func effectJSON(_ effect: Effect, _ tree: OpeningTree) -> JSON {
     return obj(["kind": "moment", "found": found])
   case .missedBest(let move):
     return obj(["kind": "missedBest", "move": move.map { obj(["from": $0.from, "to": $0.to]) } ?? .null])
+  case .pawns(let award):
+    return obj(["kind": "pawns", "event": award.event.rawValue, "count": award.count, "source": sourceJSON(award.source)])
   case .finish(let f):
     var round = encoded(runRound(f, tree, at: 0)).object
     round["at"] = nil
@@ -119,7 +131,7 @@ private func sessionJSON(_ s: RunSession) -> JSON {
         (session, effects) = turn
       case "engineMove": (session, effects) = engineMove(session, call["san"].string)
       case "endRun": (session, effects) = endRun(session)
-      case "prepRanOut": session = prepRanOut(session, index)
+      case "prepRanOut": (session, effects) = prepRanOut(session, index)
       case "closeBook": session = closeBook(session, index)
       case "sawEval": session = sawEval(session, call["cp"].number)
       case "missionFrom": session = missionFrom(session, prefs, call["cp"].number)

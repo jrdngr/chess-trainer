@@ -7,8 +7,7 @@ Tests: the `docs/rules/middlegame.md` suite in
 `Tests/SpecTests/Rules/MiddlegameRules.swift`.
 
 1. **Setup.** The opponent steers toward one of your lines, or a line that
-   ends at a gap. Moments and missions are always on, so the
-   mode always scores in points.
+   ends at a gap. Moments and missions are always on.
 2. **The line** is the one the draw picked (see [opponent](opponent.md)),
    to its end. A draw that finds no line of yours plays nothing out.
 3. **The handoff** plays your line as it stands, then book moves for both
@@ -30,5 +29,5 @@ Tests: the `docs/rules/middlegame.md` suite in
    the game transposes back into your Playbook. The book phase is over
    before it starts. The opponent plays the book, then the engine, never
    your lines. The first mission is set from the eval at the handoff.
-9. **Middlegame's points are kept apart** from Play's run record.
+9. **Middlegame's moves survived are kept apart** from Play's run record.
 10. **The plan comes from the handoff's pawn structure.**

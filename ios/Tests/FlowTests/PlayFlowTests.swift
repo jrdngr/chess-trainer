@@ -45,6 +45,25 @@ import Testing
   }
 }
 
+/// A clean prep pays pawns onto the balance as it runs out, and the day's first finished game pays the streak.
+@MainActor @Test func aCleanPrepPaysPawns() async throws {
+  try await headless { app in
+    try await drillAsWhite(app)
+    let before = app.state.pawns
+    _ = app.takeSignals()
+    try await playPrep(app)
+    let paid = app.signals.compactMap { if case .pawns(let award) = $0 { return award } else { return nil } }
+    #expect(paid.first?.event == .prepComplete && paid.first?.source == .prep)
+    let earned = try #require(app.run).session.state.extras.pawns
+    #expect(earned == paid.reduce(0) { $0 + $1.count } && earned >= 1)
+    #expect(app.state.pawns == before + earned)
+
+    await app.endRound()
+    #expect(app.state.pawns == before + earned + 1, "the day's first game pays the streak")
+    #expect(app.state.pawnStreak.days == 1)
+  }
+}
+
 /// A wrong move on your prep shows the prepared one, fails its card and logs the mistake.
 @MainActor @Test func missingAPreparedMoveShowsItAndLogsIt() async throws {
   try await headless { app in
