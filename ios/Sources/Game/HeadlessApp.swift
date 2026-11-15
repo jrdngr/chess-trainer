@@ -150,31 +150,21 @@ public final class HeadlessApp: SignalSink {
     store.update { $0.settings.seenIntro = true }
   }
 
-  /// Onboarding's "Recommend some openings": its openings go in and the tutorial's first game starts.
+  /// Welcome's "Recommend some openings": the recommended set goes in and the first Play game starts.
   public func recommendOpenings() async {
-    await startTutorial(RECOMMENDED_OPENINGS)
-  }
-
-  /// Onboarding with these openings: the tutorial's first game starts.
-  public func startTutorial(_ openings: TutorialOpenings) async {
     seeIntro()
-    store.startTutorial(openings)
+    store.recommendOpenings()
     await openPlay()
   }
 
-  /// Skip the tutorial, with a starter set's openings in the Playbook: on to Home.
-  public func skipTutorial(starter id: String? = nil) throws {
+  /// Welcome's "I know my openings", with a starter set's openings added, or none: on to Home.
+  public func knowMyOpenings(starter id: String? = nil) throws {
     seeIntro()
     if let id {
       guard let set = STARTER_SETS.first(where: { $0.id == id }) else { throw Failure.notHere("No starter set \"\(id)\"") }
       store.update { $0.seed(tree, set) }
     }
-    store.finishSkippedTutorial()
-  }
-
-  /// Skip the rest of the tutorial from Home.
-  public func endTutorial() {
-    store.update { $0.settings.skipTutorial() }
+    store.finishOnboarding()
   }
 
   /// Home's selection: the side, Freeform or Drill, and the opening (by tree id or moves; nil for Any Opening).

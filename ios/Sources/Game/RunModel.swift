@@ -74,18 +74,10 @@ public final class RunModel {
   public private(set) var firstGame = false
   /// A Play run filling a Black basic from move one.
   public private(set) var basicRun = false
-  /// A tutorial game, and the line it is on: your opening, with the moves its growth added.
-  public private(set) var tutorialGame: TutorialGame?
-  public private(set) var tutorialLine: [String] = []
-  /// The tutorial game's growth has begun, and has just ended.
-  private var tutorialGrown = false
-  private var tutorialJustGrown = false
-  /// Your moves the engine scored in a tutorial game.
-  private var tutorialScored = 0
-  /// The tutorial game asks you to end it with the X: the board takes no more moves.
-  public private(set) var endCued = false
-  /// The tutorial's tip on screen.
-  public private(set) var tip: TutorialTip?
+  /// The tip on screen.
+  public private(set) var tip: GameTip?
+  /// Your moves played this run.
+  private var ownMoves = 0
   /// The side's Playbook that moves were added to this run.
   private var filledRep: String?
   public private(set) var intro = Intro.announce
@@ -142,19 +134,6 @@ public final class RunModel {
     firstGame = true
     holeAsked = true
     fill = Fill(gap: firstMoveGap(rep, index), size: store.state.settings.movesPerFill)
-  }
-
-  /// One of the tutorial's games: its side from move one, its moves forced
-  /// where it says, the opponent along its line and script.
-  public convenience init?(tutorial game: TutorialGame, store: AppStore, tree: OpeningTree, index: ReferenceIndex, engine: ChessEngine) {
-    store.update { _ = $0.ensurePlaybook(game.color) }
-    self.init(
-      round: tutorialRound(tree, game), selection: Selection(color: game.color == .w ? .w : .b, opening: ANY_OPENING),
-      store: store, tree: tree, index: index, engine: engine)
-    tutorialGame = game
-    tutorialLine = game.opening.sans
-    holeAsked = true
-    store.update { $0.settings.tips = game.tips }
   }
 
   /// A run set up on Run's screen, on those options: `start` with no plan.
@@ -258,7 +237,6 @@ public final class RunModel {
   public var openingId: String { run.enteredIn ?? round?.pick.opening.id ?? run.openingId }
   /// The header's name: a first game is named by the book as it goes.
   public var headerName: String {
-    if let tutorialGame { return tutorialGame.opening.name }
     if firstGame || basicRun { return openingNameForPath(index, run.played)?.name ?? "Any Opening" }
     if round?.free == true { return openingNameForPath(index, run.played)?.name ?? "Freeform" }
     return openingName(tree, openingId)
@@ -275,11 +253,9 @@ public final class RunModel {
   /// Next run was tapped: the round ends on the board, and the next one follows without the end screen.
   public var advancing = false
 
-  /// Next run: past your prep in a Play run. In the tutorial, once its game asks you to end it, or in its last game.
+  /// Next run: past your prep in a Play run.
   public var nextRunShown: Bool {
-    guard round != nil, live, intro == .done, fill == nil, session.prepStatus != .on else { return false }
-    if let tutorialGame { return tutorialGame.number >= TUTORIAL_GAMES || (endCued && tutorialGame.tips.contains(.nextRun)) }
-    return true
+    round != nil && live && intro == .done && fill == nil && session.prepStatus != .on
   }
 
   /// A word over the board for a moment: leaving your prep, or a find.
@@ -289,21 +265,18 @@ public final class RunModel {
     public var id: Int
   }
   public private(set) var callout: Callout?
-  /// The last callout for leaving your prep.
-  private var prepCallout: Callout?
   private var calloutCount = 0
   /// How long a callout stays.
   public static let calloutMs = 1.5
 
-  /// The callout on the board: a tip about leaving your prep keeps its callout up.
-  public var shownCallout: Callout? { callout ?? (tip == .playOn ? prepCallout : nil) }
+  /// The callout on the board.
+  public var shownCallout: Callout? { callout }
 
-  private func show(callout text: String, good: Bool, prep: Bool = false) {
+  private func show(callout text: String, good: Bool) {
     calloutCount += 1
     let shown = Callout(text: text, good: good, id: calloutCount)
     callout = shown
     services.emit(.callout(text, good: good))
-    if prep { prepCallout = shown }
     later(Self.calloutMs) { model in
       if model.callout == shown { model.callout = nil }
     }
@@ -312,7 +285,8 @@ public final class RunModel {
   /// Your prep just ended, finished or missed: a Play run says so over the board.
   private func noteLeft(_ was: PrepLabel?) {
     guard round != nil, was == .on, session.prepStatus != .on else { return }
-    show(callout: session.prepStatus == .off ? "Off prep" : "Prep complete", good: session.prepStatus != .off, prep: true)
+    show(callout: session.prepStatus == .off ? "Off prep" : "Prep complete", good: session.prepStatus != .off)
+    if session.prepStatus != .off { offer(.prepDone) }
   }
 
   /// The board as shown: your move stands while it is judged, a blunder stays until Continue.
@@ -331,10 +305,10 @@ public final class RunModel {
   }
 
   /// A Middlegame run was announced while its handoff was built, so it goes straight to the board,
-  /// as do the first game and the tutorial's first. Later tutorial games are announced like any round.
+  /// as does the first game.
   /// `dealt`: its card was drawn from the deck and is already on the board, so no announcement.
   public func start(dealt: Bool = false) {
-    let straightIn = dealt || handoff != nil || firstGame || (tutorialGame.map { $0.number <= 1 } ?? false)
+    let straightIn = dealt || handoff != nil || firstGame
     if straightIn { toBoard() } else { later(round != nil ? services.dealSeconds : Self.announceMs) { $0.toBoard() } }
   }
 
@@ -342,6 +316,7 @@ public final class RunModel {
   public func toBoard() {
     guard intro == .announce else { return }
     intro = introPath.isEmpty ? .done : .replay
+    if handoff != nil { offer(.middlegameRound) }
     intro == .done ? begin() : replayStep()
   }
 
@@ -402,6 +377,8 @@ public final class RunModel {
 
   private func begin() {
     spanHeld = span
+    if round != nil && prepLabel(session) == .on { offer(.flashCards) }
+    if round?.free == true { offer(.freeformGame) }
     advance()
   }
 
@@ -447,13 +424,7 @@ public final class RunModel {
       guard let self else { return }
       await self.services.sleep(Self.replyMs)
       guard !Task.isCancelled, self.live, !self.myTurn else { return }
-      if let game = self.tutorialGame {
-        if let san = tutorialReply(game, played: self.run.played, line: self.tutorialLine, self.index) {
-          self.thinking = false
-          self.apply(engineMove(self.session, san))
-          return
-        }
-      } else if let step = bookTurn(self.session, self.index, self.picker) {
+      if let step = bookTurn(self.session, self.index, self.picker) {
         self.thinking = false
         self.apply(step)
         return
@@ -483,7 +454,7 @@ public final class RunModel {
     turnStartedAt = now
     // Adding moves: the player picks the next one, nothing is weighed.
     if fill != nil {
-      showTip()
+      offer(.growth)
       return
     }
     if prepNow.isEmpty {
@@ -493,19 +464,12 @@ public final class RunModel {
     }
     update(closeBook(session, index))
     askAtHole()
-    if let game = tutorialGame {
-      if !tutorialGrown && session.state.misses.isEmpty && tutorialGrowsHere(game, played: run.played, line: tutorialLine),
-        let rep = store.state.playbookList.first(where: { $0.color == game.color }) {
-        tutorialGrown = true
-        tutorialLine = run.played
-        fill = Fill(gap: tutorialGap(rep, run.played), size: game.growth)
-        pulseEdge()
-      } else if tutorialEndCue(game, played: run.played, line: tutorialLine, scored: tutorialScored, index) {
-        endCued = true
-      }
+    if fill != nil {
+      offer(.growth)
+      return
     }
-    showTip()
-    if fill != nil || endCued { return }
+    if inPrep && ownMoves > 0 { offer(.prepBar) }
+    if prepNow.isEmpty && store.state.owns(.lenses) { offer(.lens) }
     // Past your prep the engine is sure to be asked: weigh the position now.
     if prepNow.isEmpty { weigh(run.fen) }
   }
@@ -520,14 +484,15 @@ public final class RunModel {
       self.baseline = base
       self.update(sawEval(self.session, base.cp))
       if self.live && self.myTurn { self.update(missionFrom(self.session, self.prefs, base.cp)) }
+      if self.momentHere { self.offer(.moment) }
+      if self.prefs.missions && self.session.state.extras.mission != nil { self.offer(.mission) }
     }
   }
 
   /// You played a move on the board. With the Undefended flash on, a move
   /// that leaves a piece loose is held a moment first, to take back.
   public func play(_ move: LegalMove) {
-    guard live, !held, myTurn, pending == nil, flash == nil, !endCued else { return }
-    if let expected, move.san != expected { return }
+    guard live, !held, myTurn, pending == nil, flash == nil else { return }
     if tip != nil { dismissTip() }
     if fill != nil {
       if fillChoices.contains(where: { $0.san == move.san }) { addMove(move.san) }
@@ -561,14 +526,13 @@ public final class RunModel {
     miss = nil
     missedBest = nil
     holeGap = nil
+    ownMoves += 1
     let now = Env.now()
     if prepNow.contains(move.san) {
       apply(playPrepared(session, ctx, move, seconds, now))
       return
     }
     pending = move
-    // Past your line, a tutorial counts the moves the engine scores rather than lets pass as common.
-    let pastLine = prepNow.isEmpty
     searchReply(after: move.after)
     let fen = run.fen, color = run.color, moments = prefs.moments, reached = endgameOn
     spawn { [weak self] in
@@ -585,7 +549,6 @@ public final class RunModel {
       guard !Task.isCancelled, self.live, self.run.fen == fen else { return }
       self.store.update { $0.judgedMove(lost: judged.lost) }
       let step = judgedMove(self.session, self.ctx, judged, seconds, now)
-      if self.tutorialGame != nil && pastLine && step.session.bookMoves == self.session.bookMoves { self.tutorialScored += 1 }
       self.apply(step)
     }
   }
@@ -632,25 +595,21 @@ public final class RunModel {
     let fresh = (1...line.count).first { k in rep.flatMap { nodeAtLine($0, Array(line.prefix(k))) } == nil } ?? line.count
     current.steps.append((session, Array(line.prefix(fresh))))
     filledRep = rid
-    if tutorialGame != nil { tutorialLine = line }
     store.update { state in
       state.addGrowthLine(rid, line, index)
       state.logEvent(AppEvent(
         kind: "growth-pick", via: .play, color: run.color, line: run.played.joined(separator: " "), picked: san, offered: offered))
     }
     services.emit(.buzz(10))
-    let ends = tutorialGame != nil ? current.added >= current.size : fillEnds(index, line, added: current.added, size: current.size)
+    let ends = fillEnds(index, line, added: current.added, size: current.size)
     fill = ends ? nil : current
-    if fill == nil {
-      holeGap = nil
-      tutorialJustGrown = tutorialGame != nil
-    }
+    if fill == nil { holeGap = nil }
     justAdded = fill == nil ? nil : move.map { ($0.from, $0.to) }
     apply(playAdded(session, san))
   }
 
   /// The opponent's reply while adding moves: the gap's own move on the way
-  /// to it, the tutorial's set answer to move one, or the book's most played.
+  /// to it, or the book's most played.
   private func fillReply() {
     thinking = true
     later(Self.replyMs) { model in
@@ -660,8 +619,7 @@ public final class RunModel {
       let played = model.run.played
       let line = model.fill?.gap.line ?? []
       let toGap = line.count > played.count && Array(line.prefix(played.count)) == played ? line[played.count] : nil
-      let scripted = model.tutorialGame.flatMap { tutorialReply($0, played: played, line: model.tutorialLine, model.index) }
-      guard let san = toGap ?? scripted ?? popularReplies(model.index, model.run.fen, GAP_SHARE).first?.san else {
+      guard let san = toGap ?? popularReplies(model.index, model.run.fen, GAP_SHARE).first?.san else {
         model.fill = nil
         model.advance()
         return
@@ -683,85 +641,24 @@ public final class RunModel {
     session = last.session
     justAdded = nil
     fill = current
-    if let tutorialGame { tutorialLine = run.played.count >= tutorialGame.opening.sans.count ? run.played : tutorialGame.opening.sans }
   }
 
-  /* ── the tutorial's tips ── */
+  /* ── tips ── */
 
-  /// The forced move on your turn in a tutorial game: the only one the board takes, shown with an arrow.
-  public var expected: String? {
-    guard let game = tutorialGame, live, !held, myTurn, fill == nil, !endCued else { return nil }
-    return tutorialExpected(game, played: run.played, line: tutorialLine, index)
+  /// A tip whose trigger has come: it shows unless another is up or it has shown before.
+  private func offer(_ next: GameTip) {
+    guard tip == nil, !store.state.settings.seen(next) else { return }
+    tip = next
+    store.update { $0.settings.see(next) }
   }
 
-  /// The tutorial's arrow: the move it insists on, or your line's next move in its free last game.
-  public var shownMove: String? {
-    guard let game = tutorialGame, live, !held, myTurn, fill == nil, !endCued else { return nil }
-    return tutorialShown(game, played: run.played, line: tutorialLine, index)
-  }
-
-  /// The tip for where the tutorial game stands, if one is still to show there.
-  private func showTip() {
-    guard let game = tutorialGame, tip == nil, live else { return }
-    let played = run.played
-    var now = Set<TutorialMoment>()
-    if endCued { now.insert(.endCue) }
-    if fill != nil && myTurn { now.insert(.growthOpen) }
-    if tutorialJustGrown && fill == nil {
-      now.insert(.growthEnded)
-      tutorialJustGrown = false
-    }
-    if tutorialScored > 0 { now.insert(.scored) }
-    if prepCallout != nil { now.insert(.leftPrep) }
-    if fill == nil && played.count >= tutorialLine.count {
-      now.insert(ownPast(game.color, played, tutorialLine) == 0 ? .pastLine : .pastCommon)
-    }
-    if played.count < tutorialLine.count {
-      let own = played.indices.filter { ($0 % 2 == 0) == (game.color == .w) }.count
-      now.insert(own == 0 ? .start : .moved)
-    }
-    guard let found = tutorialTip(store.state.settings.tips, now) else { return }
-    tip = found
-    store.update { $0.settings.tips.removeAll { $0 == found } }
-  }
-
-  /// A finished tutorial game holds its board until you leave, and a tap anywhere moves it on.
-  public var tapsLeave: Bool { tutorialGame != nil && finish != nil }
-
-  /// A tap anywhere on a finished tutorial game: the blunder tip is put away
-  /// (the tip on the X follows), else true, and the game is left for Home.
-  public func tapFinished() -> Bool {
-    guard tapsLeave else { return false }
-    if tip == .blunder {
-      dismissTip()
-      return false
-    }
-    return true
-  }
-
-  /// A tap on the tip, or your next move: some tips lead to the next.
-  public func dismissTip() {
-    guard let current = tip else { return }
-    if current == .blunder, tutorialGame != nil, finish != nil {
-      tip = .goHome
-      return
-    }
-    if let next = current.next, store.state.settings.tips.contains(next) {
-      tip = next
-      store.update { $0.settings.tips.removeAll { $0 == next } }
-    } else {
-      tip = nil
-    }
-  }
-
-  /// The goal card stays away in the tutorial's games.
-  public var tipsInPlay: Bool { tutorialGame != nil }
+  /// A tap on the tip, or your next move.
+  public func dismissTip() { tip = nil }
 
   /// Done: no more moves added, and the game goes on from here.
   public func doneAdding() {
     guard fill != nil else { return }
     fill = nil
-    tutorialJustGrown = tutorialGame != nil
     justAdded = nil
     advance()
   }
@@ -822,6 +719,7 @@ public final class RunModel {
         services.emit(.buzz(pattern))
       case .pop(let p):
         show(pop: p)
+        if !p.found { offer(.scores) }
       case .note(let n):
         // A word on what the move earned: a callout, like a find.
         if let n { show(callout: n.text, good: n.tone == "good") }
@@ -835,6 +733,7 @@ public final class RunModel {
         missedBest = move
       case .pawns(let award):
         pay(award)
+        offer(.pawns)
       case .finish(let f):
         finished(f)
       }
@@ -851,17 +750,8 @@ public final class RunModel {
   private func finished(_ f: Finish) {
     stop()
     finish = f
-    if let game = tutorialGame {
-      var blundered = false
-      if case .blunder = f.how { blundered = true }
-      var ended = false
-      if case .ended = f.how { ended = true }
-      // Ended by hand before its end, the game is played again.
-      let counted = endCued || game.number >= 4 || !ended
-      // Ended on its own board, the game points at its X, after the blunder tip on a blunder.
-      tip = blundered ? .blunder : ended ? nil : .goHome
-      store.update { $0.settings.finishTutorialGame(counted: counted) }
-    }
+    tip = nil
+    if case .blunder = f.how { offer(.blunder) }
     before = handoff != nil ? store.state.middlegame : store.state.runRecord
     let line = f.ended.run.played
     store.finishedGame()
@@ -978,9 +868,4 @@ extension RunModel: HoleAnswers {
   }
   /// A fill answers gaps, so it offers what a gap's Growth sitting would.
   public var minShare: Double { GAP_SHARE }
-  /// Tutorial growth that offers one answer: the script's, else the book's most played.
-  public var onlyAnswer: String? {
-    guard let game = tutorialGame, game.oneOption, fill != nil else { return nil }
-    return tutorialScripted(game, run.played) ?? bookTop(index, run.played)
-  }
 }

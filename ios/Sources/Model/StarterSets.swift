@@ -28,6 +28,9 @@ public struct StarterSet: Equatable, Sendable {
 public let SLOT_LABELS: [SetSlot: String] = [.w: "As White", .e4: "Against 1.e4", .d4: "Against 1.d4"]
 public let SLOT_COLOR: [SetSlot: Color] = [.w: .w, .e4: .b, .d4: .b]
 
+/// The set "Recommend some openings" puts in a new Playbook.
+public let RECOMMENDED_SET = "classical"
+
 public let STARTER_SETS: [StarterSet] = [
   StarterSet(
     id: "classical", name: "Classical",

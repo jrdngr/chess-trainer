@@ -191,9 +191,6 @@ struct QuickPicker: View {
             openingTile(opening.node.id, shortLabel(opening.name), chosen: chosen(opening, selection)) {
               choose(opening.node.id, opening.side)
             }
-            // The tutorial's step after its fourth game: pick the answer to 1.d4. Above the
-            // row, pointing down, so the rows and sections after it can't cover it.
-            .tip(text: d4Step && opening.side == .b && opening.node.sans.first == "d4" ? D4_ROW_TIP : nil, arrow: .down)
           }
           if !showAll && overflows(yours, side: side, limit: shownCount(side)) {
             more { showAll = true }
@@ -233,9 +230,6 @@ struct QuickPicker: View {
     }
   }
 
-  /// The tutorial's step after its fourth game.
-  private var d4Step: Bool { store.state.settings.tutorial?.played == 4 }
-
   /// One of your openings is chosen when the selection is its node, from its side.
   private func chosen(_ opening: YourOpening, _ selection: Selection) -> Bool {
     selection.opening == opening.node.id && selection.color == (opening.side == .w ? .w : .b)
@@ -274,9 +268,8 @@ struct QuickPicker: View {
     .buttonStyle(.plain)
   }
 
-  /// The side the tab lists, or nil for both: Either, and the tutorial's step that needs a Black row.
+  /// The side the tab lists, or nil for both: Either.
   private func shownSide(_ selection: Selection) -> ChessCore.Color? {
-    if d4Step { return nil }
     switch selection.color {
     case .w: return .w
     case .b: return .b

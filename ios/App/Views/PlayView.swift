@@ -7,7 +7,6 @@ import SwiftUI
 
 /// Play: a run decided for you. A finished round stays on its board with
 /// the deck under it, and the next round is drawn from the deck; the close button leaves.
-/// A tutorial game also stays on its board when it ends, with no deck: its X goes back Home.
 struct PlayView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
@@ -40,7 +39,7 @@ struct PlayView: View {
     if analyzing, let model = session.model {
       AnalysisTab(tree: tree, index: index, line: model.run.played, orientation: model.run.color) { analyzing = false }
     } else if let model = session.model {
-      if model.phase == .over, let finish = model.finish, !model.advancing, !session.deals(model), model.tutorialGame == nil {
+      if model.phase == .over, let finish = model.finish, !model.advancing, !session.deals(model) {
         EndView(model: model, finish: finish, onNext: home, onAnalyze: { analyzing = true }, onExit: home)
       } else {
         runView(session, model)

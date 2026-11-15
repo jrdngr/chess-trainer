@@ -112,6 +112,7 @@ import Testing
     var old = try decodeSave(Data(#"{"version":4,"pawns":3}"#.utf8))
     old.migrate(bookIndex)
     #expect(ShopFeature.allCases.allSatisfy(old.owns))
+    #expect(GameTip.allCases.allSatisfy(old.settings.seen))
     #expect(old.pawns == 3)
   }
 }

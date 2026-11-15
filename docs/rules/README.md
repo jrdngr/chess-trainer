@@ -18,6 +18,7 @@ Play:
 - [Pawns](pawns.md): what earns them, and the daily streak.
 - [Form](form.md): each opening's signal bars.
 - [The Pawn Shop](shop.md): what pawns buy, and what stays locked until then.
+- [Tips](tips.md): what each tip waits for, and that it shows once.
 - [Scheduling](scheduling.md): cards, need, staleness and weakness, in runs.
 - [Play screen](play-screen.md): how a run is shown and ended.
 

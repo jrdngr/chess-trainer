@@ -2,7 +2,7 @@ import Game
 import Model
 import SwiftUI
 
-/// One of the tutorial's tips: white, with an arrow at what it explains.
+/// A tip: white, with an arrow at what it explains.
 /// A tap puts it away.
 struct TipBubble: View {
   enum Arrow { case up, down }
@@ -51,9 +51,9 @@ private struct TipArrow: Shape {
 }
 
 extension View {
-  /// A tutorial tip under this view (over it, for an arrow pointing down), while `shown`. `tip(text:)`.
+  /// A tip under this view (over it, for an arrow pointing down), while `shown`. `tip(text:)`.
   func tip(
-    _ tip: TutorialTip?, when shown: Bool, arrow: TipBubble.Arrow = .up, arrowAt: CGFloat = 0.5, inset: CGFloat = 0, drop: CGFloat = 0,
+    _ tip: GameTip?, when shown: Bool, arrow: TipBubble.Arrow = .up, arrowAt: CGFloat = 0.5, inset: CGFloat = 0, drop: CGFloat = 0,
     rest: Double = 0, onDismiss: @escaping () -> Void
   ) -> some View {
     self.tip(text: shown ? tip?.text : nil, arrow: arrow, arrowAt: arrowAt, inset: inset, drop: drop, rest: rest, onDismiss: onDismiss)
@@ -115,13 +115,8 @@ struct TipLayer: ViewModifier {
   }
 }
 
-/// A tip off the board put away for good, so the next one shows. True when it
-/// was the Playbook tab's last.
-@discardableResult @MainActor func dismissTip(_ store: AppStore, _ tip: TutorialTip?) -> Bool {
-  guard let tip else { return false }
-  var last = false
-  withAnimation(.easeOut(duration: 0.15)) {
-    store.update { last = $0.settings.putAway(tip) }
-  }
-  return last
+/// A tip off the board put away: it never shows again.
+@MainActor func dismissTip(_ store: AppStore, _ tip: GameTip?) {
+  guard let tip else { return }
+  withAnimation(.easeOut(duration: 0.15)) { store.see(tip) }
 }

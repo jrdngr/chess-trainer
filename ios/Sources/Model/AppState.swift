@@ -28,10 +28,8 @@ public struct Settings: Equatable, Sendable, Codable {
   public var seenAutoplayNote = false
   /// Whether the tip on drawing from the deck after a Play round has been put away.
   public var seenDeckTip = false
-  /// The tutorial's tips still to show: the game's in play, or the Playbook tab's at its end.
-  public var tips: [TutorialTip] = []
-  /// The tutorial in progress; nil once done or skipped, and for a profile from before it.
-  public var tutorial: Tutorial?
+  /// The tips already shown.
+  public var seenTips: Set<GameTip> = []
   /// Middlegame mode's setup.
   public var middlegame = DEFAULT_MIDDLEGAME
   /// How Play's runs start: from move one, or wherever your prep needs work.
@@ -41,7 +39,7 @@ public struct Settings: Equatable, Sendable, Codable {
   enum CodingKeys: String, CodingKey {
     case selection, favoriteOpenings, play, hapticFeedback, showCoordinates, onboarded, seenIntro, autoplay
     case boardTheme, lichessUsername, chesscomUsername, growth
-    case movesPerFill, seenAutoplayNote, seenDeckTip, tips, tutorial
+    case movesPerFill, seenAutoplayNote, seenDeckTip, seenTips
     case middlegame
     case start
   }
@@ -69,8 +67,8 @@ public struct Settings: Equatable, Sendable, Codable {
     movesPerFill = try c.decodeIfPresent(Int.self, forKey: .movesPerFill) ?? movesPerFill
     seenAutoplayNote = try c.decodeIfPresent(Bool.self, forKey: .seenAutoplayNote) ?? seenAutoplayNote
     seenDeckTip = try c.decodeIfPresent(Bool.self, forKey: .seenDeckTip) ?? seenDeckTip
-    tips = try c.decodeIfPresent([String].self, forKey: .tips).map(TutorialTip.decoded) ?? tips
-    tutorial = try c.decodeIfPresent(Tutorial.self, forKey: .tutorial)
+    // Names this version doesn't know are dropped.
+    seenTips = Set((try c.decodeIfPresent([String].self, forKey: .seenTips) ?? []).compactMap(GameTip.init(rawValue:)))
     middlegame = try c.decodeIfPresent(RunPrefs.self, forKey: .middlegame) ?? middlegame
     start = try c.decodeIfPresent(RunStart.self, forKey: .start) ?? start
   }

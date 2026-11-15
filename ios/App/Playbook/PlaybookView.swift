@@ -103,9 +103,8 @@ struct PlaybookView: View {
     let reps = store.state.playbookList
     let rep = reps.first { $0.color == side }
     let rows = rep.map { playbookRows($0, index) } ?? []
-    let tip = playbookTip(store.state.settings.tips, hasRows: !rows.isEmpty)
-    // The Playbook tab's last tip put away, the tutorial is over: back Home.
-    let putAway = { if dismissTip(store, tip) { onHome() } }
+    let tip: GameTip? = store.state.settings.seen(.playbook) ? nil : .playbook
+    let putAway = { dismissTip(store, tip) }
     let untidy = scan.count ?? 0
     return VStack(spacing: 0) {
       AppBar(title: "Playbook", large: true) {
@@ -125,13 +124,13 @@ struct PlaybookView: View {
         IconButton(icon: "plus") { adding = true }
       }
       .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { barWidth = $0 }
-      .tip(tip, when: tip == .playbookAdd || tip == .playbookMore, arrowAt: barArrowAt(tip), inset: 16, onDismiss: putAway)
+      .tip(tip, when: tip != nil, arrowAt: barArrowAt, inset: 16, onDismiss: putAway)
       ScrollView {
         VStack(spacing: 0) {
           SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")])
           if let rep, !rows.isEmpty {
             let groups = playbookGroups(rows, tree)
-            ForEach(Array(groups.enumerated()), id: \.offset) { at, group in
+            ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
               HStack {
                 Text(group.move).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
                 Spacer()
@@ -153,8 +152,6 @@ struct PlaybookView: View {
                   }
                 }
               }
-              // Over the first card, pointing down at its first row.
-              .tip(tip, when: at == 0 && tip == .playbookRow, arrow: .down, arrowAt: 0.3, inset: 8, onDismiss: putAway)
             }
             ListCard {
               Button { page = .browse(repId: rep.id, nodeId: nil, title: playbookName(rep.color)) } label: {
@@ -178,7 +175,7 @@ struct PlaybookView: View {
         .padding(.horizontal, 16).padding(.bottom, 28)
       }
     }
-    // While a tip shows, a tap anywhere goes to the next one, and nothing else takes a touch.
+    // While the tip shows, a tap anywhere puts it away, and nothing else takes a touch.
     .overlay {
       if tip != nil {
         SwiftUI.Color.black.opacity(0.001).contentShape(Rectangle())
@@ -211,12 +208,11 @@ struct PlaybookView: View {
     }
   }
 
-  /// Where along the app bar a tip points: its + button, or the more menu left of it.
-  private func barArrowAt(_ tip: TutorialTip?) -> CGFloat {
-    // The bar's 20pt sides, 38pt buttons 8pt apart; the tip spans the bar less 16pt each side.
+  /// Where along the app bar the tip points: its + button.
+  private var barArrowAt: CGFloat {
+    // The bar's 20pt sides, 38pt buttons; the tip spans the bar less 16pt each side.
     let plus = barWidth - 20 - 19
-    let x = tip == .playbookMore ? plus - 46 : plus
-    return (x - 16) / max(barWidth - 32, 1)
+    return (plus - 16) / max(barWidth - 32, 1)
   }
 
   /// Your playbook with the log of how it got that way, as a JSON file to share.

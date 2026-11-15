@@ -5,8 +5,7 @@ import Observation
 
 /// Play: one round after another, each a run decided for you. A finished
 /// round stays on its board and the next is drawn from the deck; Next run goes
-/// straight on; Home ends the session. The tutorial plays its games in order,
-/// and an empty Playbook starts a first game as White, adding moves from move 1.
+/// straight on; Home ends the session. An empty Playbook starts a first game as White, adding moves from move 1.
 @MainActor @Observable
 public final class PlaySession {
   public let tree: OpeningTree
@@ -35,8 +34,8 @@ public final class PlaySession {
     if model == nil && !nothing { begin() }
   }
 
-  /// A finished Play round stays on its board and deals the next from the deck. The tutorial's games don't.
-  public func deals(_ model: RunModel) -> Bool { model.round != nil && model.tutorialGame == nil }
+  /// A finished Play round stays on its board and deals the next from the deck.
+  public func deals(_ model: RunModel) -> Bool { model.round != nil }
 
   /// The next round, picked when it starts: what the last one changed is in the store by then.
   private func begin() {
@@ -50,10 +49,6 @@ public final class PlaySession {
 
   /// The next round's run, not yet started.
   private func make() -> RunModel? {
-    // The tutorial's next game, whatever is selected.
-    if let game = store.state.settings.tutorial?.next {
-      return RunModel(tutorial: game, store: store, tree: tree, index: index, engine: engine)
-    }
     if store.state.playbooks.values.allSatisfy({ $0.nodes.isEmpty }) {
       return RunModel(firstGame: store, tree: tree, index: index, engine: engine)
     }

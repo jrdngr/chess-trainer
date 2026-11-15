@@ -343,21 +343,20 @@ public final class AppStore {
 
   /* ── onboarding ── */
 
-  /// Onboarding's openings go in, and the tutorial's first game is next.
-  public func startTutorial(_ openings: TutorialOpenings) {
-    guard let tree else { return }
-    update {
-      $0.onboarded(tree, openings.seeds)
-      $0.settings.startTutorial(openings)
-    }
+  /// "Recommend some openings": the recommended set goes in, and onboarding is done.
+  public func recommendOpenings() {
+    guard let tree, let set = STARTER_SETS.first(where: { $0.id == RECOMMENDED_SET }) else { return }
+    update { $0.seed(tree, set) }
   }
 
-  /// The tutorial skipped from its first question, once the openings are added.
-  public func finishSkippedTutorial() {
-    update {
-      $0.settings.onboarded = true
-      $0.settings.skipTutorial()
-    }
+  /// Onboarding done, with whatever openings were added.
+  public func finishOnboarding() {
+    update { $0.settings.onboarded = true }
+  }
+
+  /// A tip shown off the board, put away for good.
+  public func see(_ tip: GameTip) {
+    update { $0.settings.see(tip) }
   }
 }
 

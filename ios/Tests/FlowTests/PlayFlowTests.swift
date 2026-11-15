@@ -5,7 +5,7 @@ import Testing
 
 /// Home with the Classical starter set, White, Drill.
 @MainActor private func drillAsWhite(_ app: HeadlessApp) async throws {
-  try app.skipTutorial(starter: "classical")
+  try app.knowMyOpenings(starter: "classical")
   try app.select(side: .w, start: .drill)
   await app.openPlay()
 }
@@ -123,7 +123,7 @@ private func quietMove(_ fen: String) -> String? {
 /// Freeform starts from move one: nothing is played for you.
 @MainActor @Test func freeformStartsFromMoveOne() async throws {
   try await headless { app in
-    try app.skipTutorial(starter: "classical")
+    try app.knowMyOpenings(starter: "classical")
     try app.select(side: .w, start: .freeform)
     await app.openPlay()
     let run = try #require(app.run)
@@ -136,7 +136,7 @@ private func quietMove(_ fen: String) -> String? {
 /// Playbook and is played, Undo takes the last one out, and the game goes on once the fill is done.
 @MainActor @Test func firstGameGrowsThePlaybookFromMoveOne() async throws {
   try await headless { app in
-    try app.skipTutorial()
+    try app.knowMyOpenings()
     await app.openPlay()
     let run = try #require(app.run)
     #expect(run.firstGame && run.fill != nil)

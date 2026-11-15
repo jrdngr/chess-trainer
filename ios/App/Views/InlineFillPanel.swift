@@ -33,9 +33,7 @@ struct InlineFillPanel: View {
           .frame(maxWidth: .infinity, alignment: .trailing)
       }
       .zIndex(1)
-      .tip(
-        model.tip, when: model.tip == .extendLines || model.tip == .doneButton, arrowAt: model.tip == .doneButton ? 0.9 : 0.5,
-        onDismiss: model.dismissTip)
+      .tip(model.tip, when: model.tip == .growth, arrowAt: 0.9, onDismiss: model.dismissTip)
       if !ranked.isEmpty {
         HStack(spacing: 10) {
           Text("Answer it")
@@ -61,9 +59,6 @@ struct InlineFillPanel: View {
             withAnimation(.easeOut(duration: 0.3)) { scroller.scrollTo(top, anchor: .top) }
           }
         }
-        .tip(
-          model.tip, when: model.tip == .answerRow || model.tip == .pickAny, arrow: .down, arrowAt: 0.12,
-          onDismiss: model.dismissTip)
       }
     }
     // Each hole starts with the first few answers.

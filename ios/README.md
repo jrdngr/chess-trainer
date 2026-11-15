@@ -26,7 +26,7 @@ cd ios && swift test
 
 - `ChessCoreTests`: perft counts on the standard positions.
 - `EngineTests`: Caissa, the judge and plan checks. `ENGINE_BENCH=1` adds the judge and level benchmarks.
-- `FlowTests`: user flows played start to finish on `HeadlessApp`: onboarding and the tutorial, Drill and Freeform rounds, misses and blunders, growing, Endgames, Middlegame, saves and profiles.
+- `FlowTests`: user flows played start to finish on `HeadlessApp`: onboarding and the first game's tips, the Pawn Shop, Drill and Freeform rounds, misses and blunders, growing, Endgames, Middlegame, saves and profiles.
 - `SpecTests`: the model against the golden cases in `Tests/SpecTests/Golden/`
   (`cases/functions/*.json`, `cases/scenarios/*.json`, `constants.json`).
   They were recorded from the web prototype and are now plain fixtures: when a
@@ -43,8 +43,7 @@ runs in `Game`, which builds on Linux. `HeadlessApp` plays it from code:
 
 ```swift
 try await HeadlessApp.run(book: bookURL, seed: 1) { app in
-  try app.skipTutorial(starter: "classical")
-  try app.select(side: .w, start: .drill)
+  try app.knowMyOpenings(starter: "classical")
   await app.openPlay()
   try await app.move("Nf3")
   print(app.report())

@@ -15,14 +15,17 @@ extension AppState {
   /// 2: schedules count runs, not days.
   /// 3: names are Play, Playbook and Run (done on the JSON by `decodeSave`).
   /// 4: Middlegame's record counts moves survived, not points.
-  /// 5: a profile from before the Pawn Shop owns every feature.
+  /// 5: a profile from before the Pawn Shop owns every feature and has seen every tip.
   @discardableResult
   public mutating func migrate(_ index: ReferenceIndex) -> Bool {
     if version >= SAVE_VERSION { return false }
     if version < 1 { removeNonBookMoves(index) }
     if version < 2 { scheduleByRuns() }
     if version < 4 { middlegame = middlegameInMoves(middlegame) }
-    if version < 5 { unlockAll() }
+    if version < 5 {
+      unlockAll()
+      seeAllTips()
+    }
     version = SAVE_VERSION
     return true
   }

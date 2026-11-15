@@ -8,8 +8,8 @@ extension HeadlessApp {
   public func report() -> String {
     var lines: [String] = ["[\(screen.rawValue)]"]
     switch screen {
-    case .welcome: lines.append("Welcome. `intro` reads it; then `recommend` starts the tutorial, or `skip [starter]` skips it.")
-    case .onboarding: lines.append("Onboarding. `recommend` starts the tutorial with recommended openings, or `skip [starter]` skips it.")
+    case .welcome: lines.append("Welcome. `recommend` seeds the recommended openings and starts Play, or `know [starter]` goes on to adding your own.")
+    case .onboarding: lines.append("Onboarding. `recommend` seeds the recommended openings and starts Play, or `know [starter]` adds a starter set's.")
     case .home: lines += homeLines()
     case .play, .middlegame: lines += runLines()
     case .growth: lines += growthLines()
@@ -24,7 +24,7 @@ extension HeadlessApp {
   private func homeLines() -> [String] {
     let selection = state.settings.selection
     var lines = ["Pawns: \(state.pawns)", "Play: \(colorLabel(selection.color)), \(state.settings.start.rawValue), \(openingName(tree, selection.opening))"]
-    if let tutorial = state.settings.tutorial { lines.append("Tutorial: \(tutorial.played) of \(TUTORIAL_GAMES) games played") }
+    if let tip = state.homeTip { lines.append("Tip: \(tip.text)") }
     let locked = ShopFeature.allCases.filter { !state.owns($0) }.compactMap { shopItem($0.rawValue)?.name }
     if !locked.isEmpty { lines.append("Locked: \(locked.joined(separator: ", ")). `shop` lists the Pawn Shop.") }
     let recs = recommendations.prefix(5)
@@ -44,8 +44,7 @@ extension HeadlessApp {
     lines.append(board(model.shownFen, model.run.color))
     lines.append("Moves: \(sansToMoveText(model.run.played))")
     if let label = model.label { lines.append("Prep: \(label.rawValue)") }
-    if let game = model.tutorialGame { lines.append("Tutorial game \(game.number) of \(TUTORIAL_GAMES)") }
-    if let tip = model.tip { lines.append("Tip: \(tip.rawValue)") }
+    if let tip = model.tip { lines.append("Tip: \(tip.text)") }
     if let finish = model.finish {
       lines.append("Over: \(endingTitle(finish.how, model.run.played.count))")
       if model.phase == .blunder, let blunder = model.blunder {
@@ -59,7 +58,6 @@ extension HeadlessApp {
     } else if model.holeGap != nil {
       lines.append("A reply with no answer: `grow` adds moves here.")
     }
-    if let expected = model.expected { lines.append("The tutorial wants \(expected).") }
     lines.append(model.myTurn ? "Your move." : model.thinking ? "Opponent thinking." : "Waiting.")
     return lines
   }

@@ -30,11 +30,8 @@ struct RootView: View {
   @State private var growing: GrowthModel?
   /// A line from the opening sheet for Middlegame mode to play out.
   @State private var middlegameLine: MiddlegameLine?
-  /// Onboarding: the tutorial skipped for adding openings, or its openings being chosen.
-  @State private var skippedTutorial = false
   /// The Pawn Shop item to open, from a locked control.
   @State private var shopFocus: String?
-  @State private var choosingOpenings = false
 
   var body: some View {
     ZStack {
@@ -55,18 +52,10 @@ struct RootView: View {
 
   @ViewBuilder private func content(_ tree: OpeningTree, _ index: ReferenceIndex) -> some View {
     if !store.state.settings.seenIntro {
-      WelcomeView { store.update { $0.settings.seenIntro = true } }
+      WelcomeView(onRecommend: recommend) { store.update { $0.settings.seenIntro = true } }
     } else if !store.state.settings.onboarded {
-      // Which openings the tutorial plays; Skip leaves it out for adding openings.
-      if skippedTutorial {
-        OnboardingView(tree: tree, index: index, onClose: { finishSkip(nil) }) { finishSkip($0) }
-      } else if choosingOpenings {
-        ChooseOpeningsView(onBack: { choosingOpenings = false }) { startTutorial(tree, $0) }
-      } else {
-        OpeningChoiceView(
-          onRecommend: { startTutorial(tree, RECOMMENDED_OPENINGS) }, onChoose: { choosingOpenings = true },
-          onSkip: { skippedTutorial = true })
-      }
+      // I know my openings: adding them, then Home or a first game.
+      OnboardingView(tree: tree, index: index, onClose: { finishOnboarding(nil) }) { finishOnboarding($0) }
     } else if importing {
       ImportView(onBack: { importing = false })
     } else if let growing {
@@ -149,18 +138,18 @@ struct RootView: View {
     }
   }
 
-  /// The tutorial's openings go in, and its first game starts.
-  private func startTutorial(_ tree: OpeningTree, _ openings: TutorialOpenings) {
-    store.startTutorial(openings)
+  /// Recommend some openings: the recommended set goes in, and the first game starts.
+  private func recommend() {
+    store.update { $0.settings.seenIntro = true }
+    store.recommendOpenings()
     tab = .home
     setupFirst = false
     mode = .play
   }
 
-  /// The tutorial skipped from its first question: adding openings, then Home with the Playbook's tips.
-  private func finishSkip(_ next: OnboardingNext?) {
-    store.finishSkippedTutorial()
-    skippedTutorial = false
+  /// Adding openings done: Home, or the first game.
+  private func finishOnboarding(_ next: OnboardingNext?) {
+    store.finishOnboarding()
     tab = .home
     if next == .play { mode = .play }
   }

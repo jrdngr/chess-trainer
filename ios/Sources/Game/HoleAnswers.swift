@@ -20,14 +20,11 @@ import Model
   var nudgePrefs: NudgePrefs { get }
   var minShare: Double { get }
   var tonedMemo: Memo<[NudgedMove]> { get }
-  /// The one answer offered, where only one is: the tutorial's.
-  var onlyAnswer: String? { get }
 }
 
 /// The answers a hole offers: the book's, a familiar move pulled in from further down,
 /// coloured toward your patterns, ranked, and given the arrows' roles.
 extension HoleAnswers {
-  public var onlyAnswer: String? { nil }
 
   /// The moves offered at a hole: the book's.
   public var choices: [Reply] { atHole ? choicesAt(index, holeFen, 4) : [] }
@@ -92,16 +89,12 @@ extension HoleAnswers {
   /// The answers as strong players rank them, the engine settling ties.
   public var ranked: [Reply] {
     let evals = evals
-    let all = byShare(listed, san: \.san, share: { $0.share }, { delta($0, evals) })
-    guard let only = onlyAnswer else { return all }
-    let reply = all.first { $0.san == only } ?? popularReplies(index, holeFen, 0).first { $0.san == only }
-    return [reply ?? Reply(san: only, games: 0, white: 0, draw: 0, black: 0, share: 0)]
+    return byShare(listed, san: \.san, share: { $0.share }, { delta($0, evals) })
   }
 
   /// Who recommends what: strong players' top reply, the engine's best two.
   public var roles: [RoleArrow] {
     let evals = evals
-    let shown = onlyAnswer.map { only in listed.filter { $0.san == only } } ?? listed
-    return roleArrows(holeFen, shown.map { ListedAnswer(san: $0.san, share: $0.share) }, { delta($0, evals) })
+    return roleArrows(holeFen, listed.map { ListedAnswer(san: $0.san, share: $0.share) }, { delta($0, evals) })
   }
 }

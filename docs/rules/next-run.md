@@ -2,17 +2,16 @@
 
 How Play picks each run: the opening, the side and the focus. Code:
 `nextRound` (`Rounds.swift`), `recommend` (`Recommend.swift`) and the
-questions in `Recommendations.swift`; the first two steps are in
+questions in `Recommendations.swift`; the first step is in
 `PlaySession.make` (Game target). Tests: the `docs/rules/next-run.md` suite in
 `Tests/SpecTests/Rules/NextRunRules.swift`.
 
 1. **The order.** The first match wins:
-   1. the tutorial's next game, whatever is selected;
-   2. with nothing in the Playbook, a first game as White from move one, in no opening yet;
-   3. Black's first runs (rule 2);
-   4. a Freeform round, when Home's switch is on Freeform (see [freeform](freeform.md));
-   5. a run that heads for a gap, when a new move is due (rule 3);
-   6. the recommendation (rules 4 to 9), started by the [Drill rules](drill.md).
+   1. with nothing in the Playbook, a first game as White from move one, in no opening yet;
+   2. Black's first runs (rule 2);
+   3. a Freeform round, when Home's switch is on Freeform (see [freeform](freeform.md));
+   4. a run that heads for a gap, when a new move is due (rule 3);
+   5. the recommendation (rules 4 to 9), started by the [Drill rules](drill.md).
 2. **Black's first runs.** On Any Opening with Black or Either, while Black
    has no answer to 1.e4 or to 1.d4, the run is Black from move one: the
    opponent plays the move with no answer (1.e4 first), and growth opens

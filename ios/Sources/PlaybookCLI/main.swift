@@ -13,7 +13,7 @@ import Model
 
 let HELP = """
   Anywhere:  state · help · quit · home · hint (the engine's move here)
-  Start:     intro · recommend · skip [classical|system|solid|aggressive] · end-tutorial
+  Start:     recommend · know [classical|system|solid|aggressive|fianchetto|mirror] · intro
   Home:      select [w|b|either] [drill|freeform] [opening id or moves, "any" for Any Opening]
              play · recs · grow N · endgames · middlegame · shop · buy ID
   Board:     <san> (or move <san> <san>...) · think SECONDS
@@ -67,8 +67,7 @@ func perform(_ app: HeadlessApp, _ words: [String]) async throws -> Bool {
   case "state", "show": break
   case "intro": app.seeIntro()
   case "recommend": await app.recommendOpenings()
-  case "skip": try app.skipTutorial(starter: rest.first)
-  case "end-tutorial": app.endTutorial()
+  case "know": try app.knowMyOpenings(starter: rest.first)
   case "select": try select(app, rest)
   case "play": await app.openPlay()
   case "recs": break

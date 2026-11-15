@@ -170,7 +170,11 @@ struct EndgameRoundView: View {
             .zIndex(1)
           if let lens, lens != .eval { LensLegend(kind: lens, endgame: true, safety: marks?.safety).clearsLens($lens) }
           if plan, let live = livePlan, let intro = game.entry.intro { planCard(intro.pages[live.page]) }
-          if let outcome = game.outcome { ending(outcome) } else { goal }
+          if let outcome = game.outcome {
+            ending(outcome)
+          } else {
+            goal.tip(game.tip, when: game.tip == .endgamesRound, inset: 16, onDismiss: game.dismissTip)
+          }
           if game.phase == .playing {
             Button { givingUp = true } label: { Text("Give up").frame(maxWidth: .infinity) }
               .buttonStyle(PlayButtonStyle(kind: .soft, block: true)).padding(.top, 12)

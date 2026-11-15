@@ -103,8 +103,6 @@ extension AppState {
   /// Home's choices held to the features you own: White without the side picker,
   /// Any Opening without the opening picker, Drill and one side without Freeform.
   public mutating func holdToUnlocks() {
-    // The tutorial picks its own sides and openings.
-    guard settings.tutorial == nil else { return }
     if !owns(.sidePicker) { settings.selection.color = .w }
     if !owns(.freeform) {
       settings.start = .drill

@@ -7,7 +7,7 @@ import Testing
 /// them in the Pawn Shop, each opening the choice it stands for.
 @MainActor @Test func aNewPlayerBuysFeaturesInTheShop() async throws {
   try await headless(everything: false) { app in
-    try app.skipTutorial(starter: "classical")
+    try app.knowMyOpenings(starter: "classical")
     #expect(app.state.settings.selection == Selection(color: .w, opening: ANY_OPENING))
     #expect(app.state.settings.start == .drill)
     #expect(app.report().contains("Locked: Side picker"))

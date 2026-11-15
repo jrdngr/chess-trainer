@@ -16,7 +16,7 @@ struct LensBar: View {
   var planEnabled = false
   /// The plan changed since the player last opened Plan.
   var planPulse = false
-  /// A lens to draw the eye to until it is held: the tutorial's.
+  /// A lens to draw the eye to until it is held: the lens tip's.
   var spotlight: LensKind? = nil
   /// A touch on Plan has toggled it and not yet lifted.
   @State private var planTouched = false

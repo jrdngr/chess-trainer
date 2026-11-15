@@ -26,17 +26,12 @@ struct RunView: View {
   @State private var planSeen: String?
   @State private var planSeeded = false
   @State private var breaks: (fen: String, found: PawnBreaks.Breaks)?
-  /// Counts refused moves in a forced game: each one shakes the board.
-  @State private var shakes = 0
-  /// The forced move's arrow glows for a moment after a refused move.
-  @State private var nudged = 0
   /// The X mid-round asks before it ends the session.
   @State private var askingToEnd = false
   /// The finished run, analysed on its board while the deck is under it.
   @State private var analysis: RunAnalysis?
   /// A step through it part of the way along, as the deck's swipe has it.
   @State private var slid: BoardSlide?
-  @Environment(Toasts.self) private var toasts
   @Environment(\.scenePhase) private var scenePhase
 
   /// A Middlegame run, not Play's round.
@@ -47,11 +42,6 @@ struct RunView: View {
 
   /// The tip over the deck, the first time a Play round ends on it.
   private static let deckTip = "Tap the deck to deal your next game."
-
-  /// The X is the way on: a tutorial game asks you to end it, or is over.
-  private var xCued: Bool {
-    (model.endCued && !model.nextRunShown) || (model.tutorialGame != nil && model.finish != nil && model.tip != .blunder)
-  }
 
   /// The game as played, the move that ended it last.
   private var gameLine: [String] {
@@ -87,13 +77,6 @@ struct RunView: View {
   var body: some View {
     ZStack {
       board
-      // A finished tutorial game: one layer over everything takes every tap, so nothing on the screen
-      // can sit over its tips. A tap puts the blunder tip away, then the next goes Home.
-      if model.tapsLeave {
-        Color.clear.contentShape(Rectangle()).ignoresSafeArea()
-          .onTapGesture { if model.tapFinished() { close() } }
-          .zIndex(10)
-      }
       if model.intro == .announce {
         if standalone {
           PlayIntroCover(trail: introTrail, mode: "Middlegame")
@@ -164,16 +147,14 @@ struct RunView: View {
         .padding(.horizontal).padding(.top, 12)
       BoardView(
         fen: boardFen, orientation: model.run.color,
-        interactive: drawing ? analysis != nil : model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil && model.flash == nil && !model.endCued
-          && !lensLesson,
+        interactive: drawing ? analysis != nil : model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil && model.flash == nil,
         lastMove: model.held ? lastMoveOf(Array(model.introPath.prefix(model.introPly))) : lastMove, highlights: highlights, arrows: arrows, pop: model.pop, popId: model.popCount,
-        marks: marks, bothSides: drawing, allowed: drawing ? nil : model.fill == nil ? model.expected.map { [$0] } : model.fillChoices.map(\.san),
+        marks: marks, bothSides: drawing, allowed: drawing || model.fill == nil ? nil : model.fillChoices.map(\.san),
         slide: drawing ? slid : nil,
         onMove: { move in
           if drawing { analysis?.play(move) } else { model.play(move) }
-        }, onRefused: refused
+        }
       )
-      .modifier(BoardShake(count: shakes))
       // Under Play's deal the card stands in for the board until it has grown onto it.
       .opacity(model.intro == .announce && !standalone ? 0 : 1)
       .anchorPreference(key: BoardFrameKey.self, value: .bounds) { $0 }
@@ -209,13 +190,13 @@ struct RunView: View {
     }
   }
 
-  /// The tutorial's tips hung from the board.
-  private static let boardTips: Set<TutorialTip?> = [.flashCards, .checkMark, .saved, .keepPlaying, .scores]
+  /// The tips hung from the board.
+  private static let boardTips: Set<GameTip?> = [.flashCards, .prepDone, .scores, .moment, .freeformGame, .middlegameRound]
 
-  /// The tutorial's tips hung from the header: at the prep bar, or at the X for the end of a game.
-  private static let headerTips: Set<TutorialTip?> = [.prepBar, .lineDone, .endRun, .goHome]
+  /// The tips hung from the header: at the prep bar, or at the pawn counter.
+  private static let headerTips: Set<GameTip?> = [.prepBar, .pawns]
 
-  private var headerArrowAt: CGFloat { model.tip == .endRun || model.tip == .goHome ? 0.08 : 0.5 }
+  private var headerArrowAt: CGFloat { model.tip == .pawns ? 0.92 : 0.5 }
 
   /// The board's rim and what the status line calls it: a replay, adding moves, a moment to find, your prep.
   private var rim: (color: SwiftUI.Color, label: String)? {
@@ -230,18 +211,17 @@ struct RunView: View {
   /// The lenses are away: moves are being played for you or added, or there is a moment to find without them.
   private var lensesAway: Bool { model.intro == .replay || adding || (model.blunder == nil && model.momentHere) }
 
-  /// The tutorial's lens tip holds the board: a lens is turned on, then off with a tap, before the next move.
-  private var lensLesson: Bool { model.tip == .lens && lensEnabled && !lensesAway }
+  /// A tip hangs above the dock's top: the blunder's over its name, the mission's over the goal.
+  private var tipAbove: Bool { model.blunder != nil || model.tip == .mission }
 
   /// A callout is up in the lenses' place.
   private var called: Bool { model.shownCallout != nil }
 
-  /// Prep complete, Off prep or Found it, in the lenses' place for a moment. The last game's tip hangs from it.
+  /// Prep complete, Off prep or Found it, in the lenses' place for a moment.
   @ViewBuilder private var calloutLayer: some View {
     if let callout = model.shownCallout {
       CalloutStrip(text: callout.text, good: callout.good)
         .padding(.top, 8)
-        .tip(model.tip, when: model.tip == .playOn, arrow: .up, onDismiss: model.dismissTip)
         .transition(.opacity.combined(with: .offset(y: -6)))
         .id(callout.id)
     }
@@ -252,23 +232,6 @@ struct RunView: View {
     model.advancing = true
     model.endRound()
     onNextRun?()
-  }
-
-  /// A move the board won't take in a tutorial game: growth says which it wants, a forced move shakes the board.
-  private func refused() {
-    guard let game = model.tutorialGame else { return }
-    if model.fill != nil {
-      toasts.show(game.oneOption ? "Add the move shown." : "Pick one of the moves listed.")
-    } else if model.expected != nil {
-      withAnimation(.linear(duration: 0.3)) { shakes += 1 }
-      Haptics.buzz(12, on: store.state.settings.hapticFeedback)
-      nudged += 1
-      let mine = nudged
-      Task { @MainActor in
-        try? await Task.sleep(for: .seconds(0.9))
-        if nudged == mine { withAnimation(.easeOut(duration: 0.3)) { nudged = 0 } }
-      }
-    }
   }
 
   /// Debug builds can pin a lens with `PIN_LENS=pieces`, for screenshots.
@@ -334,8 +297,6 @@ struct RunView: View {
       HStack {
         Button(action: close) {
           Image(systemName: "xmark").font(.headline).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
-            // The tutorial asks for the X once its game is done, where Next run doesn't take its place, and once it is over.
-            .overlay { if xCued { Circle().strokeBorder(Theme.accent, lineWidth: 2) } }
         }
         .foregroundStyle(Theme.text).buttonStyle(.plain)
         Spacer()
@@ -362,11 +323,10 @@ struct RunView: View {
       }
       .overlay(alignment: .top) { calloutLayer.animation(.easeOut(duration: 0.25), value: model.shownCallout?.id) }
       // The callout runs past the lenses' row, over the panel under it (Undo and Done while adding moves).
-      // Only a lens puts this tip away: the board waits for one, turned on and then off.
-      // Once one is on, the tip points up at the board to say how to turn it off.
+      // Once a lens is on, the tip points up at the board to say how to turn it off; turning it off puts the tip away.
       .tip(
-        text: model.tip == .lens ? (lens == nil ? TutorialTip.lens.text : TutorialTip.lensOff) : nil,
-        arrow: lens == nil ? .up : .down, arrowAt: lens == nil ? 0.1 : 0.5, rest: 1)
+        text: model.tip == .lens ? (lens == nil ? GameTip.lens.text : GameTip.lensOff) : nil,
+        arrow: lens == nil ? .up : .down, arrowAt: lens == nil ? 0.1 : 0.5, rest: 1, onDismiss: model.dismissTip)
       VStack(spacing: 0) {
         if lens == .eval {
           EvalRunCard(trail: model.session.evalTrail, last: model.session.lastJudged, color: model.run.color)
@@ -389,9 +349,9 @@ struct RunView: View {
       // Gives way before the board does: what doesn't fit is cut, never pushed up, and can't take a touch outside it.
       // A blunder's tip hangs above its name, over the lenses, so nothing is cut then.
       .frame(minHeight: 0, maxHeight: .infinity, alignment: .top)
-      .clipShape(Rectangle().inset(by: model.blunder != nil ? -200 : 0)).contentShape(Rectangle())
-      // Over the lenses' row while a blunder's tip hangs above its name.
-      .zIndex(model.blunder != nil ? 2 : 0)
+      .clipShape(Rectangle().inset(by: tipAbove ? -200 : 0)).contentShape(Rectangle())
+      // Over the lenses' row while a blunder's tip hangs above its name, or the mission tip above the goal.
+      .zIndex(tipAbove ? 2 : 0)
       footer.padding(.top, 10).padding(.bottom, 8).opacity(model.blunder == nil && !drawing ? 1 : 0)
     }
     // The plan when the lenses wake is the one the player starts with; a tap on Plan sees the one up now.
@@ -432,15 +392,15 @@ struct RunView: View {
   }
 
   /// The X: once play is under way it asks, then ends the round and goes Home; before that it leaves.
-  /// A run over on the board, with the deck under it or in the tutorial, leaves.
+  /// A run over on the board, with the deck under it, leaves.
   private func close() {
-    if drawing || (model.finish != nil && model.tutorialGame != nil) {
+    if drawing {
       onExit()
     } else if model.blunder != nil {
       model.continueToEnd()
     } else if model.live && model.intro == .done {
       // A round already called over, or one with nothing played yet, ends without asking.
-      if model.endCued || model.run.played.count <= model.run.opened { end() } else { askingToEnd = true }
+      if model.run.played.count <= model.run.opened { end() } else { askingToEnd = true }
     } else {
       onExit()
     }
@@ -459,8 +419,9 @@ struct RunView: View {
         HandoffMoves(handoff: handoff, played: model.introPly)
       } else if model.intro == .replay {
         movesLine(sansToMoveText(Array(model.introPath.prefix(model.introPly))))
-      } else if !model.held, model.prefs.missions, !model.tipsInPlay, let mission = model.session.state.extras.mission {
+      } else if !model.held, model.prefs.missions, let mission = model.session.state.extras.mission {
         GoalCard(mission: mission).pawnSpot("goal")
+          .tip(model.tip, when: model.tip == .mission, arrow: .down, inset: 16, onDismiss: model.dismissTip)
       } else {
         Color.clear
       }
@@ -507,10 +468,9 @@ struct RunView: View {
       if model.nextRunShown && onNextRun != nil {
         Button(action: nextRun) { HStack(spacing: 8) { Text("Next run"); Icon(name: "next", size: 16) } }
           .buttonStyle(PlayButtonStyle(kind: .soft, height: 44, radius: 12, font: 15))
-          .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.accent, lineWidth: model.endCued ? 2 : 1.5) }
+          .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.accent, lineWidth: 1.5) }
       }
     }
-    .tip(model.tip, when: model.tip == .nextRun, arrow: .down, arrowAt: 0.85, onDismiss: model.dismissTip)
   }
 
   /// The analysed line's moves, as on the Analysis screen: a tap or an arrow goes to a move.
@@ -525,8 +485,8 @@ struct RunView: View {
 
   /// Under the prep bar: the rim's name in its color while the board has one, else whose move.
   private var headerStatus: some View {
-    let turn = model.endCued ? "Round over" : model.pending != nil ? "Judging" : model.myTurn && !model.thinking ? "Your move" : "Reply"
-    let named = model.endCued ? nil : rim
+    let turn = model.pending != nil ? "Judging" : model.myTurn && !model.thinking ? "Your move" : "Reply"
+    let named = rim
     return StatusLine(
       white: model.run.color == .w,
       text: named?.label ?? turn,
@@ -535,7 +495,7 @@ struct RunView: View {
   }
 
   /// A blunder ends the run: its name under the board for a beat, the threat drawn on it,
-  /// then the end screen, which has Analyze; a tutorial game's stays until its X. A tutorial tip holds it until it is put away.
+  /// then the end screen, which has Analyze. The blunder tip holds it until it is put away.
   /// With the deck, the run stays here as analysis: its ending's name at the game's end, else the move and who is to play.
   @ViewBuilder private var ending: some View {
     if drawing {
@@ -554,10 +514,9 @@ struct RunView: View {
         .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
         .padding(.top, 16)
         .contentShape(Rectangle())
-        // A tutorial game has no end screen; its taps go to the layer over the whole screen.
-        .onTapGesture { if model.tutorialGame == nil { model.continueToEnd() } }
+        .onTapGesture { model.continueToEnd() }
         .task(id: model.tip == .blunder) {
-          guard model.tip != .blunder, model.tutorialGame == nil else { return }
+          guard model.tip != .blunder else { return }
           try? await Task.sleep(for: .seconds(2))
           if !Task.isCancelled { model.continueToEnd() }
         }
@@ -640,29 +599,8 @@ struct RunView: View {
     }
     if let miss = model.miss { return [BoardArrow(from: miss.from, to: miss.to, color: Theme.good)] }
     if model.atHole && !model.thinking {
-      // The tutorial's one answer takes its row's color, not the guided moves' accent: adding moves is its own step.
-      if let only = model.onlyAnswer {
-        let color = roleColor(model.roles.first { $0.san == only }?.role) ?? Theme.book
-        return applySan(model.run.fen, only).map { [BoardArrow(from: $0.from, to: $0.to, color: color)] } ?? []
-      }
       return holeArrows(model)
     }
-    if let shown = model.shownMove, !model.thinking, let move = applySan(model.run.fen, shown) {
-      return [BoardArrow(from: move.from, to: move.to, color: Theme.accent, glow: nudged > 0 ? Theme.accent : nil)]
-    }
     return []
-  }
-}
-
-/// The board shaken side to side once per refused move.
-private struct BoardShake: GeometryEffect {
-  var count: Int
-  var animatableData: CGFloat
-  init(count: Int) {
-    self.count = count
-    animatableData = CGFloat(count)
-  }
-  func effectValue(size: CGSize) -> ProjectionTransform {
-    ProjectionTransform(CGAffineTransform(translationX: 8 * sin(animatableData * .pi * 4), y: 0))
   }
 }

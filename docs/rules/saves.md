@@ -18,4 +18,5 @@ How an older save is brought up to date when it loads. Code:
    its bests and recent runs are dropped, and how many runs were played and
    ended stays.
 6. **Version 5: the Pawn Shop.** A profile from before it owns every
-   feature the shop sells. A new profile owns none.
+   feature the shop sells and has seen every tip. A new profile owns none
+   and has seen none.
