@@ -1,9 +1,11 @@
 import Game
 import Model
 import SwiftUI
+import UIKit
+import UIKit.UIGestureRecognizerSubclass
 
-/// A tip: white, with an arrow at what it explains.
-/// A tap puts it away.
+/// A tip: white, with an arrow at what it explains. It never takes a touch:
+/// the first touch anywhere puts it away and still goes to what is under it.
 struct TipBubble: View {
   enum Arrow { case up, down }
   let text: String
@@ -25,9 +27,9 @@ struct TipBubble: View {
       }
     }
     .shadow(color: .black.opacity(0.5), radius: 14, y: 8)
-    .contentShape(Rectangle())
-    .onTapGesture(perform: onDismiss)
+    .allowsHitTesting(false)
     .accessibilityAddTraits(.isButton)
+    .accessibilityAction(perform: onDismiss)
     .transition(.opacity)
   }
 }
@@ -102,6 +104,7 @@ struct TipLayer: ViewModifier {
           .transition(.opacity)
         }
       }
+      .background { if text != nil { AnyTouch(action: onDismiss) } }
       .animation(.easeOut(duration: Self.fade), value: text)
       .zIndex(raised || text != nil ? 2 : rest)
       .task(id: text != nil) {
@@ -119,4 +122,55 @@ struct TipLayer: ViewModifier {
 @MainActor func dismissTip(_ store: AppStore, _ tip: GameTip?) {
   guard let tip else { return }
   withAnimation(.easeOut(duration: 0.15)) { store.see(tip) }
+}
+
+/// Calls `action` on the first touch anywhere in the window, and lets the
+/// touch go on to whatever it landed on.
+private struct AnyTouch: UIViewRepresentable {
+  let action: () -> Void
+  func makeUIView(context: Context) -> TouchWatcher { TouchWatcher() }
+  func updateUIView(_ view: TouchWatcher, context: Context) { view.watch.action = action }
+  static func dismantleUIView(_ view: TouchWatcher, coordinator: ()) { view.stop() }
+}
+
+/// An empty view that watches its window's touches while it is in one.
+final class TouchWatcher: UIView {
+  let watch = FirstTouch()
+
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+    isUserInteractionEnabled = false
+  }
+
+  required init?(coder: NSCoder) { nil }
+
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    stop()
+    window?.addGestureRecognizer(watch)
+  }
+
+  func stop() { watch.view?.removeGestureRecognizer(watch) }
+}
+
+/// Sees a touch begin, then fails at once, so it never holds up, cancels or
+/// delays any other gesture or control.
+final class FirstTouch: UIGestureRecognizer {
+  var action: () -> Void = {}
+
+  init() {
+    super.init(target: nil, action: nil)
+    cancelsTouchesInView = false
+    delaysTouchesBegan = false
+    delaysTouchesEnded = false
+  }
+
+  override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+    let action = action
+    // After this touch is handed out, so the tip leaving never disturbs it.
+    DispatchQueue.main.async { action() }
+    state = .failed
+  }
+
+  override func canPrevent(_ preventedGestureRecognizer: UIGestureRecognizer) -> Bool { false }
 }

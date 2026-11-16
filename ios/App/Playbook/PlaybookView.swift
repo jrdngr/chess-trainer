@@ -175,14 +175,6 @@ struct PlaybookView: View {
         .padding(.horizontal, 16).padding(.bottom, 28)
       }
     }
-    // While the tip shows, a tap anywhere puts it away, and nothing else takes a touch.
-    .overlay {
-      if tip != nil {
-        SwiftUI.Color.black.opacity(0.001).contentShape(Rectangle())
-          .onTapGesture(perform: putAway)
-          .accessibilityHidden(true)
-      }
-    }
     .fullScreenCover(isPresented: $adding) {
       OnboardingView(tree: tree, index: index, onClose: { adding = false }) { next in
         adding = false

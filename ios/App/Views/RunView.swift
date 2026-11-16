@@ -104,16 +104,6 @@ struct RunView: View {
       }
     }
     .pawnFlights(orientation: model.run.color)
-    // While a tip is up, the next tap anywhere only puts it away.
-    .overlay {
-      if model.tip != nil || deckTipUp {
-        SwiftUI.Color.clear.contentShape(Rectangle()).ignoresSafeArea()
-          .onTapGesture {
-            if model.tip != nil { model.dismissTip() } else { store.update { $0.settings.seenDeckTip = true } }
-          }
-          .accessibilityHidden(true)
-      }
-    }
     .contentShape(Rectangle())
     .onTapGesture { if model.intro == .announce { model.toBoard() } }
     .confirmationDialog("End session?", isPresented: $askingToEnd, titleVisibility: .visible) {

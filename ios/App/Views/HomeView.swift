@@ -64,16 +64,6 @@ struct HomeView: View {
       }
       .padding(.horizontal, 16).padding(.bottom, 24)
     }
-    // While a tip shows, a tap anywhere goes to the next one.
-    .overlay {
-      if tip != nil {
-        SwiftUI.Color.black.opacity(0.001).contentShape(Rectangle())
-          .onTapGesture { nextHomeTip(store) }
-          .accessibilityHidden(true)
-      }
-    }
-    // Leaving Home puts its tip away, so a later one never waits behind it.
-    .onDisappear { nextHomeTip(store) }
     .sheet(isPresented: $settings) { SettingsSheet().presentationBackground(Theme.background) }
     .onAppear {
       guard store.takeSettingsHeld() else { return }
@@ -180,11 +170,6 @@ struct PlayStackStyle: ButtonStyle {
   }
 }
 
-/// Home's tip put away, for the next one.
-@MainActor private func nextHomeTip(_ store: AppStore) {
-  dismissTip(store, store.state.homeTip)
-}
-
 /// Under Play's button on Home: the side, how runs start, and the opening, each with its tip once bought.
 private struct PlayFooter: View {
   let tip: GameTip?
@@ -208,7 +193,7 @@ private struct PlayFooter: View {
           .accessibilityLabel("Side")
           .unlockedBy(.sidePicker, hidden: true)
           // The side button is narrow: the tip keeps a readable width, its arrow at the button.
-          .tip(text: tip == .sidePicker ? tip?.text : nil, arrowAt: 0.13, minWidth: 240) { nextHomeTip(store) }
+          .tip(text: tip == .sidePicker ? tip?.text : nil, arrowAt: 0.13, minWidth: 240) { dismissTip(store, .sidePicker) }
           SegmentedControl(
             value: Binding(get: { settings.start }, set: { start in store.update { $0.settings.start = start } }),
             options: [(RunStart.freeform, "Freeform"), (RunStart.drill, "Drill")], track: Theme.background)
@@ -228,7 +213,7 @@ private struct PlayFooter: View {
         .contentShape(RoundedRectangle(cornerRadius: 12))
       }
       .unlockedBy(.openingPicker, hidden: true)
-      .tip(text: tip == .openingPicker ? tip?.text : nil) { nextHomeTip(store) }
+      .tip(text: tip == .openingPicker ? tip?.text : nil) { dismissTip(store, .openingPicker) }
     }
     .padding(8)
     .buttonStyle(.plain)
