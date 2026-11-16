@@ -119,7 +119,7 @@ struct RootView: View {
           // A feature with a place on Home shows itself off there; the lenses wait for the next game.
           if !feature.isLens { tab = .home }
         }
-          .tabItem { Label { Text(Tab.shop.label) } icon: { Image.pawn } }.tag(Tab.shop)
+          .tabItem { Label { Text(Tab.shop.label) } icon: { Image.pawn } }.badge(store.state.buyableCount).tag(Tab.shop)
       }
       .tint(Theme.accent)
       .environment(\.openShop) { id in

@@ -10,10 +10,8 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
   case flashCards
   /// A prep move played.
   case prepBar
-  /// The prep runs out.
+  /// The first ✓ on a common move past your prep.
   case prepDone
-  /// A move past the book gets its score.
-  case scores
   /// Growth opens.
   case growth
   /// A blunder ends the game.
@@ -22,22 +20,14 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
   case pawns
   /// A mission is set.
   case mission
-  /// The board glows for a moment.
-  case moment
   /// The lenses owned, and the game past your prep.
   case lens
   /// A Freeform game starts.
   case freeformGame
-  /// A Middlegame round reaches the board.
-  case middlegameRound
-  /// An Endgames round starts.
-  case endgamesRound
 
   /* ── Home ── */
-  /// Enough pawns for something in the Pawn Shop: the shop's tab.
-  case shop
   /// A feature bought: its control on Home.
-  case sidePicker, openingPicker, freeform, recommendations, middlegame, endgames
+  case sidePicker, openingPicker
 
   /* ── the Playbook tab ── */
   /// The tab opened.
@@ -45,40 +35,27 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
 
   public var text: String {
     switch self {
-    case .flashCards: "Your openings are flashcards. Each prep move is graded on being right and fast."
+    case .flashCards: "Your openings are flashcards. Each move is graded on speed and accuracy."
     case .prepBar: "The prep bar fills as you play your line."
-    case .prepDone: "That\u{2019}s your prep. A \u{2713} means you\u{2019}re still playing common moves."
-    case .scores: "Past your prep, each move gets a score for how good (or bad) it was."
-    case .growth: "Pick an answer or play it on the board. Tap Done to stop adding early."
-    case .blunder: "A blunder ends the game. The arrow shows the threat."
-    case .pawns: "You earn pawns for good play. Spend them in the Pawn Shop."
-    case .mission: "A mission: meet it this game for \(pawnsFor(.mission)) pawns."
-    case .moment: "When the board glows, there\u{2019}s a strong move. Find it."
+    case .prepDone: "A \u{2713} means you\u{2019}re still playing common moves."
+    case .growth: "We\u{2019}ll add new moves to your openings as you get better. Pick an answer or play it on the board. Tap Done to stop adding early."
+    case .blunder: "A blunder ends the game."
+    case .pawns: "You earn pawns for various accomplishments. Spend them in the Pawn Shop."
+    case .mission: "Complete missions to earn pawns."
     case .lens: "Tap a lens for hints."
-    case .freeformGame: "Play any of your lines. Your opponent follows what you play."
-    case .middlegameRound: "Your line plays itself out to the middlegame. Then the game is yours."
-    case .endgamesRound: "Win it or hold it: the card says which."
-    case .shop: "You have enough pawns for something in the Pawn Shop."
-    case .sidePicker: "Pick White or Black here."
-    case .openingPicker: "Play Any Opening, or pick one of yours."
-    case .freeform: "Freeform plays whole games from move 1. Drill starts where you need practice."
-    case .recommendations: "Gaps in your Playbook. Tap one to fill it."
-    case .middlegame: "Play on from the middlegame of your lines."
-    case .endgames: "Endings from your games, to win or hold."
+    case .freeformGame: "Freeform lets you play any of your lines from move 1. Your opponent will always stay within your Playbook."
+    case .sidePicker: "Choose your side."
+    case .openingPicker: "Choose an opening to focus on."
     case .playbook: "Your openings live here. Tap + to add one, and swipe left on one to delete it."
     }
   }
 
-  /// The Home tip for a feature bought; the lenses have theirs in a game.
+  /// The Home tip for a feature bought: the side picker's and the opening picker's.
   public static func bought(_ feature: ShopFeature) -> GameTip? {
     switch feature {
     case .sidePicker: .sidePicker
-    case .lensPawns, .lensPieces, .lensKings, .lensEval, .lensPlan: nil
     case .openingPicker: .openingPicker
-    case .freeform: .freeform
-    case .recommendations: .recommendations
-    case .middlegame: .middlegame
-    case .endgames: .endgames
+    default: nil
     }
   }
 }
@@ -91,14 +68,16 @@ extension Settings {
 }
 
 extension AppState {
-  /// Home's tip now: a feature bought, at its control, then the Pawn Shop's tab once something there is yours to buy.
+  /// Home's tip now: a feature bought, at its control.
   public var homeTip: GameTip? {
     for feature in ShopFeature.allCases where owns(feature) {
       if let tip = GameTip.bought(feature), !settings.seen(tip) { return tip }
     }
-    if !settings.seen(.shop), SHOP.contains(where: { status($0) == .buyable }) { return .shop }
     return nil
   }
+
+  /// The Shop tab's badge: how many items you can buy now.
+  public var buyableCount: Int { SHOP.filter { status($0) == .buyable }.count }
 
   /// A profile from before the tips has seen every one.
   public mutating func seeAllTips() {

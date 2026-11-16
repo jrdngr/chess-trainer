@@ -204,7 +204,7 @@ struct RunView: View {
   }
 
   /// The tips hung from the board.
-  private static let boardTips: Set<GameTip?> = [.flashCards, .scores, .moment, .freeformGame, .middlegameRound]
+  private static let boardTips: Set<GameTip?> = [.flashCards, .prepDone, .freeformGame]
 
   /// The tips hung from the header: at the prep bar, or at the pawn counter.
   private static let headerTips: Set<GameTip?> = [.prepBar, .pawns]
@@ -230,13 +230,12 @@ struct RunView: View {
   /// A callout is up in the lenses' place.
   private var called: Bool { model.shownCallout != nil }
 
-  /// Prep complete, Off prep or Found it, in the lenses' place for a moment. The end-of-prep tip hangs from it.
+  /// Prep complete, Off prep or Found it, in the lenses' place for a moment.
   @ViewBuilder private var calloutLayer: some View {
     if let callout = model.shownCallout {
       CalloutStrip(text: callout.text, good: callout.good)
         .pawnSpot("callout")
         .padding(.top, 8)
-        .tip(model.tip, when: model.tip == .prepDone, onDismiss: model.dismissTip)
         .transition(.opacity.combined(with: .offset(y: -6)))
         .id(callout.id)
     }

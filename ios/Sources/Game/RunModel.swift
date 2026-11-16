@@ -265,21 +265,18 @@ public final class RunModel {
     public var id: Int
   }
   public private(set) var callout: Callout?
-  /// The last callout for leaving your prep, kept up while the end-of-prep tip hangs from it.
-  private var prepCallout: Callout?
   private var calloutCount = 0
   /// How long a callout stays.
   public static let calloutMs = 1.5
 
-  /// The callout on the board: the end-of-prep tip keeps its callout up.
-  public var shownCallout: Callout? { callout ?? (tip == .prepDone ? prepCallout : nil) }
+  /// The callout on the board.
+  public var shownCallout: Callout? { callout }
 
-  private func show(callout text: String, good: Bool, prep: Bool = false) {
+  private func show(callout text: String, good: Bool) {
     calloutCount += 1
     let shown = Callout(text: text, good: good, id: calloutCount)
     callout = shown
     services.emit(.callout(text, good: good))
-    if prep { prepCallout = shown }
     later(Self.calloutMs) { model in
       if model.callout == shown { model.callout = nil }
     }
@@ -288,8 +285,7 @@ public final class RunModel {
   /// Your prep just ended, finished or missed: a Play run says so over the board.
   private func noteLeft(_ was: PrepLabel?) {
     guard round != nil, was == .on, session.prepStatus != .on else { return }
-    show(callout: session.prepStatus == .off ? "Off prep" : "Prep complete", good: session.prepStatus != .off, prep: true)
-    if session.prepStatus != .off { offer(.prepDone) }
+    show(callout: session.prepStatus == .off ? "Off prep" : "Prep complete", good: session.prepStatus != .off)
   }
 
   /// The board as shown: your move stands while it is judged, a blunder stays until Continue.
@@ -319,7 +315,6 @@ public final class RunModel {
   public func toBoard() {
     guard intro == .announce else { return }
     intro = introPath.isEmpty ? .done : .replay
-    if handoff != nil { offer(.middlegameRound) }
     intro == .done ? begin() : replayStep()
   }
 
@@ -487,7 +482,6 @@ public final class RunModel {
       self.baseline = base
       self.update(sawEval(self.session, base.cp))
       if self.live && self.myTurn { self.update(missionFrom(self.session, self.prefs, base.cp)) }
-      if self.momentHere { self.offer(.moment) }
       if self.prefs.missions && self.session.state.extras.mission != nil { self.offer(.mission) }
     }
   }
@@ -725,7 +719,8 @@ public final class RunModel {
         services.emit(.buzz(pattern))
       case .pop(let p):
         show(pop: p)
-        if !p.found { offer(.scores) }
+        // The first ✓ on a common move past your prep says what it means.
+        if p.book { offer(.prepDone) }
       case .note(let n):
         // A word on what the move earned: a callout, like a find.
         if let n { show(callout: n.text, good: n.tone == "good") }

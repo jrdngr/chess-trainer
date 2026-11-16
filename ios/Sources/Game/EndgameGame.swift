@@ -29,8 +29,6 @@ public final class EndgameGame {
   public private(set) var note: String?
   /// The engine's move where you missed a mate.
   public private(set) var missedBest: (from: String, to: String)?
-  /// The tip on screen: the first round's, on its goal.
-  public private(set) var tip: GameTip?
 
   @ObservationIgnored private let store: AppStore
   @ObservationIgnored private let engine: ChessEngine
@@ -51,18 +49,7 @@ public final class EndgameGame {
     color = fenTurn(start)
     // The card comes before every round of an ending that has one.
     phase = entry.intro != nil ? .intro : .playing
-    if phase == .playing { offerTip() }
   }
-
-  /// The first round on the board: the tip on its goal, once.
-  private func offerTip() {
-    guard !store.state.settings.seen(.endgamesRound) else { return }
-    tip = .endgamesRound
-    store.update { $0.settings.see(.endgamesRound) }
-  }
-
-  /// A tap on the tip, or your move.
-  public func dismissTip() { tip = nil }
 
   public var myTurn: Bool { phase == .playing && fenTurn(fen) == color && !thinking }
   public var lastMove: (from: String, to: String)? { lastMoveOf(moves, start) }
@@ -72,7 +59,6 @@ public final class EndgameGame {
     guard phase == .intro else { return }
     store.update { $0.endgames.sawIntro(entry.id) }
     phase = .playing
-    offerTip()
   }
 
   /// Show the intro card again.
@@ -85,7 +71,6 @@ public final class EndgameGame {
 
   public func play(_ move: LegalMove) {
     guard myTurn else { return }
-    tip = nil
     let before = fen
     note = nil
     missedBest = nil

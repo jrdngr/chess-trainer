@@ -1,7 +1,7 @@
 # Tips
 
 Tips teach the game as it comes up: no tutorial, no forced moves. Code:
-`Tips.swift` in Model, `RunModel` and `EndgameGame` in Game. Tests: the
+`Tips.swift` in Model, `RunModel` in Game. Tests: the
 `docs/rules/tips.md` suite in `Tests/SpecTests/Rules/TipsRules.swift`, and
 `tipsShowAtTheirTriggersOnce` in `Tests/FlowTests/OnboardingFlowTests.swift`
 and `firstGameGrowsThePlaybookFromMoveOne` in `PlayFlowTests.swift` for rule 2.
@@ -16,21 +16,16 @@ and `firstGameGrowsThePlaybookFromMoveOne` in `PlayFlowTests.swift` for rule 2.
    away any tip that is up, so its own shows. In a game:
    - a Play game starts on your prep: your openings are flashcards
    - a prep move played: the prep bar
-   - your prep runs out without a miss: the ✓ marks common moves
-   - a move past the book gets its score: what scores mean
+   - the first ✓ on a common move: what the ✓ means
    - growth opens: pick or play an answer, Done stops early
-   - a blunder ends the game: the arrow shows the threat
+   - a blunder ends the game
    - pawns earned: what they are for
-   - a mission set: what it pays
-   - the board glows for a moment: find the strong move
+   - a mission set: missions pay pawns
    - a lens owned, past your prep: tap a lens for hints
    - a Freeform game starts: play any of your lines
-   - a Middlegame round reaches the board: the replay and the plan card
-   - an Endgames round starts: win it or hold it
-3. **Home's tip** is a bought feature's, at its control on Home (the side
-   picker, the opening picker, the Freeform switch, Recommendations,
-   Middlegame, Endgames), and once those are seen, the Pawn Shop tab's when
-   something there is yours to buy. The Playbook tab has one tip, the first
-   time it opens.
+3. **Home's tip** is a just bought side picker's or opening picker's, at
+   its control on Home. No other bought feature has a tip. The Shop tab
+   shows a badge with the number of items you can buy now, and none at
+   zero. The Playbook tab has one tip, the first time it opens.
 4. **Profiles from before the tips** have seen every one (see
    [saves](saves.md)).

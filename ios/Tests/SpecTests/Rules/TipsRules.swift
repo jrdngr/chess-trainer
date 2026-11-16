@@ -15,16 +15,16 @@ import Testing
     #expect(old.seenTips == [.prepBar], "names this version doesn't know are dropped")
   }
 
-  /// Rule 3: Home's tip is a bought feature's, at its control, before the Pawn Shop's.
-  @Test func homeShowsBoughtFeaturesThenTheShop() {
+  /// Rule 3: Home's tip is a bought side or opening picker's, at its control; the Shop tab counts what you can buy.
+  @Test func homeShowsBoughtPickersAndTheShopCountsBuyables() {
     var s = AppState()
-    #expect(s.homeTip == nil, "nothing to buy, nothing bought")
-    s.pawns = 5
-    #expect(s.homeTip == .shop)
-    s.settings.see(.shop)
-    #expect(s.homeTip == nil)
+    #expect(s.homeTip == nil && s.buyableCount == 0, "nothing to buy, nothing bought")
+    s.pawns = 10
+    #expect(s.homeTip == nil, "no tip for the Shop")
+    #expect(s.buyableCount == 2, "the side picker and the Pawns lens")
     let bought = s.buy("sidePicker")
     #expect(bought && s.homeTip == .sidePicker)
+    #expect(s.buyableCount == 0, "5 pawns left buy nothing")
     s.settings.see(.sidePicker)
     s.pawns = 10
     _ = s.buy("lensPawns")

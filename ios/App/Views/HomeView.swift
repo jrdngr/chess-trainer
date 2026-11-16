@@ -7,8 +7,7 @@ import SwiftUI
 /// Endgames, Recommendations and Milestones. A mode tile starts the mode on
 /// your saved settings; press and hold Middlegame for Start or Settings (its
 /// setup screen first). A Pawn Shop feature shows only once it is yours. A
-/// feature just bought gets a tip at its control, and enough pawns for
-/// something in the Pawn Shop a tip on its tab.
+/// side picker or opening picker just bought gets a tip at its control.
 struct HomeView: View {
   let tree: OpeningTree
   let onOpen: (Mode) -> Void
@@ -53,17 +52,12 @@ struct HomeView: View {
           if store.state.owns(.middlegame) || store.state.owns(.endgames) {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 10) {
               tile("Middlegame", "middlegame", .middlegame, held: true).unlockedBy(.middlegame, hidden: true)
-                .tip(text: tip == .middlegame ? tip?.text : nil, arrowAt: 0.3, minWidth: 260) { nextHomeTip(store) }
               tile("Endgames", "flag", .endgame).unlockedBy(.endgames, hidden: true)
-                .tip(text: tip == .endgames ? tip?.text : nil, arrowAt: 0.7) { nextHomeTip(store) }
             }
-            // Over the cards below while a tile's tip hangs past it.
-            .zIndex(tip == .middlegame || tip == .endgames ? 1 : 0)
             .padding(.bottom, 10)
           }
           VStack(spacing: 10) {
             RecommendationsCard(tree: tree, onPick: onGap).unlockedBy(.recommendations, hidden: true)
-              .tip(text: tip == .recommendations ? tip?.text : nil) { nextHomeTip(store) }
             MilestonesCard()
           }
         }
@@ -76,13 +70,6 @@ struct HomeView: View {
         SwiftUI.Color.black.opacity(0.001).contentShape(Rectangle())
           .onTapGesture { nextHomeTip(store) }
           .accessibilityHidden(true)
-      }
-    }
-    // The Pawn Shop is the system tab bar's last of five, just under Home.
-    .overlay(alignment: .bottom) {
-      if tip == .shop {
-        TipBubble(text: GameTip.shop.text, arrow: .down, arrowAt: 0.9) { nextHomeTip(store) }
-          .padding(.horizontal, 16).padding(.bottom, 12)
       }
     }
     // Leaving Home puts its tip away, so a later one never waits behind it.
@@ -226,7 +213,6 @@ private struct PlayFooter: View {
             value: Binding(get: { settings.start }, set: { start in store.update { $0.settings.start = start } }),
             options: [(RunStart.freeform, "Freeform"), (RunStart.drill, "Drill")], track: Theme.background)
             .unlockedBy(.freeform, hidden: true)
-            .tip(text: tip == .freeform ? tip?.text : nil) { nextHomeTip(store) }
         }
         // Without the Freeform switch, the side button keeps to the left rather than the middle.
         .frame(maxWidth: .infinity, alignment: .leading)
