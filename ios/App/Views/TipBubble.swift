@@ -4,8 +4,8 @@ import SwiftUI
 import UIKit
 import UIKit.UIGestureRecognizerSubclass
 
-/// A tip: white, with an arrow at what it explains. It never takes a touch:
-/// the first touch anywhere puts it away and still goes to what is under it.
+/// A tip: white, with an arrow at what it explains. A tap on it only puts it
+/// away; the first touch anywhere else puts it away and still goes to what it landed on.
 struct TipBubble: View {
   enum Arrow { case up, down }
   let text: String
@@ -27,9 +27,9 @@ struct TipBubble: View {
       }
     }
     .shadow(color: .black.opacity(0.5), radius: 14, y: 8)
-    .allowsHitTesting(false)
+    .contentShape(Rectangle())
+    .onTapGesture(perform: onDismiss)
     .accessibilityAddTraits(.isButton)
-    .accessibilityAction(perform: onDismiss)
     .transition(.opacity)
   }
 }
