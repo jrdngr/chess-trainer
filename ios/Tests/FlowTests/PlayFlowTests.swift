@@ -83,7 +83,7 @@ import Testing
 }
 
 /// Past the prep, a move that hangs the queen ends the run on the blunder, with the threat to show,
-/// and Continue goes on to the end screen.
+/// and Continue goes on to the end screen. The game's history ends on the move that lost.
 @MainActor @Test func aBlunderEndsTheRun() async throws {
   try await headless { app in
     try await drillAsWhite(app)
@@ -95,7 +95,7 @@ import Testing
     }
     let run = try #require(app.run)
     #expect(run.phase == .blunder)
-    guard case .blunder(_, _, let lost, _, _) = run.session.ending else {
+    guard case .blunder(let played, _, let lost, _, _) = run.session.ending else {
       Issue.record("the run didn't end on a blunder")
       return
     }
@@ -103,6 +103,8 @@ import Testing
     #expect(run.blunder?.threat != nil)
     app.continueToEnd()
     #expect(app.run?.phase == .over)
+    let game = try #require(app.state.games.last)
+    #expect(game.moves == run.run.played + [played], "the history keeps the move that lost")
   }
 }
 

@@ -784,14 +784,16 @@ public final class RunModel {
     settle(f)
   }
 
-  /// The run as a game for the history.
+  /// The run as a game for the history, the move that lost included.
   private func game(_ f: Finish) -> GameRecord {
     let run = f.ended.run
+    var moves = run.played
+    if case .blunder(let played, _, _, _, _) = f.how { moves.append(played) }
     let outcome = runOutcome(f.how, color: run.color)
     let mode: GameMode = handoff != nil ? .middlegame : round != nil ? .play : .run
     return GameRecord(
       id: run.id, mode: mode, at: Env.now(), color: run.color, picked: selection,
-      opening: run.openingId, moves: run.played, opened: run.opened, result: outcome.result, termination: outcome.termination)
+      opening: run.openingId, moves: moves, opened: run.opened, result: outcome.result, termination: outcome.termination)
   }
 
   /// What floats over the board goes, and the blunder or the end screen comes up.
