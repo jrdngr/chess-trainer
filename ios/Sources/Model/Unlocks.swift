@@ -52,7 +52,7 @@ public struct ShopItem: Equatable, Sendable, Identifiable {
 /// Everything in the shop, in its tree's order.
 public let SHOP: [ShopItem] = [
   ShopItem("sidePicker", "Side picker", .features, 5, feature: .sidePicker, about: "Play as White, Black, or random."),
-  ShopItem("lensPawns", "Pawns lens", .features, 10, feature: .lensPawns, about: "Shows weak and passed pawns, plus the plan."),
+  ShopItem("lensPawns", "Pawns lens", .features, 10, feature: .lensPawns, about: "Shows weak and passed pawns."),
   ShopItem("lensPieces", "Pieces lens", .features, 20, needs: ["lensPawns"], feature: .lensPieces, about: "Shows loose and attacked pieces."),
   ShopItem("lensKings", "Kings lens", .features, 30, needs: ["lensPieces"], feature: .lensKings, about: "Shows how safe each king is."),
   ShopItem("lensEval", "Eval lens", .features, 60, needs: ["lensKings"], feature: .lensEval, about: "Shows the engine's evaluation."),
