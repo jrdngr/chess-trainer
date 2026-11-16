@@ -33,8 +33,6 @@ struct InlineFillPanel: View {
           .frame(maxWidth: .infinity, alignment: .trailing)
       }
       .zIndex(1)
-      // Over the row, so the answers under it stay in view.
-      .tip(model.tip, when: model.tip == .growth || model.tip == .growthPawn, arrow: .down, arrowAt: 0.9, onDismiss: model.dismissTip)
       if !ranked.isEmpty {
         HStack(spacing: 10) {
           Text("Answer it")
@@ -60,6 +58,8 @@ struct InlineFillPanel: View {
             withAnimation(.easeOut(duration: 0.3)) { scroller.scrollTo(top, anchor: .top) }
           }
         }
+        // Over the rows above, pointing at the top answer.
+        .tip(model.tip, when: model.tip == .growth || model.tip == .growthPawn, arrow: .down, arrowAt: 0.15, onDismiss: model.dismissTip)
       }
     }
     // Each hole starts with the first few answers.
