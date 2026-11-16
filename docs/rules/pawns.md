@@ -20,6 +20,9 @@ target. Tests: the `docs/rules/pawns.md` suite in
 5. **The streak.** The first game you finish each day pays 1 in the
    streak's first week (days 1 to 7), 2 in its second, 3 in its third, 4 in
    its fourth and 5 from day 29 on. A missed day starts it again at day 1.
+   The pawns go onto the balance when the game ends, but the counter takes
+   them only when you next open Home, where they pop out of the streak ring
+   and the ring lights up.
 6. **Pawns land as they are earned.** Each goes straight onto the balance;
    the counter on screen takes it when it arrives. A run's score is the
    pawns its events earned, the streak's aside.

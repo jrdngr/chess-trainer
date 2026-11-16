@@ -19,7 +19,7 @@ struct MilestonesCard: View {
     Button { open = true } label: {
       HomeCard(title: "Milestones", aside: "\(done) of \(list.count)") {
         HStack(spacing: 6) {
-          StreakBadge(today: today).frame(maxWidth: .infinity)
+          StreakBadge(today: today, waiting: store.streakWaiting > 0).frame(maxWidth: .infinity)
           ForEach(next.isEmpty ? Array(rest.suffix(3)) : next, id: \.id) { MilestoneBadge(milestone: $0).frame(maxWidth: .infinity) }
         }
       }
@@ -67,9 +67,11 @@ private struct Ring<Glyph: View>: View {
 /// and under it today's pawns, outlined until today's game pays them.
 struct StreakBadge: View {
   var today: StreakToday
+  /// Today's pawns are paid but have yet to pop out of the ring.
+  var waiting = false
 
   var body: some View {
-    let lit = today.paid
+    let lit = today.paid && !waiting
     VStack(spacing: 4) {
       ZStack {
         ForEach(0..<7, id: \.self) { i in
@@ -94,6 +96,7 @@ struct StreakBadge: View {
       }
       .frame(height: 13)
       .foregroundStyle(Theme.pawn)
+      .pawnSpot("streak")
     }
     .accessibilityElement()
     .accessibilityLabel("Streak day \(today.day), \(today.pawns) pawn\(today.pawns == 1 ? "" : "s") a day\(lit ? ", today's paid" : "")")
@@ -103,7 +106,7 @@ struct StreakBadge: View {
   private func color(_ i: Int) -> SwiftUI.Color {
     let at = today.weekday - 1
     if i < at { return Theme.pawn }
-    if i == at { return today.paid ? Theme.pawn : SwiftUI.Color(hex: 0x6b5a2a) }
+    if i == at { return today.paid && !waiting ? Theme.pawn : SwiftUI.Color(hex: 0x6b5a2a) }
     return Theme.surface3
   }
 }

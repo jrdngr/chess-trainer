@@ -66,7 +66,8 @@ import Testing
   }
 }
 
-/// A clean prep pays pawns onto the balance as it runs out, and the day's first finished game pays the streak.
+/// A clean prep pays pawns onto the balance as it runs out, and the day's first finished game pays the streak,
+/// which waits to pop out of the streak ring on Home.
 @MainActor @Test func aCleanPrepPaysPawns() async throws {
   try await headless { app in
     try await drillAsWhite(app)
@@ -82,6 +83,12 @@ import Testing
     await app.endRound()
     #expect(app.state.pawns == before + earned + 1, "the day's first game pays the streak")
     #expect(app.state.pawnStreak.days == 1)
+    #expect(app.store.streakWaiting == 1 && app.store.shownPawns == app.state.pawns - 1 - app.store.pawnDrops.reduce(0) { $0 + $1.flying },
+            "the streak pawn waits for Home before the counter shows it")
+
+    app.store.showStreakPawns()
+    #expect(app.store.streakWaiting == 0)
+    #expect(app.store.pawnDrops.last?.award == PawnAward(.streak, .streak, count: 1), "it pops out of the streak ring")
   }
 }
 

@@ -12,7 +12,7 @@ struct PawnSpotsKey: PreferenceKey {
 }
 
 extension View {
-  /// This view is where pawns pop out from (`board`, `callout`, `prep`, `goal`) or land (`counter`).
+  /// This view is where pawns pop out from (`board`, `callout`, `prep`, `goal`, `streak`) or land (`counter`).
   func pawnSpot(_ name: String) -> some View {
     anchorPreference(key: PawnSpotsKey.self, value: .bounds) { [name: $0] }
   }
@@ -230,8 +230,7 @@ private struct PawnFlightLayer: View {
         for _ in 0..<drop.flying { store.landed(drop.id) }
         continue
       }
-      let round = drop.award.source == .counter
-      bursts.append((drop.id, source, !round && sourceIsSquare(drop.award.source), now))
+      bursts.append((drop.id, source, sourceIsSquare(drop.award.source), now))
       trips += planTrips(drop: drop.id, count: drop.flying, from: source, to: CGPoint(x: target.midX, y: target.midY), width: width, start: now)
     }
   }
@@ -269,7 +268,7 @@ private struct PawnFlightLayer: View {
     case .prep: return spots["callout"] ?? spots["prep"] ?? spots["board"]
     case .goal: return spots["goal"] ?? spots["board"]
     case .board: return spots["board"].map { CGRect(x: $0.midX - 22, y: $0.midY - 22, width: 44, height: 44) }
-    case .counter: return spots["counter"]
+    case .streak: return spots["streak"]
     }
   }
 }

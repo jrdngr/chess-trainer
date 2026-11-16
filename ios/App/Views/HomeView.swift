@@ -64,6 +64,12 @@ struct HomeView: View {
       }
       .padding(.horizontal, 16).padding(.bottom, 24)
     }
+    // The day's streak pawns pop out of the streak ring, once Home has laid out.
+    .pawnFlights()
+    .task {
+      try? await Task.sleep(for: .milliseconds(400))
+      store.showStreakPawns()
+    }
     .sheet(isPresented: $settings) { SettingsSheet().presentationBackground(Theme.background) }
     .onAppear {
       guard store.takeSettingsHeld() else { return }
@@ -232,6 +238,7 @@ private struct HomePawns: View {
         .padding(.horizontal, 12).frame(minHeight: 44)
         .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface))
         .contentShape(RoundedRectangle(cornerRadius: 14))
+        .pawnSpot("counter")
     }
     .buttonStyle(.plain)
     .accessibilityLabel("\(store.shownPawns) pawns, Pawn Shop")

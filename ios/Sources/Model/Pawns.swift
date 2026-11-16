@@ -48,8 +48,8 @@ public enum PawnSource: Equatable, Sendable {
   case goal
   /// The board as a whole: an endgame reached, an Endgames goal met.
   case board
-  /// The counter itself, for a streak day.
-  case counter
+  /// The streak ring on Home, for a streak day.
+  case streak
 }
 
 /// Pawns earned by one event, and where they pop out.

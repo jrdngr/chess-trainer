@@ -15,13 +15,18 @@ extension AppStore {
   public static let dropSeconds = 3.0
 
   /// The balance as the counter shows it: pawns still flying aren't in it yet.
-  public var shownPawns: Int { state.pawns - pawnDrops.reduce(0) { $0 + $1.flying } }
+  public var shownPawns: Int { state.pawns - streakWaiting - pawnDrops.reduce(0) { $0 + $1.flying } }
 
   /// Pawns earned: onto the balance (unless `paid` already), and off to the counter.
   public func pay(_ award: PawnAward, paid: Bool = false) {
     guard award.count > 0 else { return }
     log(AppEvent(kind: "pawns", source: award.event.rawValue, count: award.count, text: "\(award.source)"))
     if !paid { update { $0.earn(award.count) } }
+    drop(award)
+  }
+
+  /// An award's pawns off to the counter.
+  private func drop(_ award: PawnAward) {
     dropCount += 1
     let id = dropCount
     pawnDrops.append(PawnDrop(id: id, award: award, flying: award.count))
@@ -41,11 +46,22 @@ extension AppStore {
     if pawnDrops[i].flying <= 0 { pawnDrops.remove(at: i) }
   }
 
-  /// A game finished: the day's first in a streak pays.
+  /// A game finished: the day's first in a streak pays. The pawns go onto the balance
+  /// now and wait to pop out of the streak ring on Home.
   public func finishedGame() {
     var streak = 0
     update { streak = $0.finishedGame() }
-    if streak > 0 { pay(PawnAward(.streak, .counter, count: streak), paid: true) }
+    guard streak > 0 else { return }
+    log(AppEvent(kind: "pawns", source: PawnEvent.streak.rawValue, count: streak, text: "waiting"))
+    streakWaiting += streak
+  }
+
+  /// Home is up: the streak pawns waiting pop out of its streak ring.
+  public func showStreakPawns() {
+    guard streakWaiting > 0 else { return }
+    let count = streakWaiting
+    streakWaiting = 0
+    drop(PawnAward(.streak, .streak, count: count))
   }
 }
 
