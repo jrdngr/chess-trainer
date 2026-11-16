@@ -5,11 +5,11 @@ and `HeadlessApp.buy` in the Game target. Tests: the `docs/rules/shop.md`
 suite in `Tests/SpecTests/Rules/ShopRules.swift`.
 
 1. **The features**, each with its price and what it needs first: side
-   picker 5; the Pawns lens 10, then the Pieces lens 20, the Kings lens 30
-   and the Eval lens 60, each after the one before; Plan 40; opening
-   picker 50, after the side picker; Freeform 120, after the opening
-   picker; Recommendations 150, after Freeform; Middlegame 300, after the
-   Pieces lens; Endgames 300. Each item's sheet says in a sentence what it
+   picker 10; the Pawns lens 20, then the Pieces lens 30, the Kings lens 50
+   and the Eval lens 75, each after the one before; Plan 50; opening
+   picker 100, after the side picker; Freeform 200, after the opening
+   picker; Recommendations 250, after Freeform; Middlegame 500, after the
+   Pieces lens; Endgames 500. Each item's sheet says in a sentence what it
    does.
 2. **Buying** takes the price off your pawns. An item is for sale only
    when every item it needs is yours and you have its price, and it is

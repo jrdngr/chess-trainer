@@ -16,10 +16,10 @@ import Testing
     #expect(app.recommendations.isEmpty)
     #expect(throws: HeadlessApp.Failure.self) { try app.buy("sidePicker") }
 
-    app.store.update { $0.pawns = 60 }
+    app.store.update { $0.pawns = 120 }
     #expect(throws: HeadlessApp.Failure.self) { try app.buy("freeform") }
     try app.buy("sidePicker")
-    #expect(app.state.pawns == 55)
+    #expect(app.state.pawns == 110)
     #expect(app.store.justUnlocked == .sidePicker, "Home shows it off next")
     try app.select(side: .b)
     #expect(app.state.settings.selection.color == .b)
@@ -27,8 +27,8 @@ import Testing
     #expect(app.state.settings.selection.color == .either)
 
     try app.buy("openingPicker")
-    #expect(app.state.pawns == 5)
-    #expect(app.shopReport().contains("Freeform: 120, 115 short"))
+    #expect(app.state.pawns == 10)
+    #expect(app.shopReport().contains("Freeform: 200, 190 short"))
     #expect(throws: HeadlessApp.Failure.self) { try app.buy("boards") }
   }
 }
