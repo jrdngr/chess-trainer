@@ -6,7 +6,9 @@ app, `PlaySession` and `RunModel` in the Game target. Rule 3 is tested in
 target can be covered by `HeadlessApp` flow tests.
 
 1. **A run is named by its opening, never by a mode,** with the side as a
-   small square.
+   small square. A run from move one (Freeform, or a Drill run with no move
+   of yours to start at) is named by the moves played once there are any,
+   so 1.e4 e6 reads French Defense whatever opening it was steered toward.
 2. **The round's card.** The intro deals the run's card from a deck. It
    shows the start position face up, the opening's full name above it, and
    a row of segments below, one for each of your own moves, lit up to where

@@ -235,10 +235,12 @@ public final class RunModel {
   public var label: PrepLabel? { prepLabel(session) }
   /// The opening the run is named for.
   public var openingId: String { run.enteredIn ?? round?.pick.opening.id ?? run.openingId }
-  /// The header's name: a first game is named by the book as it goes.
+  /// The header's name: a first game is named by the book as it goes, and so is any run
+  /// from move one once a move is played, since you may not play the line it heads for.
   public var headerName: String {
     if firstGame || basicRun { return openingNameForPath(index, run.played)?.name ?? "Any Opening" }
     if round?.free == true { return openingNameForPath(index, run.played)?.name ?? "Freeform" }
+    if let round, round.at == nil, let name = openingNameForPath(index, run.played)?.name { return name }
     return openingName(tree, openingId)
   }
   /// The header's line over its name: the opening's family, when the name is deeper than it.
