@@ -89,7 +89,7 @@ struct RunView: View {
     .overlayPreferenceValue(BoardFrameKey.self) { anchor in
       if model.intro == .announce && !standalone {
         GeometryReader { geo in
-          RoundDeal(card: model.card, board: anchor.map { geo[$0] })
+          RoundDeal(card: model.card, board: anchor.map { geo[$0] }, onDone: { model.toBoard() })
         }
         .transition(.identity)
       } else if drawing {

@@ -6,7 +6,9 @@ import UIKit
 /// real time, Caissa, and haptics for buzzes.
 @MainActor
 enum LiveGame {
-  static let services = GameServices(dealSeconds: RoundDeal.length)
+  /// The deal hands over to the board itself when it has played on screen; the model's own wait
+  /// is only a fallback, so a slow first screen can't cut the deal short.
+  static let services = GameServices(dealSeconds: RoundDeal.length + 2)
   /// Turns the game's buzzes into haptics, as Settings allows.
   static let haptics = HapticSink()
 }

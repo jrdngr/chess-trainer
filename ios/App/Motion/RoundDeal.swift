@@ -36,7 +36,7 @@ extension RunModel {
 
 /// Play's round, announced: its card leaves the deck small and flips face up on
 /// the round's start position, then grows straight onto the board (`board`) as the
-/// rest clears. Plays once, in `length`; a tap goes straight to the board.
+/// rest clears. Plays once, in `length`, then `onDone`; a tap goes straight to the board.
 ///
 /// With `draw`, the deck waits under a finished run instead: a tap deals the next
 /// round's card, or a finger pulls it out along the same path, turning it over as it
@@ -74,7 +74,7 @@ struct RoundDeal: View {
   private static let swipeRange: CGFloat = 112
 
   static let deal = 0.5, beat = 0.06, grow = 0.4
-  /// The whole announcement: `RunModel.start` waits this long before the board.
+  /// The whole announcement, timed from its first frame.
   static var length: Double { deal + beat + grow }
   private static var dealCurve: Animation { .timingCurve(0.5, 0, 0.2, 1, duration: deal) }
 
@@ -300,6 +300,8 @@ struct RoundDeal: View {
     }
     try? await Task.sleep(for: .seconds(Self.deal + Self.beat))
     await settle()
+    try? await Task.sleep(for: .seconds(Self.grow))
+    if !Task.isCancelled { onDone?() }
   }
 
   /// Face up: straight onto the board.
