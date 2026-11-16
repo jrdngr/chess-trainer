@@ -228,6 +228,8 @@ private struct PlayFooter: View {
             .unlockedBy(.freeform, hidden: true)
             .tip(text: tip == .freeform ? tip?.text : nil) { nextHomeTip(store) }
         }
+        // Without the Freeform switch, the side button keeps to the left rather than the middle.
+        .frame(maxWidth: .infinity, alignment: .leading)
         .zIndex(1)
       }
       Button { picking = .quick } label: {
