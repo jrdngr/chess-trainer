@@ -40,7 +40,7 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     case .flashCards: "Your openings are flashcards. Each move is graded on speed and accuracy."
     case .prepBar: "The prep bar fills as you play your line."
     case .prepDone: "A \u{2713} means you\u{2019}re still playing common moves."
-    case .growth: "We\u{2019}ll add new moves to your openings as you get better. Pick an answer or play it on the board. Tap Done to stop adding early."
+    case .growth: "We\u{2019}ll add new moves to your openings as you get better. Pick an answer or play it on the board."
     case .blunder: "A blunder ends the game."
     case .pawns: "You earn pawns for various accomplishments. Spend them in the Pawn Shop."
     case .mission: "Complete missions to earn pawns."
