@@ -19,7 +19,7 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    prices but aren't for sale yet.
 4. **Home holds to what you own.** Without the side picker you play
    White. Without the opening picker you play Any Opening. Without
-   Freeform you play Drill, and Either is not a side. Home shows a
+   Freeform you play Drill. The side picker offers White, Black and Either. Home shows a
    feature's control only once it is yours: the side picker, the Freeform
    switch, the opening picker, Middlegame, Endgames and Recommendations.
    Profiles from before the shop own every feature (see [saves](saves.md)).

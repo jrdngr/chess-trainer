@@ -4,13 +4,13 @@ import ChessCore
 
 /// A feature a new player starts without.
 public enum ShopFeature: String, Sendable, Codable, CaseIterable {
-  /// White or Black on Home; Black games start here.
+  /// White, Black or Either on Home; Black games start here.
   case sidePicker
   /// One lens each, in a chain: Pawns, Pieces, Kings, Eval. Plan, beside the lenses, is its own.
   case lensPawns, lensPieces, lensKings, lensEval, lensPlan
   /// Any Opening or one of yours on Home.
   case openingPicker
-  /// Freeform runs, and Either side.
+  /// Freeform runs.
   case freeform
   case recommendations
   case middlegame
@@ -133,13 +133,10 @@ extension AppState {
   }
 
   /// Home's choices held to the features you own: White without the side picker,
-  /// Any Opening without the opening picker, Drill and one side without Freeform.
+  /// Any Opening without the opening picker, Drill without Freeform.
   public mutating func holdToUnlocks() {
     if !owns(.sidePicker) { settings.selection.color = .w }
-    if !owns(.freeform) {
-      settings.start = .drill
-      if settings.selection.color == .either { settings.selection.color = .w }
-    }
+    if !owns(.freeform) { settings.start = .drill }
     if !owns(.openingPicker) { settings.selection.opening = ANY_OPENING }
   }
 }

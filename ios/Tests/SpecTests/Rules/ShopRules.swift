@@ -64,6 +64,6 @@ private func state(pawns: Int, owning: [String] = []) -> AppState {
     #expect(side.settings.selection.color == .b)
     side.settings.selection.color = .either
     side.holdToUnlocks()
-    #expect(side.settings.selection.color == .w, "Either comes with Freeform")
+    #expect(side.settings.selection.color == .either, "Either comes with the side picker")
   }
 }

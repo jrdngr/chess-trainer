@@ -177,7 +177,6 @@ public final class HeadlessApp: SignalSink {
       node = found.id
     }
     if let side, side != .w, !state.owns(.sidePicker) { throw Failure.notHere("Black is locked: the side picker is in the Pawn Shop") }
-    if side == .either, !state.owns(.freeform) { throw Failure.notHere("Either is locked: Freeform is in the Pawn Shop") }
     if start == .freeform, !state.owns(.freeform) { throw Failure.notHere("Freeform is locked: it is in the Pawn Shop") }
     if let node, node != ANY_OPENING, !state.owns(.openingPicker) { throw Failure.notHere("Openings are locked: the opening picker is in the Pawn Shop") }
     store.update { state in

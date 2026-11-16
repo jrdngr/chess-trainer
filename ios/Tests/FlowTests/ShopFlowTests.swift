@@ -23,7 +23,8 @@ import Testing
     #expect(app.store.justUnlocked == .sidePicker, "Home shows it off next")
     try app.select(side: .b)
     #expect(app.state.settings.selection.color == .b)
-    #expect(throws: HeadlessApp.Failure.self) { try app.select(side: .either) }
+    try app.select(side: .either)
+    #expect(app.state.settings.selection.color == .either)
 
     try app.buy("openingPicker")
     #expect(app.state.pawns == 5)

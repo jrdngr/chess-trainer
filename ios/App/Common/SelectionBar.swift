@@ -109,7 +109,7 @@ struct ColorPickerSheet: View {
       Text("Play as").font(.system(size: 22, weight: .heavy)).foregroundStyle(Theme.text)
       VStack(spacing: 0) {
         // Either comes with Freeform.
-        ForEach(store.state.owns(.freeform) ? [ColorChoice.w, .b, .either] : [.w, .b], id: \.self) { choice in
+        ForEach([ColorChoice.w, .b, .either], id: \.self) { choice in
           Button {
             store.update { $0.settings.selection.color = choice }
             onClose()
