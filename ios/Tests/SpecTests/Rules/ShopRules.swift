@@ -14,26 +14,26 @@ private func state(pawns: Int, owning: [String] = []) -> AppState {
   @Test func featuresAndTheirPrerequisites() throws {
     let features = SHOP.filter { $0.feature != nil }.map { "\($0.id) \($0.price) \($0.needs.joined(separator: ","))" }
     #expect(features == [
-      "sidePicker 10 ", "lensPawns 20 ", "lensPieces 30 lensPawns", "lensKings 50 lensPieces", "lensEval 75 lensKings", "lensPlan 50 ",
-      "openingPicker 100 sidePicker", "freeform 200 openingPicker", "recommendations 250 freeform",
-      "middlegame 500 lensPieces", "endgames 500 ",
+      "sidePicker 5 ", "lensPawns 10 ", "lensPieces 20 lensPawns", "lensKings 30 lensPieces", "lensEval 60 lensKings", "lensPlan 40 ",
+      "openingPicker 50 sidePicker", "freeform 120 openingPicker", "recommendations 150 freeform",
+      "middlegame 300 lensPieces", "endgames 300 ",
     ])
   }
 
   /// Rule 2: buying takes the price, and only when every item it needs is yours.
   @Test func buyingNeedsPawnsAndPrerequisites() throws {
-    var s = state(pawns: 150)
+    var s = state(pawns: 100)
     let early = s.buy("openingPicker")
     #expect(!early)
     #expect(s.status(try #require(shopItem("openingPicker"))) == .locked)
     let side = s.buy("sidePicker")
-    #expect(side && s.pawns == 140 && s.owns(.sidePicker))
+    #expect(side && s.pawns == 95 && s.owns(.sidePicker))
     let again = s.buy("sidePicker")
     #expect(!again, "an item is bought once")
     let opening = s.buy("openingPicker")
-    #expect(opening && s.pawns == 40)
+    #expect(opening && s.pawns == 45)
     var poor = state(pawns: 4)
-    #expect(poor.status(try #require(shopItem("sidePicker"))) == .short(6))
+    #expect(poor.status(try #require(shopItem("sidePicker"))) == .short(1))
     let bought = poor.buy("sidePicker")
     #expect(!bought && poor.pawns == 4)
   }
