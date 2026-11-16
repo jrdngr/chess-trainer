@@ -161,14 +161,14 @@ struct EndgameRoundView: View {
             .padding(.bottom, 6)
           BoardView(
             fen: game.fen, orientation: game.color, interactive: game.myTurn, lastMove: game.lastMove,
-            highlights: highlights, marks: marks, onMove: game.play)
+            arrows: missedArrows, marks: marks, onMove: game.play)
             .dimmed(game.phase == .over)
             .clearsLens($lens)
             .pawnSpot("board")
           LensBar(held: $lens, lenses: LENSES, enabled: game.phase == .playing, plan: $plan, planEnabled: livePlan != nil, gated: true)
             .opacity(called == nil ? 1 : 0).allowsHitTesting(called == nil)
             .overlay(alignment: .top) {
-              if let called { CalloutStrip(text: called, good: false).padding(.top, 8).transition(.opacity).id(called) }
+              if let called { CalloutStrip.missed(called).padding(.top, 8).transition(.opacity).id(called) }
             }
             .animation(.easeOut(duration: 0.25), value: called)
             // The callout runs past the lenses' row: over what follows, not under it.
@@ -217,10 +217,10 @@ struct EndgameRoundView: View {
     .padding(.top, 12)
   }
 
-  /// Where you missed a mate, the move that had it, in red.
-  private var highlights: [String: SwiftUI.Color] {
-    guard let best = game.missedBest else { return [:] }
-    return [best.from: Theme.bad.opacity(0.45), best.to: Theme.bad.opacity(0.45)]
+  /// Where you missed a mate, the move that had it.
+  private var missedArrows: [BoardArrow] {
+    guard let best = game.missedBest else { return [] }
+    return [BoardArrow(from: best.from, to: best.to, color: Theme.missed, over: true)]
   }
 
   private var result: EndResult? {

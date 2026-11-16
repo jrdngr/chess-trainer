@@ -29,7 +29,7 @@ struct BoardRim: View {
 }
 
 /// A word under the board for a moment, in the lenses' place: Prep complete,
-/// Off prep, Found it, Missed it, how a game ended.
+/// Off prep, Found it, a missed chance, how a game ended.
 struct CalloutStrip: View {
   var text: String
   var tone: Color
@@ -38,6 +38,9 @@ struct CalloutStrip: View {
   init(text: String, good: Bool) {
     self.init(text: text, tone: good ? Theme.good : Theme.bad, symbol: good ? "checkmark" : "xmark")
   }
+
+  /// A chance you missed: the game goes on.
+  static func missed(_ text: String) -> CalloutStrip { CalloutStrip(text: text, tone: Theme.missed, symbol: "exclamationmark") }
 
   init(text: String, tone: Color, symbol: String) {
     self.text = text

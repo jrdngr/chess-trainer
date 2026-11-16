@@ -2,7 +2,8 @@
 
 What a run asks of you past the opening. Code: `Run.swift` (moments)
 and `Missions.swift`. Tests: the `docs/rules/scoring.md` suite in
-`Tests/SpecTests/Rules/ScoringRules.swift`. What they pay is in
+`Tests/SpecTests/Rules/ScoringRules.swift`; rule 2's judging in
+`JudgeTests` (`Tests/EngineTests`). What they pay is in
 [pawns](pawns.md).
 
 1. **A moment** is a position where your best move leaves you at +1 or
@@ -10,11 +11,16 @@ and `Missions.swift`. Tests: the `docs/rules/scoring.md` suite in
    when the second best doesn't. You find it by giving away 50 centipawns
    or less. A found moment pays 2 pawns. A missed one breaks the streak of
    moments found in a row.
-2. **The first mission** is set where your prep runs out, from the eval:
+2. **A missed moment is a missed chance, not a blunder.** Your move is
+   judged against the second-best move: the second best itself, or a move
+   within the blunder line of it, keeps the game going. A pink arrow shows
+   the move you missed until your next move, and the callout names it
+   ("Missed Nxe6"). A mate missed in an ending shows the same way.
+3. **The first mission** is set where your prep runs out, from the eval:
    - at +2 or better with pieces on both sides, Convert it: trade a piece within 6 moves without dropping under +1;
    - at +1 or better, Keep your edge: stay at +1 or better for 10 moves;
    - at −1 or worse, Dig in: get back to −0.5 within 15 moves;
    - otherwise, Take the lead: reach +1 within 15 moves.
-3. **Missions follow each other.** Three judged moves after one is settled,
+4. **Missions follow each other.** Three judged moves after one is settled,
    done or failed, the next is set from the eval then. A mission done pays
    2 pawns.

@@ -27,7 +27,15 @@ private func move(lost: Double, after: Double = 0, moment: Bool = false, found: 
     #expect(found.earned.pawns == 2 && found.extras.pawns == 2 && found.extras.moments.streak == 3)
   }
 
-  /// Rule 2: the first mission is set from the eval where the prep runs out.
+  /// Rule 2: a missed moment's callout names the move you missed, in the missed-chance tone.
+  @Test func aMissedMomentNamesTheMove() {
+    let missed = judgedExtras(NO_EXTRAS, ALL, .w, move(lost: 300, moment: true, found: false)).earned
+    #expect(noteFor(missed, best: "Nxe6") == Note(text: "Missed Nxe6", tone: "missed"))
+    let found = judgedExtras(NO_EXTRAS, ALL, .w, move(lost: 0, moment: true, found: true)).earned
+    #expect(noteFor(found, best: "Nxe6") == nil, "a find says nothing here")
+  }
+
+  /// Rule 3: the first mission is set from the eval where the prep runs out.
   @Test func firstMissionFromTheEval() {
     let pieces = "r3k3/8/8/8/8/8/8/R3K3 w - - 0 1"
     #expect(firstMission(NO_EXTRAS, missions: true, .w, 200, pieces).mission?.kind == .convert)
@@ -41,7 +49,7 @@ private func move(lost: Double, after: Double = 0, moment: Bool = false, found: 
     #expect(stepMission(Mission(kind: .convert, pieces: PieceCount(mine: 1, theirs: 1)), .w, 99, pieces).result == .failed)
   }
 
-  /// Rule 3: three judged moves after a mission settles, the next is set. A mission done pays 2 pawns.
+  /// Rule 4: three judged moves after a mission settles, the next is set. A mission done pays 2 pawns.
   @Test func missionsFollowEachOther() {
     var extras = NO_EXTRAS
     extras.mission = Mission(kind: .edge)

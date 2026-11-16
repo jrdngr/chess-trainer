@@ -52,7 +52,7 @@ public struct MissFlash: Equatable, Sendable {
 
 public struct Note: Equatable, Sendable {
   public var text: String
-  /// "good", "bad" or "accent".
+  /// "good", "bad", "missed" (a chance you missed) or "accent".
   public var tone: String
   public init(text: String, tone: String) {
     self.text = text
@@ -339,7 +339,7 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     }
     // A mate missed in a won ending: the run goes on, marked like a missed moment.
     let mateMissed = judged.missedMate && scored.earned.moment == nil
-    effects.append(.note(mateMissed ? Note(text: "Missed mate", tone: "bad") : noteFor(scored.earned)))
+    effects.append(.note(mateMissed ? Note(text: "Missed mate", tone: "missed") : noteFor(scored.earned, best: judged.best)))
     if let moment = scored.earned.moment { effects.append(.moment(found: moment.found)) }
     if mateMissed { effects.append(.moment(found: false)) }
     let shown = scored.earned.moment.map { !$0.found } == true || mateMissed ? judged.best.flatMap { applySan(run.fen, $0) } : nil
@@ -478,8 +478,8 @@ public func prepLabel(_ session: RunSession) -> PrepLabel? {
 /// What a judged move earned, said over the board, one thing at a time: a missed moment first
 /// (its move is shown on the board), then the mission. A found moment says
 /// nothing here: the board pulses, its bonus pops and the status line says Found it.
-public func noteFor(_ earned: Earned) -> Note? {
-  if let moment = earned.moment, !moment.found { return Note(text: "Missed it", tone: "bad") }
+public func noteFor(_ earned: Earned, best: String? = nil) -> Note? {
+  if let moment = earned.moment, !moment.found { return Note(text: best.map { "Missed \($0)" } ?? "Missed it", tone: "missed") }
   if let mission = earned.mission {
     let done = mission.result == .done
     return Note(text: "\(missionTitle(mission.kind)) \(done ? "complete" : "failed")", tone: done ? "good" : "bad")

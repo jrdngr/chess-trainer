@@ -100,7 +100,9 @@ public func judge(
     let found = moment && result.lost <= MOMENT_FOUND
     // A moment missed is judged against the next best move.
     let nextCp = next.flatMap(scoreOf)
-    let ok = moment && !found && nextCp != nil ? judgeMove(base.fen, color, colorBest(color, nextCp!, yourCp), yourCp, exact: exact, reached: endgame).ok : result.ok
+    // Your move is the next best itself: the chance is missed, and nothing else is lost.
+    let playedNext = moment && !found && base.second?.uci == uci
+    let ok = playedNext || (moment && !found && nextCp != nil ? judgeMove(base.fen, color, colorBest(color, nextCp!, yourCp), yourCp, exact: exact, reached: endgame).ok : result.ok)
     // In an endgame, a mate the engine had and your move doesn't keep: the run goes on, but you hear about it.
     func mates(_ line: EngineLine) -> Bool { line.mate.map { ($0 > 0) == (color == .w) } ?? false }
     let missedMate = endgame && mates(top) && !mates(yours)

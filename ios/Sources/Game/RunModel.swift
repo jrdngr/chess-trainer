@@ -263,6 +263,8 @@ public final class RunModel {
     public var text: String
     public var good: Bool
     public var id: Int
+    /// A chance you missed, in its own color.
+    public var missed = false
   }
   public private(set) var callout: Callout?
   private var calloutCount = 0
@@ -272,9 +274,9 @@ public final class RunModel {
   /// The callout on the board.
   public var shownCallout: Callout? { callout }
 
-  private func show(callout text: String, good: Bool) {
+  private func show(callout text: String, good: Bool, missed: Bool = false) {
     calloutCount += 1
-    let shown = Callout(text: text, good: good, id: calloutCount)
+    let shown = Callout(text: text, good: good, id: calloutCount, missed: missed)
     callout = shown
     services.emit(.callout(text, good: good))
     later(Self.calloutMs) { model in
@@ -724,7 +726,7 @@ public final class RunModel {
         if p.book { offer(.prepDone) }
       case .note(let n):
         // A word on what the move earned: a callout, like a find.
-        if let n { show(callout: n.text, good: n.tone == "good") }
+        if let n { show(callout: n.text, good: n.tone == "good", missed: n.tone == "missed") }
       case .miss(let m):
         show(miss: m)
       case .moment(let found):

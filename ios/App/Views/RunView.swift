@@ -233,7 +233,7 @@ struct RunView: View {
   /// Prep complete, Off prep or Found it, in the lenses' place for a moment.
   @ViewBuilder private var calloutLayer: some View {
     if let callout = model.shownCallout {
-      CalloutStrip(text: callout.text, good: callout.good)
+      Group { if callout.missed { CalloutStrip.missed(callout.text) } else { CalloutStrip(text: callout.text, good: callout.good) } }
         .pawnSpot("callout")
         .padding(.top, 8)
         .transition(.opacity.combined(with: .offset(y: -6)))
@@ -597,7 +597,6 @@ struct RunView: View {
     if !atGameEnd { return [:] }
     if adding, let added = model.justAdded { return [added.from: Theme.good, added.to: Theme.good] }
     if let b = model.blunder { return [b.move.from: Theme.bad, b.move.to: Theme.bad] }
-    if let best = model.missedBest { return [best.from: Theme.bad, best.to: Theme.bad] }
     return [:]
   }
 
@@ -611,6 +610,8 @@ struct RunView: View {
       return b.threat.map { [BoardArrow(from: $0.from, to: $0.to, color: Theme.bad, over: true)] } ?? []
     }
     if let miss = model.miss { return [BoardArrow(from: miss.from, to: miss.to, color: Theme.good)] }
+    // A chance you missed: its move, until your next one.
+    if let best = model.missedBest { return [BoardArrow(from: best.from, to: best.to, color: Theme.missed, over: true)] }
     if model.atHole && !model.thinking {
       return holeArrows(model)
     }
