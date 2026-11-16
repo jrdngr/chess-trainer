@@ -11,7 +11,6 @@ struct LensBar: View {
   @Binding var held: LensKind?
   /// Eval only where the screen has the engine's word on the game.
   var lenses = LENSES.filter { $0.kind != .eval }
-  var gated = false
   var enabled = true
   /// The structure's plan, held like a lens, where the screen offers it.
   var plan: Binding<Bool>? = nil
@@ -20,6 +19,8 @@ struct LensBar: View {
   var planPulse = false
   /// A lens to draw the eye to until it is held: the lens tip's.
   var spotlight: LensKind? = nil
+  /// Only the lenses bought in the Pawn Shop.
+  var gated = false
   /// A touch on Plan has toggled it and not yet lifted.
   @State private var planTouched = false
   /// The lens a touch has toggled and not yet lifted from.
