@@ -186,3 +186,30 @@ private func quietMove(_ fen: String) -> String? {
     #expect(white().flatMap { nodeAtLine($0, ["e4", app.moves[1], second]) } == nil, "Undo takes the move out of the Playbook")
   }
 }
+
+/// A Drill run heading for a gap with none of your moves on its line past White's first starts at
+/// the gap, the moves to it played for you, and opens growth there at once. Never at move one.
+@MainActor @Test func aGapRunWithNothingOnItsLineStartsAtTheGap() async throws {
+  try await headless { app in
+    try app.knowMyOpenings()
+    app.store.update { state in
+      let id = state.ensurePlaybook(.w)
+      state.addLine(id, ["e4", "e5", "Nf3"], .fixed(.book))
+      for _ in 0..<4 { state.answered(id, START_FEN, "e4", .easy) }
+      let selection = Selection(color: .w, opening: ANY_OPENING)
+      let after = lastAddedAt(state.playbookList) + 1
+      for i in 0..<5 {
+        state.recordGame(GameRecord(
+          id: "g\(i)", mode: .play, at: after + Double(i), color: .w, picked: selection, opening: selection.opening, moves: ["e4"],
+          result: "*", termination: "ended"))
+      }
+    }
+    try app.select(side: .w, start: .drill)
+    let gap = try #require(steerGap(app.state, app.tree, app.state.settings.selection))
+    #expect(gap.path == ["e4"])
+    await app.openPlay()
+    let run = try #require(app.run)
+    #expect(run.run.played == gap.line, "it opens at the reply you have no answer to")
+    #expect(run.fill != nil, "growth is open")
+  }
+}

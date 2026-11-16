@@ -586,6 +586,12 @@ public final class RunModel {
 
   /// At the run's one hole, ask the engine whether the line needs a new move now.
   private func askAtHole() {
+    // A round started at the gap it grows: growth opens at once.
+    if !holeAsked, let grow = round?.grow, !grow.hole.path.isEmpty, run.played == grow.line, myTurn {
+      holeAsked = true
+      startFill(grow)
+      return
+    }
     guard round != nil, !holeAsked, session.prepStatus == .complete, prepNow.isEmpty, session.state.misses.isEmpty,
       run.played.count > run.opened
     else { return }

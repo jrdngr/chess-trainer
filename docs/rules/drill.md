@@ -21,5 +21,5 @@ What a Drill run does before your first move. Code: `drillStart`
    [growth](growth.md)).
 6. **A run that heads for a gap starts on the gap's line.** It starts at your
    move most due among those on the line before the reply, by rules 2 to 4.
-   With none of yours on the line, it starts from move one and grows at the
-   gap.
+   With none of yours on the line past White's first move, it starts at the
+   gap itself, the moves to it played for you, and grows there.

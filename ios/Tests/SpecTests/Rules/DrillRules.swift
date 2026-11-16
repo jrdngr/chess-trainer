@@ -60,8 +60,9 @@ private func asked(_ items: [TrainingItem], _ tested: Int) -> [String: Card] {
     #expect(drillStart(allItems([rep(.b, ["e4 e5"])]), [:], accuracy: nil, round: 0)?.item.pathSans == line("e4"))
   }
 
-  /// Rule 6: a gap run with none of your moves on the gap's line before the reply starts from move one and grows there.
-  @Test func gapRunWithNothingOnItsLineGrowsFromMoveOne() throws {
+  /// Rule 6: a gap run with none of your moves on the gap's line before the reply, past White's first,
+  /// starts at the gap with the moves to it played, and grows there. Never at move one.
+  @Test func gapRunWithNothingOnItsLineStartsAtTheGap() throws {
     let tree = openingTree(bookIndex)
     var state = AppState()
     let id = state.ensurePlaybook(.w)
@@ -77,7 +78,7 @@ private func asked(_ items: [TrainingItem], _ tested: Int) -> [String: Card] {
     let gap = try #require(steerGap(state, tree, selection))
     #expect(gap.path == line("e4"))
     let round = try #require(nextRound(state, tree, selection, AutoHistory()))
-    #expect(round.at == nil)
+    #expect(round.at == gap.line, "it opens at the reply you have no answer to")
     #expect(round.aim == gap.line)
     #expect(round.grow == gap)
   }

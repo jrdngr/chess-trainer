@@ -60,8 +60,10 @@ public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selec
     }
     let start = drillStart(onLine, state.cards, accuracy: accuracy(gap.color), round: state.score.lineRounds)
     let pick = Recommendation(focus: .test, opening: opening, color: gap.color)
-    // With no move of yours on the line to start at, past your first move as White, the run starts at move one.
-    return AutoRound(pick: pick, at: start?.item.pathSans, aim: line, grow: start == nil ? gap : nil)
+    // With no move of yours on the line to start at, past your first move as White, the run starts at the
+    // hole itself, the moves to it played for you, and grows there.
+    guard let start else { return AutoRound(pick: pick, at: line, aim: line, grow: gap) }
+    return AutoRound(pick: pick, at: start.item.pathSans, aim: line)
   }
   guard let pick = recommend(recommendInput(state, tree, selection, history)) else { return nil }
   let rep = state.playbookList.first { $0.color == pick.color }
