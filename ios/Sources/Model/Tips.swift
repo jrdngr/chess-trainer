@@ -20,6 +20,8 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
   case pawns
   /// A mission is set.
   case mission
+  /// Next run shows, past your prep in a Play game.
+  case nextRun
   /// The lenses owned, and the game past your prep.
   case lens
   /// A Freeform game starts.
@@ -42,6 +44,7 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     case .blunder: "A blunder ends the game."
     case .pawns: "You earn pawns for various accomplishments. Spend them in the Pawn Shop."
     case .mission: "Complete missions to earn pawns."
+    case .nextRun: "Once your prep is done, tap \u{201C}Next run\u{201D} to start a new game."
     case .lens: "Tap a lens for hints."
     case .freeformGame: "Freeform lets you play any of your lines from move 1. Your opponent will always stay within your Playbook."
     case .sidePicker: "Choose your side."

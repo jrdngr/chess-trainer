@@ -8,8 +8,6 @@ import Shared
 public enum PawnEvent: String, Sendable, Codable, CaseIterable {
   /// Your prep ran out with no miss.
   case prepComplete
-  /// Every prepared move in the run was fast.
-  case fastPrep
   /// The opponent's move threw away a lot and your reply took it.
   case blunderPunished
   case moment
@@ -26,7 +24,7 @@ public enum PawnEvent: String, Sendable, Codable, CaseIterable {
 /// What an event pays. A streak day pays by the streak's length.
 public func pawnsFor(_ event: PawnEvent) -> Int {
   switch event {
-  case .prepComplete, .fastPrep, .blunderPunished, .endgame, .endgameGoal: return 1
+  case .prepComplete, .blunderPunished, .endgame, .endgameGoal: return 1
   case .moment, .mission: return 2
   case .checkmate: return 3
   case .streak: return 1
@@ -44,7 +42,7 @@ public let PUNISH_KEPT: Double = 50
 public enum PawnSource: Equatable, Sendable {
   /// A square on the board: the move that earned them, or the mated king.
   case square(String)
-  /// The Prep complete callout (the prep bar where none shows), for prep complete and fast prep.
+  /// The Prep complete callout (the prep bar where none shows), for prep complete.
   case prep
   /// The goal card, for a mission done.
   case goal
@@ -66,11 +64,10 @@ public struct PawnAward: Equatable, Sendable {
   }
 }
 
-/// The pawns a run's prep pays when it runs out: one with no miss, one more when
-/// every prepared move was fast. Nothing when the prep asked nothing.
+/// The pawns a run's prep pays when it runs out: one with no miss. Nothing when the prep asked nothing.
 public func prepPawns(misses: Int, times: [Double]) -> [PawnEvent] {
   guard misses == 0, !times.isEmpty else { return [] }
-  return times.allSatisfy { $0 < FAST_PREP_SECONDS } ? [.prepComplete, .fastPrep] : [.prepComplete]
+  return [.prepComplete]
 }
 
 /// Whether your judged move punished the opponent's blunder: their move dropped their

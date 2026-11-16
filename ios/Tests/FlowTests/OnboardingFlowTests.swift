@@ -30,7 +30,7 @@ import Testing
 
 /// A first game's tips come at their triggers, one at a time, and each shows once:
 /// the flashcards at the start, the prep bar after a prep move, pawns for the finished prep,
-/// and the ✓ on the first book move past it.
+/// the ✓ on the first book move past it, then Next run.
 @MainActor @Test func tipsShowAtTheirTriggersOnce() async throws {
   try await headless(everything: false) { app in
     await app.recommendOpenings()
@@ -45,7 +45,11 @@ import Testing
     let fen = try #require(app.fen)
     try await app.move(try #require(bookChoices(app.index, fen).first?.san))
     note()
-    #expect(Array(shown.prefix(4)) == [.flashCards, .prepBar, .pawns, .prepDone], "finishing the prep pays pawns first")
+    // The next move past the prep, with Next run showing.
+    let past = try #require(app.fen)
+    try await app.move(try #require(bookChoices(app.index, past).first?.san ?? legalMoves(past).first?.san))
+    note()
+    #expect(Array(shown.prefix(5)) == [.flashCards, .prepBar, .pawns, .prepDone, .nextRun], "finishing the prep pays pawns first")
     #expect(app.state.settings.seenTips.isSuperset(of: [.flashCards, .prepBar, .prepDone]))
 
     try await app.next()

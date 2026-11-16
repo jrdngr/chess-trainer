@@ -467,6 +467,7 @@ public final class RunModel {
       return
     }
     if inPrep && ownMoves > 0 { offer(.prepBar) }
+    if nextRunShown { offer(.nextRun) }
     if prepNow.isEmpty && store.state.ownsALens { offer(.lens) }
     // Past your prep the engine is sure to be asked: weigh the position now.
     if prepNow.isEmpty { weigh(run.fen) }

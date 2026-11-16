@@ -480,6 +480,8 @@ struct RunView: View {
           .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.accent, lineWidth: 1.5) }
       }
     }
+    // Over the row, its arrow at Next run on the right.
+    .tip(model.tip, when: model.tip == .nextRun, arrow: .down, arrowAt: 0.88, inset: 16, onDismiss: model.dismissTip)
   }
 
   /// The analysed line's moves, as on the Analysis screen: a tap or an arrow goes to a move.

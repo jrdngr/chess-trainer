@@ -6,12 +6,11 @@ target. Tests: the `docs/rules/pawns.md` suite in
 `Tests/SpecTests/Rules/PawnsRules.swift`.
 
 1. **Only these events pay**, in Play and Middlegame runs and Endgames
-   rounds: prep complete 1, fast prep 1, blunder punished 1, a found moment
+   rounds: prep complete 1, blunder punished 1, a found moment
    2, a mission done 2, reaching the endgame 1, checkmate 3, an Endgames
    round's goal met 1. Single moves, growth and milestones pay nothing.
 2. **Prep complete** pays when your prep runs out, asked you something, and
-   was never missed. **Fast prep** pays one more when every prepared move in
-   the run took under 3 seconds.
+   was never missed.
 3. **A blunder punished** pays when, past your prep, the opponent's move
    dropped their eval by 200 centipawns or more since your last scored move,
    and your reply gave back 50 or less.

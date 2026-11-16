@@ -21,6 +21,7 @@ and `firstGameGrowsThePlaybookFromMoveOne` in `PlayFlowTests.swift` for rule 2.
    - a blunder ends the game
    - pawns earned: what they are for
    - a mission set: missions pay pawns
+   - Next run shows past your prep in a Play game: tap it to start a new game
    - a lens owned, past your prep: tap a lens for hints
    - a Freeform game starts: play any of your lines
 3. **Home's tip** is a just bought side picker's or opening picker's, at

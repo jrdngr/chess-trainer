@@ -44,17 +44,17 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
   @Test func whatEachEventPays() {
     let paid = Dictionary(uniqueKeysWithValues: PawnEvent.allCases.map { ($0, pawnsFor($0)) })
     #expect(paid == [
-      .prepComplete: 1, .fastPrep: 1, .blunderPunished: 1, .moment: 2, .mission: 2, .endgame: 1, .checkmate: 3,
+      .prepComplete: 1, .blunderPunished: 1, .moment: 2, .mission: 2, .endgame: 1, .checkmate: 3,
       .endgameGoal: 1, .streak: 1,
     ])
   }
 
-  /// Rule 2: a clean prep pays, and one more when every answer was fast.
+  /// Rule 2: a clean prep pays one pawn, however fast it was played.
   @Test func prepPays() throws {
     let fast = prepRanOut(try prepPlayed([1, 2, 2.9]), bookIndex)
-    #expect(awards(fast.effects).map(\.event) == [.prepComplete, .fastPrep])
+    #expect(awards(fast.effects).map(\.event) == [.prepComplete])
     #expect(awards(fast.effects).allSatisfy { $0.source == .prep })
-    #expect(fast.session.state.extras.pawns == 2)
+    #expect(fast.session.state.extras.pawns == 1)
     let slow = prepRanOut(try prepPlayed([1, 3, 1]), bookIndex)
     #expect(awards(slow.effects).map(\.event) == [.prepComplete])
     // Prep that asked nothing, or was missed, pays nothing.
@@ -136,10 +136,10 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
   /// Rule 6: the run's score is what its events paid.
   @Test func theRunsScoreIsItsPawns() throws {
     let fast = prepRanOut(try prepPlayed([1, 1, 1]), bookIndex)
-    #expect(fast.session.state.extras.pawns == 2)
+    #expect(fast.session.state.extras.pawns == 1)
     var state = AppState()
     state.earn(fast.session.state.extras.pawns)
-    #expect(state.pawns == 2)
+    #expect(state.pawns == 1)
   }
 
   /// Rule 7: the record keeps moves survived.
