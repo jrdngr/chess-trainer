@@ -23,7 +23,7 @@ and `firstGameGrowsThePlaybookFromMoveOne` in `PlayFlowTests.swift` for rule 2.
    - pawns earned: what they are for
    - a mission set: what it pays
    - the board glows for a moment: find the strong move
-   - the lenses owned, past your prep: tap a lens for hints
+   - a lens owned, past your prep: tap a lens for hints
    - a Freeform game starts: play any of your lines
    - a Middlegame round reaches the board: the replay and the plan card
    - an Endgames round starts: win it or hold it

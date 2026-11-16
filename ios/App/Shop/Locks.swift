@@ -9,22 +9,32 @@ extension EnvironmentValues {
 
 extension View {
   /// A control a Pawn Shop feature unlocks: in place and dimmed until it is yours, a tap opening
-  /// its item in the shop. Once bought, it grows in with two glows the first time it shows.
-  func unlockedBy(_ feature: ShopFeature) -> some View {
-    modifier(Unlockable(feature: feature))
+  /// its item in the shop, or with `hidden` not shown at all until then. Once bought, it grows in
+  /// with two glows the first time it shows.
+  func unlockedBy(_ feature: ShopFeature, hidden: Bool = false) -> some View {
+    modifier(Unlockable(feature: feature, hidden: hidden))
   }
 }
 
 private struct Unlockable: ViewModifier {
   let feature: ShopFeature
+  let hidden: Bool
   @Environment(AppStore.self) private var store
   @Environment(\.openShop) private var openShop
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var glow = 0
 
-  func body(content: Content) -> some View {
+  @ViewBuilder func body(content: Content) -> some View {
+    if hidden && !store.state.owns(feature) {
+      EmptyView()
+    } else {
+      shown(content)
+    }
+  }
+
+  private func shown(_ content: Content) -> some View {
     let owned = store.state.owns(feature)
-    content
+    return content
       .disabled(!owned)
       .opacity(owned ? 1 : 0.35)
       .overlay {

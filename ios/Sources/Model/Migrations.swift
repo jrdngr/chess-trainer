@@ -3,7 +3,7 @@ import Foundation
 
 /// The save's version. A save from before it is brought up by `decodeSave`
 /// and `migrate`; a new save starts at it.
-public let SAVE_VERSION = 5
+public let SAVE_VERSION = 6
 
 /// Runs a day of a card's interval stood for, when intervals were days.
 let RUNS_PER_DAY: Double = 3
@@ -16,6 +16,7 @@ extension AppState {
   /// 3: names are Play, Playbook and Run (done on the JSON by `decodeSave`).
   /// 4: Middlegame's record counts moves survived, not points.
   /// 5: a profile from before the Pawn Shop owns every feature and has seen every tip.
+  /// 6: the lenses, one item before, are four: owning it owns all four.
   @discardableResult
   public mutating func migrate(_ index: ReferenceIndex) -> Bool {
     if version >= SAVE_VERSION { return false }
@@ -25,6 +26,9 @@ extension AppState {
     if version < 5 {
       unlockAll()
       seeAllTips()
+    }
+    if version < 6, unlocked.remove("lenses") != nil {
+      for kind in LensKind.allCases { unlocked.insert(ShopFeature.lens(kind).rawValue) }
     }
     version = SAVE_VERSION
     return true

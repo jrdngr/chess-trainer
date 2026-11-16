@@ -5,11 +5,13 @@ import SwiftUI
 
 /// The lens bar under a board: tap a lens to see it over the position, tap it
 /// again to clear the board. A tap elsewhere on the screen clears it too (`clearsLens`).
-/// Plan toggles the same way.
+/// Plan toggles the same way. With `gated`, only the lenses bought in the Pawn Shop
+/// show, and Plan with the Pawns lens; with none, the bar keeps its height, empty.
 struct LensBar: View {
   @Binding var held: LensKind?
   /// Eval only where the screen has the engine's word on the game.
   var lenses = LENSES.filter { $0.kind != .eval }
+  var gated = false
   var enabled = true
   /// The structure's plan, held like a lens, where the screen offers it.
   var plan: Binding<Bool>? = nil
@@ -22,10 +24,23 @@ struct LensBar: View {
   @State private var planTouched = false
   /// The lens a touch has toggled and not yet lifted from.
   @State private var touched: LensKind?
+  @Environment(AppStore.self) private var store
+
+  private var shown: [(kind: LensKind, label: String)] {
+    gated ? lenses.filter { store.state.owns(lens: $0.kind) } : lenses
+  }
+
+  private var planShown: Binding<Bool>? {
+    gated && !store.state.owns(lens: .pawns) ? nil : plan
+  }
 
   var body: some View {
     HStack(spacing: 6) {
-      ForEach(lenses, id: \.kind) { lens in
+      if shown.isEmpty && planShown == nil {
+        // Nothing bought yet: the bar's height, so what hangs from it stays put.
+        Text("Pawns").font(.system(size: 12.5, weight: .semibold)).padding(.vertical, 8).hidden()
+      }
+      ForEach(shown, id: \.kind) { lens in
         let on = held == lens.kind
         button(
           lens.label, on: on, ink: spotlight == lens.kind ? Theme.accent : Theme.text2, fill: Theme.accent, onInk: Theme.accentInk,
@@ -36,7 +51,7 @@ struct LensBar: View {
           held = on ? nil : lens.kind
         } release: { touched = nil }
       }
-      if let plan {
+      if let plan = planShown {
         button(
           "Plan", on: plan.wrappedValue, ink: PlanColors.plan, fill: PlanColors.plan, onInk: PlanColors.ink, enabled: enabled && planEnabled,
           pulse: planPulse && enabled && planEnabled

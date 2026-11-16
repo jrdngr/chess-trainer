@@ -117,7 +117,7 @@ struct RootView: View {
           .tabItem { Label(Tab.analysis.label, systemImage: Tab.analysis.symbol) }.tag(Tab.analysis)
         ShopView(focus: $shopFocus) { feature in
           // A feature with a place on Home shows itself off there; the lenses wait for the next game.
-          if feature != .lenses { tab = .home }
+          if !feature.isLens { tab = .home }
         }
           .tabItem { Label { Text(Tab.shop.label) } icon: { Image.pawn } }.tag(Tab.shop)
       }

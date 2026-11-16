@@ -8,7 +8,7 @@ enum Tab: String, CaseIterable {
     case .playbook: "Playbook"
     case .stats: "Stats"
     case .analysis: "Analysis"
-    case .shop: "Pawn Shop"
+    case .shop: "Shop"
     }
   }
 

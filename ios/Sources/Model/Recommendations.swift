@@ -86,8 +86,11 @@ public func gapImportance(reach: Double, share: Double, plies: Int) -> Double {
 }
 
 /// Every gap in some sides' Playbooks, most important first. `scope` keeps
-/// only replies inside an opening.
-public func gaps(_ reps: [Playbook], _ index: ReferenceIndex, tree: OpeningTree? = nil, scope: OpeningNode? = nil) -> [Gap] {
+/// only replies inside an opening. `everyShortReply` keeps each common reply
+/// where a line stops, not only its most played.
+public func gaps(
+  _ reps: [Playbook], _ index: ReferenceIndex, tree: OpeningTree? = nil, scope: OpeningNode? = nil, everyShortReply: Bool = false
+) -> [Gap] {
   var out: [Gap] = []
   for rep in reps where !rep.nodes.isEmpty {
     let region = tree.flatMap { t in scope.flatMap { $0.depth > 0 ? (tree: t, node: $0) : nil } }
@@ -99,7 +102,7 @@ public func gaps(_ reps: [Playbook], _ index: ReferenceIndex, tree: OpeningTree?
       let answered = childrenOf(rep, hole.nodeId).contains { !childrenOf(rep, $0.id).isEmpty }
       let kind: GapKind = hole.path.isEmpty || answered ? .noAnswer : .tooShort
       // A line that just stops is one gap, at its most played reply.
-      if kind == .tooShort && !shortAt.insert(positionKey(hole.fen)).inserted { continue }
+      if kind == .tooShort && !everyShortReply && !shortAt.insert(positionKey(hole.fen)).inserted { continue }
       let importance = gapImportance(reach: hole.reach, share: hole.share, plies: hole.path.count)
       guard importance >= GAP_MIN_IMPORTANCE else { continue }
       let name = deepestName(index, line)?.name ?? end.name
@@ -230,12 +233,13 @@ public func positionMastery(_ card: Card?) -> Double {
   return right * (0.6 + 0.4 * fast)
 }
 
-/// How well you know a line up to a hole: the average over your moves on it.
-/// A line with no moves of yours yet counts as known.
+/// How well you know a line up to a hole: the average over your moves on it,
+/// past your first move as White, which no run asks. A line with no such
+/// moves yet counts as known.
 public func lineMastery(_ rep: Playbook, _ cards: [String: Card], _ path: [String]) -> Double {
   let walked = walkSan(path)
   var scores: [Double] = []
-  for i in path.indices where i < walked.moves.count && fenTurn(walked.fens[i]) == rep.color {
+  for i in path.indices where i > 0 && i < walked.moves.count && fenTurn(walked.fens[i]) == rep.color {
     scores.append(positionMastery(cards[cardId(rep.id, positionKey(walked.fens[i]))]))
   }
   return scores.isEmpty ? 1 : scores.reduce(0, +) / Double(scores.count)
@@ -293,8 +297,11 @@ public func playbookGaps(_ state: AppState, _ tree: OpeningTree) -> [Gap] {
 public func growAtHole(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, color: Color, line: [String]) -> (gap: Gap, yes: Bool)? {
   let ranked = selectionGaps(state, tree, selection)
   let all = ranked.isEmpty ? playbookGaps(state, tree) : ranked
-  guard let gap = gapAt(all, color: color, line: line) ?? gapAt(playbookGaps(state, tree), color: color, line: line) else { return nil }
   let reps = state.playbookList
+  guard let gap = gapAt(all, color: color, line: line) ?? gapAt(playbookGaps(state, tree), color: color, line: line) else {
+    // Another common reply where your line stops: no question, but yours to grow.
+    return gapAt(gaps(reps.filter { $0.color == color }, tree.index, everyShortReply: true), color: color, line: line).map { ($0, false) }
+  }
   let p = pace(runs: runsSinceAdded(state.games, reps), size: state.settings.movesPerFill)
   return (gap, insideYourLines(gap) && growScore(gap, top: all.first, pace: p, reps: reps, cards: state.cards) >= 1)
 }

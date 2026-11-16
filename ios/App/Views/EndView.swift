@@ -125,8 +125,7 @@ struct EndView: View {
           highlights: highlights(missAt), marks: marks, onMove: { _ in })
           .clearsLens($lens)
         // The verdict fades out before the lenses fade in, so the two never show through each other.
-        LensBar(held: $lens)
-          .unlockedBy(.lenses)
+        LensBar(held: $lens, gated: true)
           .opacity(flashing ? 0 : 1).allowsHitTesting(!flashing)
           .animation(.easeIn(duration: 0.2).delay(0.25), value: flashing)
           .overlay(alignment: .top) {

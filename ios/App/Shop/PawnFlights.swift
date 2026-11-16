@@ -12,7 +12,7 @@ struct PawnSpotsKey: PreferenceKey {
 }
 
 extension View {
-  /// This view is where pawns pop out from (`board`, `prep`, `goal`) or land (`counter`).
+  /// This view is where pawns pop out from (`board`, `callout`, `prep`, `goal`) or land (`counter`).
   func pawnSpot(_ name: String) -> some View {
     anchorPreference(key: PawnSpotsKey.self, value: .bounds) { [name: $0] }
   }
@@ -125,7 +125,8 @@ private struct Seeded {
   }
 }
 
-/// Plans a drop's pawns: a fan out of the source, nearest the counter going first.
+/// Plans a drop's pawns: a fan out of the source, up or, where up leaves the screen, down,
+/// nearest the counter going first.
 func planTrips(drop: Int, count: Int, from source: CGRect, to target: CGPoint, width: Double, start: Double) -> [PawnTrip] {
   var random = Seeded(state: UInt32(truncatingIfNeeded: 9973 &* drop &+ 17))
   let origin = CGPoint(x: source.midX, y: source.midY)
@@ -145,6 +146,10 @@ func planTrips(drop: Int, count: Int, from source: CGRect, to target: CGPoint, w
       tries += 1
     } while tries < 20 && raw.contains { abs($0.d - d) < PawnMotion.distanceGap * dk }
     raw.append((a, d))
+  }
+  // Where popping up would leave the screen, the fan pops down instead.
+  if raw.contains(where: { origin.y - $0.d * cos($0.a * .pi / 180) < PawnMotion.edge }) {
+    raw = raw.map { (a: 180 - $0.a, d: $0.d) }
   }
   // Near a screen edge the whole fan swings away from it.
   let fits = { (swing: Double) in
@@ -166,7 +171,7 @@ func planTrips(drop: Int, count: Int, from source: CGRect, to target: CGPoint, w
     let dx = target.x - stop.x, dy = target.y - stop.y
     let len = max(1, (dx * dx + dy * dy).squareRoot())
     var normal = CGVector(dx: -dy / len, dy: dx / len)
-    if normal.dx * (a >= 0 ? 1 : -1) < 0 { normal = CGVector(dx: -normal.dx, dy: -normal.dy) }
+    if normal.dx * (sin(rad) >= 0 ? 1 : -1) < 0 { normal = CGVector(dx: -normal.dx, dy: -normal.dy) }
     let trip = PawnTrip(drop: drop, angle: a, origin: origin, stop: stop, normal: normal, spawn: 0, leave: 0, arrive: 0, collect: 0, ghostStretch: 1, target: target)
     return (trip, len)
   }
@@ -260,7 +265,8 @@ private struct PawnFlightLayer: View {
       let col = orientation == .w ? file : 7 - file
       let row = orientation == .w ? 7 - rank : rank
       return CGRect(x: board.minX + col * size, y: board.minY + row * size, width: size, height: size)
-    case .prep: return spots["prep"] ?? spots["board"]
+    // Out of the Prep complete callout; the prep bar where no callout shows.
+    case .prep: return spots["callout"] ?? spots["prep"] ?? spots["board"]
     case .goal: return spots["goal"] ?? spots["board"]
     case .board: return spots["board"].map { CGRect(x: $0.midX - 22, y: $0.midY - 22, width: 44, height: 44) }
     case .counter: return spots["counter"]

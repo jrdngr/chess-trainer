@@ -115,4 +115,15 @@ import Testing
     #expect(GameTip.allCases.allSatisfy(old.settings.seen))
     #expect(old.pawns == 3)
   }
+
+  /// Rule 7: version 6 turns the one lenses item into all four lenses; a profile without it gets none.
+  @Test func theLensesItemBecomesFourLenses() throws {
+    var bought = try decodeSave(Data(#"{"version":5,"unlocked":["lenses","sidePicker"]}"#.utf8))
+    bought.migrate(bookIndex)
+    #expect(LensKind.allCases.allSatisfy { bought.owns(lens: $0) } && bought.owns(.sidePicker))
+    #expect(!bought.unlocked.contains("lenses"))
+    var not = try decodeSave(Data(#"{"version":5,"unlocked":["sidePicker"]}"#.utf8))
+    not.migrate(bookIndex)
+    #expect(!not.ownsALens)
+  }
 }

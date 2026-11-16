@@ -44,7 +44,7 @@ public let PUNISH_KEPT: Double = 50
 public enum PawnSource: Equatable, Sendable {
   /// A square on the board: the move that earned them, or the mated king.
   case square(String)
-  /// The prep bar, for prep complete and fast prep.
+  /// The Prep complete callout (the prep bar where none shows), for prep complete and fast prep.
   case prep
   /// The goal card, for a mission done.
   case goal

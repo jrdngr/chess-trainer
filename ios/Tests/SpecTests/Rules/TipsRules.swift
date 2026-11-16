@@ -26,8 +26,8 @@ import Testing
     let bought = s.buy("sidePicker")
     #expect(bought && s.homeTip == .sidePicker)
     s.settings.see(.sidePicker)
-    s.pawns = 15
-    _ = s.buy("lenses")
+    s.pawns = 10
+    _ = s.buy("lensPawns")
     #expect(s.homeTip == nil, "the lenses have their tip in a game")
   }
 

@@ -26,9 +26,10 @@ How a Play run adds moves to your Playbook. Code: `Recommendations.swift`
 4. **p, pace,** is the Play runs since anything was added to the
    Playbook, over Moves per fill (default 3).
 5. **m, mastery,** is the average over your moves from move one to the
-   hole. Each move scores its share of right answers × (0.6 + 0.4 × how fast),
-   where fast is the card's ease from 1.3 (0) to 2.5 (1). A move never asked
-   scores 0. A line with no move of yours yet scores 1.
+   hole, leaving out your first move as White, which no run asks. Each move
+   scores its share of right answers × (0.6 + 0.4 × how fast), where fast is
+   the card's ease from 1.3 (0) to 2.5 (1). A move never asked scores 0. A
+   line with no such move yet scores 1.
 6. **g** is the gap's importance next to the selection's top gap, at most 1.
 7. **On a yes, the board turns into New move.** It offers the answers a
    Growth sitting would offer, and each pick is saved as it is made. The
@@ -39,7 +40,9 @@ How a Play run adds moves to your Playbook. Code: `Recommendations.swift`
 8. **New moves aren't graded that run.** They count in the book's color,
    and later runs drill them.
 9. **On a no, a Grow here button shows** while it is your move at the
-   hole. It starts the same New move.
+   hole. It starts the same New move. Where a line just stops, every reply
+   played in at least 5% of games there gets the button, not only the gap's
+   most played one; only that one is asked about.
 10. **Growth never goes past the book.** See [playbook](playbook.md).
 
 Rules 2 (the conditions), 7 (the replies) and 9 live in `RunModel` and

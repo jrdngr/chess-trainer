@@ -4,7 +4,7 @@ How an older save is brought up to date when it loads. Code:
 `Migrations.swift`. Tests: the `docs/rules/saves.md` suite in
 `Tests/SpecTests/Rules/SavesRules.swift`.
 
-1. **Every save has a version.** A new save starts at the current one (5).
+1. **Every save has a version.** A new save starts at the current one (6).
    A save written before versions existed counts as 0. Each step below runs
    once, in order, and the save is written back after.
 2. **Version 1: book moves only.** See [playbook](playbook.md).
@@ -20,3 +20,5 @@ How an older save is brought up to date when it loads. Code:
 6. **Version 5: the Pawn Shop.** A profile from before it owns every
    feature the shop sells and has seen every tip. A new profile owns none
    and has seen none.
+7. **Version 6: one item per lens.** A profile that owned the lenses, one
+   item before, owns all four lenses. One that didn't owns none.

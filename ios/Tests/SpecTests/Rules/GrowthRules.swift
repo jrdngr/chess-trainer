@@ -136,6 +136,35 @@ private func morra() -> (AppState, String) {
     #expect(known > 0.5)
   }
 
+  /// Rule 5: your first move as White, which no run asks, is left out of the average.
+  @Test func masteryLeavesOutWhitesFirstMove() {
+    var state = AppState()
+    let id = state.ensurePlaybook(.w)
+    state.addLine(id, line("e4 c5 d4 cxd4 c3"), .fixed(.book))
+    let fens = walkSan(line("e4 c5 d4 cxd4")).fens
+    for _ in 0..<3 {
+      state.answered(id, fens[2], "d4", .easy)
+      state.answered(id, fens[4], "c3", .easy)
+    }
+    let unasked = lineMastery(state.playbooks[id]!, state.cards, line("e4 c5 d4 cxd4 c3"))
+    #expect(unasked > 0.9, "1.e4 never asked doesn't drag the line down")
+    #expect(lineMastery(state.playbooks[id]!, state.cards, line("e4 c5")) == 1, "a line with only White's first move counts as known")
+  }
+
+  /// Rule 9: where a line stops, every common reply can be grown at, not only the gap's.
+  @Test func growHereAtEveryCommonReplyWhereALineStops() throws {
+    let tree = openingTree(bookIndex)
+    var state = AppState()
+    let id = state.ensurePlaybook(.w)
+    state.addLine(id, line("d4 d5 c4"), .fixed(.book))
+    let selection = Selection(color: .w, opening: ANY_OPENING)
+    let gaps = selectionGaps(state, tree, selection).filter { $0.hole.path == line("d4 d5 c4") }
+    #expect(gaps.map(\.hole.san) == ["e6"], "a line that just stops is one gap, at its most played reply")
+    let found = try #require(growAtHole(state, tree, selection, color: .w, line: line("d4 d5 c4 dxc4")))
+    #expect(found.yes == false, "only the gap is asked about")
+    #expect(found.gap.line == line("d4 d5 c4 dxc4"))
+  }
+
   /// Rule 7: a fill stops at its size, or where the book stops naming the line.
   @Test func fillStopsAtSizeOrNamedEnd() {
     let morra = line("e4 c5 d4 cxd4 c3 dxc3 Nxc3")

@@ -234,6 +234,7 @@ struct RunView: View {
   @ViewBuilder private var calloutLayer: some View {
     if let callout = model.shownCallout {
       CalloutStrip(text: callout.text, good: callout.good)
+        .pawnSpot("callout")
         .padding(.top, 8)
         .tip(model.tip, when: model.tip == .prepDone, onDismiss: model.dismissTip)
         .transition(.opacity.combined(with: .offset(y: -6)))
@@ -329,9 +330,9 @@ struct RunView: View {
     return VStack(spacing: 0) {
       LensBar(
         held: $lens, lenses: LENSES, enabled: lensEnabled, plan: $planOpen, planEnabled: lensEnabled && plan != nil,
-        planPulse: planSeeded && plan != nil && plan != planSeen, spotlight: model.tip == .lens ? .pawns : nil
+        planPulse: planSeeded && plan != nil && plan != planSeen,
+        spotlight: model.tip == .lens ? LENSES.map(\.kind).first { store.state.owns(lens: $0) } : nil, gated: true
       )
-      .unlockedBy(.lenses)
       .opacity(model.held || lensesAway || called || drawing ? 0 : 1).allowsHitTesting(!(model.held || lensesAway || called || drawing))
       // A finished run being analysed shows its moves in the lenses' place.
       .overlay {

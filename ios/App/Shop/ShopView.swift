@@ -29,7 +29,7 @@ struct ShopView: View {
       .padding(.horizontal, 20).padding(.top, 14).padding(.bottom, 10)
       ScrollView {
         ShopTree(selected: selected, purchase: purchase, frames: $frames) { selected = $0 }
-          .padding(.horizontal, 16).padding(.bottom, selected == nil ? 24 : 280)
+          .padding(.horizontal, 16).padding(.bottom, selected == nil ? 24 : 330)
       }
     }
     .background(Theme.background.ignoresSafeArea())
@@ -38,7 +38,7 @@ struct ShopView: View {
     .sheet(isPresented: Binding(get: { selected != nil }, set: { if !$0, purchase == nil { selected = nil } })) {
       if let id = selected, let item = shopItem(id) {
         BuySheet(item: item, purchase: purchase, onSelect: { selected = $0 }, onBuy: { buy(item) }) { selected = nil }
-          .presentationDetents([.height(250)])
+          .presentationDetents([.height(300)])
           .presentationBackground(SwiftUI.Color(hex: 0x131317))
           .presentationBackgroundInteraction(.enabled)
           .interactiveDismissDisabled(purchase != nil)
@@ -99,10 +99,11 @@ private struct ShopTree: View {
 
   /// Where each item sits on a 358 by 580 grid.
   static let spots: [String: CGPoint] = [
-    "sidePicker": CGPoint(x: 104, y: 0), "lenses": CGPoint(x: 236, y: 0), "endgames": CGPoint(x: 316, y: 0),
-    "openingPicker": CGPoint(x: 104, y: 112), "middlegame": CGPoint(x: 236, y: 112),
-    "freeform": CGPoint(x: 56, y: 224), "guides": CGPoint(x: 172, y: 224),
-    "recommendations": CGPoint(x: 56, y: 336), "personalities": CGPoint(x: 172, y: 336),
+    "sidePicker": CGPoint(x: 56, y: 0), "lensPawns": CGPoint(x: 236, y: 0), "endgames": CGPoint(x: 318, y: 0),
+    "openingPicker": CGPoint(x: 56, y: 112), "lensPieces": CGPoint(x: 236, y: 112),
+    "freeform": CGPoint(x: 56, y: 224), "guides": CGPoint(x: 146, y: 224), "lensKings": CGPoint(x: 236, y: 224),
+    "middlegame": CGPoint(x: 318, y: 224),
+    "recommendations": CGPoint(x: 56, y: 336), "personalities": CGPoint(x: 146, y: 336), "lensEval": CGPoint(x: 236, y: 336),
     "boards": CGPoint(x: 36, y: 478), "pieces": CGPoint(x: 107, y: 478), "decks": CGPoint(x: 179, y: 478),
     "styles": CGPoint(x: 251, y: 478), "icons": CGPoint(x: 322, y: 478),
   ]
@@ -201,7 +202,7 @@ private struct ShopNode: View {
       } else if case .short = status {
         ring(Double(balance) / Double(item.price), Theme.accent)
       }
-      Icon(name: status == .locked ? "lock" : "shop.\(item.id)", size: 22).foregroundStyle(glyph(owned))
+      Icon(name: status == .locked ? "lock" : shopIcon(item), size: 22).foregroundStyle(glyph(owned))
     }
     .frame(width: 48, height: 48)
     .overlay {
@@ -241,8 +242,8 @@ private struct ShopNode: View {
   }
 }
 
-/// The short sheet over the tree: the item as it will look, and Buy, how short you are,
-/// or the item it needs first.
+/// The short sheet over the tree: the item as it will look, what it does, and Buy, how
+/// short you are, or the item it needs first.
 private struct BuySheet: View {
   let item: ShopItem
   let purchase: Purchase?
@@ -271,7 +272,10 @@ private struct BuySheet: View {
         .padding(14).frame(maxWidth: .infinity)
         .background(RoundedRectangle(cornerRadius: 22).fill(Theme.surface))
         .opacity(status == .locked ? 0.4 : 1)
-      action(status).padding(.top, 16)
+      Text(item.about).font(.system(size: 14)).foregroundStyle(Theme.text2)
+        .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity).padding(.top, 12).padding(.horizontal, 8)
+      action(status).padding(.top, 14)
     }
     .padding(.horizontal, 16).padding(.top, 10)
   }
@@ -364,7 +368,7 @@ private struct ShopPreview: View {
       }
     default:
       HStack(spacing: 10) {
-        Icon(name: item.id == "middlegame" ? "middlegame" : item.id == "endgames" ? "flag" : "shop.\(item.id)", size: 20)
+        Icon(name: item.id == "middlegame" ? "middlegame" : item.id == "endgames" ? "flag" : shopIcon(item), size: 20)
           .foregroundStyle(Theme.accent)
         Text(item.name).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.text)
       }
@@ -420,4 +424,9 @@ private struct FlyingPawn: View {
     let u = 1 - t
     return CGPoint(x: u * u * a.x + 2 * u * t * b.x + t * t * c.x, y: u * u * a.y + 2 * u * t * b.y + t * t * c.y)
   }
+}
+
+/// An item's icon: the lenses share one.
+func shopIcon(_ item: ShopItem) -> String {
+  item.feature?.isLens == true ? "shop.lenses" : "shop.\(item.id)"
 }

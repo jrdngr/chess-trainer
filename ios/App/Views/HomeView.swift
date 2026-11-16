@@ -6,8 +6,9 @@ import SwiftUI
 /// Home: Play's next run on its button with the selection under it, Middlegame and
 /// Endgames, Recommendations and Milestones. A mode tile starts the mode on
 /// your saved settings; press and hold Middlegame for Start or Settings (its
-/// setup screen first). A feature just bought gets a tip at its control, and
-/// enough pawns for something in the Pawn Shop a tip on its tab.
+/// setup screen first). A Pawn Shop feature shows only once it is yours. A
+/// feature just bought gets a tip at its control, and enough pawns for
+/// something in the Pawn Shop a tip on its tab.
 struct HomeView: View {
   let tree: OpeningTree
   let onOpen: (Mode) -> Void
@@ -38,27 +39,33 @@ struct HomeView: View {
         VStack(spacing: 0) {
           play
             .padding([.top, .horizontal], 8)
-          PlayFooter(tip: tip)
+          if [ShopFeature.sidePicker, .freeform, .openingPicker].contains(where: { store.state.owns($0) }) {
+            PlayFooter(tip: tip)
+          } else {
+            SwiftUI.Color.clear.frame(height: 8)
+          }
         }
         .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface))
         // Over the tiles below, so a tip hanging past the card stays on top.
         .zIndex(1)
         .padding(.bottom, 10)
         Group {
-          LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 10) {
-            tile("Middlegame", "middlegame", .middlegame, held: true).unlockedBy(.middlegame)
-              .tip(text: tip == .middlegame ? tip?.text : nil, arrowAt: 0.3, minWidth: 260) { nextHomeTip(store) }
-            tile("Endgames", "flag", .endgame).unlockedBy(.endgames)
-              .tip(text: tip == .endgames ? tip?.text : nil, arrowAt: 0.7) { nextHomeTip(store) }
+          if store.state.owns(.middlegame) || store.state.owns(.endgames) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 10) {
+              tile("Middlegame", "middlegame", .middlegame, held: true).unlockedBy(.middlegame, hidden: true)
+                .tip(text: tip == .middlegame ? tip?.text : nil, arrowAt: 0.3, minWidth: 260) { nextHomeTip(store) }
+              tile("Endgames", "flag", .endgame).unlockedBy(.endgames, hidden: true)
+                .tip(text: tip == .endgames ? tip?.text : nil, arrowAt: 0.7) { nextHomeTip(store) }
+            }
+            // Over the cards below while a tile's tip hangs past it.
+            .zIndex(tip == .middlegame || tip == .endgames ? 1 : 0)
+            .padding(.bottom, 10)
           }
-          // Over the cards below while a tile's tip hangs past it.
-          .zIndex(tip == .middlegame || tip == .endgames ? 1 : 0)
           VStack(spacing: 10) {
-            RecommendationsCard(tree: tree, onPick: onGap).unlockedBy(.recommendations)
+            RecommendationsCard(tree: tree, onPick: onGap).unlockedBy(.recommendations, hidden: true)
               .tip(text: tip == .recommendations ? tip?.text : nil) { nextHomeTip(store) }
             MilestonesCard()
           }
-          .padding(.top, 10)
         }
       }
       .padding(.horizontal, 16).padding(.bottom, 24)
@@ -200,27 +207,29 @@ private struct PlayFooter: View {
   var body: some View {
     let settings = store.state.settings
     VStack(spacing: 8) {
-      HStack(spacing: 8) {
-        Button { picking = .color } label: {
-          HStack(spacing: 6) {
-            ColorSquare(choice: settings.selection.color, size: 20)
-            Icon(name: "down", size: 14).foregroundStyle(Theme.text3)
+      if store.state.owns(.sidePicker) || store.state.owns(.freeform) {
+        HStack(spacing: 8) {
+          Button { picking = .color } label: {
+            HStack(spacing: 6) {
+              ColorSquare(choice: settings.selection.color, size: 20)
+              Icon(name: "down", size: 14).foregroundStyle(Theme.text3)
+            }
+            .padding(.leading, 12).padding(.trailing, 10).frame(minHeight: 44)
+            .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface2))
+            .contentShape(RoundedRectangle(cornerRadius: 12))
           }
-          .padding(.leading, 12).padding(.trailing, 10).frame(minHeight: 44)
-          .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface2))
-          .contentShape(RoundedRectangle(cornerRadius: 12))
+          .accessibilityLabel("Side")
+          .unlockedBy(.sidePicker, hidden: true)
+          // The side button is narrow: the tip keeps a readable width, its arrow at the button.
+          .tip(text: tip == .sidePicker ? tip?.text : nil, arrowAt: 0.13, minWidth: 240) { nextHomeTip(store) }
+          SegmentedControl(
+            value: Binding(get: { settings.start }, set: { start in store.update { $0.settings.start = start } }),
+            options: [(RunStart.freeform, "Freeform"), (RunStart.drill, "Drill")], track: Theme.background)
+            .unlockedBy(.freeform, hidden: true)
+            .tip(text: tip == .freeform ? tip?.text : nil) { nextHomeTip(store) }
         }
-        .accessibilityLabel("Side")
-        .unlockedBy(.sidePicker)
-        // The side button is narrow: the tip keeps a readable width, its arrow at the button.
-        .tip(text: tip == .sidePicker ? tip?.text : nil, arrowAt: 0.13, minWidth: 240) { nextHomeTip(store) }
-        SegmentedControl(
-          value: Binding(get: { settings.start }, set: { start in store.update { $0.settings.start = start } }),
-          options: [(RunStart.freeform, "Freeform"), (RunStart.drill, "Drill")], track: Theme.background)
-          .unlockedBy(.freeform)
-          .tip(text: tip == .freeform ? tip?.text : nil) { nextHomeTip(store) }
+        .zIndex(1)
       }
-      .zIndex(1)
       Button { picking = .quick } label: {
         HStack(spacing: 8) {
           SelectionTrail(opening: settings.selection.opening).frame(maxWidth: .infinity, alignment: .leading)
@@ -230,7 +239,7 @@ private struct PlayFooter: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface2))
         .contentShape(RoundedRectangle(cornerRadius: 12))
       }
-      .unlockedBy(.openingPicker)
+      .unlockedBy(.openingPicker, hidden: true)
       .tip(text: tip == .openingPicker ? tip?.text : nil) { nextHomeTip(store) }
     }
     .padding(8)

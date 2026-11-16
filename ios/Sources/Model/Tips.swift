@@ -73,7 +73,7 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
   public static func bought(_ feature: ShopFeature) -> GameTip? {
     switch feature {
     case .sidePicker: .sidePicker
-    case .lenses: nil
+    case .lensPawns, .lensPieces, .lensKings, .lensEval: nil
     case .openingPicker: .openingPicker
     case .freeform: .freeform
     case .recommendations: .recommendations

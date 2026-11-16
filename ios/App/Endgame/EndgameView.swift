@@ -171,8 +171,7 @@ struct EndgameRoundView: View {
             .dimmed(game.phase == .over)
             .clearsLens($lens)
             .pawnSpot("board")
-          LensBar(held: $lens, lenses: LENSES, enabled: game.phase == .playing, plan: $plan, planEnabled: livePlan != nil)
-            .unlockedBy(.lenses)
+          LensBar(held: $lens, lenses: LENSES, enabled: game.phase == .playing, plan: $plan, planEnabled: livePlan != nil, gated: true)
             .opacity(called == nil ? 1 : 0).allowsHitTesting(called == nil)
             .overlay(alignment: .top) {
               if let called { CalloutStrip(text: called, good: false).padding(.top, 8).transition(.opacity).id(called) }
