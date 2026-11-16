@@ -194,7 +194,7 @@ struct RunView: View {
   }
 
   /// The tips hung from the board.
-  private static let boardTips: Set<GameTip?> = [.flashCards, .prepDone, .freeformGame]
+  private static let boardTips: Set<GameTip?> = [.flashCards, .prepDone, .missedMove, .freeformGame]
 
   /// The tips hung from the header: at the prep bar, or at the pawn counter.
   private static let headerTips: Set<GameTip?> = [.prepBar, .pawns]

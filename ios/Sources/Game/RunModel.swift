@@ -798,6 +798,7 @@ public final class RunModel {
         if let n { show(callout: n.text, good: n.tone == "good", missed: n.tone == "missed") }
       case .miss(let m):
         show(miss: m)
+        offer(.missedMove)
       case .moment(let found):
         if found { show(callout: "Found it", good: true) }
         if found { services.emit(.success) }

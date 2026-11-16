@@ -18,6 +18,7 @@ and `firstGameGrowsThePlaybookFromMoveOne` in `PlayFlowTests.swift` for rule 2.
    - a Play game starts on your prep: your openings are flashcards
    - a prep move played: the prep bar
    - the first ✓ on a common move: what the ✓ means
+   - a prepared move missed, the right one shown: remember it next time
    - growth opens: pick or play an answer
    - growth opens because a move is due, holding the Prep complete pawn: add a move to keep earning pawns on this opening
    - a blunder ends the game

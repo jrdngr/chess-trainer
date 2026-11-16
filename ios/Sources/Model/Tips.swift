@@ -12,6 +12,8 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
   case prepBar
   /// The first ✓ on a common move past your prep.
   case prepDone
+  /// A prepared move missed, the right one shown.
+  case missedMove
   /// Growth opens.
   case growth
   /// Growth opens because a move is due, holding the Prep complete pawn.
@@ -42,6 +44,7 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     case .flashCards: "Your openings are flashcards. Each move is graded on speed and accuracy."
     case .prepBar: "The prep bar fills as you play your line."
     case .prepDone: "A \u{2713} means you\u{2019}re still playing common moves."
+    case .missedMove: "Remember this move next time!"
     case .growth: "We\u{2019}ll add new moves to your openings as you get better. Pick an answer or play it on the board."
     case .growthPawn: "You must add at least one move to continue earning pawns for this opening."
     case .blunder: "A blunder ends the game."

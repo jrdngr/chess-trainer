@@ -107,6 +107,8 @@ import Testing
     #expect(miss?.expected == expected)
     #expect(app.state.mistakes.contains { $0.fen == fen && $0.played == wrong.san && $0.expected == expected })
     #expect(app.run?.label == .off)
+    #expect(app.run?.tip == .missedMove,
+            "the miss says to remember the move")
   }
 }
 
