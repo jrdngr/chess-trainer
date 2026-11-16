@@ -282,6 +282,7 @@ struct EndView: View {
         Image(systemName: "xmark").font(.headline).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
       }
       .foregroundStyle(Theme.text).buttonStyle(.plain)
+      .accessibilityLabel("Close")
       Spacer()
       Text(openingName(model.tree, playedNode.id)).font(.headline).foregroundStyle(Theme.text).lineLimit(1)
       Spacer()

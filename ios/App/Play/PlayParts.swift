@@ -17,6 +17,7 @@ struct PlayAppBar<Trailing: View>: View {
         Icon(name: "close", size: 20).foregroundStyle(Theme.text).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
       }
       .buttonStyle(.plain)
+      .accessibilityLabel("Close")
       VStack(spacing: 1) {
         Text(title).font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.text)
         if let subtitle { Text(subtitle).font(.system(size: 13)).foregroundStyle(Theme.text2) }

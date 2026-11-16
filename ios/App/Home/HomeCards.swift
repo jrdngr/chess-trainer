@@ -25,8 +25,9 @@ struct HomeCard<Content: View>: View {
 }
 
 /// Your openings with their form: the ones most worth focusing on, then Show all.
-/// Tapping one selects it. `OpeningsLadder`.
+/// Tapping one opens it with `onOpen`, or selects it with none. `OpeningsLadder`.
 struct OpeningsLadder: View {
+  var onOpen: ((String) -> Void)?
   @Environment(AppStore.self) private var store
   @State private var showAll = false
 
@@ -47,9 +48,10 @@ struct OpeningsLadder: View {
       HomeCard(title: "Your openings") {
         VStack(spacing: 2) {
           ForEach(rows, id: \.key) { row in
-            let selected = store.state.settings.selection.opening == row.node.id
+            let selected = onOpen == nil && store.state.settings.selection.opening == row.node.id
               && store.state.settings.selection.color == (row.side == .w ? .w : .b)
             Button {
+              if let onOpen { onOpen(row.node.id); return }
               store.update { $0.settings.selection = Selection(color: row.side == .w ? .w : .b, opening: row.node.id) }
             } label: {
               HStack(spacing: 8) {

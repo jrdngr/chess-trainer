@@ -14,7 +14,7 @@ struct RunBar<Actions: View>: View {
 
   var body: some View {
     HStack(spacing: 12) {
-      IconButton(icon: "close", action: onClose)
+      IconButton(icon: "close", action: onClose).accessibilityLabel("Close")
       VStack(spacing: 1) {
         Text(title).font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.text)
         if let subtitle { Text(subtitle).font(.system(size: 13)).foregroundStyle(Theme.text2) }

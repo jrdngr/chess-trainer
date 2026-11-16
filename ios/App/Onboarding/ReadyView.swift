@@ -16,7 +16,8 @@ struct ReadyView: View {
   var body: some View {
     let state = memo.get(pendingKey(rows)) { onboardedState(store.state, tree, rows) }
     let first = nextRound(state, tree, store.peekRoundSelection(state), AutoHistory())
-    let moves = rows.reduce(0) { $0 + $1.moves }
+    let shown = readyRows(rows)
+    let moves = countOwnMoves(rows.map { (sans: $0.sans, color: $0.color) })
     VStack(spacing: 0) {
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
@@ -24,10 +25,10 @@ struct ReadyView: View {
             .background(Circle().fill(Theme.good.opacity(0.14))).padding(.leading, 4)
           Text("Your Playbook is ready").font(.system(size: 30, weight: .heavy)).tracking(-0.9).foregroundStyle(Theme.text)
             .padding(.horizontal, 4).padding(.top, 14).padding(.bottom, 4)
-          Text("\(plural(moves, "move")) across \(plural(rows.count, "opening"))").font(.system(size: 14)).foregroundStyle(Theme.text2)
+          Text("\(plural(moves, "move")) across \(plural(shown.count, "opening"))").font(.system(size: 14)).foregroundStyle(Theme.text2)
             .padding(.horizontal, 4).padding(.bottom, 18)
           ListCard {
-            ForEach(rows, id: \.key) { row in
+            ForEach(shown, id: \.key) { row in
               HStack(spacing: 12) {
                 SideSquare(color: row.color)
                 Text(row.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text).frame(maxWidth: .infinity, alignment: .leading)
@@ -46,4 +47,20 @@ struct ReadyView: View {
       }
     }
   }
+}
+
+/// The ready screen's rows: openings of one side with one name are one row,
+/// their moves counted once each.
+func readyRows(_ rows: [PendingOpening]) -> [PendingOpening] {
+  var out: [PendingOpening] = []
+  for row in rows {
+    if let at = out.firstIndex(where: { $0.color == row.color && $0.name == row.name }) {
+      out[at].key += "|" + row.key
+      let group = rows.filter { $0.color == row.color && $0.name == row.name }
+      out[at].moves = countOwnMoves(group.map { (sans: $0.sans, color: $0.color) })
+    } else {
+      out.append(row)
+    }
+  }
+  return out
 }

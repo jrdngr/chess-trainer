@@ -135,7 +135,7 @@ struct RunView: View {
       if standalone {
         VStack(spacing: 0) {
           RunHeaderBar(model: model, onExit: close)
-          headerStatus.padding(.bottom, 4)
+          headerStatus.opacity(model.session.ending != nil ? 0 : 1).padding(.bottom, 4)
         }
       } else {
         header
@@ -305,7 +305,8 @@ struct RunView: View {
           PrepSegmentsView(span: model.span, height: 4).frame(maxWidth: 150).pawnSpot("prep")
         }
         // Kept in place while analysing a finished run, so the board doesn't move, but not shown.
-        headerStatus.opacity(drawing ? 0 : 1)
+        // Nor once the game is over, when no one has a move.
+        headerStatus.opacity(drawing || model.session.ending != nil ? 0 : 1)
       }
       .padding(.horizontal, 60)
       HStack {
@@ -313,6 +314,7 @@ struct RunView: View {
           Image(systemName: "xmark").font(.headline).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
         }
         .foregroundStyle(Theme.text).buttonStyle(.plain)
+        .accessibilityLabel("Close")
         Spacer()
         PawnCounter()
       }
@@ -509,9 +511,15 @@ struct RunView: View {
       Group {
         if !atGameEnd {
           analysisStatus
-        } else if model.session.ending != .ended {
-          // Ended by hand, the run needs no name for how it ended.
-          endingName.tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
+        } else {
+          HStack(spacing: 16) {
+            // Ended by hand, the run needs no name for how it ended.
+            if model.session.ending != .ended {
+              endingName.fixedSize().tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
+            }
+            // The game's pawns, all of them.
+            if let pawns = model.finish?.ended.extras.pawns, pawns > 0 { PawnAmount(count: pawns, size: 19) }
+          }
         }
       }
       .padding(.top, 16)
@@ -519,6 +527,7 @@ struct RunView: View {
     } else {
       endingName
         .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
+        .frame(maxWidth: .infinity)
         .padding(.top, 16)
         .contentShape(Rectangle())
         .onTapGesture { model.continueToEnd() }
@@ -565,7 +574,6 @@ struct RunView: View {
       Text(endingTitle(how, model.run.played.count)).font(.system(size: 19, weight: .heavy)).tracking(-0.19)
     }
     .foregroundStyle(tone).padding(.vertical, 6)
-    .frame(maxWidth: .infinity)
   }
 
   @ViewBuilder private var flash: some View {

@@ -93,6 +93,7 @@ struct RootView: View {
         }, onGap: { gap in
           growing = GrowthModel(gap: gap, store: store, tree: tree, index: index)
         }, onPlaybook: { tab = .playbook })
+          .background(Theme.background.ignoresSafeArea())
           .tabItem { Label(Tab.home.label, systemImage: Tab.home.symbol) }.tag(Tab.home)
         PlaybookView(tree: tree, index: index, tidyFocus: tidyFocus, onConsumedTidyFocus: { tidyFocus = nil }, onExplore: { sans, side in
           explore = (sans, side)
@@ -106,8 +107,10 @@ struct RootView: View {
           setupFirst = false
           mode = .play
         })
+          .background(Theme.background.ignoresSafeArea())
           .tabItem { Label(Tab.playbook.label, systemImage: Tab.playbook.symbol) }.tag(Tab.playbook)
         StatsView(tree: tree, index: index)
+          .background(Theme.background.ignoresSafeArea())
           .tabItem { Label(Tab.stats.label, systemImage: Tab.stats.symbol) }.tag(Tab.stats)
         AnalysisTab(tree: tree, index: index, line: explore?.sans ?? [], orientation: explore?.side ?? .w)
           .id(explore?.sans.joined(separator: " ") ?? "")

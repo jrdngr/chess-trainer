@@ -28,6 +28,7 @@ struct SettingsSheet: View {
             Icon(name: "close", size: 18).foregroundStyle(Theme.text).frame(width: 36, height: 36).background(Circle().fill(Theme.surface))
           }
           .buttonStyle(.plain)
+          .accessibilityLabel("Close")
         }
         section("Board", first: true)
         ListCard {

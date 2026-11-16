@@ -18,7 +18,7 @@ struct YourOpeningsView: View {
       LargeTitleBar(title: "Stats")
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
-          OpeningsLadder().padding(.top, 8)
+          OpeningsLadder(onOpen: onOpen).padding(.top, 8)
           ActivityHero(stats: stats, days: $days).padding(.top, 16)
           RunHistory()
           AccuracySection(stats: stats, days: days)

@@ -142,6 +142,7 @@ struct EndgameRoundView: View {
         if game.entry.intro != nil && game.moves.isEmpty && game.phase == .playing {
           Button { game.replayIntro() } label: { Icon(name: "pages", size: 20).foregroundStyle(Theme.text2) }
             .buttonStyle(.plain)
+            .accessibilityLabel("Intro")
         }
         PawnCounter()
       }
