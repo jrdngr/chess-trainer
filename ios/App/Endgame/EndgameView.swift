@@ -140,8 +140,13 @@ struct EndgameRoundView: View {
     VStack(spacing: 0) {
       PlayAppBar(title: game.entry.name, subtitle: game.entry.goal.label, onClose: onClose) {
         if game.entry.intro != nil && game.moves.isEmpty && game.phase == .playing {
-          Button { game.replayIntro() } label: { Icon(name: "pages", size: 20).foregroundStyle(Theme.text2) }
+          Button { game.replayIntro() } label: {
+            // A 44pt target over the 20pt icon, laid out at the icon's width so the bar keeps its shape.
+            Icon(name: "pages", size: 20).foregroundStyle(Theme.text2)
+              .frame(width: 44, height: 44).contentShape(Rectangle())
+          }
             .buttonStyle(.plain)
+            .padding(.horizontal, -12)
             .accessibilityLabel("Intro")
         }
         PawnCounter()

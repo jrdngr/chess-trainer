@@ -16,9 +16,9 @@ struct OpeningStatsView: View {
   var body: some View {
     let score = store.state.score
     let stats = nodeStats(score, node.id)
-    let trail = ancestorsOf(tree, node.id).dropLast().filter { $0.name != node.name }
+    let trail = crumbs(ancestorsOf(tree, node.id).dropLast().map(\.name), node.name)
     VStack(spacing: 0) {
-      PageBar(title: node.name, subtitle: trail.isEmpty ? bookMoveText(node.sans) : trail.map(\.name).joined(separator: " \u{203a} "), onBack: onBack) { EmptyView() }
+      PageBar(title: node.name, subtitle: trail.isEmpty ? bookMoveText(node.sans) : trail.joined(separator: " \u{203a} "), onBack: onBack) { EmptyView() }
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
           hero(stats)
@@ -26,7 +26,7 @@ struct OpeningStatsView: View {
           SegmentedControl(value: $days, options: STATS_WINDOWS).padding(.top, 24)
           AccuracySection(stats: stats, days: days)
           StatsSection(title: "By mode", aside: "rounds")
-          ListCard { ForEach(ACTIVITY_MODES, id: \.self) { modeRow($0, stats.byMode[$0]) } }
+          ListCard { ForEach(SHOWN_MODES, id: \.self) { modeRow($0, stats.byMode[$0]) } }
           children(score)
           if stats.lastAt != nil {
             StatsNote(
@@ -114,4 +114,11 @@ struct OpeningStatsView: View {
     renderer.scale = 3
     return Image(uiImage: renderer.uiImage ?? UIImage())
   }
+}
+
+/// The names over an opening's own, each once: a name its child repeats says nothing new.
+func crumbs(_ names: [String], _ own: String) -> [String] {
+  var out: [String] = []
+  for name in names where name != own && out.last != name { out.append(name) }
+  return out
 }

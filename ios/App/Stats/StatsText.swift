@@ -6,11 +6,14 @@ import Shared
 /// The windows the charts read over.
 let STATS_WINDOWS: [(value: Int, label: String)] = [(30, "30 days"), (90, "90 days"), (365, "Year")]
 
+/// The modes still played, as the tallies list them.
+let SHOWN_MODES: [ActivityMode] = [.run, .growth]
+
 /// Each mode's name in the tallies.
 func modeName(_ mode: ActivityMode) -> String {
   switch mode {
-  case .oldPlay: "Play (old)"
-  case .run: "Run"
+  case .oldPlay: "Play"
+  case .run: "Play"
   case .drill: "Drill"
   case .growth: "Growth"
   case .repair: "Repair"
