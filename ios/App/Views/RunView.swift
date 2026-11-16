@@ -513,13 +513,9 @@ struct RunView: View {
         if !atGameEnd {
           analysisStatus
         } else {
-          HStack(spacing: 16) {
-            // Ended by hand, the run needs no name for how it ended.
-            if model.session.ending != .ended {
-              endingName.fixedSize().tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
-            }
-            // The game's pawns, all of them.
-            if let pawns = model.finish?.ended.extras.pawns, pawns > 0 { PawnAmount(count: pawns, size: 19) }
+          // Ended by hand, the run needs no name for how it ended.
+          if model.session.ending != .ended {
+            endingName.fixedSize().tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
           }
         }
       }
