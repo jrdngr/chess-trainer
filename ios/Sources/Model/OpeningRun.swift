@@ -335,7 +335,9 @@ public func beginRun(_ opts: BeginOptions) -> Begun? {
   let entered = walkSan(way)
   let opened = entered.moves.count == way.count ? way.count : 0
   let fen = opened < entered.fens.count ? entered.fens[opened] : START_FEN
-  let startedIn = opened == 0 ? nil : deepestNodeWithin(tree, aim, way)
+  // Named for the line the run tests: the line drawn at the start, else the moves to the start.
+  let tested = first.target.count > way.count && Array(first.target.prefix(way.count)) == way ? first.target : way
+  let startedIn = opened == 0 ? nil : deepestNodeWithin(tree, aim, tested)
 
   let run = Run(
     id: newRunId(), sourceLabel: startedIn?.name ?? node.name, openingId: node.id, playbookId: rep?.id,

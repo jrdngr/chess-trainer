@@ -6,7 +6,9 @@ app, `PlaySession` and `RunModel` in the Game target. Rule 3 is tested in
 target can be covered by `HeadlessApp` flow tests.
 
 1. **A run is named by its opening, never by a mode,** with the side as a
-   small square.
+   small square. A Drill run's opening is the one it tests: the deepest
+   named opening on the line it heads for, not the position it starts in
+   (Ruy Lopez, not King's Pawn Game, for a run starting at 2.Nf3).
 2. **The round's card.** The intro deals the run's card from a deck. It
    shows the start position face up, the opening's full name above it, and
    a row of segments below, one for each of your own moves, lit up to where

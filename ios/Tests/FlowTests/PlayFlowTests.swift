@@ -275,3 +275,19 @@ private func quietMove(_ fen: String) -> String? {
     #expect(app.run?.session.state.extras.pawns == 0, "the run's score leaves it out")
   }
 }
+
+/// A Drill run is named by the opening it tests, not the position it starts in.
+@MainActor @Test func aDrillRunIsNamedByTheOpeningItTests() async throws {
+  try await headless { app in
+    try app.knowMyOpenings()
+    app.store.update { state in
+      let id = state.ensurePlaybook(.w)
+      state.addLine(id, ["e4", "e5", "Nf3", "Nc6", "Bb5"], .fixed(.book))
+    }
+    try app.select(side: .w, start: .drill)
+    await app.openPlay()
+    let run = try #require(app.run)
+    #expect(run.run.played == ["e4", "e5"], "it starts at 2.Nf3, your first move past move one")
+    #expect(run.headerName == "Ruy Lopez")
+  }
+}
