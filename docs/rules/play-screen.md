@@ -8,7 +8,9 @@ target can be covered by `HeadlessApp` flow tests.
 1. **A run is named by its opening, never by a mode,** with the side as a
    small square. A Drill run's opening is the one it tests: the deepest
    named opening on the line it heads for, not the position it starts in
-   (Ruy Lopez, not King's Pawn Game, for a run starting at 2.Nf3).
+   (Ruy Lopez, not King's Pawn Game, for a run starting at 2.Nf3). The
+   header shows that opening's family (Sicilian Defence for a Najdorf
+   line); Settings' Opening names switches it to the book's name.
 2. **The round's card.** The intro deals the run's card from a deck. It
    shows the start position face up, the opening's full name above it, and
    a row of segments below, one for each of your own moves, lit up to where
@@ -16,9 +18,9 @@ target can be covered by `HeadlessApp` flow tests.
    straight there. Freeform shows no segments, but Home's button still
    names the opening the opponent steers toward.
 3. **During a run,** the app bar shows the opening, the segments counting up
-   as you play, and the pawns the run has earned so far. Over a name
-   deeper than its family, a smaller line names the family ("Sicilian
-   Defence" over "Sicilian Defence: Najdorf Variation").
+   as you play, and the pawns the run has earned so far. With book names
+   on, a smaller line over a name deeper than its family names the family
+   ("Sicilian Defence" over the Najdorf).
 4. **Replay moves.** A run that starts inside its line opens on that
    position. Until your first move, Replay moves under the board plays the
    moves to it from move one, then hands it back.

@@ -45,6 +45,16 @@ struct SettingsSheet: View {
         ListCard {
           ToggleRow(label: "Move scores", on: settings.play.moveScores) { store.update { $0.settings.play.moveScores.toggle() } }
           FillSizeRow(value: settings.movesPerFill) { n in store.update { $0.settings.movesPerFill = n } }
+          HStack(spacing: 12) {
+            Text("Opening names").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+            Spacer()
+            SegmentedControl(
+              value: Binding(get: { settings.openingNames }, set: { n in store.update { $0.settings.openingNames = n } }),
+              options: [(OpeningNames.family, "Family"), (.book, "Book name")]
+            )
+            .frame(maxWidth: 200)
+          }
+          .padding(.horizontal, 16).padding(.vertical, 10)
         }
         section("Profiles")
         ListCard {

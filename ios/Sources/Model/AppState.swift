@@ -34,6 +34,8 @@ public struct Settings: Equatable, Sendable, Codable {
   public var middlegame = DEFAULT_MIDDLEGAME
   /// How Play's runs start: from move one, or wherever your prep needs work.
   public var start = RunStart.drill
+  /// How a run's header names its opening.
+  public var openingNames = OpeningNames.family
   public init() {}
 
   enum CodingKeys: String, CodingKey {
@@ -42,6 +44,7 @@ public struct Settings: Equatable, Sendable, Codable {
     case movesPerFill, seenAutoplayNote, seenDeckTip, seenTips
     case middlegame
     case start
+    case openingNames
   }
 
   /// A save missing a setting takes its default.
@@ -71,8 +74,13 @@ public struct Settings: Equatable, Sendable, Codable {
     seenTips = Set((try c.decodeIfPresent([String].self, forKey: .seenTips) ?? []).compactMap(GameTip.init(rawValue:)))
     middlegame = try c.decodeIfPresent(RunPrefs.self, forKey: .middlegame) ?? middlegame
     start = try c.decodeIfPresent(RunStart.self, forKey: .start) ?? start
+    openingNames = try c.decodeIfPresent(OpeningNames.self, forKey: .openingNames) ?? openingNames
   }
 }
+
+/// A run's header names its opening's family (Sicilian Defence), or the book's
+/// name for the line (Najdorf Variation, with the family over it).
+public enum OpeningNames: String, Sendable, Codable, CaseIterable { case family, book }
 
 /// How Play's runs start. Freeform: every run from move one, the opponent steering
 /// toward what needs work. Drill: at the opening's position, deeper inside, or cold, by need.

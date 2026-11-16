@@ -293,3 +293,22 @@ private func quietMove(_ fen: String) -> String? {
     #expect(run.headerName == "Ruy Lopez")
   }
 }
+
+/// A run is named by its opening's family, or by the book's name with the family over it when Settings asks.
+@MainActor @Test func aRunIsNamedByFamilyUnlessBookNamesAreOn() async throws {
+  try await headless { app in
+    try app.knowMyOpenings()
+    app.store.update { state in
+      let id = state.ensurePlaybook(.w)
+      state.addLine(id, ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3"], .fixed(.book))
+    }
+    try app.select(side: .w, start: .drill)
+    await app.openPlay()
+    let run = try #require(app.run)
+    #expect(run.headerName == "Sicilian Defence")
+    #expect(run.headerFamily == nil, "the family is the name, so nothing over it")
+    app.settings { $0.openingNames = .book }
+    #expect(run.headerName != "Sicilian Defence", "the book names the variation")
+    #expect(run.headerFamily == "Sicilian Defence")
+  }
+}

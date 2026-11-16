@@ -239,12 +239,22 @@ public final class RunModel {
   public var openingId: String { run.enteredIn ?? round?.pick.opening.id ?? run.openingId }
   /// The header's name: a first game is named by the book as it goes.
   public var headerName: String {
-    if firstGame || basicRun { return openingNameForPath(index, run.played)?.name ?? "Any Opening" }
-    if round?.free == true { return openingNameForPath(index, run.played)?.name ?? "Freeform" }
+    guard let book = headerBookName else { return round?.free == true && !firstGame && !basicRun ? "Freeform" : "Any Opening" }
+    guard store.state.settings.openingNames == .book else { return openingFamily(index, book) ?? familyName(index, book) }
+    if firstGame || basicRun || round?.free == true { return book }
     return openingName(tree, openingId)
   }
-  /// The header's line over its name: the opening's family, when the name is deeper than it.
-  public var headerFamily: String? { familyAbove(index, headerName) }
+  /// The header's line over its name, with book names: the opening's family, when the name is deeper than it.
+  public var headerFamily: String? {
+    guard store.state.settings.openingNames == .book, let book = headerBookName, let family = familyAbove(index, book) else { return nil }
+    return family == headerName ? nil : family
+  }
+  /// The book's full name for the run's opening; nil for none.
+  private var headerBookName: String? {
+    if firstGame || basicRun || round?.free == true { return openingNameForPath(index, run.played)?.name }
+    let node = nodeById(tree, openingId)
+    return node.depth > 0 ? node.name : nil
+  }
   public var momentHere: Bool {
     prefs.moments && live && myTurn && pending == nil && prepNow.isEmpty && baseline?.fen == run.fen && baseline?.isMomentFor(run.color) == true
   }
