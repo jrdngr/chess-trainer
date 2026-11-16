@@ -14,6 +14,8 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
   case prepDone
   /// Growth opens.
   case growth
+  /// Growth opens because a move is due, holding the Prep complete pawn.
+  case growthPawn
   /// A blunder ends the game.
   case blunder
   /// Pawns earned.
@@ -41,6 +43,7 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     case .prepBar: "The prep bar fills as you play your line."
     case .prepDone: "A \u{2713} means you\u{2019}re still playing common moves."
     case .growth: "We\u{2019}ll add new moves to your openings as you get better. Pick an answer or play it on the board."
+    case .growthPawn: "You must add at least one move to continue earning pawns for this opening."
     case .blunder: "A blunder ends the game."
     case .pawns: "You earn pawns for various accomplishments. Spend them in the Pawn Shop."
     case .mission: "Complete missions to earn pawns."

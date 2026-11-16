@@ -10,7 +10,10 @@ target. Tests: the `docs/rules/pawns.md` suite in
    2, a mission done 2, reaching the endgame 1, checkmate 3, an Endgames
    round's goal met 1. Single moves, growth and milestones pay nothing.
 2. **Prep complete** pays when your prep runs out, asked you something, and
-   was never missed.
+   was never missed. When growth opens there because a move is due, the pawn
+   waits: the first move you add pays it, and Done or the game ending first
+   loses it. An opening complete through the book has nothing due, so it
+   always pays. Tests: the held-pawn flows in `Tests/FlowTests/PlayFlowTests.swift`.
 3. **A blunder punished** pays when, past your prep, the opponent's move
    dropped their eval by 200 centipawns or more since your last scored move,
    and your reply gave back 50 or less.

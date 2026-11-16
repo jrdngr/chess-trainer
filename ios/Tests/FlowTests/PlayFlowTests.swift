@@ -213,3 +213,60 @@ private func quietMove(_ fen: String) -> String? {
     #expect(run.fill != nil, "growth is open")
   }
 }
+
+/// A Drill run on the Ruy Lopez, e4 e5 Nf3 Nc6 Bb5, with every move known well and no answer
+/// past it: growth is due at the end of the prep.
+@MainActor private func ruyLopezWithGrowthDue(_ app: HeadlessApp) async throws {
+  try app.knowMyOpenings()
+  let moves = ["e4", "e5", "Nf3", "Nc6", "Bb5"]
+  app.store.update { state in
+    state.unlocked.insert(ShopFeature.openingPicker.rawValue)
+    let id = state.ensurePlaybook(.w)
+    state.addLine(id, moves, .fixed(.book))
+    let fens = walkSan(moves).fens
+    for _ in 0..<4 { for i in stride(from: 0, to: moves.count, by: 2) { state.answered(id, fens[i], moves[i], .easy) } }
+    let selection = Selection(color: .w, opening: ANY_OPENING)
+    let after = lastAddedAt(state.playbookList) + 1
+    for i in 0..<5 {
+      state.recordGame(GameRecord(
+        id: "g\(i)", mode: .play, at: after + Double(i), color: .w, picked: selection, opening: selection.opening,
+        moves: moves, result: "*", termination: "ended"))
+    }
+  }
+  try app.select(side: .w, start: .drill, opening: "e4 e5 Nf3 Nc6 Bb5")
+  #expect(steerGap(app.state, app.tree, app.state.settings.selection)?.path == moves)
+  await app.openPlay()
+}
+
+/// When growth is due, the Prep complete pawn waits for a move added: one pays it.
+@MainActor @Test func dueGrowthHoldsThePrepPawnUntilAMoveIsAdded() async throws {
+  try await headless { app in
+    try await ruyLopezWithGrowthDue(app)
+    let before = app.state.pawns
+    try await playPrep(app)
+    let run = try #require(app.run)
+    #expect(app.callouts.contains("Prep complete"))
+    #expect(run.fill != nil, "growth opens where the prep ran out")
+    #expect(run.heldPrepPawn?.event == .prepComplete)
+    #expect(run.tip == .growth || run.tip == .growthPawn)
+    #expect(app.state.pawns == before, "nothing paid yet")
+
+    try await app.move(try #require(app.choices.first))
+    #expect(app.run?.heldPrepPawn == nil)
+    #expect(app.state.pawns == before + 1)
+  }
+}
+
+/// Done with nothing added loses the held Prep complete pawn.
+@MainActor @Test func doneWithNothingAddedLosesThePrepPawn() async throws {
+  try await headless { app in
+    try await ruyLopezWithGrowthDue(app)
+    let before = app.state.pawns
+    try await playPrep(app)
+    #expect(app.run?.heldPrepPawn != nil)
+    await app.doneAdding()
+    #expect(app.run?.heldPrepPawn == nil)
+    #expect(app.state.pawns == before)
+    #expect(app.run?.session.state.extras.pawns == 0, "the run's score leaves it out")
+  }
+}

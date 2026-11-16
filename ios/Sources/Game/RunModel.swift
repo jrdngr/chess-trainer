@@ -68,6 +68,8 @@ public final class RunModel {
   /// The gap the run reached when the engine said no new move: the player can
   /// still add one while it is their move there.
   public private(set) var holeGap: Gap?
+  /// The Prep complete pawn, held while growth is due here: one move added pays it.
+  public private(set) var heldPrepPawn: PawnAward?
   /// The run has reached its one hole and asked about it.
   private var holeAsked = false
   /// A new player's first game: nothing saved, adding moves from move one, with tips.
@@ -475,9 +477,12 @@ public final class RunModel {
     update(closeBook(session, index))
     askAtHole()
     if fill != nil {
+      // Growth is due: the prep pawn waits for a move added.
       offer(.growth)
+      if heldPrepPawn != nil { offer(.growthPawn) }
       return
     }
+    payHeldPrepPawn()
     if inPrep && ownMoves > 0 { offer(.prepBar) }
     if nextRunShown { offer(.nextRun) }
     if prepNow.isEmpty && store.state.ownsALens { offer(.lens) }
@@ -633,6 +638,7 @@ public final class RunModel {
     let fresh = (1...line.count).first { k in rep.flatMap { nodeAtLine($0, Array(line.prefix(k))) } == nil } ?? line.count
     current.steps.append((session, Array(line.prefix(fresh))))
     filledRep = rid
+    payHeldPrepPawn()
     store.update { state in
       state.addGrowthLine(rid, line, index)
       state.logEvent(AppEvent(
@@ -696,6 +702,7 @@ public final class RunModel {
   /// Done: no more moves added, and the game goes on from here.
   public func doneAdding() {
     guard fill != nil else { return }
+    dropHeldPrepPawn()
     fill = nil
     justAdded = nil
     advance()
@@ -796,6 +803,9 @@ public final class RunModel {
         pulse(found: found)
       case .missedBest(let move):
         missedBest = move
+      case .pawns(let award) where award.event == .prepComplete:
+        // Held until this turn knows whether growth is due here.
+        heldPrepPawn = award
       case .pawns(let award):
         pay(award)
         offer(.pawns)
@@ -812,7 +822,24 @@ public final class RunModel {
     store.pay(award)
   }
 
+  /// The held prep pawn, paid: a move was added, or growth wasn't due after all.
+  private func payHeldPrepPawn() {
+    guard let award = heldPrepPawn else { return }
+    heldPrepPawn = nil
+    pay(award)
+    offer(.pawns)
+  }
+
+  /// The held prep pawn, lost: growth was left with nothing added.
+  private func dropHeldPrepPawn() {
+    guard let award = heldPrepPawn else { return }
+    heldPrepPawn = nil
+    session.state.extras.pawns -= award.count
+    log("pawns-withheld") { $0.source = award.event.rawValue; $0.count = award.count }
+  }
+
   private func finished(_ f: Finish) {
+    dropHeldPrepPawn()
     stop()
     finish = f
     log("game-end") { $0.text = "\(f.how)"; $0.count = f.ended.run.played.count; $0.line = f.ended.run.played.joined(separator: " ") }
