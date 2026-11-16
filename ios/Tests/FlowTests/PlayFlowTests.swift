@@ -251,7 +251,12 @@ private func quietMove(_ fen: String) -> String? {
     #expect(run.tip == .growth || run.tip == .growthPawn)
     #expect(app.state.pawns == before, "nothing paid yet")
 
-    try await app.move(try #require(app.choices.first))
+    let fen = try #require(app.run).run.fen
+    let pick = try #require(app.choices.first)
+    _ = app.takeSignals()
+    try await app.move(pick)
+    let paid = app.signals.compactMap { if case .pawns(let award) = $0 { return award } else { return nil } }
+    #expect(paid.first?.source == .square(try #require(applySan(fen, pick)).to), "it pops out of the move added")
     #expect(app.run?.heldPrepPawn == nil)
     #expect(app.state.pawns == before + 1)
   }

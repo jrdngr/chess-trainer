@@ -638,7 +638,8 @@ public final class RunModel {
     let fresh = (1...line.count).first { k in rep.flatMap { nodeAtLine($0, Array(line.prefix(k))) } == nil } ?? line.count
     current.steps.append((session, Array(line.prefix(fresh))))
     filledRep = rid
-    payHeldPrepPawn()
+    // The held prep pawn pops out of the move just added.
+    payHeldPrepPawn(from: move.map { .square($0.to) })
     store.update { state in
       state.addGrowthLine(rid, line, index)
       state.logEvent(AppEvent(
@@ -823,9 +824,10 @@ public final class RunModel {
   }
 
   /// The held prep pawn, paid: a move was added, or growth wasn't due after all.
-  private func payHeldPrepPawn() {
-    guard let award = heldPrepPawn else { return }
+  private func payHeldPrepPawn(from source: PawnSource? = nil) {
+    guard var award = heldPrepPawn else { return }
     heldPrepPawn = nil
+    if let source { award.source = source }
     pay(award)
     offer(.pawns)
   }
