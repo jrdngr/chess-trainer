@@ -6,7 +6,7 @@ import SwiftUI
 /// The lens bar under a board: tap a lens to see it over the position, tap it
 /// again to clear the board. A tap elsewhere on the screen clears it too (`clearsLens`).
 /// Plan toggles the same way. With `gated`, only the lenses bought in the Pawn Shop
-/// show, Plan among them; with none, the bar keeps its height, empty.
+/// show, Plan among them; with none, the bar keeps its full size, empty.
 struct LensBar: View {
   @Binding var held: LensKind?
   /// Eval only where the screen has the engine's word on the game.
@@ -38,8 +38,8 @@ struct LensBar: View {
   var body: some View {
     HStack(spacing: 6) {
       if shown.isEmpty && planShown == nil {
-        // Nothing bought yet: the bar's height, so what hangs from it stays put.
-        Text("Pawns").font(.system(size: 12.5, weight: .semibold)).padding(.vertical, 8).hidden()
+        // Nothing bought yet: the bar's full width and height, so what hangs from it keeps its size.
+        Text("Pawns").font(.system(size: 12.5, weight: .semibold)).padding(.vertical, 8).frame(maxWidth: .infinity).hidden()
       }
       ForEach(shown, id: \.kind) { lens in
         let on = held == lens.kind
