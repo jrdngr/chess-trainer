@@ -49,6 +49,15 @@ public final class EndgameGame {
     color = fenTurn(start)
     // The card comes before every round of an ending that has one.
     phase = entry.intro != nil ? .intro : .playing
+    log("endgame-start") { $0.picked = entry.id; $0.fen = self.start }
+  }
+
+  /// One more event in the log, from this round.
+  private func log(_ kind: String, _ fill: (inout AppEvent) -> Void = { _ in }) {
+    var event = AppEvent(kind: kind, color: color)
+    event.game = roundId.uuidString
+    fill(&event)
+    store.log(event)
   }
 
   public var myTurn: Bool { phase == .playing && fenTurn(fen) == color && !thinking }
@@ -97,6 +106,16 @@ public final class EndgameGame {
 
   private func settle(_ move: LegalMove, _ before: String, _ judged: Judgement?) {
     thinking = false
+    log("endgame-move") {
+      $0.san = move.san
+      $0.fen = before
+      $0.before = judged?.before
+      $0.after = judged?.after
+      $0.lost = judged?.lost
+      $0.ok = judged?.ok
+      $0.best = judged?.best
+      if judged?.missedMate == true { $0.text = "missed mate" }
+    }
     if let judged {
       evalCp = judged.after
       if !judged.ok {
@@ -135,6 +154,7 @@ public final class EndgameGame {
       guard let self, !Task.isCancelled, self.fen == fen else { return }
       self.thinking = false
       guard let uci, let move = applyUci(fen, uci) else { return }
+      self.log("endgame-reply") { $0.san = move.san; $0.fen = fen; $0.source = choices != nil ? "tablebase" : "engine" }
       self.moves.append(move.san)
       self.fen = move.after
       if let done = endgameOutcome(
@@ -146,6 +166,7 @@ public final class EndgameGame {
   }
 
   private func end(_ result: EndgameOutcome) {
+    log("endgame-end") { $0.text = "\(result)"; $0.line = self.moves.joined(separator: " ") }
     task?.cancel()
     thinking = false
     outcome = result

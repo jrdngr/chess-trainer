@@ -71,6 +71,12 @@ extension Settings {
 }
 
 extension AppState {
+  /// A tip shown: seen for good, and logged.
+  public mutating func sawTip(_ tip: GameTip) {
+    settings.see(tip)
+    logEvent(AppEvent(kind: "tip", picked: tip.rawValue))
+  }
+
   /// Home's tip now: a feature bought, at its control.
   public var homeTip: GameTip? {
     for feature in ShopFeature.allCases where owns(feature) {

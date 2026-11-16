@@ -124,6 +124,7 @@ extension AppState {
     guard let item = shopItem(id), status(item) == .buyable else { return false }
     pawns -= item.price
     unlocked.insert(id)
+    logEvent(AppEvent(kind: "buy", count: item.price, picked: id, text: "balance \(pawns)"))
     return true
   }
 

@@ -45,6 +45,27 @@ import Testing
   }
 }
 
+/// A round leaves a trail in the event log: its start, each move with its judgement, the
+/// pawns it paid and its end.
+@MainActor @Test func aRoundIsLogged() async throws {
+  try await headless { app in
+    try await drillAsWhite(app)
+    let id = try #require(app.run).run.id
+    try await playPrep(app)
+    await app.endRound()
+    let mine = app.state.events.filter { $0.game == id }
+    let kinds = mine.map(\.kind)
+    for kind in ["game-start", "prep-answer", "end-round", "game-end"] {
+      #expect(kinds.contains(kind), "\(kind) is logged")
+    }
+    #expect(kinds.first == "game-start")
+    let answer = try #require(mine.first { $0.kind == "prep-answer" })
+    #expect(answer.san != nil && answer.fen != nil)
+    let paid = app.state.events.filter { $0.kind == "pawns" }
+    #expect(paid.contains { $0.source == "prepComplete" && $0.count == 1 })
+  }
+}
+
 /// A clean prep pays pawns onto the balance as it runs out, and the day's first finished game pays the streak.
 @MainActor @Test func aCleanPrepPaysPawns() async throws {
   try await headless { app in

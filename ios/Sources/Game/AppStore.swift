@@ -334,11 +334,20 @@ public final class AppStore {
     return Model.yourOpenings(state.playbookList, tree, state.score)
   }
 
-  /// Change the state and save it.
+  /// Change the state and save it. A change to the settings goes in the log.
   public func update(_ change: (inout AppState) -> Void) {
+    let settings = state.settings
     change(&state)
     state.holdToUnlocks()
+    if state.settings != settings, let changed = settingsChanged(settings, state.settings) {
+      state.logEvent(AppEvent(kind: "settings", rows: changed))
+    }
     save()
+  }
+
+  /// One more event in the log, saved with the next change.
+  public func log(_ event: AppEvent) {
+    state.logEvent(event)
   }
 
   /* ── onboarding ── */
@@ -356,7 +365,7 @@ public final class AppStore {
 
   /// A tip shown off the board, put away for good.
   public func see(_ tip: GameTip) {
-    update { $0.settings.see(tip) }
+    update { $0.sawTip(tip) }
   }
 }
 
@@ -369,4 +378,25 @@ private func folderOf(_ path: String) -> String {
 private func sibling(_ path: String, _ name: String) -> String {
   let folder = folderOf(path)
   return folder.isEmpty ? name : folder + "/" + name
+}
+
+/// What changed between two versions of the settings, a row per setting, `key: old → new`.
+/// Tips seen are logged on their own.
+func settingsChanged(_ before: Settings, _ after: Settings) -> [String]? {
+  func fields(_ settings: Settings) -> [String: String] {
+    guard let data = try? JSONEncoder().encode(settings),
+      let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    else { return [:] }
+    var out: [String: String] = [:]
+    for (key, value) in object where key != "seenTips" {
+      let json = (try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys, .fragmentsAllowed])) ?? Data()
+      out[key] = String(data: json, encoding: .utf8) ?? "\(value)"
+    }
+    return out
+  }
+  let was = fields(before), now = fields(after)
+  let rows = Set(was.keys).union(now.keys).sorted().compactMap { key -> String? in
+    was[key] == now[key] ? nil : "\(key): \(was[key] ?? "none") \u{2192} \(now[key] ?? "none")"
+  }
+  return rows.isEmpty ? nil : rows
 }

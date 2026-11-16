@@ -20,6 +20,7 @@ extension AppStore {
   /// Pawns earned: onto the balance (unless `paid` already), and off to the counter.
   public func pay(_ award: PawnAward, paid: Bool = false) {
     guard award.count > 0 else { return }
+    log(AppEvent(kind: "pawns", source: award.event.rawValue, count: award.count, text: "\(award.source)"))
     if !paid { update { $0.earn(award.count) } }
     dropCount += 1
     let id = dropCount

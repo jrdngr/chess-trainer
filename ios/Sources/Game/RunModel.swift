@@ -275,6 +275,7 @@ public final class RunModel {
   public var shownCallout: Callout? { callout }
 
   private func show(callout text: String, good: Bool, missed: Bool = false) {
+    log("callout") { $0.text = text }
     calloutCount += 1
     let shown = Callout(text: text, good: good, id: calloutCount, missed: missed)
     callout = shown
@@ -377,6 +378,13 @@ public final class RunModel {
 
   private func begin() {
     spanHeld = span
+    log("game-start") {
+      $0.source = self.handoff != nil ? "middlegame" : self.round.map { $0.free ? "freeform" : "drill" } ?? "run"
+      $0.line = self.run.played.joined(separator: " ")
+      $0.picked = "\(self.selection.color) \(self.selection.opening)"
+      $0.text = self.headerName
+      $0.fen = self.run.fen
+    }
     if round != nil && prepLabel(session) == .on { offer(.flashCards) }
     if round?.free == true { offer(.freeformGame) }
     advance()
@@ -426,6 +434,7 @@ public final class RunModel {
       guard !Task.isCancelled, self.live, !self.myTurn else { return }
       if let step = bookTurn(self.session, self.index, self.picker) {
         self.thinking = false
+        self.log("reply") { $0.san = step.session.state.run.played.last; $0.source = "book"; $0.fen = self.run.fen }
         self.apply(step)
         return
       }
@@ -444,6 +453,7 @@ public final class RunModel {
       self.thinking = false
       guard !Task.isCancelled, self.live, self.run.fen == fen else { return }
       if let san {
+        self.log("reply") { $0.san = san; $0.source = "engine"; $0.fen = fen; $0.text = "level \(level.rating)" }
         self.apply(engineMove(self.session, san))
       }
     }
@@ -483,8 +493,11 @@ public final class RunModel {
       let base = await Engine.baseline(self.engine, fen, moments: moments)
       guard let base, !Task.isCancelled, self.live, self.run.fen == fen else { return }
       self.baseline = base
+      self.logLook(base)
       self.update(sawEval(self.session, base.cp))
+      let had = self.session.state.extras.mission != nil
       if self.live && self.myTurn { self.update(missionFrom(self.session, self.prefs, base.cp)) }
+      if !had, let mission = self.session.state.extras.mission { self.log("mission") { $0.text = mission.kind.rawValue; $0.before = base.cp } }
       if self.prefs.missions && self.session.state.extras.mission != nil { self.offer(.mission) }
     }
   }
@@ -538,7 +551,10 @@ public final class RunModel {
     spawn { [weak self] in
       guard let self else { return }
       var base = self.baseline?.fen == fen ? self.baseline : nil
-      if base == nil { base = await Engine.baseline(self.engine, fen, moments: moments) }
+      if base == nil {
+        base = await Engine.baseline(self.engine, fen, moments: moments)
+        if let base { self.logLook(base) }
+      }
       guard let base else {
         self.pending = nil
         return
@@ -547,6 +563,19 @@ public final class RunModel {
       self.pending = nil
       // Ended while the judge was out: the move never counted.
       guard !Task.isCancelled, self.live, self.run.fen == fen else { return }
+      self.log("move") {
+        $0.san = move.san
+        $0.fen = fen
+        $0.before = judged.before
+        $0.after = judged.after
+        $0.lost = judged.lost
+        $0.ok = judged.ok
+        $0.best = judged.best
+        $0.moment = judged.moment
+        $0.found = judged.found
+        $0.seconds = seconds
+        if judged.missedMate { $0.text = "missed mate" }
+      }
       self.store.update { $0.judgedMove(lost: judged.lost) }
       let step = judgedMove(self.session, self.ctx, judged, seconds, now)
       self.apply(step)
@@ -652,7 +681,7 @@ public final class RunModel {
   private func offer(_ next: GameTip) {
     guard tip == nil, !store.state.settings.seen(next) else { return }
     tip = next
-    store.update { $0.settings.see(next) }
+    store.update { $0.sawTip(next) }
   }
 
   /// A tap on the tip, or your next move.
@@ -668,12 +697,14 @@ public final class RunModel {
 
   /// The app went to the background or the screen locked: the clock stops.
   public func appLeft() {
+    if awaySince == nil { log("app-left") }
     if awaySince == nil { awaySince = now }
   }
 
   /// Back on screen: the clock goes on from where it stopped.
   public func appReturned() {
     guard let away = awaySince else { return }
+    log("app-returned") { $0.seconds = self.now - away }
     awaySince = nil
     turnStartedAt += now - away
   }
@@ -681,6 +712,7 @@ public final class RunModel {
   /// You ended the round.
   public func endRound() {
     guard finish == nil else { return }
+    log("end-round")
     stop()
     pending = nil
     flash = nil
@@ -708,6 +740,27 @@ public final class RunModel {
     advance()
   }
 
+  /* ── the log ── */
+
+  /// One more event in the log, from this game.
+  private func log(_ kind: String, _ fill: (inout AppEvent) -> Void = { _ in }) {
+    var event = AppEvent(kind: kind, color: run.color)
+    event.game = run.id
+    fill(&event)
+    store.log(event)
+  }
+
+  /// The engine's first look at a position: its eval, its move, and whether it is a moment.
+  private func logLook(_ base: Baseline) {
+    log("eval") {
+      $0.fen = base.fen
+      $0.before = base.cp
+      $0.best = base.best
+      $0.moment = base.isMomentFor(self.run.color)
+      $0.text = base.second.map { "second \($0.uci) \($0.cp)" }
+    }
+  }
+
   /// The controller's effects, in order.
   private func perform(_ effects: [Effect]) {
     for effect in effects {
@@ -715,8 +768,10 @@ public final class RunModel {
       case .answer(let result):
         store.update { $0.recordMove(tree, result) }
       case .answered(let rid, let fen, let san, let grade):
+        log("prep-answer") { $0.san = san; $0.fen = fen; $0.text = "\(grade)"; $0.playbookId = rid }
         store.update { $0.answered(rid, fen, san, grade) }
       case .missed(let rid, let fen, let played, let expected):
+        log("prep-miss") { $0.san = played; $0.best = expected; $0.fen = fen; $0.playbookId = rid }
         store.update { $0.missed(rid, fen, played, expected) }
       case .buzz(let pattern):
         services.emit(.buzz(pattern))
@@ -754,6 +809,7 @@ public final class RunModel {
   private func finished(_ f: Finish) {
     stop()
     finish = f
+    log("game-end") { $0.text = "\(f.how)"; $0.count = f.ended.run.played.count; $0.line = f.ended.run.played.joined(separator: " ") }
     tip = nil
     if case .blunder = f.how { offer(.blunder) }
     before = handoff != nil ? store.state.middlegame : store.state.runRecord

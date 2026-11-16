@@ -254,7 +254,7 @@
     "EVEN_CP": 10
   },
   "src/model/events.ts": {
-    "EVENT_CAP": 1000,
+    "EVENT_CAP": 5000,
     "REMOVED_CAP": 20
   },
   "src/model/extensionGraph.ts": {
