@@ -63,9 +63,9 @@ struct ShopView: View {
       flights = (0..<10).map { Flight(id: $0, from: CGPoint(x: from.midX, y: from.midY), to: CGPoint(x: to.midX, y: to.midY)) }
     }
     Task { @MainActor in
-      try? await Task.sleep(for: .milliseconds(420))
-      withAnimation(.linear(duration: 1.15)) { purchase?.progress = 1 }
-      try? await Task.sleep(for: .milliseconds(1150))
+      try? await Task.sleep(for: .milliseconds(210))
+      withAnimation(.linear(duration: 0.575)) { purchase?.progress = 1 }
+      try? await Task.sleep(for: .milliseconds(575))
       flights = []
       store.buy(item.id)
       purchase?.done = true
@@ -405,7 +405,7 @@ private struct FlyingPawn: View {
 
   var body: some View {
     TimelineView(.animation) { timeline in
-      let t = (timeline.date.timeIntervalSince(start) - Double(flight.id) * 0.075) / 0.64
+      let t = (timeline.date.timeIntervalSince(start) - Double(flight.id) * 0.0375) / 0.32
       if t > 0, t < 1 {
         let jitter = Double((flight.id * 37) % 11 - 5) * 7
         let mid = CGPoint(x: (flight.from.x + flight.to.x) / 2 + jitter, y: (flight.from.y + flight.to.y) / 2 - 18)
