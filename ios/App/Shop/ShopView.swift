@@ -100,7 +100,7 @@ private struct ShopTree: View {
   /// Where each item sits on a 358 by 580 grid.
   static let spots: [String: CGPoint] = [
     "sidePicker": CGPoint(x: 56, y: 0), "lensPawns": CGPoint(x: 236, y: 0), "endgames": CGPoint(x: 318, y: 0),
-    "openingPicker": CGPoint(x: 56, y: 112), "lensPieces": CGPoint(x: 236, y: 112),
+    "openingPicker": CGPoint(x: 56, y: 112), "lensPieces": CGPoint(x: 236, y: 112), "lensPlan": CGPoint(x: 318, y: 112),
     "freeform": CGPoint(x: 56, y: 224), "guides": CGPoint(x: 146, y: 224), "lensKings": CGPoint(x: 236, y: 224),
     "middlegame": CGPoint(x: 318, y: 224),
     "recommendations": CGPoint(x: 56, y: 336), "personalities": CGPoint(x: 146, y: 336), "lensEval": CGPoint(x: 236, y: 336),

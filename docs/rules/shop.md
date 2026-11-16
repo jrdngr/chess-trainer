@@ -6,10 +6,11 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
 
 1. **The features**, each with its price and what it needs first: side
    picker 5; the Pawns lens 10, then the Pieces lens 20, the Kings lens 30
-   and the Eval lens 60, each after the one before; opening picker 50, after
-   the side picker; Freeform 120, after the opening picker; Recommendations
-   150, after Freeform; Middlegame 300, after the Pieces lens; Endgames 300.
-   Each item's sheet says in a sentence or two what it does.
+   and the Eval lens 60, each after the one before; Plan 40; opening
+   picker 50, after the side picker; Freeform 120, after the opening
+   picker; Recommendations 150, after Freeform; Middlegame 300, after the
+   Pieces lens; Endgames 300. Each item's sheet says in a sentence what it
+   does.
 2. **Buying** takes the price off your pawns. An item is for sale only
    when every item it needs is yours and you have its price, and it is
    bought once.
@@ -23,4 +24,4 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    switch, the opening picker, Middlegame, Endgames and Recommendations.
    Profiles from before the shop own every feature (see [saves](saves.md)).
 5. **Each lens shows once it is yours,** in Play, on the end screen and in
-   Endgames; Plan comes with the Pawns lens. Analysis has every lens.
+   Endgames. Analysis has every lens.

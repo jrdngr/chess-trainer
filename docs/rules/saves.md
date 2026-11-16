@@ -21,4 +21,4 @@ How an older save is brought up to date when it loads. Code:
    feature the shop sells and has seen every tip. A new profile owns none
    and has seen none.
 7. **Version 6: one item per lens.** A profile that owned the lenses, one
-   item before, owns all four lenses. One that didn't owns none.
+   item before, owns all five lenses. One that didn't owns none.

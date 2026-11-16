@@ -6,8 +6,8 @@ import ChessCore
 public enum ShopFeature: String, Sendable, Codable, CaseIterable {
   /// White or Black on Home; Black games start here.
   case sidePicker
-  /// One lens each, in a chain: Pawns, Pieces, Kings, Eval.
-  case lensPawns, lensPieces, lensKings, lensEval
+  /// One lens each, in a chain: Pawns, Pieces, Kings, Eval. Plan, beside the lenses, is its own.
+  case lensPawns, lensPieces, lensKings, lensEval, lensPlan
   /// Any Opening or one of yours on Home.
   case openingPicker
   /// Freeform runs, and Either side.
@@ -56,6 +56,7 @@ public let SHOP: [ShopItem] = [
   ShopItem("lensPieces", "Pieces lens", .features, 20, needs: ["lensPawns"], feature: .lensPieces, about: "Shows loose and attacked pieces."),
   ShopItem("lensKings", "Kings lens", .features, 30, needs: ["lensPieces"], feature: .lensKings, about: "Shows how safe each king is."),
   ShopItem("lensEval", "Eval lens", .features, 60, needs: ["lensKings"], feature: .lensEval, about: "Shows the engine's evaluation."),
+  ShopItem("lensPlan", "Plan", .features, 40, feature: .lensPlan, about: "Shows a plan for the position."),
   ShopItem("openingPicker", "Opening picker", .features, 50, needs: ["sidePicker"], feature: .openingPicker, about: "Play a specific opening."),
   ShopItem("freeform", "Freeform", .features, 120, needs: ["openingPicker"], feature: .freeform, about: "Play any of your lines from move one."),
   ShopItem("recommendations", "Recommendations", .features, 150, needs: ["freeform"], feature: .recommendations, about: "Find the gaps in your Playbook."),
@@ -96,7 +97,8 @@ extension ShopFeature {
     }
   }
 
-  public var isLens: Bool { LensKind.allCases.contains { Self.lens($0) == self } }
+  /// A lens, Plan among them.
+  public var isLens: Bool { self == .lensPlan || LensKind.allCases.contains { Self.lens($0) == self } }
 }
 
 extension AppState {
@@ -106,8 +108,8 @@ extension AppState {
   /// Whether a lens is yours.
   public func owns(lens kind: LensKind) -> Bool { owns(.lens(kind)) }
 
-  /// Whether any lens is yours.
-  public var ownsALens: Bool { LensKind.allCases.contains { owns(lens: $0) } }
+  /// Whether any lens is yours, Plan among them.
+  public var ownsALens: Bool { ShopFeature.allCases.contains { $0.isLens && owns($0) } }
 
   public func status(_ item: ShopItem) -> ShopStatus {
     if unlocked.contains(item.id) { return .owned }

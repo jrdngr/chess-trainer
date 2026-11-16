@@ -16,7 +16,7 @@ extension AppState {
   /// 3: names are Play, Playbook and Run (done on the JSON by `decodeSave`).
   /// 4: Middlegame's record counts moves survived, not points.
   /// 5: a profile from before the Pawn Shop owns every feature and has seen every tip.
-  /// 6: the lenses, one item before, are four: owning it owns all four.
+  /// 6: the lenses, one item before, are five: owning it owns all five.
   @discardableResult
   public mutating func migrate(_ index: ReferenceIndex) -> Bool {
     if version >= SAVE_VERSION { return false }
@@ -28,7 +28,7 @@ extension AppState {
       seeAllTips()
     }
     if version < 6, unlocked.remove("lenses") != nil {
-      for kind in LensKind.allCases { unlocked.insert(ShopFeature.lens(kind).rawValue) }
+      for feature in ShopFeature.allCases where feature.isLens { unlocked.insert(feature.rawValue) }
     }
     version = SAVE_VERSION
     return true
