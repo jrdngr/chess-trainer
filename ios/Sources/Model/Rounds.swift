@@ -52,7 +52,7 @@ public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selec
   // A new move is due: the run heads for the gap that most wants one, from your move most due on its line.
   if let gap = steerGap(state, tree, selection) {
     let region = nodeById(tree, selection.opening)
-    let opening = deepestNodeWithin(tree, region, gap.path)
+    let opening = deepestNodeWithin(tree, region, gap.line)
     let line = gap.line
     let onLine = state.playbookList.filter { $0.id == gap.playbookId }.flatMap { allItems([$0]) }.filter { item in
       item.pathSans.count < gap.hole.path.count && Array(line.prefix(item.pathSans.count)) == item.pathSans
