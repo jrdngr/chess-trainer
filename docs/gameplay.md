@@ -74,7 +74,7 @@ your openings at the opponent's second move, then first move, open as
 levels, once there is nothing deeper to grow, you have played 20 (then 40)
 games, and every opening you have is green. The opponent plays only what
 you have unlocked. The Playbook tab is a tree of your openings with the
-ones to come locked in place; any of them can be unlocked early for a pawn.
+ones to come locked in place; any of them can be unlocked early, free.
 Home's one line says what grows next. The rules: [growth](rules/growth.md),
 [playbook](rules/playbook.md).
 

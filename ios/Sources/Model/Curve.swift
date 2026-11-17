@@ -193,20 +193,16 @@ public func unlockLine(_ tree: OpeningTree, _ gap: Gap, size: Int) -> [String] {
   return line
 }
 
-/// The price of growing a locked opening now, in pawns.
-public let UNLOCK_PRICE = 1
-
 extension AppState {
-  /// Grow a hole now for a pawn: the line `unlockLine` gives goes into its side's
-  /// Playbook. Returns whether it was bought.
+  /// Grow a hole now, free: the line `unlockLine` gives goes into its side's
+  /// Playbook. Returns whether anything was added.
   @discardableResult
   public mutating func unlockEarly(_ gap: Gap, _ tree: OpeningTree) -> Bool {
-    guard pawns >= UNLOCK_PRICE, let rep = playbookList.first(where: { $0.color == gap.color }) else { return false }
+    guard let rep = playbookList.first(where: { $0.color == gap.color }) else { return false }
     let line = unlockLine(tree, gap, size: settings.movesPerFill)
     guard line.count > gap.line.count else { return false }
-    pawns -= UNLOCK_PRICE
     addLine(rep.id, line, .fixed(.growth), via: .growth)
-    logEvent(AppEvent(kind: "unlock", count: UNLOCK_PRICE, picked: gap.name, text: "balance \(pawns)"))
+    logEvent(AppEvent(kind: "unlock", color: gap.color, line: line.joined(separator: " ")))
     return true
   }
 }

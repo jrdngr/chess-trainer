@@ -206,10 +206,9 @@ public final class HeadlessApp: SignalSink {
   /// The Playbook tab's tree for one side.
   public func map(_ side: ChessCore.Color) -> [MapNode] { playbookMap(state, tree, side: side) }
 
-  /// Unlock a locked opening on the tree now, for a pawn.
+  /// Unlock a locked opening on the tree now.
   public func unlock(_ node: MapNode) throws {
     guard let gap = node.gap, !node.owned else { throw Failure.notHere("\(node.name) is already yours") }
-    guard state.pawns >= UNLOCK_PRICE else { throw Failure.notHere("Unlocking needs \(UNLOCK_PRICE) pawn") }
     var bought = false
     store.update { bought = $0.unlockEarly(gap, tree) }
     if !bought { throw Failure.notHere("\(node.name) can't be unlocked") }

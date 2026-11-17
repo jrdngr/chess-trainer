@@ -32,7 +32,7 @@ import Testing
   }
 }
 
-/// The Playbook tree: Home names the Next opening, and a locked opening unlocks now for a pawn,
+/// The Playbook tree: Home names the Next opening, and a locked opening unlocks now, free,
 /// which puts it in the Playbook.
 @MainActor @Test func unlockingAnOpeningOnTheTree() async throws {
   try await headless { app in
@@ -42,10 +42,8 @@ import Testing
     func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.children) } }
     let locked = try #require(all(app.map(.w)).first { $0.line == ["e4", "c5"] })
     #expect(!locked.owned)
-    #expect(throws: HeadlessApp.Failure.self) { try app.unlock(locked) }
-    app.store.update { $0.pawns = 3 }
     try app.unlock(locked)
-    #expect(app.state.pawns == 3 - UNLOCK_PRICE)
+    #expect(app.state.pawns == 0, "unlocking is free")
     #expect(all(app.map(.w)).contains { $0.line == ["e4", "c5"] && $0.owned })
   }
 }

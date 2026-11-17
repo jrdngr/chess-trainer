@@ -13,7 +13,7 @@ struct MapFocus: Equatable {
 /// The Playbook tab's tree: first moves on top, and under the open opening its
 /// branches, the ones you have first and the locked ones the curve will add
 /// after them. The bar at the bottom is the open opening's row, or for a locked
-/// one when it grows and Unlock 1.
+/// one when it grows and Unlock.
 struct PlaybookMapView: View {
   let tree: OpeningTree
   let side: ChessCore.Color
@@ -203,22 +203,17 @@ struct PlaybookMapView: View {
   }
 
   @ViewBuilder private func lockedRows(_ node: MapNode) -> some View {
-    let pawns = store.state.pawns
     HStack(spacing: 10) {
       Text(node.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text2).lineLimit(1)
         .frame(maxWidth: .infinity, alignment: .leading)
       Button { unlock(node) } label: {
-        HStack(spacing: 6) {
-          Icon(name: "pawn", size: 15).foregroundStyle(Theme.pawn)
-          Text("Unlock \(UNLOCK_PRICE)").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-        }
+        Text("Unlock").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
         .padding(.horizontal, 12).frame(height: 36)
         .background(RoundedRectangle(cornerRadius: 10).fill(Theme.surface3))
         .contentShape(RoundedRectangle(cornerRadius: 10))
       }
       .buttonStyle(.plain)
-      .disabled(pawns < UNLOCK_PRICE || node.gap == nil)
-      .opacity(pawns < UNLOCK_PRICE ? 0.5 : 1)
+      .disabled(node.gap == nil)
     }
     .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 60)
     ForEach(requirements(node), id: \.label) { need in
@@ -373,11 +368,7 @@ private struct MapNodeView: View {
         Circle().strokeBorder(isNext ? Theme.accent : SwiftUI.Color(hex: 0x3a3a44), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
       }
       if !node.owned {
-        HStack(spacing: 3) {
-          Icon(name: "pawn", size: 14)
-          Text("\(UNLOCK_PRICE)").font(.system(size: 14, weight: .bold))
-        }
-        .foregroundStyle(Theme.pawn)
+        Icon(name: "lock", size: 18).foregroundStyle(isNext ? Theme.accent : Theme.text3)
       } else if top {
         Text(node.move).font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.text)
       } else {

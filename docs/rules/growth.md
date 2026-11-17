@@ -60,7 +60,7 @@ at a hole), `prepRanOut`
     answers offered and is the one an unlock adds; the rest keep their order.
     As White the order stays.
 12. **Unlocking early.** A locked opening on the [Playbook tree](playbook.md)
-    grows now for 1 pawn: its reply, then your answer and the most played
+    grows now, free: its reply, then your answer and the most played
     reply in turn, for one fill of your moves, ending with the named opening
     or where no reply is played in 5% of games.
 

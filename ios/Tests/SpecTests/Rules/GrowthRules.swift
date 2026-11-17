@@ -115,19 +115,16 @@ private func morra() -> (AppState, String) {
     #expect(calmFirst(tree, line("e4"), color: .w, answers, san: { $0 }) == answers)
   }
 
-  /// Rule 12: a locked opening grows now for a pawn, with one fill along its line.
+  /// Rule 12: a locked opening grows now, free, with one fill along its line.
   @Test func unlockingEarlyCostsAPawn() throws {
     let tree = openingTree(bookIndex)
     var state = AppState()
     let id = state.ensurePlaybook(.w)
     state.addLine(id, line("e4 e5 Nf3 Nc6 Bb5 a6"), .fixed(.book))
     let gap = try #require(curveHoles(state.playbookList, bookIndex, tree: tree).first { $0.line == line("e4 c5") })
-    let broke = state.unlockEarly(gap, tree)
-    #expect(!broke, "no pawns")
-    state.pawns = 2
     let bought = state.unlockEarly(gap, tree)
     #expect(bought)
-    #expect(state.pawns == 1)
+    #expect(state.pawns == 0, "free")
     let added = unlockLine(tree, gap, size: state.settings.movesPerFill)
     #expect(added.count > gap.line.count)
     #expect(nodeAtLine(state.playbooks[id]!, added) != nil)
