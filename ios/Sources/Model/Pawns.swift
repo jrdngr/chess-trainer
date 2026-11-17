@@ -15,6 +15,10 @@ public enum PawnEvent: String, Sendable, Codable, CaseIterable {
   /// The game reached endgame rules.
   case endgame
   case checkmate
+  /// Every 5 of your moves past prep; its pawns come from `distancePawns`.
+  case distance
+  /// A draw held from −1.5 or worse after the prep.
+  case heldDraw
   /// An Endgames round's goal met.
   case endgameGoal
   /// The first game of a day in a streak; its pawns come from `streakPawns`.
@@ -29,8 +33,37 @@ public func pawnsFor(_ event: PawnEvent) -> Int {
   case .blunderPunished, .endgame: return 3
   case .moment, .mission: return 6
   case .checkmate: return 15
+  case .heldDraw: return pawnsFor(.checkmate) / 2
+  case .distance: return DISTANCE_PAWNS[0]
   case .streak: return 1
   }
+}
+
+/// How many of your moves past prep make a distance marker.
+public let DISTANCE_EVERY = 5
+/// What the first markers pay; each one after pays the last.
+public let DISTANCE_PAWNS = [10, 15, 20]
+/// The share of a marker Middlegame pays.
+public let MIDDLEGAME_DISTANCE_SHARE = 0.4
+
+/// What the `n`th distance marker of a run pays (from 1).
+public func distancePawns(_ n: Int, middlegame: Bool = false) -> Int {
+  let full = DISTANCE_PAWNS[min(max(n, 1), DISTANCE_PAWNS.count) - 1]
+  return middlegame ? Int((Double(full) * MIDDLEGAME_DISTANCE_SHARE).rounded()) : full
+}
+
+/// What a run's first `count` distance markers pay together.
+public func distancePawns(markers count: Int, middlegame: Bool = false) -> Int {
+  count > 0 ? (1...count).reduce(0) { $0 + distancePawns($1, middlegame: middlegame) } : 0
+}
+
+/// How far behind after the prep a draw must be held from to pay, in centipawns from your side.
+public let HELD_DRAW_FROM: Double = -150
+
+/// Whether a draw was held: you stood at `HELD_DRAW_FROM` or worse after the prep. `cp` is White's.
+public func heldDraw(_ color: Color, afterPrep cp: Double?) -> Bool {
+  guard let cp else { return false }
+  return (color == .w ? cp : -cp) <= HELD_DRAW_FROM
 }
 
 /// A prepared move this quick is fast: the time that grades its card easy.

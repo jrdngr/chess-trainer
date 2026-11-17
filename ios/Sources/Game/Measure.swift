@@ -73,10 +73,21 @@ public struct MeasuredRun: Codable, Sendable, Equatable {
   public var misses = 0
   /// blunder, won, lost, draw, ended (the X), capped; for Endgames, success or failure.
   public var ending = ""
-  /// How many times each pawn event paid, by `PawnEvent` name; prep complete counts its prep moves.
+  /// How many times each pawn event paid, by `PawnEvent` name; prep complete counts its prep
+  /// moves. `measuredPawns` values them.
   public var events: [String: Int] = [:]
   /// Pawns earned at the values the run was played with.
   public var pawns = 0
+}
+
+/// What a run's counted events pay at today's values. Distance markers climb within a run, and
+/// pay Middlegame's share there.
+public func measuredPawns(_ events: [String: Int], middlegame: Bool) -> Int {
+  events.reduce(0) { total, entry in
+    guard let event = PawnEvent(rawValue: entry.key) else { return total }
+    if event == .distance { return total + distancePawns(markers: entry.value, middlegame: middlegame) }
+    return total + pawnsFor(event) * entry.value
+  }
 }
 
 /// The bot: the engine at a level, picking as the app's opponents do.
@@ -138,8 +149,8 @@ extension HeadlessApp {
       }
       for signal in takeSignals() {
         guard case .pawns(let award) = signal, award.event != .streak else { continue }
-        // Counted in its event's units: prep complete pays one for each prep move asked.
-        counted.events[award.event.rawValue, default: 0] += award.count / max(1, pawnsFor(award.event))
+        // Prep complete counts its prep moves; every other event, the times it paid.
+        counted.events[award.event.rawValue, default: 0] += award.event == .prepComplete ? award.count : 1
         counted.pawns += award.count
       }
       runs.append(counted)

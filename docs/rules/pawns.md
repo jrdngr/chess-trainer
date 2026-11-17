@@ -8,7 +8,8 @@ target. Tests: the `docs/rules/pawns.md` suite in
 1. **Only these events pay**, in Play and Middlegame runs and Endgames
    rounds: prep complete 1 for each prep move asked, blunder punished 3, a
    found moment 6, a mission done 6, reaching the endgame 3, checkmate 15,
-   an Endgames round's goal met 1. Single moves, growth and milestones pay
+   distance markers and a held draw (rules 9 and 10), an Endgames round's
+   goal met 1. Single moves, growth and milestones pay
    nothing.
 2. **Prep complete** pays when your prep runs out, asked you something, and
    was never missed: a pawn for each prep move asked. Each prepared move
@@ -40,3 +41,11 @@ target. Tests: the `docs/rules/pawns.md` suite in
    streak's week. Before today's game it shows the day the game will make
    and the pawns it will pay as outlines; once played, the day it made and
    the pawns filled in.
+9. **Distance markers** pay every 5 of your moves past your prep: 10 for
+   the first, 15 for the second and 20 for each one after, popping out of
+   the move that reached it. In Middlegame, where every move is past prep,
+   they pay 40%: 4, 6, then 8. Growth moves and your prep's own moves don't
+   count.
+10. **Held the draw** pays half of checkmate, rounded down (7), when a game
+   ends drawn and you stood at −1.5 or worse after your prep (the engine's
+   word before your first move past it). Other draws pay nothing extra.

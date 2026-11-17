@@ -10,8 +10,7 @@ import Testing
     let runs = try await app.measure(MeasureOptions(strategy: .full, rating: 1200, runs: 3, maxMoves: 30), seed: 1)
     #expect(runs.count == 3)
     for run in runs {
-      let valued = run.events.reduce(0) { $0 + pawnsFor(PawnEvent(rawValue: $1.key)!) * $1.value }
-      #expect(valued == run.pawns)
+      #expect(measuredPawns(run.events, middlegame: false) == run.pawns)
       #expect(run.prepMoves + run.growthMoves + run.otherMoves > 0)
       #expect(run.ending != "none")
     }

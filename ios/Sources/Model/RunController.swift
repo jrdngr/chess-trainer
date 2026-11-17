@@ -134,6 +134,8 @@ public struct RunSession {
   public var ending: Ending?
   /// Middlegame mode's run: handed over past your prep and the book, so neither is asked.
   public var middlegame = false
+  /// Your moves played past your prep, for distance markers.
+  public var pastPrep = 0
 }
 
 /// One of your judged moves: where it went, and the eval swing it closed on from your side (nil across a mate).
@@ -242,6 +244,11 @@ private func afterMove(_ session: RunSession, _ state: RunTally) -> Step {
   } else if status.checkmate {
     ended = finish(next, state, won ? .won : .lost)
   } else {
+    // A draw held from well behind after the prep pays.
+    if heldDraw(state.run.color, afterPrep: session.evalTrail.first) {
+      effects.append(earn(&state, PawnAward(.heldDraw, .board)))
+      next.state = state
+    }
     ended = finish(next, state, .draw)
   }
   return (ended.session, effects + ended.effects)
@@ -355,6 +362,15 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     }
     if let moment = scored.earned.moment, moment.found { effects.append(.pawns(PawnAward(.moment, at))) }
     if let mission = scored.earned.mission, mission.result == .done { effects.append(.pawns(PawnAward(.mission, .goal))) }
+    // Every 5 of your moves past prep is a distance marker.
+    if expected.isEmpty {
+      s.pastPrep += 1
+      if s.pastPrep % DISTANCE_EVERY == 0 {
+        let award = PawnAward(.distance, at, count: distancePawns(s.pastPrep / DISTANCE_EVERY, middlegame: s.middlegame))
+        scored.extras.pawns += award.count
+        effects.append(.pawns(award))
+      }
+    }
     let moved = afterMove(s, playYours(s.state, judged.san, expected.first, scored.extras))
     return (moved.session, effects + moved.effects)
   }

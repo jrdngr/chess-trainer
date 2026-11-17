@@ -45,7 +45,7 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
     let paid = Dictionary(uniqueKeysWithValues: PawnEvent.allCases.map { ($0, pawnsFor($0)) })
     #expect(paid == [
       .prepComplete: 1, .blunderPunished: 3, .moment: 6, .mission: 6, .endgame: 3, .checkmate: 15,
-      .endgameGoal: 1, .streak: 1,
+      .endgameGoal: 1, .streak: 1, .distance: 10, .heldDraw: 7,
     ])
   }
 
@@ -169,5 +169,41 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
     #expect(streakToday(nine, today: "d9", yesterday: "d8") == StreakToday(day: 9, paid: true, pawns: 2))
     #expect(streakToday(nine, today: "d12", yesterday: "d11") == StreakToday(day: 1, paid: false, pawns: 1))
     #expect(streakToday(PawnStreak(day: "d7", days: 7), today: "d7", yesterday: "d6").weekday == 7)
+  }
+
+  /// Rule 9: markers at 5, 10, 15 and 20 moves past prep pay 10, 15, 20, 20; Middlegame pays 40%.
+  @Test func distanceMarkersPay() throws {
+    #expect((1...4).map { distancePawns($0) } == [10, 15, 20, 20])
+    #expect((1...4).map { distancePawns($0, middlegame: true) } == [4, 6, 8, 8])
+    var s = prepRanOut(try session(at: line("e4 e5 Nf3 Nc6 Bb5 a6")), bookIndex).session
+    var paid: [Int] = []
+    for (mine, theirs) in [("Ba4", "Nf6"), ("O-O", "Be7"), ("Re1", "b5"), ("Bb3", "d6"), ("c3", "O-O"), ("h3", "Nb8")] {
+      let step = judgedMove(s, ctx, judged(mine), 1, 0)
+      paid += awards(step.effects).filter { $0.event == .distance }.map(\.count)
+      s = engineMove(step.session, theirs).session
+    }
+    #expect(paid == [10])
+    #expect(s.pastPrep == 6)
+    // A move your prep had doesn't count.
+    let prep = try session()
+    let e4 = try #require(applySan(prep.state.run.fen, "e4"))
+    #expect(playPrepared(prep, ctx, e4, 1, 0).session.pastPrep == 0)
+  }
+
+  /// Rule 10: a draw pays when you stood at −1.5 or worse after the prep.
+  @Test func heldDrawsPay() throws {
+    #expect(heldDraw(.w, afterPrep: -150) && heldDraw(.b, afterPrep: 200))
+    #expect(!heldDraw(.w, afterPrep: -149) && !heldDraw(.w, afterPrep: nil))
+    // Stalemate: White mates nothing; Black has no move.
+    var held = try session()
+    held.state.run.played = []
+    held.state.run.fen = "7k/8/5Q2/8/8/8/8/K7 w - - 0 1"
+    held.evalTrail = [-200, -300]
+    held.state.extras.endgame = true
+    let stale = engineMove(held, "Qf7")
+    #expect(awards(stale.effects) == [PawnAward(.heldDraw, .board)])
+    if case .draw = stale.session.ending {} else { Issue.record("not a draw") }
+    held.evalTrail = [-100]
+    #expect(awards(engineMove(held, "Qf7").effects).isEmpty, "not behind enough after the prep")
   }
 }
