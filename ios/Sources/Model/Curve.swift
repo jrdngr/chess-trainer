@@ -47,10 +47,13 @@ public func curveHoles(_ reps: [Playbook], _ index: ReferenceIndex, tree: Openin
       let best = stops[id].flatMap { san in holes.first { $0.nodeId == id && $0.san == san } }
       if best.map({ hole.share > $0.share }) ?? true { stops[id] = hole.san }
     }
+    // Growth stays inside the families you have: a reply into another family is bought, not grown.
+    let owned = Set(leafLines(rep).compactMap { familyLine($0.sans, rep.color) })
     for hole in holes {
       let reach = hole.reach * hole.share / 100
       guard reach >= CURVE_MIN_REACH else { continue }
       let line = hole.path + [hole.san]
+      guard let family = familyLine(line, rep.color), owned.contains(family) else { continue }
       guard let end = namedEnd(index, line), end.ply >= line.count else { continue }
       out.append(Gap(
         kind: hole.nodeId.flatMap { stops[$0] } == hole.san ? .tooShort : .noAnswer, playbookId: rep.id, color: rep.color, hole: hole,
@@ -166,11 +169,11 @@ public func calmFirst<T>(_ tree: OpeningTree, _ path: [String], color: Color, _ 
   return out
 }
 
-/* ── unlocking early ── */
+/* ── where a hole leads ── */
 
-/// The moves an early unlock adds at a hole: the reply, then your answer and the
-/// most played reply in turn, for one fill of your moves, ending with the named
-/// opening or where no reply is common enough.
+/// The moves a hole grows into: the reply, then your answer and the most played reply in turn,
+/// for `size` of your moves, ending with the named opening or where no reply is common enough.
+/// The tree hangs a locked opening where this line first names one you don't have.
 public func unlockLine(_ tree: OpeningTree, _ gap: Gap, size: Int) -> [String] {
   let index = tree.index
   var line = gap.line
@@ -191,18 +194,4 @@ public func unlockLine(_ tree: OpeningTree, _ gap: Gap, size: Int) -> [String] {
     }
   }
   return line
-}
-
-extension AppState {
-  /// Grow a hole now, free: the line `unlockLine` gives goes into its side's
-  /// Playbook. Returns whether anything was added.
-  @discardableResult
-  public mutating func unlockEarly(_ gap: Gap, _ tree: OpeningTree) -> Bool {
-    guard let rep = playbookList.first(where: { $0.color == gap.color }) else { return false }
-    let line = unlockLine(tree, gap, size: settings.movesPerFill)
-    guard line.count > gap.line.count else { return false }
-    addLine(rep.id, line, .fixed(.growth), via: .growth)
-    logEvent(AppEvent(kind: "unlock", color: gap.color, line: line.joined(separator: " ")))
-    return true
-  }
 }

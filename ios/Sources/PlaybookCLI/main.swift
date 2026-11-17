@@ -17,7 +17,7 @@ let HELP = """
   Anywhere:  state · help · quit · home · hint (the engine's move here)
   Start:     recommend · know [classical|system|solid|aggressive|fianchetto|mirror] · intro
   Home:      select [w|b|either] [drill|freeform] [opening id or moves, "any" for Any Opening]
-             play · tree [w|b] · unlock NAME · endgames · middlegame · shop · buy ID
+             play · tree [w|b] · unlock FAMILY · endgames · middlegame · shop · buy ID
   Board:     <san> (or move <san> <san>...) · think SECONDS
   Play:      end · continue · takeback · next · undo · done · grow · replay
   Growth:    save · more · play-on · back
@@ -78,10 +78,10 @@ func perform(_ app: HeadlessApp, _ words: [String]) async throws -> Bool {
   case "unlock":
     let name = rest.joined(separator: " ")
     let all = (app.map(.w) + app.map(.b)).flatMap(flatten)
-    guard let node = all.first(where: { !$0.owned && ($0.label == name || $0.name == name) }) else {
-      throw HeadlessApp.Failure.notHere("No locked opening \"\(name)\". `tree` lists them")
+    guard let node = all.first(where: { $0.forSale && ($0.label == name || $0.name == name || $0.move == name) }) else {
+      throw HeadlessApp.Failure.notHere("No family \"\(name)\" for sale. `tree` lists them")
     }
-    try app.unlock(node)
+    try app.buyFamily(node)
   case "grow": await app.growHere()
   case "endgames": try app.openEndgames()
   case "middlegame": try await app.openMiddlegame()
@@ -245,6 +245,8 @@ func mapText(_ roots: [MapNode]) -> String {
     case .locked(.inLine): state = "locked"
     case .locked(.games(let games)): state = "locked, game \(games)"
     case .locked(.green(let have, let of)): state = "locked, green \(have)/\(of)"
+    case .forSale(let price): state = "for sale, \(price) pawns"
+    case .way: state = "no answer yet"
     }
     lines.append("\(pad)\(node.move)  \(node.label)  (\(state))")
     for kid in node.children { visit(kid, depth + 1) }

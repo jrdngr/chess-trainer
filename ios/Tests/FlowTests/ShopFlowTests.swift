@@ -32,18 +32,29 @@ import Testing
   }
 }
 
-/// The Playbook tree: Home names the Next opening, and a locked opening unlocks now, free,
-/// which puts it in the Playbook.
-@MainActor @Test func unlockingAnOpeningOnTheTree() async throws {
+/// The Playbook tree: Home names the Next opening, and families you don't have are for sale on
+/// a rising ladder; a swap token trades one for another.
+@MainActor @Test func buyingAFamilyOnTheTree() async throws {
   try await headless { app in
     try app.knowMyOpenings(starter: "classical")
     let next = try #require(app.nextUp)
     #expect(app.report().contains("Next: \(next.name)"))
     func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.children) } }
-    let locked = try #require(all(app.map(.w)).first { $0.line == ["e4", "c5"] })
-    #expect(!locked.owned)
-    try app.unlock(locked)
-    #expect(app.state.pawns == 0, "unlocking is free")
-    #expect(all(app.map(.w)).contains { $0.line == ["e4", "c5"] && $0.owned })
+    let d4 = try #require(app.map(.w).first { $0.family == ["d4"] })
+    #expect(d4.state == .forSale(price: 2_000))
+    #expect(throws: HeadlessApp.Failure.self) { try app.buyFamily(d4) }
+    app.store.update { $0.pawns = 5_000 }
+    try app.buyFamily(d4)
+    #expect(app.state.pawns == 3_000)
+    #expect(app.map(.w).contains { $0.family == ["d4"] && $0.owned })
+    let c4 = try #require(app.map(.w).first { $0.family == ["c4"] })
+    #expect(c4.state == .forSale(price: 2_500), "the next one costs 500 more")
+    // Black's answers hang under White's first move.
+    #expect(all(app.map(.b)).contains { $0.family == ["e4", "c5"] && $0.forSale })
+
+    try app.swapFamily(["d4"], for: c4)
+    #expect(app.state.ownedFamilies(.w) == [["e4"], ["c4"]])
+    #expect(app.state.families.tokens == 0)
+    #expect(app.state.pawns == 3_000, "a swap is free")
   }
 }

@@ -59,10 +59,10 @@ at a hole), `prepRanOut`
     answers to a new reply, the one whose opening is least sharp leads the
     answers offered and is the one an unlock adds; the rest keep their order.
     As White the order stays.
-12. **Unlocking early.** A locked opening on the [Playbook tree](playbook.md)
-    grows now, free: its reply, then your answer and the most played
-    reply in turn, for one fill of your moves, ending with the named opening
-    or where no reply is played in 5% of games.
+12. **Growth stays inside your families.** A hole whose line leads into a
+    family you don't have (see [families](families.md)) is not a hole: that
+    family is bought, not grown. There is no early unlock; a locked
+    variation opens only through the curve.
 
 Rules 2 (the conditions), 7 (the replies) and 9 live in `RunModel` and
 have no test yet; `HeadlessApp` flow tests can cover them.

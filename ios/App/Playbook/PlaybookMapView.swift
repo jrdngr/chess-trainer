@@ -12,8 +12,8 @@ struct MapFocus: Equatable {
 
 /// The Playbook tab's tree: first moves on top, and under the open opening its
 /// branches, the ones you have first and the locked ones the curve will add
-/// after them. The bar at the bottom is the open opening's row, or for a locked
-/// one when it grows and Unlock.
+/// after them, then the families you don't have, for sale. The bar at the bottom is the open
+/// opening's row, for a locked one when it grows, and for a family Unlock at its price.
 struct PlaybookMapView: View {
   let tree: OpeningTree
   let side: ChessCore.Color
@@ -84,7 +84,7 @@ struct PlaybookMapView: View {
     let state = store.state
     let key = "\(side.rawValue)|" + state.playbookList.map { "\($0.id):\($0.nodes.count)" }.joined(separator: ",")
       + "|\(lastAddedAt(state.playbookList))|\(state.games.count)|\(state.form.openings.values.reduce(0) { $0 + $1.reduce(0, +) })"
-      + "|\(state.owns(.sidePicker))"
+      + "|\(state.owns(.sidePicker))|\(state.families.price(side))"
     return memo.get(key) { playbookMap(state, tree, side: side) }
   }
 
@@ -206,14 +206,24 @@ struct PlaybookMapView: View {
     HStack(spacing: 10) {
       Text(node.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text2).lineLimit(1)
         .frame(maxWidth: .infinity, alignment: .leading)
-      Button { unlock(node) } label: {
-        Text("Unlock").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-        .padding(.horizontal, 12).frame(height: 36)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Theme.surface3))
-        .contentShape(RoundedRectangle(cornerRadius: 10))
+      if case .forSale(let price) = node.state {
+        if store.state.families.tokens > 0, !store.state.ownedFamilies(side).isEmpty { swapMenu(node) }
+        Button { buy(node) } label: {
+          HStack(spacing: 6) {
+            Text("Unlock").foregroundStyle(Theme.text)
+            PawnAmount(count: price, size: 15)
+          }
+          .font(.system(size: 15, weight: .semibold))
+          .padding(.horizontal, 12).frame(height: 36)
+          .background(RoundedRectangle(cornerRadius: 10).fill(Theme.surface3))
+          .contentShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .disabled(store.state.pawns < price)
+        .opacity(store.state.pawns < price ? 0.5 : 1)
+      } else if node.state == .way {
+        Text("Pick an answer below").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.text3)
       }
-      .buttonStyle(.plain)
-      .disabled(node.gap == nil)
     }
     .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 60)
     ForEach(requirements(node), id: \.label) { need in
@@ -240,7 +250,7 @@ struct PlaybookMapView: View {
   /// What a locked opening waits for, one value each in an aligned column.
   private func requirements(_ node: MapNode) -> [Requirement] {
     switch node.state {
-    case .owned: return []
+    case .owned, .forSale, .way: return []
     case .next, .locked(.inLine):
       return [Requirement(label: "Opens", value: mapWhen(node.state) ?? "", met: false)]
     case .locked(.games), .locked(.green):
@@ -253,13 +263,33 @@ struct PlaybookMapView: View {
     }
   }
 
-  private func unlock(_ node: MapNode) {
-    guard let gap = node.gap else { return }
-    var bought = false
-    store.update { bought = $0.unlockEarly(gap, tree) }
-    if bought {
-      toasts.show("\(nameBelow(node.name, nil)) added")
+  /// Swap: a family you have goes, with everything under it, and this one comes in its place.
+  private func swapMenu(_ node: MapNode) -> some View {
+    Menu {
+      Section("Swap out, losing its progress") {
+        ForEach(store.state.ownedFamilies(side), id: \.self) { out in
+          Button(nodeById(tree, out.joined(separator: " ")).name) { swap(out, for: node) }
+        }
+      }
+    } label: {
+      Text("Swap").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+        .padding(.horizontal, 12).frame(height: 36)
+        .background(RoundedRectangle(cornerRadius: 10).strokeBorder(Theme.surface3, lineWidth: 1.5))
     }
+  }
+
+  private func buy(_ node: MapNode) {
+    guard let family = node.family else { return }
+    var bought = false
+    store.update { bought = $0.buyFamily(family, side, tree) }
+    if bought { toasts.show("\(nameBelow(node.name, nil)) added") }
+  }
+
+  private func swap(_ out: [String], for node: MapNode) {
+    guard let family = node.family else { return }
+    var swapped = false
+    store.update { swapped = $0.swapFamily(out, for: family, side, tree) }
+    if swapped { toasts.show("\(nameBelow(node.name, nil)) added") }
   }
 
   private func shelfTag(_ node: MapNode) -> (word: String, color: SwiftUI.Color)? {
@@ -324,6 +354,10 @@ private struct MapNodeView: View {
   let width: CGFloat
   let open: Bool
   let recede: Bool
+  /// A family's price under it; choosing openings shows none.
+  var showPrice = true
+  /// Picked for a slot while choosing openings.
+  var picked = false
 
   private var isNext: Bool { if case .next = node.state { return true } else { return false } }
   private var top: Bool { node.line.count == 1 }
@@ -331,7 +365,7 @@ private struct MapNodeView: View {
   var body: some View {
     VStack(spacing: 0) {
       disc.padding(.top, 8)
-      if !(top && node.owned) {
+      if !(top && (node.owned || node.forSale || node.state == .way)) {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
           if let color = shelfColor {
             RoundedRectangle(cornerRadius: 1.5).fill(color).frame(width: 3, height: 11).opacity(node.owned ? 1 : 0.55)
@@ -345,6 +379,8 @@ private struct MapNodeView: View {
       if let when = mapWhen(node.state) {
         Text(when).font(.system(size: 11, weight: .semibold).monospacedDigit())
           .foregroundStyle(isNext ? Theme.accent : Theme.text3).lineLimit(1)
+      } else if case .forSale(let price) = node.state, showPrice {
+        PawnAmount(count: price, size: 11)
       }
     }
     .fixedSize(horizontal: false, vertical: true)
@@ -364,10 +400,15 @@ private struct MapNodeView: View {
       if node.owned {
         Circle().fill(Theme.surface2)
         if !top { FormArc(form: node.form) }
+      } else if picked {
+        Circle().strokeBorder(Theme.accent, lineWidth: 2)
       } else {
         Circle().strokeBorder(isNext ? Theme.accent : SwiftUI.Color(hex: 0x3a3a44), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
       }
-      if !node.owned {
+      if node.forSale || node.state == .way {
+        Text(node.move).font(.system(size: 12, weight: .bold)).foregroundStyle(picked ? Theme.accent : Theme.text2)
+          .minimumScaleFactor(0.7).lineLimit(1).padding(.horizontal, 4)
+      } else if !node.owned {
         Icon(name: "lock", size: 18).foregroundStyle(isNext ? Theme.accent : Theme.text3)
       } else if top {
         Text(node.move).font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.text)

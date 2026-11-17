@@ -20,7 +20,8 @@ questions in `Recommendations.swift`; the first step is in
    since anything was added to the Playbook, from any source, over Moves per
    fill (default 3). From a pace of 1, the run heads for the curve's next
    hole in the selection (see [growth](growth.md)). A White first move with
-   no answer waits for its level like any other hole.
+   no answer is no hole: answering it is a family to buy (see
+   [families](families.md)).
 4. **Candidates.** For each side the selection covers that has a Playbook,
    each opening at or below the selection where you have a move gets a
    Review candidate. The selection itself also gets a Test candidate.

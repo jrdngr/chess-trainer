@@ -115,19 +115,15 @@ private func morra() -> (AppState, String) {
     #expect(calmFirst(tree, line("e4"), color: .w, answers, san: { $0 }) == answers)
   }
 
-  /// Rule 12: a locked opening grows now, free, with one fill along its line.
-  @Test func unlockingEarlyCostsAPawn() throws {
+  /// Rule 12: growth stays inside your families: a reply into one you don't have is no hole.
+  @Test func growthStaysInsideYourFamilies() throws {
     let tree = openingTree(bookIndex)
     var state = AppState()
-    let id = state.ensurePlaybook(.w)
-    state.addLine(id, line("e4 e5 Nf3 Nc6 Bb5 a6"), .fixed(.book))
-    let gap = try #require(curveHoles(state.playbookList, bookIndex, tree: tree).first { $0.line == line("e4 c5") })
-    let bought = state.unlockEarly(gap, tree)
-    #expect(bought)
-    #expect(state.pawns == 0, "free")
-    let added = unlockLine(tree, gap, size: state.settings.movesPerFill)
-    #expect(added.count > gap.line.count)
-    #expect(nodeAtLine(state.playbooks[id]!, added) != nil)
+    let id = state.ensurePlaybook(.b)
+    state.addLine(id, line("e4 e5 Nf3 Nc6"), .fixed(.book))
+    let holes = curveHoles(state.playbookList, bookIndex, tree: tree)
+    #expect(!holes.isEmpty)
+    #expect(holes.allSatisfy { familyLine($0.line, .b) == ["e4", "e5"] }, "1.d4 and 1.e4 c5 are families to buy")
   }
 
   /// Rule 8: a move added mid-run isn't graded and counts in the book's color.

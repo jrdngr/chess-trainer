@@ -208,7 +208,7 @@ private func playRuns(_ state: inout AppState, _ selection: Selection, _ count: 
         result: "*", termination: "ended"))
     }
     let firstMoveGaps = curveHoles(state.playbookList, bookIndex, tree: tree).filter { $0.hole.path.isEmpty }
-    #expect(firstMoveGaps.contains { $0.hole.san == "c4" })
+    #expect(firstMoveGaps.isEmpty, "an answer to 1.c4 is a family to buy, not a hole")
     if let steered = steerGap(state, tree, selection) { #expect(!steered.hole.path.isEmpty) }
     let atC4 = try #require(growAtHole(state, tree, selection, color: .b, line: line("c4")))
     #expect(!atC4.yes)

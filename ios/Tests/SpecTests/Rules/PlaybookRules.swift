@@ -45,7 +45,8 @@ import Testing
     state.addLine(id, line("e4 e5 Nf3 Nc6 Bb5 a6"), .fixed(.book))
     state.addLine(id, line("d4 d5 c4 e6"), .fixed(.book))
     let roots = playbookMap(state, tree, side: .w)
-    #expect(roots.map(\.id) == ["e4", "d4"] && roots.allSatisfy(\.owned))
+    #expect(roots.filter(\.owned).map(\.id) == ["e4", "d4"])
+    #expect(roots.filter { !$0.owned }.allSatisfy { $0.forSale }, "the other first moves are families for sale")
     func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.children) } }
     let nodes = all(roots)
     let next = nodes.filter { if case .next = $0.state { return true } else { return false } }
@@ -58,7 +59,7 @@ import Testing
     #expect(sicilian.state == .locked(.games(40)))
     #expect(e4.children.first?.owned == true)
     #expect(nodes.filter(\.owned).allSatisfy { $0.lines >= 1 && $0.gap == nil })
-    #expect(nodes.filter { !$0.owned }.allSatisfy { $0.gap != nil && $0.children.isEmpty })
+    #expect(nodes.filter { !$0.owned && !$0.forSale }.allSatisfy { $0.gap != nil && $0.children.isEmpty })
   }
 
   /// Rule 4: a tap opens an opening's branches; a tap on the open one folds it.

@@ -206,12 +206,20 @@ public final class HeadlessApp: SignalSink {
   /// The Playbook tab's tree for one side.
   public func map(_ side: ChessCore.Color) -> [MapNode] { playbookMap(state, tree, side: side) }
 
-  /// Unlock a locked opening on the tree now.
-  public func unlock(_ node: MapNode) throws {
-    guard let gap = node.gap, !node.owned else { throw Failure.notHere("\(node.name) is already yours") }
+  /// Buy a family for sale on the tree, at its side's price.
+  public func buyFamily(_ node: MapNode) throws {
+    guard let family = node.family, node.forSale else { throw Failure.notHere("\(node.name) isn't for sale") }
     var bought = false
-    store.update { bought = $0.unlockEarly(gap, tree) }
-    if !bought { throw Failure.notHere("\(node.name) can't be unlocked") }
+    store.update { bought = $0.buyFamily(family, node.color, tree) }
+    if !bought { throw Failure.notHere("\(node.name) needs \(state.families.price(node.color)) pawns") }
+  }
+
+  /// Swap a family you have for one for sale, with a swap token.
+  public func swapFamily(_ out: [String], for node: MapNode) throws {
+    guard let family = node.family, node.forSale else { throw Failure.notHere("\(node.name) isn't for sale") }
+    var swapped = false
+    store.update { swapped = $0.swapFamily(out, for: family, node.color, tree) }
+    if !swapped { throw Failure.notHere("No swap: \(state.families.tokens) token\(state.families.tokens == 1 ? "" : "s") held") }
   }
 
   /// Buy an item in the Pawn Shop.

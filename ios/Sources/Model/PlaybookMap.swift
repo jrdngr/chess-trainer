@@ -23,6 +23,10 @@ public enum MapState: Equatable, Sendable {
   /// The curve grows it next, in this many runs.
   case next(runs: Int)
   case locked(MapNeed)
+  /// A family you don't have, for sale at this price.
+  case forSale(price: Int)
+  /// A first move White plays that you have no answer to: it holds the answers for sale.
+  case way
 }
 
 public struct MapNode: Equatable, Sendable, Identifiable {
@@ -46,8 +50,11 @@ public struct MapNode: Equatable, Sendable, Identifiable {
   /// The hole that grows it, for a locked opening.
   public var gap: Gap?
   public var children: [MapNode]
+  /// The family it stands for, where it is one: your first move, or as Black your answer to one.
+  public var family: [String]?
 
   public var owned: Bool { state == .owned }
+  public var forSale: Bool { if case .forSale = state { true } else { false } }
 }
 
 /// The part of a name below another: "Najdorf Variation" under "Sicilian Defence".
@@ -68,7 +75,8 @@ public func shelfOf(_ tree: OpeningTree, _ node: OpeningNode) -> Shelf? {
 
 /// One side's tree, its first moves at the top.
 public func playbookMap(_ state: AppState, _ tree: OpeningTree, side: Color) -> [MapNode] {
-  guard let rep = state.playbookList.first(where: { $0.color == side }) else { return [] }
+  // With no Playbook on this side yet, every family is for sale.
+  let rep = state.playbookList.first(where: { $0.color == side }) ?? createPlaybook("", side, "none")
   // The openings your lines go through, and how many of your lines go through each.
   var owned = Set<String>()
   for node in rep.nodes.values {
@@ -87,7 +95,7 @@ public func playbookMap(_ state: AppState, _ tree: OpeningTree, side: Color) -> 
   let next = curvePlaybookGaps(state, tree).first
   let runs = runsUntilGrowth(state)
   let gate = curveGate(state, tree)
-  let holes = curveSides(state).contains(where: { $0.id == rep.id }) ? curveHoles([rep], tree.index, tree: tree) : []
+  let holes = !rep.nodes.isEmpty && curveSides(state).contains(where: { $0.id == rep.id }) ? curveHoles([rep], tree.index, tree: tree) : []
 
   // Each hole as the first opening it leads into that you don't have, under the nearest one you do.
   var locked: [String?: [MapNode]] = [:]
@@ -123,20 +131,50 @@ public func playbookMap(_ state: AppState, _ tree: OpeningTree, side: Color) -> 
       id: id, name: name, label: label == parentName.map({ nameBelow($0, nil) }) ? moveLabel(gap.line) : label,
       move: fresh?.depth == 1 ? moveLabel(gap.line) : gap.hole.san, color: side, line: gap.line,
       state: next?.id == gap.id ? .next(runs: runs) : .locked(need), form: nil, lines: 0,
-      shelf: fresh.flatMap { shelfOf(tree, $0)?.id }, gap: gap, children: []))
+      shelf: fresh.flatMap { shelfOf(tree, $0)?.id }, gap: gap, children: [], family: nil))
   }
 
   func build(_ node: OpeningNode, _ parentName: String?) -> MapNode {
     let kids = node.children.filter { owned.contains($0.id) }.sorted { $0.games > $1.games }
     let label = node.depth == 1 ? moveLabel(node.sans) : nameBelow(node.name, parentName)
     let shown = parentName.map { nameBelow($0, nil) == label } == true ? moveLabel(node.sans) : label
+    let family = familyLine(node.sans, side) == node.sans ? node.sans : nil
     return MapNode(
       id: node.id, name: node.name, label: shown, move: node.depth == 1 ? moveLabel(node.sans) : node.sans.last ?? "",
       color: side, line: node.sans, state: .owned, form: formAverage(state.form, node.id), lines: lines[node.id] ?? 0, shelf: shelfOf(tree, node)?.id,
-      gap: nil, children: kids.map { build($0, node.name) } + lockedOrder(locked[node.id] ?? []))
+      gap: nil, children: kids.map { build($0, node.name) } + lockedOrder(locked[node.id] ?? []) + forSale[node.id, default: []],
+      family: family)
+  }
+
+  // The families you don't have, for sale where they would hang: White's first moves on top;
+  // Black's answers under White's first move, which shows as the way to them when you have none.
+  let price = state.families.price(side)
+  var forSale: [String: [MapNode]] = [:]
+  var ways: [MapNode] = []
+  for family in familyChoices(tree.index, side) where !owned.contains(family.joined(separator: " ")) {
+    let node = nodeById(tree, family.joined(separator: " "))
+    let id = node.depth == family.count ? node.id : family.joined(separator: " ")
+    let name = node.depth == family.count ? node.name : moveLabel(family)
+    let sale = MapNode(
+      id: id, name: name, label: family.count == 1 ? moveLabel(family) : nameBelow(name, nil), move: moveLabel(family), color: side,
+      line: family, state: .forSale(price: price), form: nil, lines: 0, shelf: node.depth == family.count ? shelfOf(tree, node)?.id : nil,
+      gap: nil, children: [], family: family)
+    let parent = family.count == 1 ? "" : family[0]
+    if family.count == 2 && !owned.contains(parent) && !ways.contains(where: { $0.id == parent }) {
+      let first = nodeById(tree, parent)
+      ways.append(MapNode(
+        id: parent, name: first.depth == 1 ? first.name : moveLabel([parent]), label: moveLabel([parent]), move: moveLabel([parent]),
+        color: side, line: [parent], state: .way, form: nil, lines: 0, shelf: nil, gap: nil, children: [], family: nil))
+    }
+    forSale[parent, default: []].append(sale)
   }
   let roots = tree.root.children.filter { owned.contains($0.id) }.sorted { $0.games > $1.games }
-  return roots.map { build($0, nil) } + lockedOrder(locked[nil] ?? [])
+  let wayRoots = ways.map { way in
+    var way = way
+    way.children = forSale[way.id] ?? []
+    return way
+  }
+  return roots.map { build($0, nil) } + lockedOrder(locked[nil] ?? []) + forSale["", default: []] + wayRoots
 }
 
 /// Locked openings in order: Next first, then as often as you would meet them.
@@ -208,7 +246,7 @@ public func mapTap(_ roots: [MapNode], path: [String], _ id: String) -> [String]
 /// What a locked opening shows under its name: when it grows.
 public func mapWhen(_ state: MapState) -> String? {
   switch state {
-  case .owned: return nil
+  case .owned, .forSale, .way: return nil
   case .next(let runs): return runs == 0 ? "Next game" : "~\(runs) \(runs == 1 ? "game" : "games")"
   case .locked(.inLine): return "In line"
   case .locked(.games(let games)): return "Game \(games)"
@@ -242,7 +280,7 @@ public let MAP_TIER = 4
 /// than a tier's worth, the row splits in half by rank instead.
 public func mapTiers(_ row: [MapNode]) -> (upper: [MapNode], lower: [MapNode])? {
   guard row.count > MAP_TIER else { return nil }
-  let mine = row.filter(\.owned), locked = row.filter { !$0.owned }
+  let mine = row.filter { $0.owned || $0.state == .way }, locked = row.filter { !$0.owned && $0.state != .way }
   if !mine.isEmpty && mine.count <= MAP_TIER && locked.count <= MAP_TIER { return (mine, locked) }
   let half = (row.count + 1) / 2
   return (Array(row.prefix(half)), Array(row.dropFirst(half)))
