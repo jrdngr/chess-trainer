@@ -26,7 +26,9 @@ struct RootView: View {
   @State private var analyzing: (sans: [String], side: ChessCore.Color)?
   /// A find handed over from the end of a round, for Tidy to open on.
   @State private var tidyFocus: TidyFind?
-  /// A Growth sitting, from a recommendation or an opening's Grow.
+  /// The opening Home's Next line opens the Playbook tree at.
+  @State private var mapFocus: MapFocus?
+  /// A Growth sitting, from an opening's Grow.
   @State private var growing: GrowthModel?
   /// A line from the opening sheet for Middlegame mode to play out.
   @State private var middlegameLine: MiddlegameLine?
@@ -90,12 +92,14 @@ struct RootView: View {
         }, onSetup: { next in
           setupFirst = true
           mode = next
-        }, onGap: { gap in
-          growing = GrowthModel(gap: gap, store: store, tree: tree, index: index)
+        }, onNext: { node in
+          mapFocus = MapFocus(side: node.color, id: node.id)
+          tab = .playbook
         }, onPlaybook: { tab = .playbook })
           .background(Theme.background.ignoresSafeArea())
           .tabItem { Label(Tab.home.label, systemImage: Tab.home.symbol) }.tag(Tab.home)
-        PlaybookView(tree: tree, index: index, tidyFocus: tidyFocus, onConsumedTidyFocus: { tidyFocus = nil }, onExplore: { sans, side in
+        PlaybookView(tree: tree, index: index, tidyFocus: tidyFocus, onConsumedTidyFocus: { tidyFocus = nil },
+          mapFocus: mapFocus, onConsumedMapFocus: { mapFocus = nil }, onExplore: { sans, side in
           explore = (sans, side)
           tab = .analysis
         }, onGrow: { offer in

@@ -12,7 +12,6 @@ public enum ShopFeature: String, Sendable, Codable, CaseIterable {
   case openingPicker
   /// Freeform runs.
   case freeform
-  case recommendations
   case middlegame
   case endgames
 }
@@ -59,7 +58,6 @@ public let SHOP: [ShopItem] = [
   ShopItem("lensPlan", "Plan", .features, 40, feature: .lensPlan, about: "Shows a plan for the position."),
   ShopItem("openingPicker", "Opening picker", .features, 50, needs: ["sidePicker"], feature: .openingPicker, about: "Play a specific opening."),
   ShopItem("freeform", "Freeform", .features, 120, needs: ["openingPicker"], feature: .freeform, about: "Play any of your lines from move one."),
-  ShopItem("recommendations", "Recommendations", .features, 150, needs: ["freeform"], feature: .recommendations, about: "Find the gaps in your Playbook."),
   ShopItem("middlegame", "Middlegame", .features, 300, needs: ["lensPieces"], feature: .middlegame, about: "Play middlegames from your openings."),
   ShopItem("endgames", "Endgames", .features, 300, feature: .endgames, about: "Practice key endgames."),
   ShopItem("guides", "Opening guides", .content, 100, needs: ["openingPicker"], each: true, about: "Learn the ideas behind an opening."),

@@ -86,10 +86,12 @@ extension HoleAnswers {
     return deltaFor(answerColor, position, after)
   }
 
-  /// The answers as strong players rank them, the engine settling ties.
+  /// The answers as strong players rank them, the engine settling ties. As Black the calmest
+  /// of the top three comes first.
   public var ranked: [Reply] {
     let evals = evals
-    return byShare(listed, san: \.san, share: { $0.share }, { delta($0, evals) })
+    let byPlayers = byShare(listed, san: \.san, share: { $0.share }, { delta($0, evals) })
+    return calmFirst(openingTree(index), holePath, color: answerColor, byPlayers, san: \.san)
   }
 
   /// Who recommends what: strong players' top reply, the engine's best two.

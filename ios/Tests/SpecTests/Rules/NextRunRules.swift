@@ -192,8 +192,8 @@ private func playRuns(_ state: inout AppState, _ selection: Selection, _ count: 
     #expect(blackFirstGap(state, tree, Selection(color: .b, opening: ANY_OPENING)) == nil)
   }
 
-  /// Rule 3: a Play run never steers to a White first move you have no answer to, nor grows there:
-  /// those gaps are Home's Recommendations, not a run's.
+  /// Rule 3: a Play run never steers to a White first move you have no answer to, nor grows there,
+  /// before its level opens.
   @Test func runsDoNotGrowAtWhitesFirstMove() throws {
     let tree = openingTree(bookIndex)
     var state = AppState()
@@ -207,7 +207,7 @@ private func playRuns(_ state: inout AppState, _ selection: Selection, _ count: 
         id: "g\(i)", mode: .play, at: after + Double(i), color: .b, picked: selection, opening: selection.opening, moves: ["e4"],
         result: "*", termination: "ended"))
     }
-    let firstMoveGaps = selectionGaps(state, tree, selection).filter { $0.hole.path.isEmpty }
+    let firstMoveGaps = curveHoles(state.playbookList, bookIndex, tree: tree).filter { $0.hole.path.isEmpty }
     #expect(firstMoveGaps.contains { $0.hole.san == "c4" })
     if let steered = steerGap(state, tree, selection) { #expect(!steered.hole.path.isEmpty) }
     let atC4 = try #require(growAtHole(state, tree, selection, color: .b, line: line("c4")))

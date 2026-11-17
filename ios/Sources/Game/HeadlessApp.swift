@@ -200,8 +200,20 @@ public final class HeadlessApp: SignalSink {
     await idle()
   }
 
-  /// Home's Recommendations, most needed first; none until they are bought.
-  public var recommendations: [Gap] { state.owns(.recommendations) ? playbookGaps(state, tree) : [] }
+  /// Home's Next line: what the Playbook grows next, and in how many runs.
+  public var nextUp: (name: String, runs: Int)? { nextOpening(state, tree) }
+
+  /// The Playbook tab's tree for one side.
+  public func map(_ side: ChessCore.Color) -> [MapNode] { playbookMap(state, tree, side: side) }
+
+  /// Unlock a locked opening on the tree now, for a pawn.
+  public func unlock(_ node: MapNode) throws {
+    guard let gap = node.gap, !node.owned else { throw Failure.notHere("\(node.name) is already yours") }
+    guard state.pawns >= UNLOCK_PRICE else { throw Failure.notHere("Unlocking needs \(UNLOCK_PRICE) pawn") }
+    var bought = false
+    store.update { bought = $0.unlockEarly(gap, tree) }
+    if !bought { throw Failure.notHere("\(node.name) can't be unlocked") }
+  }
 
   /// Buy an item in the Pawn Shop.
   public func buy(_ id: String) throws {
@@ -215,7 +227,7 @@ public final class HeadlessApp: SignalSink {
     }
   }
 
-  /// Fill a recommendation in Growth.
+  /// Fill a hole in Growth.
   public func grow(_ gap: Gap) async throws {
     closeModes()
     guard let model = GrowthModel(gap: gap, store: store, tree: tree, index: index) else { throw Failure.notHere("That can't be grown") }

@@ -80,8 +80,11 @@ public func regionSource(_ tree: OpeningTree, _ node: OpeningNode, _ rep: Playbo
     label: node.name, color: color, node: node,
     movesAt: { fen, played in candidates(fen, played).map(\.san) },
     weightsAt: { fen, played in
-      // The opponent plays book moves and your prepared replies, not every rare try.
       let all = candidates(fen, played)
+      // Where your Playbook has replies, the opponent plays only those: the others are still locked.
+      let mine = all.filter(\.prepared)
+      if !mine.isEmpty { return mine.map { ($0.san, $0.games) } }
+      // Past your lines it plays book moves, not every rare try.
       let entry = lookup(index, fen)
       let total = totalGamesAt(entry)
       let shareOf = { (san: String) -> Double in

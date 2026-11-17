@@ -109,12 +109,9 @@ public func freeformSource(
   return source
 }
 
-/// The lines of the gaps on one side of a selection that are due a new move now.
+/// The line of the hole the curve grows next on one side of a selection, when growth is due.
 public func dueGapLines(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, color: Color) -> [[String]] {
-  let reps = state.playbookList
-  let p = pace(runs: runsSinceAdded(state.games, reps), size: state.settings.movesPerFill)
-  if p < 1 { return [] }
-  let ranked = selectionGaps(state, tree, selection)
-  guard let top = ranked.first else { return [] }
-  return ranked.filter { $0.color == color && insideYourLines($0) && growScore($0, top: top, pace: p, reps: reps, cards: state.cards) >= 1 }.map(\.line)
+  guard runsUntilGrowth(state) == 0 else { return [] }
+  return curveSelectionGaps(state, tree, selection).first { $0.color == color }.map { [$0.line] } ?? []
 }
+

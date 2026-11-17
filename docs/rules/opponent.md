@@ -19,10 +19,10 @@ What the other side plays. Code: `beginRun`, `regionSource` and
 5. **A run that heads for a gap follows the gap's line** while it is on it.
 6. **Off the drawn line, a new one is drawn** from where the run stands, by
    the same rules.
-7. **With no line of yours to follow,** it plays a reply your Playbook has
-   there or one played in at least 5% of strong players' games, weighted by
-   how often it is played. Replies that keep the run in your lines or the
-   book come first.
+7. **With no line of yours to follow,** it plays only the replies your
+   Playbook has there, where it has any: the others are still locked (see
+   [growth](growth.md)). Past your lines it plays one played in at least 5%
+   of strong players' games, weighted by how often it is played.
 8. **Past the book, the engine plays at your strength,** rounded to the
    nearest 50.
 9. **Your strength** starts at 1200. Each of your moves the engine judges

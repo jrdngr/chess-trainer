@@ -1,36 +1,47 @@
 # Growth inside a run
 
-How a Play run adds moves to your Playbook. Code: `Recommendations.swift`
-(gaps, pace, mastery and the question at a hole), `prepRanOut`
+How the Playbook grows. Code: `Curve.swift` (holes, levels, the gate, calm
+answers and unlocking), `Recommendations.swift` (gaps, pace and the question
+at a hole), `prepRanOut`
 (`RunController.swift`) and `askAtHole`, `addMove` and `fillReply` in
 `RunModel` (Game target). Tests: the `docs/rules/growth.md` suite in
 `Tests/SpecTests/Rules/GrowthRules.swift`.
 
-1. **A gap** is a common reply with no answer in your Playbook:
+1. **A hole** is a reply with no answer in your Playbook that the curve
+   can grow:
    - the reply is played in at least 5% of strong players' games at its position;
    - it is still inside the opening the book names along that line;
-   - you meet it in at least 2% of your games, after a 0.85 discount for each full move of depth.
+   - at least 1% of your games meet it: the share of games reaching its
+     position times the reply's share there.
 
-   A reply where you answer others, or at move one, is "no answer yet". A
-   line that just stops is "too short", and is one gap, at its most played
-   reply.
+   Holes are ranked by that last number, most met first. Where a line just
+   stops, its most played reply is "too short"; every other hole is "no
+   answer yet". (The older gap list, `gaps`, still names a line that stops
+   as one gap at its most played reply; Grow here uses it.)
 2. **A run reaches at most one hole.** That is the first time it is your
    turn with no move of yours. Your prep must have been followed without a
    miss, and the run must be past the moves played for you. Only Play runs
    reach holes.
-3. **The question at the hole.** The answer is yes when p × m² × g ≥ 1
-   and the gap is past at least one move of yours. The gap is looked up among
-   the selection's gaps, or the whole Playbook's when the selection has none
-   or doesn't hold it. A run set to grow at a gap (see [drill](drill.md) and
-   [next run](next-run.md)) grows there whatever the answer.
-4. **p, pace,** is the Play runs since anything was added to the
-   Playbook, over Moves per fill (default 3).
-5. **m, mastery,** is the average over your moves from move one to the
-   hole, leaving out your first move as White, which no run asks. Each move
-   scores its share of right answers × (0.6 + 0.4 × how fast), where fast is
-   the card's ease from 1.3 (0) to 2.5 (1). A move never asked scores 0. A
-   line with no such move yet scores 1.
-6. **g** is the gap's importance next to the selection's top gap, at most 1.
+3. **The curve grows depth first.** Each hole has a level: 1 or 2 when it
+   is "no answer yet" at the opponent's first or second move, so it leaves
+   your openings there; 0 for every other hole. Level 0 is always open.
+   Level 2 opens once no hole is left in the open levels, you have played
+   20 Play games, and every opening you have is green (rule 5). Level 1
+   opens the same way after level 2, at 40 games. The curve's next hole is
+   the most met hole in the open levels; for a selection, the most met one
+   inside it, with the levels opened by the whole Playbook.
+4. **The question at the hole.** The answer is yes when the pace (Play runs
+   since anything was added to the Playbook, over Moves per fill, default 3)
+   has reached 1 and the hole is the curve's next one in the selection. A run
+   set to grow at a gap (see [drill](drill.md) and [next run](next-run.md))
+   grows there whatever the answer.
+5. **Green** is an opening's form (see [form](form.md)) of at least 0.8 over
+   at least 5 answers. The openings that count are the deepest named opening
+   each of your lines reaches, on the sides the curve grows: White, and
+   Black once the side picker is yours.
+6. **The opponent plays only what you have unlocked.** Where your Playbook
+   has replies, it plays only those (see [opponent](opponent.md)); a hole
+   is met in a run only on the way to a gap.
 7. **On a yes, the board turns into New move.** It offers the answers a
    Growth sitting would offer, and each pick is saved as it is made. The
    opponent replies along the gap's line while it can, then with the book's
@@ -44,6 +55,14 @@ How a Play run adds moves to your Playbook. Code: `Recommendations.swift`
    played in at least 5% of games there gets the button, not only the gap's
    most played one; only that one is asked about.
 10. **Growth never goes past the book.** See [playbook](playbook.md).
+11. **As Black, the calmest answer goes first.** Of the three most played
+    answers to a new reply, the one whose opening is least sharp leads the
+    answers offered and is the one an unlock adds; the rest keep their order.
+    As White the order stays.
+12. **Unlocking early.** A locked opening on the [Playbook tree](playbook.md)
+    grows now for 1 pawn: its reply, then your answer and the most played
+    reply in turn, for one fill of your moves, ending with the named opening
+    or where no reply is played in 5% of games.
 
 Rules 2 (the conditions), 7 (the replies) and 9 live in `RunModel` and
 have no test yet; `HeadlessApp` flow tests can cover them.

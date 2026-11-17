@@ -3,12 +3,12 @@ import Game
 import Model
 import Testing
 
-/// Filling a recommendation in Growth: the sitting opens on the reply with no answer, offers the
-/// book's answers, and Save Line puts the picked one in the Playbook, which drops the recommendation.
-@MainActor @Test func growingARecommendationFillsIt() async throws {
+/// Filling the curve's next hole in Growth: the sitting opens on the reply with no answer, offers the
+/// book's answers, and Save Line puts the picked one in the Playbook, which fills the hole.
+@MainActor @Test func growingTheNextHoleFillsIt() async throws {
   try await headless { app in
     try app.knowMyOpenings(starter: "classical")
-    let gap = try #require(app.recommendations.first)
+    let gap = try #require(curvePlaybookGaps(app.state, app.tree).first)
     try await app.grow(gap)
     #expect(app.screen == .growth)
     #expect(app.moves == gap.line)
@@ -20,7 +20,7 @@ import Testing
     #expect(rep().flatMap { nodeAtLine($0, gap.line + [answer]) } == nil, "nothing is saved before Save Line")
     app.saveGrowth()
     #expect(rep().flatMap { nodeAtLine($0, gap.line + [answer]) } != nil)
-    #expect(!app.recommendations.contains { $0.line == gap.line && $0.color == gap.color })
+    #expect(!curvePlaybookGaps(app.state, app.tree).contains { $0.line == gap.line && $0.color == gap.color })
   }
 }
 
@@ -68,7 +68,7 @@ import Testing
 @MainActor @Test func playingOnFromALineRecordsNothing() async throws {
   try await headless { app in
     try app.knowMyOpenings(starter: "classical")
-    let gap = try #require(app.recommendations.first { $0.color == .w })
+    let gap = try #require(curvePlaybookGaps(app.state, app.tree).first { $0.color == .w })
     try await app.grow(gap)
     try await app.move(try #require(app.choices.first))
     let playbooks = app.state.playbooks

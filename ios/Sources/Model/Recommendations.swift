@@ -163,28 +163,6 @@ private func basicOrder(_ gap: Gap) -> Int {
   gap.color == .w ? 0 : 1 + (BASIC_FIRST_MOVES.firstIndex(of: gap.hole.san) ?? BASIC_FIRST_MOVES.count)
 }
 
-/// A short list of gaps: the basics first, then `quota` of each kind, as many as there are,
-/// then the most important of the rest up to `limit`, grouped by kind in
-/// rank order. Home asks for 3 with one of each kind; More for 10 with 5
-/// "Too short".
-public func topGaps(_ ranked: [Gap], limit: Int = 3, quota: [GapKind: Int] = [.noAnswer: 1, .tooShort: 1]) -> [Gap] {
-  var picked = Array(ranked.filter(\.basic).prefix(limit))
-  for kind in [GapKind.noAnswer, .tooShort] {
-    for gap in ranked.filter({ $0.kind == kind && !$0.basic }).prefix(quota[kind] ?? 0) where picked.count < limit {
-      picked.append(gap)
-    }
-  }
-  for gap in ranked where picked.count < limit && !picked.contains(where: { $0.id == gap.id }) { picked.append(gap) }
-  return [GapKind.noAnswer, .tooShort].flatMap { kind in
-    ranked.filter { gap in gap.kind == kind && picked.contains { $0.id == gap.id } }
-  }
-}
-
-/// The longer list behind Home's More.
-public func moreGaps(_ ranked: [Gap]) -> [Gap] {
-  topGaps(ranked, limit: 10, quota: [.tooShort: 5])
-}
-
 /* ── filling a gap ── */
 
 /// Whether a fill has come to its end after your latest move: it has added
@@ -206,7 +184,7 @@ public func gapAt(_ ranked: [Gap], color: Color, line: [String]) -> Gap? {
   return ranked.first { $0.color == color && $0.hole.san == last && positionKey($0.hole.fen) == key }
 }
 
-/* ── pace, mastery and the yes or no at a hole ── */
+/* ── pace ── */
 
 /// When anything was last added to a Playbook, from any source.
 public func lastAddedAt(_ reps: [Playbook]) -> Double {
@@ -224,40 +202,6 @@ public func pace(runs: Int, size: Int) -> Double {
   Double(runs) / Double(max(1, size))
 }
 
-/// How well one position is known, 0...1: right answers, more so when fast.
-/// A position never asked counts as not known.
-public func positionMastery(_ card: Card?) -> Double {
-  guard let card, card.correct + card.incorrect > 0 else { return 0 }
-  let right = Double(card.correct) / Double(card.correct + card.incorrect)
-  let fast = max(0, min(1, (card.ease - 1.3) / (DEFAULT_SRS.startingEase - 1.3)))
-  return right * (0.6 + 0.4 * fast)
-}
-
-/// How well you know a line up to a hole: the average over your moves on it,
-/// past your first move as White, which no run asks. A line with no such
-/// moves yet counts as known.
-public func lineMastery(_ rep: Playbook, _ cards: [String: Card], _ path: [String]) -> Double {
-  let walked = walkSan(path)
-  var scores: [Double] = []
-  for i in path.indices where i > 0 && i < walked.moves.count && fenTurn(walked.fens[i]) == rep.color {
-    scores.append(positionMastery(cards[cardId(rep.id, positionKey(walked.fens[i]))]))
-  }
-  return scores.isEmpty ? 1 : scores.reduce(0, +) / Double(scores.count)
-}
-
-/// How a hole weighs against the top gap, 0...1.
-public func gapWeight(_ gap: Gap, top: Gap?) -> Double {
-  guard let top, top.importance > 0 else { return 1 }
-  return max(0, min(1, gap.importance / top.importance))
-}
-
-/// p × m² × g for a gap: what steering and the question at a hole weigh.
-public func growScore(_ gap: Gap, top: Gap?, pace p: Double, reps: [Playbook], cards: [String: Card]) -> Double {
-  guard let rep = reps.first(where: { $0.id == gap.playbookId }) else { return 0 }
-  let m = lineMastery(rep, cards, gap.path)
-  return p * m * m * gapWeight(gap, top: top)
-}
-
 /* ── the questions, on the app's state ── */
 
 /// Black's first runs on Any Opening, while Black has no answer to 1.e4 or
@@ -273,56 +217,25 @@ public func firstMoveRound(_ tree: OpeningTree, _ gap: Gap) -> AutoRound {
   AutoRound(pick: Recommendation(focus: .test, opening: tree.root, color: gap.color), at: nil, aim: gap.line, grow: gap)
 }
 
-/// The gaps inside a selection, every side it covers.
-public func selectionGaps(_ state: AppState, _ tree: OpeningTree, _ selection: Selection) -> [Gap] {
-  let reps = state.playbookList
-  var out: [Gap] = []
-  for region in regionsBySide(tree, selection) {
-    let side = reps.filter { $0.color == region.side }
-    out += gaps(side, tree.index, tree: tree, scope: region.node)
-  }
-  var seen = Set<String>()
-  return rankGaps(out.filter { seen.insert($0.id).inserted })
-}
-
-/// Every gap in the Playbook, for Home, the basics first: the selection plays no part.
-public func playbookGaps(_ state: AppState, _ tree: OpeningTree) -> [Gap] {
-  let reps = state.playbookList
-  let basics = basicGaps(reps, tree.index)
-  let rest = gaps(reps, tree.index, tree: tree).filter { gap in !basics.contains { $0.id == gap.id } }
-  return rankGaps(basics + rest)
-}
-
-/// The answer at a hole in a run: whether the line needs a new move now.
+/// The answer at a hole in a run: whether the line needs a new move now. Yes
+/// when growth is due and the hole is the one the curve grows next in the selection.
 public func growAtHole(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, color: Color, line: [String]) -> (gap: Gap, yes: Bool)? {
-  let ranked = selectionGaps(state, tree, selection)
-  let all = ranked.isEmpty ? playbookGaps(state, tree) : ranked
+  let next = curveSelectionGaps(state, tree, selection)
   let reps = state.playbookList
-  guard let gap = gapAt(all, color: color, line: line) ?? gapAt(playbookGaps(state, tree), color: color, line: line) else {
+  guard let gap = gapAt(next, color: color, line: line) ?? gapAt(curvePlaybookGaps(state, tree), color: color, line: line) else {
     // Another common reply where your line stops: no question, but yours to grow.
     return gapAt(gaps(reps.filter { $0.color == color }, tree.index, everyShortReply: true), color: color, line: line).map { ($0, false) }
   }
-  let p = pace(runs: runsSinceAdded(state.games, reps), size: state.settings.movesPerFill)
-  return (gap, insideYourLines(gap) && growScore(gap, top: all.first, pace: p, reps: reps, cards: state.cards) >= 1)
+  return (gap, runsUntilGrowth(state) == 0 && next.first?.id == gap.id)
 }
 
-/// A gap past at least one move of yours. A Play run grows only these; an answer to
-/// a White first move you have none for is left to Home's Recommendations.
+/// A gap past at least one move of yours.
 public func insideYourLines(_ gap: Gap) -> Bool { !gap.hole.path.isEmpty }
 
-/// The gap the next run steers toward when a new move is due, if any.
+/// The gap the next run steers toward when a new move is due: the curve's next hole in the selection.
 public func steerGap(_ state: AppState, _ tree: OpeningTree, _ selection: Selection) -> Gap? {
-  let reps = state.playbookList
-  let p = pace(runs: runsSinceAdded(state.games, reps), size: state.settings.movesPerFill)
-  if p < 1 { return nil }
-  let ranked = selectionGaps(state, tree, selection)
-  guard let top = ranked.first else { return nil }
-  var best: (gap: Gap, score: Double)?
-  for gap in ranked where insideYourLines(gap) {
-    let score = growScore(gap, top: top, pace: p, reps: reps, cards: state.cards)
-    if score >= 1 && (best == nil || score > best!.score) { best = (gap, score) }
-  }
-  return best?.gap
+  guard runsUntilGrowth(state) == 0 else { return nil }
+  return curveSelectionGaps(state, tree, selection).first
 }
 
 /// A gap as Growth's one row, so a sitting can start on its reply.

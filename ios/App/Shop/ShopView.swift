@@ -103,7 +103,7 @@ private struct ShopTree: View {
     "openingPicker": CGPoint(x: 56, y: 112), "lensPieces": CGPoint(x: 236, y: 112), "lensPlan": CGPoint(x: 318, y: 112),
     "freeform": CGPoint(x: 56, y: 224), "guides": CGPoint(x: 146, y: 224), "lensKings": CGPoint(x: 236, y: 224),
     "middlegame": CGPoint(x: 318, y: 224),
-    "recommendations": CGPoint(x: 56, y: 336), "personalities": CGPoint(x: 146, y: 336), "lensEval": CGPoint(x: 236, y: 336),
+    "personalities": CGPoint(x: 146, y: 336), "lensEval": CGPoint(x: 236, y: 336),
     "boards": CGPoint(x: 36, y: 478), "pieces": CGPoint(x: 107, y: 478), "decks": CGPoint(x: 179, y: 478),
     "styles": CGPoint(x: 251, y: 478), "icons": CGPoint(x: 322, y: 478),
   ]

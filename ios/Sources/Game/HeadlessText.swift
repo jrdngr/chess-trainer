@@ -27,13 +27,7 @@ extension HeadlessApp {
     if let tip = state.homeTip { lines.append("Tip: \(tip.text)") }
     let locked = ShopFeature.allCases.filter { !state.owns($0) }.compactMap { shopItem($0.rawValue)?.name }
     if !locked.isEmpty { lines.append("Locked: \(locked.joined(separator: ", ")). `shop` lists the Pawn Shop.") }
-    let recs = recommendations.prefix(5)
-    if !recs.isEmpty {
-      lines.append("Recommendations:")
-      for (i, gap) in recs.enumerated() {
-        lines.append("  \(i + 1). \(gap.name) (\(gap.color == .w ? "White" : "Black")): \(sansToMoveText(gap.line))")
-      }
-    }
+    if let next = nextUp { lines.append("Next: \(next.name) \(nextWhen(next.runs))") }
     return lines
   }
 

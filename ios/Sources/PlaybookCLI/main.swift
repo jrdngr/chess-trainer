@@ -15,7 +15,7 @@ let HELP = """
   Anywhere:  state · help · quit · home · hint (the engine's move here)
   Start:     recommend · know [classical|system|solid|aggressive|fianchetto|mirror] · intro
   Home:      select [w|b|either] [drill|freeform] [opening id or moves, "any" for Any Opening]
-             play · recs · grow N · endgames · middlegame · shop · buy ID
+             play · tree [w|b] · unlock NAME · endgames · middlegame · shop · buy ID
   Board:     <san> (or move <san> <san>...) · think SECONDS
   Play:      end · continue · next · undo · done · grow · replay
   Growth:    save · more · play-on · back
@@ -70,15 +70,17 @@ func perform(_ app: HeadlessApp, _ words: [String]) async throws -> Bool {
   case "know": try app.knowMyOpenings(starter: rest.first)
   case "select": try select(app, rest)
   case "play": await app.openPlay()
-  case "recs": break
-  case "grow":
-    if let n = rest.first.flatMap(Int.init) {
-      let recs = app.recommendations
-      guard n >= 1, n <= recs.count else { throw HeadlessApp.Failure.notHere("No recommendation \(n)") }
-      try await app.grow(recs[n - 1])
-    } else {
-      await app.growHere()
+  case "tree":
+    print(mapText(app.map(rest.first == "b" ? .b : .w)))
+    return true
+  case "unlock":
+    let name = rest.joined(separator: " ")
+    let all = (app.map(.w) + app.map(.b)).flatMap(flatten)
+    guard let node = all.first(where: { !$0.owned && ($0.label == name || $0.name == name) }) else {
+      throw HeadlessApp.Failure.notHere("No locked opening \"\(name)\". `tree` lists them")
     }
+    try app.unlock(node)
+  case "grow": await app.growHere()
   case "endgames": try app.openEndgames()
   case "middlegame": try await app.openMiddlegame()
   case "shop": print(app.shopReport())
@@ -168,3 +170,26 @@ func main() async {
 }
 
 await main()
+
+/// Every opening on a tree, depth first.
+func flatten(_ node: MapNode) -> [MapNode] { [node] + node.children.flatMap(flatten) }
+
+/// A side's tree as indented text: each opening, its form, and what a locked one waits for.
+func mapText(_ roots: [MapNode]) -> String {
+  var lines: [String] = []
+  func visit(_ node: MapNode, _ depth: Int) {
+    let pad = String(repeating: "  ", count: depth)
+    let state: String
+    switch node.state {
+    case .owned: state = node.form.map { String(format: "form %.2f", $0) } ?? "no form yet"
+    case .next(let runs): state = "NEXT in ~\(max(1, runs)) games"
+    case .locked(.inLine): state = "locked"
+    case .locked(.games(let games)): state = "locked, game \(games)"
+    case .locked(.green(let have, let of)): state = "locked, green \(have)/\(of)"
+    }
+    lines.append("\(pad)\(node.move)  \(node.label)  (\(state))")
+    for kid in node.children { visit(kid, depth + 1) }
+  }
+  for root in roots { visit(root, 0) }
+  return lines.isEmpty ? "No openings on this side." : lines.joined(separator: "\n")
+}

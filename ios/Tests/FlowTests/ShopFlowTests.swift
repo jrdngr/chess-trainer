@@ -13,7 +13,6 @@ import Testing
     #expect(app.report().contains("Locked: Side picker"))
     #expect(throws: HeadlessApp.Failure.self) { try app.select(side: .b) }
     #expect(throws: HeadlessApp.Failure.self) { try app.openEndgames() }
-    #expect(app.recommendations.isEmpty)
     #expect(throws: HeadlessApp.Failure.self) { try app.buy("sidePicker") }
 
     app.store.update { $0.pawns = 60 }
@@ -30,5 +29,23 @@ import Testing
     #expect(app.state.pawns == 5)
     #expect(app.shopReport().contains("Freeform: 120, 115 short"))
     #expect(throws: HeadlessApp.Failure.self) { try app.buy("boards") }
+  }
+}
+
+/// The Playbook tree: Home names the Next opening, and a locked opening unlocks now for a pawn,
+/// which puts it in the Playbook.
+@MainActor @Test func unlockingAnOpeningOnTheTree() async throws {
+  try await headless { app in
+    try app.knowMyOpenings(starter: "classical")
+    let next = try #require(app.nextUp)
+    #expect(app.report().contains("Next: \(next.name)"))
+    func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.children) } }
+    let locked = try #require(all(app.map(.w)).first { $0.line == ["e4", "c5"] })
+    #expect(!locked.owned)
+    #expect(throws: HeadlessApp.Failure.self) { try app.unlock(locked) }
+    app.store.update { $0.pawns = 3 }
+    try app.unlock(locked)
+    #expect(app.state.pawns == 3 - UNLOCK_PRICE)
+    #expect(all(app.map(.w)).contains { $0.line == ["e4", "c5"] && $0.owned })
   }
 }

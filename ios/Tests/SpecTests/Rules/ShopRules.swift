@@ -15,7 +15,7 @@ private func state(pawns: Int, owning: [String] = []) -> AppState {
     let features = SHOP.filter { $0.feature != nil }.map { "\($0.id) \($0.price) \($0.needs.joined(separator: ","))" }
     #expect(features == [
       "sidePicker 5 ", "lensPawns 10 ", "lensPieces 20 lensPawns", "lensKings 30 lensPieces", "lensEval 60 lensKings", "lensPlan 40 ",
-      "openingPicker 50 sidePicker", "freeform 120 openingPicker", "recommendations 150 freeform",
+      "openingPicker 50 sidePicker", "freeform 120 openingPicker",
       "middlegame 300 lensPieces", "endgames 300 ",
     ])
   }

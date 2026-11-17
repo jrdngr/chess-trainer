@@ -18,10 +18,9 @@ questions in `Recommendations.swift`; the first step is in
    there. A specific opening picked on Home never gets these runs.
 3. **A new move is due after Moves per fill runs.** Pace is the Play runs
    since anything was added to the Playbook, from any source, over Moves per
-   fill (default 3). From a pace of 1, the run heads for the selection's gap
-   with the highest p × m² × g, if that is at least 1 (see
-   [growth](growth.md)). Only gaps past at least one move of yours count: a
-   White first move with no answer is left to Home's Recommendations.
+   fill (default 3). From a pace of 1, the run heads for the curve's next
+   hole in the selection (see [growth](growth.md)). A White first move with
+   no answer waits for its level like any other hole.
 4. **Candidates.** For each side the selection covers that has a Playbook,
    each opening at or below the selection where you have a move gets a
    Review candidate. The selection itself also gets a Test candidate.

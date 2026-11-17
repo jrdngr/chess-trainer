@@ -5,15 +5,18 @@ import Model
 import SwiftUI
 import UIKit
 
-/// The Playbook tab: one side at a time, its openings under their first move,
-/// replies to one opening of yours under its name, each row with its tier and
-/// its line count. Tidy is in the more menu when it has something.
+/// The Playbook tab: one side at a time, its openings as a tree that grows from
+/// the first moves, with the openings the curve adds next locked in place.
+/// Tidy is in the more menu when it has something.
 struct PlaybookView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
   var tidyFocus: TidyFind? = nil
   /// The focus is taken: Tidy holds it from here.
   var onConsumedTidyFocus: () -> Void = {}
+  /// An opening for the tree to open at, from Home's Next line.
+  var mapFocus: MapFocus? = nil
+  var onConsumedMapFocus: () -> Void = {}
   var onExplore: ([String], ChessCore.Color) -> Void = { _, _ in }
   /// Grow an opening, from Growth's own pick for it.
   var onGrow: (GrowOffer) -> Void = { _ in }
@@ -81,8 +84,16 @@ struct PlaybookView: View {
       }
     }
     .task(id: scanInput) { await scan.run(scanInput, tree, index) }
+    .onChange(of: mapFocus) { _, focus in
+      guard let focus else { return }
+      page = nil
+      side = focus.side
+    }
     .onAppear {
-      if store.state.playbookList.first(where: { $0.color == side }) == nil, let other = store.state.playbookList.first {
+      if let mapFocus {
+        page = nil
+        side = mapFocus.side
+      } else if store.state.playbookList.first(where: { $0.color == side }) == nil, let other = store.state.playbookList.first {
         side = other.color
       }
       guard let tidyFocus else { return }
@@ -102,7 +113,6 @@ struct PlaybookView: View {
   private var list: some View {
     let reps = store.state.playbookList
     let rep = reps.first { $0.color == side }
-    let rows = rep.map { playbookRows($0, index) } ?? []
     let tip: GameTip? = store.state.settings.seen(.playbook) ? nil : .playbook
     let putAway = { dismissTip(store, tip) }
     let untidy = scan.count ?? 0
@@ -125,54 +135,18 @@ struct PlaybookView: View {
       }
       .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { barWidth = $0 }
       .tip(tip, when: tip != nil, arrowAt: barArrowAt, inset: 16, onDismiss: putAway)
-      ScrollView {
-        VStack(spacing: 0) {
-          SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")])
-          if let rep, !rows.isEmpty {
-            let groups = playbookGroups(rows, tree)
-            ForEach(Array(groups.enumerated()), id: \.offset) { at, group in
-              HStack {
-                Text(group.move).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
-                Spacer()
-                if at == 0 {
-                  Text("LINES").font(.system(size: 11.5, weight: .semibold)).tracking(0.6).foregroundStyle(Theme.text3)
-                    .frame(width: 40, alignment: .trailing)
-                  Spacer().frame(width: 18)
-                }
-              }
-              .padding(.horizontal, 16).padding(.top, at == 0 ? 18 : 14).padding(.bottom, 6)
-              ListCard {
-                ForEach(Array(group.entries.enumerated()), id: \.offset) { _, entry in
-                  switch entry {
-                  case .row(let row):
-                    rowView(rep, row)
-                  case .family(let name, let node, let members):
-                    FamilyRowView(name: name, nodeId: node, lines: entry.lines)
-                    ForEach(members, id: \.id) { row in rowView(rep, row, name: nameUnder(name, row.name), indent: 18) }
-                  }
-                }
-              }
-            }
-            ListCard {
-              Button { page = .browse(repId: rep.id, nodeId: nil, title: playbookName(rep.color)) } label: {
-                HStack(spacing: 12) {
-                  Icon(name: "tree", size: 20).foregroundStyle(Theme.text2)
-                  Text("Whole tree").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-                  Spacer()
-                  Text("\(rep.nodes.count)").font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text)
-                  Icon(name: "chevron", size: 18).foregroundStyle(Theme.text3)
-                }
-                .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
-              }
-              .buttonStyle(.plain)
-            }
-            .padding(.top, 12)
-          } else {
-            EmptyNote(title: side == .w ? "No openings as White" : "No openings as Black", hint: "Tap + to add one")
-              .padding(.top, 24)
-          }
+      SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")])
+        .padding(.horizontal, 16)
+      if let rep, !rep.nodes.isEmpty {
+        PlaybookMapView(
+          tree: tree, side: side, focus: mapFocus, onConsumedFocus: onConsumedMapFocus,
+          onOpen: { node in open(rep, node) })
+          .padding(.top, 4)
+      } else {
+        ScrollView {
+          EmptyNote(title: side == .w ? "No openings as White" : "No openings as Black", hint: "Tap + to add one")
+            .padding(.top, 24).padding(.horizontal, 16)
         }
-        .padding(.horizontal, 16).padding(.bottom, 28)
       }
     }
     .fullScreenCover(isPresented: $adding) {
@@ -183,20 +157,17 @@ struct PlaybookView: View {
     }
   }
 
-  /// One opening's row, swiping left to delete it after a confirmation.
-  private func rowView(_ rep: Playbook, _ row: PlaybookRow, name: String? = nil, indent: CGFloat = 0) -> some View {
-    let removes = row.parts.reduce(0) { $0 + $1.removes }
-    return SwipeToRemove(title: "Delete \(row.name)?", action: "Delete \(removes) \(removes == 1 ? "move" : "moves")") {
-      store.update { state in
-        for part in row.parts {
-          state.removeOpening(rep.id, part.rootId, tips: part.nested != nil ? tipsOf(rep, part) : nil)
-        }
-      }
-      toasts.show("\(row.name) deleted")
-    } content: {
-      PlaybookRowView(tree: tree, row: row, name: name, indent: indent) {
-        page = .opening(repId: rep.id, name: row.name)
-      }
+  /// An opening of yours on its page: the tab's row of that name, else the first row
+  /// along its line, else the tree of moves at it.
+  private func open(_ rep: Playbook, _ node: MapNode) {
+    let rows = playbookRows(rep, index)
+    let along = { (row: PlaybookRow) in
+      row.parts.contains { $0.path.starts(with: node.line) || node.line.starts(with: $0.path) }
+    }
+    if let row = rows.first(where: { $0.name == node.name }) ?? rows.first(where: along) {
+      page = .opening(repId: rep.id, name: row.name)
+    } else {
+      page = .browse(repId: rep.id, nodeId: nodeAtLine(rep, node.line)?.id, title: node.name)
     }
   }
 
@@ -233,142 +204,4 @@ struct RepRef: Identifiable { var id: String }
 /// the shallowest node of that name, else the node at the row's first move order.
 @MainActor func openingNode(_ tree: OpeningTree, _ row: PlaybookRow) -> OpeningNode? {
   row.parts.first.flatMap { familyNode(tree, row.name, path: $0.path) }
-}
-
-/// One opening on the tab: its name, its form, and its line count.
-struct PlaybookRowView: View {
-  let tree: OpeningTree
-  let row: PlaybookRow
-  /// The name shown, shorter under a family's row.
-  var name: String? = nil
-  var indent: CGFloat = 0
-  let onOpen: () -> Void
-  @Environment(AppStore.self) private var store
-
-  var body: some View {
-    let node = openingNode(tree, row)
-    Button(action: onOpen) {
-      HStack(spacing: 10) {
-        Text(name ?? row.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
-          .frame(maxWidth: .infinity, alignment: .leading)
-        FormBars(bars: node.flatMap { store.state.form.bars($0.id) }).frame(width: 32, alignment: .trailing)
-        Text("\(row.lines)").font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text)
-          .frame(width: 40, alignment: .trailing)
-        Icon(name: "chevron", size: 18).foregroundStyle(Theme.text3)
-      }
-      .padding(.leading, indent).padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 60).contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-  }
-}
-
-/// The opening of yours that the rows under it answer: its name, its own form, and their lines together.
-struct FamilyRowView: View {
-  let name: String
-  /// The book position it is named for, where its form is kept.
-  let nodeId: String
-  let lines: Int
-  @Environment(AppStore.self) private var store
-
-  var body: some View {
-    HStack(spacing: 10) {
-      Text(name).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text).lineLimit(1)
-        .frame(maxWidth: .infinity, alignment: .leading)
-      FormBars(bars: store.state.form.bars(nodeId)).frame(width: 32, alignment: .trailing)
-      Text("\(lines)").font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text)
-        .frame(width: 40, alignment: .trailing)
-      Spacer().frame(width: 18)
-    }
-    .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 60)
-    .background(Theme.surface)
-  }
-}
-
-/// A row that swipes left to show Delete, which asks before it deletes.
-struct SwipeToRemove<Content: View>: View {
-  let title: String
-  /// The confirming button's label.
-  let action: String
-  let onRemove: () -> Void
-  @ViewBuilder var content: Content
-  @State private var offset: CGFloat = 0
-  @State private var start: CGFloat = 0
-  @State private var asking = false
-  private let width: CGFloat = 92
-
-  var body: some View {
-    ZStack(alignment: .trailing) {
-      if offset < 0 {
-        Button { asking = true } label: {
-          Text("Delete").font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
-            .frame(width: width).frame(maxHeight: .infinity).background(Theme.bad)
-        }
-        .buttonStyle(.plain)
-      }
-      content
-        .background(Theme.surface)
-        // While open, a tap on the row closes it instead of opening the opening.
-        .overlay {
-          if offset < 0 {
-            SwiftUI.Color.black.opacity(0.001).contentShape(Rectangle())
-              .onTapGesture { close() }
-          }
-        }
-        .offset(x: offset)
-        .gesture(HorizontalPan { dx in
-          offset = min(0, max(-width * 1.3, start + dx))
-        } onEnd: { dx, velocity in
-          let end = start + dx
-          withAnimation(.snappy) { offset = end < -width / 2 || velocity < -300 ? -width : 0 }
-          start = offset
-        })
-    }
-    .clipped()
-    .confirmationDialog(title, isPresented: $asking, titleVisibility: .visible) {
-      Button(action, role: .destructive) {
-        close()
-        onRemove()
-      }
-      Button("Cancel", role: .cancel) { close() }
-    }
-    .accessibilityAction(named: "Delete") { asking = true }
-  }
-
-  private func close() {
-    withAnimation(.snappy) { offset = 0 }
-    start = 0
-  }
-}
-
-/// A pan that starts only when the finger moves more sideways than up or down,
-/// so the list still scrolls and the row's button loses the touch once it starts.
-private struct HorizontalPan: UIGestureRecognizerRepresentable {
-  let onChange: (CGFloat) -> Void
-  /// The pan's sideways travel and speed when the finger lifts.
-  let onEnd: (CGFloat, CGFloat) -> Void
-
-  func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
-
-  func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
-    let pan = UIPanGestureRecognizer()
-    pan.delegate = context.coordinator
-    return pan
-  }
-
-  func handleUIGestureRecognizerAction(_ pan: UIPanGestureRecognizer, context: Context) {
-    let dx = pan.translation(in: pan.view).x
-    switch pan.state {
-    case .changed: onChange(dx)
-    case .ended, .cancelled, .failed: onEnd(dx, pan.velocity(in: pan.view).x)
-    default: break
-    }
-  }
-
-  final class Coordinator: NSObject, UIGestureRecognizerDelegate {
-    func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
-      guard let pan = recognizer as? UIPanGestureRecognizer else { return true }
-      let v = pan.velocity(in: pan.view)
-      return abs(v.x) > abs(v.y)
-    }
-  }
 }

@@ -30,7 +30,7 @@ private func morra() -> (AppState, String) {
     #expect(prepRanOut(missed, bookIndex).session.prepEnd == nil)
   }
 
-  /// Rules 3 and 4: the hole's answer turns yes once the pace reaches 1 on a known line.
+  /// Rule 4: the hole's answer turns yes once the pace reaches 1, at the curve's next hole.
   @Test func holeAnswersYesOncePaceIsDue() throws {
     let tree = openingTree(bookIndex)
     var (state, _) = morra()
@@ -52,26 +52,85 @@ private func morra() -> (AppState, String) {
     #expect(found.yes && found.gap.line == hole)
   }
 
-  /// Rule 5: a position's mastery is right answers, weighted toward fast ones.
-  @Test func positionMasteryWeighsSpeed() {
-    var card = createCard("c", "p", "k", START_FEN, 0)
-    #expect(positionMastery(nil) == 0 && positionMastery(card) == 0)
-    card.correct = 3
-    card.incorrect = 1
-    card.ease = 2.5
-    #expect(positionMastery(card) == 0.75)
-    card.ease = 1.3
-    #expect(abs(positionMastery(card) - 0.45) < 1e-9)
+  /// Rule 1: a hole grows when at least 1% of your games meet it, most met first.
+  @Test func holesMetInOnePercent() throws {
+    let tree = openingTree(bookIndex)
+    let found = curveHoles([rep(.w, ["e4 e5 Nf3 Nc6 Bb5 a6", "d4 d5 c4"])], bookIndex, tree: tree)
+    #expect(!found.isEmpty)
+    #expect(found.allSatisfy { $0.importance >= CURVE_MIN_REACH })
+    #expect(zip(found, found.dropFirst()).allSatisfy { $0.importance >= $1.importance })
+    #expect(found.allSatisfy { $0.importance == $0.hole.reach * $0.hole.share / 100 })
   }
 
-  /// Rule 6: g is the gap against the top one, at most 1.
-  @Test func gapWeightAgainstTheTop() throws {
-    let found = gaps([rep(.w, ["e4 c5 d4 cxd4 c3", "d4 d5 c4"])], bookIndex, tree: openingTree(bookIndex))
-    let top = try #require(found.first)
-    let last = try #require(found.last)
-    #expect(gapWeight(top, top: top) == 1)
-    #expect(gapWeight(last, top: top) == last.importance / top.importance)
-    #expect(gapWeight(top, top: last) == 1)
+  /// Rule 3: a hole's level is the opponent's move number at it when that is 1 or 2, else 0.
+  @Test func levelsByTheOpponentsMove() throws {
+    let tree = openingTree(bookIndex)
+    let found = curveHoles([rep(.w, ["e4 e5 Nf3 Nc6 Bb5 a6"])], bookIndex, tree: tree)
+    let c5 = try #require(found.first { $0.line == line("e4 c5") })
+    let petrov = try #require(found.first { $0.line == line("e4 e5 Nf3 Nf6") })
+    let deep = try #require(found.first { $0.path.count >= 4 })
+    #expect(curveLevel(c5) == 1)
+    #expect(curveLevel(petrov) == 2)
+    #expect(curveLevel(deep) == 0)
+    let black = curveHoles([rep(.b, ["e4 c5 Nf3 d6"])], bookIndex, tree: tree)
+    #expect(black.filter { $0.path.isEmpty }.allSatisfy { curveLevel($0) == 1 })
+    #expect(black.filter { $0.path.count == 2 }.allSatisfy { curveLevel($0) == 2 })
+  }
+
+  /// Rule 3: level 2 opens once no depth hole is left, at 20 games with every opening green;
+  /// level 1 the same after level 2, at 40 games.
+  @Test func levelsOpenInTurn() throws {
+    let tree = openingTree(bookIndex)
+    let found = curveHoles([rep(.w, ["e4 e5 Nf3 Nc6 Bb5 a6"])], bookIndex, tree: tree)
+    let shallow = found.filter { curveLevel($0) != 0 }
+    let onlyFirst = found.filter { curveLevel($0) == 1 }
+    let green = CurveGate(games: 40, green: 3, openings: 3)
+    #expect(openLevels(found, green) == [0], "depth first")
+    #expect(openLevels(shallow, green) == [0, 2])
+    #expect(openLevels(onlyFirst, green) == [0, 2, 1])
+    #expect(openLevels(onlyFirst, CurveGate(games: 39, green: 3, openings: 3)) == [0, 2])
+    #expect(openLevels(onlyFirst, CurveGate(games: 19, green: 3, openings: 3)) == [0])
+    #expect(openLevels(onlyFirst, CurveGate(games: 40, green: 2, openings: 3)) == [0])
+  }
+
+  /// Rule 5: green is a form of at least 0.8 over enough answers.
+  @Test func greenNeedsEnoughGoodAnswers() {
+    var form = FormRecord()
+    form.openings["x"] = Array(repeating: 1, count: FORM_MIN_ANSWERS - 1)
+    #expect(!isGreen(form, "x"))
+    form.openings["x"] = Array(repeating: 0.8, count: FORM_MIN_ANSWERS)
+    #expect(isGreen(form, "x"))
+    form.openings["x"] = Array(repeating: 0.7, count: FORM_MIN_ANSWERS)
+    #expect(!isGreen(form, "x"))
+  }
+
+  /// Rule 11: as Black a new reply is answered with the calmest of the three most played; as White the order stays.
+  @Test func blackGetsTheCalmestAnswer() {
+    let tree = openingTree(bookIndex)
+    let answers = popularReplies(bookIndex, walkSan(line("e4")).fens[1], 0).prefix(4).map(\.san)
+    let calm = calmFirst(tree, line("e4"), color: .b, answers, san: { $0 })
+    let sharp = { (san: String) in sharpnessOf(tree, line("e4") + [san]) }
+    #expect(answers.prefix(3).allSatisfy { sharp(calm[0]) <= sharp($0) })
+    #expect(Array(calm.dropFirst()) == answers.filter { $0 != calm[0] })
+    #expect(calmFirst(tree, line("e4"), color: .w, answers, san: { $0 }) == answers)
+  }
+
+  /// Rule 12: a locked opening grows now for a pawn, with one fill along its line.
+  @Test func unlockingEarlyCostsAPawn() throws {
+    let tree = openingTree(bookIndex)
+    var state = AppState()
+    let id = state.ensurePlaybook(.w)
+    state.addLine(id, line("e4 e5 Nf3 Nc6 Bb5 a6"), .fixed(.book))
+    let gap = try #require(curveHoles(state.playbookList, bookIndex, tree: tree).first { $0.line == line("e4 c5") })
+    let broke = state.unlockEarly(gap, tree)
+    #expect(!broke, "no pawns")
+    state.pawns = 2
+    let bought = state.unlockEarly(gap, tree)
+    #expect(bought)
+    #expect(state.pawns == 1)
+    let added = unlockLine(tree, gap, size: state.settings.movesPerFill)
+    #expect(added.count > gap.line.count)
+    #expect(nodeAtLine(state.playbooks[id]!, added) != nil)
   }
 
   /// Rule 8: a move added mid-run isn't graded and counts in the book's color.
@@ -118,39 +177,6 @@ private func morra() -> (AppState, String) {
     #expect(!found.contains { $0.line == line("e4 e5 Nf3 Nc6") })
   }
 
-  /// Rule 5: a line's mastery is the average over your moves on it; a move never asked counts as 0.
-  @Test func masteryCountsUnaskedAsWeak() {
-    var state = AppState()
-    let id = state.ensurePlaybook(.w)
-    state.addLine(id, line("e4 c5 d4 cxd4 c3"), .fixed(.book))
-    let rep = state.playbooks[id]!
-    #expect(lineMastery(rep, state.cards, line("e4 c5 d4 cxd4 c3")) == 0)
-    #expect(lineMastery(rep, state.cards, []) == 1)
-    let fens = walkSan(line("e4 c5 d4 cxd4")).fens
-    for _ in 0..<3 {
-      state.answered(id, fens[0], "e4", .good)
-      state.answered(id, fens[2], "d4", .good)
-      state.answered(id, fens[4], "c3", .good)
-    }
-    let known = lineMastery(state.playbooks[id]!, state.cards, line("e4 c5 d4 cxd4 c3"))
-    #expect(known > 0.5)
-  }
-
-  /// Rule 5: your first move as White, which no run asks, is left out of the average.
-  @Test func masteryLeavesOutWhitesFirstMove() {
-    var state = AppState()
-    let id = state.ensurePlaybook(.w)
-    state.addLine(id, line("e4 c5 d4 cxd4 c3"), .fixed(.book))
-    let fens = walkSan(line("e4 c5 d4 cxd4")).fens
-    for _ in 0..<3 {
-      state.answered(id, fens[2], "d4", .easy)
-      state.answered(id, fens[4], "c3", .easy)
-    }
-    let unasked = lineMastery(state.playbooks[id]!, state.cards, line("e4 c5 d4 cxd4 c3"))
-    #expect(unasked > 0.9, "1.e4 never asked doesn't drag the line down")
-    #expect(lineMastery(state.playbooks[id]!, state.cards, line("e4 c5")) == 1, "a line with only White's first move counts as known")
-  }
-
   /// Rule 9: where a line stops, every common reply can be grown at, not only the gap's.
   @Test func growHereAtEveryCommonReplyWhereALineStops() throws {
     let tree = openingTree(bookIndex)
@@ -158,8 +184,8 @@ private func morra() -> (AppState, String) {
     let id = state.ensurePlaybook(.w)
     state.addLine(id, line("d4 d5 c4"), .fixed(.book))
     let selection = Selection(color: .w, opening: ANY_OPENING)
-    let gaps = selectionGaps(state, tree, selection).filter { $0.hole.path == line("d4 d5 c4") }
-    #expect(gaps.map(\.hole.san) == ["e6"], "a line that just stops is one gap, at its most played reply")
+    let stops = gaps(state.playbookList, bookIndex, tree: tree).filter { $0.hole.path == line("d4 d5 c4") }
+    #expect(stops.map(\.hole.san) == ["e6"], "a line that just stops is one gap, at its most played reply")
     let found = try #require(growAtHole(state, tree, selection, color: .w, line: line("d4 d5 c4 dxc4")))
     #expect(found.yes == false, "only the gap is asked about")
     #expect(found.gap.line == line("d4 d5 c4 dxc4"))

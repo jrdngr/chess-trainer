@@ -4,7 +4,7 @@ import Model
 import SwiftUI
 
 /// Home: Play's next run on its button with the selection under it, Middlegame and
-/// Endgames, Recommendations and Milestones. A mode tile starts the mode on
+/// Endgames, the line on what the Playbook grows next, and Milestones. A mode tile starts the mode on
 /// your saved settings; press and hold Middlegame for Start or Settings (its
 /// setup screen first). A Pawn Shop feature shows only once it is yours. A
 /// side picker or opening picker just bought gets a tip at its control.
@@ -13,8 +13,8 @@ struct HomeView: View {
   let onOpen: (Mode) -> Void
   /// Open a mode on its setup screen.
   let onSetup: (Mode) -> Void
-  /// Fill a recommendation in Growth.
-  let onGap: (Gap) -> Void
+  /// Open the Playbook tree at the opening that grows next.
+  let onNext: (MapNode) -> Void
   /// Go to the Playbook tab, when there is nothing to play yet.
   let onPlaybook: () -> Void
   @Environment(AppStore.self) private var store
@@ -57,7 +57,7 @@ struct HomeView: View {
             .padding(.bottom, 10)
           }
           VStack(spacing: 10) {
-            RecommendationsCard(tree: tree, onPick: onGap).unlockedBy(.recommendations, hidden: true)
+            NextLine(tree: tree, onOpen: onNext)
             MilestonesCard()
           }
         }

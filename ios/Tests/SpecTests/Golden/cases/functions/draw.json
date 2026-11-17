@@ -42,10 +42,10 @@
     },
     {
       "fn": "openingRun.opponentReply",
-      "about": "Off the drawn line, the opponent replies by weight, among replies that keep the run going where there are any: counts over 300 rolls.",
+      "about": "Off the drawn line, the opponent replies by weight, only with your Playbook's replies where it has any: counts over 300 rolls.",
       "cases": [
       {"args":["w","e4",""],"out":{"c5":112,"e5":74,"c6":61,"e6":53}},
-      {"args":["w","e4 e5 Nf3",""],"out":{"Nc6":217,"d6":46,"Nf6":37}},
+      {"args":["w","e4 e5 Nf3",""],"out":{"Nc6":244,"d6":56}},
       {"args":["b","e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6",""],"out":{"Nc3":300}},
       {"args":["b","d4 Nf6","d4 Nf6 c4 g6"],"out":{"c4":198,"Nf3":102}}
       ]

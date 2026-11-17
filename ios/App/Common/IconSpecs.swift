@@ -130,11 +130,6 @@ extension Icon {
       IconPart(.path("M5 7h14M5 12h14M5 17h8M16 16l2 2 2-2"), fill: .none, stroke: .current, opacity: (1, 1))]),
     "shop.freeform": IconSpec(strokeWidth: 2, parts: [
       IconPart(.path("M3.5 17c3-10 5.5-10 7.5-3s4.5 6 9.5-7"), fill: .none, stroke: .current, opacity: (1, 1))]),
-    "shop.recommendations": IconSpec(strokeWidth: 2, parts: [
-      IconPart(.circle(7, 5.5, 2), fill: .none, stroke: .current, opacity: (1, 1)),
-      IconPart(.circle(7, 18.5, 2), fill: .none, stroke: .current, opacity: (1, 1)),
-      IconPart(.circle(17, 9, 2), fill: .none, stroke: .current, opacity: (1, 1)),
-      IconPart(.path("M7 7.5v9M17 11c0 3.5-5 3-9 4.5"), fill: .none, stroke: .current, opacity: (1, 1))]),
     "shop.middlegame": IconSpec(strokeWidth: 2, parts: [
       IconPart(.path("M12 21v-8M12 13L6.5 5.5M12 13l5.5-7.5M4.5 8.5l2-3 3 1.3M19.5 8.5l-2-3-3 1.3"), fill: .none, stroke: .current, opacity: (1, 1))]),
     "shop.endgames": IconSpec(strokeWidth: 2, parts: [

@@ -60,19 +60,31 @@ played fast, a blunder punished, a moment found, a mission met, reaching
 the endgame, a mate, an Endgames goal, and the first game of each day in a
 streak. Pawns buy features in the Pawn Shop, in an order that teaches the
 game. A new player starts on White Drill with Any Opening, then buys the
-side picker, the lenses, the opening picker, Freeform, Recommendations,
-Middlegame and Endgames. There is no tutorial: a tip explains each thing
-the first time it comes up. Each opening shows its form as signal bars
-instead of a rating. The rules: [pawns](rules/pawns.md),
+side picker, the lenses, the opening picker, Freeform, Middlegame and
+Endgames. There is no tutorial: a tip explains each thing
+the first time it comes up. Each opening shows its form instead of a
+rating. The rules: [pawns](rules/pawns.md),
 [the Pawn Shop](rules/shop.md), [tips](rules/tips.md), [form](rules/form.md).
+
+## The growth curve
+
+Added 2026-11-17. The Playbook grows depth first: the hole you meet most
+often inside your lines grows next, one fill at a time. Replies that leave
+your openings at the opponent's second move, then first move, open as
+levels, once there is nothing deeper to grow, you have played 20 (then 40)
+games, and every opening you have is green. The opponent plays only what
+you have unlocked. The Playbook tab is a tree of your openings with the
+ones to come locked in place; any of them can be unlocked early for a pawn.
+Home's one line says what grows next. The rules: [growth](rules/growth.md),
+[playbook](rules/playbook.md).
 
 ## What it is not
 
 - It is not a mode picker. Freeform and Drill are one kind of round that
   only starts differently.
 - It is not a Playbook editor. It adds moves only at the one hole a run
-  reaches. Other growing is done from Home's Recommendations or an
-  opening's Grow.
+  reaches. Other growing is an opening's Grow, or unlocking an opening
+  early on the Playbook tree.
 - It is not where you choose an exact line, side, steer or clock.
 - It never starts from the opening's named position just because it is
   named, and never asks which first move an opening wants: learning names is

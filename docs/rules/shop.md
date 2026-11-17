@@ -8,8 +8,7 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    picker 5; the Pawns lens 10, then the Pieces lens 20, the Kings lens 30
    and the Eval lens 60, each after the one before; Plan 40; opening
    picker 50, after the side picker; Freeform 120, after the opening
-   picker; Recommendations 150, after Freeform; Middlegame 300, after the
-   Pieces lens; Endgames 300. Each item's sheet says in a sentence what it
+   picker; Middlegame 300, after the Pieces lens; Endgames 300. Each item's sheet says in a sentence what it
    does.
 2. **Buying** takes the price off your pawns. An item is for sale only
    when every item it needs is yours and you have its price, and it is
@@ -21,7 +20,7 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    White. Without the opening picker you play Any Opening. Without
    Freeform you play Drill. The side picker offers White, Black and Either. Home shows a
    feature's control only once it is yours: the side picker, the Freeform
-   switch, the opening picker, Middlegame, Endgames and Recommendations.
+   switch, the opening picker, Middlegame and Endgames.
    Profiles from before the shop own every feature (see [saves](saves.md)).
 5. **Each lens shows once it is yours,** in Play, on the end screen and in
    Endgames. Analysis has every lens.

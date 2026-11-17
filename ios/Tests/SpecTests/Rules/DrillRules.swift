@@ -66,11 +66,13 @@ private func asked(_ items: [TrainingItem], _ tested: Int) -> [String: Card] {
     let tree = openingTree(bookIndex)
     var state = AppState()
     let id = state.ensurePlaybook(.w)
-    state.addLine(id, line("e4 e5 Nf3"), .fixed(.book))
+    // The Parham Attack ends where the book's name does, so once level 1 opens its gaps are 1.e4's other replies.
+    state.addLine(id, line("e4 e5 Qh5"), .fixed(.book))
     for _ in 0..<4 { state.answered(id, START_FEN, "e4", .easy) }
+    state.form.openings[try #require(deepestNodeAlong(tree, line("e4 e5 Qh5"))).id] = Array(repeating: 1, count: FORM_MIN_ANSWERS)
     let selection = Selection(color: .w, opening: ANY_OPENING)
     let after = lastAddedAt(state.playbookList) + 1
-    for i in 0..<5 {
+    for i in 0..<CURVE_LEVEL_GAMES[1]! {
       state.recordGame(GameRecord(
         id: "g\(i)", mode: .play, at: after + Double(i), color: .w, picked: selection, opening: selection.opening, moves: ["e4"],
         result: "*", termination: "ended"))

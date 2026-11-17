@@ -84,17 +84,17 @@ private let seeds: [Double] = [1, 2, 3, 4, 5, 6, 7, 8]
     #expect(begun.redraw(run).target == line(NAJDORF))
   }
 
-  /// Rule 7: with no line to follow, a reply you have or a book move.
+  /// Rule 7: with no line to follow, only the replies you have where you have any, else book moves.
   @Test func repliesYouHaveOrBookMoves() throws {
     let tree = openingTree(bookIndex)
     let white = rep(.w, ["e4 e5 Nf3"])
     let source = regionSource(tree, tree.root, white, .w)
     let afterE4 = walkSan(line("e4")).fens[1]
-    let replies = source.weightsAt(afterE4, line("e4")).map(\.san)
-    let book = bookMoves(bookIndex, afterE4)
-    #expect(replies.contains("e5"))
-    #expect(replies.allSatisfy { $0 == "e5" || book.contains($0) })
-    #expect(Set(book).isSubset(of: Set(replies)))
+    #expect(source.weightsAt(afterE4, line("e4")).map(\.san) == ["e5"], "1...c5 is still locked")
+    let afterD4 = walkSan(line("d4")).fens[1]
+    let replies = source.weightsAt(afterD4, line("d4")).map(\.san)
+    let book = bookMoves(bookIndex, afterD4)
+    #expect(!replies.isEmpty && replies.allSatisfy { book.contains($0) })
   }
 
   /// Rule 8: the engine's level is your strength to the nearest 50.
