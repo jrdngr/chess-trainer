@@ -195,9 +195,11 @@ public struct EndgameRecord: Equatable, Sendable, Codable {
   public var rounds = 0
   /// Each family's last rounds, newest last: whether the goal was met.
   public var results: [String: [Bool]] = [:]
+  /// Each position's bounties and tune-ups.
+  public var progress: [String: EndgameProgress] = [:]
   public init() {}
 
-  enum CodingKeys: String, CodingKey { case cards, seenIntros, saved, rounds, results }
+  enum CodingKeys: String, CodingKey { case cards, seenIntros, saved, rounds, results, progress }
 
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -206,6 +208,7 @@ public struct EndgameRecord: Equatable, Sendable, Codable {
     saved = try c.decodeIfPresent([SavedEndgame].self, forKey: .saved) ?? []
     rounds = try c.decodeIfPresent(Int.self, forKey: .rounds) ?? 0
     results = try c.decodeIfPresent([String: [Bool]].self, forKey: .results) ?? [:]
+    progress = try c.decodeIfPresent([String: EndgameProgress].self, forKey: .progress) ?? [:]
   }
 
   /// A family's form: signal bars from its last rounds, or nil before it has enough.
@@ -220,9 +223,91 @@ public struct EndgameRecord: Equatable, Sendable, Codable {
       .sorted { cards[$0.id]!.dueRound < cards[$1.id]!.dueRound }
   }
 
-  /// The next position to play: the first due, else the first never played.
-  public var next: EndgameEntry? {
-    due.first ?? entries.first { cards[$0.id] == nil }
+  /// The next position to play: a tune-up due, else the first due, else the first never played.
+  public var next: EndgameEntry? { next(now: Env.now()) }
+
+  public func next(now: Double) -> EndgameEntry? {
+    tuneUpsDue(now: now).first ?? due.first ?? entries.first { cards[$0.id] == nil }
+  }
+
+  /// What Practice plays: tune-ups due, then what is due, else the next ending to learn.
+  public func practice(now: Double = Env.now()) -> [EndgameEntry] {
+    let tuneUps = tuneUpsDue(now: now)
+    let queue = tuneUps + due.filter { e in !tuneUps.contains { $0.id == e.id } }
+    if !queue.isEmpty { return queue }
+    return next(now: now).map { [$0] } ?? []
+  }
+
+  /// Mastered positions whose tune-up is due, longest due first.
+  public func tuneUpsDue(now: Double) -> [EndgameEntry] {
+    entries.filter { progress[$0.id]?.tuneUpDue(now: now) == true }
+      .sorted { progress[$0.id]!.tuneAt! < progress[$1.id]!.tuneAt! }
+  }
+}
+
+/* ── bounties and tune-ups ── */
+
+/// What a library ending pays, once each: its first clear, its first mission, and mastery.
+public let ENDGAME_CLEAR_PAWNS = 250, ENDGAME_MISSION_PAWNS = 100, ENDGAME_MASTERY_PAWNS = 500
+/// What a passed tune-up pays, and what a From your games position pays on its first conversion.
+public let ENDGAME_TUNE_UP_PAWNS = 100, ENDGAME_CONVERTED_PAWNS = 100
+/// Successes in a row, each on a different day, that master an ending.
+public let ENDGAME_MASTERY_DAYS = 3
+/// Days to the first tune-up after mastery, the longest interval, and the wait after a failed one.
+public let TUNE_UP_FIRST_DAYS = 14.0, TUNE_UP_MAX_DAYS = 90.0, TUNE_UP_RETRY_DAYS = 3.0
+
+/// One position's bounties and, once mastered, its tune-ups.
+public struct EndgameProgress: Equatable, Sendable, Codable {
+  public var cleared = false
+  public var missionMet = false
+  /// The days of the successes in a row so far; a failure clears them.
+  public var successDays: [String] = []
+  public var mastered = false
+  /// When the next tune-up is due, and the days since the last that it waited.
+  public var tuneAt: Double?
+  public var tuneDays: Double = 0
+  public init() {}
+
+  public func tuneUpDue(now: Double) -> Bool { mastered && (tuneAt ?? .infinity) <= now }
+}
+
+extension EndgameRecord {
+  /// A round's bounties: an ending's first clear, first mission and mastery each pay once; a
+  /// passed tune-up pays, and a failed one comes back in 3 days with mastery kept. A From your
+  /// games position pays once, on its first conversion. Call after the round's result is known.
+  public mutating func bounties(_ entry: EndgameEntry, success: Bool, mission: Bool, now: Double) -> [PawnAward] {
+    var p = progress[entry.id] ?? EndgameProgress()
+    var paid: [PawnAward] = []
+    if entry.family == "games" {
+      if success && !p.cleared { paid.append(PawnAward(.endgameConverted, .board, count: ENDGAME_CONVERTED_PAWNS)) }
+      if success { p.cleared = true }
+      progress[entry.id] = p
+      return paid
+    }
+    let tuneUp = p.tuneUpDue(now: now)
+    if success {
+      if !p.cleared { paid.append(PawnAward(.endgameClear, .board, count: ENDGAME_CLEAR_PAWNS)) }
+      p.cleared = true
+      if mission && !p.missionMet { paid.append(PawnAward(.endgameMission, .board, count: ENDGAME_MISSION_PAWNS)) }
+      if mission { p.missionMet = true }
+      let today = dayKey(now)
+      if p.successDays.last != today { p.successDays = Array((p.successDays + [today]).suffix(ENDGAME_MASTERY_DAYS)) }
+      if !p.mastered && p.successDays.count >= ENDGAME_MASTERY_DAYS {
+        p.mastered = true
+        p.tuneDays = TUNE_UP_FIRST_DAYS
+        p.tuneAt = now + TUNE_UP_FIRST_DAYS * DAY
+        paid.append(PawnAward(.endgameMastery, .board, count: ENDGAME_MASTERY_PAWNS))
+      } else if tuneUp {
+        p.tuneDays = min(TUNE_UP_MAX_DAYS, p.tuneDays * 2)
+        p.tuneAt = now + p.tuneDays * DAY
+        paid.append(PawnAward(.endgameTuneUp, .board, count: ENDGAME_TUNE_UP_PAWNS))
+      }
+    } else {
+      p.successDays = []
+      if tuneUp { p.tuneAt = now + TUNE_UP_RETRY_DAYS * DAY }
+    }
+    progress[entry.id] = p
+    return paid
   }
 }
 

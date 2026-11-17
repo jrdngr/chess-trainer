@@ -30,4 +30,14 @@ Play run are in [past prep](past-prep.md).
 6. **The next round** is the position due longest, else the first never
    played. A position never played isn't due; it waits its turn.
 7. **Each family has a form:** its last rounds, read as signal bars (see
-   [form](form.md)). A goal met pays a pawn (see [pawns](pawns.md)).
+   [form](form.md)).
+8. **Bounties, not rounds, pay.** Each library ending pays once for its
+   first clear (250), its first mission met (100) and mastery (500).
+   Mastered is 3 successes in a row, each on a different day; a failure
+   starts the count again. Each From your games position pays 100 once, on
+   its first success. Other rounds pay nothing.
+9. **Tune-ups keep a mastered ending.** The first comes due 14 days after
+   mastery; each pass pays 100 and doubles the wait, up to 90 days. A failed
+   one pays nothing and comes back in 3 days, and mastery is kept. Practice
+   plays tune-ups due first, and while one is due the Endgames tile on Home
+   shows a plain dot with no count.

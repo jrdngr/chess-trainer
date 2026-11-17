@@ -52,7 +52,8 @@ struct HomeView: View {
           if store.state.owns(.middlegame) || store.state.owns(.endgames) {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 10) {
               tile("Middlegame", "middlegame", .middlegame, held: true).unlockedBy(.middlegame, hidden: true)
-              tile("Endgames", "flag", .endgame).unlockedBy(.endgames, hidden: true)
+              tile("Endgames", "flag", .endgame, dot: !store.state.endgames.tuneUpsDue(now: Env.now()).isEmpty)
+                .unlockedBy(.endgames, hidden: true)
             }
             .padding(.bottom, 10)
           }
@@ -110,12 +111,14 @@ struct HomeView: View {
   }
 
   /// A mode's tile. `held`: press and hold offers Start and Settings.
-  @ViewBuilder private func tile(_ name: String, _ icon: String, _ mode: Mode, held: Bool = false) -> some View {
+  /// `dot`: a plain dot, no count, while something waits there (an Endgames tune-up).
+  @ViewBuilder private func tile(_ name: String, _ icon: String, _ mode: Mode, held: Bool = false, dot: Bool = false) -> some View {
     let button = Button { onOpen(mode) } label: {
       HStack(spacing: 10) {
         Icon(name: icon, size: 20).foregroundStyle(Theme.accent)
         Text(name).font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.text)
         Spacer(minLength: 0)
+        if dot { Circle().fill(Theme.accent).frame(width: 8, height: 8).accessibilityLabel("Tune-up due") }
       }
       .padding(.horizontal, 12).frame(minHeight: 56)
       .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface))

@@ -45,7 +45,8 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
     let paid = Dictionary(uniqueKeysWithValues: PawnEvent.allCases.map { ($0, pawnsFor($0)) })
     #expect(paid == [
       .prepComplete: 1, .blunderPunished: 3, .moment: 6, .mission: 6, .endgame: 3, .checkmate: 15,
-      .endgameGoal: 1, .streak: 1, .distance: 10, .heldDraw: 7,
+      .streak: 1, .distance: 10, .heldDraw: 7,
+      .endgameClear: 250, .endgameMission: 100, .endgameMastery: 500, .endgameTuneUp: 100, .endgameConverted: 100,
     ])
   }
 

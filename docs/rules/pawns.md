@@ -8,8 +8,8 @@ target. Tests: the `docs/rules/pawns.md` suite in
 1. **Only these events pay**, in Play and Middlegame runs and Endgames
    rounds: prep complete 1 for each prep move asked, blunder punished 3, a
    found moment 6, a mission done 6, reaching the endgame 3, checkmate 15,
-   distance markers and a held draw (rules 9 and 10), an Endgames round's
-   goal met 1. Single moves, growth and milestones pay
+   distance markers and a held draw (rules 9 and 10), and Endgames bounties
+   (see [endgames](endgames.md)). Single moves, growth and milestones pay
    nothing.
 2. **Prep complete** pays when your prep runs out, asked you something, and
    was never missed: a pawn for each prep move asked. Each prepared move

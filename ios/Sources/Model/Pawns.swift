@@ -19,8 +19,9 @@ public enum PawnEvent: String, Sendable, Codable, CaseIterable {
   case distance
   /// A draw held from −1.5 or worse after the prep.
   case heldDraw
-  /// An Endgames round's goal met.
-  case endgameGoal
+  /// Endgames bounties, each paid once for an ending: its first clear, its first mission, its
+  /// mastery. Then each passed tune-up, and a From your games position's first conversion.
+  case endgameClear, endgameMission, endgameMastery, endgameTuneUp, endgameConverted
   /// The first game of a day in a streak; its pawns come from `streakPawns`.
   case streak
 }
@@ -29,7 +30,12 @@ public enum PawnEvent: String, Sendable, Codable, CaseIterable {
 /// the streak's length.
 public func pawnsFor(_ event: PawnEvent) -> Int {
   switch event {
-  case .prepComplete, .endgameGoal: return 1
+  case .prepComplete: return 1
+  case .endgameClear: return ENDGAME_CLEAR_PAWNS
+  case .endgameMission: return ENDGAME_MISSION_PAWNS
+  case .endgameMastery: return ENDGAME_MASTERY_PAWNS
+  case .endgameTuneUp: return ENDGAME_TUNE_UP_PAWNS
+  case .endgameConverted: return ENDGAME_CONVERTED_PAWNS
   case .blunderPunished, .endgame: return 3
   case .moment, .mission: return 6
   case .checkmate: return 15
@@ -81,7 +87,7 @@ public enum PawnSource: Equatable, Sendable {
   case pot
   /// The goal card, for a mission done.
   case goal
-  /// The board as a whole: an endgame reached, an Endgames goal met.
+  /// The board as a whole: an endgame reached, a held draw, an Endgames bounty.
   case board
   /// The streak ring on Home, for a streak day.
   case streak

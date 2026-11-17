@@ -15,18 +15,12 @@ public final class EndgameSession {
     self.store = store
   }
 
-  /// Practice: what is due, else the next ending to learn. False when there is neither.
+  /// Practice: tune-ups and what is due, else the next ending to learn. False when there is neither.
   @discardableResult
   public func practice() -> Bool {
-    let record = store.state.endgames
-    if !record.due.isEmpty {
-      play(record.due)
-    } else if let next = record.next {
-      play([next])
-    } else {
-      return false
-    }
-    return true
+    let queue = store.state.endgames.practice()
+    play(queue)
+    return !queue.isEmpty
   }
 
   /// Play these endings in order.

@@ -167,4 +167,58 @@ private func coordsOf(_ square: String) -> (Int, Int) {
     #expect(endgameOutcome(pawn, "Q7/8/8/8/8/8/5k2/7K b - - 0 1", you: .w, yourMoves: 4, promoted: true, stillWon: true) == .success(text: "Queened", mission: true))
     #expect(endgameOutcome(pawn, "Q7/8/8/8/8/8/5k2/7K b - - 0 1", you: .w, yourMoves: 4, promoted: true, stillWon: false) == nil)
   }
+
+  /// Rule 8: first clear, first mission and mastery each pay once; mastery takes 3 days in a row.
+  @Test func bountiesPayOnce() {
+    let queen = ENDGAME_LIBRARY.first { $0.id == "mate-queen" }!
+    var record = EndgameRecord()
+    let day0 = 1_790_000_000_000.0
+    let paid = { (r: inout EndgameRecord, success: Bool, mission: Bool, at: Double) in
+      r.bounties(queen, success: success, mission: mission, now: at).map(\.event)
+    }
+    #expect(paid(&record, true, false, day0) == [.endgameClear])
+    #expect(paid(&record, true, false, day0 + 1000).isEmpty, "a second success the same day counts once")
+    #expect(paid(&record, true, true, day0 + DAY) == [.endgameMission])
+    #expect(paid(&record, false, false, day0 + 2 * DAY).isEmpty, "a failure starts mastery's count again")
+    #expect(paid(&record, true, true, day0 + 3 * DAY).isEmpty)
+    #expect(paid(&record, true, true, day0 + 4 * DAY).isEmpty)
+    #expect(paid(&record, true, true, day0 + 5 * DAY) == [.endgameMastery])
+    #expect(record.progress[queen.id]?.mastered == true)
+    #expect(paid(&record, true, true, day0 + 6 * DAY).isEmpty, "mastery pays once")
+
+    // From your games: once, on the first conversion.
+    let saved = SavedEndgame(id: "s", fen: "8/8/4k3/8/8/8/4K3/7R w - - 0 1", goal: .win, name: "", at: 0).entry
+    #expect(record.bounties(saved, success: false, mission: false, now: day0).isEmpty)
+    #expect(record.bounties(saved, success: true, mission: true, now: day0).map(\.count) == [100])
+    #expect(record.bounties(saved, success: true, mission: true, now: day0 + DAY).isEmpty)
+  }
+
+  /// Rule 9: tune-ups at 14 days, doubling to 90; a failure comes back in 3 days and keeps mastery.
+  @Test func tuneUpsKeepMastery() {
+    let queen = ENDGAME_LIBRARY.first { $0.id == "mate-queen" }!
+    var record = EndgameRecord()
+    var mastered = EndgameProgress()
+    mastered.cleared = true
+    mastered.missionMet = true
+    mastered.mastered = true
+    mastered.tuneDays = 14
+    let t0 = 1_790_000_000_000.0
+    mastered.tuneAt = t0 + 14 * DAY
+    record.progress[queen.id] = mastered
+    #expect(record.tuneUpsDue(now: t0 + 13 * DAY).isEmpty)
+    #expect(record.practice(now: t0 + 14 * DAY).first?.id == queen.id, "Practice plays the tune-up first")
+    #expect(record.bounties(queen, success: false, mission: false, now: t0 + 14 * DAY).isEmpty)
+    #expect(record.progress[queen.id]?.mastered == true)
+    #expect(record.progress[queen.id]?.tuneAt == t0 + 17 * DAY)
+    #expect(record.bounties(queen, success: true, mission: true, now: t0 + 17 * DAY).map(\.event) == [.endgameTuneUp])
+    #expect(record.progress[queen.id]?.tuneAt == t0 + 45 * DAY)
+    var at = t0 + 45 * DAY
+    for _ in 0..<3 {
+      _ = record.bounties(queen, success: true, mission: true, now: at)
+      at = record.progress[queen.id]!.tuneAt!
+    }
+    #expect(record.progress[queen.id]?.tuneDays == 90)
+    // Between tune-ups a round pays nothing.
+    #expect(record.bounties(queen, success: true, mission: true, now: at - DAY).isEmpty)
+  }
 }

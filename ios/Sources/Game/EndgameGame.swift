@@ -171,10 +171,14 @@ public final class EndgameGame {
     thinking = false
     outcome = result
     phase = .over
-    var success = false
-    if case .success = result { success = true }
-    store.update { $0.endgames.review(entry, success: success) }
-    if success { store.pay(PawnAward(.endgameGoal, .board)) }
+    var success = false, mission = false
+    if case .success(_, let met) = result { (success, mission) = (true, met) }
+    var paid: [PawnAward] = []
+    store.update { state in
+      state.endgames.review(entry, success: success)
+      paid = state.endgames.bounties(entry, success: success, mission: mission, now: Env.now())
+    }
+    for award in paid { store.pay(award) }
     store.finishedGame()
   }
 }
