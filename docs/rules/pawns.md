@@ -6,14 +6,20 @@ target. Tests: the `docs/rules/pawns.md` suite in
 `Tests/SpecTests/Rules/PawnsRules.swift`.
 
 1. **Only these events pay**, in Play and Middlegame runs and Endgames
-   rounds: prep complete 1, blunder punished 1, a found moment
-   2, a mission done 2, reaching the endgame 1, checkmate 3, an Endgames
-   round's goal met 1. Single moves, growth and milestones pay nothing.
+   rounds: prep complete 1 for each prep move asked, blunder punished 3, a
+   found moment 6, a mission done 6, reaching the endgame 3, checkmate 15,
+   an Endgames round's goal met 1. Single moves, growth and milestones pay
+   nothing.
 2. **Prep complete** pays when your prep runs out, asked you something, and
-   was never missed. When growth opens there because a move is due, the pawn
-   waits: the first move you add pays it, popping out of that move, and Done or the game ending first
-   loses it. An opening complete through the book has nothing due, so it
-   always pays. Tests: the held-pawn flows in `Tests/FlowTests/PlayFlowTests.swift`.
+   was never missed: a pawn for each prep move asked. Each prepared move
+   you find pops a pawn out of its square into the pot beside the prep bar,
+   which counts them; nothing is paid until the prep completes, when the
+   pot's pawns fly to the counter. A miss loses the pot: it turns red and
+   drains, and the rest of the run still pays. When growth opens there
+   because a move is due, the pot waits, breathing: the first move you add
+   pays it out, and Done or the game ending first drains it. An opening
+   complete through the book has nothing due, so it always pays. Tests:
+   the held-pot flows in `Tests/FlowTests/PlayFlowTests.swift`.
 3. **A blunder punished** pays when, past your prep, the opponent's move
    dropped their eval by 200 centipawns or more since your last scored move,
    and your reply gave back 50 or less.

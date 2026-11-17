@@ -6,7 +6,7 @@ import Shared
 /// one at a time, in Play, Middlegame and Endgames, plus each streak day.
 
 public enum PawnEvent: String, Sendable, Codable, CaseIterable {
-  /// Your prep ran out with no miss.
+  /// Your prep ran out with no miss: one pawn for each prep move asked.
   case prepComplete
   /// The opponent's move threw away a lot and your reply took it.
   case blunderPunished
@@ -21,12 +21,14 @@ public enum PawnEvent: String, Sendable, Codable, CaseIterable {
   case streak
 }
 
-/// What an event pays. A streak day pays by the streak's length.
+/// What an event pays. Prep complete pays this for each prep move asked; a streak day pays by
+/// the streak's length.
 public func pawnsFor(_ event: PawnEvent) -> Int {
   switch event {
-  case .prepComplete, .blunderPunished, .endgame, .endgameGoal: return 1
-  case .moment, .mission: return 2
-  case .checkmate: return 3
+  case .prepComplete, .endgameGoal: return 1
+  case .blunderPunished, .endgame: return 3
+  case .moment, .mission: return 6
+  case .checkmate: return 15
   case .streak: return 1
   }
 }
@@ -42,8 +44,8 @@ public let PUNISH_KEPT: Double = 50
 public enum PawnSource: Equatable, Sendable {
   /// A square on the board: the move that earned them, or the mated king.
   case square(String)
-  /// The Prep complete callout (the prep bar where none shows), for prep complete.
-  case prep
+  /// The pot beside the prep bar, for prep complete.
+  case pot
   /// The goal card, for a mission done.
   case goal
   /// The board as a whole: an endgame reached, an Endgames goal met.
@@ -64,10 +66,9 @@ public struct PawnAward: Equatable, Sendable {
   }
 }
 
-/// The pawns a run's prep pays when it runs out: one with no miss. Nothing when the prep asked nothing.
-public func prepPawns(misses: Int, times: [Double]) -> [PawnEvent] {
-  guard misses == 0, !times.isEmpty else { return [] }
-  return [.prepComplete]
+/// The pawns a run's prep pays when it runs out: one for each prep move asked, with no miss.
+public func prepPawns(misses: Int, times: [Double]) -> Int {
+  misses == 0 ? times.count * pawnsFor(.prepComplete) : 0
 }
 
 /// Whether your judged move punished the opponent's blunder: their move dropped their

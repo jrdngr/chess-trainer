@@ -68,8 +68,12 @@ public final class RunModel {
   /// The gap the run reached when the engine said no new move: the player can
   /// still add one while it is their move there.
   public private(set) var holeGap: Gap?
-  /// The Prep complete pawn, held while growth is due here: one move added pays it.
+  /// The Prep complete pawns, held while growth is due here: one move added pays them.
   public private(set) var heldPrepPawn: PawnAward?
+  /// The pawns in the prep's pot: one for each prepared move found, paid when the prep completes.
+  public private(set) var pot = 0
+  /// The pot lost to a miss, or to growth left with nothing added: how many it held. `id` restarts its drain.
+  public private(set) var potDrain: (count: Int, id: Int)?
   /// The run has reached its one hole and asked about it.
   private var holeAsked = false
   /// A new player's first game: nothing saved, adding moves from move one, with tips.
@@ -648,8 +652,8 @@ public final class RunModel {
     let fresh = (1...line.count).first { k in rep.flatMap { nodeAtLine($0, Array(line.prefix(k))) } == nil } ?? line.count
     current.steps.append((session, Array(line.prefix(fresh))))
     filledRep = rid
-    // The held prep pawn pops out of the move just added.
-    payHeldPrepPawn(from: move.map { .square($0.to) })
+    // The held prep pawns fly out of the pot.
+    payHeldPrepPawn()
     store.update { state in
       state.addGrowthLine(rid, line, index)
       state.logEvent(AppEvent(
@@ -808,6 +812,7 @@ public final class RunModel {
         if let n { show(callout: n.text, good: n.tone == "good", missed: n.tone == "missed") }
       case .miss(let m):
         show(miss: m)
+        drainPot()
         offer(.missedMove)
       case .moment(let found):
         if found { show(callout: "Found it", good: true) }
@@ -815,6 +820,9 @@ public final class RunModel {
         pulse(found: found)
       case .missedBest(let move):
         missedBest = move
+      case .potPawn(let square):
+        pot += 1
+        store.dropInPot(square)
       case .pawns(let award) where award.event == .prepComplete:
         // Held until this turn knows whether growth is due here.
         heldPrepPawn = award
@@ -834,21 +842,29 @@ public final class RunModel {
     store.pay(award)
   }
 
-  /// The held prep pawn, paid: a move was added, or growth wasn't due after all.
-  private func payHeldPrepPawn(from source: PawnSource? = nil) {
-    guard var award = heldPrepPawn else { return }
+  /// The held prep pawns, paid out of the pot: a move was added, or growth wasn't due after all.
+  private func payHeldPrepPawn() {
+    guard let award = heldPrepPawn else { return }
     heldPrepPawn = nil
-    if let source { award.source = source }
+    pot = 0
     pay(award)
     offer(.pawns)
   }
 
-  /// The held prep pawn, lost: growth was left with nothing added.
+  /// The held prep pawns, lost: growth was left with nothing added. The pot drains.
   private func dropHeldPrepPawn() {
     guard let award = heldPrepPawn else { return }
     heldPrepPawn = nil
     session.state.extras.pawns -= award.count
+    drainPot()
     log("pawns-withheld") { $0.source = award.event.rawValue; $0.count = award.count }
+  }
+
+  /// The pot is lost: what it held drains away, and nothing reaches the counter.
+  private func drainPot() {
+    guard pot > 0 else { return }
+    potDrain = (pot, (potDrain?.id ?? 0) + 1)
+    pot = 0
   }
 
   private func finished(_ f: Finish) {

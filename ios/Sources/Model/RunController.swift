@@ -191,6 +191,8 @@ public enum Effect {
   case missedBest((from: String, to: String)?)
   /// Pawns earned: onto the balance, popping out where they were earned.
   case pawns(PawnAward)
+  /// A prepared move found: a pawn pops out of its square into the prep's pot, not yet paid.
+  case potPawn(square: String)
   case finish(Finish)
 }
 
@@ -271,6 +273,7 @@ public func playPrepared(_ session: RunSession, _ ctx: RunContext, _ move: Legal
   if ctx.play {
     effects.append(.pop(Pop(square: move.to, text: secondsText(seconds), tone: speedTone(seconds), found: true)))
   }
+  if session.prepStatus == .on { effects.append(.potPawn(square: move.to)) }
   var start = session
   start.prepTimes.append(seconds)
   var step: Step = (start, effects)
@@ -406,7 +409,7 @@ private func theirMove(_ session: RunSession, _ state: RunTally) -> Step {
 }
 
 /// Your turn with nothing prepared, having followed your prep so far: the line is done.
-/// Prep that asked something and was never missed pays, and a little more when every answer was fast.
+/// Prep that asked something and was never missed pays its pot: a pawn for each prep move asked.
 public func prepRanOut(_ session: RunSession, _ index: ReferenceIndex) -> Step {
   if session.prepStatus != .on { return unchanged(session) }
   var next = session
@@ -414,7 +417,8 @@ public func prepRanOut(_ session: RunSession, _ index: ReferenceIndex) -> Step {
   if inTheBook(index, session.state.run.fen) { next.bookTo = session.state.run.played.count } else { next.bookOver = true }
   // Where growing would start, even when the prep asked you nothing.
   if session.state.misses.isEmpty { next.prepEnd = session.state.run.played }
-  let effects = prepPawns(misses: session.state.misses.count, times: session.prepTimes).map { earn(&next.state, PawnAward($0, .prep)) }
+  let pot = prepPawns(misses: session.state.misses.count, times: session.prepTimes)
+  let effects = pot > 0 ? [earn(&next.state, PawnAward(.prepComplete, .pot, count: pot))] : []
   return (next, effects)
 }
 

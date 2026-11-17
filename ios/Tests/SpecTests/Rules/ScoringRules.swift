@@ -24,7 +24,7 @@ private func move(lost: Double, after: Double = 0, moment: Bool = false, found: 
     let missed = judgedExtras(extras, ALL, .w, move(lost: 300, moment: true, found: false))
     #expect(missed.extras.moments.streak == 0)
     let found = judgedExtras(extras, ALL, .w, move(lost: 0, moment: true, found: true))
-    #expect(found.earned.pawns == 2 && found.extras.pawns == 2 && found.extras.moments.streak == 3)
+    #expect(found.earned.pawns == 6 && found.extras.pawns == 6 && found.extras.moments.streak == 3)
   }
 
   /// Rule 2: a missed moment's callout names the move you missed, in the missed-chance tone.
@@ -64,6 +64,6 @@ private func move(lost: Double, after: Double = 0, moment: Bool = false, found: 
     var edge = NO_EXTRAS
     edge.mission = Mission(kind: .edge, held: EDGE_MOVES - 1)
     let done = judgedExtras(edge, ALL, .w, move(lost: 0, after: 150))
-    #expect(done.earned.pawns == 2 && done.extras.missions.done == 1)
+    #expect(done.earned.pawns == 6 && done.extras.missions.done == 1)
   }
 }

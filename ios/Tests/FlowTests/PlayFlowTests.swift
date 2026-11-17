@@ -62,7 +62,7 @@ import Testing
     let answer = try #require(mine.first { $0.kind == "prep-answer" })
     #expect(answer.san != nil && answer.fen != nil)
     let paid = app.state.events.filter { $0.kind == "pawns" }
-    #expect(paid.contains { $0.source == "prepComplete" && $0.count == 1 })
+    #expect(paid.contains { $0.source == "prepComplete" && ($0.count ?? 0) >= 1 })
   }
 }
 
@@ -75,7 +75,9 @@ import Testing
     _ = app.takeSignals()
     try await playPrep(app)
     let paid = app.signals.compactMap { if case .pawns(let award) = $0 { return award } else { return nil } }
-    #expect(paid.first?.event == .prepComplete && paid.first?.source == .prep)
+    #expect(paid.first?.event == .prepComplete && paid.first?.source == .pot)
+    let asked = try #require(app.run).session.prepTimes.count
+    #expect(paid.first?.count == asked, "a pawn for each prep move asked")
     let earned = try #require(app.run).session.state.extras.pawns
     #expect(earned == paid.reduce(0) { $0 + $1.count } && earned >= 1)
     #expect(app.state.pawns == before + earned)
@@ -243,7 +245,7 @@ private func quietMove(_ fen: String) -> String? {
   await app.openPlay()
 }
 
-/// When growth is due, the Prep complete pawn waits for a move added: one pays it.
+/// When growth is due, the prep's pot waits for a move added: one pays it out of the pot.
 @MainActor @Test func dueGrowthHoldsThePrepPawnUntilAMoveIsAdded() async throws {
   try await headless { app in
     try await ruyLopezWithGrowthDue(app)
@@ -253,29 +255,32 @@ private func quietMove(_ fen: String) -> String? {
     #expect(app.callouts.contains("Prep complete"))
     #expect(run.fill != nil, "growth opens where the prep ran out")
     #expect(run.heldPrepPawn?.event == .prepComplete)
+    let held = try #require(run.heldPrepPawn).count
+    #expect(held == run.session.prepTimes.count && run.pot == held, "the pot holds a pawn for each prep move")
     #expect(run.tip == .growth || run.tip == .growthPawn)
     #expect(app.state.pawns == before, "nothing paid yet")
 
-    let fen = try #require(app.run).run.fen
     let pick = try #require(app.choices.first)
     _ = app.takeSignals()
     try await app.move(pick)
     let paid = app.signals.compactMap { if case .pawns(let award) = $0 { return award } else { return nil } }
-    #expect(paid.first?.source == .square(try #require(applySan(fen, pick)).to), "it pops out of the move added")
-    #expect(app.run?.heldPrepPawn == nil)
-    #expect(app.state.pawns == before + 1)
+    #expect(paid.first?.source == .pot, "they fly out of the pot")
+    #expect(app.run?.heldPrepPawn == nil && app.run?.pot == 0)
+    #expect(app.state.pawns == before + held)
   }
 }
 
-/// Done with nothing added loses the held Prep complete pawn.
+/// Done with nothing added drains the pot.
 @MainActor @Test func doneWithNothingAddedLosesThePrepPawn() async throws {
   try await headless { app in
     try await ruyLopezWithGrowthDue(app)
     let before = app.state.pawns
     try await playPrep(app)
     #expect(app.run?.heldPrepPawn != nil)
+    let held = try #require(app.run?.pot)
     await app.doneAdding()
     #expect(app.run?.heldPrepPawn == nil)
+    #expect(app.run?.pot == 0 && app.run?.potDrain?.count == held)
     #expect(app.state.pawns == before)
     #expect(app.run?.session.state.extras.pawns == 0, "the run's score leaves it out")
   }

@@ -73,7 +73,7 @@ public struct MeasuredRun: Codable, Sendable, Equatable {
   public var misses = 0
   /// blunder, won, lost, draw, ended (the X), capped; for Endgames, success or failure.
   public var ending = ""
-  /// How many times each pawn event paid, by `PawnEvent` name.
+  /// How many times each pawn event paid, by `PawnEvent` name; prep complete counts its prep moves.
   public var events: [String: Int] = [:]
   /// Pawns earned at the values the run was played with.
   public var pawns = 0
@@ -138,7 +138,8 @@ extension HeadlessApp {
       }
       for signal in takeSignals() {
         guard case .pawns(let award) = signal, award.event != .streak else { continue }
-        counted.events[award.event.rawValue, default: 0] += 1
+        // Counted in its event's units: prep complete pays one for each prep move asked.
+        counted.events[award.event.rawValue, default: 0] += award.count / max(1, pawnsFor(award.event))
         counted.pawns += award.count
       }
       runs.append(counted)

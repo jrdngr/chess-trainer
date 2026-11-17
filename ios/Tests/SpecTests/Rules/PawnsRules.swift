@@ -44,22 +44,21 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
   @Test func whatEachEventPays() {
     let paid = Dictionary(uniqueKeysWithValues: PawnEvent.allCases.map { ($0, pawnsFor($0)) })
     #expect(paid == [
-      .prepComplete: 1, .blunderPunished: 1, .moment: 2, .mission: 2, .endgame: 1, .checkmate: 3,
+      .prepComplete: 1, .blunderPunished: 3, .moment: 6, .mission: 6, .endgame: 3, .checkmate: 15,
       .endgameGoal: 1, .streak: 1,
     ])
   }
 
-  /// Rule 2: a clean prep pays one pawn, however fast it was played.
+  /// Rule 2: a clean prep pays a pawn for each prep move asked, however fast, out of the pot.
   @Test func prepPays() throws {
     let fast = prepRanOut(try prepPlayed([1, 2, 2.9]), bookIndex)
-    #expect(awards(fast.effects).map(\.event) == [.prepComplete])
-    #expect(awards(fast.effects).allSatisfy { $0.source == .prep })
-    #expect(fast.session.state.extras.pawns == 1)
-    let slow = prepRanOut(try prepPlayed([1, 3, 1]), bookIndex)
-    #expect(awards(slow.effects).map(\.event) == [.prepComplete])
+    #expect(awards(fast.effects) == [PawnAward(.prepComplete, .pot, count: 3)])
+    #expect(fast.session.state.extras.pawns == 3)
+    let slow = prepRanOut(try prepPlayed([1, 9, 1]), bookIndex)
+    #expect(awards(slow.effects).map(\.count) == [3])
     // Prep that asked nothing, or was missed, pays nothing.
-    #expect(prepPawns(misses: 0, times: []).isEmpty)
-    #expect(prepPawns(misses: 1, times: [1]).isEmpty)
+    #expect(prepPawns(misses: 0, times: []) == 0)
+    #expect(prepPawns(misses: 1, times: [1, 1]) == 0)
     var missed = try session(at: line("e4 e5 Nf3 Nc6 Bb5 a6"))
     missed.prepStatus = .off
     #expect(prepRanOut(missed, bookIndex).effects.isEmpty)
@@ -71,13 +70,26 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
     past.lastScored = 30
     let took = judgedMove(past, ctx, judged("Bxc6", lost: 50, before: 230, after: 220), 1, 0)
     #expect(awards(took.effects).contains { $0.event == .blunderPunished && $0.source == .square("c6") })
-    #expect(took.session.state.extras.pawns == 1)
+    #expect(took.session.state.extras.pawns == 3)
     let missed = judgedMove(past, ctx, judged("Bxc6", lost: 51, before: 230, after: 179), 1, 0)
     #expect(!awards(missed.effects).contains { $0.event == .blunderPunished })
     let small = judgedMove(past, ctx, judged("Bxc6", lost: 0, before: 229, after: 229), 1, 0)
     #expect(!awards(small.effects).contains { $0.event == .blunderPunished })
     #expect(punished(.b, lastScored: 0, before: -200, lost: 0))
     #expect(!punished(.w, lastScored: nil, before: 500, lost: 0))
+  }
+
+  /// Rule 2: each prepared move found drops a pawn into the pot from its square; a miss drops none.
+  @Test func preparedMovesFillThePot() throws {
+    var s = try session()
+    let e4 = try #require(applySan(s.state.run.fen, "e4"))
+    let found = playPrepared(s, ctx, e4, 1, 0)
+    #expect(found.effects.contains { if case .potPawn("e4") = $0 { true } else { false } })
+    #expect(awards(found.effects).isEmpty, "nothing is paid until the prep completes")
+    s = engineMove(found.session, "e5").session
+    let wrong = judgedMove(s, ctx, judged("d4"), 1, 0)
+    #expect(!wrong.effects.contains { if case .potPawn = $0 { true } else { false } })
+    #expect(prepRanOut(wrong.session, bookIndex).effects.isEmpty)
   }
 
   /// Rule 4: the endgame pays once; checkmate pays the side that gives it, from the mated king.
@@ -136,10 +148,10 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
   /// Rule 6: the run's score is what its events paid.
   @Test func theRunsScoreIsItsPawns() throws {
     let fast = prepRanOut(try prepPlayed([1, 1, 1]), bookIndex)
-    #expect(fast.session.state.extras.pawns == 1)
+    #expect(fast.session.state.extras.pawns == 3)
     var state = AppState()
     state.earn(fast.session.state.extras.pawns)
-    #expect(state.pawns == 1)
+    #expect(state.pawns == 3)
   }
 
   /// Rule 7: the record keeps moves survived.

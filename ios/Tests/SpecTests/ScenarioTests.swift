@@ -23,7 +23,7 @@ private func endingJSON(_ e: Ending) -> JSON {
 private func sourceJSON(_ source: PawnSource) -> JSON {
   switch source {
   case .square(let square): return .string(square)
-  case .prep: return "prep".json
+  case .pot: return "pot".json
   case .goal: return "goal".json
   case .board: return "board".json
   case .streak: return "streak".json
@@ -55,6 +55,8 @@ private func effectJSON(_ effect: Effect, _ tree: OpeningTree) -> JSON {
     return obj(["kind": "missedBest", "move": move.map { obj(["from": $0.from, "to": $0.to]) } ?? .null])
   case .pawns(let award):
     return obj(["kind": "pawns", "event": award.event.rawValue, "count": award.count, "source": sourceJSON(award.source)])
+  case .potPawn(let square):
+    return obj(["kind": "potPawn", "square": square])
   case .finish(let f):
     var round = encoded(runRound(f, tree, at: 0)).object
     round["at"] = nil

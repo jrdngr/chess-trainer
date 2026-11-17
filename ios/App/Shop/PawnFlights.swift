@@ -226,7 +226,7 @@ private struct PawnFlightLayer: View {
     let now = Date().timeIntervalSince(epoch) * 1000
     for drop in store.pawnDrops where !planned.contains(drop.id) {
       planned.insert(drop.id)
-      guard !reduceMotion, let target = spots["counter"], let source = sourceRect(drop.award.source) else {
+      guard !reduceMotion, let target = spots[drop.toPot ? "pot" : "counter"], let source = sourceRect(drop.award.source) else {
         for _ in 0..<drop.flying { store.landed(drop.id) }
         continue
       }
@@ -264,8 +264,8 @@ private struct PawnFlightLayer: View {
       let col = orientation == .w ? file : 7 - file
       let row = orientation == .w ? 7 - rank : rank
       return CGRect(x: board.minX + col * size, y: board.minY + row * size, width: size, height: size)
-    // Out of the Prep complete callout; the prep bar where no callout shows.
-    case .prep: return spots["callout"] ?? spots["prep"] ?? spots["board"]
+    // Out of the pot beside the prep bar.
+    case .pot: return spots["pot"] ?? spots["prep"] ?? spots["board"]
     case .goal: return spots["goal"] ?? spots["board"]
     case .board: return spots["board"].map { CGRect(x: $0.midX - 22, y: $0.midY - 22, width: 44, height: 44) }
     case .streak: return spots["streak"]
@@ -383,5 +383,56 @@ struct PawnCounter: View {
     } else {
       content
     }
+  }
+}
+
+/// The prep's pot beside the prep bar: a pawn and the count of prepared moves found this run.
+/// Each pawn landing bumps it; while growth holds the pawns it breathes; a miss turns it red and
+/// it drains away, one pawn at a time.
+struct PrepPot: View {
+  /// Pawns in the pot, landed or on their way.
+  let pot: Int
+  let held: Bool
+  let drain: (count: Int, id: Int)?
+  @Environment(AppStore.self) private var store
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var landings = 0
+  @State private var draining: Int?
+  @State private var breathe = false
+
+  var body: some View {
+    let count = draining ?? max(0, pot - store.flyingToPot + store.flyingFromPot)
+    let red = draining != nil
+    HStack(spacing: 1) {
+      PawnCoin(stroked: false, size: 13, fill: red ? Theme.bad : Theme.pawn)
+        .opacity(count == 0 && !red ? 0.35 : 1)
+      if count > 0 {
+        Text("\(count)").font(.system(size: 11, weight: .bold).monospacedDigit())
+          .foregroundStyle(red ? Theme.bad : Theme.pawn)
+          .contentTransition(.numericText(value: Double(count)))
+      }
+    }
+    .animation(.easeOut(duration: 0.09), value: count)
+    .keyframeAnimator(initialValue: 1.0, trigger: landings) { view, scale in view.scaleEffect(scale) } keyframes: { _ in
+      CubicKeyframe(1.2, duration: 0.1)
+      CubicKeyframe(1, duration: 0.1)
+    }
+    .opacity(held && !reduceMotion ? (breathe ? 1 : 0.56) : 1)
+    .animation(held ? .easeInOut(duration: 1.7).repeatForever(autoreverses: true) : .default, value: breathe)
+    .frame(width: 28, alignment: .leading)
+    .pawnSpot("pot")
+    .onChange(of: count) { old, new in if new > old && draining == nil { landings += 1 } }
+    .onChange(of: held, initial: true) { _, now in breathe = now }
+    .task(id: drain?.id) {
+      guard let drain else { return }
+      draining = drain.count
+      while let left = draining, left > 0 {
+        try? await Task.sleep(for: .milliseconds(115))
+        draining = left - 1
+      }
+      try? await Task.sleep(for: .milliseconds(200))
+      draining = nil
+    }
+    .accessibilityHidden(true)
   }
 }

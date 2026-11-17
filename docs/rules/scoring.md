@@ -9,7 +9,7 @@ and `Missions.swift`. Tests: the `docs/rules/scoring.md` suite in
 1. **A moment** is a position where your best move leaves you at +1 or
    better and at least 150 centipawns ahead of the second best, or mates
    when the second best doesn't. You find it by giving away 50 centipawns
-   or less. A found moment pays 2 pawns. A missed one breaks the streak of
+   or less. A found moment pays 6 pawns. A missed one breaks the streak of
    moments found in a row.
 2. **A missed moment is a missed chance, not a blunder.** Your move is
    judged against the second-best move: the second best itself, or a move
@@ -23,4 +23,4 @@ and `Missions.swift`. Tests: the `docs/rules/scoring.md` suite in
    - otherwise, Take the lead: reach +1 within 15 moves.
 4. **Missions follow each other.** Three judged moves after one is settled,
    done or failed, the next is set from the eval then. A mission done pays
-   2 pawns.
+   6 pawns.

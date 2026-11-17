@@ -8,6 +8,8 @@ public struct PawnDrop: Equatable, Identifiable, Sendable {
   public var award: PawnAward
   /// Its pawns not yet in the counter.
   public var flying: Int
+  /// Flying into the prep's pot, not the counter: not on the balance yet.
+  public var toPot = false
 }
 
 extension AppStore {
@@ -15,7 +17,26 @@ extension AppStore {
   public static let dropSeconds = 3.0
 
   /// The balance as the counter shows it: pawns still flying aren't in it yet.
-  public var shownPawns: Int { state.pawns - streakWaiting - pawnDrops.reduce(0) { $0 + $1.flying } }
+  public var shownPawns: Int { state.pawns - streakWaiting - pawnDrops.reduce(0) { $0 + ($1.toPot ? 0 : $1.flying) } }
+
+  /// Pawns on their way into the prep's pot.
+  public var flyingToPot: Int { pawnDrops.reduce(0) { $0 + ($1.toPot ? $1.flying : 0) } }
+
+  /// Pawns on their way out of the prep's pot to the counter.
+  public var flyingFromPot: Int { pawnDrops.reduce(0) { $0 + (!$1.toPot && $1.award.source == .pot ? $1.flying : 0) } }
+
+  /// A prepared move found: a pawn pops out of its square into the prep's pot. It isn't
+  /// earned until the prep completes.
+  public func dropInPot(_ square: String) {
+    dropCount += 1
+    let id = dropCount
+    pawnDrops.append(PawnDrop(id: id, award: PawnAward(.prepComplete, .square(square), count: 1), flying: 1, toPot: true))
+    let clock = services.clock
+    Task { @MainActor [weak self] in
+      await clock.sleep(Self.dropSeconds)
+      self?.pawnDrops.removeAll { $0.id == id }
+    }
+  }
 
   /// Pawns earned: onto the balance (unless `paid` already), and off to the counter.
   public func pay(_ award: PawnAward, paid: Bool = false) {

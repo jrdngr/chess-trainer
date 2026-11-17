@@ -292,7 +292,12 @@ struct RunView: View {
           // Endgame rules, on for the rest of the game once it reaches an endgame: moves are judged by the result they keep.
           Text("ENDGAME").font(.system(size: 11, weight: .bold)).tracking(0.7).foregroundStyle(Theme.text2)
         } else {
-          PrepSegmentsView(span: model.span, height: 4).frame(maxWidth: 150).pawnSpot("prep")
+          HStack(spacing: 6) {
+            PrepSegmentsView(span: model.span, height: 4).frame(maxWidth: 150).pawnSpot("prep")
+            if !model.session.middlegame {
+              PrepPot(pot: model.pot, held: model.heldPrepPawn != nil, drain: model.potDrain)
+            }
+          }
         }
         // Kept in place while analysing a finished run, so the board doesn't move, but not shown.
         // Nor once the game is over, when no one has a move.
