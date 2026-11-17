@@ -6,7 +6,8 @@ import SwiftUI
 /// The lens bar under a board: tap a lens to see it over the position, tap it
 /// again to clear the board. A tap elsewhere on the screen clears it too (`clearsLens`).
 /// Plan toggles the same way. With `gated`, only the lenses bought in the Pawn Shop
-/// show, Plan among them; with none, the bar keeps its full size, empty.
+/// show, Plan among them; with none, the bar keeps its full size, empty. Each
+/// button keeps one width, however many are bought or shown.
 struct LensBar: View {
   @Binding var held: LensKind?
   /// Eval only where the screen has the engine's word on the game.
@@ -25,6 +26,8 @@ struct LensBar: View {
   @State private var planTouched = false
   /// The lens a touch has toggled and not yet lifted from.
   @State private var touched: LensKind?
+  /// The bar's width, split into one slot per lens and Plan.
+  @State private var width: CGFloat = 0
   @Environment(AppStore.self) private var store
 
   private var shown: [(kind: LensKind, label: String)] {
@@ -33,6 +36,13 @@ struct LensBar: View {
 
   private var planShown: Binding<Bool>? {
     gated && !store.state.owns(.lensPlan) ? nil : plan
+  }
+
+  /// One button's width, the same on every screen: the bar shared among every lens and Plan.
+  private var slot: CGFloat? {
+    let count = LENSES.count + 1
+    guard width > 0 else { return nil }
+    return (width - 6 * CGFloat(count - 1)) / CGFloat(count)
   }
 
   var body: some View {
@@ -64,6 +74,8 @@ struct LensBar: View {
         } release: { planTouched = false }
       }
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
     .padding(.top, 8)
     .onChange(of: enabled) {
       guard !enabled else { return }
@@ -80,7 +92,7 @@ struct LensBar: View {
     Text(label)
       .font(.system(size: 12.5, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
       .foregroundStyle(on ? onInk : ink)
-      .frame(maxWidth: .infinity).padding(.vertical, 8)
+      .frame(maxWidth: slot == nil ? .infinity : nil).frame(width: slot).padding(.vertical, 8)
       .background {
         RoundedRectangle(cornerRadius: 10).fill(on ? fill : Theme.surface2)
         if pulse && !on { PlanPulse(color: pulseColor) }
