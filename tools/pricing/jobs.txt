@@ -1,0 +1,27 @@
+101 --strategy full --rating 800 --side w --runs 100
+102 --strategy prepOnly --rating 800 --side w --runs 100
+103 --strategy full --rating 800 --side b --runs 100
+104 --strategy prepOnly --rating 800 --side b --runs 100
+105 --strategy full --rating 800 --side w --start freeform --runs 50
+106 --strategy middlegame --rating 800 --side either --runs 60
+107 --strategy full --rating 1200 --side w --runs 100
+108 --strategy prepOnly --rating 1200 --side w --runs 100
+109 --strategy full --rating 1200 --side b --runs 100
+110 --strategy prepOnly --rating 1200 --side b --runs 100
+111 --strategy full --rating 1200 --side w --start freeform --runs 50
+112 --strategy middlegame --rating 1200 --side either --runs 60
+113 --strategy full --rating 1600 --side w --runs 100
+114 --strategy prepOnly --rating 1600 --side w --runs 100
+115 --strategy full --rating 1600 --side b --runs 100
+116 --strategy prepOnly --rating 1600 --side b --runs 100
+117 --strategy full --rating 1600 --side w --start freeform --runs 50
+118 --strategy middlegame --rating 1600 --side either --runs 60
+119 --strategy full --rating 2000 --side w --runs 100
+120 --strategy prepOnly --rating 2000 --side w --runs 100
+121 --strategy full --rating 2000 --side b --runs 100
+122 --strategy prepOnly --rating 2000 --side b --runs 100
+123 --strategy full --rating 2000 --side w --start freeform --runs 50
+124 --strategy middlegame --rating 2000 --side either --runs 60
+125 --strategy endgames --rating 1200 --runs 100
+126 --strategy full --rating 1200 --side w --miss 0.15 --runs 100
+127 --strategy full --rating 1200 --side w --adaptive --runs 100

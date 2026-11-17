@@ -3,9 +3,9 @@
 How the app earns money and how pawns flow, agreed on 2026-11-17. Nothing
 here is built yet. When a part is built, its rules go in `rules/`, each
 with a test. The numbers below are starting values. They come from the
-pawn-rate calculator, which recomputes earnings from headless runs
-(`swift run playbook measure`, see `ios/README.md`), so a value or price
-change needs no new games.
+pawn-rate calculator in [tools/pricing](../tools/pricing/README.md),
+which recomputes earnings from headless runs (`swift run playbook
+measure`), so a value or price change needs no new games.
 
 ## Intent
 

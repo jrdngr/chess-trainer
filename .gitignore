@@ -7,3 +7,4 @@ ios/build/
 *.whl
 ios/.golden-out/
 ios/.measure/
+tools/pricing/pawn-rates.html

@@ -1,0 +1,435 @@
+<title>Pawn Earning Rates</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a sticky panel of assumptions beside the tables they drive; one column on phones. */
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --fg: #1b2230; --muted: #5d6779; --line: #dde1e8;
+  --pawn: #b7791f; --pawn-soft: #fdf3dc; --best: #1f7a4d;
+  --sans: "Barlow", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161d; --panel: #1a2029; --fg: #e6e9ef; --muted: #9aa4b5; --line: #2b3340;
+  --pawn: #fbbf24; --pawn-soft: #2c2412; --best: #4ade80; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161d; --panel: #1a2029; --fg: #e6e9ef; --muted: #9aa4b5; --line: #2b3340;
+  --pawn: #fbbf24; --pawn-soft: #2c2412; --best: #4ade80; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 48px; }
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); } }
+header { grid-column: 1 / -1; display: grid; gap: 6px; }
+h1 { font-size: 30px; margin: 0; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+h1 .dot { color: var(--pawn); }
+.lede { color: var(--muted); max-width: 70ch; margin: 0; }
+.headline { display: flex; flex-wrap: wrap; gap: 10px 28px; margin-top: 8px; }
+.headline div { display: grid; }
+.headline b { font-family: var(--mono); font-size: 22px; color: var(--pawn); font-variant-numeric: tabular-nums; }
+.headline span { color: var(--muted); font-size: 13px; }
+aside { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px; display: grid; gap: 16px; max-height: calc(100vh - 24px); overflow: auto; }
+@media (max-width: 860px) { aside { position: static; max-height: none; } }
+fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; }
+legend { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+label { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; }
+input[type=number], select { width: 76px; font: 14px var(--mono); padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); text-align: right; }
+select { width: auto; text-align: left; }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--pawn); outline-offset: 1px; }
+button { font: 600 13px var(--sans); border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+main { display: grid; gap: 30px; min-width: 0; }
+section { display: grid; gap: 8px; min-width: 0; }
+h2 { font-size: 19px; margin: 0; font-weight: 600; }
+.note { color: var(--muted); font-size: 13.5px; margin: 0; max-width: 75ch; }
+.scroll { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { padding: 6px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+th { font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; background: var(--panel); }
+td:first-child, th:first-child { text-align: left; }
+td.num { font-family: var(--mono); }
+tr:last-child td { border-bottom: 0; }
+td.rate { font-weight: 600; color: var(--pawn); }
+tr.best td { background: var(--pawn-soft); }
+tr.best td:first-child::after { content: " · best"; color: var(--best); font-weight: 600; }
+.bar { display: inline-block; height: 8px; background: var(--pawn); border-radius: 2px; vertical-align: middle; margin-left: 6px; opacity: 0.8; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.filters label { gap: 6px; }
+code, .formula { font-family: var(--mono); font-size: 13px; }
+.formula { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; white-space: pre-wrap; overflow-x: auto; }
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Pawn earning rates<span class="dot">.</span></h1>
+  <p class="lede">Headless runs played by a bot on the player's side, counted per run. The seconds start at the owner's own pace, measured from a 16-run session on 2026-11-17. Every rate below is recomputed from those counts with the pawn values and time assumptions on the left, so a price or timing change needs no new games.</p>
+  <div class="headline" id="headline"></div>
+</header>
+
+<aside>
+  <fieldset id="values"><legend>Pawns per event</legend></fieldset>
+  <fieldset id="markers"><legend>Distance markers</legend></fieldset>
+  <fieldset id="bounty"><legend>Endgames bounties</legend></fieldset>
+  <fieldset id="streak"><legend>Streak</legend></fieldset>
+  <fieldset id="times"><legend>Seconds</legend></fieldset>
+  <fieldset id="prices"><legend>Prices</legend></fieldset>
+  <button id="reset" type="button">Reset to proposed values</button>
+</aside>
+
+<main>
+  <section>
+    <h2>Targets</h2>
+    <p class="note">The owner's targets, against prep-only drilling (all levels, both sides, at the owner's pace) as 1×. Rates for full runs and Middlegame use a new player's pace past prep. Held the draw is not in the runs, so it isn't checked.</p>
+    <div class="scroll"><table id="targets"></table></div>
+  </section>
+
+  <section>
+    <h2>1 · Every strategy, ranked</h2>
+    <p class="note">One row per strategy, bot level and side. The rate pools each group: total pawns over total minutes.</p>
+    <div class="scroll"><table id="strategies"></table></div>
+  </section>
+
+  <section>
+    <h2>2 · Prep only</h2>
+    <p class="note">Play the prepared moves, add growth's top answer when growth opens, end the run with the X, start the next.</p>
+    <div class="scroll"><table id="prep"></table></div>
+  </section>
+
+  <section>
+    <h2>3 · Full runs, broken down</h2>
+    <div class="filters">
+      <label for="f-rating">Bot level <select id="f-rating"></select></label>
+      <label for="f-side">Side <select id="f-side"><option value="">Both</option><option value="w">White</option><option value="b">Black</option></select></label>
+    </div>
+    <p class="note">Drill runs played to their end, without misses. Run length counts your moves.</p>
+    <div class="scroll"><table id="byLength"></table></div>
+    <div class="scroll"><table id="byEnding"></table></div>
+    <div class="scroll"><table id="byMissions"></table></div>
+    <div class="scroll"><table id="byMoments"></table></div>
+  </section>
+
+  <section>
+    <h2>4 · Runs that end in checkmate</h2>
+    <p class="note">Full runs (same filters) where you gave mate, against the rest.</p>
+    <div class="scroll"><table id="mates"></table></div>
+  </section>
+
+  <section>
+    <h2>5 · Where the pawns come from</h2>
+    <p class="note">Share of each strategy's pawns by event, at the values on the left. The streak pays on top of these, once a day.</p>
+    <div class="scroll"><table id="sources"></table></div>
+  </section>
+
+  <section>
+    <h2>6 · Endgames by family</h2>
+    <p class="note">Endgames pays bounties, not per round: first clear, first mission and mastered once per ending, then a tune-up when one comes due (14 days after mastery, doubling to 90). Mastered is 3 successes in a row on different days, so time to master assumes 3 rounds at the measured success rate. The bot plays the engine's best move.</p>
+    <div class="scroll"><table id="endgames"></table></div>
+  </section>
+
+  <section>
+    <h2>7 · As the Playbook grows</h2>
+    <p class="note">Full White Drill runs at each level, grouped by how far into the session they came. Growth adds moves as runs go by.</p>
+    <div class="scroll"><table id="growth"></table></div>
+  </section>
+
+  <section>
+    <h2>8 · Price sheet</h2>
+    <p class="note">Proposed prices, editable here. Time is shown three ways: minutes of prep-only drilling at the baseline, and hours of typical full runs (1200, White) at the owner's pace and at a new player's pace past prep. Packs show what their pawns would take to earn. The streak is left out.</p>
+    <div class="scroll"><table id="sheet"></table></div>
+    <div class="scroll"><table id="buy"></table></div>
+  </section>
+
+  <section>
+    <h2>The formulas</h2>
+    <div class="formula" id="formulas"></div>
+  </section>
+</main>
+</div>
+
+<script>
+const RAW = /*DATA*/[];
+const EVENTS = [
+  ["prepComplete", "Prep complete, per prep move asked", 1], ["blunderPunished", "Blunder punished", 3], ["moment", "Found moment", 6],
+  ["mission", "Mission done", 6], ["endgame", "Reached the endgame", 3], ["checkmate", "Checkmate", 15],
+];
+const TIMES = [
+  ["prep", "Per prep move", 2], ["growth", "Per growth move", 2], ["other", "Per move past prep", 3],
+  ["ending", "Per Endgames move", 3], ["overhead", "Per run (deal, end screen)", 4],
+  ["mgOverhead", "Per Middlegame run (handoff)", 12], ["slowOther", "New player, per move past prep", 6],
+];
+const PRICES = [["famStart", "First family", 2000], ["famStep", "Each family after, +", 500], ["families", "Families to buy", 8]];
+// The price sheet: [group, id, name, proposed price, shop price today or ""].
+const CATALOG = [
+  ["Feature tree", "sidePicker", "Side picker", 200, 5], ["Feature tree", "lensPawns", "Pawns lens", 300, 10],
+  ["Feature tree", "lensPieces", "Pieces lens", 500, 20], ["Feature tree", "lensKings", "Kings lens", 800, 30],
+  ["Feature tree", "lensEval", "Eval lens", 1500, 60], ["Feature tree", "lensPlan", "Plan", 1000, 40],
+  ["Feature tree", "openingPicker", "Opening picker", 1000, 50], ["Feature tree", "freeform", "Freeform", 3000, 120],
+  ["Feature tree", "middlegame", "Middlegame", 8000, 300], ["Feature tree", "endgames", "Endgames (Basic mates, From your games)", 5000, 300],
+  ["Content", "egPawn", "Endgame family: King and pawn", 5000, ""], ["Content", "egRook", "Endgame family: Rook endings", 3500, ""],
+  ["Content", "guide", "Opening guide, each", 2000, 100], ["Content", "personalities", "Opponent personalities", 5000, 200],
+  ["Cosmetics", "board", "Board style, each", 3000, 150], ["Cosmetics", "pieces", "Piece style, each", 3000, 150],
+  ["Cosmetics", "deck", "Deck style, each", 3000, 150], ["Cosmetics", "uiStyle", "Full UI style, each", 10000, 400],
+  ["Cosmetics", "icon", "App icon, each", 2000, 100],
+  ["In play", "freeze", "Streak freeze", 1000, ""], ["In play", "repair", "Streak repair", 2000, ""],
+  ["In play", "continue", "Continue after a blunder", 500, ""],
+  ["Pawn packs", "pack2", "Pawns for $2", 2000, ""], ["Pawn packs", "pack5", "Pawns for $5", 6000, ""], ["Pawn packs", "pack10", "Pawns for $10", 13000, ""],
+];
+const MARKERS = [["mkEvery", "Every N moves past prep", 5], ["mkFirst", "First marker pays", 10], ["mkStep", "Each marker after, +", 5], ["mkCap", "Most a marker pays", 20], ["mkMiddlegame", "In Middlegame, % of value", 40]];
+const BOUNTY = [["egFirst", "First clear, each ending", 250], ["egMission", "First mission, each ending", 100], ["egMastered", "Mastered, each ending", 500], ["egTune", "Tune-up passed", 100], ["egGames", "From your games, each position", 100]];
+const STREAK = [["stStart", "Day 1 pays", 10], ["stStep", "Each day after, +", 10], ["stCap", "Most a day pays", 90]];
+const KEY = "pawn-rates-v10";
+const V = {};
+function defaults() { for (const [k, , d] of [...EVENTS, ...MARKERS, ...BOUNTY, ...STREAK, ...TIMES, ...PRICES]) V[k] = d; for (const [, k, , d] of CATALOG) V["c_" + k] = d; }
+defaults();
+try { Object.assign(V, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+
+function inputs(id, list) {
+  const box = document.getElementById(id);
+  for (const [k, name] of list) {
+    const l = document.createElement("label");
+    l.htmlFor = "in-" + k;
+    l.textContent = name;
+    const i = document.createElement("input");
+    i.type = "number"; i.id = "in-" + k; i.min = 0; i.step = k === "famStart" || k === "famStep" || k === "tree" ? 5 : 1; i.value = V[k];
+    i.addEventListener("input", () => { V[k] = parseFloat(i.value) || 0; save(); render(); });
+    l.appendChild(i); box.appendChild(l);
+  }
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(V)); } catch (e) {} }
+inputs("values", EVENTS); inputs("markers", MARKERS); inputs("bounty", BOUNTY); inputs("streak", STREAK); inputs("times", TIMES); inputs("prices", PRICES);
+document.getElementById("reset").addEventListener("click", () => {
+  defaults(); save();
+  for (const k in V) { const i = document.getElementById("in-" + k); if (i) i.value = V[k]; }
+  render();
+});
+
+// One run's pawns and minutes under the current values.
+// Distance markers aren't in the game yet: they're worked out from each run's moves past prep.
+function markerPawns(r) {
+  if (r.strategy === "endgames" || V.mkEvery <= 0) return 0;
+  let p = 0;
+  const n = Math.floor(r.otherMoves / V.mkEvery);
+  for (let k = 0; k < n; k++) p += Math.min(V.mkFirst + k * V.mkStep, V.mkCap);
+  return r.strategy === "middlegame" ? p * V.mkMiddlegame / 100 : p;
+}
+// Prep complete pays once per run, one pawn value for each prep move asked.
+function eventPawns(r, k) { return k === "prepComplete" ? (r.events[k] ? r.prepMoves : 0) * V[k] : (r.events[k] || 0) * V[k]; }
+function pawns(r) { let p = markerPawns(r); for (const [k] of EVENTS) p += eventPawns(r, k); return p; }
+function minutes(r, slow) {
+  const other = slow ? V.slowOther : V.other;
+  const moveSecs = r.strategy === "endgames" ? r.otherMoves * V.ending : r.prepMoves * V.prep + r.growthMoves * V.growth + r.otherMoves * other;
+  return (moveSecs + (r.strategy === "middlegame" ? V.mgOverhead : V.overhead)) / 60;
+}
+function pool(rows, slow) {
+  let p = 0, m = 0, moves = 0;
+  for (const r of rows) { p += pawns(r); m += minutes(r, slow); moves += r.prepMoves + r.growthMoves + r.otherMoves; }
+  const n = rows.length;
+  return { n, pawns: p, mins: m, perRun: n ? p / n : 0, minPerRun: n ? m / n : 0, rate: m ? p / m : 0, moves: n ? moves / n : 0 };
+}
+const fmt = (x, d = 1) => Number.isFinite(x) ? x.toFixed(d) : "–";
+function table(id, head, rows, opts = {}) {
+  const t = document.getElementById(id);
+  const max = Math.max(...rows.map(r => r.rate || 0), 0.0001);
+  let html = "<thead><tr>" + head.map(h => `<th>${h}</th>`).join("") + "</tr></thead><tbody>";
+  for (const r of rows) {
+    html += `<tr class="${opts.best && r === opts.best ? "best" : ""}">` + r.cells.map((c, i) =>
+      `<td class="${i ? "num" : ""}${r.rateCol === i ? " rate" : ""}">${c}${r.rateCol === i ? `<span class="bar" style="width:${Math.round(40 * (r.rate || 0) / max)}px"></span>` : ""}</td>`).join("") + "</tr>";
+  }
+  t.innerHTML = html + "</tbody>";
+}
+const VARIANTS = { full: "Full runs", prepOnly: "Prep only", middlegame: "Middlegame", endgames: "Endgames", freeform: "Full runs, Freeform", miss: "Full runs, 15% misses", adaptive: "Full runs, adaptive opponent" };
+const SIDE = { w: "White", b: "Black", either: "Either" };
+function rateRow(label, rows, extra = []) {
+  const g = pool(rows);
+  return { cells: [label, g.n, fmt(g.moves), fmt(g.perRun, 2), fmt(g.minPerRun, 2), ...extra, fmt(g.rate, 2), fmt(g.rate * 60, 0)], rate: g.rate, rateCol: 5 + extra.length, g };
+}
+const RATE_HEAD = ["", "Runs", "Moves/run", "Pawns/run", "Min/run", "Pawns/min", "Pawns/hour"];
+
+function groupBy(rows, key) {
+  const m = new Map();
+  for (const r of rows) { const k = key(r); if (!m.has(k)) m.set(k, []); m.get(k).push(r); }
+  return m;
+}
+const ratings = [...new Set(RAW.map(r => r.rating))].sort((a, b) => a - b);
+const fr = document.getElementById("f-rating");
+fr.innerHTML = `<option value="">All</option>` + ratings.map(r => `<option value="${r}">${r}</option>`).join("");
+fr.addEventListener("change", render);
+document.getElementById("f-side").addEventListener("change", render);
+
+function render() {
+  // 1. Strategies
+  const groups = groupBy(RAW, r => `${r.variant}|${r.strategy === "endgames" ? "" : r.rating}|${r.strategy === "endgames" ? "" : r.side}`);
+  const stratRows = [...groups].map(([k, rows]) => {
+    const [variant, rating, side] = k.split("|");
+    const r = rateRow(VARIANTS[variant] || variant, rows);
+    r.cells.splice(1, 0, rating || "best moves", SIDE[side] || side || "Both");
+    r.rateCol += 2;
+    return r;
+  }).sort((a, b) => b.rate - a.rate);
+  table("strategies", ["Strategy", "Level", "Side", ...RATE_HEAD.slice(1)], stratRows, { best: stratRows[0] });
+
+  // 2. Prep only
+  const prep = RAW.filter(r => r.variant === "prepOnly");
+  const prepRows = [...groupBy(prep, r => `${r.rating}|${r.side}`)].map(([k, rows]) => {
+    const [rating, side] = k.split("|");
+    const grew = rows.filter(r => r.growthMoves > 0).length;
+    const r = rateRow(`${rating} · ${SIDE[side]}`, rows, [`${fmt(100 * grew / rows.length, 0)}%`]);
+    return r;
+  });
+  table("prep", ["Level · side", ...RATE_HEAD.slice(1, 5), "Runs with growth", ...RATE_HEAD.slice(5)], prepRows);
+
+  // 3. Full runs broken down
+  const fRating = fr.value, fSide = document.getElementById("f-side").value;
+  const full = RAW.filter(r => r.variant === "full" && (!fRating || String(r.rating) === fRating) && (!fSide || r.side === fSide));
+  const len = r => r.prepMoves + r.growthMoves + r.otherMoves;
+  const buckets = [[0, 10], [11, 20], [21, 40], [41, 80], [81, 999]];
+  table("byLength", ["Run length (your moves)", ...RATE_HEAD.slice(1)],
+    buckets.map(([a, b]) => rateRow(b > 900 ? `${a}+` : `${a}–${b}`, full.filter(r => len(r) >= a && len(r) <= b))).filter(r => r.g.n));
+  const ENDS = { blunder: "Blunder", won: "Checkmate given", lost: "Mated", draw: "Draw", ended: "Ended (X)", capped: "Hit the move cap" };
+  table("byEnding", ["How it ended", ...RATE_HEAD.slice(1)],
+    [...groupBy(full, r => r.ending)].map(([k, rows]) => rateRow(ENDS[k] || k, rows)).sort((a, b) => b.g.n - a.g.n));
+  const countBucket = (n) => n >= 3 ? "3+" : String(n);
+  table("byMissions", ["Missions done", ...RATE_HEAD.slice(1)],
+    [...groupBy(full, r => countBucket(r.events.mission || 0))].sort().map(([k, rows]) => rateRow(k, rows)));
+  table("byMoments", ["Moments found", ...RATE_HEAD.slice(1)],
+    [...groupBy(full, r => countBucket(r.events.moment || 0))].sort().map(([k, rows]) => rateRow(k, rows)));
+
+  // 4. Checkmate
+  const mates = full.filter(r => r.ending === "won"), rest = full.filter(r => r.ending !== "won");
+  table("mates", ["", "Runs", "Share", "Moves/run", "Pawns/run", "Min/run", "Pawns/min", "Pawns/hour"], [mates, rest].map((rows, i) => {
+    const r = rateRow(i ? "Every other run" : "Checkmate given", rows);
+    r.cells.splice(2, 0, `${fmt(100 * rows.length / Math.max(1, full.length), 0)}%`);
+    r.rateCol += 1;
+    return r;
+  }));
+
+  // 5. Sources
+  const srcRows = [...groupBy(RAW, r => r.variant)].map(([variant, rows]) => {
+    const total = rows.reduce((s, r) => s + pawns(r), 0) || 1;
+    return { cells: [VARIANTS[variant] || variant, ...EVENTS.map(([k]) => {
+      const p = rows.reduce((s, r) => s + eventPawns(r, k), 0);
+      return p ? `${fmt(100 * p / total, 0)}%` : "–";
+    }), (() => { const p = rows.reduce((s, r) => s + markerPawns(r), 0); return p ? `${fmt(100 * p / total, 0)}%` : "–"; })()] };
+  });
+  table("sources", ["", ...EVENTS.map(e => e[1]), "Distance markers"], srcRows);
+
+  // 6. Endgames
+  const FAM = { mates: "Basic mates", pawn: "King and pawn", rook: "Rook endings", games: "From your games" };
+  const eg = RAW.filter(r => r.strategy === "endgames");
+  const once = V.egFirst + V.egMission + V.egMastered;
+  // Tune-ups in the first year after mastery: due at 14, then doubling intervals capped at 90 days.
+  let tunes = 0;
+  for (let day = 14, gap = 14; day <= 365; gap = Math.min(gap * 2, 90), day += gap) tunes++;
+  const egRows = [...groupBy(eg, r => `${FAM[r.start] || r.start} · ${r.opening}`)].sort().map(([k, rows]) => {
+    const ok = rows.filter(r => r.ending === "success").length / rows.length;
+    const mins = rows.reduce((s, r) => s + minutes(r), 0) / rows.length;
+    const toMaster = ok ? 3 / ok * mins : Infinity;
+    return { cells: [k, rows.length, `${fmt(100 * ok, 0)}%`, fmt(mins, 1), fmt(toMaster, 1), once, fmt(once / toMaster, 1), tunes * V.egTune] };
+  });
+  egRows.push({ cells: [`<b>Library, ${egRows.length} endings</b>`, "", "", "", "", `<b>${once * egRows.length}</b>`, "", `<b>${tunes * V.egTune * egRows.length}</b>`] });
+  table("endgames", ["Family · ending", "Rounds", "Success", "Min/round", "Min to master", "One-time pawns", "Pawns/min to mastery", `Tune-ups, first year (${tunes})`], egRows);
+
+  // 7. Growth over a session
+  const fw = RAW.filter(r => r.variant === "full" && r.side === "w");
+  const growRows = [];
+  for (const rating of ratings) for (const [a, b] of [[0, 24], [25, 49], [50, 74], [75, 99]]) {
+    const rows = fw.filter(r => r.rating === rating && r.index >= a && r.index <= b);
+    if (!rows.length) continue;
+    const size = rows.reduce((s, r) => s + r.playbookMoves, 0) / rows.length;
+    const prepPer = rows.reduce((s, r) => s + r.prepMoves, 0) / rows.length;
+    growRows.push(rateRow(`${rating} · runs ${a + 1}–${b + 1}`, rows, [fmt(size, 0), fmt(prepPer, 1)]));
+  }
+  table("growth", ["Level · runs", ...RATE_HEAD.slice(1, 5), "Playbook moves", "Prep moves/run", ...RATE_HEAD.slice(5)], growRows);
+
+  // 8. Time to buy
+  const best = stratRows[0];
+  const typical = pool(RAW.filter(r => r.variant === "full" && r.rating === 1200 && r.side === "w"));
+  const baseline = pool(RAW.filter(r => r.variant === "prepOnly" && r.rating === 1200 && r.side === "w"));
+  const fullByLevel = ratings.map(rt => pool(RAW.filter(r => r.variant === "full" && r.rating === rt))).filter(g => g.n);
+  const slow = fullByLevel.reduce((a, b) => (b.rate < a.rate ? b : a), fullByLevel[0] || { rate: 0 });
+  const rates = [best.rate, typical.rate, slow.rate];
+  const typicalSlow = pool(RAW.filter(r => r.variant === "full" && r.rating === 1200 && r.side === "w"), true);
+  const treeTotal = CATALOG.filter(c => c[0] === "Feature tree").reduce((s, c) => s + V["c_" + c[1]], 0);
+  V.tree = treeTotal;
+  const sheet = document.getElementById("sheet");
+  const time = p => [`${fmt(p / (baseline.rate || 1), 0)} min`, `${fmt(p / (typical.rate || 1) / 60, 1)} h`, `${fmt(p / (typicalSlow.rate || 1) / 60, 1)} h`];
+  let html = "<thead><tr><th>Item</th><th>Today</th><th>Price</th><th>Baseline</th><th>Typical, owner</th><th>Typical, new player</th></tr></thead><tbody>";
+  let group = "";
+  for (const [g, id, name, , today] of CATALOG) {
+    if (g !== group) {
+      group = g;
+      if (g === "Content") html += `<tr><td><b>Feature tree, all</b></td><td class="num">935</td><td class="num"><b>${treeTotal}</b></td>${time(treeTotal).map(c => `<td class="num rate">${c}</td>`).join("")}</tr>`;
+      html += `<tr><td colspan="6" style="color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em;padding-top:14px">${g}</td></tr>`;
+    }
+    const p = V["c_" + id];
+    html += `<tr><td><label for="c_${id}" style="display:inline">${name}</label></td><td class="num">${today}</td><td class="num"><input type="number" id="c_${id}" min="0" step="5" value="${p}" data-k="c_${id}"></td>${time(p).map(c => `<td class="num">${c}</td>`).join("")}</tr>`;
+  }
+  const pack10 = V.c_pack10;
+  html += `<tr><td colspan="6" class="note">$10 of packs buys ${pack10} pawns, ${pack10 < treeTotal ? "less than" : "NOT less than"} the feature tree's ${treeTotal}, so the $10 unlock ${pack10 < treeTotal ? "stays the better deal" : "is undercut"}.</td></tr>`;
+  sheet.innerHTML = html + "</tbody>";
+  for (const i of sheet.querySelectorAll("input")) i.addEventListener("change", () => { V[i.dataset.k] = parseFloat(i.value) || 0; save(); render(); });
+  const items = [["Feature tree", V.tree]];
+  let cum = 0;
+  for (let i = 0; i < V.families; i++) {
+    const price = V.famStart + i * V.famStep;
+    cum += price;
+    items.push([`Family ${i + 1} (${price}), ${cum} in all`, cum]);
+  }
+  table("buy", ["Running total", "Pawns", "Best strategy", "Typical (1200, White)", "Slowest level"],
+    items.map(([name, p]) => ({ cells: [name, p, ...rates.map(rt => rt ? `${fmt(p / rt / 60, 1)} h` : "–")] })));
+
+  // Targets
+  {
+    const base = pool(RAW.filter(r => r.variant === "prepOnly"));
+    const x = rows => pool(rows, true).rate / (base.rate || 1);
+    const full = RAW.filter(r => r.variant === "full");
+    const ff = RAW.filter(r => r.variant === "freeform");
+    const longX = x(full.filter(r => r.otherMoves >= 20)), shortX = x(full.filter(r => r.otherMoves < 20));
+    const mateX = x([...full, ...ff].filter(r => r.ending === "won")), mgX = x(RAW.filter(r => r.variant === "middlegame"));
+    const side = sd => pool(RAW.filter(r => r.variant === "prepOnly" && r.side === sd)).rate;
+    const wb = side("w") / (side("b") || 1);
+    const ffd = (lo, hi) => x(ff.filter(r => r.otherMoves >= lo && r.otherMoves < hi)) / (x(full.filter(r => r.side === "w" && r.otherMoves >= lo && r.otherMoves < hi)) || 1);
+    const ffX = ffd(20, 999);
+    const once = V.egFirst + V.egMission + V.egMastered;
+    const endings = fam => new Set(RAW.filter(r => r.strategy === "endgames" && r.start === fam).map(r => r.opening)).size;
+    const egShare = (fam, price) => endings(fam) * once / (price || 1);
+    const streakMin = V.stCap / (base.rate || 1);
+    const capDay = V.stStep > 0 ? Math.ceil((V.stCap - V.stStart) / V.stStep) + 1 : 1;
+    const near = (v, t, tol) => Math.abs(v - t) <= tol;
+    const T = [
+      ["T1, T2 · Long runs (20+ moves past prep)", "2×", fmt(longX, 2) + "×", longX >= 1.9],
+      ["Shorter full runs", "between 1× and 2×", fmt(shortX, 2) + "×", shortX >= 1 && shortX <= 2],
+      ["T3 · Middlegame", "1×", fmt(mgX, 2) + "×", near(mgX, 1, 0.1)],
+      ["T4 · Freeform against Drill, long runs", "equal", fmt(ffX, 2) + "×", near(ffX, 1, 0.1)],
+      ["T5 · A miss", "loses the prep pawns only", "by rule", true],
+      ["T6 · Runs ending in your mate", "at least 2×", fmt(mateX, 2) + "×", mateX >= 2],
+      ["Held the draw", "half of mate, rounded down", `${Math.floor(V.checkmate / 2)}`, true],
+      ["T7 · Basic mates bounties against the Endgames unlock", "about ½", fmt(egShare("mates", V.c_endgames), 2), near(egShare("mates", V.c_endgames), 0.5, 0.1)],
+      ["T7 · King and pawn bounties against its price", "about ½", fmt(egShare("pawn", V.c_egPawn), 2), near(egShare("pawn", V.c_egPawn), 0.5, 0.1)],
+      ["T7 · Rook endings bounties against its price", "about ½", fmt(egShare("rook", V.c_egRook), 2), near(egShare("rook", V.c_egRook), 0.5, 0.1)],
+      ["T8 · Streak at its cap", "about 5 min of prep-only", `${fmt(streakMin, 1)} min, reached on day ${capDay}`, near(streakMin, 5, 1)],
+      ["Q3 · White against Black, prep-only", "equal", fmt(wb, 2) + "×", near(wb, 1, 0.2)],
+    ];
+    document.getElementById("targets").innerHTML = "<thead><tr><th>Target</th><th>Wanted</th><th>Now</th><th></th></tr></thead><tbody>" +
+      T.map(([n, w, v, ok]) => `<tr><td>${n}</td><td class="num">${w}</td><td class="num rate">${v}</td><td>${ok ? "✓" : "✗"}</td></tr>`).join("") + "</tbody>";
+  }
+
+  // Headline
+  document.getElementById("headline").innerHTML = [
+    [fmt(best.rate, 2), `pawns/min at best (${best.cells[0]}, ${best.cells[1]})`],
+    [fmt(typical.rate, 2), "pawns/min in a typical full run (1200, White)"],
+    [fmt(typical.rate / (baseline.rate || 1), 2) + "×", "typical full run against the prep-only baseline (1200, White)"],
+    [fmt(V.tree / (typical.rate || 1) / 60, 1) + " h", "to earn the feature tree that way"],
+    [String(RAW.length), "runs measured"],
+  ].map(([b, s]) => `<div><b>${b}</b><span>${s}</span></div>`).join("");
+
+  document.getElementById("formulas").textContent =
+`pawns(run)   = Σ count(event) × value(event) + markers(run)
+markers(run) = Σ min(${V.mkFirst} + (k − 1) × ${V.mkStep}, ${V.mkCap})  for k = 1 … ⌊past-prep moves / ${V.mkEvery}⌋
+minutes(run) = (prep × ${V.prep}s + growth × ${V.growth}s + past-prep × ${V.other}s + ${V.overhead}s) / 60
+             = (Endgames moves × ${V.ending}s + ${V.overhead}s) / 60       for Endgames rounds
+rate(group)  = Σ pawns(run) / Σ minutes(run)
+hours(price) = price / rate / 60
+family k     = ${V.famStart} + (k − 1) × ${V.famStep}
+prep complete pays ${V.prepComplete} × prep moves asked, once per run; held the draw (half of checkmate, rounded down) and the streak are not counted`;
+}
+render();
+</script>
