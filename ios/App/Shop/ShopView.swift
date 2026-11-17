@@ -100,15 +100,16 @@ private struct ShopTree: View {
   let onTap: (String) -> Void
   @Environment(AppStore.self) private var store
 
-  /// Where each item sits on a 358 by 580 grid.
+  /// Where each item sits on a 358 by 700 grid. Endgame families and the styles sit in rows under their headings.
   static let spots: [String: CGPoint] = [
     "sidePicker": CGPoint(x: 56, y: 0), "lensPawns": CGPoint(x: 236, y: 0), "endgames": CGPoint(x: 318, y: 0),
     "openingPicker": CGPoint(x: 56, y: 112), "lensPieces": CGPoint(x: 236, y: 112), "lensPlan": CGPoint(x: 318, y: 112),
     "freeform": CGPoint(x: 56, y: 224), "guides": CGPoint(x: 146, y: 224), "lensKings": CGPoint(x: 236, y: 224),
     "middlegame": CGPoint(x: 318, y: 224),
     "personalities": CGPoint(x: 146, y: 336), "lensEval": CGPoint(x: 236, y: 336),
-    "boards": CGPoint(x: 36, y: 478), "pieces": CGPoint(x: 107, y: 478), "decks": CGPoint(x: 179, y: 478),
-    "styles": CGPoint(x: 251, y: 478), "icons": CGPoint(x: 322, y: 478),
+    "endgamesPawn": CGPoint(x: 36, y: 478), "endgamesRook": CGPoint(x: 107, y: 478),
+    "boards": CGPoint(x: 36, y: 598), "pieces": CGPoint(x: 107, y: 598), "decks": CGPoint(x: 179, y: 598),
+    "styles": CGPoint(x: 251, y: 598), "icons": CGPoint(x: 322, y: 598),
   ]
 
   var body: some View {
@@ -118,7 +119,8 @@ private struct ShopTree: View {
       ZStack(alignment: .topLeading) {
         Canvas { context, _ in
           for item in SHOP {
-            for need in item.needs {
+            // An endgame family sits in its own row under its heading: no line to Endgames.
+            for need in item.needs where item.feature?.endgameFamily == nil {
               guard let a = Self.spots[need], let b = Self.spots[item.id] else { continue }
               var path = Path()
               path.move(to: CGPoint(x: a.x * k, y: a.y + 90))
@@ -133,8 +135,10 @@ private struct ShopTree: View {
             }
           }
         }
+        Text("Endgames").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.text2)
+          .offset(x: 8, y: 448).opacity(lit == nil || lit!.contains("endgames") ? 1 : 0.28)
         Text("Styles").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.text2)
-          .offset(x: 8, y: 448).opacity(lit == nil ? 1 : 0.28)
+          .offset(x: 8, y: 568).opacity(lit == nil ? 1 : 0.28)
         ForEach(SHOP) { item in
           if let spot = Self.spots[item.id] {
             ShopNode(item: item, status: store.state.status(item), selected: selected == item.id,
@@ -149,7 +153,7 @@ private struct ShopTree: View {
       }
       .animation(.easeOut(duration: 0.35), value: selected)
     }
-    .frame(height: 580)
+    .frame(height: 700)
   }
 
   /// The medallion inside a node's frame: its top 48 points, centered.
@@ -431,7 +435,9 @@ private struct FlyingPawn: View {
 
 /// An item's icon: the lenses share one.
 func shopIcon(_ item: ShopItem) -> String {
-  item.feature?.isLens == true ? "shop.lenses" : "shop.\(item.id)"
+  if item.feature?.isLens == true { return "shop.lenses" }
+  if item.feature?.endgameFamily != nil { return "shop.endgames" }
+  return "shop.\(item.id)"
 }
 
 /// Streak freezes: held for a missed day, used on their own, up to 2.

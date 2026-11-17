@@ -197,9 +197,11 @@ public struct EndgameRecord: Equatable, Sendable, Codable {
   public var results: [String: [Bool]] = [:]
   /// Each position's bounties and tune-ups.
   public var progress: [String: EndgameProgress] = [:]
+  /// The families yours to play; nil for all of them. Kept in step with the Pawn Shop.
+  public var families: Set<String>?
   public init() {}
 
-  enum CodingKeys: String, CodingKey { case cards, seenIntros, saved, rounds, results, progress }
+  enum CodingKeys: String, CodingKey { case cards, seenIntros, saved, rounds, results, progress, families }
 
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -209,13 +211,16 @@ public struct EndgameRecord: Equatable, Sendable, Codable {
     rounds = try c.decodeIfPresent(Int.self, forKey: .rounds) ?? 0
     results = try c.decodeIfPresent([String: [Bool]].self, forKey: .results) ?? [:]
     progress = try c.decodeIfPresent([String: EndgameProgress].self, forKey: .progress) ?? [:]
+    families = try c.decodeIfPresent(Set<String>.self, forKey: .families)
   }
 
   /// A family's form: signal bars from its last rounds, or nil before it has enough.
   public func formBars(_ family: String) -> Int? { endgameFormBars(results[family] ?? []) }
 
-  /// Every position to play: the library, then your saved ones.
-  public var entries: [EndgameEntry] { ENDGAME_LIBRARY + saved.map(\.entry) }
+  /// Every position to play: the library's families that are yours, then your saved ones.
+  public var entries: [EndgameEntry] {
+    ENDGAME_LIBRARY.filter { families?.contains($0.family) ?? true } + saved.map(\.entry)
+  }
 
   /// Positions due now, oldest due first. A position never played is not due: it waits to be started.
   public var due: [EndgameEntry] {

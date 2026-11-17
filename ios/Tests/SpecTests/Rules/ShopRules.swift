@@ -14,39 +14,50 @@ private func state(pawns: Int, owning: [String] = []) -> AppState {
   @Test func featuresAndTheirPrerequisites() throws {
     let features = SHOP.filter { $0.feature != nil }.map { "\($0.id) \($0.price) \($0.needs.joined(separator: ","))" }
     #expect(features == [
-      "sidePicker 5 ", "lensPawns 10 ", "lensPieces 20 lensPawns", "lensKings 30 lensPieces", "lensEval 60 lensKings", "lensPlan 40 ",
-      "openingPicker 50 sidePicker", "freeform 120 openingPicker",
-      "middlegame 300 lensPieces", "endgames 300 ",
+      "sidePicker 200 ", "lensPawns 300 ", "lensPieces 500 lensPawns", "lensKings 800 lensPieces", "lensEval 1500 lensKings",
+      "lensPlan 1000 ", "openingPicker 1000 sidePicker", "freeform 3000 openingPicker",
+      "middlegame 8000 lensPieces", "endgames 5000 ", "endgamesPawn 5000 endgames", "endgamesRook 3500 endgames",
     ])
+    #expect(FEATURE_TREE.reduce(0) { $0 + $1.price } == 21_300, "the $10 unlock's worth")
+  }
+
+  /// Rule 1: Endgames plays Basic mates and From your games; King and pawn and Rook endings are bought apart.
+  @Test func endgameFamiliesAreBoughtApart() {
+    var s = state(pawns: 20_000)
+    _ = s.buy("endgames")
+    #expect(Set(s.endgames.entries.map(\.family)) == ["mates"])
+    _ = s.buy("endgamesRook")
+    #expect(Set(s.endgames.entries.map(\.family)) == ["mates", "rook"])
+    #expect(s.pawns == 20_000 - 5_000 - 3_500)
   }
 
   /// Rule 2: buying takes the price, and only when every item it needs is yours.
   @Test func buyingNeedsPawnsAndPrerequisites() throws {
-    var s = state(pawns: 100)
+    var s = state(pawns: 2_000)
     let early = s.buy("openingPicker")
     #expect(!early)
     #expect(s.status(try #require(shopItem("openingPicker"))) == .locked)
     let side = s.buy("sidePicker")
-    #expect(side && s.pawns == 95 && s.owns(.sidePicker))
+    #expect(side && s.pawns == 1_800 && s.owns(.sidePicker))
     let again = s.buy("sidePicker")
     #expect(!again, "an item is bought once")
     let opening = s.buy("openingPicker")
-    #expect(opening && s.pawns == 45)
-    var poor = state(pawns: 4)
+    #expect(opening && s.pawns == 800)
+    var poor = state(pawns: 199)
     #expect(poor.status(try #require(shopItem("sidePicker"))) == .short(1))
     let bought = poor.buy("sidePicker")
-    #expect(!bought && poor.pawns == 4)
+    #expect(!bought && poor.pawns == 199)
   }
 
   /// Rule 3: content and cosmetics are shown but not for sale.
   @Test func placeholdersAreNotForSale() throws {
-    var s = state(pawns: 1000, owning: ShopFeature.allCases.map(\.rawValue))
+    var s = state(pawns: 100_000, owning: ShopFeature.allCases.map(\.rawValue))
     for item in SHOP where item.feature == nil {
       #expect(s.status(item) == .soon)
       let bought = s.buy(item.id)
       #expect(!bought)
     }
-    #expect(s.pawns == 1000)
+    #expect(s.pawns == 100_000)
   }
 
   /// Rule 4: Home's choices stay within what you own.

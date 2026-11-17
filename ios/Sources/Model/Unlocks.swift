@@ -13,7 +13,20 @@ public enum ShopFeature: String, Sendable, Codable, CaseIterable {
   /// Freeform runs.
   case freeform
   case middlegame
+  /// Endgames, with Basic mates and From your games.
   case endgames
+  /// Endgame families bought on their own, after Endgames.
+  case endgamesPawn, endgamesRook
+
+  /// The Endgames family a feature adds, if any.
+  public var endgameFamily: String? {
+    switch self {
+    case .endgames: "mates"
+    case .endgamesPawn: "pawn"
+    case .endgamesRook: "rook"
+    default: nil
+    }
+  }
 }
 
 /// The shelf an item sits on.
@@ -50,24 +63,29 @@ public struct ShopItem: Equatable, Sendable, Identifiable {
 
 /// Everything in the shop, in its tree's order.
 public let SHOP: [ShopItem] = [
-  ShopItem("sidePicker", "Side picker", .features, 5, feature: .sidePicker, about: "Play as White, Black, or random."),
-  ShopItem("lensPawns", "Pawns lens", .features, 10, feature: .lensPawns, about: "Tap it under the board in a game to show weak and passed pawns."),
-  ShopItem("lensPieces", "Pieces lens", .features, 20, needs: ["lensPawns"], feature: .lensPieces, about: "Tap it under the board in a game to show loose and attacked pieces."),
-  ShopItem("lensKings", "Kings lens", .features, 30, needs: ["lensPieces"], feature: .lensKings, about: "Tap it under the board in a game to show how safe each king is."),
-  ShopItem("lensEval", "Eval lens", .features, 60, needs: ["lensKings"], feature: .lensEval, about: "Tap it under the board in a game to show the engine's evaluation."),
-  ShopItem("lensPlan", "Plan", .features, 40, feature: .lensPlan, about: "Tap it under the board in a game to show a plan for the position."),
-  ShopItem("openingPicker", "Opening picker", .features, 50, needs: ["sidePicker"], feature: .openingPicker, about: "Play a specific opening."),
-  ShopItem("freeform", "Freeform", .features, 120, needs: ["openingPicker"], feature: .freeform, about: "Play any of your lines from move one."),
-  ShopItem("middlegame", "Middlegame", .features, 300, needs: ["lensPieces"], feature: .middlegame, about: "Play middlegames from your openings."),
-  ShopItem("endgames", "Endgames", .features, 300, feature: .endgames, about: "Practice key endgames."),
-  ShopItem("guides", "Opening guides", .content, 100, needs: ["openingPicker"], each: true, about: "Learn the ideas behind an opening."),
-  ShopItem("personalities", "Opponent personalities", .content, 200, needs: ["freeform"], about: "Opponents with their own play styles."),
-  ShopItem("boards", "Board styles", .cosmetics, 150, each: true, about: "New board designs."),
-  ShopItem("pieces", "Piece styles", .cosmetics, 150, each: true, about: "New piece sets."),
-  ShopItem("decks", "Deck styles", .cosmetics, 150, each: true, about: "New card designs."),
-  ShopItem("styles", "Full UI styles", .cosmetics, 400, each: true, about: "New looks for the whole app."),
-  ShopItem("icons", "App icons", .cosmetics, 100, each: true, about: "New app icons."),
+  ShopItem("sidePicker", "Side picker", .features, 200, feature: .sidePicker, about: "Play as White, Black, or random."),
+  ShopItem("lensPawns", "Pawns lens", .features, 300, feature: .lensPawns, about: "Tap it under the board in a game to show weak and passed pawns."),
+  ShopItem("lensPieces", "Pieces lens", .features, 500, needs: ["lensPawns"], feature: .lensPieces, about: "Tap it under the board in a game to show loose and attacked pieces."),
+  ShopItem("lensKings", "Kings lens", .features, 800, needs: ["lensPieces"], feature: .lensKings, about: "Tap it under the board in a game to show how safe each king is."),
+  ShopItem("lensEval", "Eval lens", .features, 1_500, needs: ["lensKings"], feature: .lensEval, about: "Tap it under the board in a game to show the engine's evaluation."),
+  ShopItem("lensPlan", "Plan", .features, 1_000, feature: .lensPlan, about: "Tap it under the board in a game to show a plan for the position."),
+  ShopItem("openingPicker", "Opening picker", .features, 1_000, needs: ["sidePicker"], feature: .openingPicker, about: "Play a specific opening."),
+  ShopItem("freeform", "Freeform", .features, 3_000, needs: ["openingPicker"], feature: .freeform, about: "Play any of your lines from move one."),
+  ShopItem("middlegame", "Middlegame", .features, 8_000, needs: ["lensPieces"], feature: .middlegame, about: "Play middlegames from your openings."),
+  ShopItem("endgames", "Endgames", .features, 5_000, feature: .endgames, about: "Practice key endgames, starting with the basic mates and endings from your games."),
+  ShopItem("endgamesPawn", "King and pawn", .content, 5_000, needs: ["endgames"], feature: .endgamesPawn, about: "Key squares, the opposition and the square rule, to win and to hold."),
+  ShopItem("endgamesRook", "Rook endings", .content, 3_500, needs: ["endgames"], feature: .endgamesRook, about: "The Lucena and Philidor positions."),
+  ShopItem("guides", "Opening guides", .content, 2_000, needs: ["openingPicker"], each: true, about: "Learn the ideas behind an opening."),
+  ShopItem("personalities", "Opponent personalities", .content, 5_000, needs: ["freeform"], about: "Opponents with their own play styles."),
+  ShopItem("boards", "Board styles", .cosmetics, 3_000, each: true, about: "New board designs."),
+  ShopItem("pieces", "Piece styles", .cosmetics, 3_000, each: true, about: "New piece sets."),
+  ShopItem("decks", "Deck styles", .cosmetics, 3_000, each: true, about: "New card designs."),
+  ShopItem("styles", "Full UI styles", .cosmetics, 10_000, each: true, about: "New looks for the whole app."),
+  ShopItem("icons", "App icons", .cosmetics, 2_000, each: true, about: "New app icons."),
 ]
+
+/// The features the $10 unlock gives: the whole feature shelf.
+public var FEATURE_TREE: [ShopItem] { SHOP.filter { $0.shelf == .features } }
 
 public func shopItem(_ id: String) -> ShopItem? { SHOP.first { $0.id == id } }
 
@@ -122,6 +140,7 @@ extension AppState {
     guard let item = shopItem(id), status(item) == .buyable else { return false }
     pawns -= item.price
     unlocked.insert(id)
+    syncEndgameFamilies()
     logEvent(AppEvent(kind: "buy", count: item.price, picked: id, text: "balance \(pawns)"))
     return true
   }
@@ -129,6 +148,14 @@ extension AppState {
   /// Every feature yours, as an existing profile gets.
   public mutating func unlockAll() {
     for feature in ShopFeature.allCases { unlocked.insert(feature.rawValue) }
+    syncEndgameFamilies()
+  }
+
+  /// Endgames plays the families you own: From your games comes with Endgames.
+  public mutating func syncEndgameFamilies() {
+    guard owns(.endgames) else { return }
+    let owned = ShopFeature.allCases.filter { owns($0) }.compactMap(\.endgameFamily)
+    endgames.families = Set(owned + ["games"])
   }
 
   /// Home's choices held to the features you own: White without the side picker,
