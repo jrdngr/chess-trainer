@@ -10,8 +10,7 @@ struct MilestonesCard: View {
 
   var body: some View {
     let list = milestones(store.state.score, store.state.runRecord)
-    let now = Env.now()
-    let today = streakToday(store.state.pawnStreak, today: dayKey(now), yesterday: dayBefore(now))
+    let today = store.state.streakNow()
     let done = list.filter(earned).count
     // The streak always leads; the three closest of the rest follow it.
     let rest = list.filter { $0.kind != .streak }
@@ -29,6 +28,7 @@ struct MilestonesCard: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 16) {
           Text("Milestones").font(.system(size: 22, weight: .heavy)).foregroundStyle(Theme.text)
+          if today.repairable { StreakRepair() }
           LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 6)], spacing: 14) {
             ForEach(list, id: \.id) { MilestoneBadge(milestone: $0) }
           }
@@ -90,9 +90,8 @@ struct StreakBadge: View {
       .frame(width: 52, height: 52)
       .animation(.easeOut(duration: 0.45), value: lit)
       HStack(spacing: 1) {
-        ForEach(0..<today.pawns, id: \.self) { _ in
-          PawnMark(filled: lit).frame(width: 12, height: 12)
-        }
+        PawnMark(filled: lit).frame(width: 12, height: 12)
+        Text("\(today.pawns)").font(.system(size: 11, weight: .bold).monospacedDigit())
       }
       .frame(height: 13)
       .foregroundStyle(Theme.pawn)
@@ -102,10 +101,12 @@ struct StreakBadge: View {
     .accessibilityLabel("Streak day \(today.day), \(today.pawns) pawn\(today.pawns == 1 ? "" : "s") a day\(lit ? ", today's paid" : "")")
   }
 
-  /// Days before today in the week are lit; today's part is dim until its game pays.
+  /// Days before today in the week are lit, frozen ones icy; yesterday, missed but repairable, is
+  /// a faint ice; today's part is dim until its game pays.
   private func color(_ i: Int) -> SwiftUI.Color {
     let at = today.weekday - 1
-    if i < at { return Theme.pawn }
+    if today.repairable && i == at - 1 { return Theme.ice.opacity(0.3) }
+    if i < at { return today.frozen.contains(i + 1) ? Theme.ice : Theme.pawn }
     if i == at { return today.paid && !waiting ? Theme.pawn : SwiftUI.Color(hex: 0x6b5a2a) }
     return Theme.surface3
   }
@@ -154,5 +155,27 @@ struct MilestoneBadge: View {
       Text(milestone.target >= 1000 ? "\(Int(milestone.target) / 1000)k" : "\(Int(milestone.target))")
         .font(.system(size: 13, weight: .heavy).monospacedDigit())
     }
+  }
+}
+
+/// The quiet offer to repair yesterday, missed: in the Milestones sheet, never a popup.
+private struct StreakRepair: View {
+  @Environment(AppStore.self) private var store
+
+  var body: some View {
+    let afford = store.state.pawns >= REPAIR_PRICE
+    HStack(spacing: 12) {
+      Icon(name: "flame", size: 18).foregroundStyle(Theme.ice)
+      VStack(alignment: .leading, spacing: 2) {
+        Text("Repair your streak").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text)
+        Text("Yesterday was missed. Repair it any time today.").font(.system(size: 13)).foregroundStyle(Theme.text2)
+      }
+      Spacer(minLength: 0)
+      Button { store.update { $0.repairStreak() } } label: { PawnAmount(count: REPAIR_PRICE) }
+        .buttonStyle(PlayButtonStyle(kind: afford ? .accent : .plain, height: 40, inset: 14))
+        .disabled(!afford)
+    }
+    .padding(14)
+    .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
   }
 }

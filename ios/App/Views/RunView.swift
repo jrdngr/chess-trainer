@@ -517,6 +517,25 @@ struct RunView: View {
       }
       .padding(.top, 16)
       .frame(maxWidth: .infinity)
+    } else if model.canContinue {
+      // Continue can take the blunder back: the board holds it until the player chooses.
+      VStack(spacing: 14) {
+        endingName
+          .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
+        HStack(spacing: 10) {
+          Button { model.continueToEnd() } label: { Text("End run") }
+            .buttonStyle(PlayButtonStyle(kind: .plain, height: 44, inset: 18))
+          Button { model.buyContinue() } label: {
+            HStack(spacing: 8) {
+              Text("Continue")
+              PawnAmount(count: CONTINUE_PRICE, size: 15, color: Theme.text)
+            }
+          }
+          .buttonStyle(PlayButtonStyle(kind: .accent, height: 44, inset: 18))
+        }
+      }
+      .frame(maxWidth: .infinity)
+      .padding(.top, 16)
     } else {
       endingName
         .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
@@ -606,6 +625,8 @@ struct RunView: View {
       return b.threat.map { [BoardArrow(from: $0.from, to: $0.to, color: Theme.bad, over: true)] } ?? []
     }
     if let miss = model.miss { return [BoardArrow(from: miss.from, to: miss.to, color: Theme.good)] }
+    // The blunder Continue took back: what it would have allowed, until your next move.
+    if let threat = model.takenBack?.threat { return [BoardArrow(from: threat.from, to: threat.to, color: Theme.bad, over: true)] }
     // A chance you missed: its move, until your next one.
     if let best = model.missedBest { return [BoardArrow(from: best.from, to: best.to, color: Theme.missed, over: true)] }
     if model.atHole && !model.thinking {

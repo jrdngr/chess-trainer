@@ -83,14 +83,14 @@ import Testing
     #expect(app.state.pawns == before + earned)
 
     await app.endRound()
-    #expect(app.state.pawns == before + earned + 1, "the day's first game pays the streak")
+    #expect(app.state.pawns == before + earned + 10, "the day's first game pays the streak")
     #expect(app.state.pawnStreak.days == 1)
-    #expect(app.store.streakWaiting == 1 && app.store.shownPawns == app.state.pawns - 1 - app.store.pawnDrops.reduce(0) { $0 + $1.flying },
+    #expect(app.store.streakWaiting == 10 && app.store.shownPawns == app.state.pawns - 10 - app.store.pawnDrops.reduce(0) { $0 + $1.flying },
             "the streak pawn waits for Home before the counter shows it")
 
     app.store.showStreakPawns()
     #expect(app.store.streakWaiting == 0)
-    #expect(app.store.pawnDrops.last?.award == PawnAward(.streak, .streak, count: 1), "it pops out of the streak ring")
+    #expect(app.store.pawnDrops.last?.award == PawnAward(.streak, .streak, count: 10), "it pops out of the streak ring")
   }
 }
 
@@ -137,6 +137,40 @@ import Testing
     #expect(app.run?.phase == .over)
     let game = try #require(app.state.games.last)
     #expect(game.moves == run.run.played + [played], "the history keeps the move that lost")
+  }
+}
+
+/// With 500 pawns, a blunder holds the board: Continue takes it back for them, once, and the run
+/// goes on; the record counts only the moves before it.
+@MainActor @Test func continueTakesABlunderBack() async throws {
+  try await headless { app in
+    try await drillAsWhite(app)
+    app.store.update { $0.pawns = 1_000 }
+    try await playPrep(app)
+    for _ in 0..<20 {
+      guard let run = app.run, run.live else { break }
+      let hang = try #require(hangingQueenMove(run.run.fen) ?? quietMove(run.run.fen))
+      try await app.move(hang)
+    }
+    let run = try #require(app.run)
+    #expect(run.phase == .blunder && run.canContinue)
+    #expect(run.finish == nil, "the run isn't over while Continue can take it back")
+    let fen = run.run.fen
+    let threat = try #require(run.blunder?.threat)
+    let pawns = app.state.pawns
+    try await app.buyContinue()
+    #expect(app.state.pawns == pawns - CONTINUE_PRICE)
+    #expect(run.live && run.run.fen == fen, "the blunder is taken back")
+    #expect(run.takenBack?.threat?.to == threat.to, "its threat stays drawn")
+    #expect(!run.canContinue)
+    let counted = run.session.state.moves
+    for _ in 0..<20 {
+      guard let run = app.run, run.live else { break }
+      let hang = try #require(hangingQueenMove(run.run.fen) ?? quietMove(run.run.fen))
+      try await app.move(hang)
+    }
+    #expect(run.phase == .blunder && run.finish != nil, "a second blunder ends the run")
+    #expect(app.state.runRecord.global.best == counted)
   }
 }
 

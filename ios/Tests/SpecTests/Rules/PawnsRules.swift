@@ -118,31 +118,31 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
     #expect(awards(engineMove(reached.session, "Kd8").effects).isEmpty)
   }
 
-  /// Rule 5: a week at a time, up to 5 a day; a missed day starts again.
-  @Test func theStreakPaysByTheWeek() {
-    #expect([1, 7, 8, 14, 15, 22, 28, 29, 100].map(streakPawns) == [1, 1, 2, 2, 3, 4, 4, 5, 5])
+  /// Rule 5: 10 more each day, up to 90; a missed day starts again.
+  @Test func theStreakClimbsDaily() {
+    #expect([1, 2, 5, 8, 9, 10, 100].map(streakPawns) == [10, 20, 50, 80, 90, 90, 90])
     var streak = PawnStreak()
     var paid: [Int] = []
-    for day in 1...9 {
+    for day in 1...10 {
       let d = streakDay(streak, today: "d\(day)", yesterday: "d\(day - 1)")
       streak = d.streak
       paid.append(d.pawns)
     }
-    #expect(paid == [1, 1, 1, 1, 1, 1, 1, 2, 2])
-    #expect(streakDay(streak, today: "d9", yesterday: "d8").pawns == 0)
-    let missed = streakDay(streak, today: "d11", yesterday: "d10")
-    #expect(missed.streak.days == 1 && missed.pawns == 1)
+    #expect(paid == [10, 20, 30, 40, 50, 60, 70, 80, 90, 90])
+    #expect(streakDay(streak, today: "d10", yesterday: "d9").pawns == 0)
+    let missed = streakDay(streak, today: "d12", yesterday: "d11")
+    #expect(missed.streak.days == 1 && missed.pawns == 10)
   }
 
   /// Rule 5: the first finished game of a day pays onto the balance.
   @Test func finishingAGamePaysTheDay() {
     var state = AppState()
     let noon = 1_790_000_000_000.0
-    #expect(state.finishedGame(now: noon) == 1)
+    #expect(state.finishedGame(now: noon) == 10)
     #expect(state.finishedGame(now: noon + 1000) == 0)
-    #expect(state.finishedGame(now: noon + DAY) == 1)
-    #expect(state.pawns == 2 && state.pawnStreak.days == 2)
-    #expect(state.finishedGame(now: noon + 3 * DAY) == 1)
+    #expect(state.finishedGame(now: noon + DAY) == 20)
+    #expect(state.pawns == 30 && state.pawnStreak.days == 2)
+    #expect(state.finishedGame(now: noon + 4 * DAY) == 10)
     #expect(state.pawnStreak.days == 1)
   }
 
@@ -165,11 +165,14 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
   /// Rule 8: before today's game the ring shows the day it will make and what it will pay; after, the day it made.
   @Test func theStreakRingShowsToday() {
     let nine = PawnStreak(day: "d9", days: 9)
-    #expect(streakToday(nine, today: "d10", yesterday: "d9") == StreakToday(day: 10, paid: false, pawns: 2))
+    #expect(streakToday(nine, today: "d10", yesterday: "d9") == StreakToday(day: 10, paid: false, pawns: 90))
     #expect(streakToday(nine, today: "d10", yesterday: "d9").weekday == 3)
-    #expect(streakToday(nine, today: "d9", yesterday: "d8") == StreakToday(day: 9, paid: true, pawns: 2))
-    #expect(streakToday(nine, today: "d12", yesterday: "d11") == StreakToday(day: 1, paid: false, pawns: 1))
+    #expect(streakToday(nine, today: "d9", yesterday: "d8") == StreakToday(day: 9, paid: true, pawns: 90))
+    #expect(streakToday(nine, today: "d12", yesterday: "d11") == StreakToday(day: 1, paid: false, pawns: 10))
     #expect(streakToday(PawnStreak(day: "d7", days: 7), today: "d7", yesterday: "d6").weekday == 7)
+    // A frozen day shows icy in its week.
+    let kept = PawnStreak(day: "d9", days: 9, frozen: [3, 9])
+    #expect(streakToday(kept, today: "d10", yesterday: "d9").frozen == [2])
   }
 
   /// Rule 9: markers at 5, 10, 15 and 20 moves past prep pay 10, 15, 20, 20; Middlegame pays 40%.
@@ -206,5 +209,45 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
     if case .draw = stale.session.ending {} else { Issue.record("not a draw") }
     held.evalTrail = [-100]
     #expect(awards(engineMove(held, "Qf7").effects).isEmpty, "not behind enough after the prep")
+  }
+
+  /// Rule 11: freezes cover missed days on their own, oldest first, and count toward the length.
+  @Test func freezesKeepTheStreak() {
+    let past = ["d9", "d8", "d7", "d6"]
+    let held = PawnStreak(day: "d7", days: 7, freezes: 2)
+    // Missed d8 and d9: both frozen, today is day 10.
+    let played = streakDay(held, today: "d10", past: past)
+    #expect(played.streak.days == 10 && played.streak.freezes == 0 && played.pawns == 90)
+    #expect(played.streak.frozen == [8, 9])
+    // One freeze for two missed days: d8 frozen, d9 still missed, so a repair is offered.
+    let one = PawnStreak(day: "d7", days: 7, freezes: 1)
+    #expect(repairOffered(one, today: "d10", past: past))
+    #expect(streakToday(one, today: "d10", past: past).repairable)
+    #expect(streakDay(one, today: "d10", past: past).streak.days == 1, "playing without the repair starts again")
+    // Three missed days with no freeze: gone.
+    #expect(!repairOffered(PawnStreak(day: "d6", days: 6), today: "d10", past: past))
+  }
+
+  /// Rule 11: freezes cost 1,000, hold 2; a repair costs 2,000 and pays nothing for the missed day.
+  @Test func freezesAndRepairsCostPawns() {
+    var state = AppState()
+    state.pawns = 2_500
+    let first = state.buyFreeze(), second = state.buyFreeze(), third = state.buyFreeze()
+    #expect(first && second)
+    #expect(!third, "2 at most")
+    #expect(state.pawns == 500 && state.pawnStreak.freezes == 2)
+
+    var missed = AppState()
+    let noon = 1_790_000_000_000.0
+    _ = missed.finishedGame(now: noon)
+    _ = missed.finishedGame(now: noon + DAY)
+    missed.pawns = 2_000
+    let early = missed.repairStreak(now: noon + 2 * DAY)
+    #expect(!early, "nothing missed yet")
+    let repaired = missed.repairStreak(now: noon + 3 * DAY)
+    #expect(repaired)
+    #expect(missed.pawns == 0 && missed.pawnStreak.days == 3 && missed.pawnStreak.frozen == [3])
+    let today = missed.finishedGame(now: noon + 3 * DAY)
+    #expect(today == 40, "today is day 4")
   }
 }

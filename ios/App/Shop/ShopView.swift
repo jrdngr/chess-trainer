@@ -28,8 +28,11 @@ struct ShopView: View {
       }
       .padding(.horizontal, 20).padding(.top, 14).padding(.bottom, 10)
       ScrollView {
-        ShopTree(selected: selected, purchase: purchase, frames: $frames) { selected = $0 }
-          .padding(.horizontal, 16).padding(.bottom, selected == nil ? 24 : 330)
+        VStack(spacing: 16) {
+          ShopTree(selected: selected, purchase: purchase, frames: $frames) { selected = $0 }
+          StreakFreezeRow()
+        }
+        .padding(.horizontal, 16).padding(.bottom, selected == nil ? 24 : 330)
       }
     }
     .background(Theme.background.ignoresSafeArea())
@@ -429,4 +432,29 @@ private struct FlyingPawn: View {
 /// An item's icon: the lenses share one.
 func shopIcon(_ item: ShopItem) -> String {
   item.feature?.isLens == true ? "shop.lenses" : "shop.\(item.id)"
+}
+
+/// Streak freezes: held for a missed day, used on their own, up to 2.
+private struct StreakFreezeRow: View {
+  @Environment(AppStore.self) private var store
+
+  var body: some View {
+    let held = store.state.pawnStreak.freezes
+    let full = held >= MAX_FREEZES
+    let afford = store.state.pawns >= FREEZE_PRICE
+    HStack(spacing: 12) {
+      Icon(name: "flame", size: 20).foregroundStyle(Theme.ice)
+      VStack(alignment: .leading, spacing: 2) {
+        Text("Streak freeze").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text)
+        Text("Keeps your streak through a missed day. \(held) of \(MAX_FREEZES) held.")
+          .font(.system(size: 13)).foregroundStyle(Theme.text2)
+      }
+      Spacer(minLength: 0)
+      Button { store.update { $0.buyFreeze() } } label: { PawnAmount(count: FREEZE_PRICE, size: 15) }
+        .buttonStyle(PlayButtonStyle(kind: afford && !full ? .accent : .plain, height: 40, inset: 14))
+        .disabled(full || !afford)
+    }
+    .padding(14)
+    .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
+  }
 }

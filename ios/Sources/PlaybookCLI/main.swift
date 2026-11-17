@@ -19,7 +19,7 @@ let HELP = """
   Home:      select [w|b|either] [drill|freeform] [opening id or moves, "any" for Any Opening]
              play · tree [w|b] · unlock NAME · endgames · middlegame · shop · buy ID
   Board:     <san> (or move <san> <san>...) · think SECONDS
-  Play:      end · continue · next · undo · done · grow · replay
+  Play:      end · continue · takeback · next · undo · done · grow · replay
   Growth:    save · more · play-on · back
   Endgames:  practice · ending ID · resign · next
   """
@@ -94,6 +94,7 @@ func perform(_ app: HeadlessApp, _ words: [String]) async throws -> Bool {
   case "think": await app.think(rest.first.flatMap(Double.init) ?? 1)
   case "end": await app.endRound()
   case "continue": app.continueToEnd()
+  case "takeback": try await app.buyContinue()
   case "next": try await app.next()
   case "undo": await app.undo()
   case "done": await app.doneAdding()

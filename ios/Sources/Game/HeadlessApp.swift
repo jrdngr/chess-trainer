@@ -330,7 +330,7 @@ public final class HeadlessApp: SignalSink {
       game.play(move)
     }
     await idle()
-    if before.0 == moves.count && before.1 == growth?.session && before.2 == endgame?.game?.moves.count && run?.finish == nil {
+    if before.0 == moves.count && before.1 == growth?.session && before.2 == endgame?.game?.moves.count && run?.finish == nil && run?.heldBlunder == nil {
       throw Failure.refused(san)
     }
   }
@@ -373,6 +373,13 @@ public final class HeadlessApp: SignalSink {
   /// Past a blunder, on to the end screen.
   public func continueToEnd() {
     run?.continueToEnd()
+  }
+
+  /// Continue after a blunder: it is taken back for its pawns, once a run.
+  public func buyContinue() async throws {
+    guard let run, run.canContinue else { throw Failure.notHere("No Continue here") }
+    run.buyContinue()
+    await idle()
   }
 
   /// Next run: in Play, the next round, dealt; in Middlegame, another line; in Endgames, the next ending.
