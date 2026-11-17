@@ -857,7 +857,8 @@ public final class RunModel {
     finish = f
     log("game-end") { $0.text = "\(f.how)"; $0.count = f.ended.run.played.count; $0.line = f.ended.run.played.joined(separator: " ") }
     tip = nil
-    if case .blunder = f.how { offer(.blunder) }
+    // Next run goes straight on: no game is left on the board to look back on.
+    if case .blunder = f.how { offer(.blunder) } else if handoff == nil && !advancing { offer(.analysis) }
     before = handoff != nil ? store.state.middlegame : store.state.runRecord
     let line = f.ended.run.played
     store.finishedGame()

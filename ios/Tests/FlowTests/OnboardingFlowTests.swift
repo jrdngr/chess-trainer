@@ -56,3 +56,15 @@ import Testing
     #expect(app.run?.tip == nil, "the flashcards tip has shown")
   }
 }
+
+/// A Play game ended by hand, not Next run, leaves its moves to look back on: the analysis tip shows, once.
+@MainActor @Test func aGameEndedByHandShowsTheAnalysisTip() async throws {
+  try await headless(everything: false) { app in
+    await app.recommendOpenings()
+    app.store.update { $0.settings.seenTips = Set(GameTip.allCases).subtracting([.analysis]) }
+    try await app.move(try #require(app.run?.prepNow.first))
+    await app.endRound()
+    #expect(app.run?.tip == .analysis)
+    #expect(app.state.settings.seen(.analysis))
+  }
+}

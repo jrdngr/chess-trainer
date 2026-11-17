@@ -330,6 +330,8 @@ struct RunView: View {
       .overlay(alignment: .top) { calloutLayer.animation(.easeOut(duration: 0.25), value: model.shownCallout?.id) }
       // The callout runs past the lenses' row, over the panel under it (Undo and Done while adding moves).
       .tip(model.tip, when: model.tip == .lens, arrowAt: 0.1, rest: 1, onDismiss: model.dismissTip)
+      // Over a finished game, at its moves.
+      .tip(model.tip, when: model.tip == .analysis && drawing, rest: 1, onDismiss: model.dismissTip)
       VStack(spacing: 0) {
         if lens == .eval {
           EvalRunCard(trail: model.session.evalTrail, last: model.session.lastJudged, color: model.run.color)
@@ -490,7 +492,8 @@ struct RunView: View {
     let named = rim
     return StatusLine(
       white: model.run.color == .w,
-      text: named?.label ?? turn,
+      // A finished game says so, whatever was last on the board.
+      text: drawing ? "Game over" : named?.label ?? turn,
       busy: model.thinking || model.pending != nil,
       tone: named?.color ?? Theme.text2)
   }
@@ -504,10 +507,7 @@ struct RunView: View {
         if !atGameEnd {
           analysisStatus
         } else {
-          // Ended by hand, the run needs no name for how it ended.
-          if model.session.ending != .ended {
-            endingName.fixedSize().tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
-          }
+          endingName.fixedSize().tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
         }
       }
       .padding(.top, 16)
@@ -559,7 +559,8 @@ struct RunView: View {
       if lostIt {
         Icon(name: "cross", size: 18).frame(width: 26, height: 26).background(Circle().fill(Theme.bad.opacity(0.14)))
       }
-      Text(endingTitle(how, model.run.played.count)).font(.system(size: 19, weight: .heavy)).tracking(-0.19)
+      // Ended by hand, the game is just over.
+      Text(how == .ended ? "Game over" : endingTitle(how, model.run.played.count)).font(.system(size: 19, weight: .heavy)).tracking(-0.19)
     }
     .foregroundStyle(tone).padding(.vertical, 6)
   }

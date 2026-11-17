@@ -30,6 +30,8 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
   case lens
   /// A Freeform game starts.
   case freeformGame
+  /// A Play game ends without a blunder, its moves left to look back on.
+  case analysis
 
   /* ── Home ── */
   /// A feature bought: its control on Home.
@@ -53,6 +55,7 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     case .nextRun: "Once your prep is done, tap \u{201C}Next run\u{201D} to end early. This can be helpful for drilling openings quickly."
     case .lens: "Tap a lens for hints."
     case .freeformGame: "Freeform lets you play any of your lines from move 1. Your opponent will always stay within your Playbook."
+    case .analysis: "The game\u{2019}s over. Step through your moves or try others on the board."
     case .sidePicker: "Choose your side."
     case .openingPicker: "Choose an opening to focus on."
     case .playbook: "Your openings live here as a tree. Tap one to see its branches, and + to add one."
