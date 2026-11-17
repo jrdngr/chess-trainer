@@ -78,8 +78,8 @@ text after each, so an agent can play a whole game through stdin.
 
 `App/Assets.xcassets/AppIcon.appiconset/AppIcon.png` is a single 1024px
 opaque PNG; iOS masks the corners and scales it down. Its source is
-`Design/app-icon.svg` (three pawns climbing three dark steps, lavender to a
-gold top pawn, with a lavender glow behind it). Re-render the PNG from the SVG after editing it.
+`Design/app-icon.svg` (three pawns climbing three isometric steps, lavender
+to a gold top pawn, with gold lit step edges). Re-render the PNG from the SVG after editing it.
 
 ## Builds and versions
 
