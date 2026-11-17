@@ -33,7 +33,7 @@ cd ios && swift test
   behavior change is intended, edit the affected cases with it.
   `SpecTests/Rules/` holds one suite per file in `docs/rules/`.
 
-`PickerData.swift`, `StructureTemplates.swift` and `StarterSets.swift` hold
+`PickerData.swift` and `StructureTemplates.swift` hold
 data that the constants tests compare with `Golden/constants.json`.
 
 ## Playing without the screens
@@ -43,8 +43,7 @@ runs in `Game`, which builds on Linux. `HeadlessApp` plays it from code:
 
 ```swift
 try await HeadlessApp.run(book: bookURL, seed: 1) { app in
-  try app.knowMyOpenings(starter: "classical")
-  await app.openPlay()
+  try await app.chooseOpenings([["e4"], ["e4", "c5"], ["d4", "Nf6"]])
   try await app.move("Nf3")
   print(app.report())
 }

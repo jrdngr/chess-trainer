@@ -18,9 +18,9 @@ import Testing
     ])
   }
 
-  func finish(_ openings: [SeedOpening], _ board: [OnboardingLine] = []) -> JSON {
+  func finish(_ openings: [SeedOpening]) -> JSON {
     var state = AppState()
-    Env.at(at) { state.onboarded(tree, openings, board) }
+    Env.at(at) { state.onboarded(tree, openings) }
     return obj([
       "playbook": state.playbookList.map(written).json,
       "selection": encoded(state.settings.selection),
@@ -34,16 +34,9 @@ import Testing
     "onboarding.selectionFor": { a in
       encoded(selectionFor(a[0].array.map { ($0.string, playerOf(line($0.string))) }))
     },
-    "onboarding.onboarded (a starter set)": { a in
-      let set = STARTER_SETS.first { $0.id == a[0].string }!
-      return finish(setOpenings(set).map { SeedOpening(sans: line($0.id), color: $0.color) })
-    },
-    "onboarding.onboarded": { a in
-      finish(
-        a[0].array.map { seedFor(line($0.string)) },
-        a[1].array.map { OnboardingLine(sans: line($0[0].string), color: Color(rawValue: $0[1].string)!) })
-    },
-  ], only: ["onboarding.playerOf", "onboarding.selectionFor", "onboarding.onboarded (a starter set)", "onboarding.onboarded"])
+    "onboarding.onboarded (the recommended openings)": { _ in finish(RECOMMENDED_OPENINGS) },
+    "onboarding.onboarded": { a in finish(a[0].array.map { seedFor(line($0.string)) }) },
+  ])
 }
 
 /// An event as the cases record it: without its time or playbook id.

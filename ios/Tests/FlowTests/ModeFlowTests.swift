@@ -7,7 +7,7 @@ import Testing
 /// book's answers, and Save Line puts the picked one in the Playbook, which fills the hole.
 @MainActor @Test func growingTheNextHoleFillsIt() async throws {
   try await headless { app in
-    try app.knowMyOpenings(starter: "classical")
+    onboard(app)
     let gap = try #require(curvePlaybookGaps(app.state, app.tree).first)
     try await app.grow(gap)
     #expect(app.screen == .growth)
@@ -28,7 +28,7 @@ import Testing
 /// and resigning the next one counts as a miss too.
 @MainActor @Test func endgameRoundsEndOnASlip() async throws {
   try await headless { app in
-    try app.knowMyOpenings(starter: "classical")
+    onboard(app)
     try app.openEndgames()
     try await app.practice()
     let game = try #require(app.endgame?.game)
@@ -49,7 +49,7 @@ import Testing
 /// Middlegame: one of your lines is played out to a middlegame for you, then the run is yours from there.
 @MainActor @Test func middlegameHandsOverAfterYourLine() async throws {
   try await headless { app in
-    try app.knowMyOpenings(starter: "classical")
+    onboard(app)
     try await app.openMiddlegame()
     #expect(app.screen == .middlegame)
     let run = try #require(app.run)
@@ -67,7 +67,7 @@ import Testing
 /// and nothing goes into the Playbook or the history.
 @MainActor @Test func playingOnFromALineRecordsNothing() async throws {
   try await headless { app in
-    try app.knowMyOpenings(starter: "classical")
+    onboard(app)
     let gap = try #require(curvePlaybookGaps(app.state, app.tree).first { $0.color == .w })
     try await app.grow(gap)
     try await app.move(try #require(app.choices.first))

@@ -89,4 +89,34 @@ private func starter() -> AppState {
     for family in [["e4", "c5"], ["e4", "e6"], ["e4", "c6"]] { _ = state.buyFamily(family, .b, tree) }
     #expect(state.families.tokens == 1, "held at most 1")
   }
+
+  /// Rule 7: the choosing tree offers only what a slot takes, and the picks go in free.
+  @Test func choosingFillsThreeSlotsFree() {
+    let tree = openingTree(bookIndex)
+    #expect(choiceSlot(["c4"]) == .w)
+    #expect(choiceSlot(["e4", "c5"]) == .e4)
+    #expect(choiceSlot(["d4", "Nf6"]) == .d4)
+    #expect(choiceSlot(["c4", "e5"]) == nil)
+    #expect(Set(choosingMap(tree, side: .b).map(\.line)) == [["e4"], ["d4"]])
+    var state = AppState()
+    state.choose(tree, [["d4"], ["e4", "c5"], ["d4", "Nf6"]])
+    #expect(state.settings.onboarded)
+    #expect(state.ownedFamilies(.w) == [["d4"]])
+    #expect(Set(state.ownedFamilies(.b)) == [["e4", "c5"], ["d4", "Nf6"]])
+    #expect(state.families.bought.isEmpty)
+    #expect(state.families.price(.w) == FAMILY_FIRST_PRICE)
+    let seeded = leafLines(state.playbookList.first { $0.color == .w }!).map(\.sans)
+    #expect(seeded.allSatisfy { $0.count > 1 }, "each family goes in with its seed line")
+  }
+
+  /// Rule 8.
+  @Test func linesSavedByHandStayInsideYourFamilies() {
+    let state = starter()
+    #expect(state.inYourFamilies(line("e4 e5 Nf3"), .w))
+    #expect(!state.inYourFamilies(line("d4 d5"), .w))
+    #expect(state.inYourFamilies(line("d4 d5 c4"), .b))
+    #expect(!state.inYourFamilies(line("e4 c5"), .b))
+    #expect(state.inYourFamilies(line("d4"), .b), "a line leading into a family you have")
+    #expect(!state.inYourFamilies(line("c4"), .b))
+  }
 }

@@ -157,14 +157,19 @@ public final class HeadlessApp: SignalSink {
     await openPlay()
   }
 
-  /// Welcome's "I know my openings", with a starter set's openings added, or none: on to Home.
-  public func knowMyOpenings(starter id: String? = nil) throws {
-    seeIntro()
-    if let id {
-      guard let set = STARTER_SETS.first(where: { $0.id == id }) else { throw Failure.notHere("No starter set \"\(id)\"") }
-      store.update { $0.seed(tree, set) }
+  /// Welcome's "Choose my openings": a family for each slot (White's first move, Black's answers
+  /// to 1.e4 and 1.d4), picked on the tree, then the first Play game starts.
+  public func chooseOpenings(_ families: [[String]]) async throws {
+    let slots = families.compactMap(choiceSlot)
+    guard slots.count == families.count, Set(slots) == Set(ChoiceSlot.allCases), slots.count == ChoiceSlot.allCases.count else {
+      throw Failure.notHere("Pick one family for each slot: a White first move, an answer to 1.e4 and one to 1.d4")
     }
-    store.finishOnboarding()
+    for (family, slot) in zip(families, slots) where !choosingMap(tree, side: slot.color).contains(where: { holds($0, family) }) {
+      throw Failure.notHere("\(family.joined(separator: " ")) is not a family on the tree")
+    }
+    seeIntro()
+    store.chooseOpenings(families)
+    await openPlay()
   }
 
   /// Home's selection: the side, Freeform or Drill, and the opening (by tree id or moves; nil for Any Opening).
@@ -481,4 +486,9 @@ private func nextChance(_ seed: inout UInt32) -> Double {
   t = (t ^ (t >> 15)) &* (t | 1)
   t ^= t &+ ((t ^ (t >> 7)) &* (t | 61))
   return Double(t ^ (t >> 14)) / 4_294_967_296
+}
+
+/// Whether a tree node, or one under it, is this family for sale.
+private func holds(_ node: MapNode, _ family: [String]) -> Bool {
+  node.family == family || node.children.contains { holds($0, family) }
 }

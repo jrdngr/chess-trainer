@@ -15,7 +15,7 @@ import Model
 
 let HELP = """
   Anywhere:  state · help · quit · home · hint (the engine's move here)
-  Start:     recommend · know [classical|system|solid|aggressive|fianchetto|mirror] · intro
+  Start:     recommend · choose WHITE E4 D4 (e.g. `choose d4 c5 Nf6`) · intro
   Home:      select [w|b|either] [drill|freeform] [opening id or moves, "any" for Any Opening]
              play · tree [w|b] · unlock FAMILY · endgames · middlegame · shop · buy ID
   Board:     <san> (or move <san> <san>...) · think SECONDS
@@ -69,7 +69,10 @@ func perform(_ app: HeadlessApp, _ words: [String]) async throws -> Bool {
   case "state", "show": break
   case "intro": app.seeIntro()
   case "recommend": await app.recommendOpenings()
-  case "know": try app.knowMyOpenings(starter: rest.first)
+  case "choose":
+    // White's first move, then Black's answers to 1.e4 and to 1.d4.
+    guard rest.count == 3 else { throw HeadlessApp.Failure.notHere("choose WHITE E4 D4, e.g. `choose d4 c5 Nf6`") }
+    try await app.chooseOpenings([[rest[0]], ["e4", rest[1]], ["d4", rest[2]]])
   case "select": try select(app, rest)
   case "play": await app.openPlay()
   case "tree":

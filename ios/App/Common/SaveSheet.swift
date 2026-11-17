@@ -19,8 +19,6 @@ struct SaveSheet: View {
   /// A note for the line's last move.
   var note: String? = nil
   var onSaved: ((String, Int, [String]) -> Void)? = nil
-  /// Take the line instead of saving it.
-  var onKeep: (([String], ChessCore.Color) -> Void)? = nil
   var onClose: () -> Void
 
   @Environment(AppStore.self) private var store
@@ -34,6 +32,7 @@ struct SaveSheet: View {
     let side = color ?? picked ?? preferColor ?? (slice.count % 2 == 1 ? .w : .b)
     let book = store.index.map { bookLength($0, slice) } ?? slice.count
     let leaves = book < slice.count
+    let yours = store.state.inYourFamilies(Array(slice.prefix(book)), side)
 
     ScrollView {
       VStack(alignment: .leading, spacing: 0) {
@@ -60,10 +59,15 @@ struct SaveSheet: View {
           }
           .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface2)).clipShape(RoundedRectangle(cornerRadius: 14))
           .padding(.top, 14)
+          if !yours {
+            row(label: "Not one of your openings", line: compactMoves(familyLine(slice, side) ?? slice), value: "Not saved", warn: true)
+              .clipShape(RoundedRectangle(cornerRadius: 14))
+              .padding(.top, 10)
+          }
         }
         Spacer().frame(height: 24)
         SheetButton(leaves && book > 0 ? "Save \(moveCount(book))" : "Save", style: .accent) { save(slice, book, side) }
-          .disabled(!legal || book == 0)
+          .disabled(!legal || book == 0 || !yours)
       }
       .padding(20)
     }
@@ -93,13 +97,7 @@ struct SaveSheet: View {
 
   private func save(_ slice: [String], _ upTo: Int, _ side: ChessCore.Color) {
     let line = Array(slice.prefix(upTo))
-    guard !line.isEmpty else { return }
-    if let onKeep {
-      onKeep(line, side)
-      toasts.show("Saved")
-      onClose()
-      return
-    }
+    guard !line.isEmpty, store.state.inYourFamilies(line, side) else { return }
     var added = 0
     var repId = ""
     store.update { state in

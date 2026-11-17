@@ -23,3 +23,13 @@ families for sale in `PlaybookMap.swift`. Tests: the
 6. **Swap tokens.** You start with 1 and earn 1 more for every 3 families
    bought, holding at most 1. A swap trades a family you have for one for
    sale, free: the old one goes with every move, card and form under it.
+7. **Choosing openings.** Welcome offers "Recommend some openings" (the
+   Italian as White, 1...e5 and the Queen's Gambit Declined as Black) or
+   "Choose my openings": the tree in a choosing mode, with no prices, and
+   three slots to fill: a White family, an answer to 1.e4 and an answer to
+   1.d4. Each picked family goes in free with its seed line (rule 5) and
+   doesn't raise a price. There are no other ways in: after this, new
+   families come only from the tree. Code: `Choosing.swift`.
+8. **Lines saved by hand stay inside your families.** The board editor and
+   Analysis save a line only when it is in a family you have, or leads into
+   one; anything else shows as not saved.

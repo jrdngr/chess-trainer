@@ -4,10 +4,10 @@ import Model
 import SwiftUI
 
 /// The first screen a new profile sees: the app's name, then a deck of opening
-/// cards dealt into a fan once, then Recommend some openings or I know my openings.
+/// cards dealt into a fan once, then Recommend some openings or Choose my openings.
 struct WelcomeView: View {
   let onRecommend: () -> Void
-  let onKnow: () -> Void
+  let onChoose: () -> Void
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   /// How far each fan card has come from the deck, 0...1, by its place in `Self.fan`.
   @State private var dealt: [Double] = Array(repeating: 0, count: Self.fan.count)
@@ -42,8 +42,8 @@ struct WelcomeView: View {
       .padding(.top, 36)
       VStack(spacing: 4) {
         BigButton(label: "Recommend some openings", action: onRecommend)
-        Button(action: onKnow) {
-          Text("I know my openings").font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.text2)
+        Button(action: onChoose) {
+          Text("Choose my openings").font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.text2)
             .frame(maxWidth: .infinity, minHeight: 48).contentShape(Rectangle())
         }
         .buttonStyle(.plain)

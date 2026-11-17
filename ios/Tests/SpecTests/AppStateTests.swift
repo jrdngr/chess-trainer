@@ -7,7 +7,7 @@ import Testing
 @Test func starterSetToFirstRound() throws {
   let tree = openingTree(bookIndex)
   var state = AppState()
-  state.seed(tree, STARTER_SETS[0])
+  state.recommend(tree)
   #expect(state.playbookList.count == 2)
   #expect(state.settings.selection.opening == ANY_OPENING)
   let selection = state.settings.selection

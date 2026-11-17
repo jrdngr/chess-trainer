@@ -16,10 +16,6 @@ struct RootView: View {
   @State private var mode: Mode? = Self.debugMode
   /// The mode opens on its setup screen instead of starting at once. Debug opens keep the setup, for screenshots.
   @State private var setupFirst = Self.debugMode != nil
-  /// Play on the board, opened from the Playbook tab.
-  @State private var building = false
-  /// Import my games, opened from the Playbook tab.
-  @State private var importing = false
   /// A line the Playbook sent to the Analysis tab, and the side it was sent from.
   @State private var explore: (sans: [String], side: ChessCore.Color)?
   /// A line a mode sent to Analysis, opened over it: the mode stays underneath, and Back returns to it.
@@ -56,18 +52,19 @@ struct RootView: View {
     if !store.state.settings.seenIntro {
       WelcomeView(onRecommend: recommend) { store.update { $0.settings.seenIntro = true } }
     } else if !store.state.settings.onboarded {
-      // I know my openings: adding them, then Home or a first game.
-      OnboardingView(tree: tree, index: index, onClose: { finishOnboarding(nil) }) { finishOnboarding($0) }
-    } else if importing {
-      ImportView(onBack: { importing = false })
+      // Choose my openings: a family per slot, then the first game.
+      ChooseOpeningsView(tree: tree, onBack: { store.update { $0.settings.seenIntro = false } }) { families in
+        store.chooseOpenings(families)
+        tab = .home
+        setupFirst = false
+        mode = .play
+      }
     } else if let growing {
       GrowthSitting(model: growing, onAnalyze: { sans, side in
         explore = (sans, side)
         self.growing = nil
         tab = .analysis
       }, onExit: { self.growing = nil })
-    } else if building {
-      BoardBuildView(onBack: { _ in building = false })
     } else if let mode {
       ZStack {
         modeView(mode, tree, index)
@@ -107,10 +104,7 @@ struct RootView: View {
         }, onMiddlegame: { side, sans in
           middlegameLine = MiddlegameLine(color: side, sans: sans)
           mode = .middlegame
-        }, onImport: { importing = true }, onBuild: { building = true }, onHome: { tab = .home }, onPlay: {
-          setupFirst = false
-          mode = .play
-        })
+        }, onHome: { tab = .home })
           .background(Theme.background.ignoresSafeArea())
           .tabItem { Label(Tab.playbook.label, systemImage: Tab.playbook.symbol) }.tag(Tab.playbook)
         StatsView(tree: tree, index: index)
@@ -155,13 +149,6 @@ struct RootView: View {
     mode = .play
   }
 
-  /// Adding openings done: Home, or the first game.
-  private func finishOnboarding(_ next: OnboardingNext?) {
-    store.finishOnboarding()
-    tab = .home
-    if next == .play { mode = .play }
-  }
-
   /// Leaving a mode, from anywhere inside it, lands on Home.
   private func leave() {
     analyzing = nil
@@ -179,18 +166,16 @@ struct RootView: View {
     #endif
   }
 
-  /// Debug builds onboard a fresh install with a starter set, `SEED_SET=classical`, for screenshots.
-  /// `SEED_SET` and `ONB_STEP` both skip the intro pages.
+  /// Debug builds onboard a fresh install with the recommended openings, `SEED_SET=1`, for screenshots,
+  /// or open on choosing them with `ONB_STEP=choose`. Both skip Welcome.
   private func debugSeed() {
     #if DEBUG
       let env = ProcessInfo.processInfo.environment
       if env["SEED_SET"] != nil || env["ONB_STEP"] != nil, !store.state.settings.seenIntro {
         store.update { $0.settings.seenIntro = true }
       }
-      guard let id = ProcessInfo.processInfo.environment["SEED_SET"], let tree = store.tree,
-        !store.state.settings.onboarded, let set = STARTER_SETS.first(where: { $0.id == id })
-      else { return }
-      store.update { $0.seed(tree, set) }
+      guard env["SEED_SET"] != nil, !store.state.settings.onboarded else { return }
+      store.recommendOpenings()
     #endif
   }
 }

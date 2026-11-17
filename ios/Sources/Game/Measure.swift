@@ -128,7 +128,10 @@ extension HeadlessApp {
   /// Play `options.runs` runs with a bot on your side and count each. The profile owns every
   /// feature, so every strategy can run; `onRun` sees each run as it ends.
   public func measure(_ options: MeasureOptions, seed: UInt32, onRun: (MeasuredRun) -> Void = { _ in }) async throws -> [MeasuredRun] {
-    if !state.settings.seenIntro { try knowMyOpenings(starter: "classical") }
+    if !state.settings.seenIntro {
+      seeIntro()
+      store.recommendOpenings()
+    }
     store.update { state in
       state.unlockAll()
       state.strength = PlayerStrength(rating: Double(options.rating), moves: 1000)

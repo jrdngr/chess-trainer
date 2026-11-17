@@ -58,7 +58,7 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     case .analysis: "The game\u{2019}s over. Step through your moves or try others on the board."
     case .sidePicker: "Choose your side."
     case .openingPicker: "Choose an opening to focus on."
-    case .playbook: "Your openings live here as a tree. Tap one to see its branches, and + to add one."
+    case .playbook: "Your openings live here as a tree. Tap one to see its branches, and a new one to unlock it."
     }
   }
 

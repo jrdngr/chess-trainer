@@ -8,8 +8,8 @@ extension HeadlessApp {
   public func report() -> String {
     var lines: [String] = ["[\(screen.rawValue)]"]
     switch screen {
-    case .welcome: lines.append("Welcome. `recommend` seeds the recommended openings and starts Play, or `know [starter]` goes on to adding your own.")
-    case .onboarding: lines.append("Onboarding. `recommend` seeds the recommended openings and starts Play, or `know [starter]` adds a starter set's.")
+    case .welcome: lines.append("Welcome. `recommend` seeds the recommended openings and starts Play, or `choose WHITE E4 D4` picks a family per slot (White's first move, Black's answers to 1.e4 and 1.d4) and starts Play.")
+    case .onboarding: lines.append("Choosing openings. `recommend` seeds the recommended openings and starts Play, or `choose WHITE E4 D4` picks a family per slot and starts Play.")
     case .home: lines += homeLines()
     case .play, .middlegame: lines += runLines()
     case .growth: lines += growthLines()

@@ -31,3 +31,9 @@ func freeCapture(_ fen: String) -> String? {
       && !legalMoves(move.after).contains { reply in reply.to == move.to && legalMoves(reply.after).contains { $0.to == move.to } }
   }?.san
 }
+
+/// Past Welcome to Home: with the recommended openings, or with none.
+@MainActor func onboard(_ app: HeadlessApp, recommended: Bool = true) {
+  app.seeIntro()
+  if recommended { app.store.recommendOpenings() } else { app.store.update { $0.settings.onboarded = true } }
+}

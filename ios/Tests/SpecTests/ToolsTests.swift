@@ -15,24 +15,6 @@ private enum Tools {
     return out
   }
 
-  static func game(_ id: String, _ moves: String, _ result: String, _ userColor: Color) -> ImportedGame {
-    ImportedGame(
-      id: id, site: .lichess, white: userColor == .w ? "me" : "them", black: userColor == .b ? "me" : "them",
-      result: result, userColor: userColor, date: "2026-09-01", moves: line(moves))
-  }
-
-  /// Black games: the Najdorf prepared; English Attack, a slip at move 6, and an unprepared 2.c3.
-  static let GAMES = [
-    game("g1", "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5 Nb3 Be6", "0-1", .b),
-    game("g2", "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e6 f3 b5", "1-0", .b),
-    game("g3", "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e6 g4 h6", "1-0", .b),
-    game("g4", "e4 c5 c3 Nf6 e5 Nd5 d4 cxd4", "1/2-1/2", .b),
-    game("g5", "e4 c5 c3 Nf6 e5 Nd5 Nf3 Nc6", "1-0", .b),
-    game("g6", "e4 c5 c3 d5 exd5 Qxd5 d4 Nf6", "0-1", .b),
-    game("g7", "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6", "1-0", .b),
-    game("g8", "d4 Nf6 c4 g6 Nc3 Bg7 e4 O-O", "1-0", .b),
-    game("g9", "e4 e5 Nf3 Nc6 Bb5 a6", "1-0", .w),
-  ]
   static let BLACK = rep(.b, [
     "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5 Nb3 Be6",
     "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O",

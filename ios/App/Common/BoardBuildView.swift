@@ -18,7 +18,7 @@ struct BoardLine: Equatable {
 /// moves past the book outlined; only the book part of a line is saved. The
 /// engine judges every move, and a dubious move or a blunder shows what it
 /// gave away and an arrow to the better move. Nothing is saved until Save line.
-/// Shared by onboarding, the Playbook tab and the Playbook browser.
+/// Opened from the Playbook browser.
 struct BoardBuildView: View {
   /// The line it opens on, cursor at its end.
   var start: [String] = []
@@ -28,8 +28,6 @@ struct BoardBuildView: View {
   let onBack: ([BoardLine]) -> Void
   /// After a line is saved, with the lines saved so far; nil stays on the board.
   var onSaved: (([BoardLine]) -> Void)? = nil
-  /// Hand the saved lines on without putting them in the Playbook.
-  var hold = false
 
   @Environment(AppStore.self) private var store
   @State private var started = false
@@ -167,7 +165,6 @@ struct BoardBuildView: View {
     }) { ref in
       SaveSheet(sans: ref.sans, color: color, source: .board,
                 onSaved: { _, _, line in keep(BoardLine(color: color, sans: line)) },
-                onKeep: hold ? { line, _ in keep(BoardLine(color: color, sans: line)) } : nil,
                 onClose: { saving = nil })
         .presentationDetents([.medium, .large]).presentationBackground(Theme.background)
     }
@@ -221,12 +218,9 @@ struct BoardBuildView: View {
     return [BoardArrow(from: move.from, to: move.to, color: Theme.good)]
   }
 
-  /// How many moves at the start of a line are already saved: in the Playbook, or in this sitting's held lines.
+  /// How many moves at the start of a line are already saved in the Playbook.
   private func held(_ line: [String]) -> Int {
-    if hold {
-      return saved.filter { $0.color == color }.map { zip($0.sans, line).prefix { $0.0 == $0.1 }.count }.max() ?? 0
-    }
-    return savedPlies(store.state.playbookList.first { $0.color == color }, line)
+    savedPlies(store.state.playbookList.first { $0.color == color }, line)
   }
 
   private func keep(_ line: BoardLine) {

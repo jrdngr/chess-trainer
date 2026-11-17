@@ -22,21 +22,16 @@ struct PlaybookView: View {
   var onGrow: (GrowOffer) -> Void = { _ in }
   /// Play a line out to a middlegame, as this side.
   var onMiddlegame: (ChessCore.Color, [String]) -> Void = { _, _ in }
-  var onImport: () -> Void = {}
-  var onBuild: () -> Void = {}
   /// Go to Home, after an opening page selected its opening.
   var onHome: () -> Void = {}
-  /// Start a run, after openings were added from +.
-  var onPlay: () -> Void = {}
 
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
   @State private var scan = TidyScan(checks: EngineChecks.shared)
   @State private var page: Page?
   @State private var focus: TidyFind?
-  @State private var adding = false
   @State private var side = ChessCore.Color.w
-  /// The app bar's width, to point a tip at its + or more button.
+  /// The app bar's width, to point a tip at its more button.
   @State private var barWidth: CGFloat = 393
 
   enum Page: Equatable {
@@ -122,8 +117,6 @@ struct PlaybookView: View {
           if untidy > 0 {
             Button { page = .tidy } label: { Label("Tidy (\(untidy))", systemImage: "wand.and.stars") }
           }
-          Button { onImport() } label: { Label("Import my games", systemImage: "square.and.arrow.down") }
-          Button { onBuild() } label: { Label("Play on the board", systemImage: "checkerboard.rectangle") }
           if !reps.isEmpty {
             ShareLink(item: exportFile(reps)) { Label("Export", systemImage: "square.and.arrow.up") }
           }
@@ -131,29 +124,16 @@ struct PlaybookView: View {
           Icon(name: "more", size: 20).foregroundStyle(Theme.text).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
         }
         .accessibilityLabel("More")
-        IconButton(icon: "plus") { adding = true }
       }
       .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { barWidth = $0 }
       .tip(tip, when: tip != nil, arrowAt: barArrowAt, inset: 16, onDismiss: putAway)
       SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")])
         .padding(.horizontal, 16)
-      if let rep, !rep.nodes.isEmpty {
-        PlaybookMapView(
-          tree: tree, side: side, focus: mapFocus, onConsumedFocus: onConsumedMapFocus,
-          onOpen: { node in open(rep, node) })
-          .padding(.top, 4)
-      } else {
-        ScrollView {
-          EmptyNote(title: side == .w ? "No openings as White" : "No openings as Black", hint: "Tap + to add one")
-            .padding(.top, 24).padding(.horizontal, 16)
-        }
-      }
-    }
-    .fullScreenCover(isPresented: $adding) {
-      OnboardingView(tree: tree, index: index, onClose: { adding = false }) { next in
-        adding = false
-        if next == .play { onPlay() } else { onHome() }
-      }
+      // With nothing on a side, its tree is every family for sale.
+      PlaybookMapView(
+        tree: tree, side: side, focus: mapFocus, onConsumedFocus: onConsumedMapFocus,
+        onOpen: { node in if let rep { open(rep, node) } })
+        .padding(.top, 4)
     }
   }
 
@@ -171,11 +151,11 @@ struct PlaybookView: View {
     }
   }
 
-  /// Where along the app bar the tip points: its + button.
+  /// Where along the app bar the tip points: its more button.
   private var barArrowAt: CGFloat {
     // The bar's 20pt sides, 38pt buttons; the tip spans the bar less 16pt each side.
-    let plus = barWidth - 20 - 19
-    return (plus - 16) / max(barWidth - 32, 1)
+    let more = barWidth - 20 - 19
+    return (more - 16) / max(barWidth - 32, 1)
   }
 
   /// Your playbook with the log of how it got that way, as a JSON file to share.

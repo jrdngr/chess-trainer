@@ -203,23 +203,14 @@ extension AppState {
     }
   }
 
-  /// A starter set as a first Playbook: each opening exactly its own moves.
-  public mutating func seed(_ tree: OpeningTree, _ set: StarterSet) {
-    onboarded(tree, setOpenings(set).map { SeedOpening(sans: $0.id.split(separator: " ").map(String.init), color: $0.color) })
-  }
-
   /// Finishing onboarding: `useStore.onboarded`. Picked openings go in as
-  /// their own moves; lines played on the board go in whole, marked as
-  /// played on the board. A move order that is not legal is not an opening, and is left
+  /// their own moves. A move order that is not legal is not an opening, and is left
   /// out. Skipping puts nothing in but is still an answer.
-  public mutating func onboarded(_ tree: OpeningTree, _ openings: [SeedOpening], _ board: [OnboardingLine] = []) {
+  public mutating func onboarded(_ tree: OpeningTree, _ openings: [SeedOpening]) {
     let legal = { (sans: [String]) in walkSan(sans).fens.count == sans.count + 1 }
-    let lines: [(line: OnboardingLine, source: MoveSource)] =
-      board.filter { legal($0.sans) }.map { ($0, .board) }
-      + openings.filter { legal($0.sans) }.map { (OnboardingLine(sans: $0.sans, color: $0.color), .picker) }
-    for (line, source) in lines {
-      let repId = ensurePlaybook(line.color)
-      addLine(repId, line.sans, .fixed(source), via: .onboarding)
+    for opening in openings where legal(opening.sans) {
+      let repId = ensurePlaybook(opening.color)
+      addLine(repId, opening.sans, .fixed(.picker), via: .onboarding)
     }
     // The selection follows the picks the book names.
     let picks = openings.compactMap { opening -> (id: String, color: Color)? in
@@ -234,16 +225,6 @@ extension AppState {
 
 /// An opening picked to start with: its own moves, for the side that plays it.
 public struct SeedOpening: Equatable, Sendable {
-  public var sans: [String]
-  public var color: Color
-  public init(sans: [String], color: Color) {
-    self.sans = sans
-    self.color = color
-  }
-}
-
-/// A line played on onboarding's board.
-public struct OnboardingLine: Equatable, Sendable {
   public var sans: [String]
   public var color: Color
   public init(sans: [String], color: Color) {

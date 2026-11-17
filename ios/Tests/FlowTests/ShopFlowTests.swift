@@ -7,7 +7,7 @@ import Testing
 /// them in the Pawn Shop, each opening the choice it stands for.
 @MainActor @Test func aNewPlayerBuysFeaturesInTheShop() async throws {
   try await headless(everything: false) { app in
-    try app.knowMyOpenings(starter: "classical")
+    onboard(app)
     #expect(app.state.settings.selection == Selection(color: .w, opening: ANY_OPENING))
     #expect(app.state.settings.start == .drill)
     #expect(app.report().contains("Locked: Side picker"))
@@ -36,7 +36,7 @@ import Testing
 /// a rising ladder; a swap token trades one for another.
 @MainActor @Test func buyingAFamilyOnTheTree() async throws {
   try await headless { app in
-    try app.knowMyOpenings(starter: "classical")
+    onboard(app)
     let next = try #require(app.nextUp)
     #expect(app.report().contains("Next: \(next.name)"))
     func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.children) } }

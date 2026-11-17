@@ -5,7 +5,7 @@ import Testing
 
 /// Home with the Classical starter set, White, Drill.
 @MainActor private func drillAsWhite(_ app: HeadlessApp) async throws {
-  try app.knowMyOpenings(starter: "classical")
+  onboard(app)
   try app.select(side: .w, start: .drill)
   await app.openPlay()
 }
@@ -191,7 +191,7 @@ private func quietMove(_ fen: String) -> String? {
 /// Freeform starts from move one: nothing is played for you.
 @MainActor @Test func freeformStartsFromMoveOne() async throws {
   try await headless { app in
-    try app.knowMyOpenings(starter: "classical")
+    onboard(app)
     try app.select(side: .w, start: .freeform)
     await app.openPlay()
     let run = try #require(app.run)
@@ -204,7 +204,7 @@ private func quietMove(_ fen: String) -> String? {
 /// Playbook and is played, Undo takes the last one out, and the game goes on once the fill is done.
 @MainActor @Test func firstGameGrowsThePlaybookFromMoveOne() async throws {
   try await headless { app in
-    try app.knowMyOpenings()
+    onboard(app, recommended: false)
     await app.openPlay()
     let run = try #require(app.run)
     #expect(run.firstGame && run.fill != nil)
@@ -229,7 +229,7 @@ private func quietMove(_ fen: String) -> String? {
 /// the gap, the moves to it played for you, and opens growth there at once. Never at move one.
 @MainActor @Test func aGapRunWithNothingOnItsLineStartsAtTheGap() async throws {
   try await headless { app in
-    try app.knowMyOpenings()
+    onboard(app, recommended: false)
     app.store.update { state in
       let id = state.ensurePlaybook(.w)
       state.addLine(id, ["e4", "e5", "Qh5"], .fixed(.book))
@@ -258,7 +258,7 @@ private func quietMove(_ fen: String) -> String? {
 /// A Drill run on the Ruy Lopez, e4 e5 Nf3 Nc6 Bb5, with every move known well and no answer
 /// past it: growth is due at the end of the prep.
 @MainActor private func ruyLopezWithGrowthDue(_ app: HeadlessApp) async throws {
-  try app.knowMyOpenings()
+  onboard(app, recommended: false)
   let moves = ["e4", "e5", "Nf3", "Nc6", "Bb5"]
   app.store.update { state in
     state.unlocked.insert(ShopFeature.openingPicker.rawValue)
@@ -323,7 +323,7 @@ private func quietMove(_ fen: String) -> String? {
 /// A Drill run is named by the opening it tests, not the position it starts in.
 @MainActor @Test func aDrillRunIsNamedByTheOpeningItTests() async throws {
   try await headless { app in
-    try app.knowMyOpenings()
+    onboard(app, recommended: false)
     app.store.update { state in
       let id = state.ensurePlaybook(.w)
       state.addLine(id, ["e4", "e5", "Nf3", "Nc6", "Bb5"], .fixed(.book))
@@ -339,7 +339,7 @@ private func quietMove(_ fen: String) -> String? {
 /// A run is named by its opening's family, or by the book's name with the family over it when Settings asks.
 @MainActor @Test func aRunIsNamedByFamilyUnlessBookNamesAreOn() async throws {
   try await headless { app in
-    try app.knowMyOpenings()
+    onboard(app, recommended: false)
     app.store.update { state in
       let id = state.ensurePlaybook(.w)
       state.addLine(id, ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3"], .fixed(.book))

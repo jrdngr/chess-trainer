@@ -324,9 +324,6 @@ public final class AppStore {
   /// The next round's selection, without taking it: `peekRoundSelection`.
   public func peekRoundSelection() -> Selection { state.settings.selection }
 
-  /// The same, for a state not saved yet, such as onboarding's Playbook before it goes in.
-  public func peekRoundSelection(_ state: AppState) -> Selection { state.settings.selection }
-
   /// The next round's selection, taken.
   public func takeRoundSelection() -> Selection { state.settings.selection }
 
@@ -354,15 +351,16 @@ public final class AppStore {
 
   /* ── onboarding ── */
 
-  /// "Recommend some openings": the recommended set goes in, and onboarding is done.
+  /// "Recommend some openings": the recommended openings go in, and onboarding is done.
   public func recommendOpenings() {
-    guard let tree, let set = STARTER_SETS.first(where: { $0.id == RECOMMENDED_SET }) else { return }
-    update { $0.seed(tree, set) }
+    guard let tree else { return }
+    update { $0.recommend(tree) }
   }
 
-  /// Onboarding done, with whatever openings were added.
-  public func finishOnboarding() {
-    update { $0.settings.onboarded = true }
+  /// "Choose my openings" done: the families picked for the slots go in, and onboarding is done.
+  public func chooseOpenings(_ families: [[String]]) {
+    guard let tree else { return }
+    update { $0.choose(tree, families) }
   }
 
   /// A tip shown off the board, put away for good.

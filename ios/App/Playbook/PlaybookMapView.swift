@@ -14,13 +14,17 @@ struct MapFocus: Equatable {
 /// branches, the ones you have first and the locked ones the curve will add
 /// after them, then the families you don't have, for sale. The bar at the bottom is the open
 /// opening's row, for a locked one when it grows, and for a family Unlock at its price.
+/// Choosing openings, it shows only the families a slot takes, without prices, and tapping
+/// one fills its slot.
 struct PlaybookMapView: View {
   let tree: OpeningTree
   let side: ChessCore.Color
   var focus: MapFocus?
   var onConsumedFocus: () -> Void = {}
+  /// The families picked for each slot, while choosing openings.
+  var choosing: Binding<[ChoiceSlot: [String]]>? = nil
   /// Open an opening you have on its page.
-  let onOpen: (MapNode) -> Void
+  var onOpen: (MapNode) -> Void = { _ in }
 
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
@@ -48,7 +52,8 @@ struct PlaybookMapView: View {
               if let spot = layout.spots[node.id] {
                 MapNodeView(
                   node: node, width: CGFloat(spot.width), open: node.id == path.last,
-                  recede: !path.contains(node.id) && r < rows.count - 1
+                  recede: !path.contains(node.id) && r < rows.count - 1,
+                  showPrice: choosing == nil, picked: picked(node)
                 )
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { heights[node.id] = $0 }
                 .frame(width: CGFloat(spot.width), height: Self.nodeHeight, alignment: .top)
@@ -67,7 +72,7 @@ struct PlaybookMapView: View {
       .scrollIndicators(.hidden)
       .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
       .safeAreaInset(edge: .bottom, spacing: 0) {
-        if let open { tray(open) }
+        if let open, choosing == nil { tray(open) }
       }
       .onChange(of: path) { _, now in
         let rows = mapRows(roots, path: now)
@@ -81,6 +86,7 @@ struct PlaybookMapView: View {
 
   /// One side's tree, kept until the Playbook, the games or the form change.
   private var map: [MapNode] {
+    if choosing != nil { return memo.get("choosing|\(side.rawValue)") { choosingMap(tree, side: side) } }
     let state = store.state
     let key = "\(side.rawValue)|" + state.playbookList.map { "\($0.id):\($0.nodes.count)" }.joined(separator: ",")
       + "|\(lastAddedAt(state.playbookList))|\(state.games.count)|\(state.form.openings.values.reduce(0) { $0 + $1.reduce(0, +) })"
@@ -95,8 +101,25 @@ struct PlaybookMapView: View {
   }
 
   private func tap(_ roots: [MapNode], _ path: [String], _ id: String) {
+    if let choosing, let family = find(roots, id)?.family, let slot = choiceSlot(family) {
+      choosing.wrappedValue[slot] = family
+    }
     let next = mapTap(roots, path: path, id)
     withAnimation(.easeOut(duration: 0.26)) { paths[side] = next }
+  }
+
+  /// Whether a family is picked for its slot, while choosing.
+  private func picked(_ node: MapNode) -> Bool {
+    guard let choosing, let family = node.family, let slot = choiceSlot(family) else { return false }
+    return choosing.wrappedValue[slot] == family
+  }
+
+  private func find(_ roots: [MapNode], _ id: String?) -> MapNode? {
+    for node in roots {
+      if node.id == id { return node }
+      if let found = find(node.children, id) { return found }
+    }
+    return nil
   }
 
   private func takeFocus(_ roots: [MapNode]) {

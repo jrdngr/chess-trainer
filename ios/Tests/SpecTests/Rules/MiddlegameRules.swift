@@ -26,7 +26,7 @@ private func movesAt(_ plies: Range<Int>) -> [String: [String]] {
 private func handoffRun() throws -> (session: RunSession, tree: OpeningTree) {
   let tree = openingTree(bookIndex)
   var state = AppState()
-  state.seed(tree, STARTER_SETS[0])
+  state.recommend(tree)
   var opts = StartOptions(steer: .lines, tree: tree, reps: state.playbookList, node: nodeById(tree, ""), color: .w)
   opts.at = QGD
   opts.seed = 1
@@ -145,7 +145,7 @@ private func handoffRun() throws -> (session: RunSession, tree: OpeningTree) {
     // Only a Black Playbook: a White draw in the Italian falls back on the opening's own moves, which aren't yours.
     let tree = openingTree(bookIndex)
     var state = AppState()
-    state.seed(tree, STARTER_SETS[0])
+    state.recommend(tree)
     let italian = line("e4 e5 Nf3 Nc6 Bc4")
     let node = try #require(deepestNodeAlong(tree, italian))
     let blackOnly = state.playbookList.filter { $0.color == .b }

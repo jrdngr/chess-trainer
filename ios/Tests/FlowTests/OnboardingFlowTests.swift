@@ -19,12 +19,14 @@ import Testing
   }
 }
 
-/// "I know my openings" with a starter set lands on Home with that set's openings, one Playbook per side.
-@MainActor @Test func knowingYourOpeningsSeedsTheStarterSet() async throws {
+/// Welcome's "Choose my openings": a family for each of the three slots goes in, and the first game starts.
+@MainActor @Test func choosingYourOpeningsFillsThreeSlots() async throws {
   try await headless(everything: false) { app in
-    try app.knowMyOpenings(starter: "classical")
-    #expect(app.screen == .home)
-    #expect(app.state.playbookList.count == 2)
+    await #expect(throws: HeadlessApp.Failure.self) { try await app.chooseOpenings([["e4"], ["e4", "c5"]]) }
+    try await app.chooseOpenings([["d4"], ["e4", "c5"], ["d4", "Nf6"]])
+    #expect(app.screen == .play)
+    #expect(app.state.ownedFamilies(.w) == [["d4"]])
+    #expect(Set(app.state.ownedFamilies(.b)) == [["e4", "c5"], ["d4", "Nf6"]])
   }
 }
 

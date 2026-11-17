@@ -6,7 +6,7 @@ import Testing
 @MainActor @Test func aRelaunchKeepsTheSave() async throws {
   let storage = MemoryStorage()
   let before = try await HeadlessApp.run(book: BOOK, storage: storage) { app in
-    try app.knowMyOpenings(starter: "classical")
+    onboard(app)
     await app.openPlay()
     await app.endRound()
     return app.state
@@ -22,7 +22,7 @@ import Testing
 /// Profiles keep their own saves: a new one starts fresh, and switching back finds the first as it was.
 @MainActor @Test func profilesKeepTheirOwnSaves() async throws {
   try await headless { app in
-    try app.knowMyOpenings(starter: "classical")
+    onboard(app)
     let first = app.store.profiles.active
     let playbooks = app.state.playbooks
     app.store.createProfile("Second")
@@ -38,7 +38,7 @@ import Testing
 @MainActor @Test func theSameSeedReplaysTheSameGame() async throws {
   func game(_ seed: UInt32) async throws -> [String] {
     try await headless(seed: seed) { app in
-      try app.knowMyOpenings(starter: "classical")
+      onboard(app)
       try app.select(side: .b, start: .freeform)
       await app.openPlay()
       for _ in 0..<12 {

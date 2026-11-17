@@ -88,6 +88,12 @@ extension AppState {
 
   public func ownsFamily(_ family: [String], _ color: Color) -> Bool { ownedFamilies(color).contains(family) }
 
+  /// Whether a line saved by hand stays inside your families: it is in one, or leads into one.
+  public func inYourFamilies(_ line: [String], _ color: Color) -> Bool {
+    guard let family = familyLine(line, color) else { return ownedFamilies(color).contains { $0.starts(with: line) } }
+    return ownsFamily(family, color)
+  }
+
   /// Buy a family at its side's price: its seed line goes into the Playbook, the price rises, and
   /// every third family bought earns a swap token. Returns whether it was bought.
   @discardableResult
