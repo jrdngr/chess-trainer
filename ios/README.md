@@ -65,6 +65,17 @@ cd ios && swift run playbook            # --engine scripted, --seed N, --save DI
 It reads one command per line (`help` lists them) and prints the screen as
 text after each, so an agent can play a whole game through stdin.
 
+`swift run playbook measure` has a bot play runs instead and prints each
+run's pawn events and moves as one JSON line, for working out earning rates:
+
+```bash
+swift run -c release playbook measure --strategy full --rating 1200 --runs 100 --out runs.jsonl
+```
+
+Strategies are `full` (Play runs to their end), `prepOnly` (the prep, then
+the X), `middlegame` and `endgames`. Counts, not rates, are recorded, so pawn
+values and time per move can change afterwards without playing again.
+
 ## Notes
 
 - Sorts use `jsSorted`, which is stable; ties are broken by original order throughout the model.

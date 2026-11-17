@@ -8,6 +8,8 @@ import Model
 /// after it the game settles and the screen is printed as text.
 ///
 ///   swift run playbook [--seed N] [--engine caissa|scripted] [--save DIR] [--book PATH]
+///   swift run playbook measure --strategy full|prepOnly|middlegame|endgames --rating N --runs N
+///     [--side w|b|either] [--start drill|freeform] [--miss RATE] [--max MOVES] [--seed N] [--out FILE] [--adaptive]
 ///
 /// `--save DIR` keeps the save in DIR across runs; without it every run is a fresh install.
 
@@ -155,8 +157,64 @@ func session(_ app: HeadlessApp) async {
   }
 }
 
+/// `measure`: a bot plays runs and each run's counts go out as one JSON line, to `--out` (appended) or stdout.
+@MainActor
+func measureMain(_ args: [String]) async {
+  var strategy = MeasureStrategy.full, rating = 1200, runs = 20, side = ColorChoice.w, start = RunStart.drill
+  var miss = 0.0, maxMoves = 120, seed: UInt32 = 1, out: String?, scripted = false, adaptive = false
+  var it = args.makeIterator()
+  while let arg = it.next() {
+    if arg == "--adaptive" {
+      adaptive = true
+      continue
+    }
+    let value = it.next() ?? ""
+    switch arg {
+    case "--strategy": strategy = MeasureStrategy(rawValue: value) ?? strategy
+    case "--rating": rating = Int(value) ?? rating
+    case "--runs": runs = Int(value) ?? runs
+    case "--side": side = ColorChoice(rawValue: value) ?? side
+    case "--start": start = RunStart(rawValue: value) ?? start
+    case "--miss": miss = Double(value) ?? miss
+    case "--max": maxMoves = Int(value) ?? maxMoves
+    case "--seed": seed = UInt32(value) ?? seed
+    case "--out": out = value
+    case "--engine": scripted = value == "scripted"
+    default:
+      FileHandle.standardError.write("unknown measure option \(arg)\n".data(using: .utf8)!)
+      exit(2)
+    }
+  }
+  let options = MeasureOptions(strategy: strategy, rating: rating, runs: runs, side: side, start: start, missRate: miss, maxMoves: maxMoves, adaptive: adaptive)
+  let useScripted = scripted
+  let engine: @Sendable () -> ChessEngine = { useScripted ? ScriptedEngine() : makeEngine() }
+  let file = out.map { path -> FileHandle in
+    if !FileManager.default.fileExists(atPath: path) { FileManager.default.createFile(atPath: path, contents: nil) }
+    let handle = FileHandle(forWritingAtPath: path)!
+    handle.seekToEndOfFile()
+    return handle
+  }
+  let encoder = JSONEncoder()
+  encoder.outputFormatting = .sortedKeys
+  do {
+    _ = try await HeadlessApp.run(book: bookURL(Options()), seed: seed, engine: engine) { app in
+      try await app.measure(options, seed: seed) { run in
+        guard let data = try? encoder.encode(run) else { return }
+        if let file { file.write(data + Data([0x0a])) } else { print(String(decoding: data, as: UTF8.self)) }
+      }
+    }
+  } catch {
+    FileHandle.standardError.write("! \(error)\n".data(using: .utf8)!)
+    exit(1)
+  }
+}
+
 @MainActor
 func main() async {
+  if CommandLine.arguments.dropFirst().first == "measure" {
+    await measureMain(Array(CommandLine.arguments.dropFirst(2)))
+    return
+  }
   let options = parseOptions()
   let storage: SaveStorage = options.save.map { FileStorage(folder: URL(fileURLWithPath: $0)) } ?? MemoryStorage()
   let scripted = options.engine == "scripted"

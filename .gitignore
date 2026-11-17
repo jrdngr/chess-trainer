@@ -6,3 +6,4 @@ ios/build/
 *.tar.gz
 *.whl
 ios/.golden-out/
+ios/.measure/
