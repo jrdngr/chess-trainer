@@ -172,17 +172,6 @@ public struct EndgameCard: Equatable, Sendable, Codable {
     self.reps = reps
     self.lapses = lapses
   }
-
-  enum CodingKeys: String, CodingKey { case dueRound, interval, reps, lapses }
-
-  /// Saves before version 2 kept a date instead of `dueRound`: those come due at once, until migrated.
-  public init(from decoder: Decoder) throws {
-    let c = try decoder.container(keyedBy: CodingKeys.self)
-    dueRound = try c.decodeIfPresent(Int.self, forKey: .dueRound) ?? 0
-    interval = try c.decode(Double.self, forKey: .interval)
-    reps = try c.decode(Int.self, forKey: .reps)
-    lapses = try c.decode(Int.self, forKey: .lapses)
-  }
 }
 
 public struct EndgameRecord: Equatable, Sendable, Codable {

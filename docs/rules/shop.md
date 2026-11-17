@@ -26,7 +26,6 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    Freeform you play Drill. The side picker offers White, Black and Either. Home shows a
    feature's control only once it is yours: the side picker, the Freeform
    switch, the opening picker, Middlegame and Endgames.
-   Profiles from before the shop own every feature (see [saves](saves.md)).
 5. **Each lens shows once it is yours,** in Play, on the end screen and in
    Endgames. Analysis has every lens.
 6. **Streak freezes** are sold under the tree for 1,000 each, while you

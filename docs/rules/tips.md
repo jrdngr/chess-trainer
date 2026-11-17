@@ -32,5 +32,3 @@ and `firstGameGrowsThePlaybookFromMoveOne` in `PlayFlowTests.swift` for rule 2.
    its control on Home. No other bought feature has a tip. The Shop tab
    shows a badge with the number of items you can buy now, and none at
    zero. The Playbook tab has one tip, the first time it opens.
-4. **Profiles from before the tips** have seen every one (see
-   [saves](saves.md)).

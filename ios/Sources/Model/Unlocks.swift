@@ -145,7 +145,7 @@ extension AppState {
     return true
   }
 
-  /// Every feature yours, as an existing profile gets.
+  /// Every feature yours, for measuring and tests.
   public mutating func unlockAll() {
     for feature in ShopFeature.allCases { unlocked.insert(feature.rawValue) }
     syncEndgameFamilies()

@@ -25,7 +25,7 @@ Play:
 Everywhere:
 
 - [Playbook](playbook.md): book moves only.
-- [Saves](saves.md): bringing older saves up to date.
+- [Saves](saves.md): what happens to older saves.
 
 Other modes:
 

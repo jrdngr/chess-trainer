@@ -96,11 +96,6 @@ extension AppState {
 
   /// The Shop tab's badge: how many items you can buy now.
   public var buyableCount: Int { SHOP.filter { status($0) == .buyable }.count }
-
-  /// A profile from before the tips has seen every one.
-  public mutating func seeAllTips() {
-    settings.seenTips = Set(GameTip.allCases)
-  }
 }
 
 /// The plies of `played` from `from` on that are common moves: ones the book plays in at least BOOK_SHARE of its games.

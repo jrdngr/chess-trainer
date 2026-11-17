@@ -30,12 +30,4 @@ import Testing
     _ = s.buy("lensPawns")
     #expect(s.homeTip == nil, "the lenses have their tip in a game")
   }
-
-  /// Rule 4: a profile from before the tips has seen them all.
-  @Test func oldProfilesHaveSeenEveryTip() throws {
-    #expect(AppState().settings.seenTips.isEmpty)
-    var old = try decodeSave(Data(#"{"version":4}"#.utf8))
-    old.migrate(bookIndex)
-    #expect(GameTip.allCases.allSatisfy(old.settings.seen))
-  }
 }

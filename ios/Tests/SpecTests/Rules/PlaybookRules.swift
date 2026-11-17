@@ -12,31 +12,7 @@ import Testing
   }
 
 
-  /// Rule 2: migrating an old save keeps the book moves and removes every move the book
-  /// lacks, yours or theirs, with everything under it and its cards.
-  @Test func migrationRemovesNonBookMoves() throws {
-    var state = AppState()
-    let id = state.ensurePlaybook(.w)
-    state.addLine(id, line("e4 e5 Nf3 Nc6 Bc4"), .fixed(.book))
-    state.addLine(id, line("e4 g5 d4 h6 Nc3"), .fixed(.board))
-    let deep = walkSan(line("e4 g5 d4 h6")).fens[2]
-    state.answered(id, deep, "d4", .good)
-    #expect(!state.cards.isEmpty)
-    state.version = 0
-
-    let changed = state.migrate(bookIndex)
-    #expect(changed)
-    let rep = try #require(state.playbooks[id])
-    #expect(nodeAtLine(rep, line("e4 e5 Nf3 Nc6 Bc4")) != nil)
-    #expect(nodeAtLine(rep, line("e4 g5")) == nil)
-    #expect(state.cards.isEmpty)
-    #expect(rep.nodes.values.allSatisfy { inBook(bookIndex, $0.fenBefore, $0.san) })
-    #expect(state.version == SAVE_VERSION)
-    let again = state.migrate(bookIndex)
-    #expect(!again)
-  }
-
-  /// Rule 3: the tab is a tree of the openings your lines reach, with the ones the curve
+  /// Rule 2: the tab is a tree of the openings your lines reach, with the ones the curve
   /// will add hanging locked under the nearest one you have, and exactly one Next.
   @Test func theTreeHangsLockedOpeningsInPlace() throws {
     let tree = openingTree(bookIndex)
@@ -62,7 +38,7 @@ import Testing
     #expect(nodes.filter { !$0.owned && !$0.forSale }.allSatisfy { $0.gap != nil && $0.children.isEmpty })
   }
 
-  /// Rule 4: a tap opens an opening's branches; a tap on the open one folds it.
+  /// Rule 3: a tap opens an opening's branches; a tap on the open one folds it.
   @Test func tappingOpensAndFolds() throws {
     let tree = openingTree(bookIndex)
     var state = AppState()
@@ -77,7 +53,7 @@ import Testing
     #expect(mapPath(roots, to: family.id) == [roots[0].id, family.id])
   }
 
-  /// Rule 4: a row of more than four goes on two tiers, yours above and locked below, never overlapping.
+  /// Rule 3: a row of more than four goes on two tiers, yours above and locked below, never overlapping.
   @Test func wideRowsTakeTwoTiers() throws {
     let tree = openingTree(bookIndex)
     var state = AppState()
@@ -101,7 +77,7 @@ import Testing
     #expect(layout.spots.values.allSatisfy { $0.x - $0.width / 2 >= 0 && $0.x + $0.width / 2 <= 402 })
   }
 
-  /// Rule 4: what a locked opening shows under its name.
+  /// Rule 3: what a locked opening shows under its name.
   @Test func lockedOpeningsSayWhen() {
     #expect(mapWhen(.owned) == nil)
     #expect(mapWhen(.next(runs: 2)) == "~2 games")

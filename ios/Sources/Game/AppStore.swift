@@ -89,7 +89,6 @@ public final class AppStore {
     guard storage.exists(file) else { return }
     if let data = try? storage.read(file) {
       decode(data)
-      if let index, state.migrate(index) { save() }
     } else {
       print("load failed: \(file) could not be read")
       saveBlocked = true

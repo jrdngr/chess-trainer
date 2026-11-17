@@ -118,7 +118,7 @@ public struct AppState: Equatable, Sendable, Codable {
   public var families = FamilyRecord()
   /// The games you played here, newest first, at most GAMES_CAP.
   public var games: [GameRecord] = []
-  /// Which `migrate` steps the save has had.
+  /// The version the save was written at: one older than SAVE_VERSION is wiped on load.
   public var version = SAVE_VERSION
   public init() {}
 
