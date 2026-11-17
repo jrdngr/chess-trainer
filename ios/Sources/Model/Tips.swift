@@ -55,7 +55,7 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     case .freeformGame: "Freeform lets you play any of your lines from move 1. Your opponent will always stay within your Playbook."
     case .sidePicker: "Choose your side."
     case .openingPicker: "Choose an opening to focus on."
-    case .playbook: "Your openings live here. Tap + to add one, and swipe left on one to delete it."
+    case .playbook: "Your openings live here as a tree. Tap one to see its branches, and + to add one."
     }
   }
 
