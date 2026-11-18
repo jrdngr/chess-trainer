@@ -48,6 +48,8 @@ struct MoveStrip: View {
         }
         .onAppear { scroll(proxy, animated: false) }
         .onChange(of: cursor) { scroll(proxy, animated: true) }
+        // A move added at the end lays out after the cursor moves: scroll once it is there.
+        .onChange(of: items.count) { DispatchQueue.main.async { scroll(proxy, animated: true) } }
       }
       .frame(minHeight: 38)
       if arrows { arrow("chevron.right", disabled: cursor >= max) { onSeek(cursor + 1) } }

@@ -64,7 +64,8 @@ struct PlaybookMapView: View {
             }
           }
           ForEach(Array(layout.bus.enumerated()), id: \.offset) { r, bus in
-            SwiftUI.Color.clear.frame(width: 1, height: 1).offset(y: CGFloat(bus) + 10).id("row\(r)")
+            // Placed by padding, not offset: an offset moves only the drawing, and scrolling goes by layout.
+            SwiftUI.Color.clear.frame(width: 1, height: 1).padding(.top, CGFloat(bus) + 10).id("row\(r)")
           }
         }
         .frame(width: width, height: CGFloat(layout.height) + 24, alignment: .topLeading)
@@ -89,7 +90,7 @@ struct PlaybookMapView: View {
     if let slot = choosing?.wrappedValue.slot { return memo.get("choosing|\(slot.rawValue)") { choosingMap(tree, slot: slot) } }
     let state = store.state
     let key = "\(side.rawValue)|" + state.playbookList.map { "\($0.id):\($0.nodes.count)" }.joined(separator: ",")
-      + "|\(lastAddedAt(state.playbookList))|\(state.games.count)|\(state.form.openings.values.reduce(0) { $0 + $1.reduce(0, +) })"
+      + "|\(lastAddedAt(state.playbookList))|\(state.games.count)|\(state.form.stamp)"
       + "|\(state.owns(.sidePicker))|\(state.families.price(side))"
     return memo.get(key) { playbookMap(state, tree, side: side) }
   }

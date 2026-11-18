@@ -523,15 +523,16 @@ struct RunView: View {
         endingName
           .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
         HStack(spacing: 10) {
-          Button { model.continueToEnd() } label: { Text("End run") }
-            .buttonStyle(PlayButtonStyle(kind: .plain, height: 44, inset: 18))
+          Button { model.continueToEnd() } label: { Text("End run").lineLimit(1) }
+            .buttonStyle(PlayButtonStyle(kind: .plain, height: 44, block: true, inset: 12))
           Button { model.buyContinue() } label: {
             HStack(spacing: 8) {
               Text("Continue")
-              PawnAmount(count: CONTINUE_PRICE, size: 15, color: Theme.text)
+              PawnAmount(count: CONTINUE_PRICE, size: 15, color: Theme.accentInk)
             }
+            .lineLimit(1).fixedSize()
           }
-          .buttonStyle(PlayButtonStyle(kind: .accent, height: 44, inset: 18))
+          .buttonStyle(PlayButtonStyle(kind: .accent, height: 44, block: true, inset: 12))
         }
       }
       .frame(maxWidth: .infinity)

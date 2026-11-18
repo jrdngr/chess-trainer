@@ -60,6 +60,8 @@ struct LensBar: View {
           guard touched != lens.kind else { return }
           touched = lens.kind
           held = on ? nil : lens.kind
+          // One panel at a time: a lens turned on puts Plan away.
+          if !on, let plan = planShown { plan.wrappedValue = false }
         } release: { touched = nil }
       }
       if let plan = planShown {
@@ -70,6 +72,8 @@ struct LensBar: View {
           // Plan toggles, so its card stays open to scroll and tap.
           guard !planTouched else { return }
           planTouched = true
+          // One panel at a time: Plan turned on puts the lens away.
+          if !plan.wrappedValue { held = nil }
           plan.wrappedValue.toggle()
         } release: { planTouched = false }
       }

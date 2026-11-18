@@ -94,8 +94,12 @@ struct RoundDeal: View {
       // Drawn by hand, the finished run shows until the card comes out, and stays hidden
       // until the card is the board: it is the old game's board, not the next one's.
       let cover = draw == nil ? (grown ? 0 : 1) : min(1, dealt * 1.15)
+      // Drawn by hand, the header stays: only the old game's board and what is under it go.
+      let coverTop = draw == nil ? 0 : max(0, (board?.minY ?? 0) - 48)
       ZStack(alignment: .topLeading) {
-        Theme.background.opacity(cover).ignoresSafeArea()
+        Theme.background.opacity(cover)
+          .padding(.top, coverTop)
+          .ignoresSafeArea(edges: draw == nil ? .all : [.horizontal, .bottom])
           .allowsHitTesting(false)
         // Once the drawn card has turned over, a tap anywhere goes straight to the board.
         if committed {
