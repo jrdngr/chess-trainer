@@ -153,12 +153,16 @@ struct DeveloperView: View {
     section("Profiles", first: true)
     ListCard {
       ForEach(store.profiles.profiles) { profile in profileRow(profile) }
-      actionRow("New profile") {
+    }
+    // Making a profile is its own card, apart from the profiles themselves.
+    ListCard {
+      iconRow("plus", "New profile") {
         typed = ""
         naming = .new
       }
-      actionRow("Duplicate \(store.profiles.activeProfile.name)") { store.duplicateProfile() }
+      iconRow("cards", "Duplicate \(store.profiles.activeProfile.name)") { store.duplicateProfile() }
     }
+    .padding(.top, 10)
   }
 
   @ViewBuilder private var openings: some View {
@@ -267,6 +271,20 @@ struct DeveloperView: View {
         .frame(maxWidth: .infinity, minHeight: 38)
         .background(RoundedRectangle(cornerRadius: 10).fill(Theme.surface3))
         .contentShape(RoundedRectangle(cornerRadius: 10))
+    }
+    .buttonStyle(.plain)
+  }
+
+  /// A row that makes something, led by its icon and in the accent color.
+  private func iconRow(_ icon: String, _ label: String, _ action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      HStack(spacing: 10) {
+        Icon(name: icon, size: 16)
+        Text(label).font(.system(size: 15, weight: .semibold)).lineLimit(1)
+        Spacer()
+      }
+      .foregroundStyle(Theme.accent)
+      .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
     }
     .buttonStyle(.plain)
   }
