@@ -1,9 +1,9 @@
 import Model
 
 /// A name without the word every opening has: "Najdorf" for "Najdorf
-/// Variation", "King's Indian" for "King's Indian Defence". `shortLabel`.
+/// Variation", "King's Indian" for "King's Indian Defense". `shortLabel`.
 public func shortLabel(_ label: String) -> String {
-  for suffix in [" Defence", " Variation", " Opening", " Game"] where label.hasSuffix(suffix) {
+  for suffix in [" Defense", " Variation", " Opening", " Game"] where label.hasSuffix(suffix) {
     let cut = String(label.dropLast(suffix.count))
     return cut.isEmpty ? label : cut
   }

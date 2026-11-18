@@ -41,7 +41,7 @@ public enum BrowseItem {
 
 /// "Najdorf" for "Najdorf Variation": the word every opening has is noise in a list.
 public func shortName(_ label: String) -> String {
-  for word in ["Defence", "Variation", "Opening", "Game"] where label.hasSuffix(" " + word) {
+  for word in ["Defense", "Variation", "Opening", "Game"] where label.hasSuffix(" " + word) {
     let short = String(label.dropLast(word.count + 1))
     return short.isEmpty ? label : short
   }

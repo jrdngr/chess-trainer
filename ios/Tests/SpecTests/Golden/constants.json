@@ -92,17 +92,17 @@
           "Danish Gambit",
           "Italian Game: Evans Gambit",
           "Italian Game: Scotch Gambit",
-          "Sicilian Defence: Smith-Morra Gambit",
-          "Sicilian Defence: Wing Gambit",
+          "Sicilian Defense: Smith-Morra Gambit",
+          "Sicilian Defense: Wing Gambit",
           "Blackmar-Diemer Gambit",
           "Benko Gambit",
-          "Indian Defence: Budapest Gambit",
+          "Indian Defense: Budapest Gambit",
           "Queen's Gambit Declined: Albin Countergambit",
           "Ruy Lopez: Marshall Attack",
           "Elephant Gambit",
           "Latvian Gambit",
           "Englund Gambit",
-          "Petrov's Defence: Stafford Gambit"
+          "Petrov's Defense: Stafford Gambit"
         ]
       },
       {
@@ -118,9 +118,9 @@
           "Rapport-Jobava System",
           "Yusupov-Rubinstein System",
           "Catalan Opening",
-          "Hippopotamus Defence",
-          "Modern Defence",
-          "Pirc Defence"
+          "Hippopotamus Defense",
+          "Modern Defense",
+          "Pirc Defense"
         ]
       },
       {
@@ -128,15 +128,15 @@
         "label": "Solid",
         "color": "#2dd4bf",
         "keys": [
-          "Caro-Kann Defence",
-          "Slav Defence",
+          "Caro-Kann Defense",
+          "Slav Defense",
           "Queen's Gambit Declined",
-          "Petrov's Defence",
-          "Ruy Lopez: Berlin Defence",
-          "Queen's Indian Defence",
-          "Philidor Defence",
+          "Petrov's Defense",
+          "Ruy Lopez: Berlin Defense",
+          "Queen's Indian Defense",
+          "Philidor Defense",
           "Italian Game: Giuoco Pianissimo",
-          "Bogo-Indian Defence",
+          "Bogo-Indian Defense",
           "London System"
         ]
       },
@@ -145,17 +145,17 @@
         "label": "Sharp",
         "color": "#ef4444",
         "keys": [
-          "Sicilian Defence: Najdorf Variation",
-          "Sicilian Defence: Dragon Variation",
-          "Sicilian Defence: Lasker-Pelikan Variation",
-          "Sicilian Defence: Sozin Attack",
-          "King's Indian Defence",
-          "Grünfeld Defence",
-          "Benoni Defence: Modern Variation",
-          "Semi-Slav Defence",
-          "French Defence: Winawer Variation",
-          "Dutch Defence",
-          "Ruy Lopez: Schliemann Defence",
+          "Sicilian Defense: Najdorf Variation",
+          "Sicilian Defense: Dragon Variation",
+          "Sicilian Defense: Lasker-Pelikan Variation",
+          "Sicilian Defense: Sozin Attack",
+          "King's Indian Defense",
+          "Grünfeld Defense",
+          "Benoni Defense: Modern Variation",
+          "Semi-Slav Defense",
+          "French Defense: Winawer Variation",
+          "Dutch Defense",
+          "Ruy Lopez: Schliemann Defense",
           "King's Gambit"
         ]
       },
@@ -171,10 +171,10 @@
           "Four Knights Game",
           "Scotch Game",
           "Vienna Game",
-          "Nimzo-Indian Defence: Classical Variation",
-          "French Defence: Classical Variation",
-          "Caro-Kann Defence: Classical Variation",
-          "Pirc Defence: Classical Variation"
+          "Nimzo-Indian Defense: Classical Variation",
+          "French Defense: Classical Variation",
+          "Caro-Kann Defense: Classical Variation",
+          "Pirc Defense: Classical Variation"
         ]
       },
       {
@@ -184,14 +184,14 @@
         "keys": [
           "Réti Opening",
           "English Opening",
-          "King's Indian Defence",
-          "Grünfeld Defence",
-          "Nimzo-Indian Defence",
-          "Queen's Indian Defence",
-          "Bogo-Indian Defence",
-          "Alekhine Defence",
-          "Pirc Defence",
-          "Modern Defence",
+          "King's Indian Defense",
+          "Grünfeld Defense",
+          "Nimzo-Indian Defense",
+          "Queen's Indian Defense",
+          "Bogo-Indian Defense",
+          "Alekhine Defense",
+          "Pirc Defense",
+          "Modern Defense",
           "Catalan Opening",
           "Nimzo-Larsen Attack"
         ]
@@ -206,11 +206,11 @@
           "Grob Opening",
           "Hungarian Opening",
           "Van Geet Opening",
-          "Nimzowitsch Defence",
-          "Owen Defence",
-          "St. George Defence",
-          "English Defence",
-          "Scandinavian Defence",
+          "Nimzowitsch Defense",
+          "Owen Defense",
+          "St. George Defense",
+          "English Defense",
+          "Scandinavian Defense",
           "Center Game",
           "Ponziani Opening",
           "Bishop's Opening",
@@ -222,20 +222,20 @@
         "label": "Trappy",
         "color": "#ec4899",
         "keys": [
-          "Petrov's Defence: Stafford Gambit",
+          "Petrov's Defense: Stafford Gambit",
           "Englund Gambit",
           "Elephant Gambit",
           "Latvian Gambit",
-          "Italian Game: Two Knights Defence",
-          "Indian Defence: Budapest Gambit",
+          "Italian Game: Two Knights Defense",
+          "Indian Defense: Budapest Gambit",
           "Queen's Gambit Declined: Albin Countergambit",
           "Blackmar-Diemer Gambit",
           "Danish Gambit",
           "Center Game",
           "Vienna Game",
-          "Sicilian Defence: Smith-Morra Gambit",
+          "Sicilian Defense: Smith-Morra Gambit",
           "Italian Game: Evans Gambit",
-          "Ruy Lopez: Schliemann Defence"
+          "Ruy Lopez: Schliemann Defense"
         ]
       }
     ]
@@ -284,36 +284,36 @@
           "Queen's Gambit",
           "Queen's Gambit Declined",
           "Queen's Gambit Accepted",
-          "Slav Defence",
-          "Semi-Slav Defence",
-          "Semi-Slav Defence Accepted",
-          "Tarrasch Defence",
+          "Slav Defense",
+          "Semi-Slav Defense",
+          "Semi-Slav Defense Accepted",
+          "Tarrasch Defense",
           "Catalan Opening",
-          "Indian Defence",
+          "Indian Defense",
           "Queen's Pawn Game"
         ]
       },
       {
         "name": "...e6 Indians",
         "families": [
-          "Nimzo-Indian Defence",
-          "Queen's Indian Defence",
+          "Nimzo-Indian Defense",
+          "Queen's Indian Defense",
           "Queen's Indian Accelerated",
-          "Pseudo Queen's Indian Defence",
-          "Bogo-Indian Defence",
+          "Pseudo Queen's Indian Defense",
+          "Bogo-Indian Defense",
           "Queen's Gambit Declined",
           "Catalan Opening",
-          "Indian Defence"
+          "Indian Defense"
         ]
       },
       {
         "name": "...c6 and ...d5",
         "families": [
-          "Slav Defence",
-          "Semi-Slav Defence",
-          "Semi-Slav Defence Accepted",
+          "Slav Defense",
+          "Semi-Slav Defense",
+          "Semi-Slav Defense Accepted",
           "Slav Indian",
-          "Caro-Kann Defence"
+          "Caro-Kann Defense"
         ]
       },
       {
@@ -327,35 +327,35 @@
           "King's Indian Attack, with Bf5",
           "Zukertort Opening",
           "Hungarian Opening",
-          "Neo-Grünfeld Defence",
-          "Indian Defence"
+          "Neo-Grünfeld Defense",
+          "Indian Defense"
         ]
       },
       {
         "name": "Kingside fianchetto for Black",
         "families": [
-          "King's Indian Defence",
-          "Grünfeld Defence",
-          "Neo-Grünfeld Defence",
-          "Modern Defence",
-          "Pirc Defence",
-          "Pterodactyl Defence",
-          "East Indian Defence",
-          "Old Indian Defence",
-          "Benoni Defence",
+          "King's Indian Defense",
+          "Grünfeld Defense",
+          "Neo-Grünfeld Defense",
+          "Modern Defense",
+          "Pirc Defense",
+          "Pterodactyl Defense",
+          "East Indian Defense",
+          "Old Indian Defense",
+          "Benoni Defense",
           "Benko Gambit",
           "Benko Gambit Accepted",
           "Benko Gambit Declined",
           "English Opening",
-          "Indian Defence"
+          "Indian Defense"
         ]
       },
       {
         "name": "...c5",
         "families": [
-          "Sicilian Defence",
+          "Sicilian Defense",
           "English Opening",
-          "Benoni Defence",
+          "Benoni Defense",
           "Benko Gambit",
           "Benko Gambit Accepted"
         ]
@@ -366,17 +366,17 @@
           "Nimzo-Larsen Attack",
           "Zukertort Opening",
           "English Opening",
-          "Queen's Indian Defence",
-          "Owen Defence",
-          "English Defence",
+          "Queen's Indian Defense",
+          "Owen Defense",
+          "English Defense",
           "Polish Opening",
-          "Polish Defence"
+          "Polish Defense"
         ]
       },
       {
         "name": "Stonewall and Dutch",
         "families": [
-          "Dutch Defence",
+          "Dutch Defense",
           "Bird Opening",
           "Zukertort Opening"
         ]
@@ -386,7 +386,7 @@
         "families": [
           "London System",
           "Queen's Pawn Game",
-          "Indian Defence",
+          "Indian Defense",
           "Torre Attack",
           "Trompowsky Attack",
           "Richter-Veresov Attack",
@@ -403,8 +403,8 @@
           "Scotch Game",
           "Four Knights Game",
           "Three Knights Opening",
-          "Petrov's Defence",
-          "Philidor Defence",
+          "Petrov's Defense",
+          "Philidor Defense",
           "Vienna Game",
           "Bishop's Opening",
           "King's Knight Opening",
@@ -423,18 +423,18 @@
       {
         "name": "French and Caro-Kann",
         "families": [
-          "French Defence",
-          "Caro-Kann Defence"
+          "French Defense",
+          "Caro-Kann Defense"
         ]
       },
       {
         "name": "Pirc and Modern",
         "families": [
-          "Pirc Defence",
-          "Modern Defence",
-          "Rat Defence",
-          "Lion Defence",
-          "Philidor Defence"
+          "Pirc Defense",
+          "Modern Defense",
+          "Rat Defense",
+          "Lion Defense",
+          "Philidor Defense"
         ]
       }
     ]
@@ -561,10 +561,10 @@
   },
   "src/model/pickerData.ts": {
     "BRANCH_SIDES": {
-      "Sicilian Defence: Taimanov Variation": "b"
+      "Sicilian Defense: Taimanov Variation": "b"
     },
     "FAMILY_GROUPS": {
-      "Sicilian Defence": {
+      "Sicilian Defense": {
         "groups": [
           {
             "label": "Open Sicilian",
@@ -610,7 +610,7 @@
         "rest": "Other second moves",
         "restSharpness": 3
       },
-      "French Defence": {
+      "French Defense": {
         "groups": [
           {
             "label": "3.Nc3",
@@ -636,7 +636,7 @@
         ],
         "rest": "Other lines"
       },
-      "Caro-Kann Defence": {
+      "Caro-Kann Defense": {
         "groups": [
           {
             "label": "Main lines (3.Nc3 and 3.Nd2)",
@@ -674,14 +674,14 @@
       "Ruy Lopez": {
         "groups": [
           {
-            "label": "Morphy Defence (3...a6)",
+            "label": "Morphy Defense (3...a6)",
             "from": [
               "e4 e5 Nf3 Nc6 Bb5 a6"
             ],
             "sharpness": 3
           },
           {
-            "label": "Berlin Defence (3...Nf6)",
+            "label": "Berlin Defense (3...Nf6)",
             "from": [
               "e4 e5 Nf3 Nc6 Bb5 Nf6"
             ],
@@ -742,7 +742,7 @@
         ],
         "rest": "Second-move alternatives"
       },
-      "King's Indian Defence": {
+      "King's Indian Defense": {
         "groups": [
           {
             "label": "Classical (5.Nf3)",
@@ -769,7 +769,7 @@
         ],
         "rest": "Other lines"
       },
-      "Indian Defence": {
+      "Indian Defense": {
         "groups": [
           {
             "label": "2.c4",
@@ -826,7 +826,7 @@
         ],
         "rest": "Other replies"
       },
-      "Benoni Defence": {
+      "Benoni Defense": {
         "groups": [
           {
             "label": "Modern Benoni",
@@ -845,7 +845,7 @@
         ],
         "rest": "Other lines"
       },
-      "Scandinavian Defence": {
+      "Scandinavian Defense": {
         "groups": [
           {
             "label": "2...Qxd5",
@@ -864,7 +864,7 @@
         ],
         "rest": "Other lines"
       },
-      "Dutch Defence": {
+      "Dutch Defense": {
         "groups": [
           {
             "label": "2.c4 main lines",
@@ -878,56 +878,56 @@
       }
     },
     "FAMILY_SHARPNESS": {
-      "Sicilian Defence": 4,
-      "French Defence": 3,
+      "Sicilian Defense": 4,
+      "French Defense": 3,
       "Ruy Lopez": 2,
       "English Opening": 2,
-      "Caro-Kann Defence": 2,
+      "Caro-Kann Defense": 2,
       "Queen's Gambit Declined": 2,
-      "King's Indian Defence": 4,
+      "King's Indian Defense": 4,
       "Italian Game": 3,
-      "Indian Defence": 3,
+      "Indian Defense": 3,
       "Queen's Pawn Game": 2,
-      "Nimzo-Indian Defence": 3,
-      "Petrov's Defence": 1,
-      "Scandinavian Defence": 3,
+      "Nimzo-Indian Defense": 3,
+      "Petrov's Defense": 1,
+      "Scandinavian Defense": 3,
       "Zukertort Opening": 2,
-      "Benoni Defence": 4,
-      "Slav Defence": 2,
-      "Alekhine Defence": 3,
-      "Queen's Indian Defence": 2,
+      "Benoni Defense": 4,
+      "Slav Defense": 2,
+      "Alekhine Defense": 3,
+      "Queen's Indian Defense": 2,
       "Queen's Gambit Accepted": 2,
-      "Semi-Slav Defence": 4,
-      "Grünfeld Defence": 4,
-      "Dutch Defence": 4,
+      "Semi-Slav Defense": 4,
+      "Grünfeld Defense": 4,
+      "Dutch Defense": 4,
       "Four Knights Game": 2,
       "Scotch Game": 3,
       "Vienna Game": 3,
-      "Modern Defence": 3,
-      "Nimzowitsch Defence": 3,
-      "Pirc Defence": 4,
+      "Modern Defense": 3,
+      "Nimzowitsch Defense": 3,
+      "Pirc Defense": 4,
       "King's Indian Attack": 2,
       "Réti Opening": 2,
       "Hungarian Opening": 2,
       "King's Pawn Game": 3,
       "Bishop's Opening": 3,
       "King's Gambit Accepted": 5,
-      "Bogo-Indian Defence": 2,
-      "Tarrasch Defence": 3,
-      "Philidor Defence": 2,
+      "Bogo-Indian Defense": 2,
+      "Tarrasch Defense": 3,
+      "Philidor Defense": 2,
       "Benko Gambit Accepted": 4,
       "Trompowsky Attack": 3,
       "Nimzo-Larsen Attack": 2,
       "King's Gambit Declined": 4,
       "Center Game": 4,
-      "Rat Defence": 3,
+      "Rat Defense": 3,
       "Catalan Opening": 2,
-      "Old Indian Defence": 2,
+      "Old Indian Defense": 2,
       "Bird Opening": 3,
-      "Lion Defence": 3,
-      "Neo-Grünfeld Defence": 3,
+      "Lion Defense": 3,
+      "Neo-Grünfeld Defense": 3,
       "Torre Attack": 2,
-      "Pterodactyl Defence": 4,
+      "Pterodactyl Defense": 4,
       "King's Knight Opening": 3,
       "Van Geet Opening": 3,
       "Richter-Veresov Attack": 3,
@@ -943,42 +943,42 @@
       "Benko Gambit Declined": 3,
       "Mieses Opening": 2,
       "Barnes Opening": 2,
-      "Vienna Gambit, with Max Lange Defence": 5,
+      "Vienna Gambit, with Max Lange Defense": 5,
       "King's Gambit": 5,
       "Center Game Accepted": 4,
       "Danish Gambit": 5,
-      "Czech Defence": 3,
-      "Owen Defence": 3,
-      "St. George Defence": 3,
-      "Barnes Defence": 2,
-      "Fried Fox Defence": 2,
+      "Czech Defense": 3,
+      "Owen Defense": 3,
+      "St. George Defense": 3,
+      "Barnes Defense": 2,
+      "Fried Fox Defense": 2,
       "Duras Gambit": 4,
-      "Goldsmith Defence": 2,
-      "Carr Defence": 2,
-      "Ware Defence": 2,
-      "Hippopotamus Defence": 2,
+      "Goldsmith Defense": 2,
+      "Carr Defense": 2,
+      "Ware Defense": 2,
+      "Hippopotamus Defense": 2,
       "Blumenfeld Countergambit": 4,
       "Blumenfeld Countergambit Accepted": 4,
       "Slav Indian": 2,
       "Queen's Indian Accelerated": 2,
-      "Mexican Defence": 3,
-      "East Indian Defence": 3,
+      "Mexican Defense": 3,
+      "East Indian Defense": 3,
       "London System": 1,
-      "Pseudo Queen's Indian Defence": 2,
+      "Pseudo Queen's Indian Defense": 2,
       "Yusupov-Rubinstein System": 1,
       "Paleface Attack": 3,
       "Queen's Gambit": 2,
-      "Semi-Slav Defence Accepted": 4,
+      "Semi-Slav Defense Accepted": 4,
       "Rapport-Jobava System": 3,
       "Blackmar-Diemer Gambit Accepted": 5,
       "Rapport-Jobava System, with e6": 3,
-      "Horwitz Defence": 2,
-      "Kangaroo Defence": 3,
+      "Horwitz Defense": 2,
+      "Kangaroo Defense": 3,
       "Englund Gambit Declined": 3,
-      "Mikenas Defence": 3,
-      "English Defence": 3,
-      "Polish Defence": 3,
-      "Wade Defence": 2,
+      "Mikenas Defense": 3,
+      "English Defense": 3,
+      "Polish Defense": 3,
+      "Wade Defense": 2,
       "King's Indian Attack, with e6": 2,
       "King's Indian Attack, with Bf5": 2,
       "English Orangutan": 3,
@@ -993,93 +993,93 @@
       "Ware Opening": 2
     },
     "SHARPNESS_OVERRIDES": {
-      "Sicilian Defence: Najdorf Variation": 5,
-      "Sicilian Defence: Dragon Variation": 5,
-      "Sicilian Defence: Lasker-Pelikan Variation": 5,
-      "Sicilian Defence: Richter-Rauzer Variation": 4,
-      "Sicilian Defence: Scheveningen Variation": 4,
-      "Sicilian Defence: Scheveningen Variation, Keres Attack": 5,
-      "Sicilian Defence: Taimanov Variation": 4,
-      "Sicilian Defence: Kan Variation": 3,
-      "Sicilian Defence: Accelerated Dragon": 3,
-      "Sicilian Defence: Accelerated Dragon, Maróczy Bind": 2,
-      "Sicilian Defence: Kalashnikov Variation": 4,
-      "Sicilian Defence: Four Knights Variation": 4,
-      "Sicilian Defence: Classical Variation": 4,
-      "Sicilian Defence: Alapin Variation": 2,
-      "Sicilian Defence: Nyezhmetdinov-Rossolimo Attack": 2,
-      "Sicilian Defence: Moscow Variation": 2,
-      "Sicilian Defence: Smith-Morra Gambit": 5,
-      "Sicilian Defence: Wing Gambit": 5,
-      "Sicilian Defence: Grand Prix Attack": 4,
-      "Sicilian Defence: Closed": 3,
-      "French Defence: Winawer Variation": 5,
-      "French Defence: Classical Variation": 4,
-      "French Defence: Steinitz Variation": 4,
-      "French Defence: McCutcheon Variation": 5,
-      "French Defence: Alekhine-Chatard Attack": 5,
-      "French Defence: Rubinstein Variation": 2,
-      "French Defence: Exchange Variation": 1,
-      "French Defence: Advance Variation, Milner-Barry Gambit": 5,
-      "Caro-Kann Defence: Advance Variation, Bayonet Attack": 5,
-      "Caro-Kann Defence: Panov Attack": 3,
-      "Caro-Kann Defence: Tartakower Variation": 3,
-      "Caro-Kann Defence: Bronstein-Larsen Variation": 4,
-      "Caro-Kann Defence: Maróczy Variation": 4,
-      "Caro-Kann Defence: Endgame Variation": 1,
-      "Caro-Kann Defence: Apocalypse Attack": 4,
-      "Ruy Lopez: Morphy Defence": 3,
-      "Ruy Lopez: Berlin Defence": 1,
+      "Sicilian Defense: Najdorf Variation": 5,
+      "Sicilian Defense: Dragon Variation": 5,
+      "Sicilian Defense: Lasker-Pelikan Variation": 5,
+      "Sicilian Defense: Richter-Rauzer Variation": 4,
+      "Sicilian Defense: Scheveningen Variation": 4,
+      "Sicilian Defense: Scheveningen Variation, Keres Attack": 5,
+      "Sicilian Defense: Taimanov Variation": 4,
+      "Sicilian Defense: Kan Variation": 3,
+      "Sicilian Defense: Accelerated Dragon": 3,
+      "Sicilian Defense: Accelerated Dragon, Maróczy Bind": 2,
+      "Sicilian Defense: Kalashnikov Variation": 4,
+      "Sicilian Defense: Four Knights Variation": 4,
+      "Sicilian Defense: Classical Variation": 4,
+      "Sicilian Defense: Alapin Variation": 2,
+      "Sicilian Defense: Nyezhmetdinov-Rossolimo Attack": 2,
+      "Sicilian Defense: Moscow Variation": 2,
+      "Sicilian Defense: Smith-Morra Gambit": 5,
+      "Sicilian Defense: Wing Gambit": 5,
+      "Sicilian Defense: Grand Prix Attack": 4,
+      "Sicilian Defense: Closed": 3,
+      "French Defense: Winawer Variation": 5,
+      "French Defense: Classical Variation": 4,
+      "French Defense: Steinitz Variation": 4,
+      "French Defense: McCutcheon Variation": 5,
+      "French Defense: Alekhine-Chatard Attack": 5,
+      "French Defense: Rubinstein Variation": 2,
+      "French Defense: Exchange Variation": 1,
+      "French Defense: Advance Variation, Milner-Barry Gambit": 5,
+      "Caro-Kann Defense: Advance Variation, Bayonet Attack": 5,
+      "Caro-Kann Defense: Panov Attack": 3,
+      "Caro-Kann Defense: Tartakower Variation": 3,
+      "Caro-Kann Defense: Bronstein-Larsen Variation": 4,
+      "Caro-Kann Defense: Maróczy Variation": 4,
+      "Caro-Kann Defense: Endgame Variation": 1,
+      "Caro-Kann Defense: Apocalypse Attack": 4,
+      "Ruy Lopez: Morphy Defense": 3,
+      "Ruy Lopez: Berlin Defense": 1,
       "Ruy Lopez: Marshall Attack": 5,
-      "Ruy Lopez: Schliemann Defence": 5,
+      "Ruy Lopez: Schliemann Defense": 5,
       "Ruy Lopez: Open": 4,
       "Ruy Lopez: Exchange Variation": 2,
       "Ruy Lopez: Closed": 2,
-      "Italian Game: Two Knights Defence": 4,
-      "Italian Game: Two Knights Defence, Knight Attack": 5,
+      "Italian Game: Two Knights Defense": 4,
+      "Italian Game: Two Knights Defense, Knight Attack": 5,
       "Italian Game: Evans Gambit": 5,
       "Italian Game: Giuoco Pianissimo": 2,
       "Italian Game: Scotch Gambit": 4,
       "Queen's Gambit Declined: Albin Countergambit": 5,
-      "Queen's Gambit Declined: Chigorin Defence": 4,
+      "Queen's Gambit Declined: Chigorin Defense": 4,
       "Queen's Gambit Declined: Exchange Variation": 2,
-      "Queen's Gambit Declined: Ragozin Defence": 3,
-      "Queen's Gambit Declined: Semi-Tarrasch Defence": 3,
-      "Queen's Gambit Declined: Tarrasch Defence": 3,
-      "King's Indian Defence: Four Pawns Attack": 5,
-      "King's Indian Defence: Fianchetto Variation": 3,
-      "King's Indian Defence: Averbakh Variation": 3,
-      "King's Indian Defence: Petrosian Variation": 3,
-      "King's Indian Defence: Exchange Variation": 2,
-      "King's Indian Defence: Makogonov Variation": 3,
-      "Indian Defence: Budapest Gambit": 4,
-      "Indian Defence: London System": 1,
-      "Indian Defence: Accelerated London System": 1,
+      "Queen's Gambit Declined: Ragozin Defense": 3,
+      "Queen's Gambit Declined: Semi-Tarrasch Defense": 3,
+      "Queen's Gambit Declined: Tarrasch Defense": 3,
+      "King's Indian Defense: Four Pawns Attack": 5,
+      "King's Indian Defense: Fianchetto Variation": 3,
+      "King's Indian Defense: Averbakh Variation": 3,
+      "King's Indian Defense: Petrosian Variation": 3,
+      "King's Indian Defense: Exchange Variation": 2,
+      "King's Indian Defense: Makogonov Variation": 3,
+      "Indian Defense: Budapest Gambit": 4,
+      "Indian Defense: London System": 1,
+      "Indian Defense: Accelerated London System": 1,
       "Queen's Pawn Game: London System": 1,
       "Queen's Pawn Game: Accelerated London System": 1,
       "Queen's Pawn Game: Colle System": 1,
-      "Nimzo-Indian Defence: Sämisch Variation": 4,
-      "Nimzo-Indian Defence: Rubinstein System": 2,
-      "Petrov's Defence: Stafford Gambit": 5,
-      "Petrov's Defence: Cochrane Gambit": 5,
-      "Scandinavian Defence: Portuguese Gambit": 4,
-      "Scandinavian Defence: Icelandic-Palme Gambit": 5,
-      "Benoni Defence: Modern Variation": 5,
-      "Benoni Defence: Czech Benoni Defence": 2,
-      "Semi-Slav Defence: Botvinnik Variation": 5,
-      "Semi-Slav Defence: Meran Variation": 4,
-      "Semi-Slav Defence: Anti-Moscow Gambit": 5,
-      "Semi-Slav Defence: Marshall Gambit": 5,
-      "Slav Defence: Geller Gambit": 5,
-      "Alekhine Defence: Four Pawns Attack": 5,
-      "Dutch Defence: Staunton Gambit": 5,
-      "Dutch Defence: Leningrad Variation": 4,
+      "Nimzo-Indian Defense: Sämisch Variation": 4,
+      "Nimzo-Indian Defense: Rubinstein System": 2,
+      "Petrov's Defense: Stafford Gambit": 5,
+      "Petrov's Defense: Cochrane Gambit": 5,
+      "Scandinavian Defense: Portuguese Gambit": 4,
+      "Scandinavian Defense: Icelandic-Palme Gambit": 5,
+      "Benoni Defense: Modern Variation": 5,
+      "Benoni Defense: Czech Benoni Defense": 2,
+      "Semi-Slav Defense: Botvinnik Variation": 5,
+      "Semi-Slav Defense: Meran Variation": 4,
+      "Semi-Slav Defense: Anti-Moscow Gambit": 5,
+      "Semi-Slav Defense: Marshall Gambit": 5,
+      "Slav Defense: Geller Gambit": 5,
+      "Alekhine Defense: Four Pawns Attack": 5,
+      "Dutch Defense: Staunton Gambit": 5,
+      "Dutch Defense: Leningrad Variation": 4,
       "Scotch Game: Göring Gambit": 5,
       "Vienna Game: Vienna Gambit": 5,
       "Vienna Game: Frankenstein-Dracula Variation": 5,
-      "Pirc Defence: Austrian Attack": 5,
+      "Pirc Defense: Austrian Attack": 5,
       "English Opening: King's English Variation": 3,
-      "English Opening: Anglo-Dutch Defence": 4,
+      "English Opening: Anglo-Dutch Defense": 4,
       "English Opening: Mikenas-Carls Variation": 4
     }
   },

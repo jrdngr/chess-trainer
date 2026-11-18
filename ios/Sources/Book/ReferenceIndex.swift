@@ -78,11 +78,6 @@ public enum BookError: Error {
   case malformed(String)
 }
 
-/// Lichess spells it "Defense"; the app spells it "Defence".
-func normaliseName(_ name: String) -> String {
-  name.replacing(#/\bDefense\b/#, with: "Defence")
-}
-
 /// Decode `book.json`. Wire format:
 ///   positions: [positionKey, gamesAtPosition, [[san, shareBp, whitePct, drawPct, next], ...]]
 ///   names:     [positionKey, sanPath, eco, name]
@@ -122,7 +117,7 @@ public func decodeBook(_ data: Data) throws -> ReferenceIndex {
     guard row.count == 4, let key = row[0] as? String, let path = row[1] as? String, let eco = row[2] as? String, let raw = row[3] as? String else {
       throw BookError.malformed("name")
     }
-    let name = normaliseName(raw)
+    let name = raw
     names[key] = OpeningName(eco: eco, name: name)
     if var entry = entries[key] {
       entry.eco = eco

@@ -266,7 +266,7 @@ public func linesOf(_ rep: Playbook, _ opening: DerivedOpening, _ index: Referen
   }
 }
 
-/// "Ruy Lopez: Berlin Defence" under the Ruy Lopez reads "Berlin Defence".
+/// "Ruy Lopez: Berlin Defense" under the Ruy Lopez reads "Berlin Defense".
 private func shortName(_ name: String, _ family: String) -> String {
   if name == family { return name }
   for sep in [": ", ", "] where name.hasPrefix(family + sep) {

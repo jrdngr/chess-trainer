@@ -78,7 +78,7 @@ public struct Settings: Equatable, Sendable, Codable {
   }
 }
 
-/// A run's header names its opening's family (Sicilian Defence), or the book's
+/// A run's header names its opening's family (Sicilian Defense), or the book's
 /// name for the line (Najdorf Variation, with the family over it).
 public enum OpeningNames: String, Sendable, Codable, CaseIterable { case family, book }
 

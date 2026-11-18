@@ -1,6 +1,6 @@
 import Model
 
-/// An opening as the app names it: the last of its picker trail, "Berlin Defence".
+/// An opening as the app names it: the last of its picker trail, "Berlin Defense".
 @MainActor
 public func openingName(_ tree: OpeningTree, _ id: String) -> String {
   let node = nodeById(tree, id)

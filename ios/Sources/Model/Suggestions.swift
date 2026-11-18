@@ -97,7 +97,7 @@ private func holeCandidates(_ reps: [Playbook], _ index: ReferenceIndex, _ tree:
 
 /// Families named for a first move rather than for anybody's plan.
 private let GENERIC_FAMILIES: Set<String> = [
-  "King's Pawn Game", "Queen's Pawn Game", "Indian Defence", "King's Knight Opening", "Zukertort Opening", "Horwitz Defence",
+  "King's Pawn Game", "Queen's Pawn Game", "Indian Defense", "King's Knight Opening", "Zukertort Opening", "Horwitz Defense",
 ]
 /// Branch names that say where in the book a line is, not what it is:
 /// `/^(Normal|Main Line|Modern Line|Modern Variations?|Open|Closed|Traditional|Accepted|Declined)\b/`.

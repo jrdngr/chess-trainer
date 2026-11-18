@@ -11,10 +11,10 @@ import Testing
     "e4 c5 Nf3 d6",
   ])
   let families = familiesIn(black, bookIndex)
-  #expect(families.filter { $0.name == "King's Indian Defence" }.count == 3)
+  #expect(families.filter { $0.name == "King's Indian Defense" }.count == 3)
 
   let rows = playbookRows(black, bookIndex)
-  #expect(rows.map(\.name) == ["King's Indian Defence", "Sicilian Defence"])
+  #expect(rows.map(\.name) == ["King's Indian Defense", "Sicilian Defense"])
   #expect(rows[0].parts.count == 3)
   #expect(rows[0].lines == 3)
   #expect(linesOf(black, rows[0], bookIndex).map { $0.path.joined(separator: " ") }.sorted() == [
@@ -44,6 +44,6 @@ import Testing
     case .family(let name, _, let rows): "\(name): " + rows.map { nameUnder(name, $0.name) }.sorted().joined(separator: ", ")
     }
   }
-  #expect(byMove["1.e4"]!.map(describe).sorted() == ["Ruy Lopez", "Sicilian Defence"])
-  #expect(byMove["1.d4"]!.map(describe).sorted() == ["Benoni Defence", "Queen's Gambit: Accepted, Declined, Slav Defence"])
+  #expect(byMove["1.e4"]!.map(describe).sorted() == ["Ruy Lopez", "Sicilian Defense"])
+  #expect(byMove["1.d4"]!.map(describe).sorted() == ["Benoni Defense", "Queen's Gambit: Accepted, Declined, Slav Defense"])
 }

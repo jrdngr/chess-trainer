@@ -402,7 +402,7 @@ public func sideForPick(_ catalog: PickerCatalog, _ node: OpeningNode) -> Color?
 
 /// Where the book names an opening a move late.
 public let NAMED_LATE: [String: Color] = [
-  // King's Indian Defence.
+  // King's Indian Defense.
   "d4 Nf6 c4 g6 Nc3": .b,
   // Scotch Game.
   "e4 e5 Nf3 Nc6 d4 exd4": .w,

@@ -17,46 +17,46 @@ public struct KinSet: Equatable, Sendable {
 
 public let KIN_SETS: [KinSet] = [
   KinSet(name: "Queen's Gambit", families: [
-    "Queen's Gambit", "Queen's Gambit Declined", "Queen's Gambit Accepted", "Slav Defence", "Semi-Slav Defence",
-    "Semi-Slav Defence Accepted", "Tarrasch Defence", "Catalan Opening", "Indian Defence", "Queen's Pawn Game",
+    "Queen's Gambit", "Queen's Gambit Declined", "Queen's Gambit Accepted", "Slav Defense", "Semi-Slav Defense",
+    "Semi-Slav Defense Accepted", "Tarrasch Defense", "Catalan Opening", "Indian Defense", "Queen's Pawn Game",
   ]),
   KinSet(name: "...e6 Indians", families: [
-    "Nimzo-Indian Defence", "Queen's Indian Defence", "Queen's Indian Accelerated", "Pseudo Queen's Indian Defence",
-    "Bogo-Indian Defence", "Queen's Gambit Declined", "Catalan Opening", "Indian Defence",
+    "Nimzo-Indian Defense", "Queen's Indian Defense", "Queen's Indian Accelerated", "Pseudo Queen's Indian Defense",
+    "Bogo-Indian Defense", "Queen's Gambit Declined", "Catalan Opening", "Indian Defense",
   ]),
   KinSet(name: "...c6 and ...d5", families: [
-    "Slav Defence", "Semi-Slav Defence", "Semi-Slav Defence Accepted", "Slav Indian", "Caro-Kann Defence",
+    "Slav Defense", "Semi-Slav Defense", "Semi-Slav Defense Accepted", "Slav Indian", "Caro-Kann Defense",
   ]),
   KinSet(name: "Kingside fianchetto for White", families: [
     "Catalan Opening", "English Opening", "Réti Opening", "King's Indian Attack", "King's Indian Attack, with e6",
-    "King's Indian Attack, with Bf5", "Zukertort Opening", "Hungarian Opening", "Neo-Grünfeld Defence", "Indian Defence",
+    "King's Indian Attack, with Bf5", "Zukertort Opening", "Hungarian Opening", "Neo-Grünfeld Defense", "Indian Defense",
   ]),
   KinSet(name: "Kingside fianchetto for Black", families: [
-    "King's Indian Defence", "Grünfeld Defence", "Neo-Grünfeld Defence", "Modern Defence", "Pirc Defence",
-    "Pterodactyl Defence", "East Indian Defence", "Old Indian Defence", "Benoni Defence", "Benko Gambit",
-    "Benko Gambit Accepted", "Benko Gambit Declined", "English Opening", "Indian Defence",
+    "King's Indian Defense", "Grünfeld Defense", "Neo-Grünfeld Defense", "Modern Defense", "Pirc Defense",
+    "Pterodactyl Defense", "East Indian Defense", "Old Indian Defense", "Benoni Defense", "Benko Gambit",
+    "Benko Gambit Accepted", "Benko Gambit Declined", "English Opening", "Indian Defense",
   ]),
   KinSet(name: "...c5", families: [
-    "Sicilian Defence", "English Opening", "Benoni Defence", "Benko Gambit", "Benko Gambit Accepted",
+    "Sicilian Defense", "English Opening", "Benoni Defense", "Benko Gambit", "Benko Gambit Accepted",
   ]),
   KinSet(name: "Queenside fianchetto", families: [
-    "Nimzo-Larsen Attack", "Zukertort Opening", "English Opening", "Queen's Indian Defence", "Owen Defence",
-    "English Defence", "Polish Opening", "Polish Defence",
+    "Nimzo-Larsen Attack", "Zukertort Opening", "English Opening", "Queen's Indian Defense", "Owen Defense",
+    "English Defense", "Polish Opening", "Polish Defense",
   ]),
-  KinSet(name: "Stonewall and Dutch", families: ["Dutch Defence", "Bird Opening", "Zukertort Opening"]),
+  KinSet(name: "Stonewall and Dutch", families: ["Dutch Defense", "Bird Opening", "Zukertort Opening"]),
   KinSet(name: "d4 systems", families: [
-    "London System", "Queen's Pawn Game", "Indian Defence", "Torre Attack", "Trompowsky Attack",
+    "London System", "Queen's Pawn Game", "Indian Defense", "Torre Attack", "Trompowsky Attack",
     "Richter-Veresov Attack", "Rapport-Jobava System", "Rapport-Jobava System, with e6", "Zukertort Opening",
   ]),
   KinSet(name: "1.e4 e5", families: [
-    "Italian Game", "Ruy Lopez", "Scotch Game", "Four Knights Game", "Three Knights Opening", "Petrov's Defence",
-    "Philidor Defence", "Vienna Game", "Bishop's Opening", "King's Knight Opening", "King's Pawn Game",
+    "Italian Game", "Ruy Lopez", "Scotch Game", "Four Knights Game", "Three Knights Opening", "Petrov's Defense",
+    "Philidor Defense", "Vienna Game", "Bishop's Opening", "King's Knight Opening", "King's Pawn Game",
     "Ponziani Opening", "Center Game", "King's Gambit", "King's Gambit Accepted", "King's Gambit Declined",
     "Danish Gambit", "Elephant Gambit", "Latvian Gambit", "Latvian Gambit Accepted",
   ]),
-  KinSet(name: "French and Caro-Kann", families: ["French Defence", "Caro-Kann Defence"]),
+  KinSet(name: "French and Caro-Kann", families: ["French Defense", "Caro-Kann Defense"]),
   KinSet(name: "Pirc and Modern", families: [
-    "Pirc Defence", "Modern Defence", "Rat Defence", "Lion Defence", "Philidor Defence",
+    "Pirc Defense", "Modern Defense", "Rat Defense", "Lion Defense", "Philidor Defense",
   ]),
 ]
 
@@ -70,6 +70,6 @@ public func kinOf(_ family: String) -> Set<String> {
 /// A family as it reads in a sentence: "Réti" for "Réti Opening".
 public func shortFamily(_ family: String) -> String {
   family
-    .replacing(#/ (Opening|Defence|Game)$/#, with: "", maxReplacements: 1)
-    .replacing(#/ (Opening|Defence|Game),/#, with: ",", maxReplacements: 1)
+    .replacing(#/ (Opening|Defense|Game)$/#, with: "", maxReplacements: 1)
+    .replacing(#/ (Opening|Defense|Game),/#, with: ",", maxReplacements: 1)
 }

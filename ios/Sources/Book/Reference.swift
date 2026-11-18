@@ -25,7 +25,7 @@ public func deepestName(_ index: ReferenceIndex, _ sans: [String], _ startFen: S
   return best
 }
 
-/// The family a name belongs to: "Sicilian Defence: Najdorf Variation" is a Sicilian Defence.
+/// The family a name belongs to: "Sicilian Defense: Najdorf Variation" is a Sicilian Defense.
 public func familyName(_ index: ReferenceIndex, _ name: String) -> String {
   families(index)[name] ?? name
 }

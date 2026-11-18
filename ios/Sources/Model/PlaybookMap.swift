@@ -57,7 +57,7 @@ public struct MapNode: Equatable, Sendable, Identifiable {
   public var forSale: Bool { if case .forSale = state { true } else { false } }
 }
 
-/// The part of a name below another: "Najdorf Variation" under "Sicilian Defence".
+/// The part of a name below another: "Najdorf Variation" under "Sicilian Defense".
 public func nameBelow(_ name: String, _ parent: String?) -> String {
   let parts = name.split(separator: ":", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
   guard parts.count == 2 else { return name }

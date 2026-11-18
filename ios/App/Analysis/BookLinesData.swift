@@ -72,12 +72,12 @@ let BOOK_LINES: [BookLine] = [
     summary: "Black gives back the pawn for free development and a queenside expansion; White plays against the isolated d-pawn structures.",
     ideas: ["a4 is the cleanest answer to ...a6: it costs a tempo but kills ...b5 for good.", "Rd1 before recapturing on d4 is the move order that matters.", "White gets an isolated queen’s pawn with active pieces — this is a structure to understand once and reuse forever."]),
   BookLine(
-    id: "bk_tarrasch", name: "Tarrasch Defence", eco: "D32", forColor: .w,
+    id: "bk_tarrasch", name: "Tarrasch Defense", eco: "D32", forColor: .w,
     moves: "d4 d5 c4 e6 Nc3 c5 cxd5 exd5 Nf3 Nc6 g3 Nf6 Bg2 Be7 O-O O-O Bg5 cxd4 Nxd4".split(separator: " ").map(String.init),
     summary: "Black accepts an isolated d-pawn for free piece play. White meets it with the fianchetto, the one set-up that presses the pawn properly.",
     ideas: ["The g2 bishop stares at d5 all game — that is the entire point of the Rubinstein set-up.", "Trade pieces, not pawns: the isolani gets weaker as the board empties.", "Black’s counterplay is ...d4 at the right moment; stop it and the position plays itself."]),
   BookLine(
-    id: "bk_chigorin", name: "Chigorin Defence", eco: "D07", forColor: .w,
+    id: "bk_chigorin", name: "Chigorin Defense", eco: "D07", forColor: .w,
     moves: "d4 d5 c4 Nc6 Nf3 Bg4 cxd5 Bxf3 gxf3 Qxd5 e3 e5 Nc3 Bb4 Bd2 Bxc3 bxc3 Qd6 Rb1".split(separator: " ").map(String.init),
     summary: "Black gives up both bishops for activity and open lines. Rare, provocative, and unpleasant if you have never seen it.",
     ideas: ["White’s shattered kingside pawns are a small price for two bishops and the open g-file.", "Rb1 hits b7 immediately and gains the tempo that makes the position comfortable.", "Do not try to refute it — just develop and let the bishop pair tell."]),
@@ -112,12 +112,12 @@ let BOOK_LINES: [BookLine] = [
     summary: "A low-theory anti-Sicilian: trade on c6, keep the position closed, and play against the doubled pawns.",
     ideas: ["White wants Qd2, Bh6 and a knight to e3-d5 or c4.", "Black’s bishop pair is real compensation — do not let the position open carelessly.", "An excellent practical weapon if you do not want to learn the Open Sicilian."]),
   BookLine(
-    id: "bk_ruy_closed", name: "Ruy López — Closed, Chigorin", eco: "C92", forColor: .w,
+    id: "bk_ruy_closed", name: "Ruy Lopez — Closed, Chigorin", eco: "C92", forColor: .w,
     moves: "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O h3 Na5 Bc2 c5 d4 Qc7".split(separator: " ").map(String.init),
     summary: "The classical Spanish. White builds the big centre with c3 and d4; Black expands on the queenside and waits.",
     ideas: ["The knight manoeuvre Nb1-d2-f1-g3 is the standard regrouping.", "White must decide when to release the tension with d5 or dxe5.", "Slow, rich, and the most instructive structure in chess — worth learning even if you play something else."]),
   BookLine(
-    id: "bk_berlin", name: "Ruy López — Berlin Endgame", eco: "C67", forColor: .b,
+    id: "bk_berlin", name: "Ruy Lopez — Berlin Endgame", eco: "C67", forColor: .b,
     moves: "e4 e5 Nf3 Nc6 Bb5 Nf6 O-O Nxe4 d4 Nd6 Bxc6 dxc6 dxe5 Nf5 Qxd8+ Kxd8 h3 Ke8 Nc3 h5 Bf4 Be7 Rad1 Be6".split(separator: " ").map(String.init),
     summary: "Queens come off by move eight. Black has the bishop pair and a damaged structure; White has a kingside majority.",
     ideas: ["The king on e8 is safe — do not waste time trying to castle by hand.", "White’s 4-vs-3 kingside majority is the long-term trump; Black’s bishops are the counterweight.", "The classic way to take the sting out of 1.e4 as Black."]),
