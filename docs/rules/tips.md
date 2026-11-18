@@ -21,6 +21,7 @@ and `firstGameGrowsThePlaybookFromMoveOne` in `PlayFlowTests.swift` for rule 2.
    - a prepared move missed, the right one shown: remember it next time
    - growth opens: pick or play an answer
    - growth opens because a move is due, holding the Prep complete pawn: add a move to keep earning pawns on this opening
+   - growth draws a green arrow: green moves may not be the engine's top pick, but keep the Playbook easier to remember; then, at a later turn, a red arrow: red moves break a pattern, so they are harder to remember (test: `greenThenRedExplained`)
    - a blunder ends the game
    - pawns earned: what they are for
    - a mission set: missions pay pawns

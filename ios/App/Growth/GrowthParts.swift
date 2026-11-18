@@ -109,15 +109,15 @@ struct HoleAnswerList<Source: HoleAnswers>: View {
   }
 }
 
-/// The role arrows at a hole, glowing where a move matches or breaks your patterns,
+/// The role arrows at a hole, flowing green or red where a move matches or breaks your patterns,
 /// and a familiar move nobody recommends in gray: least important first.
 @MainActor func holeArrows(_ source: some HoleAnswers) -> [BoardArrow] {
   let roles = source.roles
   let toned = source.toned
-  let glow = { (san: String) in toned.first { $0.san == san && $0.tone != nil }.map { nudgeColor($0.tone) } }
+  let tone = { (san: String) in toned.first { $0.san == san && $0.tone != nil }.map { nudgeColor($0.tone) } }
   let familiar = toned.filter { move in (move.tone == .toward || move.tone == .towardFar) && !roles.contains { $0.san == move.san } }
-    .map { BoardArrow(from: $0.from, to: $0.to, color: Theme.text2, glow: nudgeColor($0.tone)) }
-  return familiar + roles.reversed().map { BoardArrow(from: $0.from, to: $0.to, color: roleColor($0.role) ?? Theme.accent, glow: glow($0.san)) }
+    .map { BoardArrow(from: $0.from, to: $0.to, color: Theme.text2, tone: nudgeColor($0.tone)) }
+  return familiar + roles.reversed().map { BoardArrow(from: $0.from, to: $0.to, color: roleColor($0.role) ?? Theme.accent, tone: tone($0.san)) }
 }
 
 /// The color a nudge is drawn in: green toward, yellow toward from off the list, red away.

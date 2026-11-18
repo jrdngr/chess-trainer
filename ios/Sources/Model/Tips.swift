@@ -18,6 +18,10 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
   case growth
   /// Growth opens because a move is due, holding the Prep complete pawn.
   case growthPawn
+  /// A green arrow shows in growth: a move that fits your patterns.
+  case greenMove
+  /// A red arrow shows in growth: a move that breaks one.
+  case redMove
   /// A blunder ends the game.
   case blunder
   /// Pawns earned.
@@ -47,6 +51,8 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     case .missedMove: "Remember this move next time!"
     case .growth: "We\u{2019}ll add new moves to your openings as you get better. Pick an answer or play it on the board."
     case .growthPawn: "You must add at least one move to continue earning pawns for this opening."
+    case .greenMove: "Green moves fit what you already play. They may not be the engine\u{2019}s top pick, but they keep your Playbook easier to remember."
+    case .redMove: "Red moves break a pattern in your Playbook, so they\u{2019}re harder to remember."
     case .blunder: "A blunder ends the game."
     case .pawns: "You earn pawns for various accomplishments. Spend them in the Pawn Shop."
     case .mission: "Complete missions to earn pawns."
@@ -68,6 +74,13 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     default: nil
     }
   }
+}
+
+/// Growth's colors, explained the first time each shows: green before red when both do.
+public func toneTip(_ tones: [NudgeTone?], seen: (GameTip) -> Bool) -> GameTip? {
+  if tones.contains(.toward), !seen(.greenMove) { return .greenMove }
+  if tones.contains(.away), !seen(.redMove) { return .redMove }
+  return nil
 }
 
 /// The balance at which a game points out its close button: enough for the cheapest feature in the Pawn Shop.

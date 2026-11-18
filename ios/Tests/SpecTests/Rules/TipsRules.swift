@@ -15,6 +15,20 @@ import Testing
     #expect(old.seenTips == [.prepBar], "names this version doesn't know are dropped")
   }
 
+  /// Rule 2: growth's green is explained the first time it is drawn, red the first time
+  /// after that; a color already explained, or never drawn, gets no tip.
+  @Test func greenThenRedExplained() {
+    var settings = Settings()
+    let both: [NudgeTone?] = [nil, .away, .toward]
+    #expect(toneTip([nil, .towardFar], seen: settings.seen) == nil, "yellow alone has no tip")
+    #expect(toneTip(both, seen: settings.seen) == .greenMove, "green first when both are drawn")
+    settings.see(.greenMove)
+    #expect(toneTip([.toward], seen: settings.seen) == nil)
+    #expect(toneTip(both, seen: settings.seen) == .redMove)
+    settings.see(.redMove)
+    #expect(toneTip(both, seen: settings.seen) == nil)
+  }
+
   /// Rule 3: Home's tip is a bought side or opening picker's, at its control; the Shop tab counts what you can buy.
   @Test func homeShowsBoughtPickersAndTheShopCountsBuyables() {
     var s = AppState()

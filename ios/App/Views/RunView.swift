@@ -214,8 +214,8 @@ struct RunView: View {
   /// The lenses are away: moves are being played for you or added, or there is a moment to find without them.
   private var lensesAway: Bool { model.intro == .replay || adding || (model.blunder == nil && model.momentHere) }
 
-  /// A tip hangs above the dock's top: the blunder's over its name, the mission's over the goal, growth's over Done.
-  private var tipAbove: Bool { model.blunder != nil || model.tip == .blunder || model.tip == .mission || model.tip == .growth }
+  /// A tip hangs above the dock's top: the blunder's over its name, the mission's over the goal, growth's and its colors' over Done.
+  private var tipAbove: Bool { model.blunder != nil || model.tip == .blunder || model.tip == .mission || model.tip == .growth || model.tip == .greenMove || model.tip == .redMove }
 
   /// A callout is up in the lenses' place.
   private var called: Bool { model.shownCallout != nil }

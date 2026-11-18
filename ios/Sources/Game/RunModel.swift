@@ -501,6 +501,7 @@ public final class RunModel {
     // Adding moves: the player picks the next one, nothing is weighed.
     if fill != nil {
       offer(.growth)
+      offerToneTip()
       return
     }
     if prepNow.isEmpty {
@@ -514,6 +515,7 @@ public final class RunModel {
       // Growth is due: the prep pawn waits for a move added.
       offer(.growth)
       if heldPrepPawn != nil { offer(.growthPawn) }
+      offerToneTip()
       return
     }
     payHeldPrepPawn(fresh: true)
@@ -657,6 +659,8 @@ public final class RunModel {
     // Adding moves takes the screen: whatever tip was up gives way to growth's.
     tip = nil
     offer(.growth)
+    // Green and red need the engine's word: their tip waits for the evals.
+    services.growthEngine.onEvals = { [weak self] in self?.offerToneTip() }
     store.update { $0.logEvent(AppEvent(kind: "inline-grow", via: .play, color: gap.color, line: gap.line.joined(separator: " "))) }
   }
 
@@ -730,6 +734,12 @@ public final class RunModel {
     guard tip == nil, !store.state.settings.seen(next) else { return }
     tip = next
     store.update { $0.sawTip(next) }
+  }
+
+  /// Growth's green or red, the first time each is drawn.
+  public func offerToneTip() {
+    guard atHole, let next = toneTip(toned.map(\.tone), seen: store.state.settings.seen) else { return }
+    offer(next)
   }
 
   /// Pawns paid: what they are for, and in Play, once there are enough to spend, the way to the Pawn Shop.

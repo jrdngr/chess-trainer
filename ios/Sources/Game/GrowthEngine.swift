@@ -22,6 +22,9 @@ public final class GrowthEngine {
   private var known: [String: Evals] = [:]
   private var positions: [String: Double] = [:]
 
+  /// Called each time a position's evals are worked out.
+  @ObservationIgnored public var onEvals: (@MainActor () -> Void)?
+
   @ObservationIgnored private var evalWaiting: (fen: String, sans: [String])?
   @ObservationIgnored private var evalBusy = false
 
@@ -79,5 +82,6 @@ public final class GrowthEngine {
     for cp in moves.values { position = white ? max(position!, cp) : min(position!, cp) }
     positions[positionKey(fen)] = position
     known[Self.key(fen, sans)] = Evals(position: position, moves: moves)
+    onEvals?()
   }
 }

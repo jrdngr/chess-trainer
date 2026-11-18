@@ -8,8 +8,9 @@ struct BoardArrow: Equatable {
   var from: String
   var to: String
   var color: SwiftUI.Color
-  /// A soft halo under the arrow: Growth's nudge toward or away from your patterns.
-  var glow: SwiftUI.Color? = nil
+  /// Growth's nudge toward or away from your patterns: a band of this color
+  /// keeps flowing along the arrow toward its tip.
+  var tone: SwiftUI.Color? = nil
   /// Drawn over the pieces: a threat that has to read even across the pieces in its way.
   var over = false
 }
@@ -236,9 +237,6 @@ struct PieceView: View {
   }
 }
 
-/// Arrows over the board. A disc under the piece a run of arrows starts from, a dark
-/// edge under each so it reads on light and dark squares, every shaft before
-/// any head, and Growth's soft glow under the lot.
 /// One piece on its square. Keyed by the piece, not the square, so a move
 /// slides it.
 private struct PlacedPiece: View {
@@ -263,59 +261,79 @@ private struct PlacedPiece: View {
   }
 }
 
+/// Arrows over the board. A disc under the piece a run of arrows starts from, a dark
+/// edge under each so it reads on light and dark squares, every shaft before
+/// any head. A toned arrow carries a band of its tone flowing toward the tip.
 struct ArrowsView: View {
   var arrows: [BoardArrow]
   var cell: CGFloat
   var position: (String) -> (col: Int, row: Int)
   /// The disc under where a run of arrows starts; a lens's arrows have none.
   var origins = true
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   /// Widths in squares.
   static let width: CGFloat = 0.13
   static let edge: CGFloat = 0.025
-  static let glowEdge: CGFloat = 0.04
   static let ink = SwiftUI.Color(red: 10 / 255, green: 12 / 255, blue: 20 / 255).opacity(0.7)
+  /// One trip of the tone's band from the piece to past the tip.
+  static let flowSeconds = 1.8
+  /// The gradient's period, in lengths of the arrow, so one band is on it at a time.
+  static let flowSpan: CGFloat = 1.2
 
   var body: some View {
-    Canvas { context, _ in
-      let drawn = arrows.map { shape(center($0.from), center($0.to)) }
-      for (arrow, d) in zip(arrows, drawn) {
-        guard let glow = arrow.glow else { continue }
-        var halo = context
-        halo.addFilter(.blur(radius: cell * 0.07))
-        halo.opacity = 0.85
-        halo.stroke(d.shaft, with: .color(glow), style: StrokeStyle(lineWidth: cell * 0.34, lineCap: .round))
-        halo.fill(d.head, with: .color(glow))
-        halo.stroke(d.head, with: .color(glow), style: StrokeStyle(lineWidth: cell * 0.2, lineJoin: .round))
-      }
-      // Where a run of arrows starts: a disc under the piece that moves first.
-      for (arrow, d) in zip(arrows, drawn) where origins && !arrows.contains(where: { $0.to == arrow.from }) {
-        let r = cell * 0.4
-        let disc = Path(ellipseIn: CGRect(x: d.from.x - r, y: d.from.y - r, width: 2 * r, height: 2 * r))
-        var faint = context
-        faint.opacity = 0.45
-        faint.fill(disc, with: .color(arrow.color))
-        faint.stroke(disc, with: .color(Self.ink), lineWidth: cell * Self.edge)
-      }
-      for (arrow, d) in zip(arrows, drawn) {
-        let edge = arrow.glow == nil ? Self.edge : Self.glowEdge
-        context.stroke(d.shaft, with: .color(arrow.glow ?? Self.ink),
-                       style: StrokeStyle(lineWidth: cell * (Self.width + edge * 2), lineCap: .round))
-      }
-      for (arrow, d) in zip(arrows, drawn) {
-        context.stroke(d.shaft, with: .color(arrow.color), style: StrokeStyle(lineWidth: cell * Self.width, lineCap: .round))
-      }
-      for (arrow, d) in zip(arrows, drawn) {
-        context.stroke(d.head, with: .color(arrow.glow ?? Self.ink),
-                       style: StrokeStyle(lineWidth: cell * (arrow.glow == nil ? Self.edge * 2 : Self.glowEdge * 3.2), lineJoin: .round))
-        context.fill(d.head, with: .color(arrow.color))
-      }
+    let toned = arrows.contains { $0.tone != nil }
+    TimelineView(.animation(paused: !toned || reduceMotion)) { timeline in
+      // Still, the band rests on the head.
+      let phase = reduceMotion ? 1 / 3 : timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: Self.flowSeconds) / Self.flowSeconds
+      Canvas { context, _ in draw(&context, phase: CGFloat(phase)) }
     }
+  }
+
+  private func draw(_ context: inout GraphicsContext, phase: CGFloat) {
+    let drawn = arrows.map { shape(center($0.from), center($0.to)) }
+    // Where a run of arrows starts: a disc under the piece that moves first.
+    for (arrow, d) in zip(arrows, drawn) where origins && !arrows.contains(where: { $0.to == arrow.from }) {
+      let r = cell * 0.4
+      let disc = Path(ellipseIn: CGRect(x: d.from.x - r, y: d.from.y - r, width: 2 * r, height: 2 * r))
+      var faint = context
+      faint.opacity = 0.45
+      faint.fill(disc, with: .color(arrow.color))
+      faint.stroke(disc, with: .color(Self.ink), lineWidth: cell * Self.edge)
+    }
+    for (_, d) in zip(arrows, drawn) {
+      context.stroke(d.shaft, with: .color(Self.ink),
+                     style: StrokeStyle(lineWidth: cell * (Self.width + Self.edge * 2), lineCap: .round))
+    }
+    let paints = zip(arrows, drawn).map { arrow, d in paint(arrow, d, phase: phase) }
+    for (paint, d) in zip(paints, drawn) {
+      context.stroke(d.shaft, with: paint, style: StrokeStyle(lineWidth: cell * Self.width, lineCap: .round))
+    }
+    for (paint, d) in zip(paints, drawn) {
+      context.stroke(d.head, with: .color(Self.ink), style: StrokeStyle(lineWidth: cell * Self.edge * 2, lineJoin: .round))
+      context.fill(d.head, with: paint)
+    }
+  }
+
+  /// The arrow's own color, or for a toned arrow a repeating gradient that
+  /// slides from the piece toward the tip: own color, a band of the tone, own color.
+  private func paint(_ arrow: BoardArrow, _ d: (from: CGPoint, tip: CGPoint, shaft: Path, head: Path), phase: CGFloat) -> GraphicsContext.Shading {
+    guard let tone = arrow.tone else { return .color(arrow.color) }
+    let dx = d.tip.x - d.from.x, dy = d.tip.y - d.from.y
+    let span = Self.flowSpan
+    let start = CGPoint(x: d.from.x + dx * span * phase, y: d.from.y + dy * span * phase)
+    let end = CGPoint(x: start.x + dx * span, y: start.y + dy * span)
+    let gradient = Gradient(stops: [
+      .init(color: arrow.color, location: 0), .init(color: arrow.color, location: 0.3),
+      .init(color: tone, location: 0.5),
+      .init(color: arrow.color, location: 0.7), .init(color: arrow.color, location: 1),
+    ])
+    return .linearGradient(gradient, startPoint: start, endPoint: end, options: .repeat)
   }
 
   /// The head is three stroke widths long, its tip a little past the target's
   /// centre; the shaft stops at the head's base, its round cap just reaching it.
-  private func shape(_ from: CGPoint, _ to: CGPoint) -> (from: CGPoint, shaft: Path, head: Path) {
+  private func shape(_ from: CGPoint, _ to: CGPoint) -> (from: CGPoint, tip: CGPoint, shaft: Path, head: Path) {
     let w = Self.width * cell
     let dx = to.x - from.x, dy = to.y - from.y
     let len = max(hypot(dx, dy), 1)
@@ -332,7 +350,7 @@ struct ArrowsView: View {
     var shaft = Path()
     shaft.move(to: from)
     shaft.addLine(to: CGPoint(x: base.x - ux * back, y: base.y - uy * back))
-    return (from, shaft, head)
+    return (from, tip, shaft, head)
   }
 
   private func center(_ square: String) -> CGPoint {

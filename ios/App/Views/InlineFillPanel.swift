@@ -16,6 +16,8 @@ struct InlineFillPanel: View {
 
   /// Answers listed before More: as many as fit under the board.
   static let shown = 3
+  /// The tips hung over the answers.
+  static let listTips: Set<GameTip?> = [.growth, .growthPawn, .greenMove, .redMove]
 
   var body: some View {
     let fill = model.fill
@@ -59,7 +61,7 @@ struct InlineFillPanel: View {
           }
         }
         // Over the rows above, pointing at the top answer.
-        .tip(model.tip, when: model.tip == .growth || model.tip == .growthPawn, arrow: .down, arrowAt: 0.15, onDismiss: model.dismissTip)
+        .tip(model.tip, when: Self.listTips.contains(model.tip), arrow: .down, arrowAt: 0.15, onDismiss: model.dismissTip)
       }
     }
     // Each hole starts with the first few answers.
