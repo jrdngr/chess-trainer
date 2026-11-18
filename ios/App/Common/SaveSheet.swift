@@ -49,11 +49,11 @@ struct SaveSheet: View {
         }
         if !slice.isEmpty {
           VStack(spacing: 0) {
-            if book > 0 {
+            if book > 0 && yours {
               row(label: "Playbook", line: snippet(slice, 0, book), value: moveCount(book), warn: false)
             }
             if leaves {
-              if book > 0 { Rectangle().fill(.white.opacity(0.07)).frame(height: 1) }
+              if book > 0 && yours { Rectangle().fill(.white.opacity(0.07)).frame(height: 1) }
               row(label: "Not in the book", line: snippet(slice, book, slice.count), value: "Not saved", warn: true)
             }
           }
@@ -66,7 +66,7 @@ struct SaveSheet: View {
           }
         }
         Spacer().frame(height: 24)
-        SheetButton(leaves && book > 0 ? "Save \(moveCount(book))" : "Save", style: .accent) { save(slice, book, side) }
+        SheetButton(leaves && book > 0 && yours ? "Save \(moveCount(book))" : "Save", style: .accent) { save(slice, book, side) }
           .disabled(!legal || book == 0 || !yours)
       }
       .padding(20)

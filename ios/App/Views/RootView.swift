@@ -30,6 +30,10 @@ struct RootView: View {
   @State private var middlegameLine: MiddlegameLine?
   /// The Pawn Shop item to open, from a locked control.
   @State private var shopFocus: String?
+  @State private var playbookPage: PlaybookView.Page?
+  @State private var playbookSide = ChessCore.Color.w
+  /// Where leaving a mode goes: the Playbook for one started from an opening page, else Home.
+  @State private var returnTab: Tab?
 
   var body: some View {
     ZStack {
@@ -95,7 +99,7 @@ struct RootView: View {
         }, onPlaybook: { tab = .playbook })
           .background(Theme.background.ignoresSafeArea())
           .tabItem { Label(Tab.home.label, systemImage: Tab.home.symbol) }.tag(Tab.home)
-        PlaybookView(tree: tree, index: index, tidyFocus: tidyFocus, onConsumedTidyFocus: { tidyFocus = nil },
+        PlaybookView(tree: tree, index: index, page: $playbookPage, side: $playbookSide, tidyFocus: tidyFocus, onConsumedTidyFocus: { tidyFocus = nil },
           mapFocus: mapFocus, onConsumedMapFocus: { mapFocus = nil }, onExplore: { sans, side in
           explore = (sans, side)
           tab = .analysis
@@ -103,6 +107,7 @@ struct RootView: View {
           growing = GrowthModel(offer: offer, store: store, tree: tree, index: index)
         }, onMiddlegame: { side, sans in
           middlegameLine = MiddlegameLine(color: side, sans: sans)
+          returnTab = .playbook
           mode = .middlegame
         }, onHome: { tab = .home })
           .background(Theme.background.ignoresSafeArea())
@@ -154,7 +159,8 @@ struct RootView: View {
     analyzing = nil
     mode = nil
     middlegameLine = nil
-    tab = .home
+    tab = returnTab ?? .home
+    returnTab = nil
   }
 
   /// Debug builds open on a tab with `OPEN_TAB=stats`, for screenshots.

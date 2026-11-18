@@ -11,6 +11,9 @@ import UIKit
 struct PlaybookView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
+  /// The page open and the side shown: kept above the tabs, so Grow and Middlegame come back to them.
+  @Binding var page: Page?
+  @Binding var side: ChessCore.Color
   var tidyFocus: TidyFind? = nil
   /// The focus is taken: Tidy holds it from here.
   var onConsumedTidyFocus: () -> Void = {}
@@ -28,9 +31,7 @@ struct PlaybookView: View {
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
   @State private var scan = TidyScan(checks: EngineChecks.shared)
-  @State private var page: Page?
   @State private var focus: TidyFind?
-  @State private var side = ChessCore.Color.w
   /// The app bar's width, to point a tip at its more button.
   @State private var barWidth: CGFloat = 393
 

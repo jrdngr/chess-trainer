@@ -56,7 +56,7 @@ struct OpeningsLadder: View {
             } label: {
               HStack(spacing: 8) {
                 SideDot(side: row.side)
-                Text(row.label).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
+                Text(row.label).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1).minimumScaleFactor(0.75)
                   .frame(maxWidth: .infinity, alignment: .leading)
                 FormBars(bars: row.bars).frame(width: 32, alignment: .trailing)
               }

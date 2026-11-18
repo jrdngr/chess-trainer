@@ -397,7 +397,7 @@ private struct MapNodeView: View {
           }
           Text(node.label).font(.system(size: width < 76 ? 10.5 : 12, weight: .semibold))
             .foregroundStyle(node.owned ? Theme.text : Theme.text3)
-            .multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.85)
+            .multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.7)
         }
         .padding(.top, 6)
       }

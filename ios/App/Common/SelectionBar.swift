@@ -258,7 +258,7 @@ struct QuickPicker: View {
   private func openingTile(_ id: String, _ side: ChessCore.Color, _ label: String, chosen: Bool, action: @escaping () -> Void) -> some View {
     Button(action: action) {
       HStack(spacing: 8) {
-        Text(label).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
+        Text(label).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1).minimumScaleFactor(0.75)
           .frame(maxWidth: .infinity, alignment: .leading)
         FormBars(bars: store.state.form.bars(id, side))
       }
