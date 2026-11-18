@@ -48,17 +48,16 @@ struct CalloutStrip: View {
     self.symbol = symbol
   }
 
+  /// A plain dark bar: the tone only on a small icon tile, the words white.
   var body: some View {
-    HStack(spacing: 10) {
+    HStack(spacing: 12) {
       Image(systemName: symbol)
-        .font(.system(size: 13, weight: .heavy)).foregroundStyle(Theme.background)
-        .frame(width: 26, height: 26).background(Circle().fill(tone))
-      Text(text).font(.system(size: 20, weight: .heavy)).tracking(-0.2).foregroundStyle(tone).lineLimit(1).minimumScaleFactor(0.6)
+        .font(.system(size: 11, weight: .heavy)).foregroundStyle(tone)
+        .frame(width: 24, height: 24).background(RoundedRectangle(cornerRadius: 7).fill(tone.opacity(0.18)))
+      Text(text).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1).minimumScaleFactor(0.7)
     }
-    .frame(maxWidth: .infinity).frame(height: 46)
+    .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 14).frame(height: 46)
     .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface))
-    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(tone, lineWidth: 1.5))
-    .shadow(color: tone.opacity(0.2), radius: 7)
     .allowsHitTesting(false)
   }
 }
