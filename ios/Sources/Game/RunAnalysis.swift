@@ -5,7 +5,8 @@ import Observation
 
 /// A finished run, analysed on its own board: the game's moves to step back and forth
 /// through, moves played on the board to try others, and the engine's eval and top move from each position.
-/// Past the game's end, stepping forward plays the top move.
+/// Stepping forward always plays the top move shown, in the game or past its end; where the line
+/// went another way, the rest of it gives way.
 @MainActor @Observable
 public final class RunAnalysis {
   /// The game as played, its last move the one that ended it.
@@ -45,11 +46,9 @@ public final class RunAnalysis {
   /// How deep the engine looked here; 0 before it has.
   public var depth: Int { depths[fen] ?? 0 }
 
-  /// The move a step would make: forward plays the next one in the line, or the top move past its end;
-  /// back takes the last one back.
+  /// The move a step would make: forward plays the top move shown; back takes the last one back.
   public func stepMove(_ dir: Int) -> LegalMove? {
-    if dir < 0 { return last }
-    return ply < line.count ? moves[ply] : top
+    dir < 0 ? last : top
   }
 
   public func canStep(_ dir: Int) -> Bool { stepMove(dir) != nil }
@@ -58,9 +57,10 @@ public final class RunAnalysis {
     guard let move = stepMove(dir) else { return }
     if dir < 0 {
       ply -= 1
-    } else {
-      if ply == line.count { extend(move) }
+    } else if ply < line.count && moves[ply].san == move.san {
       ply += 1
+    } else {
+      play(move)
     }
   }
 

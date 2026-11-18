@@ -31,8 +31,12 @@ target can be covered by `HeadlessApp` flow tests.
    screen. After a blunder, your move shows in red with the reply that
    punishes it, and how the round ended shows under the board (nothing when
    you ended it yourself).
-   - Swipe the deck left or right to step through the moves. Past the
-     game's end, a step forward plays the engine's top move.
+   - Swipe the deck left or right to step through the moves. A step
+     forward always plays the engine's top move, the one its arrow shows;
+     where the game went another way, the game's later moves give way to
+     it.
+     Test: `analysisStepsPlayTheTopMoveShown` in
+     `Tests/FlowTests/AnalysisFlowTests.swift`.
    - Play a move on the board to try another line.
    - Tap the deck, or flick a card up, and the next round's card is dealt.
 7. **Endgame header.** Once the game reaches the endgame rules (see
