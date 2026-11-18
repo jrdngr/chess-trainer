@@ -15,12 +15,15 @@ target. Tests: the `docs/rules/pawns.md` suite in
    was never missed: a pawn for each prep move asked. Each prepared move
    you find pops a pawn out of its square into the pot beside the prep bar,
    which counts them; nothing is paid until the prep completes, when the
-   pot's pawns fly to the counter. A miss loses the pot: it turns red and
+   pot's pawns fly to the counter. When it completes the turn the last
+   prepared move was found, that move's pawn, still on its way into the
+   pot, turns and flies straight to the counter, and the pot pays the rest. A miss loses the pot: it turns red and
    drains, and the rest of the run still pays. When growth opens there
    because a move is due, the pot waits, breathing: the first move you add
-   pays it out, and Done or the game ending first drains it. An opening
+   pays it out, every pawn from the pot, and Done or the game ending first
+   drains it. An opening
    complete through the book has nothing due, so it always pays. Tests:
-   the held-pot flows in `Tests/FlowTests/PlayFlowTests.swift`.
+   the clean-prep and held-pot flows in `Tests/FlowTests/PlayFlowTests.swift`.
 3. **A blunder punished** pays when, past your prep, the opponent's move
    dropped their eval by 200 centipawns or more since your last scored move,
    and your reply gave back 50 or less.

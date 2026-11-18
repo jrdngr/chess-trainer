@@ -80,6 +80,8 @@ public final class RunModel {
   public private(set) var heldPrepPawn: PawnAward?
   /// The pawns in the prep's pot: one for each prepared move found, paid when the prep completes.
   public private(set) var pot = 0
+  /// The square of the last prepared move found, whose pawn went into the pot.
+  private var lastPotSquare: String?
   /// The pot lost to a miss, or to growth left with nothing added: how many it held. `id` restarts its drain.
   public private(set) var potDrain: (count: Int, id: Int)?
   /// The run has reached its one hole and asked about it.
@@ -504,7 +506,7 @@ public final class RunModel {
       if heldPrepPawn != nil { offer(.growthPawn) }
       return
     }
-    payHeldPrepPawn()
+    payHeldPrepPawn(fresh: true)
     if inPrep && ownMoves > 0 { offer(.prepBar) }
     if nextRunShown { offer(.nextRun) }
     if prepNow.isEmpty && store.state.ownsALens { offer(.lens) }
@@ -838,6 +840,7 @@ public final class RunModel {
         missedBest = move
       case .potPawn(let square):
         pot += 1
+        lastPotSquare = square
         store.dropInPot(square)
       case .pawns(let award) where award.event == .prepComplete:
         // Held until this turn knows whether growth is due here.
@@ -859,11 +862,13 @@ public final class RunModel {
   }
 
   /// The held prep pawns, paid out of the pot: a move was added, or growth wasn't due after all.
-  private func payHeldPrepPawn() {
+  /// Paid the turn the prep ran out (`fresh`), the last prepared move's pawn goes straight to the
+  /// counter and the pot pays the rest; held for growth, every pawn is in the pot and it pays them all.
+  private func payHeldPrepPawn(fresh: Bool = false) {
     guard let award = heldPrepPawn else { return }
     heldPrepPawn = nil
     pot = 0
-    pay(award)
+    if fresh, let square = lastPotSquare { store.payPot(award, lastSquare: square) } else { pay(award) }
     offer(.pawns)
   }
 

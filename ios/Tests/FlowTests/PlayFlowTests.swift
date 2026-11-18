@@ -75,9 +75,13 @@ import Testing
     _ = app.takeSignals()
     try await playPrep(app)
     let paid = app.signals.compactMap { if case .pawns(let award) = $0 { return award } else { return nil } }
-    #expect(paid.first?.event == .prepComplete && paid.first?.source == .pot)
     let asked = try #require(app.run).session.prepTimes.count
-    #expect(paid.first?.count == asked, "a pawn for each prep move asked")
+    let prep = paid.filter { $0.event == .prepComplete }
+    #expect(prep.reduce(0) { $0 + $1.count } == asked, "a pawn for each prep move asked")
+    let last = try #require(prep.first)
+    if case .square = last.source {} else { Issue.record("the last prep move's pawn goes straight to the counter, not \(last.source)") }
+    #expect(last.count == 1)
+    if asked > 1 { #expect(prep.dropFirst().first == PawnAward(.prepComplete, .pot, count: asked - 1), "the pot pays the rest") }
     let earned = try #require(app.run).session.state.extras.pawns
     #expect(earned == paid.reduce(0) { $0 + $1.count } && earned >= 1)
     #expect(app.state.pawns == before + earned)

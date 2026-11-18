@@ -199,6 +199,8 @@ private struct PawnFlightLayer: View {
   @State private var trips: [PawnTrip] = []
   @State private var bursts: [(drop: Int, rect: CGRect, round: Bool, start: Double)] = []
   @State private var planned: Set<Int> = []
+  /// Drops planned into the prep's pot, until one turns for the counter.
+  @State private var potBound: Set<Int> = []
   @State private var landed: Set<String> = []
   @State private var epoch = Date()
 
@@ -218,6 +220,7 @@ private struct PawnFlightLayer: View {
         .onChange(of: Int(t / 16)) { settle(t) }
       }
       .onChange(of: store.pawnDrops.map(\.id), initial: true) { plan(width: geo.size.width) }
+      .onChange(of: store.pawnDrops.filter { !$0.toPot }.map(\.id)) { turnForCounter() }
     }
   }
 
@@ -230,8 +233,25 @@ private struct PawnFlightLayer: View {
         for _ in 0..<drop.flying { store.landed(drop.id) }
         continue
       }
+      if drop.toPot { potBound.insert(drop.id) }
       bursts.append((drop.id, source, sourceIsSquare(drop.award.source), now))
       trips += planTrips(drop: drop.id, count: drop.flying, from: source, to: CGPoint(x: target.midX, y: target.midY), width: width, start: now)
+    }
+  }
+
+  /// A pawn on its way into the pot that the prep paid out first flies on to the counter instead.
+  private func turnForCounter() {
+    guard let counter = spots["counter"] else { return }
+    let target = CGPoint(x: counter.midX, y: counter.midY)
+    for drop in store.pawnDrops where !drop.toPot && potBound.contains(drop.id) {
+      potBound.remove(drop.id)
+      for i in trips.indices where trips[i].drop == drop.id {
+        let dx = target.x - trips[i].stop.x, dy = target.y - trips[i].stop.y
+        let len = max(1, (dx * dx + dy * dy).squareRoot())
+        let side: Double = trips[i].normal.dx * dy - trips[i].normal.dy * dx >= 0 ? 1 : -1
+        trips[i].normal = CGVector(dx: -dy / len * side, dy: dx / len * side)
+        trips[i].target = target
+      }
     }
   }
 

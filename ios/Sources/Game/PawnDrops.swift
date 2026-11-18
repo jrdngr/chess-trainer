@@ -46,6 +46,25 @@ extension AppStore {
     drop(award)
   }
 
+  /// A prep's pot paid out the turn its last prepared move was found: that move's pawn, still on
+  /// its way into the pot, turns for the counter, and the pot pays out the rest. With nothing on
+  /// its way in, the last pawn pops out of its square instead.
+  public func payPot(_ award: PawnAward, lastSquare square: String) {
+    guard award.count > 0 else { return }
+    log(AppEvent(kind: "pawns", source: award.event.rawValue, count: award.count, text: "\(award.source)"))
+    update { $0.earn(award.count) }
+    let last = PawnAward(award.event, .square(square), count: 1)
+    if let i = pawnDrops.lastIndex(where: { $0.toPot && $0.flying > 0 }) {
+      pawnDrops[i].toPot = false
+      pawnDrops[i].award = last
+      pawnDrops[i].flying = 1
+      services.emit(.pawns(last))
+    } else {
+      drop(last)
+    }
+    if award.count > 1 { drop(PawnAward(award.event, .pot, count: award.count - 1)) }
+  }
+
   /// An award's pawns off to the counter.
   private func drop(_ award: PawnAward) {
     dropCount += 1
