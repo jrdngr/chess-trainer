@@ -76,9 +76,12 @@ struct HomeView: View {
       store.showStreakPawns()
     }
     .sheet(isPresented: $settings) { SettingsSheet().presentationBackground(Theme.background) }
-    .onAppear {
+    .task {
       if Self.debugDeveloper { settings = true }
       guard store.takeSettingsHeld() else { return }
+      // The old screens' Settings and Developer sheets are still going away: presented
+      // now, Settings wouldn't show, yet would stay marked open and never open again.
+      try? await Task.sleep(for: .milliseconds(600))
       var still = Transaction()
       still.disablesAnimations = true
       withTransaction(still) { settings = true }
