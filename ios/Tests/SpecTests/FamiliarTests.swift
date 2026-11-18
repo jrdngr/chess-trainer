@@ -29,7 +29,6 @@ private let PREFS: [String: NudgePrefs] = [
 ]
 
 private let MIN_SHARE = AUTO_GROWTH.minShare
-private let OPTS = TidyOptions(prefs: PREFS["transposition"]!, minShare: MIN_SHARE)
 
 private func tree(_ t: JSON) -> Playbook {
   let found = TREES[t.string]!
@@ -39,15 +38,6 @@ private func tree(_ t: JSON) -> Playbook {
 /// A move as the cases write it: with its tone, pill and reason when nudged.
 private func shown(_ moves: [NudgedMove]) -> JSON {
   moves.map { m in m.tone.map { "\(m.san) \($0.rawValue) [\(m.pill!)] \(m.reason!)" } ?? m.san }.json
-}
-
-/// A Tidy find without node ids.
-private func find(_ f: TidyFind?) -> JSON {
-  guard let f else { return .null }
-  return obj([
-    "path": f.path.joined(separator: " "), "mine": f.mine, "suggestion": f.suggestion, "kind": f.kind.rawValue,
-    "tone": f.tone.rawValue, "offBook": f.offBook, "reason": f.reason, "against": f.against, "removes": f.removes,
-  ])
 }
 
 private func candidates(_ fen: String) -> [NudgeCandidate] {
@@ -96,20 +86,5 @@ private func candidates(_ fen: String) -> [NudgeCandidate] {
       return roleArrows(fen, listed) { san in deltas == .null ? nil : deltas[san].numberOrNil }
         .map { "\($0.san) \($0.role.rawValue)" }.json
     },
-    "tidy.scan": { a in
-      let r = tree(a[0])
-      let todo = tidyPositions([r], openings, openings.root)
-      let finds = sortFinds(todo.compactMap { findAt(r, index, $0.node, OPTS) })
-      return obj(["positions": todo.count, "finds": JSON.array(finds.map(find))])
-    },
-    "tidy.offPrepHint": { a in
-      find(offPrepHint(tree(a[0]), index, after(a[1].string), a[2].string, a[3].string, OPTS))
-    },
-    "tidy.switchMove": { a in
-      let r = tree(a[0])
-      guard let node = nodeAtLine(r, line(a[1].string)), let out = switchMove(r, node.id, a[2].string) else { return .null }
-      return leafLines(out).map { $0.sans.joined(separator: " ") }.json
-    },
-    "tidy.moveLabel": { moveLabel($0[0].int, $0[1].string).json },
   ])
 }

@@ -187,48 +187,6 @@
       {"args":["e4 e5",null,true],"out":["Nf3 engine","Nc3 engine-next","Bc4 engine-next"]},
       {"args":["e4 e5",{"Nf3":-10,"Bc4":-15,"Nc3":-12},true],"out":["Nf3 engine","Nc3 engine-next","Bc4 engine-next"]}
       ]
-    },
-    {
-      "fn": "tidy.scan",
-      "about": "A Tidy scan of a whole Playbook: every position you chose at (a transposition once), each compared with the book's moves and your habits; finds with the most to remove first, then the earliest. Each find: your move, the switch, why it is familiar, why yours works against your lines, and what switching removes.",
-      "cases": [
-      {"args":["white"],"out":{"positions":22,"finds":[{"path":"c4 e5","mine":"Nc3","suggestion":"g3","kind":"habit","tone":"toward","offBook":false,"reason":"You play g3 in 2 Catalan and English lines, Nc3 in none","against":null,"removes":7},{"path":"c4 c5","mine":"Nf3","suggestion":"g3","kind":"habit","tone":"toward","offBook":false,"reason":"You play g3 in 2 Catalan and English lines, Nf3 in none","against":null,"removes":5},{"path":"d4 d5 c4 e6","mine":"Nc3","suggestion":"g3","kind":"transposes","tone":"toward-far","offBook":false,"reason":"g3 can transpose into your Catalan Opening line","against":null,"removes":5},{"path":"d4 Nf6 c4 e6 g3 Bb4+","mine":"Bd2","suggestion":"Nc3","kind":"habit","tone":"toward-far","offBook":false,"reason":"You play Nc3 in 3 Queen's Gambit Declined and Slav lines, Bd2 in none","against":null,"removes":3},{"path":"d4 d5 c4 e6 Nc3 Nf6 cxd5 exd5","mine":"Bg5","suggestion":"Nf3","kind":"habit","tone":"toward","offBook":false,"reason":"You play Nf3 in 2 Catalan and Slav lines, Bg5 in none","against":null,"removes":1}]}},
-      {"args":["black"],"out":{"positions":13,"finds":[{"path":"d4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Nf3","mine":"c6","suggestion":"Be7","kind":"habit","tone":"toward-far","offBook":false,"reason":"You play Be7 in 2 Queen's Gambit Declined lines, c6 in none","against":null,"removes":1}]}}
-      ]
-    },
-    {
-      "fn": "tidy.offPrepHint",
-      "about": "The end screen's hint on a miss: the move played over the board, if it is closer to the rest of your lines than your prepared move. A habit here needs no test against the times you passed it up.",
-      "cases": [
-      {"args":["black","d4 d5 c4 e6 Nc3 Nf6 Bg5","c6","Be7"],"out":null},
-      {"args":["black","d4 d5 c4 e6 Nc3","Be7","Nf6"],"out":null},
-      {"args":["black","d4 d5 c4 e6 Nf3 Nf6 g3","c6","Be7"],"out":null},
-      {"args":["black","e4 e6 d4 d5 Nc3","Bb4","Nf6"],"out":null},
-      {"args":["white","d4 d5 c4 e6","Nf3","Nc3"],"out":null},
-      {"args":["white","c4 c5 Nf3 Nc6","d4","g3"],"out":null},
-      {"args":["white","c4 e5","g3","Nc3"],"out":{"path":"c4 e5","mine":"Nc3","suggestion":"g3","kind":"habit","tone":"toward","offBook":false,"reason":"You play g3 in 2 Catalan and English lines, Nc3 in none","against":null,"removes":7}},
-      {"args":["white","e4","e4","d4"],"out":null}
-      ]
-    },
-    {
-      "fn": "tidy.switchMove",
-      "about": "Switching your move at a position: the new move becomes yours and preferred there, and the old move goes with everything under it. Null when the move is not legal.",
-      "cases": [
-      {"args":["white","d4 d5 c4 e6 Nc3","Nf3"],"out":["d4 Nf6 c4 e6 g3 d5 Bg2 Be7 Nf3","d4 Nf6 c4 e6 g3 Bb4+ Bd2 Be7 Bg2","d4 d5 c4 c6 Nf3 Nf6 Nc3 dxc4 a4","c4 e5 Nc3 Nf6 g3 d5 cxd5 Nxd5 Bg2","c4 c5 Nf3 Nc6 g3 g6 Bg2","d4 d5 c4 e6 Nf3"]},
-      {"args":["white","c4 e5 Nc3","g3"],"out":["d4 Nf6 c4 e6 g3 d5 Bg2 Be7 Nf3","d4 Nf6 c4 e6 g3 Bb4+ Bd2 Be7 Bg2","d4 d5 c4 e6 Nc3 Nf6 cxd5 exd5 Bg5","d4 d5 c4 c6 Nf3 Nf6 Nc3 dxc4 a4","c4 c5 Nf3 Nc6 g3 g6 Bg2","c4 e5 g3"]},
-      {"args":["black","d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7","c6"],"out":["d4 d5 c4 e6 cxd5 exd5 Nc3 Nf6 Nf3 c6","d4 d5 c4 e6 Nc3 Nf6 Bg5 c6","d4 d5 c4 e6 Nf3 Nf6 g3 Be7","e4 e6 d4 d5 Nc3 Nf6","e4 e6 d4 d5 e5 c5"]},
-      {"args":["black","e4 e6","Ke7"],"out":null}
-      ]
-    },
-    {
-      "fn": "tidy.moveLabel",
-      "about": "A move with its number, from the plies before it: \"6.g3\", \"6...Nf6\".",
-      "cases": [
-      {"args":[0,"g3"],"out":"1.g3"},
-      {"args":[1,"g3"],"out":"1...g3"},
-      {"args":[10,"g3"],"out":"6.g3"},
-      {"args":[11,"g3"],"out":"6...g3"}
-      ]
     }
   ]
 }

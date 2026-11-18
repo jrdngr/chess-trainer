@@ -27,8 +27,6 @@ public struct RepMove: Equatable, Sendable, Codable {
   public var note: String?
   public var source: MoveSource
   public var addedAt: Double
-  /// When you kept this reply on Tidy's card.
-  public var keptAt: Double?
 }
 
 public struct Playbook: Equatable, Sendable, Codable {

@@ -5,7 +5,7 @@ import Observation
 
 /// What the hint engine says of single moves, asked one at a time and kept
 /// for the app's lifetime: what a line's moves give away, for the Save sheet,
-/// and whether a move off the book is sound, for Tidy and Growth.
+/// and whether a move off the book is sound, for Growth.
 @MainActor @Observable
 public final class EngineChecks {
   @ObservationIgnored private unowned let services: GameServices

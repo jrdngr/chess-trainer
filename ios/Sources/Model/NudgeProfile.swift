@@ -3,7 +3,7 @@ import ChessCore
 import Shared
 
 /// Nudges: keeping a playbook narrow while it grows. Four files: the profile and context here, the signals, the arrows, and
-/// the switches Tidy offers.
+/// rare book moves that are familiar anyway.
 ///
 /// A move that lands in a position you already know, or one you already play
 /// in the same opening, costs almost nothing to learn; one that shuts off the
