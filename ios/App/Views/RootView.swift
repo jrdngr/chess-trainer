@@ -24,14 +24,10 @@ struct RootView: View {
   @State private var mapFocus: MapFocus?
   /// A Growth sitting, from an opening's Grow.
   @State private var growing: GrowthModel?
-  /// A line from the opening sheet for Middlegame mode to play out.
-  @State private var middlegameFrom: Selection?
   /// The Pawn Shop item to open, from a locked control.
   @State private var shopFocus: String?
   @State private var playbookPage: PlaybookView.Page?
   @State private var playbookSide = ChessCore.Color.w
-  /// Where leaving a mode goes: the Playbook for one started from an opening page, else Home.
-  @State private var returnTab: Tab?
 
   var body: some View {
     ZStack {
@@ -96,10 +92,6 @@ struct RootView: View {
           tab = .analysis
         }, onGrow: { gap in
           growing = GrowthModel(gap: gap, store: store, tree: tree, index: index)
-        }, onMiddlegame: { selection in
-          middlegameFrom = selection
-          returnTab = .playbook
-          mode = .middlegame
         }, onHome: { tab = .home })
           .background(Theme.background.ignoresSafeArea())
           .tabItem { Label(Tab.playbook.label, systemImage: Tab.playbook.symbol) }.tag(Tab.playbook)
@@ -131,7 +123,7 @@ struct RootView: View {
     case .endgame: EndgameView { leave() }
     case .middlegame:
       MiddlegameView(
-        tree: tree, index: index, opening: middlegameFrom, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) },
+        tree: tree, index: index, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) },
         straight: !setupFirst)
     }
   }
@@ -149,9 +141,7 @@ struct RootView: View {
   private func leave() {
     analyzing = nil
     mode = nil
-    middlegameFrom = nil
-    tab = returnTab ?? .home
-    returnTab = nil
+    tab = .home
   }
 
   /// Debug builds open on a tab with `OPEN_TAB=stats`, for screenshots.

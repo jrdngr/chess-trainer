@@ -6,9 +6,9 @@ import Testing
 
 private func everyNode(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + everyNode($0.children) } }
 
-/// An opening's page on the tree: Grow fills the hole the curve allows under it, Middlegame
-/// plays out a line through it, and Delete takes it until the undo puts it back.
-@MainActor @Test func anOpeningsPageGrowsPlaysAndDeletes() async throws {
+/// An opening's page on the tree: Grow fills the hole the curve allows under it, Select
+/// makes Middlegame play out a line through it, and Delete takes it until the undo puts it back.
+@MainActor @Test func anOpeningsPageGrowsSelectsAndDeletes() async throws {
   try await headless { app in
     onboard(app)
     let owned = everyNode(app.map(.w)).filter { $0.owned && $0.line.count > 1 }
@@ -19,9 +19,10 @@ private func everyNode(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + e
     #expect(app.screen == .growth)
     await app.home()
 
-    try await app.openMiddlegame(from: Selection(color: .w, opening: node.id))
+    try app.select(side: .w, opening: node.id)
+    try await app.openMiddlegame()
     let handoff = try #require(app.run?.handoff)
-    #expect(handoff.line.starts(with: node.line), "the line drawn goes through the opening")
+    #expect(handoff.line.starts(with: node.line), "the line drawn goes through the selected opening")
     await app.home()
 
     let undo = try app.delete(node)

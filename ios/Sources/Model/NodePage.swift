@@ -2,8 +2,7 @@ import Book
 import ChessCore
 
 /// The page an opening of yours on the tree opens: that one position, how
-/// well you know it, how much of it you have, and what growing under it
-/// waits for. Lines past it are reached through their own openings on the tree.
+/// well you know it, and what growing under it waits for. Lines past it are reached through their own openings on the tree.
 
 /// What growing under an opening waits for.
 public enum NodeGrow: Equatable, Sendable {
@@ -23,26 +22,15 @@ public struct NodePage: Equatable, Sendable {
   public var answers: [Double]
   /// Their average, 0 to 1; nil before there are enough of them.
   public var form: Double?
-  /// Your moves on the way to it and under it.
-  public var movesKnown: Int
-  /// The holes the curve sees under it, in any level.
-  public var linesToGrow: Int
   public var grow: NodeGrow
 }
 
 /// The page for the opening `id`, reached by `line`, on `side`'s tree.
 public func nodePage(_ state: AppState, _ tree: OpeningTree, side: Color, id: String, line: [String]) -> NodePage {
   let answers = state.form.scores(id, side)
-  var known = 0
-  if let rep = state.playbookList.first(where: { $0.color == side }), let at = nodeAtLine(rep, line) {
-    let ids = Set(pathTo(rep, at.id).map(\.id)).union(subtreeIds(rep, at.id))
-    known = ids.filter { pathTo(rep, $0).count % 2 == (side == .w ? 1 : 0) }.count
-  }
   let all = curveHoles(curveSides(state), tree.index, tree: tree)
   let under = all.filter { $0.color == side && $0.line.count > line.count && $0.line.starts(with: line) }
-  return NodePage(
-    answers: answers, form: formOf(answers), movesKnown: known, linesToGrow: under.count,
-    grow: nodeGrow(under, all, curveGate(state, tree)))
+  return NodePage(answers: answers, form: formOf(answers), grow: nodeGrow(under, all, curveGate(state, tree)))
 }
 
 /// The first hole under the opening the open levels allow; else what opens them:

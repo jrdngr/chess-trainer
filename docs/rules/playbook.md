@@ -29,17 +29,15 @@ Tests: the `docs/rules/playbook.md` suite in
    back through the moves to it, never past them; Analysis opens from there.
    Lines past it are reached through their own openings on the tree. The page
    shows the opening's form: its last 10 answers and their average (see
-   [form](form.md)). It also shows your moves on the way to it and under it,
-   and the holes the curve sees under it.
+   [form](form.md)).
 5. **Grow waits for the curve.** Grow fills the first hole under the
    opening that an open level allows (see [growth](growth.md)). Otherwise the
    page says what it waits for. Holes in open levels elsewhere grow first, so
    it names the next of them and how many there are. Failing that, it shows
    the games and green openings its first hole's level needs. With no hole
    under the opening, there is no Grow.
-6. **Middlegame and Select act on the opening** as if it were picked in
-   the opening picker. Middlegame draws one of your lines through it and
-   plays it out (see [middlegame](middlegame.md)); Select makes it Play's
-   opening. Each shows only once its feature is yours.
+6. **Select** makes the opening Play's, as if it were picked in the opening
+   picker, so Play and Middlegame draw their lines through it. It shows only
+   once the opening picker is yours.
 7. **Delete** takes the opening's last move and everything after it, with
    an undo. Nothing else edits the Playbook by hand.

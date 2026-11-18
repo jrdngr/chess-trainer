@@ -24,9 +24,6 @@ public struct MiddlegameLine: Equatable, Sendable {
 public final class MiddlegameSession {
   public let tree: OpeningTree
   public let index: ReferenceIndex
-  /// The opening to draw lines through, from its page on the Playbook tree, as
-  /// if picked in the opening picker; nil draws from the round's selection.
-  public let opening: Selection?
   @ObservationIgnored private let store: AppStore
 
   public private(set) var model: RunModel?
@@ -34,15 +31,14 @@ public final class MiddlegameSession {
   public private(set) var building: [String]?
   /// The line the last run played out, for Same line.
   public private(set) var last: MiddlegameLine?
-  /// A run couldn't start: what to say, and whether the mode should close.
-  @ObservationIgnored public var onFail: ((_ message: String, _ close: Bool) -> Void)?
+  /// A run couldn't start: what to say.
+  @ObservationIgnored public var onFail: ((_ message: String) -> Void)?
   @ObservationIgnored private var job: Task<Void, Never>?
 
-  public init(store: AppStore, tree: OpeningTree, index: ReferenceIndex, opening: Selection? = nil) {
+  public init(store: AppStore, tree: OpeningTree, index: ReferenceIndex) {
     self.store = store
     self.tree = tree
     self.index = index
-    self.opening = opening
   }
 
   private var services: GameServices { store.services }
@@ -50,7 +46,7 @@ public final class MiddlegameSession {
   /// Draw a line from the setup (or take `line`), build its handoff, then begin the run there.
   public func start(_ saved: RunPrefs, line: MiddlegameLine? = nil) {
     let prefs = middlegamePrefs(saved)
-    let selection = line.map(selectionOf) ?? opening ?? store.takeRoundSelection()
+    let selection = line.map(selectionOf) ?? store.takeRoundSelection()
     let seed = (Env.random() * 2_147_483_648).rounded(.down)
     var options = runStart(prefs, selection, store.state, tree, seed: seed)
     guard let drawn = line ?? startRun(options).map({ begun -> MiddlegameLine in
@@ -60,7 +56,7 @@ public final class MiddlegameSession {
       !drawn.sans.isEmpty
     else {
       services.emit(.toast("No line to play out here"))
-      onFail?("No line to play out here", opening != nil && model == nil)
+      onFail?("No line to play out here")
       return
     }
     options.color = drawn.color == .w ? .w : .b
@@ -86,7 +82,7 @@ public final class MiddlegameSession {
           store: self.store, tree: self.tree, index: self.index, engine: engine)
       else {
         self.services.emit(.toast("This line couldn't be played out"))
-        self.onFail?("This line couldn't be played out", self.opening != nil)
+        self.onFail?("This line couldn't be played out")
         return
       }
       self.model = run

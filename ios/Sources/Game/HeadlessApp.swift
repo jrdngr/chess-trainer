@@ -287,12 +287,11 @@ public final class HeadlessApp: SignalSink {
     endgame = EndgameSession(store: store)
   }
 
-  /// Middlegame mode: a line drawn from your setup, or through `opening` as an opening's
-  /// page on the Playbook tree starts it, built and started.
-  public func openMiddlegame(from opening: Selection? = nil) async throws {
+  /// Middlegame mode: a line drawn from your setup, built and started.
+  public func openMiddlegame() async throws {
     guard state.owns(.middlegame) else { throw Failure.notHere("Middlegame is locked: it is in the Pawn Shop") }
     closeModes()
-    let session = MiddlegameSession(store: store, tree: tree, index: index, opening: opening)
+    let session = MiddlegameSession(store: store, tree: tree, index: index)
     middlegame = session
     session.start(state.settings.middlegame)
     await idle()

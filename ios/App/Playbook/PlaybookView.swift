@@ -21,8 +21,6 @@ struct PlaybookView: View {
   var onAnalyze: ([String], ChessCore.Color) -> Void = { _, _ in }
   /// Grow a hole, from an opening's page.
   var onGrow: (Gap) -> Void = { _ in }
-  /// Middlegame through an opening, as if picked in the opening picker.
-  var onMiddlegame: (Selection) -> Void = { _ in }
   /// Go to Home, after an opening page selected its opening.
   var onHome: () -> Void = {}
 
@@ -39,7 +37,7 @@ struct PlaybookView: View {
       switch page {
       case .opening(let node):
         OpeningPage(
-          tree: tree, node: node, onBack: { page = nil }, onGrow: onGrow, onMiddlegame: onMiddlegame,
+          tree: tree, node: node, onBack: { page = nil }, onGrow: onGrow,
           onAnalyze: onAnalyze,
           onShowNext: {
             if let next = nextMapNode(store.state, tree) {
