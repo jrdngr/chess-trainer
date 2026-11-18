@@ -14,15 +14,15 @@ struct MapFocus: Equatable {
 /// branches, the ones you have first and the locked ones the curve will add
 /// after them, then the families you don't have, for sale. The bar at the bottom is the open
 /// opening's row, for a locked one when it grows, and for a family Unlock at its price.
-/// Choosing openings, it shows only the families a slot takes, without prices, and tapping
-/// one fills its slot.
+/// Choosing openings, it shows only the families the slot being filled takes, without prices,
+/// and tapping one fills that slot.
 struct PlaybookMapView: View {
   let tree: OpeningTree
   let side: ChessCore.Color
   var focus: MapFocus?
   var onConsumedFocus: () -> Void = {}
-  /// The openings picked for each slot, by id, while choosing openings.
-  var choosing: Binding<[ChoiceSlot: String]>? = nil
+  /// The slots being filled, while choosing openings.
+  var choosing: Binding<Choosing>? = nil
   /// Open an opening you have on its page.
   var onOpen: (MapNode) -> Void = { _ in }
 
@@ -86,7 +86,7 @@ struct PlaybookMapView: View {
 
   /// One side's tree, kept until the Playbook, the games or the form change.
   private var map: [MapNode] {
-    if choosing != nil { return memo.get("choosing|\(side.rawValue)") { choosingMap(tree, side: side) } }
+    if let slot = choosing?.wrappedValue.slot { return memo.get("choosing|\(slot.rawValue)") { choosingMap(tree, slot: slot) } }
     let state = store.state
     let key = "\(side.rawValue)|" + state.playbookList.map { "\($0.id):\($0.nodes.count)" }.joined(separator: ",")
       + "|\(lastAddedAt(state.playbookList))|\(state.games.count)|\(state.form.openings.values.reduce(0) { $0 + $1.reduce(0, +) })"
@@ -101,8 +101,9 @@ struct PlaybookMapView: View {
   }
 
   private func tap(_ roots: [MapNode], _ path: [String], _ id: String) {
-    if let choosing, let family = find(roots, id)?.family, let slot = choiceSlot(family) {
-      choosing.wrappedValue[slot] = family
+    if let choosing, let family = find(roots, id)?.family {
+      withAnimation(.easeOut(duration: 0.2)) { _ = choosing.wrappedValue.pick(family) }
+      return
     }
     let next = mapTap(roots, path: path, id)
     withAnimation(.easeOut(duration: 0.26)) { paths[side] = next }
@@ -111,7 +112,7 @@ struct PlaybookMapView: View {
   /// Whether a family is picked for its slot, while choosing.
   private func picked(_ node: MapNode) -> Bool {
     guard let choosing, let family = node.family, let slot = choiceSlot(family) else { return false }
-    return choosing.wrappedValue[slot] == family
+    return choosing.wrappedValue.picks[slot] == family
   }
 
   private func find(_ roots: [MapNode], _ id: String?) -> MapNode? {

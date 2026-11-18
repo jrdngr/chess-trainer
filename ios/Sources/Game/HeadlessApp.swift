@@ -161,12 +161,15 @@ public final class HeadlessApp: SignalSink {
   /// 1.e4, Black against 1.d4), by id, then the first Play game starts.
   public func chooseOpenings(_ ids: [String]) async throws {
     for id in ids where curatedOpening(id) == nil { throw Failure.notHere("No opening \"\(id)\" on the list") }
-    let slots = ids.compactMap(choiceSlot)
-    guard slots.count == ids.count, Set(slots).count == ChoiceSlot.allCases.count, ids.count == ChoiceSlot.allCases.count else {
-      throw Failure.notHere("Pick one opening for each slot: a White one, one against 1.e4 and one against 1.d4")
+    var choosing = Choosing()
+    for id in ids where !choosing.pick(id) {
+      throw Failure.notHere("Pick one opening for each slot in order: a White one, one against 1.e4, then one against 1.d4")
+    }
+    guard let picked = choosing.ids, picked.count == ids.count else {
+      throw Failure.notHere("Pick one opening for each slot in order: a White one, one against 1.e4, then one against 1.d4")
     }
     seeIntro()
-    store.chooseOpenings(ids)
+    store.chooseOpenings(picked)
     await openPlay()
   }
 

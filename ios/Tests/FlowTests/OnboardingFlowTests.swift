@@ -24,6 +24,7 @@ import Testing
   try await headless(everything: false) { app in
     await #expect(throws: HeadlessApp.Failure.self) { try await app.chooseOpenings(["london", "najdorf"]) }
     await #expect(throws: HeadlessApp.Failure.self) { try await app.chooseOpenings(["london", "najdorf", "french"]) }
+    await #expect(throws: HeadlessApp.Failure.self) { try await app.chooseOpenings(["najdorf", "london", "slav"]) }
     try await app.chooseOpenings(["london", "najdorf", "slav"])
     #expect(app.screen == .play)
     #expect(app.state.ownedFamilies(.w).map(\.id) == ["london"])

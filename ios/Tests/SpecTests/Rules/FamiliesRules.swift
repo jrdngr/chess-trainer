@@ -110,7 +110,9 @@ private func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.
     #expect(choiceSlot("najdorf") == .e4)
     #expect(choiceSlot("slav") == .d4)
     #expect(choiceSlot("nope") == nil)
-    #expect(Set(choosingMap(tree, side: .b).map(\.line)) == [["e4"], ["d4"]])
+    #expect(choosingMap(tree, slot: .e4).map(\.line) == [["e4"]])
+    #expect(choosingMap(tree, slot: .d4).map(\.line) == [["d4"]])
+    #expect(choosingMap(tree, slot: .w).allSatisfy { $0.color == .w })
     var state = AppState()
     state.choose(tree, ["london", "najdorf", "slav"])
     #expect(state.settings.onboarded)
@@ -118,6 +120,28 @@ private func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.
     #expect(state.ownedFamilies(.b).map(\.id) == ["najdorf", "slav"])
     #expect(state.families.bought.isEmpty)
     #expect(state.families.price(.w) == FAMILY_FIRST_PRICE)
+  }
+
+  /// Rule 7: the slots fill in order, and a filled one can be opened again to change its pick.
+  @Test func choosingFillsSlotsInOrder() {
+    var choosing = Choosing()
+    #expect(choosing.slot == .w)
+    #expect(!choosing.canOpen(.e4), "a later slot waits")
+    let early = choosing.pick("najdorf")
+    #expect(!early, "only the slot being filled takes a pick")
+    let white = choosing.pick("london")
+    #expect(white && choosing.slot == .e4)
+    let wrong = choosing.pick("slav")
+    #expect(!wrong)
+    let e4 = choosing.pick("najdorf")
+    #expect(e4 && choosing.slot == .d4)
+    #expect(choosing.ids == nil)
+    choosing.open(.w)
+    #expect(choosing.slot == .w)
+    let changed = choosing.pick("english")
+    #expect(changed && choosing.slot == .d4, "back to the first empty slot")
+    let d4 = choosing.pick("slav")
+    #expect(d4 && choosing.ids == ["english", "najdorf", "slav"])
   }
 
   /// Rule 8.

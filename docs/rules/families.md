@@ -36,7 +36,11 @@ What pawns buy on the Playbook tree: a curated list of openings. Code:
 7. **Choosing openings.** Welcome offers "Recommend some openings" (the
    Italian, 1...e5 and the Queen's Gambit Declined) or "Choose my
    openings": the tree in a choosing mode, with no prices, and three slots
-   to fill: a White opening, a Black one against 1.e4 and one against 1.d4.
+   filled in order: a White opening, then a Black one against 1.e4, then
+   one against 1.d4. The tree shows only the slot being filled (White's
+   tree, or Black's branch under 1.e4 or 1.d4) and the slot bar highlights
+   it. A pick moves on to the next empty slot; a filled slot can be opened
+   again to change its pick.
    The picks go in free with their lines (rule 5) and don't raise a price.
    There are no other ways in: after this, new openings come only from the
    tree. Code: `Choosing.swift`.
