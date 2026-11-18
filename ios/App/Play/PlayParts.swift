@@ -59,7 +59,7 @@ struct PlayButtonStyle: ButtonStyle {
   private var ink: SwiftUI.Color {
     switch kind {
     case .primary: SwiftUI.Color(hex: 0x0b0b0e)
-    case .accent: Theme.accentInk
+    case .accent: Theme.buttonInk
     case .bare: Theme.text2
     case .danger: Theme.bad
     default: Theme.text
@@ -71,7 +71,7 @@ struct PlayButtonStyle: ButtonStyle {
     case .primary: Theme.text
     case .soft: Theme.surface
     case .plain: Theme.surface2
-    case .accent: Theme.accent
+    case .accent: Theme.button
     case .bare: .clear
     case .danger: Theme.bad.opacity(0.14)
     }

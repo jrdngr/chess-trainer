@@ -67,9 +67,9 @@ struct BigButton: View {
         if let icon { Icon(name: icon, size: 18) }
         Text(label).font(.system(size: xl ? 17 : 16, weight: .semibold)).lineLimit(1)
       }
-      .foregroundStyle(accent ? Theme.accentInk : Theme.text)
+      .foregroundStyle(accent ? Theme.buttonInk : Theme.text)
       .frame(maxWidth: .infinity, minHeight: xl ? 56 : 50)
-      .background(RoundedRectangle(cornerRadius: xl ? 16 : 14).fill(accent ? Theme.accent : soft ? Theme.surface : Theme.surface2))
+      .background(RoundedRectangle(cornerRadius: xl ? 16 : 14).fill(accent ? Theme.button : soft ? Theme.surface : Theme.surface2))
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)

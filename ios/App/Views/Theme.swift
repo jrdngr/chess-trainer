@@ -10,14 +10,16 @@ enum Theme {
   static let text2 = Color(hex: 0xa3a3ad)
   static let text3 = Color(hex: 0x66666f)
   static let accent = Color(hex: 0x8a8cff)
+  /// Dark lines on the book's blue card back, and on a current book move.
   static let accentInk = Color(hex: 0x0e0e2a)
+  /// Filled buttons: near-white with near-black words. The accent is for highlights only.
+  static let button = Color(hex: 0xececf2)
+  static let buttonInk = Color(hex: 0x111116)
   /// Home's Play button pressed.
-  static let accentPressed = Color(hex: 0x7f81f4)
+  static let buttonPressed = Color(hex: 0xd4d4dc)
   /// The two cards under Home's Play button, top one first.
-  static let deck2 = Color(hex: 0x6163cf)
-  static let deck3 = Color(hex: 0x41439a)
-  /// The outline around the white words on Home's Play button.
-  static let playOutline = Color(hex: 0x23246b)
+  static let deck2 = Color(hex: 0xa9a9b5)
+  static let deck3 = Color(hex: 0x73737d)
   static let good = Color(hex: 0x4ade80)
   static let bad = Color(hex: 0xfb7185)
   static let warn = Color(hex: 0xfbbf24)

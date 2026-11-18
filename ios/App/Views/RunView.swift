@@ -528,7 +528,7 @@ struct RunView: View {
           Button { model.buyContinue() } label: {
             HStack(spacing: 8) {
               Text("Continue")
-              PawnAmount(count: CONTINUE_PRICE, size: 15, color: Theme.accentInk)
+              PawnAmount(count: CONTINUE_PRICE, size: 15, color: Theme.buttonInk)
             }
             .lineLimit(1).fixedSize()
           }

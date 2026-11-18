@@ -20,7 +20,7 @@ struct SheetButton: View {
     let (fg, bg): (SwiftUI.Color, SwiftUI.Color) = switch style {
     case .plain: (Theme.text, Theme.surface2)
     case .soft: (Theme.text, Theme.surface)
-    case .accent: (Theme.accentInk, Theme.accent)
+    case .accent: (Theme.buttonInk, Theme.button)
     case .danger: (Theme.bad, Theme.bad.opacity(0.14))
     case .primary: (Theme.background, SwiftUI.Color(hex: 0xf5f5f7))
     }

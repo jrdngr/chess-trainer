@@ -54,7 +54,7 @@ struct LensBar: View {
       ForEach(shown, id: \.kind) { lens in
         let on = held == lens.kind
         button(
-          lens.label, on: on, ink: spotlight == lens.kind ? Theme.accent : Theme.text2, fill: Theme.accent, onInk: Theme.accentInk,
+          lens.label, on: on, ink: spotlight == lens.kind ? Theme.accent : Theme.text2, fill: Theme.button, onInk: Theme.buttonInk,
           enabled: enabled, pulse: spotlight == lens.kind, pulseColor: Theme.accent, outlined: spotlight == lens.kind
         ) {
           guard touched != lens.kind else { return }

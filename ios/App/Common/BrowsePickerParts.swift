@@ -75,9 +75,9 @@ struct BrowseNameBar: View {
       .frame(maxWidth: .infinity, alignment: .leading)
       if form != nil { FormRing(form: form) }
       Button(action: onChoose) {
-        Text("Choose").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.accentInk)
+        Text("Choose").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.buttonInk)
           .padding(.horizontal, 16).frame(minHeight: 44)
-          .background(RoundedRectangle(cornerRadius: 12).fill(Theme.accent))
+          .background(RoundedRectangle(cornerRadius: 12).fill(Theme.button))
       }
       .buttonStyle(.plain)
     }

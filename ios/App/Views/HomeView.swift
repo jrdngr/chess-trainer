@@ -108,8 +108,8 @@ struct HomeView: View {
     } else {
       Button { onPlaybook() } label: {
         HStack(spacing: 13) {
-          Icon(name: "bolt", size: 22).foregroundStyle(Theme.accentInk).frame(width: 42, height: 42)
-            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.accent))
+          Icon(name: "bolt", size: 22).foregroundStyle(Theme.buttonInk).frame(width: 42, height: 42)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.button))
           VStack(alignment: .leading, spacing: 1) {
             Text("PLAY").font(.system(size: 10.5, weight: .heavy)).tracking(0.9).foregroundStyle(Theme.accent)
             Text("Build").font(.system(size: 18, weight: .heavy)).foregroundStyle(Theme.text)
@@ -156,20 +156,11 @@ struct HomeView: View {
 /// The word on Home's Play button.
 struct PlayLabel: View {
   var body: some View {
-    let label = HStack(spacing: 10) {
+    HStack(spacing: 10) {
       Image(systemName: "play.fill").font(.system(size: 18, weight: .bold))
       Text("Play").font(.system(size: 21, weight: .heavy))
     }
-    ZStack {
-      // The outline: sixteen copies in the outline color, pushed out in a ring.
-      ForEach(0..<16, id: \.self) { i in
-        let angle = Double(i) / 16 * 2 * .pi
-        label.foregroundStyle(Theme.playOutline)
-          .offset(x: cos(angle) * 1.75, y: sin(angle) * 1.75)
-          .accessibilityHidden(true)
-      }
-      label.foregroundStyle(.white)
-    }
+    .foregroundStyle(Theme.buttonInk)
   }
 }
 
@@ -186,7 +177,7 @@ struct PlayStackStyle: ButtonStyle {
       shape.fill(Theme.deck2).frame(height: 54).padding(.horizontal, 7).offset(y: down && !reduceMotion ? 8 : 4)
       configuration.label
         .frame(maxWidth: .infinity, minHeight: 54)
-        .background(shape.fill(down ? Theme.accentPressed : Theme.accent))
+        .background(shape.fill(down ? Theme.buttonPressed : Theme.button))
         .offset(y: down && !reduceMotion ? 8 : 0)
     }
     .frame(height: 62, alignment: .top)

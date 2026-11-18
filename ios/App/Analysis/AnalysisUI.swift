@@ -38,7 +38,7 @@ struct AnalysisChip: View {
   private var colors: (fg: Color, bg: Color) {
     switch tone {
     case .plain: return (Theme.text2, Theme.surface2)
-    case .on: return (Theme.accentInk, Theme.accent)
+    case .on: return (Theme.buttonInk, Theme.button)
     case .white: return (Color(hex: 0x111111), Color(hex: 0xf2f2f4))
     case .black: return (Color(hex: 0xe8e8ee), Color(hex: 0x2a2a31))
     }
@@ -73,7 +73,7 @@ struct WideButton: View {
     case .plain: return (Theme.text, Theme.surface2)
     case .soft: return (Theme.text, Theme.surface)
     case .primary: return (Color(hex: 0x0b0b0e), Theme.text)
-    case .accent: return (Theme.accentInk, Theme.accent)
+    case .accent: return (Theme.buttonInk, Theme.button)
     }
   }
 }

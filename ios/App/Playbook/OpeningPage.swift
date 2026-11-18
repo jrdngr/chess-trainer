@@ -116,8 +116,8 @@ struct OpeningPage: View {
           Text("Grow").font(.system(size: 17, weight: .heavy)).frame(maxWidth: .infinity, alignment: .leading)
           Text(gap.name).font(.system(size: 14, weight: .bold)).lineLimit(1)
         }
-        .foregroundStyle(Theme.accentInk).padding(.horizontal, 18).frame(minHeight: 64)
-        .background(RoundedRectangle(cornerRadius: 18).fill(Theme.accent))
+        .foregroundStyle(Theme.buttonInk).padding(.horizontal, 18).frame(minHeight: 64)
+        .background(RoundedRectangle(cornerRadius: 18).fill(Theme.button))
       }
       .buttonStyle(.plain)
     case .level(let level, let games, let gamesNeeded, let green, let openings):

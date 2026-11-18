@@ -202,7 +202,7 @@ private struct ShopNode: View {
       case .locked:
         Circle().fill(Theme.surface)
       case .buyable where purchase == nil:
-        Circle().fill(Theme.accent)
+        Circle().fill(Theme.button)
       default:
         Circle().fill(Theme.surface2)
       }
@@ -236,7 +236,7 @@ private struct ShopNode: View {
     if owned { return Theme.good }
     if purchase != nil { return Theme.pawn }
     switch status {
-    case .buyable: return Theme.accentInk
+    case .buyable: return Theme.buttonInk
     case .locked, .soon: return Theme.text3
     default: return Theme.text2
     }
