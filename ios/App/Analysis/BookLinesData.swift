@@ -9,8 +9,8 @@ let BOOK_LINES: [BookLine] = [
   BookLine(
     id: "bk_dragon_d5", name: "Dragon — 9.O-O-O and the ...d5 break", eco: "B76", forColor: .b,
     moves: "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6 O-O-O d5 exd5 Nxd5 Nxc6 bxc6 Bd4 e5 Bc5 Be6".split(separator: " ").map(String.init),
-    summary: "When White castles long without Bc4, the centre is soft — ...d5 comes at once and equalises by force.",
-    ideas: ["The difference from 9.Bc4 is one tempo: without a bishop on c4 the d5 square is not covered.", "After ...e5 and ...Be6 Black has the bishop pair and an active position; the doubled c-pawns do not matter.", "Recognise the move order at the board — playing ...Bd7 here instead throws the advantage away."]),
+    summary: "When White castles long without Bc4, the center is soft — ...d5 comes at once and equalizes by force.",
+    ideas: ["The difference from 9.Bc4 is one tempo: without a bishop on c4 the d5 square is not covered.", "After ...e5 and ...Be6 Black has the bishop pair and an active position; the doubled c-pawns do not matter.", "Recognize the move order at the board — playing ...Bd7 here instead throws the advantage away."]),
   BookLine(
     id: "bk_dragon_classical", name: "Dragon — Classical Variation", eco: "B70", forColor: .b,
     moves: "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be2 Bg7 O-O O-O Be3 Nc6 Nb3 Be6 f4 Na5 f5 Bc4".split(separator: " ").map(String.init),
@@ -24,7 +24,7 @@ let BOOK_LINES: [BookLine] = [
   BookLine(
     id: "bk_alapin", name: "Sicilian — Alapin (2.c3)", eco: "B22", forColor: .b,
     moves: "e4 c5 c3 Nf6 e5 Nd5 d4 cxd4 Nf3 Nc6 cxd4 d6 Bc4 Nb6 Bb5 dxe5 Nxe5 Bd7 Nxd7 Qxd7".split(separator: " ").map(String.init),
-    summary: "White builds a big centre; Black chips at it with ...Nf6 and ...d6 and reaches a balanced isolated-pawn position.",
+    summary: "White builds a big center; Black chips at it with ...Nf6 and ...d6 and reaches a balanced isolated-pawn position.",
     ideas: ["...Nf6 provoking e5 gives the knight a square and a job — ...Nb6 hits the bishop and eyes d5 and c4.", "Trading on e5 at the right moment leaves White with an isolated d-pawn, not an attack.", "The most common anti-Sicilian below master level: worth knowing cold."]),
   BookLine(
     id: "bk_kid_bayonet", name: "King’s Indian — Bayonet Attack", eco: "E97", forColor: .b,
@@ -35,21 +35,21 @@ let BOOK_LINES: [BookLine] = [
     id: "bk_kid_samisch", name: "King’s Indian — Sämisch", eco: "E80", forColor: .b,
     moves: "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3 O-O Be3 e5 d5 Nh5 Qd2 f5 O-O-O Nd7 Bd3 Nc5 Bc2 a6 Nge2 b5".split(separator: " ").map(String.init),
     summary: "White builds a wall with f3 and castles long. Both kings come under fire and the game is decided by which storm lands first.",
-    ideas: ["...Nh5 before ...f5 stops g4 and makes the break work.", "With White castled queenside, ...a6 and ...b5 are not slow moves — they are the attack.", "Do not trade on f5 or d5 without a concrete reason; the closed centre is what makes the wing play fast."]),
+    ideas: ["...Nh5 before ...f5 stops g4 and makes the break work.", "With White castled queenside, ...a6 and ...b5 are not slow moves — they are the attack.", "Do not trade on f5 or d5 without a concrete reason; the closed center is what makes the wing play fast."]),
   BookLine(
     id: "bk_kid_fianchetto", name: "King’s Indian — Fianchetto Variation", eco: "E68", forColor: .b,
     moves: "d4 Nf6 c4 g6 Nf3 Bg7 g3 d6 Bg2 O-O O-O Nbd7 Nc3 e5 e4 c6 h3 Qb6 Re1 exd4 Nxd4 Re8".split(separator: " ").map(String.init),
     summary: "The most respectable anti-King’s-Indian system. The bishop on g2 takes the sting out of a kingside attack.",
-    ideas: ["Against the fianchetto, ...f5 is usually too slow — play in the centre with ...c6, ...Qb6 and ...exd4 instead.", "...Qb6 hits both b2 and d4 and makes White commit.", "This is the line to understand rather than memorise: the plans change with every White set-up."]),
+    ideas: ["Against the fianchetto, ...f5 is usually too slow — play in the center with ...c6, ...Qb6 and ...exd4 instead.", "...Qb6 hits both b2 and d4 and makes White commit.", "This is the line to understand rather than memorize: the plans change with every White set-up."]),
   BookLine(
     id: "bk_kid_fourpawns", name: "King’s Indian — Four Pawns Attack", eco: "E76", forColor: .b,
     moves: "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f4 O-O Nf3 c5 d5 e6 Be2 exd5 cxd5 Re8 e5 dxe5 fxe5 Ng4 Bg5 Qb6 O-O Nxe5".split(separator: " ").map(String.init),
-    summary: "White takes the whole centre and Black hits it immediately. Concrete from move six.",
-    ideas: ["The centre is overextended, not strong — ...c5 and ...e6 before White completes development.", "...Ng4 and ...Qb6 are the standard pair: they hit e5, d4 and f2 at once.", "If you know this line White usually ends up worse, which is why strong players rarely enter it."]),
+    summary: "White takes the whole center and Black hits it immediately. Concrete from move six.",
+    ideas: ["The center is overextended, not strong — ...c5 and ...e6 before White completes development.", "...Ng4 and ...Qb6 are the standard pair: they hit e5, d4 and f2 at once.", "If you know this line White usually ends up worse, which is why strong players rarely enter it."]),
   BookLine(
     id: "bk_kid_averbakh", name: "King’s Indian — Averbakh", eco: "E73", forColor: .b,
     moves: "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Be2 O-O Bg5 c5 d5 e6 Qd2 exd5 exd5 Re8 Nf3 Bg4 O-O Nbd7".split(separator: " ").map(String.init),
-    summary: "Bg5 stops ...e5, so Black changes plan and hits the centre with ...c5 instead, reaching a favourable Benoni.",
+    summary: "Bg5 stops ...e5, so Black changes plan and hits the center with ...c5 instead, reaching a favorable Benoni.",
     ideas: ["Playing ...e5 anyway runs into dxe5 and the pin — ...c5 is the point of the whole variation.", "After exd5 the structure is a Benoni where White’s bishop on g5 is misplaced.", "...Bg4 trades off the piece that defends d5 and e4."]),
   BookLine(
     id: "bk_kid_exchange", name: "King’s Indian — Exchange Variation", eco: "E92", forColor: .b,
@@ -60,11 +60,11 @@ let BOOK_LINES: [BookLine] = [
     id: "bk_slav_main", name: "Slav — Main Line with a4", eco: "D17", forColor: .w,
     moves: "d4 d5 c4 c6 Nf3 Nf6 Nc3 dxc4 a4 Bf5 e3 e6 Bxc4 Bb4 O-O Nbd7 Qe2 Bg6 e4 O-O Bd3".split(separator: " ").map(String.init),
     summary: "Black grabs the pawn and develops the bishop outside the chain before ...e6. a4 is the move that makes it a real fight.",
-    ideas: ["a4 stops ...b5 permanently but leaves b4 weak — Black heads there with a bishop or knight.", "White’s big centre with e4 is the compensation for the slightly loose queenside.", "The whole Slav exists because ...Bf5 solves the problem piece the QGD never solves."]),
+    ideas: ["a4 stops ...b5 permanently but leaves b4 weak — Black heads there with a bishop or knight.", "White’s big center with e4 is the compensation for the slightly loose queenside.", "The whole Slav exists because ...Bf5 solves the problem piece the QGD never solves."]),
   BookLine(
     id: "bk_semislav_meran", name: "Semi-Slav — Meran Variation", eco: "D47", forColor: .w,
     moves: "d4 d5 c4 c6 Nf3 Nf6 Nc3 e6 e3 Nbd7 Bd3 dxc4 Bxc4 b5 Bd3 Bb7 O-O a6 e4 c5 d5 Qc7".split(separator: " ").map(String.init),
-    summary: "Black takes on c4 and expands on the queenside; White answers with e4 and d5 in the centre. The mainstream Semi-Slav.",
+    summary: "Black takes on c4 and expands on the queenside; White answers with e4 and d5 in the center. The mainstream Semi-Slav.",
     ideas: ["The tempo Black spends on ...b5 and ...a6 is what buys White the e4-d5 break.", "Choosing e3 over Bg5 means avoiding Botvinnik theory entirely — a reasonable trade.", "Every line hinges on whether d5 comes with tempo."]),
   BookLine(
     id: "bk_qga_classical", name: "Queen’s Gambit Accepted — Classical", eco: "D27", forColor: .w,
@@ -95,7 +95,7 @@ let BOOK_LINES: [BookLine] = [
     id: "bk_najdorf_opocensky", name: "Najdorf — Opočenský (6.Be2)", eco: "B92", forColor: .b,
     moves: "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be2 e5 Nb3 Be7 O-O O-O Be3 Be6 Qd2 Nbd7 a4 Rc8".split(separator: " ").map(String.init),
     summary: "The quiet main line. White builds slowly with a4 and Nd5 ideas; Black gets a sound, strategically rich game.",
-    ideas: ["a4 stops ...b5, so Black switches to the c-file and ...Nb6 hitting a4 and c4.", "Trading the light-squared bishop on e6 usually helps White — keep it unless d5 becomes weak.", "A good practical choice when you want a Najdorf without memorising Poisoned Pawn theory."]),
+    ideas: ["a4 stops ...b5, so Black switches to the c-file and ...Nb6 hitting a4 and c4.", "Trading the light-squared bishop on e6 usually helps White — keep it unless d5 becomes weak.", "A good practical choice when you want a Najdorf without memorizing Poisoned Pawn theory."]),
   BookLine(
     id: "bk_dragon_yugoslav", name: "Sicilian Dragon — Yugoslav Attack", eco: "B76", forColor: .b,
     moves: "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6 Bc4 Bd7 O-O-O Rc8 Bb3 Ne5 h4 h5 Bg5 Rc5".split(separator: " ").map(String.init),
@@ -114,7 +114,7 @@ let BOOK_LINES: [BookLine] = [
   BookLine(
     id: "bk_ruy_closed", name: "Ruy Lopez — Closed, Chigorin", eco: "C92", forColor: .w,
     moves: "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O h3 Na5 Bc2 c5 d4 Qc7".split(separator: " ").map(String.init),
-    summary: "The classical Spanish. White builds the big centre with c3 and d4; Black expands on the queenside and waits.",
+    summary: "The classical Spanish. White builds the big center with c3 and d4; Black expands on the queenside and waits.",
     ideas: ["The knight manoeuvre Nb1-d2-f1-g3 is the standard regrouping.", "White must decide when to release the tension with d5 or dxe5.", "Slow, rich, and the most instructive structure in chess — worth learning even if you play something else."]),
   BookLine(
     id: "bk_berlin", name: "Ruy Lopez — Berlin Endgame", eco: "C67", forColor: .b,
@@ -125,11 +125,11 @@ let BOOK_LINES: [BookLine] = [
     id: "bk_italian", name: "Italian — Giuoco Pianissimo", eco: "C54", forColor: .w,
     moves: "e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d3 d6 O-O O-O Re1 a6 Bb3 Ba7 Nbd2 Ne7".split(separator: " ").map(String.init),
     summary: "Slow build-up with d3 and c3, aiming for d4 at the right moment. The modern main line at every level.",
-    ideas: ["Both sides manoeuvre knights to the kingside before committing the centre.", "Nbd2-f1-g3 and h3 are almost automatic for White.", "Very little forced theory — understanding beats memorisation here."]),
+    ideas: ["Both sides manoeuvre knights to the kingside before committing the center.", "Nbd2-f1-g3 and h3 are almost automatic for White.", "Very little forced theory — understanding beats memorisation here."]),
   BookLine(
     id: "bk_winawer_pp", name: "French — Winawer Poisoned Pawn", eco: "C18", forColor: .w,
     moves: "e4 e6 d4 d5 Nc3 Bb4 e5 c5 a3 Bxc3+ bxc3 Ne7 Qg4 Qc7 Qxg7 Rg8 Qxh7 cxd4 Ne2 Nbc6 f4 Bd7".split(separator: " ").map(String.init),
-    summary: "White grabs g7 and h7 and gives back the centre. Enormously sharp and completely concrete.",
+    summary: "White grabs g7 and h7 and gives back the center. Enormously sharp and completely concrete.",
     ideas: ["White’s h-pawn is the long-term winner if the position survives the middlegame.", "Black’s counterplay comes down the g- and c-files against the shattered queenside.", "Know the move order exactly: transpositions here change the evaluation."]),
   BookLine(
     id: "bk_caro_classical", name: "Caro-Kann — Classical", eco: "B18", forColor: .b,
@@ -159,8 +159,8 @@ let BOOK_LINES: [BookLine] = [
   BookLine(
     id: "bk_grunfeld_exchange", name: "Grünfeld — Exchange Variation", eco: "D85", forColor: .w,
     moves: "d4 Nf6 c4 g6 Nc3 d5 cxd5 Nxd5 e4 Nxc3 bxc3 Bg7 Nf3 c5 Rb1 O-O Be2 cxd4 cxd4 Qa5+ Bd2 Qxa2".split(separator: " ").map(String.init),
-    summary: "White builds an imposing centre; Black attacks it immediately with ...c5, ...Bg7 and pressure on d4.",
-    ideas: ["The big centre is a target, not an asset, until White proves otherwise.", "Rb1 sidesteps the ...Qa5 pin and prepares to push the d-pawn.", "...Qxa2 wins a pawn but leaves the queen offside — White plays for the initiative with O-O and Bg5."]),
+    summary: "White builds an imposing center; Black attacks it immediately with ...c5, ...Bg7 and pressure on d4.",
+    ideas: ["The big center is a target, not an asset, until White proves otherwise.", "Rb1 sidesteps the ...Qa5 pin and prepares to push the d-pawn.", "...Qxa2 wins a pawn but leaves the queen offside — White plays for the initiative with O-O and Bg5."]),
   BookLine(
     id: "bk_benko", name: "Benko Gambit", eco: "A57", forColor: .w,
     moves: "d4 Nf6 c4 c5 d5 b5 cxb5 a6 bxa6 Bxa6 Nc3 d6 e4 Bxf1 Kxf1 g6 g3 Bg7 Kg2 O-O".split(separator: " ").map(String.init),

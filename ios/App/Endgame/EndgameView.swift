@@ -131,12 +131,13 @@ struct EndgameRoundView: View {
       PlayAppBar(title: game.entry.name, subtitle: game.entry.goal.label, onClose: onClose) {
         if game.entry.intro != nil && game.moves.isEmpty && game.phase == .playing {
           Button { game.replayIntro() } label: {
-            // A 44pt target over the 20pt icon, laid out at the icon's width so the bar keeps its shape.
+            // A 44pt target over the 20pt icon, laid out at the icon's size so the bar keeps its shape
+            // when the button goes.
             Icon(name: "pages", size: 20).foregroundStyle(Theme.text2)
               .frame(width: 44, height: 44).contentShape(Rectangle())
           }
             .buttonStyle(.plain)
-            .padding(.horizontal, -12)
+            .padding(.horizontal, -12).padding(.vertical, -12)
             .accessibilityLabel("Intro")
         }
         PawnCounter()
