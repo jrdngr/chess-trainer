@@ -28,7 +28,7 @@ struct BoardRim: View {
   }
 }
 
-/// A word under the board for a moment, in the lenses' place: Prep complete,
+/// A word under the board for a moment, in the lenses' place:
 /// Off prep, Found it, a missed chance, how a game ended.
 struct CalloutStrip: View {
   var text: String

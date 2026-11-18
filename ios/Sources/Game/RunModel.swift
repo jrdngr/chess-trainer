@@ -311,10 +311,11 @@ public final class RunModel {
     }
   }
 
-  /// Your prep just ended, finished or missed: a Play run says so over the board.
+  /// Your prep just missed: a Play run says Off prep under the board. A finished prep says nothing
+  /// there: its pawns fly to the header with their own Prep complete.
   private func noteLeft(_ was: PrepLabel?) {
-    guard round != nil, was == .on, session.prepStatus != .on else { return }
-    show(callout: session.prepStatus == .off ? "Off prep" : "Prep complete", good: session.prepStatus != .off)
+    guard round != nil, was == .on, session.prepStatus == .off else { return }
+    show(callout: "Off prep", good: false)
   }
 
   /// The board as shown: your move stands while it is judged, a blunder stays until Continue.

@@ -2,7 +2,7 @@
 
 How a run is shown, ended and dealt. Code: `PlayView` and `RunView` in the
 app, `PlaySession` and `RunModel` in the Game target. Rule 3 is tested in
-`PlayScreenRules`; the others have no test yet, and the parts in the Game
+`PlayScreenRules` and rule 7 by a flow test; the others have no test yet, and the parts in the Game
 target can be covered by `HeadlessApp` flow tests.
 
 1. **A run is named by its opening, never by a mode,** with the side as a
@@ -40,6 +40,10 @@ target can be covered by `HeadlessApp` flow tests.
      `Tests/FlowTests/AnalysisFlowTests.swift`.
    - Play a move on the board to try another line.
    - Tap the deck, or flick a card up, and the next round's card is dealt.
-7. **Endgame header.** Once the game reaches the endgame rules (see
+7. **Leaving your prep.** A miss shows Off prep under the board for a
+   moment. A finished prep shows nothing there: its pawns fly to the header
+   with their own Prep complete.
+   Test: `drillRoundScoresPrepAndIsRecorded` in `Tests/FlowTests/PlayFlowTests.swift`.
+8. **Endgame header.** Once the game reaches the endgame rules (see
    [past prep](past-prep.md)), the header says Endgame and the lenses switch
    to their endgame forms.

@@ -16,7 +16,7 @@ import Testing
 }
 
 /// A Drill round: it starts on a move of yours past move one, scores each prepared move,
-/// says when the prep is done, and an ended round goes into the history and counts for the next.
+/// leaves the end of the prep to its pawns, and an ended round goes into the history and counts for the next.
 @MainActor @Test func drillRoundScoresPrepAndIsRecorded() async throws {
   try await headless { app in
     try await drillAsWhite(app)
@@ -29,7 +29,7 @@ import Testing
     try await playPrep(app)
     let pops = app.signals.compactMap { if case .pop(let pop) = $0 { return pop } else { return nil } }
     #expect(!pops.isEmpty && pops.allSatisfy(\.found), "every prepared move is ticked")
-    #expect(app.callouts.contains("Prep complete"))
+    #expect(!app.callouts.contains("Prep complete"), "a finished prep says so only with its pawns")
     #expect(app.run?.label != .on)
 
     await app.endRound()
@@ -351,7 +351,6 @@ private func quietMove(_ fen: String) -> String? {
     let before = app.state.pawns
     try await playPrep(app)
     let run = try #require(app.run)
-    #expect(app.callouts.contains("Prep complete"))
     #expect(run.fill != nil, "growth opens where the prep ran out")
     #expect(run.heldPrepPawn?.event == .prepComplete)
     let held = try #require(run.heldPrepPawn).count
