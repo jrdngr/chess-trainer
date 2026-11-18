@@ -9,8 +9,8 @@ value or price change needs no new games.
 
 ## Files
 
-- `runs.jsonl`: the measured runs, one per line (2,340 runs, measured 2026-11-17, under
-  the pawn rules before the monetization build).
+- `runs.jsonl`: the measured runs, one per line (2,340 runs, measured 2026-11-18, under
+  the pawn rules in docs/monetization.md).
 - `jobs.txt`: the sweep, one `playbook measure` call per line: the seed, then its options.
 - `pawn-rates.template.html`: the calculator. Its inputs (pawns per event, distance
   markers, Endgames bounties, streak, seconds, prices) default to the values in the doc.
