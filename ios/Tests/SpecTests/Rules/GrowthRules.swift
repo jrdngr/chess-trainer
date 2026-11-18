@@ -196,4 +196,20 @@ private func morra() -> (AppState, String) {
     #expect(fillEnds(bookIndex, past, added: 1, size: 5))
   }
 
+  /// Rule 13: green and yellow only on answers the engine has weighed and finds sound.
+  @Test func greenIsNeverAWeakMove() {
+    let moves = [
+      NudgedMove(san: "d3", from: "d2", to: "d3", tone: .toward, reason: "You play d3 in 4 Italian lines", pill: "Your habit"),
+      NudgedMove(san: "d4", from: "d2", to: "d4", tone: .toward, pill: "Transposes"),
+      NudgedMove(san: "c3", from: "c2", to: "c3", tone: .towardFar, pill: "Your pawns"),
+      NudgedMove(san: "Ng5", from: "f3", to: "g5", tone: .away, pill: "Breaks a habit"),
+    ]
+    let deltas: [String: Double] = ["d3": -CLEARLY_WORSE_CP, "d4": -CLEARLY_WORSE_CP - 1, "Ng5": -200]
+    let toned = soundTones(moves) { deltas[$0] }
+    #expect(toned[0] == moves[0], "within the line, green stays")
+    #expect(toned[1].tone == nil && toned[1].pill == nil, "clearly worse: drawn plain")
+    #expect(toned[2].tone == nil, "not weighed yet: no color")
+    #expect(toned[3] == moves[3], "red is never taken away")
+  }
+
 }

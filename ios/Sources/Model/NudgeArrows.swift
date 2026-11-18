@@ -29,6 +29,14 @@ public struct NudgedMove: Equatable, Sendable {
   public var reason: String?
   /// The reason in a word or two, for a pill on the move's row.
   public var pill: String?
+  public init(san: String, from: String, to: String, tone: NudgeTone? = nil, reason: String? = nil, pill: String? = nil) {
+    self.san = san
+    self.from = from
+    self.to = to
+    self.tone = tone
+    self.reason = reason
+    self.pill = pill
+  }
 }
 
 /// A move you may choose, with its share of games.
@@ -99,6 +107,24 @@ public func nudgeArrows(
     out[at].pill = red.kind == .closes ? "Closes off your habit" : "Breaks a habit"
   }
   return out
+}
+
+/// A loss past this many centipawns, against the position, makes an answer clearly worse.
+public let CLEARLY_WORSE_CP: Double = 50
+
+/// A move that keeps your Playbook narrow is never a weak one: green and yellow stay only on
+/// answers the engine has weighed (`deltaOf`, nil until then) and doesn't find clearly worse.
+/// The rest are drawn and listed plain.
+public func soundTones(_ moves: [NudgedMove], _ deltaOf: (String) -> Double?) -> [NudgedMove] {
+  moves.map { move in
+    guard move.tone == .toward || move.tone == .towardFar else { return move }
+    if let delta = deltaOf(move.san), delta >= -CLEARLY_WORSE_CP { return move }
+    var plain = move
+    plain.tone = nil
+    plain.reason = nil
+    plain.pill = nil
+    return plain
+  }
 }
 
 private func towardOrder(_ priority: NudgePriority) -> [TowardKind] {

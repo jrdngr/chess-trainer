@@ -73,11 +73,8 @@ struct NudgeNote: View {
 /// Gray unless the move is clearly worse, so a normal book move doesn't read as a mistake.
 struct DeltaTag: View {
   var cp: Double?
-  /// A loss past this many centipawns shows red.
-  static let clearlyWorse: Double = 50
-
   var body: some View {
-    let worse = (cp ?? 0) < -Self.clearlyWorse
+    let worse = (cp ?? 0) < -CLEARLY_WORSE_CP
     Text(cp.map(formatDelta) ?? "\u{2026}").font(.system(size: 14).monospacedDigit())
       .foregroundStyle(worse ? Theme.bad : Theme.text3)
       .frame(minWidth: 40, alignment: .trailing)

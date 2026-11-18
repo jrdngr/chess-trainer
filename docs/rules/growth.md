@@ -64,6 +64,11 @@ at a hole), `prepRanOut`
     start of an opening you have (see [families](families.md)); anything
     else is bought, not grown. There is no early unlock; a locked variation
     opens only through the curve.
+13. **Green is never a weak move.** An answer that matches your patterns
+    (green, or yellow when pulled in from further down the book) keeps its
+    color only once the engine has weighed it and it costs no more than 0.5
+    against the position, the line where its eval turns red. Until then, or
+    past that, it is drawn and listed plain. Red is never taken away.
 
 Rules 2 (the conditions), 7 (the replies) and 9 live in `RunModel` and
 have no test yet; `HeadlessApp` flow tests can cover them.

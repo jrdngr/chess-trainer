@@ -46,8 +46,15 @@ extension HoleAnswers {
     for san in offBookAsked { services.checks.askSound(holeFen, san) }
   }
 
-  /// The answers drawn and listed, coloured toward the moves that keep your Playbook narrow.
+  /// The answers drawn and listed, coloured toward the moves that keep your Playbook narrow:
+  /// green and yellow only once the engine finds them sound.
   public var toned: [NudgedMove] {
+    let evals = evals
+    return soundTones(nudges) { delta($0, evals) }
+  }
+
+  /// The colours as your patterns give them, before the engine has a say.
+  private var nudges: [NudgedMove] {
     guard atHole else { return [] }
     let off = offBook
     let key = "\(holeFen)|\(off.joined(separator: " "))|\(answerTree?.nodes.count ?? 0)|\(nudgePrefs)"
@@ -65,7 +72,7 @@ extension HoleAnswers {
   /// Every answer on offer, with a familiar move pulled in from further down the book.
   public var listed: [Reply] {
     let options = choices
-    guard let far = toned.first(where: { $0.tone == .towardFar }), !options.contains(where: { $0.san == far.san }) else { return options }
+    guard let far = nudges.first(where: { $0.tone == .towardFar }), !options.contains(where: { $0.san == far.san }) else { return options }
     let option = popularReplies(index, holeFen, 0).first { $0.san == far.san }
       ?? Reply(san: far.san, games: 0, white: 0, draw: 0, black: 0, share: 0)
     return options + [option]
