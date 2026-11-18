@@ -11,7 +11,7 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    opening picker; Middlegame 8,000, after the Pieces lens; Endgames 5,000,
    with Basic mates and From your games. All of them come to 21,150. King
    and pawn (5,000) and Rook endings (3,500) are Endgames families bought
-   on their own, after Endgames, in their own row. Each item's sheet says
+   on their own, branching off Endgames on the tree. Each item's sheet says
    in a sentence what it does.
 2. **Buying** takes the price off your pawns. An item is for sale only
    when every item it needs is yours and you have its price, and it is

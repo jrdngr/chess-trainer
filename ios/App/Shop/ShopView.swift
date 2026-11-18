@@ -94,7 +94,7 @@ struct Purchase: Equatable {
   var left: Int { price - Int((Double(price) * progress).rounded()) }
 }
 
-/// The tree: features in rows, then the styles' row under its heading.
+/// The tree: features in rows, Endgames with its families branching under it, then the styles' row under its heading.
 private struct ShopTree: View {
   let selected: String?
   let purchase: Purchase?
@@ -102,16 +102,17 @@ private struct ShopTree: View {
   let onTap: (String) -> Void
   @Environment(AppStore.self) private var store
 
-  /// Where each item sits on a 358 by 700 grid. Endgame families and the styles sit in rows under their headings.
+  /// Where each item sits on a 358 by 812 grid. The styles sit in a row under their heading.
   static let spots: [String: CGPoint] = [
-    "sidePicker": CGPoint(x: 56, y: 0), "lensPawns": CGPoint(x: 236, y: 0), "endgames": CGPoint(x: 318, y: 0),
-    "openingPicker": CGPoint(x: 56, y: 112), "lensPieces": CGPoint(x: 236, y: 112), "lensPlan": CGPoint(x: 318, y: 112),
+    "sidePicker": CGPoint(x: 56, y: 0), "lensPawns": CGPoint(x: 236, y: 0), "lensPlan": CGPoint(x: 318, y: 0),
+    "openingPicker": CGPoint(x: 56, y: 112), "lensPieces": CGPoint(x: 236, y: 112),
     "freeform": CGPoint(x: 56, y: 224), "guides": CGPoint(x: 146, y: 224), "lensKings": CGPoint(x: 236, y: 224),
     "middlegame": CGPoint(x: 318, y: 224),
     "personalities": CGPoint(x: 146, y: 336), "lensEval": CGPoint(x: 236, y: 336),
-    "endgamesPawn": CGPoint(x: 56, y: 478), "endgamesRook": CGPoint(x: 146, y: 478),
-    "boards": CGPoint(x: 36, y: 598), "pieces": CGPoint(x: 107, y: 598), "decks": CGPoint(x: 179, y: 598),
-    "styles": CGPoint(x: 251, y: 598), "icons": CGPoint(x: 322, y: 598),
+    "endgames": CGPoint(x: 101, y: 448),
+    "endgamesPawn": CGPoint(x: 56, y: 560), "endgamesRook": CGPoint(x: 146, y: 560),
+    "boards": CGPoint(x: 36, y: 710), "pieces": CGPoint(x: 107, y: 710), "decks": CGPoint(x: 179, y: 710),
+    "styles": CGPoint(x: 251, y: 710), "icons": CGPoint(x: 322, y: 710),
   ]
 
   var body: some View {
@@ -121,8 +122,7 @@ private struct ShopTree: View {
       ZStack(alignment: .topLeading) {
         Canvas { context, _ in
           for item in SHOP {
-            // An endgame family sits in its own row under its heading: no line to Endgames.
-            for need in item.needs where item.feature?.endgameFamily == nil {
+            for need in item.needs {
               guard let a = Self.spots[need], let b = Self.spots[item.id] else { continue }
               var path = Path()
               path.move(to: CGPoint(x: a.x * k, y: a.y + 90))
@@ -137,10 +137,8 @@ private struct ShopTree: View {
             }
           }
         }
-        Text("Endgames").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.text2)
-          .offset(x: 8, y: 448).opacity(lit == nil || lit!.contains("endgames") ? 1 : 0.28)
         Text("Styles").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.text2)
-          .offset(x: 8, y: 568).opacity(lit == nil ? 1 : 0.28)
+          .offset(x: 8, y: 680).opacity(lit == nil ? 1 : 0.28)
         ForEach(SHOP) { item in
           if let spot = Self.spots[item.id] {
             ShopNode(item: item, status: store.state.status(item), selected: selected == item.id,
@@ -155,7 +153,7 @@ private struct ShopTree: View {
       }
       .animation(.easeOut(duration: 0.35), value: selected)
     }
-    .frame(height: 700)
+    .frame(height: 812)
   }
 
   /// The medallion inside a node's frame: its top 48 points, centered.
