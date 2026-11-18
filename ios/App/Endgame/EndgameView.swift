@@ -144,9 +144,9 @@ struct EndgameRoundView: View {
       // As in Play: ENDGAME, then whose move, under the title.
       VStack(spacing: 6) {
         Text("ENDGAME").font(.system(size: 11, weight: .bold)).tracking(0.7).foregroundStyle(Theme.text2)
-        if game.phase == .playing {
-          StatusLine(white: game.color == .w, text: game.myTurn && !game.thinking ? "Your move" : "Reply", busy: game.thinking)
-        }
+        // Kept in place, hidden, once the round is over, so the board doesn't jump up.
+        StatusLine(white: game.color == .w, text: game.myTurn && !game.thinking ? "Your move" : "Reply", busy: game.thinking && game.phase == .playing)
+          .opacity(game.phase == .playing ? 1 : 0)
       }
       .padding(.bottom, 6)
       ScrollView {

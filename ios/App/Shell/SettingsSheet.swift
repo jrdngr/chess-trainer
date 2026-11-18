@@ -16,78 +16,68 @@ struct SettingsSheet: View {
 
   var body: some View {
     let settings = store.state.settings
-    ScrollView {
-      VStack(alignment: .leading, spacing: 0) {
-        HStack {
-          Text("Settings").font(.system(size: 22, weight: .heavy)).foregroundStyle(Theme.text)
-          Spacer()
-          Button { dismiss() } label: {
-            Icon(name: "close", size: 18).foregroundStyle(Theme.text).frame(width: 36, height: 36).background(Circle().fill(Theme.surface))
-          }
-          .buttonStyle(.plain)
-          .accessibilityLabel("Close")
+    VStack(spacing: 0) {
+      // The title and Close stay put while the rest scrolls.
+      HStack {
+        Text("Settings").font(.system(size: 22, weight: .heavy)).foregroundStyle(Theme.text)
+        Spacer()
+        Button { dismiss() } label: {
+          Icon(name: "close", size: 18).foregroundStyle(Theme.text).frame(width: 36, height: 36).background(Circle().fill(Theme.surface))
         }
-        section("Board", first: true)
-        ListCard {
-          SegmentedControl(
-            value: Binding(get: { settings.boardTheme }, set: { t in store.update { $0.settings.boardTheme = t } }),
-            options: BoardTheme.allCases.map { ($0, $0.rawValue.prefix(1).uppercased() + $0.rawValue.dropFirst()) }
-          )
-          .padding(.horizontal, 16).padding(.vertical, 10)
-          ToggleRow(label: "Coordinates", on: settings.showCoordinates) { store.update { $0.settings.showCoordinates.toggle() } }
-          ToggleRow(label: "Haptics", on: settings.hapticFeedback) { store.update { $0.settings.hapticFeedback.toggle() } }
-          ToggleRow(label: "Replay", on: settings.autoplay) { store.update { $0.settings.autoplay.toggle() } }
-        }
-        section("Play")
-        ListCard {
-          ToggleRow(label: "Move scores", on: settings.play.moveScores) { store.update { $0.settings.play.moveScores.toggle() } }
-          FillSizeRow(value: settings.movesPerFill) { n in store.update { $0.settings.movesPerFill = n } }
-          HStack(spacing: 12) {
-            Text("Opening names").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-            Spacer()
-            SegmentedControl(
-              value: Binding(get: { settings.openingNames }, set: { n in store.update { $0.settings.openingNames = n } }),
-              options: [(OpeningNames.family, "Family"), (.book, "Book name")]
-            )
-            .frame(maxWidth: 200)
-          }
-          .padding(.horizontal, 16).padding(.vertical, 10)
-        }
-        section("iCloud")
-        ListCard {
-          HStack {
-            Text("Last backup").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-            Spacer()
-            Text(lastBackup).font(.system(size: 14)).foregroundStyle(store.iCloudOff || store.backupHeld ? Theme.warn : Theme.text3)
-          }
-          .padding(.horizontal, 16).frame(minHeight: 54)
-          Button { restoring = true } label: {
-            HStack {
-              Text("Restore from iCloud").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-              Spacer()
-              Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3)
-            }
-            .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
-          }
-          .buttonStyle(.plain)
-        }
-        ListCard {
-          Button { exporting = true } label: {
-            HStack {
-              Text("Export").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-              Spacer()
-              Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3)
-            }
-            .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
-          }
-          .buttonStyle(.plain)
-        }
-        .padding(.top, 24)
-        if devTools {
+        .buttonStyle(.plain)
+        .accessibilityLabel("Close")
+      }
+      .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 4)
+      ScrollView {
+        VStack(alignment: .leading, spacing: 0) {
+          section("Board", first: true)
           ListCard {
-            Button { developing = true } label: {
+            SegmentedControl(
+              value: Binding(get: { settings.boardTheme }, set: { t in store.update { $0.settings.boardTheme = t } }),
+              options: BoardTheme.allCases.map { ($0, $0.rawValue.prefix(1).uppercased() + $0.rawValue.dropFirst()) }
+            )
+            .padding(.horizontal, 16).padding(.vertical, 10)
+            ToggleRow(label: "Coordinates", on: settings.showCoordinates) { store.update { $0.settings.showCoordinates.toggle() } }
+            ToggleRow(label: "Haptics", on: settings.hapticFeedback) { store.update { $0.settings.hapticFeedback.toggle() } }
+            ToggleRow(label: "Replay", on: settings.autoplay) { store.update { $0.settings.autoplay.toggle() } }
+          }
+          section("Play")
+          ListCard {
+            ToggleRow(label: "Move scores", on: settings.play.moveScores) { store.update { $0.settings.play.moveScores.toggle() } }
+            FillSizeRow(value: settings.movesPerFill) { n in store.update { $0.settings.movesPerFill = n } }
+            HStack(spacing: 12) {
+              Text("Opening names").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+              Spacer()
+              SegmentedControl(
+                value: Binding(get: { settings.openingNames }, set: { n in store.update { $0.settings.openingNames = n } }),
+                options: [(OpeningNames.family, "Family"), (.book, "Book name")]
+              )
+              .frame(maxWidth: 200)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 10)
+          }
+          section("iCloud")
+          ListCard {
+            HStack {
+              Text("Last backup").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+              Spacer()
+              Text(lastBackup).font(.system(size: 14)).foregroundStyle(store.iCloudOff || store.backupHeld ? Theme.warn : Theme.text3)
+            }
+            .padding(.horizontal, 16).frame(minHeight: 54)
+            Button { restoring = true } label: {
               HStack {
-                Text("Developer").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+                Text("Restore from iCloud").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+                Spacer()
+                Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3)
+              }
+              .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+          }
+          ListCard {
+            Button { exporting = true } label: {
+              HStack {
+                Text("Export").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
                 Spacer()
                 Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3)
               }
@@ -96,9 +86,23 @@ struct SettingsSheet: View {
             .buttonStyle(.plain)
           }
           .padding(.top, 24)
+          if devTools {
+            ListCard {
+              Button { developing = true } label: {
+                HStack {
+                  Text("Developer").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+                  Spacer()
+                  Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3)
+                }
+                .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
+              }
+              .buttonStyle(.plain)
+            }
+            .padding(.top, 24)
+          }
         }
+        .padding(.horizontal, 20).padding(.bottom, 20)
       }
-      .padding(20)
     }
     .task {
       devTools = await DevAccess.allowed()

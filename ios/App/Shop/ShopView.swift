@@ -435,8 +435,9 @@ private struct FlyingPawn: View {
   }
 }
 
-/// An item's icon: the lenses share one.
+/// An item's icon: the board lenses share one; Plan has its own.
 func shopIcon(_ item: ShopItem) -> String {
+  if item.feature == .lensPlan { return "shop.lensPlan" }
   if item.feature?.isLens == true { return "shop.lenses" }
   if item.feature?.endgameFamily != nil { return "shop.endgames" }
   return "shop.\(item.id)"

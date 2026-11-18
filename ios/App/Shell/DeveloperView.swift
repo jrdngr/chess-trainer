@@ -33,102 +33,106 @@ struct DeveloperView: View {
 
   var body: some View {
     let state = store.state
-    ScrollView {
-      VStack(alignment: .leading, spacing: 0) {
-        HStack {
-          Text("Developer").font(.system(size: 22, weight: .heavy)).foregroundStyle(Theme.text)
-          Spacer()
-          Button { dismiss() } label: {
-            Icon(name: "close", size: 18).foregroundStyle(Theme.text).frame(width: 36, height: 36).background(Circle().fill(Theme.surface))
-          }
-          .buttonStyle(.plain)
-          .accessibilityLabel("Close")
+    VStack(spacing: 0) {
+      // The title and Close stay put while the rest scrolls.
+      HStack {
+        Text("Developer").font(.system(size: 22, weight: .heavy)).foregroundStyle(Theme.text)
+        Spacer()
+        Button { dismiss() } label: {
+          Icon(name: "close", size: 18).foregroundStyle(Theme.text).frame(width: 36, height: 36).background(Circle().fill(Theme.surface))
         }
-        profiles
-        section("Clock")
-        ListCard {
-          CountRow(label: "Days ahead", value: store.dev.daysAhead) { n in
-            store.travel(days: n)
-            Env.travel.set(n)
-          }
-        }
-        section("Pawns")
-        ListCard {
-          HStack {
-            Text("Balance").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-            Spacer()
-            PawnAmount(count: state.pawns, size: 15)
-          }
-          .padding(.horizontal, 16).frame(minHeight: 54)
-          HStack(spacing: 8) {
-            ForEach([100, 1_000, 10_000], id: \.self) { n in
-              chip("+\(n.formatted())") { store.devUpdate { $0.devAddPawns(n) } }
-            }
-            chip("Zero") { store.devUpdate { $0.pawns = 0 } }
-          }
-          .padding(12)
-        }
-        section("Pawn Shop")
-        ListCard {
-          HStack(spacing: 8) {
-            chip("Own all") { store.devUpdate { $0.devSetAllOwned(true) } }
-            chip("Own none") { store.devUpdate { $0.devSetAllOwned(false) } }
-          }
-          .padding(12)
-          ForEach(SHOP.filter { $0.feature != nil }) { item in
-            ToggleRow(label: item.name, on: state.unlocked.contains(item.id)) {
-              store.devUpdate { $0.devSetOwned(item.id, !state.unlocked.contains(item.id)) }
-            }
-          }
-        }
-        section("App Store")
-        ListCard {
-          ToggleRow(
-            label: "Ignore owned unlock", hint: "The unlock the App Store says you own isn't credited on this device.",
-            on: store.dev.ignoreStoreUnlock
-          ) { store.setDev { $0.ignoreStoreUnlock.toggle() } }
-          actionRow("Forget credited purchases (\(state.credited.count))") { store.devUpdate { $0.credited = [] } }
-        }
-        openings
-        tips
-        streak
-        growth
-        section("Onboarding")
-        ListCard {
-          actionRow("Replay Welcome") {
-            dismiss()
-            store.devUpdate { $0.devReplayWelcome() }
-          }
-        }
-        section("Save")
-        ListCard {
-          if let data = store.exportSave(), let json = String(data: data, encoding: .utf8) {
-            ShareLink(item: json) {
-              HStack {
-                Text("Export save").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-                Spacer()
-                Icon(name: "export", size: 16).foregroundStyle(Theme.text3)
-              }
-              .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-          }
-          actionRow("Paste save") {
-            guard let text = UIPasteboard.general.string, store.importSave(Data(text.utf8)) else {
-              toasts.show("That isn't a save this version reads")
-              return
-            }
-            toasts.show("Save pasted in")
-          }
-          HStack {
-            Text("Build").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-            Spacer()
-            Text(buildText).font(.system(size: 14).monospacedDigit()).foregroundStyle(Theme.text3)
-          }
-          .padding(.horizontal, 16).frame(minHeight: 54)
-        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Close")
       }
-      .padding(20)
+      .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 4)
+      ScrollView {
+        VStack(alignment: .leading, spacing: 0) {
+          profiles
+          section("Clock")
+          ListCard {
+            CountRow(label: "Days ahead", value: store.dev.daysAhead) { n in
+              store.travel(days: n)
+              Env.travel.set(n)
+            }
+          }
+          section("Pawns")
+          ListCard {
+            HStack {
+              Text("Balance").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+              Spacer()
+              PawnAmount(count: state.pawns, size: 15)
+            }
+            .padding(.horizontal, 16).frame(minHeight: 54)
+            HStack(spacing: 8) {
+              ForEach([100, 1_000, 10_000], id: \.self) { n in
+                chip("+\(n.formatted())") { store.devUpdate { $0.devAddPawns(n) } }
+              }
+              chip("Zero") { store.devUpdate { $0.pawns = 0 } }
+            }
+            .padding(12)
+          }
+          section("Pawn Shop")
+          ListCard {
+            HStack(spacing: 8) {
+              chip("Own all") { store.devUpdate { $0.devSetAllOwned(true) } }
+              chip("Own none") { store.devUpdate { $0.devSetAllOwned(false) } }
+            }
+            .padding(12)
+            ForEach(SHOP.filter { $0.feature != nil }) { item in
+              ToggleRow(label: item.name, on: state.unlocked.contains(item.id)) {
+                store.devUpdate { $0.devSetOwned(item.id, !state.unlocked.contains(item.id)) }
+              }
+            }
+          }
+          section("App Store")
+          ListCard {
+            ToggleRow(
+              label: "Ignore owned unlock", hint: "The unlock the App Store says you own isn't credited on this device.",
+              on: store.dev.ignoreStoreUnlock
+            ) { store.setDev { $0.ignoreStoreUnlock.toggle() } }
+            actionRow("Forget credited purchases (\(state.credited.count))") { store.devUpdate { $0.credited = [] } }
+          }
+          openings
+          tips
+          streak
+          growth
+          section("Onboarding")
+          ListCard {
+            actionRow("Replay Welcome") {
+              dismiss()
+              store.devUpdate { $0.devReplayWelcome() }
+            }
+          }
+          section("Save")
+          ListCard {
+            if let data = store.exportSave(), let json = String(data: data, encoding: .utf8) {
+              ShareLink(item: json) {
+                HStack {
+                  Text("Export save").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+                  Spacer()
+                  Icon(name: "export", size: 16).foregroundStyle(Theme.text3)
+                }
+                .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
+              }
+              .buttonStyle(.plain)
+            }
+            actionRow("Paste save") {
+              guard let text = UIPasteboard.general.string, store.importSave(Data(text.utf8)) else {
+                toasts.show("That isn't a save this version reads")
+                return
+              }
+              toasts.show("Save pasted in")
+            }
+            HStack {
+              Text("Build").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+              Spacer()
+              Text(buildText).font(.system(size: 14).monospacedDigit()).foregroundStyle(Theme.text3)
+            }
+            .padding(.horizontal, 16).frame(minHeight: 54)
+          }
+        }
+        .padding(.horizontal, 20).padding(.bottom, 20)
+      }
     }
     .onAppear { daysAtOpen = daysAtOpen ?? store.dev.daysAhead }
     .onDisappear {
@@ -209,19 +213,22 @@ struct DeveloperView: View {
       CountRow(label: "Freezes", value: streak.freezes, range: 0...MAX_FREEZES) { n in
         store.devUpdate { $0.devSetStreak(days: streak.days, freezes: n, lastPlayed: last ?? 0) }
       }
-      HStack(spacing: 12) {
-        Text("Last day").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-        Spacer()
-        SegmentedControl(
-          value: Binding(
-            get: { last ?? -1 },
-            set: { back in store.devUpdate { $0.devSetStreak(days: max(1, streak.days), freezes: streak.freezes, lastPlayed: back) } }
-          ),
-          options: [(0, "Today"), (1, "1 ago"), (2, "2 ago"), (3, "3 ago")]
-        )
-        .frame(maxWidth: 240)
+      // A streak of 0 days has no last day.
+      if streak.days > 0 {
+        HStack(spacing: 12) {
+          Text("Last day").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+          Spacer()
+          SegmentedControl(
+            value: Binding(
+              get: { last ?? 4 },
+              set: { back in store.devUpdate { $0.devSetStreak(days: streak.days, freezes: streak.freezes, lastPlayed: back) } }
+            ),
+            options: [(0, "Today"), (1, "1 ago"), (2, "2 ago"), (3, "3 ago"), (4, "Older")]
+          )
+          .frame(maxWidth: 280)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 10)
       }
-      .padding(.horizontal, 16).padding(.vertical, 10)
     }
   }
 

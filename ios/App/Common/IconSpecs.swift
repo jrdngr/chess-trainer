@@ -126,6 +126,10 @@ extension Icon {
     "shop.lenses": IconSpec(strokeWidth: 2, parts: [
       IconPart(.path("M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"), fill: .none, stroke: .current, opacity: (1, 1)),
       IconPart(.circle(12, 12, 2.6), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "shop.lensPlan": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.path("M6.5 17.5c2-4 4.5-4 6-6.5s3.5-4 5-4.5"), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.circle(5, 19, 2), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.circle(19, 5, 2), fill: .current, stroke: .none, opacity: (1, 1))]),
     "shop.openingPicker": IconSpec(strokeWidth: 2, parts: [
       IconPart(.path("M5 7h14M5 12h14M5 17h8M16 16l2 2 2-2"), fill: .none, stroke: .current, opacity: (1, 1))]),
     "shop.freeform": IconSpec(strokeWidth: 2, parts: [
