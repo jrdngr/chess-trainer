@@ -8,7 +8,7 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    picker 50; opening picker 100, after the side picker; Freeform 3,000,
    after the opening picker; the Pawns lens 100, then the Pieces lens 200,
    the Kings lens 300 and the Eval lens 500, each after the one before;
-   Plan 1,000; Middlegame 8,000, after the Pieces lens; Endgames 5,000,
+   Plan 1,000; Middlegame 8,000; Endgames 5,000,
    with Basic mates and From your games. Each lens has upgrades, bought
    after it: Structure names 400 and Endgame pawns 600 for Pawns, Square
    control 600 and Endgame pieces 800 for Pieces, Endgame kings 1,000 for

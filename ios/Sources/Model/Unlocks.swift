@@ -80,7 +80,7 @@ public let SHOP: [ShopItem] = [
   ShopItem("lensEval", "Eval lens", .features, 500, needs: ["lensKings"], feature: .lensEval, about: "Tap it under the board in a game to show the engine's evaluation."),
   ShopItem("lensEvalHistory", "Eval history", .features, 1_200, needs: ["lensEval"], feature: .lensEvalHistory, about: "The Eval lens charts the run and shows what your last move cost."),
   ShopItem("lensPlan", "Plan", .features, 1_000, feature: .lensPlan, about: "Tap it under the board in a game to show a plan for the position."),
-  ShopItem("middlegame", "Middlegame", .features, 8_000, needs: ["lensPieces"], feature: .middlegame, about: "Play middlegames from your openings."),
+  ShopItem("middlegame", "Middlegame", .features, 8_000, feature: .middlegame, about: "Play middlegames from your openings."),
   ShopItem("endgames", "Endgames", .features, 5_000, feature: .endgames, about: "Practice key endgames, starting with the basic mates and endings from your games."),
   ShopItem("endgamesPawn", "King and pawn", .content, 5_000, needs: ["endgames"], feature: .endgamesPawn, about: "Key squares, the opposition and the square rule, to win and to hold."),
   ShopItem("endgamesRook", "Rook endings", .content, 3_500, needs: ["endgames"], feature: .endgamesRook, about: "The Lucena and Philidor positions."),

@@ -20,7 +20,7 @@ private func state(pawns: Int, owning: [String] = []) -> AppState {
       "lensPieces 200 lensPawns", "lensControl 600 lensPieces", "lensEndgamePieces 800 lensPieces",
       "lensKings 300 lensPieces", "lensEndgameKings 1000 lensKings",
       "lensEval 500 lensKings", "lensEvalHistory 1200 lensEval",
-      "lensPlan 1000 ", "middlegame 8000 lensPieces", "endgames 5000 ", "endgamesPawn 5000 endgames", "endgamesRook 3500 endgames",
+      "lensPlan 1000 ", "middlegame 8000 ", "endgames 5000 ", "endgamesPawn 5000 endgames", "endgamesRook 3500 endgames",
     ])
     #expect(FEATURE_TREE.reduce(0) { $0 + $1.price } == 22_850, "the $10 unlock's worth")
   }

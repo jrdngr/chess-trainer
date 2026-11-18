@@ -171,11 +171,10 @@ private struct ShopTree: View {
   }
 
   /// The line from an item to one that needs it. A lens upgrade sits on a straight line from
-  /// its lens, through the upgrade before it; the lenses chain straight down; Middlegame, beside
-  /// Plan, has none. Every other line leaves under its row's names and prices and turns once.
+  /// its lens, through the upgrade before it; the lenses chain straight down. Every other line
+  /// leaves under its row's names and prices and turns once.
   private func line(from need: String, to item: ShopItem, k: CGFloat) -> Path? {
     guard let a = Self.spots[need], let b = Self.spots[item.id], let needed = shopItem(need) else { return nil }
-    if item.id == "middlegame" { return nil }
     var path = Path()
     if item.feature?.isLensUpgrade == true {
       // From the nearest node to its left on the row: the lens or the upgrade before this one.
