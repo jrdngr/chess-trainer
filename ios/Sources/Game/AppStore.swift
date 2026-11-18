@@ -362,6 +362,14 @@ public final class AppStore {
     update { $0.choose(tree, ids) }
   }
 
+  /// An App Store purchase, credited once per transaction. Returns whether it was credited.
+  @discardableResult
+  public func credit(_ product: CashProduct, transaction: String) -> Bool {
+    var done = false
+    update { done = $0.credit(product, transaction: transaction) }
+    return done
+  }
+
   /// A tip shown off the board, put away for good.
   public func see(_ tip: GameTip) {
     update { $0.sawTip(tip) }

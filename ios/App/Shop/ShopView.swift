@@ -29,8 +29,10 @@ struct ShopView: View {
       .padding(.horizontal, 20).padding(.top, 14).padding(.bottom, 10)
       ScrollView {
         VStack(spacing: 16) {
+          UnlockEverythingRow()
           ShopTree(selected: selected, purchase: purchase, frames: $frames) { selected = $0 }
           StreakFreezeRow()
+          PawnPacksRow()
         }
         .padding(.horizontal, 16).padding(.bottom, selected == nil ? 24 : 330)
       }

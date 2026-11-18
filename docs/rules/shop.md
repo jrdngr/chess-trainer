@@ -30,3 +30,9 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    Endgames. Analysis has every lens.
 6. **Streak freezes** are sold under the tree for 1,000 each, while you
    hold fewer than 2 (see [pawns](pawns.md)).
+7. **Cash buys two things.** The unlock ($9.99) makes every feature in the
+   tree yours; not the endgame families, the cosmetics or openings. It sits
+   above the tree until it is yours, and comes back to every profile from
+   the App Store. Pawn packs sit under the tree: 2,000 for $1.99, 6,000 for
+   $4.99, 13,000 for $9.99. Each App Store transaction is credited once.
+   Code: `Purchases.swift`, and `CashStore` in the app.

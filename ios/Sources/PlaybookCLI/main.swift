@@ -17,7 +17,7 @@ let HELP = """
   Anywhere:  state · help · quit · home · hint (the engine's move here)
   Start:     recommend · choose WHITE E4 D4 (ids, e.g. `choose london caro slav`) · openings · intro
   Home:      select [w|b|either] [drill|freeform] [opening id or moves, "any" for Any Opening]
-             play · tree [w|b] · unlock OPENING (id or name) · endgames · middlegame · shop · buy ID
+             play · tree [w|b] · unlock OPENING (id or name) · endgames · middlegame · shop · buy ID · purchase unlock|pawns2000|pawns6000|pawns13000
   Board:     <san> (or move <san> <san>...) · think SECONDS
   Play:      end · continue · takeback · next · undo · done · grow · replay
   Growth:    save · more · play-on · back
@@ -97,6 +97,11 @@ func perform(_ app: HeadlessApp, _ words: [String]) async throws -> Bool {
   case "buy":
     guard let id = rest.first else { throw HeadlessApp.Failure.notHere("Buy what? `shop` lists the items") }
     try app.buy(id)
+  case "purchase":
+    guard let name = rest.first, let product = CashProduct.allCases.first(where: { $0.rawValue.hasSuffix(".\(name)") }) else {
+      throw HeadlessApp.Failure.notHere("purchase unlock|pawns2000|pawns6000|pawns13000")
+    }
+    app.purchase(product)
   case "home": await app.home()
   case "move": for san in rest { try await app.move(san) }
   case "think": await app.think(rest.first.flatMap(Double.init) ?? 1)

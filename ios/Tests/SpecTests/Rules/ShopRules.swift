@@ -77,4 +77,23 @@ private func state(pawns: Int, owning: [String] = []) -> AppState {
     side.holdToUnlocks()
     #expect(side.settings.selection.color == .either, "Either comes with the side picker")
   }
+
+  /// Rule 7: the unlock gives the feature tree and nothing else; packs add pawns; a transaction pays once.
+  @Test func cashBuysTheTreeAndPawns() {
+    var s = AppState()
+    #expect(!s.ownsFeatureTree)
+    let unlocked = s.credit(.unlock, transaction: "1")
+    #expect(unlocked && s.ownsFeatureTree && s.pawns == 0)
+    #expect(!s.owns(.endgamesPawn) && !s.owns(.endgamesRook), "endgame families are bought with pawns")
+    #expect(s.ownedFamilies(.w).isEmpty, "no openings")
+    let again = s.credit(.unlock, transaction: "1")
+    #expect(!again)
+    let pack = s.credit(.pawns6000, transaction: "2")
+    #expect(pack && s.pawns == 6_000)
+    let twice = s.credit(.pawns6000, transaction: "2")
+    #expect(!twice && s.pawns == 6_000, "a transaction is credited once")
+    _ = s.credit(.pawns13000, transaction: "3")
+    #expect(s.pawns == 19_000)
+    #expect(CashProduct.pawns13000.pawns < FEATURE_TREE.map(\.price).reduce(0, +), "$10 of pawns buys less than the unlock")
+  }
 }

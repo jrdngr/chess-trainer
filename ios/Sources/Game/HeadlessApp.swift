@@ -225,6 +225,11 @@ public final class HeadlessApp: SignalSink {
     if !swapped { throw Failure.notHere("No swap: \(state.families.tokens) token\(state.families.tokens == 1 ? "" : "s") held") }
   }
 
+  /// A cash purchase as the App Store would complete it, as a new transaction.
+  public func purchase(_ product: CashProduct) {
+    store.credit(product, transaction: "headless-\(state.credited.count + 1)")
+  }
+
   /// Buy an item in the Pawn Shop.
   public func buy(_ id: String) throws {
     guard let item = shopItem(id) else { throw Failure.notHere("No item \"\(id)\" in the Pawn Shop") }
