@@ -60,7 +60,7 @@ struct SaveSheet: View {
           .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface2)).clipShape(RoundedRectangle(cornerRadius: 14))
           .padding(.top, 14)
           if !yours {
-            row(label: "Not one of your openings", line: compactMoves(familyLine(slice, side) ?? slice), value: "Not saved", warn: true)
+            row(label: "Not one of your openings", line: compactMoves(Array(slice.prefix(book))), value: "Not saved", warn: true)
               .clipShape(RoundedRectangle(cornerRadius: 14))
               .padding(.top, 10)
           }
