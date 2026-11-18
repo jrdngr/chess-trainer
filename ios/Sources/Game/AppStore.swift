@@ -25,9 +25,11 @@ public final class AppStore {
   @ObservationIgnored private var saveBlocked = false
 
   /// The profiles on this device and the one in use.
-  public private(set) var profiles = ProfileList()
+  public internal(set) var profiles = ProfileList()
   /// Changes whenever the state is swapped out (a switch or a reset), so screens start over.
   public private(set) var session = UUID()
+  /// The developer tools' settings for this device.
+  public internal(set) var dev = DevSettings()
   /// Settings was open when the session changed under it: Home opens it again.
   @ObservationIgnored private var settingsHeld = false
 
@@ -39,7 +41,7 @@ public final class AppStore {
   public var restoreOffer: [DeviceBackup] = []
   /// The clock, the engines and where signals go.
   @ObservationIgnored public let services: GameServices
-  @ObservationIgnored private let storage: SaveStorage
+  @ObservationIgnored let storage: SaveStorage
   @ObservationIgnored private let backup: BackupDrive?
   /// What this device is called in its backups.
   @ObservationIgnored private let deviceName: String
@@ -68,6 +70,7 @@ public final class AppStore {
     }.value
     let fresh = !storage.exists(profilesFile) && !storage.exists(ProfileList.savePath(ProfileList.mainId))
     loadDevice()
+    loadDev()
     if let data = try? storage.read(profilesFile), let list = try? JSONDecoder().decode(ProfileList.self, from: data) {
       profiles = list
     }
@@ -81,7 +84,7 @@ public final class AppStore {
   }
 
   /// Read the active profile's save into `state`; none yet is a fresh start.
-  private func readState() {
+  func readState() {
     state = AppState()
     saveBlocked = false
     autoHistory = AutoHistory()
@@ -94,6 +97,9 @@ public final class AppStore {
       saveBlocked = true
     }
   }
+
+  /// Screens start over on the state as it is.
+  public func restartScreens() { session = UUID() }
 
   private func decode(_ data: Data) {
     do {
@@ -112,7 +118,7 @@ public final class AppStore {
     try? storage.write(sibling(file, "playbook-unreadable-\(stamp).json"), data)
   }
 
-  private func saveProfiles() {
+  func saveProfiles() {
     do {
       try storage.write(profilesFile, JSONEncoder().encode(profiles))
     } catch {
@@ -363,8 +369,11 @@ public final class AppStore {
   }
 
   /// An App Store purchase, credited once per transaction. Returns whether it was credited.
+  /// `bought` is a purchase made just now; otherwise the App Store is handing back one made
+  /// before, which the developer tools can have this device ignore for the unlock.
   @discardableResult
-  public func credit(_ product: CashProduct, transaction: String) -> Bool {
+  public func credit(_ product: CashProduct, transaction: String, bought: Bool = true) -> Bool {
+    if product == .unlock && !bought && dev.ignoreStoreUnlock { return false }
     var done = false
     update { done = $0.credit(product, transaction: transaction) }
     return done

@@ -7,8 +7,18 @@ public enum Env {
   @TaskLocal public static var clock: (@Sendable () -> Double)?
   @TaskLocal public static var chance: (@Sendable () -> Double)?
 
-  /// Milliseconds since the epoch.
-  public static func now() -> Double { clock?() ?? Date().timeIntervalSince1970 * 1000 }
+  /// Milliseconds since the epoch. The real clock runs `travel` ahead; a pinned one doesn't.
+  public static func now() -> Double { clock?() ?? Date().timeIntervalSince1970 * 1000 + travel.get() * DAY }
+
+  /// Whole days the developer tools move the real clock on by. Set by the app alone, never in tests.
+  public static let travel = Travel()
+
+  public final class Travel: @unchecked Sendable {
+    private let lock = NSLock()
+    private var days = 0.0
+    public func get() -> Double { lock.withLock { days } }
+    public func set(_ value: Int) { lock.withLock { days = Double(value) } }
+  }
   /// A number in [0, 1).
   public static func random() -> Double { chance?() ?? Double.random(in: 0..<1) }
 

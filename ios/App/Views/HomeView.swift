@@ -24,6 +24,10 @@ struct HomeView: View {
     ScrollView {
       VStack(spacing: 0) {
         HStack {
+          if store.dev.daysAhead > 0 {
+            // The developer tools' clock, so it isn't left ahead by mistake.
+            Text("+\(store.dev.daysAhead) days").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.warn)
+          }
           Spacer()
           HomePawns()
           Button { settings = true } label: {
@@ -73,11 +77,21 @@ struct HomeView: View {
     }
     .sheet(isPresented: $settings) { SettingsSheet().presentationBackground(Theme.background) }
     .onAppear {
+      if Self.debugDeveloper { settings = true }
       guard store.takeSettingsHeld() else { return }
       var still = Transaction()
       still.disablesAnimations = true
       withTransaction(still) { settings = true }
     }
+  }
+
+  /// Debug builds open Settings and its Developer screen with `OPEN_DEV=1`, for screenshots.
+  static var debugDeveloper: Bool {
+    #if DEBUG
+      ProcessInfo.processInfo.environment["OPEN_DEV"] != nil
+    #else
+      false
+    #endif
   }
 
   private var tip: GameTip? { store.state.homeTip }

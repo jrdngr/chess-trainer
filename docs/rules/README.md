@@ -26,6 +26,7 @@ Everywhere:
 
 - [Playbook](playbook.md): book moves only.
 - [Saves](saves.md): what happens to older saves.
+- [Developer tools](dev-tools.md): setting the save by hand, for testing.
 
 Other modes:
 

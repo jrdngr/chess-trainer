@@ -1,4 +1,5 @@
 import Game
+import Model
 import SwiftUI
 
 @main
@@ -18,6 +19,11 @@ struct ChessPlaybookApp: App {
         .preferredColorScheme(.dark)
         .task {
           await store.load()
+          // The developer tools' clock, kept on this device.
+          if store.dev.daysAhead > 0 {
+            Env.travel.set(store.dev.daysAhead)
+            store.restartScreens()
+          }
           await cash.start(store)
         }
         // Another profile opened: the unlock, if owned, is its too.

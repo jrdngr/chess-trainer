@@ -167,18 +167,24 @@ extension AppState {
     guard families.tokens > 0, let old = curatedOpening(out), let new = curatedOpening(id), old.color == new.color,
       ownsFamily(out), !ownsFamily(id), let rep = playbookList.first(where: { $0.color == old.color })
     else { return false }
-    let kept = ownedFamilies(old.color).filter { $0.id != out }
-    for root in old.roots {
-      // Cut where the root leaves every other opening you have.
-      let cut = (1...root.count).first { n in !kept.contains { $0.leadsInto(Array(root.prefix(n))) || $0.holds(Array(root.prefix(n))) } }
-      guard let cut, let fresh = playbooks[rep.id], let node = nodeAtLine(fresh, Array(root.prefix(cut))) else { continue }
-      removeNode(rep.id, node.id)
-    }
-    for key in form.openings.keys where old.holds(key.split(separator: " ").map(String.init)) { form.openings[key] = nil }
+    dropFamily(old, from: rep.id)
     guard seedFamily(new, tree) else { return false }
     families.tokens -= 1
     logEvent(AppEvent(kind: "swap", color: old.color, picked: id, text: "out \(out)"))
     return true
+  }
+
+  /// An opening out of the Playbook, with every move, card and form inside it. Moves it shares
+  /// with another opening you have stay.
+  mutating func dropFamily(_ old: CuratedOpening, from repId: String) {
+    let kept = ownedFamilies(old.color).filter { $0.id != old.id }
+    for root in old.roots {
+      // Cut where the root leaves every other opening you have.
+      let cut = (1...root.count).first { n in !kept.contains { $0.leadsInto(Array(root.prefix(n))) || $0.holds(Array(root.prefix(n))) } }
+      guard let cut, let fresh = playbooks[repId], let node = nodeAtLine(fresh, Array(root.prefix(cut))) else { continue }
+      removeNode(repId, node.id)
+    }
+    for key in form.openings.keys where old.holds(key.split(separator: " ").map(String.init)) { form.openings[key] = nil }
   }
 
   /// An opening's seed lines into its side's Playbook, one per root.

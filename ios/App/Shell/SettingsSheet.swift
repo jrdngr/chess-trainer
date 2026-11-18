@@ -3,19 +3,16 @@ import Game
 import Model
 import SwiftUI
 
-/// Settings: the board, Play's extras, the engine, profiles, iCloud backup and Export.
+/// Settings: the board, Play's extras, iCloud backup and Export, and in Xcode and TestFlight builds
+/// the developer tools.
 struct SettingsSheet: View {
   @Environment(AppStore.self) private var store
   @Environment(\.dismiss) private var dismiss
   @State private var exporting = false
   @State private var restoring = false
-  /// The name prompt open: a new profile, or the profile being renamed.
-  @State private var naming: Naming?
-  @State private var typed = ""
-  /// The profile waiting on a delete (or, as the last one, a reset) to be confirmed.
-  @State private var removing: Profile?
-
-  enum Naming: Equatable { case new, rename(Profile) }
+  /// Xcode and TestFlight builds: the Developer row shows.
+  @State private var devTools = false
+  @State private var developing = false
 
   var body: some View {
     let settings = store.state.settings
@@ -56,22 +53,6 @@ struct SettingsSheet: View {
           }
           .padding(.horizontal, 16).padding(.vertical, 10)
         }
-        section("Profiles")
-        ListCard {
-          ForEach(store.profiles.profiles) { profile in profileRow(profile) }
-          Button {
-            typed = ""
-            naming = .new
-          } label: {
-            HStack(spacing: 10) {
-              Icon(name: "plus", size: 16).foregroundStyle(Theme.text2)
-              Text("New profile").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-              Spacer()
-            }
-            .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
-          }
-          .buttonStyle(.plain)
-        }
         section("iCloud")
         ListCard {
           HStack {
@@ -102,22 +83,30 @@ struct SettingsSheet: View {
           .buttonStyle(.plain)
         }
         .padding(.top, 24)
+        if devTools {
+          ListCard {
+            Button { developing = true } label: {
+              HStack {
+                Text("Developer").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+                Spacer()
+                Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3)
+              }
+              .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+          }
+          .padding(.top, 24)
+        }
       }
       .padding(20)
     }
+    .task {
+      devTools = await DevAccess.allowed()
+      if devTools && HomeView.debugDeveloper { developing = true }
+    }
+    .sheet(isPresented: $developing) { DeveloperView().presentationBackground(Theme.background) }
     .sheet(isPresented: $exporting) { ExportView().presentationBackground(Theme.background) }
     .sheet(isPresented: $restoring) { RestoreView().presentationBackground(Theme.background) }
-    .alert(naming == .new ? "New profile" : "Rename profile", isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
-      TextField("Name", text: $typed)
-      Button(naming == .new ? "Create" : "Rename") { finishNaming() }
-      Button("Cancel", role: .cancel) { naming = nil }
-    }
-    .alert(removeTitle, isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } })) {
-      Button(lastProfile ? "Reset" : "Delete", role: .destructive) { finishRemoving() }
-      Button("Cancel", role: .cancel) { removing = nil }
-    } message: {
-      Text("This can't be undone.")
-    }
   }
 
   private func section(_ title: String, first: Bool = false) -> some View {
@@ -131,62 +120,6 @@ struct SettingsSheet: View {
     let at = store.device.manifest.savedAt
     guard at > 0 else { return "None yet" }
     return Date(timeIntervalSince1970: at / 1000).formatted(.dateTime.month(.abbreviated).day().hour().minute())
-  }
-
-  private var lastProfile: Bool { store.profiles.profiles.count == 1 }
-
-  private var removeTitle: String {
-    guard let removing else { return "" }
-    return "\(lastProfile ? "Reset" : "Delete") \(removing.name)?"
-  }
-
-  /// A profile: tap to switch to it, long-press to rename or delete it.
-  private func profileRow(_ profile: Profile) -> some View {
-    let active = profile.id == store.profiles.active
-    return Button {
-      guard !active else { return }
-      dismiss()
-      store.switchProfile(profile.id)
-    } label: {
-      HStack {
-        Text(profile.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-        Spacer()
-        if active { Icon(name: "check", size: 16).foregroundStyle(Theme.good) }
-      }
-      .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-    .contextMenu {
-      Button("Rename") {
-        typed = profile.name
-        naming = .rename(profile)
-      }
-      Button(lastProfile ? "Reset" : "Delete", role: .destructive) { removing = profile }
-    }
-  }
-
-  private func finishNaming() {
-    switch naming {
-    case .new:
-      dismiss()
-      store.createProfile(typed)
-    case .rename(let profile):
-      store.renameProfile(profile.id, typed)
-    case nil:
-      break
-    }
-    naming = nil
-  }
-
-  private func finishRemoving() {
-    guard let profile = removing else { return }
-    removing = nil
-    if lastProfile {
-      dismiss()
-      store.resetProfile()
-    } else {
-      store.deleteProfile(profile.id)
-    }
   }
 }
 

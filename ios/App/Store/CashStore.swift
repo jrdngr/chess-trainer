@@ -20,7 +20,7 @@ final class CashStore {
     self.store = store
     if updates == nil {
       updates = Task { [weak self] in
-        for await result in StoreKit.Transaction.updates { await self?.handle(result) }
+        for await result in StoreKit.Transaction.updates { await self?.handle(result, bought: false) }
       }
     }
     if let found = try? await Product.products(for: CashProduct.allCases.map(\.rawValue)) {
@@ -36,12 +36,12 @@ final class CashStore {
     buying = product
     defer { buying = nil }
     guard case .success(let result) = try? await item.purchase() else { return false }
-    return await handle(result)
+    return await handle(result, bought: true)
   }
 
   /// The unlock, when the App Store says it is owned: credited to the profile open now.
   func restore() async {
-    for await result in StoreKit.Transaction.currentEntitlements { await handle(result) }
+    for await result in StoreKit.Transaction.currentEntitlements { await handle(result, bought: false) }
   }
 
   /// Restore purchases: sync with the App Store first, which may ask the player to sign in.
@@ -51,11 +51,11 @@ final class CashStore {
   }
 
   @discardableResult
-  private func handle(_ result: VerificationResult<StoreKit.Transaction>) async -> Bool {
+  private func handle(_ result: VerificationResult<StoreKit.Transaction>, bought: Bool) async -> Bool {
     guard case .verified(let transaction) = result else { return false }
     var credited = false
     if transaction.revocationDate == nil, let product = CashProduct(rawValue: transaction.productID), let store {
-      credited = store.credit(product, transaction: String(transaction.id))
+      credited = store.credit(product, transaction: String(transaction.id), bought: bought)
     }
     await transaction.finish()
     return credited
