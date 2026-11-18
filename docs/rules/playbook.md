@@ -12,8 +12,8 @@ Tests: the `docs/rules/playbook.md` suite in
    each opening hang the named openings your lines reach next, most played
    first, and after them the openings the curve will add (see
    [growth](growth.md)), locked, under the nearest opening you have, the
-   Next one first, and after them the families you don't have, for sale
-   (see [families](families.md)). Exactly one opening on the tree is Next. Home's Next line
+   Next one first, and after them the openings on the list you don't
+   have, for sale (see [families](families.md)). Exactly one opening on the tree is Next. Home's Next line
    names it and when it grows, and opens the tree at it. Code:
    `PlaybookMap.swift`.
 3. **A tap opens an opening's branches;** a tap on the open one folds it. A

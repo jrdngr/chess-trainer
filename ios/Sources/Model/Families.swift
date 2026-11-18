@@ -1,27 +1,90 @@
 import Book
 import ChessCore
 
-/// Opening families: what pawns buy on the Playbook tree. A family is the first move that is
-/// yours: as White, your first move; as Black, your answer to White's first move. Pawns buy
-/// families; everything under one is a variation, free, and grows only through the curve.
+/// Openings for sale: a curated list, each named the way a player talks about the choice they
+/// made (the Italian, the Najdorf, the Slav). An opening is everything from its named position
+/// on; the moves leading to it are fixed. You drill only the openings you have, and growth
+/// stays inside them. Pawns buy openings; everything inside one grows through the curve.
 
-/// What the first family past the starting ones costs, and how much more each one after.
+/// What the first opening past the starting ones costs, and how much more each one after.
 public let FAMILY_FIRST_PRICE = 2_000, FAMILY_PRICE_STEP = 500
-/// Families bought to earn a swap token, and the most tokens held.
+/// Openings bought to earn a swap token, and the most tokens held.
 public let FAMILIES_PER_TOKEN = 3, MAX_SWAP_TOKENS = 1
-/// The least share of games, in percent, a move needs to show as a family on the tree.
-public let FAMILY_MIN_SHARE = 2.0
 
-/// The family a line is in, for the side that plays it: its first move as White, its first two
-/// as Black. Nil for a line too short to have one.
-public func familyLine(_ line: [String], _ color: Color) -> [String]? {
-  let plies = color == .w ? 1 : 2
-  return line.count >= plies ? Array(line.prefix(plies)) : nil
+/// One opening on the list.
+public struct CuratedOpening: Equatable, Sendable, Identifiable {
+  public var id: String
+  public var name: String
+  /// The side that plays it.
+  public var color: Color
+  /// The moves to its named position, ending on your move. Most openings have one; a system
+  /// played against several answers (the London) has one per answer.
+  public var roots: [[String]]
+
+  init(_ id: String, _ name: String, _ color: Color, _ roots: String...) {
+    self.id = id
+    self.name = name
+    self.color = color
+    self.roots = roots.map { $0.split(separator: " ").map(String.init) }
+  }
+
+  /// The first move of its line.
+  public var firstMove: String { roots[0][0] }
+
+  /// Whether a line is inside it: past one of its roots, or at one.
+  public func holds(_ line: [String]) -> Bool { roots.contains { line.starts(with: $0) } }
+
+  /// Whether a line leads into it: a start of one of its roots.
+  public func leadsInto(_ line: [String]) -> Bool { roots.contains { $0.starts(with: line) } }
 }
 
-/// What families cost and how swaps are earned.
+/// The list, most played first on each side.
+public let OPENING_LIST: [CuratedOpening] = [
+  // White
+  CuratedOpening("italian", "Italian Game", .w, "e4 e5 Nf3 Nc6 Bc4"),
+  CuratedOpening("ruy", "Ruy Lopez", .w, "e4 e5 Nf3 Nc6 Bb5"),
+  CuratedOpening("scotch", "Scotch Game", .w, "e4 e5 Nf3 Nc6 d4"),
+  CuratedOpening("vienna", "Vienna Game", .w, "e4 e5 Nc3"),
+  CuratedOpening("kingsGambit", "King's Gambit", .w, "e4 e5 f4"),
+  CuratedOpening("openSicilian", "Open Sicilian", .w, "e4 c5 Nf3 d6 d4", "e4 c5 Nf3 Nc6 d4", "e4 c5 Nf3 e6 d4"),
+  CuratedOpening("alapin", "Alapin Sicilian", .w, "e4 c5 c3"),
+  CuratedOpening("morra", "Smith-Morra Gambit", .w, "e4 c5 d4 cxd4 c3"),
+  CuratedOpening("advanceFrench", "Advance French", .w, "e4 e6 d4 d5 e5"),
+  CuratedOpening("advanceCaro", "Advance Caro-Kann", .w, "e4 c6 d4 d5 e5"),
+  CuratedOpening("queensGambit", "Queen's Gambit", .w, "d4 d5 c4"),
+  CuratedOpening("london", "London System", .w, "d4 d5 Bf4", "d4 Nf6 Bf4"),
+  CuratedOpening("catalan", "Catalan", .w, "d4 Nf6 c4 e6 g3"),
+  CuratedOpening("english", "English Opening", .w, "c4"),
+  CuratedOpening("kia", "King's Indian Attack", .w, "Nf3 d5 g3", "Nf3 Nf6 g3"),
+  // Black against 1.e4
+  CuratedOpening("openGame", "1...e5", .b, "e4 e5"),
+  CuratedOpening("najdorf", "Najdorf Sicilian", .b, "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"),
+  CuratedOpening("dragon", "Dragon Sicilian", .b, "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6"),
+  CuratedOpening("accelerated", "Accelerated Dragon", .b, "e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 g6"),
+  CuratedOpening("french", "French Defense", .b, "e4 e6"),
+  CuratedOpening("caro", "Caro-Kann Defense", .b, "e4 c6"),
+  CuratedOpening("scandinavian", "Scandinavian Defense", .b, "e4 d5"),
+  CuratedOpening("pirc", "Pirc Defense", .b, "e4 d6"),
+  // Black against 1.d4
+  CuratedOpening("qgd", "Queen's Gambit Declined", .b, "d4 d5 c4 e6"),
+  CuratedOpening("slav", "Slav Defense", .b, "d4 d5 c4 c6"),
+  CuratedOpening("qga", "Queen's Gambit Accepted", .b, "d4 d5 c4 dxc4"),
+  CuratedOpening("kid", "King's Indian Defense", .b, "d4 Nf6 c4 g6 Nc3 Bg7"),
+  CuratedOpening("grunfeld", "Grünfeld Defense", .b, "d4 Nf6 c4 g6 Nc3 d5"),
+  CuratedOpening("nimzo", "Nimzo-Indian Defense", .b, "d4 Nf6 c4 e6 Nc3 Bb4"),
+  CuratedOpening("qid", "Queen's Indian Defense", .b, "d4 Nf6 c4 e6 Nf3 b6"),
+  CuratedOpening("dutch", "Dutch Defense", .b, "d4 f5"),
+]
+
+/// An opening on the list by id.
+public func curatedOpening(_ id: String) -> CuratedOpening? { OPENING_LIST.first { $0.id == id } }
+
+/// The openings on the list for one side.
+public func openingList(_ color: Color) -> [CuratedOpening] { OPENING_LIST.filter { $0.color == color } }
+
+/// What openings cost and how swaps are earned.
 public struct FamilyRecord: Equatable, Sendable, Codable {
-  /// Families bought on each side, by color ("w", "b"): each one raises its side's price.
+  /// Openings bought on each side, by color ("w", "b"): each one raises its side's price.
   public var bought: [String: Int] = [:]
   /// Swap tokens held.
   public var tokens = 1
@@ -35,16 +98,16 @@ public struct FamilyRecord: Equatable, Sendable, Codable {
     tokens = try c.decodeIfPresent(Int.self, forKey: .tokens) ?? 1
   }
 
-  /// The next family's price on a side.
+  /// The next opening's price on a side.
   public func price(_ color: Color) -> Int { FAMILY_FIRST_PRICE + FAMILY_PRICE_STEP * (bought[color.rawValue] ?? 0) }
 }
 
-/// The moves a family starts with: the family, then the most played reply and your most played
-/// answer in turn, for `size` of your moves, ending where the named opening ends or no reply is
-/// common enough. As Black the calmest of the top answers leads.
-public func familySeed(_ tree: OpeningTree, _ family: [String], _ color: Color, size: Int) -> [String] {
+/// The moves an opening starts with, from one of its roots: the most played reply and your
+/// most played answer in turn, for `size` of your moves, ending where the named opening ends
+/// or no reply is common enough. As Black the calmest of the top answers leads.
+public func familySeed(_ tree: OpeningTree, _ root: [String], _ color: Color, size: Int) -> [String] {
   let index = tree.index
-  var line = family
+  var line = root
   var added = 1
   while !fillEnds(index, line, added: added, size: size) {
     let walked = walkSan(line)
@@ -63,72 +126,69 @@ public func familySeed(_ tree: OpeningTree, _ family: [String], _ color: Color, 
   return line
 }
 
-/// The families a side could have: as White the common first moves; as Black, under each common
-/// first move, the common answers. Most played first.
-public func familyChoices(_ index: ReferenceIndex, _ color: Color) -> [[String]] {
-  let firsts = popularReplies(index, START_FEN, FAMILY_MIN_SHARE).map(\.san)
-  if color == .w { return firsts.map { [$0] } }
-  return firsts.flatMap { first -> [[String]] in
-    guard let after = applySan(START_FEN, first)?.after else { return [] }
-    return popularReplies(index, after, FAMILY_MIN_SHARE).map { [first, $0.san] }
-  }
-}
-
 extension AppState {
-  /// The families you have on a side: those your Playbook's lines are in, in Playbook order.
-  public func ownedFamilies(_ color: Color) -> [[String]] {
+  /// The openings on the list you have on a side: those your Playbook's lines are in, in list order.
+  public func ownedFamilies(_ color: Color) -> [CuratedOpening] {
     guard let rep = playbookList.first(where: { $0.color == color }) else { return [] }
-    var out: [[String]] = []
-    for leaf in leafLines(rep) {
-      guard let family = familyLine(leaf.sans, color), !out.contains(family) else { continue }
-      out.append(family)
-    }
-    return out
+    let lines = leafLines(rep).map(\.sans)
+    return openingList(color).filter { opening in lines.contains { opening.holds($0) } }
   }
 
-  public func ownsFamily(_ family: [String], _ color: Color) -> Bool { ownedFamilies(color).contains(family) }
+  public func ownsFamily(_ id: String) -> Bool {
+    guard let opening = curatedOpening(id) else { return false }
+    return ownedFamilies(opening.color).contains { $0.id == id }
+  }
 
-  /// Whether a line saved by hand stays inside your families: it is in one, or leads into one.
+  /// Whether a line stays inside your openings: in one, or leading into one.
   public func inYourFamilies(_ line: [String], _ color: Color) -> Bool {
-    guard let family = familyLine(line, color) else { return ownedFamilies(color).contains { $0.starts(with: line) } }
-    return ownsFamily(family, color)
+    ownedFamilies(color).contains { $0.holds(line) || $0.leadsInto(line) }
   }
 
-  /// Buy a family at its side's price: its seed line goes into the Playbook, the price rises, and
-  /// every third family bought earns a swap token. Returns whether it was bought.
+  /// Buy an opening at its side's price: its seed lines go into the Playbook, the price rises, and
+  /// every third one bought earns a swap token. Returns whether it was bought.
   @discardableResult
-  public mutating func buyFamily(_ family: [String], _ color: Color, _ tree: OpeningTree) -> Bool {
-    let price = families.price(color)
-    guard familyLine(family, color) == family, !ownsFamily(family, color), pawns >= price else { return false }
-    guard seedFamily(family, color, tree) else { return false }
+  public mutating func buyFamily(_ id: String, _ tree: OpeningTree) -> Bool {
+    guard let opening = curatedOpening(id), !ownsFamily(id) else { return false }
+    let price = families.price(opening.color)
+    guard pawns >= price, seedFamily(opening, tree) else { return false }
     pawns -= price
-    families.bought[color.rawValue, default: 0] += 1
+    families.bought[opening.color.rawValue, default: 0] += 1
     let total = families.bought.values.reduce(0, +)
     if total % FAMILIES_PER_TOKEN == 0 { families.tokens = min(MAX_SWAP_TOKENS, families.tokens + 1) }
-    logEvent(AppEvent(kind: "buy", color: color, count: price, picked: family.joined(separator: " "), text: "balance \(pawns)"))
+    logEvent(AppEvent(kind: "buy", color: opening.color, count: price, picked: id, text: "balance \(pawns)"))
     return true
   }
 
-  /// Swap a family you have for one you don't, with a token: the old one goes with every move,
-  /// card and form under it. Returns whether it was swapped.
+  /// Swap an opening you have for one you don't, on the same side, with a token: the old one goes
+  /// with every move, card and form inside it. Moves it shares with another opening you have stay.
+  /// Returns whether it was swapped.
   @discardableResult
-  public mutating func swapFamily(_ out: [String], for family: [String], _ color: Color, _ tree: OpeningTree) -> Bool {
-    guard families.tokens > 0, ownsFamily(out, color), familyLine(family, color) == family, !ownsFamily(family, color),
-      let rep = playbookList.first(where: { $0.color == color }), let node = nodeAtLine(rep, out)
+  public mutating func swapFamily(_ out: String, for id: String, _ tree: OpeningTree) -> Bool {
+    guard families.tokens > 0, let old = curatedOpening(out), let new = curatedOpening(id), old.color == new.color,
+      ownsFamily(out), !ownsFamily(id), let rep = playbookList.first(where: { $0.color == old.color })
     else { return false }
-    removeNode(rep.id, node.id)
-    for id in form.openings.keys where id.split(separator: " ").map(String.init).starts(with: out) { form.openings[id] = nil }
-    guard seedFamily(family, color, tree) else { return false }
+    let kept = ownedFamilies(old.color).filter { $0.id != out }
+    for root in old.roots {
+      // Cut where the root leaves every other opening you have.
+      let cut = (1...root.count).first { n in !kept.contains { $0.leadsInto(Array(root.prefix(n))) || $0.holds(Array(root.prefix(n))) } }
+      guard let cut, let fresh = playbooks[rep.id], let node = nodeAtLine(fresh, Array(root.prefix(cut))) else { continue }
+      removeNode(rep.id, node.id)
+    }
+    for key in form.openings.keys where old.holds(key.split(separator: " ").map(String.init)) { form.openings[key] = nil }
+    guard seedFamily(new, tree) else { return false }
     families.tokens -= 1
-    logEvent(AppEvent(kind: "swap", color: color, picked: family.joined(separator: " "), text: "out \(out.joined(separator: " "))"))
+    logEvent(AppEvent(kind: "swap", color: old.color, picked: id, text: "out \(out)"))
     return true
   }
 
-  /// A family's seed line into its side's Playbook.
+  /// An opening's seed lines into its side's Playbook, one per root.
   @discardableResult
-  mutating func seedFamily(_ family: [String], _ color: Color, _ tree: OpeningTree) -> Bool {
-    let line = familySeed(tree, family, color, size: settings.movesPerFill)
-    let id = ensurePlaybook(color)
-    return addLine(id, line, .fixed(.growth), via: .growth) > 0
+  mutating func seedFamily(_ opening: CuratedOpening, _ tree: OpeningTree) -> Bool {
+    let id = ensurePlaybook(opening.color)
+    var added = 0
+    for root in opening.roots {
+      added += addLine(id, familySeed(tree, root, opening.color, size: settings.movesPerFill), .fixed(.growth), via: .growth)
+    }
+    return added > 0
   }
 }

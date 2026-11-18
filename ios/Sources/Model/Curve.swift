@@ -47,13 +47,14 @@ public func curveHoles(_ reps: [Playbook], _ index: ReferenceIndex, tree: Openin
       let best = stops[id].flatMap { san in holes.first { $0.nodeId == id && $0.san == san } }
       if best.map({ hole.share > $0.share }) ?? true { stops[id] = hole.san }
     }
-    // Growth stays inside the families you have: a reply into another family is bought, not grown.
-    let owned = Set(leafLines(rep).compactMap { familyLine($0.sans, rep.color) })
+    // Growth stays inside the openings you have: anything else is bought, not grown.
+    let lines = leafLines(rep).map(\.sans)
+    let owned = openingList(rep.color).filter { opening in lines.contains { opening.holds($0) } }
     for hole in holes {
       let reach = hole.reach * hole.share / 100
       guard reach >= CURVE_MIN_REACH else { continue }
       let line = hole.path + [hole.san]
-      guard let family = familyLine(line, rep.color), owned.contains(family) else { continue }
+      guard owned.contains(where: { $0.roots.contains { line.count > $0.count && line.starts(with: $0) } }) else { continue }
       guard let end = namedEnd(index, line), end.ply >= line.count else { continue }
       out.append(Gap(
         kind: hole.nodeId.flatMap { stops[$0] } == hole.san ? .tooShort : .noAnswer, playbookId: rep.id, color: rep.color, hole: hole,

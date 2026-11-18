@@ -5,15 +5,15 @@ import Model
 import SwiftUI
 
 /// Welcome's "Choose my openings": the Playbook tree in its choosing mode, one side at a
-/// time, and a bar of three slots under it: a White family, an answer to 1.e4 and one to
-/// 1.d4. Tapping a family fills its slot; Done appears once all three are filled.
+/// time, and a bar of three slots under it: a White opening, a Black one against 1.e4 and one
+/// against 1.d4. Tapping an opening fills its slot; Done appears once all three are filled.
 struct ChooseOpeningsView: View {
   let tree: OpeningTree
   let onBack: () -> Void
-  let onDone: ([[String]]) -> Void
+  let onDone: ([String]) -> Void
 
   @State private var side = ChessCore.Color.w
-  @State private var picks: [ChoiceSlot: [String]] = [:]
+  @State private var picks: [ChoiceSlot: String] = [:]
 
   var body: some View {
     VStack(spacing: 0) {
@@ -51,7 +51,7 @@ struct ChooseOpeningsView: View {
     return VStack(spacing: 3) {
       Text(slot.label).font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.text3).lineLimit(1)
       if let family {
-        Text(nodeById(tree, family.joined(separator: " ")).name)
+        Text(curatedOpening(family)?.name ?? "")
           .font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text)
           .lineLimit(2).multilineTextAlignment(.center).minimumScaleFactor(0.8)
       }

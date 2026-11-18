@@ -19,8 +19,8 @@ questions in `Recommendations.swift`; the first step is in
 3. **A new move is due after Moves per fill runs.** Pace is the Play runs
    since anything was added to the Playbook, from any source, over Moves per
    fill (default 3). From a pace of 1, the run heads for the curve's next
-   hole in the selection (see [growth](growth.md)). A White first move with
-   no answer is no hole: answering it is a family to buy (see
+   hole in the selection (see [growth](growth.md)). A reply outside your
+   openings is no hole: another opening is bought, not grown (see
    [families](families.md)).
 4. **Candidates.** For each side the selection covers that has a Playbook,
    each opening at or below the selection where you have a move gets a

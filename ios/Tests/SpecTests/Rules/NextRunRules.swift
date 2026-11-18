@@ -38,7 +38,7 @@ private func playRuns(_ state: inout AppState, _ selection: Selection, _ count: 
     let tree = openingTree(bookIndex)
     var state = AppState()
     let id = state.ensurePlaybook(.w)
-    state.addLine(id, line("e4 e5 Nf3"), .fixed(.book))
+    state.addLine(id, line("e4 e5 Nf3 Nc6 Bc4"), .fixed(.book))
     for _ in 0..<4 { state.answered(id, START_FEN, "e4", .easy) }
     let selection = Selection(color: .w, opening: ANY_OPENING)
     #expect(state.settings.movesPerFill == 3)

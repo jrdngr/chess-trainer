@@ -13,13 +13,11 @@ public enum ChoiceSlot: String, Sendable, CaseIterable {
   public var label: String { [.w: "As White", .e4: "Against 1.e4", .d4: "Against 1.d4"][self]! }
 }
 
-/// The slot a family fills, or nil for one no slot takes (a Black answer to anything but 1.e4 or 1.d4).
-public func choiceSlot(_ family: [String]) -> ChoiceSlot? {
-  switch family.count {
-  case 1: return .w
-  case 2: return family[0] == "e4" ? .e4 : family[0] == "d4" ? .d4 : nil
-  default: return nil
-  }
+/// The slot an opening fills: White's, or Black's against 1.e4 or 1.d4. Nil for one no slot takes.
+public func choiceSlot(_ id: String) -> ChoiceSlot? {
+  guard let opening = curatedOpening(id) else { return nil }
+  if opening.color == .w { return .w }
+  return ChoiceSlot(rawValue: opening.firstMove)
 }
 
 /// What "Recommend some openings" puts in: the Italian as White, 1...e5 and the Queen's Gambit Declined as Black.
@@ -29,10 +27,10 @@ public let RECOMMENDED_OPENINGS: [SeedOpening] = [
   SeedOpening(sans: ["d4", "d5", "c4", "e6"], color: .b),
 ]
 
-/// One side's tree while choosing: every family a slot can take, none owned.
+/// One side's tree while choosing: every opening a slot can take, none owned.
 public func choosingMap(_ tree: OpeningTree, side: Color) -> [MapNode] {
   playbookMap(AppState(), tree, side: side).filter { root in
-    side == .w || ["e4", "d4"].contains(root.line.first ?? "")
+    side == .w || ChoiceSlot(rawValue: root.line.first ?? "") != nil
   }
 }
 
@@ -42,13 +40,12 @@ extension AppState {
     onboarded(tree, RECOMMENDED_OPENINGS)
   }
 
-  /// "Choose my openings" done: each picked family goes in with its seed line, free, and onboarding is done.
-  /// A family no slot takes is left out.
-  public mutating func choose(_ tree: OpeningTree, _ families: [[String]]) {
+  /// "Choose my openings" done: each picked opening goes in with its seed lines, free, and onboarding is done.
+  /// An opening no slot takes is left out.
+  public mutating func choose(_ tree: OpeningTree, _ ids: [String]) {
     let size = settings.movesPerFill
-    onboarded(tree, families.compactMap { family in
-      guard let slot = choiceSlot(family) else { return nil }
-      return SeedOpening(sans: familySeed(tree, family, slot.color, size: size), color: slot.color)
+    onboarded(tree, ids.compactMap(curatedOpening).filter { choiceSlot($0.id) != nil }.flatMap { opening in
+      opening.roots.map { SeedOpening(sans: familySeed(tree, $0, opening.color, size: size), color: opening.color) }
     })
   }
 }

@@ -22,20 +22,19 @@ import Testing
     state.addLine(id, line("d4 d5 c4 e6"), .fixed(.book))
     let roots = playbookMap(state, tree, side: .w)
     #expect(roots.filter(\.owned).map(\.id) == ["e4", "d4"])
-    #expect(roots.filter { !$0.owned }.allSatisfy { $0.forSale }, "the other first moves are families for sale")
+    #expect(roots.filter { !$0.owned }.allSatisfy { $0.state == .way }, "other first moves hold the openings for sale there")
     func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.children) } }
     let nodes = all(roots)
     let next = nodes.filter { if case .next = $0.state { return true } else { return false } }
     #expect(next.count == 1)
     #expect(next.first?.gap?.id == curvePlaybookGaps(state, tree).first?.id)
     #expect(nextMapNode(state, tree)?.id == next.first?.id, "Home's line opens the tree at it")
-    // 1...c5 waits for level 1 under 1.e4, its first locked reply after those you have.
+    // The Italian is for sale under 1.e4, after what you have.
     let e4 = roots[0]
-    let sicilian = try #require(e4.children.first { $0.line == line("e4 c5") })
-    #expect(sicilian.state == .locked(.games(40)))
+    #expect(all([e4]).contains { $0.family == "italian" && $0.forSale })
     #expect(e4.children.first?.owned == true)
     #expect(nodes.filter(\.owned).allSatisfy { $0.lines >= 1 && $0.gap == nil })
-    #expect(nodes.filter { !$0.owned && !$0.forSale }.allSatisfy { $0.gap != nil && $0.children.isEmpty })
+    #expect(nodes.filter { !$0.owned && !$0.forSale && $0.state != .way }.allSatisfy { $0.gap != nil && $0.children.isEmpty })
   }
 
   /// Rule 3: a tap opens an opening's branches; a tap on the open one folds it.

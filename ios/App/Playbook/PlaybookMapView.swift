@@ -21,8 +21,8 @@ struct PlaybookMapView: View {
   let side: ChessCore.Color
   var focus: MapFocus?
   var onConsumedFocus: () -> Void = {}
-  /// The families picked for each slot, while choosing openings.
-  var choosing: Binding<[ChoiceSlot: [String]]>? = nil
+  /// The openings picked for each slot, by id, while choosing openings.
+  var choosing: Binding<[ChoiceSlot: String]>? = nil
   /// Open an opening you have on its page.
   var onOpen: (MapNode) -> Void = { _ in }
 
@@ -286,12 +286,12 @@ struct PlaybookMapView: View {
     }
   }
 
-  /// Swap: a family you have goes, with everything under it, and this one comes in its place.
+  /// Swap: an opening you have goes, with everything under it, and this one comes in its place.
   private func swapMenu(_ node: MapNode) -> some View {
     Menu {
       Section("Swap out, losing its progress") {
-        ForEach(store.state.ownedFamilies(side), id: \.self) { out in
-          Button(nodeById(tree, out.joined(separator: " ")).name) { swap(out, for: node) }
+        ForEach(store.state.ownedFamilies(side)) { out in
+          Button(out.name) { swap(out.id, for: node) }
         }
       }
     } label: {
@@ -302,17 +302,17 @@ struct PlaybookMapView: View {
   }
 
   private func buy(_ node: MapNode) {
-    guard let family = node.family else { return }
+    guard let id = node.family else { return }
     var bought = false
-    store.update { bought = $0.buyFamily(family, side, tree) }
-    if bought { toasts.show("\(nameBelow(node.name, nil)) added") }
+    store.update { bought = $0.buyFamily(id, tree) }
+    if bought { toasts.show("\(node.name) added") }
   }
 
-  private func swap(_ out: [String], for node: MapNode) {
-    guard let family = node.family else { return }
+  private func swap(_ out: String, for node: MapNode) {
+    guard let id = node.family else { return }
     var swapped = false
-    store.update { swapped = $0.swapFamily(out, for: family, side, tree) }
-    if swapped { toasts.show("\(nameBelow(node.name, nil)) added") }
+    store.update { swapped = $0.swapFamily(out, for: id, tree) }
+    if swapped { toasts.show("\(node.name) added") }
   }
 
   private func shelfTag(_ node: MapNode) -> (word: String, color: SwiftUI.Color)? {

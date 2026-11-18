@@ -15,9 +15,9 @@ import Model
 
 let HELP = """
   Anywhere:  state · help · quit · home · hint (the engine's move here)
-  Start:     recommend · choose WHITE E4 D4 (e.g. `choose d4 c5 Nf6`) · intro
+  Start:     recommend · choose WHITE E4 D4 (ids, e.g. `choose london caro slav`) · openings · intro
   Home:      select [w|b|either] [drill|freeform] [opening id or moves, "any" for Any Opening]
-             play · tree [w|b] · unlock FAMILY · endgames · middlegame · shop · buy ID
+             play · tree [w|b] · unlock OPENING (id or name) · endgames · middlegame · shop · buy ID
   Board:     <san> (or move <san> <san>...) · think SECONDS
   Play:      end · continue · takeback · next · undo · done · grow · replay
   Growth:    save · more · play-on · back
@@ -70,9 +70,14 @@ func perform(_ app: HeadlessApp, _ words: [String]) async throws -> Bool {
   case "intro": app.seeIntro()
   case "recommend": await app.recommendOpenings()
   case "choose":
-    // White's first move, then Black's answers to 1.e4 and to 1.d4.
-    guard rest.count == 3 else { throw HeadlessApp.Failure.notHere("choose WHITE E4 D4, e.g. `choose d4 c5 Nf6`") }
-    try await app.chooseOpenings([[rest[0]], ["e4", rest[1]], ["d4", rest[2]]])
+    // Ids from the list: a White opening, then Black's against 1.e4 and against 1.d4.
+    guard rest.count == 3 else { throw HeadlessApp.Failure.notHere("choose WHITE E4 D4, e.g. `choose london caro slav` (`openings` lists the ids)") }
+    try await app.chooseOpenings(rest)
+  case "openings":
+    for opening in OPENING_LIST {
+      print("\(opening.id)  \(opening.name)  \(opening.color == .w ? "White" : "Black")  \(opening.roots.map { $0.joined(separator: " ") }.joined(separator: " / "))")
+    }
+    return true
   case "select": try select(app, rest)
   case "play": await app.openPlay()
   case "tree":
@@ -81,8 +86,8 @@ func perform(_ app: HeadlessApp, _ words: [String]) async throws -> Bool {
   case "unlock":
     let name = rest.joined(separator: " ")
     let all = (app.map(.w) + app.map(.b)).flatMap(flatten)
-    guard let node = all.first(where: { $0.forSale && ($0.label == name || $0.name == name || $0.move == name) }) else {
-      throw HeadlessApp.Failure.notHere("No family \"\(name)\" for sale. `tree` lists them")
+    guard let node = all.first(where: { $0.forSale && ($0.family == name || $0.name == name) }) else {
+      throw HeadlessApp.Failure.notHere("No opening \"\(name)\" for sale. `tree` lists them")
     }
     try app.buyFamily(node)
   case "grow": await app.growHere()
@@ -248,8 +253,8 @@ func mapText(_ roots: [MapNode]) -> String {
     case .locked(.inLine): state = "locked"
     case .locked(.games(let games)): state = "locked, game \(games)"
     case .locked(.green(let have, let of)): state = "locked, green \(have)/\(of)"
-    case .forSale(let price): state = "for sale, \(price) pawns"
-    case .way: state = "no answer yet"
+    case .forSale(let price): state = "for sale, \(price) pawns (unlock \(node.family ?? ""))"
+    case .way: state = "openings for sale under it"
     }
     lines.append("\(pad)\(node.move)  \(node.label)  (\(state))")
     for kid in node.children { visit(kid, depth + 1) }

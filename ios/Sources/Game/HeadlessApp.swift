@@ -157,18 +157,16 @@ public final class HeadlessApp: SignalSink {
     await openPlay()
   }
 
-  /// Welcome's "Choose my openings": a family for each slot (White's first move, Black's answers
-  /// to 1.e4 and 1.d4), picked on the tree, then the first Play game starts.
-  public func chooseOpenings(_ families: [[String]]) async throws {
-    let slots = families.compactMap(choiceSlot)
-    guard slots.count == families.count, Set(slots) == Set(ChoiceSlot.allCases), slots.count == ChoiceSlot.allCases.count else {
-      throw Failure.notHere("Pick one family for each slot: a White first move, an answer to 1.e4 and one to 1.d4")
-    }
-    for (family, slot) in zip(families, slots) where !choosingMap(tree, side: slot.color).contains(where: { holds($0, family) }) {
-      throw Failure.notHere("\(family.joined(separator: " ")) is not a family on the tree")
+  /// Welcome's "Choose my openings": an opening from the list for each slot (White, Black against
+  /// 1.e4, Black against 1.d4), by id, then the first Play game starts.
+  public func chooseOpenings(_ ids: [String]) async throws {
+    for id in ids where curatedOpening(id) == nil { throw Failure.notHere("No opening \"\(id)\" on the list") }
+    let slots = ids.compactMap(choiceSlot)
+    guard slots.count == ids.count, Set(slots).count == ChoiceSlot.allCases.count, ids.count == ChoiceSlot.allCases.count else {
+      throw Failure.notHere("Pick one opening for each slot: a White one, one against 1.e4 and one against 1.d4")
     }
     seeIntro()
-    store.chooseOpenings(families)
+    store.chooseOpenings(ids)
     await openPlay()
   }
 
@@ -211,19 +209,19 @@ public final class HeadlessApp: SignalSink {
   /// The Playbook tab's tree for one side.
   public func map(_ side: ChessCore.Color) -> [MapNode] { playbookMap(state, tree, side: side) }
 
-  /// Buy a family for sale on the tree, at its side's price.
+  /// Buy an opening for sale on the tree, at its side's price.
   public func buyFamily(_ node: MapNode) throws {
-    guard let family = node.family, node.forSale else { throw Failure.notHere("\(node.name) isn't for sale") }
+    guard let id = node.family, node.forSale else { throw Failure.notHere("\(node.name) isn't for sale") }
     var bought = false
-    store.update { bought = $0.buyFamily(family, node.color, tree) }
+    store.update { bought = $0.buyFamily(id, tree) }
     if !bought { throw Failure.notHere("\(node.name) needs \(state.families.price(node.color)) pawns") }
   }
 
-  /// Swap a family you have for one for sale, with a swap token.
-  public func swapFamily(_ out: [String], for node: MapNode) throws {
-    guard let family = node.family, node.forSale else { throw Failure.notHere("\(node.name) isn't for sale") }
+  /// Swap an opening you have (by id) for one for sale, with a swap token.
+  public func swapFamily(_ out: String, for node: MapNode) throws {
+    guard let id = node.family, node.forSale else { throw Failure.notHere("\(node.name) isn't for sale") }
     var swapped = false
-    store.update { swapped = $0.swapFamily(out, for: family, node.color, tree) }
+    store.update { swapped = $0.swapFamily(out, for: id, tree) }
     if !swapped { throw Failure.notHere("No swap: \(state.families.tokens) token\(state.families.tokens == 1 ? "" : "s") held") }
   }
 
@@ -486,9 +484,4 @@ private func nextChance(_ seed: inout UInt32) -> Double {
   t = (t ^ (t >> 15)) &* (t | 1)
   t ^= t &+ ((t ^ (t >> 7)) &* (t | 61))
   return Double(t ^ (t >> 14)) / 4_294_967_296
-}
-
-/// Whether a tree node, or one under it, is this family for sale.
-private func holds(_ node: MapNode, _ family: [String]) -> Bool {
-  node.family == family || node.children.contains { holds($0, family) }
 }

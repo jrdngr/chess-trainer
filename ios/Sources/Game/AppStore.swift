@@ -356,10 +356,10 @@ public final class AppStore {
     update { $0.recommend(tree) }
   }
 
-  /// "Choose my openings" done: the families picked for the slots go in, and onboarding is done.
-  public func chooseOpenings(_ families: [[String]]) {
+  /// "Choose my openings" done: the openings picked for the slots go in, and onboarding is done.
+  public func chooseOpenings(_ ids: [String]) {
     guard let tree else { return }
-    update { $0.choose(tree, families) }
+    update { $0.choose(tree, ids) }
   }
 
   /// A tip shown off the board, put away for good.

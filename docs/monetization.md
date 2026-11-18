@@ -93,19 +93,22 @@ Lenses are free to use once owned.
 
 ### Openings
 
-- **A new player starts with 3 families:** one White opening, a Black
-  answer to 1.e4 and a Black answer to 1.d4.
-- **Each family after that costs pawns** on a rising ladder: 2,000 for the
+- **Openings come from a curated list,** each named the way players talk
+  about their choice: the Italian, the London, the Najdorf, the Slav. An
+  opening is everything from its named position on. You drill only what
+  you picked: an Italian player never drills 1...c5.
+- **A new player starts with 3 openings:** one White, one Black against
+  1.e4 and one Black against 1.d4.
+- **Each opening after that costs pawns** on a rising ladder: 2,000 for the
   first, then 500 more for each one after. White and Black have separate
-  ladders, and every Black answer is its own family. The $10 unlock
-  includes no families.
-- **Pawns buy breadth, play earns depth.** On the Playbook tree, a family
-  node costs its ladder price. Named variations inside a family you own are
+  ladders. The $10 unlock includes no openings.
+- **Pawns buy breadth, play earns depth.** On the Playbook tree, an opening
+  for sale costs its ladder price. Variations inside an opening you own are
   free and open only through growth's level gates. There's no early unlock.
 - **Swap tokens.** A player starts with 1 and earns 1 more for every 3
-  families bought, holding at most 1. Swapping a family out deletes its
+  openings bought, holding at most 1. Swapping an opening out deletes its
   progress.
-- **Trials** let a player walk any locked family for free before buying it.
+- **Trials** let a player walk any opening for sale for free before buying it.
   See [trials.md](trials.md).
 
 ### Other content
@@ -154,11 +157,11 @@ guides and personalities ship.
 1. **Welcome has two buttons.** "Recommend some openings" gives the
    Classical set. "Choose my openings" opens the picker.
 2. **The picker is the Playbook tree** in a choosing mode, the same screen
-   used later to buy and try families. A bar at the bottom holds three
-   slots: White, against 1.e4 and against 1.d4. Tapping a family fills its
+   used later to buy and try openings. A bar at the bottom holds three
+   slots: White, against 1.e4 and against 1.d4. Tapping an opening fills its
    slot, and Done appears once all three are filled.
 3. **There are no other ways in.** The other starter sets, playing lines on
-   the board and importing games are gone. After onboarding, new families
+   the board and importing games are gone. After onboarding, new openings
    come only from the Playbook tree.
 
 ## When it lands

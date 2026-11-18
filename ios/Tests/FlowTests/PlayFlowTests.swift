@@ -232,22 +232,22 @@ private func quietMove(_ fen: String) -> String? {
     onboard(app, recommended: false)
     app.store.update { state in
       let id = state.ensurePlaybook(.w)
-      state.addLine(id, ["e4", "e5", "Qh5"], .fixed(.book))
-      for _ in 0..<4 { state.answered(id, START_FEN, "e4", .easy) }
-      if let parham = deepestNodeAlong(app.tree, ["e4", "e5", "Qh5"]) {
-        state.form.openings[parham.id] = Array(repeating: 1, count: FORM_MIN_ANSWERS)
+      state.addLine(id, ["c4", "e5", "g3"], .fixed(.book))
+      for _ in 0..<4 { state.answered(id, START_FEN, "c4", .easy) }
+      if let english = deepestNodeAlong(app.tree, ["c4", "e5", "g3"]) {
+        state.form.openings[english.id] = Array(repeating: 1, count: FORM_MIN_ANSWERS)
       }
       let selection = Selection(color: .w, opening: ANY_OPENING)
       let after = lastAddedAt(state.playbookList) + 1
       for i in 0..<CURVE_LEVEL_GAMES[1]! {
         state.recordGame(GameRecord(
-          id: "g\(i)", mode: .play, at: after + Double(i), color: .w, picked: selection, opening: selection.opening, moves: ["e4"],
+          id: "g\(i)", mode: .play, at: after + Double(i), color: .w, picked: selection, opening: selection.opening, moves: ["c4"],
           result: "*", termination: "ended"))
       }
     }
     try app.select(side: .w, start: .drill)
     let gap = try #require(steerGap(app.state, app.tree, app.state.settings.selection))
-    #expect(gap.path == ["e4"])
+    #expect(gap.path == ["c4"])
     await app.openPlay()
     let run = try #require(app.run)
     #expect(run.run.played == gap.line, "it opens at the reply you have no answer to")

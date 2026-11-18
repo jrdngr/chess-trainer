@@ -65,14 +65,14 @@ private func morra() -> (AppState, String) {
   /// Rule 3: a hole's level is the opponent's move number at it when that is 1 or 2, else 0.
   @Test func levelsByTheOpponentsMove() throws {
     let tree = openingTree(bookIndex)
-    let found = curveHoles([rep(.w, ["e4 e5 Nf3 Nc6 Bb5 a6"])], bookIndex, tree: tree)
-    let c5 = try #require(found.first { $0.line == line("e4 c5") })
-    let petrov = try #require(found.first { $0.line == line("e4 e5 Nf3 Nf6") })
+    let found = curveHoles([rep(.w, ["c4 e5 Nc3 Nf6 Nf3 Nc6"])], bookIndex, tree: tree)
+    let first = try #require(found.first { $0.path == line("c4") })
+    let second = try #require(found.first { $0.path == line("c4 e5 Nc3") })
     let deep = try #require(found.first { $0.path.count >= 4 })
-    #expect(curveLevel(c5) == 1)
-    #expect(curveLevel(petrov) == 2)
+    #expect(curveLevel(first) == 1)
+    #expect(curveLevel(second) == 2)
     #expect(curveLevel(deep) == 0)
-    let black = curveHoles([rep(.b, ["e4 c5 Nf3 d6"])], bookIndex, tree: tree)
+    let black = curveHoles([rep(.b, ["e4 e6 d4 d5"])], bookIndex, tree: tree)
     #expect(black.filter { $0.path.isEmpty }.allSatisfy { curveLevel($0) == 1 })
     #expect(black.filter { $0.path.count == 2 }.allSatisfy { curveLevel($0) == 2 })
   }
@@ -81,7 +81,7 @@ private func morra() -> (AppState, String) {
   /// level 1 the same after level 2, at 40 games.
   @Test func levelsOpenInTurn() throws {
     let tree = openingTree(bookIndex)
-    let found = curveHoles([rep(.w, ["e4 e5 Nf3 Nc6 Bb5 a6"])], bookIndex, tree: tree)
+    let found = curveHoles([rep(.w, ["c4 e5 Nc3 Nf6 Nf3 Nc6"])], bookIndex, tree: tree)
     let shallow = found.filter { curveLevel($0) != 0 }
     let onlyFirst = found.filter { curveLevel($0) == 1 }
     let green = CurveGate(games: 40, green: 3, openings: 3)
@@ -123,7 +123,8 @@ private func morra() -> (AppState, String) {
     state.addLine(id, line("e4 e5 Nf3 Nc6"), .fixed(.book))
     let holes = curveHoles(state.playbookList, bookIndex, tree: tree)
     #expect(!holes.isEmpty)
-    #expect(holes.allSatisfy { familyLine($0.line, .b) == ["e4", "e5"] }, "1.d4 and 1.e4 c5 are families to buy")
+    let e5 = try #require(curatedOpening("openGame"))
+    #expect(holes.allSatisfy { e5.holds($0.line) && $0.line.count > 2 }, "1.d4 and 1.e4 c5 are openings to buy")
   }
 
   /// Rule 8: a move added mid-run isn't graded and counts in the book's color.

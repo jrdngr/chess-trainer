@@ -22,11 +22,12 @@ import Testing
 /// Welcome's "Choose my openings": a family for each of the three slots goes in, and the first game starts.
 @MainActor @Test func choosingYourOpeningsFillsThreeSlots() async throws {
   try await headless(everything: false) { app in
-    await #expect(throws: HeadlessApp.Failure.self) { try await app.chooseOpenings([["e4"], ["e4", "c5"]]) }
-    try await app.chooseOpenings([["d4"], ["e4", "c5"], ["d4", "Nf6"]])
+    await #expect(throws: HeadlessApp.Failure.self) { try await app.chooseOpenings(["london", "najdorf"]) }
+    await #expect(throws: HeadlessApp.Failure.self) { try await app.chooseOpenings(["london", "najdorf", "french"]) }
+    try await app.chooseOpenings(["london", "najdorf", "slav"])
     #expect(app.screen == .play)
-    #expect(app.state.ownedFamilies(.w) == [["d4"]])
-    #expect(Set(app.state.ownedFamilies(.b)) == [["e4", "c5"], ["d4", "Nf6"]])
+    #expect(app.state.ownedFamilies(.w).map(\.id) == ["london"])
+    #expect(app.state.ownedFamilies(.b).map(\.id) == ["najdorf", "slav"])
   }
 }
 
