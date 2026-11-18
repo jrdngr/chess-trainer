@@ -267,8 +267,8 @@ struct RunView: View {
     guard let lens, lensEnabled else { return nil }
     let me = model.run.color
     let fens = walkSan(Array(model.run.played.dropLast())).fens
-    var marks = heldLens(lens, model.shownFen, me, model.run.played.isEmpty ? nil : fens.last)
-    if lens == .eval { marks.tints = evalLensTints(model.session.lastJudged, played: model.run.played.count) }
+    var marks = heldLens(lens, model.shownFen, me, model.run.played.isEmpty ? nil : fens.last, parts: store.state.lensParts)
+    if lens == .eval, store.state.owns(.lensEvalHistory) { marks.tints = evalLensTints(model.session.lastJudged, played: model.run.played.count) }
     if lens == .pawns, let breaks, breaks.fen == model.shownFen {
       let sides: [ChessCore.Color] = [.w, .b]
       marks.arrows = sides.compactMap { (side: ChessCore.Color) -> LensArrow? in
@@ -339,9 +339,9 @@ struct RunView: View {
       .tip(model.tip, when: model.tip == .analysis && drawing, rest: 1, onDismiss: model.dismissTip)
       VStack(spacing: 0) {
         if lens == .eval {
-          EvalRunCard(trail: model.session.evalTrail, last: model.session.lastJudged, color: model.run.color)
+          if store.state.owns(.lensEvalHistory) { EvalRunCard(trail: model.session.evalTrail, last: model.session.lastJudged, color: model.run.color) }
         } else if let lens {
-          LensLegend(kind: lens, endgame: isEndgame(model.shownFen), safety: marks?.safety)
+          LensLegend(kind: lens, endgame: isEndgame(model.shownFen), safety: marks?.safety, parts: store.state.lensParts)
         } else if planOpen {
           // A long plan card scrolls rather than run off the dock.
           ScrollView { PlanLegend(fens: fens, me: model.run.color) }.scrollIndicators(.hidden).scrollBounceBehavior(.basedOnSize)

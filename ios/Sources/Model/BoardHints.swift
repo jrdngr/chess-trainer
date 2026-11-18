@@ -606,20 +606,38 @@ public func newlyLoose(_ before: String, _ after: String, _ me: Color, from: Str
   }
 }
 
-public func lensMarks(_ kind: LensKind, _ fen: String, _ me: Color, _ prevFen: String? = nil) -> LensMarks {
-  let ending = isEndgame(fen)
+/// What a lens draws, held to the parts that are yours: without its endgame upgrade a lens
+/// keeps its first part in an endgame too, and structure names and square control come with
+/// their own upgrades.
+public func lensMarks(_ kind: LensKind, _ fen: String, _ me: Color, _ prevFen: String? = nil, parts: LensParts = .all) -> LensMarks {
+  let ending = isEndgame(fen) && parts.endgame(kind)
+  var marks: LensMarks
   switch kind {
-  case .pawns: return ending ? endgamePawnsLens(fen, me) : pawnsLens(fen)
-  case .pieces: return ending ? endgamePiecesLens(fen, me) : piecesLens(fen, me)
-  case .kings: return ending ? endgameKingsLens(fen, me) : kingsLens(fen, me)
-  case .eval: return LensMarks()
+  case .pawns:
+    if ending {
+      marks = endgamePawnsLens(fen, me)
+    } else if isEndgame(fen) {
+      // Tags only: the endgame Pawns lens without its passers' kinds and squares.
+      marks = endgamePawnsLens(fen, me)
+      marks.letters = nil
+      marks.boxes = nil
+    } else {
+      marks = pawnsLens(fen)
+      if !parts.has(.lensStructure) { marks.caption = nil }
+    }
+  case .pieces:
+    marks = ending ? endgamePiecesLens(fen, me) : piecesLens(fen, me)
+    if !parts.has(.lensControl) { marks.tints = nil }
+  case .kings: marks = ending ? endgameKingsLens(fen, me) : kingsLens(fen, me)
+  case .eval: marks = LensMarks()
   }
+  return marks
 }
 
 /// What the board draws for a held lens: `lensMarks`, and the pieces to keep bright.
 /// The Eval lens draws nothing from the board alone: the run's screen adds what the engine said.
-public func heldLens(_ kind: LensKind, _ fen: String, _ me: Color, _ prevFen: String? = nil) -> LensMarks {
-  var marks = lensMarks(kind, fen, me, prevFen)
+public func heldLens(_ kind: LensKind, _ fen: String, _ me: Color, _ prevFen: String? = nil, parts: LensParts = .all) -> LensMarks {
+  var marks = lensMarks(kind, fen, me, prevFen, parts: parts)
   marks.focus = marks.focus ?? lensFocus(kind, marks, fen)
   return marks
 }

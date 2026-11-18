@@ -19,12 +19,12 @@ import Testing
   @Test func homeShowsBoughtPickersAndTheShopCountsBuyables() {
     var s = AppState()
     #expect(s.homeTip == nil && s.buyableCount == 0, "nothing to buy, nothing bought")
-    s.pawns = 300
+    s.pawns = 120
     #expect(s.homeTip == nil, "no tip for the Shop")
     #expect(s.buyableCount == 2, "the side picker and the Pawns lens")
     let bought = s.buy("sidePicker")
     #expect(bought && s.homeTip == .sidePicker)
-    #expect(s.buyableCount == 0, "100 pawns left buy nothing")
+    #expect(s.buyableCount == 0, "70 pawns left buy nothing")
     s.settings.see(.sidePicker)
     s.pawns = 300
     _ = s.buy("lensPawns")

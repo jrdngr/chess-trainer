@@ -126,23 +126,38 @@ struct LensLegend: View {
   var endgame = false
   /// Each king's grade, which the Kings key leads with.
   var safety: KingSafety? = nil
+  /// The lens upgrades that are yours: the key lists only what the lens draws.
+  var parts: LensParts = .all
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
       LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), alignment: .leading)], spacing: 10) {
-        ForEach(kingRows + ((endgame ? Self.endgameRows : Self.rows)[kind] ?? []), id: \.label) { row in
+        ForEach(kingRows + shownRows, id: \.label) { row in
           HStack(spacing: 8) {
             row.swatch.frame(width: 18, height: 18)
             Text(row.label).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(2)
           }
         }
       }
-      if kind == .pieces { ControlScale() }
+      if kind == .pieces && parts.has(.lensControl) { ControlScale() }
     }
     .padding(.horizontal, 14).padding(.vertical, 12)
     .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface))
     .padding(.top, 12)
   }
+
+  /// The rows for what the lens draws here. Without its endgame upgrade a lens keeps its
+  /// first part in an endgame: Pawns its tags and breaks, Pieces its rings, Kings its safety.
+  private var shownRows: [Row] {
+    if endgame && parts.endgame(kind) { return Self.endgameRows[kind] ?? [] }
+    if endgame && kind == .pawns {
+      return (Self.endgameRows[.pawns] ?? []).filter { row in Self.passerLabels.allSatisfy { $0 != row.label } }
+    }
+    return Self.rows[kind] ?? []
+  }
+
+  /// The endgame Pawns rows Endgame pawns adds.
+  private static let passerLabels = ["Pawn\u{2019}s square", "Outside passer", "Protected passer", "Connected passers"]
 
   private var kingRows: [Row] {
     guard kind == .kings, let safety else { return [] }

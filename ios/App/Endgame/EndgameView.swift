@@ -170,7 +170,7 @@ struct EndgameRoundView: View {
             .animation(.easeOut(duration: 0.25), value: called)
             // The callout runs past the lenses' row: over what follows, not under it.
             .zIndex(1)
-          if let lens, lens != .eval { LensLegend(kind: lens, endgame: true, safety: marks?.safety).clearsLens($lens) }
+          if let lens, lens != .eval { LensLegend(kind: lens, endgame: true, safety: marks?.safety, parts: store.state.lensParts).clearsLens($lens) }
           if plan, let live = livePlan, let intro = game.entry.intro { planCard(intro.pages[live.page]) }
           if let outcome = game.outcome {
             ending(outcome)
@@ -195,7 +195,7 @@ struct EndgameRoundView: View {
     guard game.phase == .playing else { return nil }
     if plan { return livePlan?.marks }
     guard let lens, lens != .eval else { return nil }
-    return heldLens(lens, game.fen, game.color)
+    return heldLens(lens, game.fen, game.color, parts: store.state.lensParts)
   }
 
   /// Where the game stands in the ending's plan; nil for an ending without one.

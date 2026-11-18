@@ -94,26 +94,41 @@ struct Purchase: Equatable {
   var left: Int { price - Int((Double(price) * progress).rounded()) }
 }
 
-/// The tree: features in rows, Endgames with its families branching under it, then the styles' row under its heading.
+/// The tree: features down the left; the lenses chained down beside them, each with its
+/// upgrades on a straight line to its right; Middlegame, Plan and Endgames under them, Endgames
+/// with its families; then the styles' row under its heading.
 private struct ShopTree: View {
   let selected: String?
   let purchase: Purchase?
   @Binding var frames: [String: CGRect]
   let onTap: (String) -> Void
   @Environment(AppStore.self) private var store
+  /// Each node's height, name and price included: lines start under it.
+  @State private var heights: [String: CGFloat] = [:]
 
-  /// Where each item sits on a 358 by 812 grid. The styles sit in a row under their heading.
-  static let spots: [String: CGPoint] = [
-    "sidePicker": CGPoint(x: 56, y: 0), "lensPawns": CGPoint(x: 236, y: 0), "lensPlan": CGPoint(x: 318, y: 0),
-    "openingPicker": CGPoint(x: 56, y: 112), "lensPieces": CGPoint(x: 236, y: 112),
-    "freeform": CGPoint(x: 56, y: 224), "guides": CGPoint(x: 146, y: 224), "lensKings": CGPoint(x: 236, y: 224),
-    "middlegame": CGPoint(x: 318, y: 224),
-    "personalities": CGPoint(x: 146, y: 336), "lensEval": CGPoint(x: 236, y: 336),
-    "endgames": CGPoint(x: 101, y: 448),
-    "endgamesPawn": CGPoint(x: 56, y: 560), "endgamesRook": CGPoint(x: 146, y: 560),
-    "boards": CGPoint(x: 36, y: 710), "pieces": CGPoint(x: 107, y: 710), "decks": CGPoint(x: 179, y: 710),
-    "styles": CGPoint(x: 251, y: 710), "icons": CGPoint(x: 322, y: 710),
-  ]
+  static let row: CGFloat = 132
+  static let stylesY: CGFloat = 6 * row + 30
+  static let height: CGFloat = stylesY + 100
+
+  /// Where each item sits on a grid 358 wide: x is the node's center, y its top.
+  static let spots: [String: CGPoint] = {
+    let r = row
+    return [
+      "sidePicker": CGPoint(x: 48, y: 0), "openingPicker": CGPoint(x: 48, y: r), "freeform": CGPoint(x: 48, y: 2 * r),
+      "personalities": CGPoint(x: 48, y: 3 * r),
+      "lensPawns": CGPoint(x: 150, y: 0), "lensStructure": CGPoint(x: 234, y: 0), "lensEndgamePawns": CGPoint(x: 314, y: 0),
+      "lensPieces": CGPoint(x: 150, y: r), "lensControl": CGPoint(x: 234, y: r), "lensEndgamePieces": CGPoint(x: 314, y: r),
+      "lensKings": CGPoint(x: 150, y: 2 * r), "lensEndgameKings": CGPoint(x: 234, y: 2 * r),
+      "lensEval": CGPoint(x: 150, y: 3 * r), "lensEvalHistory": CGPoint(x: 234, y: 3 * r),
+      "middlegame": CGPoint(x: 48, y: 4 * r), "lensPlan": CGPoint(x: 150, y: 4 * r), "endgames": CGPoint(x: 274, y: 4 * r),
+      "endgamesPawn": CGPoint(x: 234, y: 5 * r), "endgamesRook": CGPoint(x: 314, y: 5 * r),
+      "boards": CGPoint(x: 36, y: stylesY), "pieces": CGPoint(x: 107, y: stylesY), "decks": CGPoint(x: 179, y: stylesY),
+      "styles": CGPoint(x: 251, y: stylesY), "icons": CGPoint(x: 322, y: stylesY),
+    ]
+  }()
+
+  /// A lens upgrade's medallion is smaller, its center level with its lens's.
+  static func size(_ item: ShopItem) -> CGFloat { item.feature?.isLensUpgrade == true ? 36 : 48 }
 
   var body: some View {
     GeometryReader { geo in
@@ -123,12 +138,7 @@ private struct ShopTree: View {
         Canvas { context, _ in
           for item in SHOP {
             for need in item.needs {
-              guard let a = Self.spots[need], let b = Self.spots[item.id] else { continue }
-              var path = Path()
-              path.move(to: CGPoint(x: a.x * k, y: a.y + 90))
-              path.addLine(to: CGPoint(x: a.x * k, y: a.y + 99))
-              path.addLine(to: CGPoint(x: b.x * k, y: a.y + 99))
-              path.addLine(to: CGPoint(x: b.x * k, y: b.y - 5))
+              guard let path = line(from: need, to: item, k: k) else { continue }
               let owned = store.state.unlocked.contains(need)
               var layer = context
               layer.opacity = lit == nil || (lit!.contains(need) && lit!.contains(item.id)) ? 1 : 0.28
@@ -138,27 +148,57 @@ private struct ShopTree: View {
           }
         }
         Text("Styles").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.text2)
-          .offset(x: 8, y: 680).opacity(lit == nil ? 1 : 0.28)
+          .offset(x: 8, y: Self.stylesY - 30).opacity(lit == nil ? 1 : 0.28)
         ForEach(SHOP) { item in
           if let spot = Self.spots[item.id] {
+            let size = Self.size(item)
             ShopNode(item: item, status: store.state.status(item), selected: selected == item.id,
-              purchase: purchase?.id == item.id ? purchase : nil, balance: store.state.pawns)
-              .frame(width: 100)
-              .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(ShopView.space)) } action: { frames[item.id] = medallion($0) }
+              purchase: purchase?.id == item.id ? purchase : nil, balance: store.state.pawns, size: size)
+              .frame(width: size < 48 ? 80 : 100)
+              .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(ShopView.space)) } action: {
+                frames[item.id] = CGRect(x: $0.midX - size / 2, y: $0.minY, width: size, height: size)
+              }
+              .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { heights[item.id] = $0 }
               .opacity(lit == nil || lit!.contains(item.id) ? 1 : 0.28)
-              .offset(x: spot.x * k - 50, y: spot.y)
+              .offset(x: spot.x * k - (size < 48 ? 40 : 50), y: spot.y + (48 - size) / 2)
               .onTapGesture { onTap(item.id) }
           }
         }
       }
       .animation(.easeOut(duration: 0.35), value: selected)
     }
-    .frame(height: 812)
+    .frame(height: Self.height)
   }
 
-  /// The medallion inside a node's frame: its top 48 points, centered.
-  private func medallion(_ node: CGRect) -> CGRect {
-    CGRect(x: node.midX - 24, y: node.minY, width: 48, height: 48)
+  /// The line from an item to one that needs it. A lens upgrade sits on a straight line from
+  /// its lens, through the upgrade before it; the lenses chain straight down; Middlegame, beside
+  /// Plan, has none. Every other line leaves under its row's names and prices and turns once.
+  private func line(from need: String, to item: ShopItem, k: CGFloat) -> Path? {
+    guard let a = Self.spots[need], let b = Self.spots[item.id], let needed = shopItem(need) else { return nil }
+    if item.id == "middlegame" { return nil }
+    var path = Path()
+    if item.feature?.isLensUpgrade == true {
+      // From the nearest node to its left on the row: the lens or the upgrade before this one.
+      let left = Self.spots.filter { $0.value.y == a.y && $0.value.x < b.x }.max { $0.value.x < $1.value.x }
+      guard let left, let leftItem = shopItem(left.key) else { return nil }
+      let y = a.y + 24
+      path.move(to: CGPoint(x: left.value.x * k + Self.size(leftItem) / 2 + 6, y: y))
+      path.addLine(to: CGPoint(x: b.x * k - Self.size(item) / 2 - 6, y: y))
+      return path
+    }
+    let bottom = (heights[need] ?? 90) + a.y + (48 - Self.size(needed)) / 2
+    if a.x == b.x {
+      path.move(to: CGPoint(x: a.x * k, y: bottom + 2))
+      path.addLine(to: CGPoint(x: b.x * k, y: b.y - 6))
+      return path
+    }
+    // Under every name and price on the parent's row, so the line never crosses one.
+    let rowBottom = Self.spots.filter { $0.value.y == a.y }.map { a.y + (heights[$0.key] ?? 90) }.max() ?? bottom
+    path.move(to: CGPoint(x: a.x * k, y: bottom + 2))
+    path.addLine(to: CGPoint(x: a.x * k, y: rowBottom + 6))
+    path.addLine(to: CGPoint(x: b.x * k, y: rowBottom + 6))
+    path.addLine(to: CGPoint(x: b.x * k, y: b.y - 6))
+    return path
   }
 
   /// The item, what it needs and what needs it: the rest dims while its sheet is up.
@@ -175,13 +215,15 @@ private struct ShopNode: View {
   let selected: Bool
   let purchase: Purchase?
   let balance: Int
+  /// The medallion's width: smaller for a lens upgrade.
+  var size: CGFloat = 48
 
   var body: some View {
     VStack(spacing: 0) {
       medallion.padding(.bottom, 6)
       Text(item.name.replacingOccurrences(of: " styles", with: "")).font(.system(size: 12, weight: .semibold))
         .foregroundStyle(dim ? Theme.text3 : Theme.text).lineLimit(2).minimumScaleFactor(0.85)
-        .multilineTextAlignment(.center).frame(maxWidth: 100).fixedSize(horizontal: false, vertical: true)
+        .multilineTextAlignment(.center).frame(maxWidth: size < 48 ? 76 : 100).fixedSize(horizontal: false, vertical: true)
       price.frame(height: 16)
     }
     .contentShape(Rectangle())
@@ -209,9 +251,9 @@ private struct ShopNode: View {
       } else if case .short = status {
         ring(Double(balance) / Double(item.price), Theme.accent)
       }
-      Icon(name: status == .locked ? "lock" : shopIcon(item), size: 22).foregroundStyle(glyph(owned))
+      Icon(name: status == .locked ? "lock" : shopIcon(item), size: size < 48 ? 17 : 22).foregroundStyle(glyph(owned))
     }
-    .frame(width: 48, height: 48)
+    .frame(width: size, height: size)
     .overlay {
       if selected { Circle().strokeBorder(Theme.text, lineWidth: 2).padding(-5) }
     }
@@ -437,6 +479,7 @@ private struct FlyingPawn: View {
 func shopIcon(_ item: ShopItem) -> String {
   if item.feature == .lensPlan { return "shop.lensPlan" }
   if item.feature?.isLens == true { return "shop.lenses" }
+  if item.feature?.isLensUpgrade == true { return "shop.lensUpgrade" }
   if item.feature?.endgameFamily != nil { return "shop.endgames" }
   return "shop.\(item.id)"
 }

@@ -128,7 +128,7 @@ struct EndView: View {
           // The verdict runs past the lenses' row: over the buttons under it, not under them.
           .zIndex(1)
         if let lens {
-          LensLegend(kind: lens, endgame: isEndgame(shownFen), safety: marks?.safety).clearsLens($lens)
+          LensLegend(kind: lens, endgame: isEndgame(shownFen), safety: marks?.safety, parts: store.state.lensParts).clearsLens($lens)
         } else {
           below
         }
@@ -212,7 +212,7 @@ struct EndView: View {
   /// What a held lens draws over the shown position.
   private var marks: LensMarks? {
     guard let lens else { return nil }
-    return heldLens(lens, shownFen, run.color, cursor > 0 ? fens[cursor - 1] : nil)
+    return heldLens(lens, shownFen, run.color, cursor > 0 ? fens[cursor - 1] : nil, parts: store.state.lensParts)
   }
 
   /// The run's moves, a miss on the position it was asked in, then the blunder beside the engine's move.

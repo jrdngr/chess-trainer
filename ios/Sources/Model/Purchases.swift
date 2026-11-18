@@ -28,17 +28,17 @@ extension AppState {
 
   /// A purchase from the App Store, credited once per transaction: the unlock makes the whole
   /// feature tree yours (not the endgame families, cosmetics or openings); a pack adds its pawns.
-  /// Returns whether it was credited.
+  /// An unlock seen again still grants every feature, so items added to the tree later come with
+  /// it. Returns whether it was credited.
   @discardableResult
   public mutating func credit(_ product: CashProduct, transaction: String) -> Bool {
-    guard credited.insert(transaction).inserted else { return false }
-    switch product {
-    case .unlock:
+    let fresh = credited.insert(transaction).inserted
+    if product == .unlock {
       for item in FEATURE_TREE { unlocked.insert(item.id) }
       syncEndgameFamilies()
-    case .pawns2000, .pawns6000, .pawns13000:
-      pawns += product.pawns
     }
+    guard fresh else { return false }
+    pawns += product.pawns
     logEvent(AppEvent(kind: "cash", count: product.pawns, picked: product.rawValue, text: "balance \(pawns)"))
     return true
   }

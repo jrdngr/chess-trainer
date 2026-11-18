@@ -126,6 +126,10 @@ extension Icon {
     "shop.lenses": IconSpec(strokeWidth: 2, parts: [
       IconPart(.path("M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"), fill: .none, stroke: .current, opacity: (1, 1)),
       IconPart(.circle(12, 12, 2.6), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "shop.lensUpgrade": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.path("M2.5 13s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.circle(12, 13, 2.6), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.path("M19 1.5v6M16 4.5h6"), fill: .none, stroke: .current, opacity: (1, 1))]),
     "shop.lensPlan": IconSpec(strokeWidth: 2, parts: [
       IconPart(.path("M6.5 17.5c2-4 4.5-4 6-6.5s3.5-4 5-4.5"), fill: .none, stroke: .current, opacity: (1, 1)),
       IconPart(.circle(5, 19, 2), fill: .none, stroke: .current, opacity: (1, 1)),
@@ -138,8 +142,6 @@ extension Icon {
       IconPart(.path("M12 21v-8M12 13L6.5 5.5M12 13l5.5-7.5M4.5 8.5l2-3 3 1.3M19.5 8.5l-2-3-3 1.3"), fill: .none, stroke: .current, opacity: (1, 1))]),
     "shop.endgames": IconSpec(strokeWidth: 2, parts: [
       IconPart(.path("M6 21V4h11.5l-2.5 4 2.5 4H6"), fill: .none, stroke: .current, opacity: (1, 1))]),
-    "shop.guides": IconSpec(strokeWidth: 2, parts: [
-      IconPart(.path("M5 5.5A2.5 2.5 0 0 1 7.5 3H19v15H7.5A2.5 2.5 0 0 0 5 20.5zM5 20.5A1.5 1.5 0 0 0 6.5 22H19v-4"), fill: .none, stroke: .current, opacity: (1, 1))]),
     "shop.personalities": IconSpec(strokeWidth: 2, parts: [
       IconPart(.circle(12, 8, 3.5), fill: .none, stroke: .current, opacity: (1, 1)),
       IconPart(.path("M5 20c1-4 4-5.5 7-5.5s6 1.5 7 5.5"), fill: .none, stroke: .current, opacity: (1, 1))]),

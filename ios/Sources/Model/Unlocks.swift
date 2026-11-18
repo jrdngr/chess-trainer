@@ -8,6 +8,9 @@ public enum ShopFeature: String, Sendable, Codable, CaseIterable {
   case sidePicker
   /// One lens each, in a chain: Pawns, Pieces, Kings, Eval. Plan, beside the lenses, is its own.
   case lensPawns, lensPieces, lensKings, lensEval, lensPlan
+  /// Upgrades, each adding a part to its lens: structure names and endgame pawns to Pawns,
+  /// square control and endgame pieces to Pieces, endgame kings to Kings, eval history to Eval.
+  case lensStructure, lensEndgamePawns, lensControl, lensEndgamePieces, lensEndgameKings, lensEvalHistory
   /// Any Opening or one of yours on Home.
   case openingPicker
   /// Freeform runs.
@@ -64,18 +67,23 @@ public struct ShopItem: Equatable, Sendable, Identifiable {
 /// Everything in the shop, in its tree's order.
 public let SHOP: [ShopItem] = [
   ShopItem("sidePicker", "Side picker", .features, 50, feature: .sidePicker, about: "Play as White, Black, or random."),
-  ShopItem("lensPawns", "Pawns lens", .features, 300, feature: .lensPawns, about: "Tap it under the board in a game to show weak and passed pawns."),
-  ShopItem("lensPieces", "Pieces lens", .features, 500, needs: ["lensPawns"], feature: .lensPieces, about: "Tap it under the board in a game to show loose and attacked pieces."),
-  ShopItem("lensKings", "Kings lens", .features, 800, needs: ["lensPieces"], feature: .lensKings, about: "Tap it under the board in a game to show how safe each king is."),
-  ShopItem("lensEval", "Eval lens", .features, 1_500, needs: ["lensKings"], feature: .lensEval, about: "Tap it under the board in a game to show the engine's evaluation."),
-  ShopItem("lensPlan", "Plan", .features, 1_000, feature: .lensPlan, about: "Tap it under the board in a game to show a plan for the position."),
-  ShopItem("openingPicker", "Opening picker", .features, 1_000, needs: ["sidePicker"], feature: .openingPicker, about: "Play a specific opening."),
+  ShopItem("openingPicker", "Opening picker", .features, 100, needs: ["sidePicker"], feature: .openingPicker, about: "Play a specific opening."),
   ShopItem("freeform", "Freeform", .features, 3_000, needs: ["openingPicker"], feature: .freeform, about: "Play any of your lines from move one."),
+  ShopItem("lensPawns", "Pawns lens", .features, 100, feature: .lensPawns, about: "Tap it under the board in a game to show weak and passed pawns and holes."),
+  ShopItem("lensStructure", "Structure names", .features, 400, needs: ["lensPawns"], feature: .lensStructure, about: "The Pawns lens names the pawn structure."),
+  ShopItem("lensEndgamePawns", "Endgame pawns", .features, 600, needs: ["lensPawns"], feature: .lensEndgamePawns, about: "In endgames, the Pawns lens shows each passed pawn's kind and its square."),
+  ShopItem("lensPieces", "Pieces lens", .features, 200, needs: ["lensPawns"], feature: .lensPieces, about: "Tap it under the board in a game to show how active each piece is."),
+  ShopItem("lensControl", "Square control", .features, 600, needs: ["lensPieces"], feature: .lensControl, about: "The Pieces lens shows who holds each square."),
+  ShopItem("lensEndgamePieces", "Endgame pieces", .features, 800, needs: ["lensPieces"], feature: .lensEndgamePieces, about: "In endgames, the Pieces lens judges rooks, bad bishops and kings."),
+  ShopItem("lensKings", "Kings lens", .features, 300, needs: ["lensPieces"], feature: .lensKings, about: "Tap it under the board in a game to show how safe each king is."),
+  ShopItem("lensEndgameKings", "Endgame kings", .features, 1_000, needs: ["lensKings"], feature: .lensEndgameKings, about: "In endgames, the Kings lens shows key squares, the opposition and cut-off lines."),
+  ShopItem("lensEval", "Eval lens", .features, 500, needs: ["lensKings"], feature: .lensEval, about: "Tap it under the board in a game to show the engine's evaluation."),
+  ShopItem("lensEvalHistory", "Eval history", .features, 1_200, needs: ["lensEval"], feature: .lensEvalHistory, about: "The Eval lens charts the run and shows what your last move cost."),
+  ShopItem("lensPlan", "Plan", .features, 1_000, feature: .lensPlan, about: "Tap it under the board in a game to show a plan for the position."),
   ShopItem("middlegame", "Middlegame", .features, 8_000, needs: ["lensPieces"], feature: .middlegame, about: "Play middlegames from your openings."),
   ShopItem("endgames", "Endgames", .features, 5_000, feature: .endgames, about: "Practice key endgames, starting with the basic mates and endings from your games."),
   ShopItem("endgamesPawn", "King and pawn", .content, 5_000, needs: ["endgames"], feature: .endgamesPawn, about: "Key squares, the opposition and the square rule, to win and to hold."),
   ShopItem("endgamesRook", "Rook endings", .content, 3_500, needs: ["endgames"], feature: .endgamesRook, about: "The Lucena and Philidor positions."),
-  ShopItem("guides", "Opening guides", .content, 2_000, needs: ["openingPicker"], each: true, about: "Learn the ideas behind an opening."),
   ShopItem("personalities", "Opponent personalities", .content, 5_000, needs: ["freeform"], about: "Opponents with their own play styles."),
   ShopItem("boards", "Board styles", .cosmetics, 3_000, each: true, about: "New board designs."),
   ShopItem("pieces", "Piece styles", .cosmetics, 3_000, each: true, about: "New piece sets."),
@@ -115,6 +123,32 @@ extension ShopFeature {
 
   /// A lens, Plan among them.
   public var isLens: Bool { self == .lensPlan || LensKind.allCases.contains { Self.lens($0) == self } }
+
+  /// An upgrade that adds a part to a lens.
+  public var isLensUpgrade: Bool { Self.lensUpgrades.contains(self) }
+
+  public static let lensUpgrades: [ShopFeature] = [
+    .lensStructure, .lensEndgamePawns, .lensControl, .lensEndgamePieces, .lensEndgameKings, .lensEvalHistory,
+  ]
+}
+
+/// The lens upgrades that are yours: what each lens draws beyond its first part.
+public struct LensParts: Equatable, Sendable {
+  public var owned: Set<ShopFeature>
+  public init(_ owned: Set<ShopFeature>) { self.owned = owned }
+  /// Every part, as Analysis shows.
+  public static let all = LensParts(Set(ShopFeature.lensUpgrades))
+  public func has(_ upgrade: ShopFeature) -> Bool { owned.contains(upgrade) }
+
+  /// Whether a lens draws its endgame marks in an endgame.
+  public func endgame(_ kind: LensKind) -> Bool {
+    switch kind {
+    case .pawns: has(.lensEndgamePawns)
+    case .pieces: has(.lensEndgamePieces)
+    case .kings: has(.lensEndgameKings)
+    case .eval: true
+    }
+  }
 }
 
 extension AppState {
@@ -123,6 +157,9 @@ extension AppState {
 
   /// Whether a lens is yours.
   public func owns(lens kind: LensKind) -> Bool { owns(.lens(kind)) }
+
+  /// The lens upgrades that are yours.
+  public var lensParts: LensParts { LensParts(Set(ShopFeature.lensUpgrades.filter { owns($0) })) }
 
   /// Whether any lens is yours, Plan among them.
   public var ownsALens: Bool { ShopFeature.allCases.contains { $0.isLens && owns($0) } }

@@ -78,18 +78,26 @@ than the owner's.
 | Item | Price |
 | --- | --- |
 | Side picker | 50 |
-| Pawns lens | 300 |
-| Pieces lens | 500 |
-| Kings lens | 800 |
-| Eval lens | 1,500 |
-| Plan | 1,000 |
-| Opening picker | 1,000 |
+| Opening picker | 100 |
 | Freeform | 3,000 |
+| Pawns lens | 100 |
+| Structure names (Pawns upgrade) | 400 |
+| Endgame pawns (Pawns upgrade) | 600 |
+| Pieces lens | 200 |
+| Square control (Pieces upgrade) | 600 |
+| Endgame pieces (Pieces upgrade) | 800 |
+| Kings lens | 300 |
+| Endgame kings (Kings upgrade) | 1,000 |
+| Eval lens | 500 |
+| Eval history (Eval upgrade) | 1,200 |
+| Plan | 1,000 |
 | Middlegame | 8,000 |
 | Endgames (Basic mates, From your games) | 5,000 |
-| All of it | 21,150 |
+| All of it | 22,850 |
 
-Lenses are free to use once owned.
+Lenses are free to use once owned. The base lenses are cheap so players
+use them early; each lens's first part is its most useful one, and its
+upgrades add the rest.
 
 ### Openings
 
@@ -117,13 +125,12 @@ Lenses are free to use once owned.
 | --- | --- |
 | Endgame family: King and pawn | 5,000 |
 | Endgame family: Rook endings | 3,500 |
-| Opening guide, each | 2,000 |
 | Opponent personalities | 5,000 |
 | Board, piece or deck style, each | 3,000 |
 | Full UI style, each | 10,000 |
 | App icon, each | 2,000 |
 
-Cosmetics, guides and personalities are pawn-only.
+Cosmetics and personalities are pawn-only.
 
 ### In play
 
@@ -149,8 +156,8 @@ Cosmetics, guides and personalities are pawn-only.
 
 Bigger packs give more pawns per dollar. $10 of packs always buys less than
 the feature tree, so the $10 unlock is always the better deal, and it's
-shown above the packs. There's no $1 pack. A $20 pack comes when cosmetics,
-guides and personalities ship.
+shown above the packs. There's no $1 pack. A $20 pack comes when cosmetics
+and personalities ship.
 
 ## Choosing openings
 
