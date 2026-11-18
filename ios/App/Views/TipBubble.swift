@@ -94,18 +94,22 @@ struct TipLayer: ViewModifier {
   func body(content: Content) -> some View {
     content
       .overlay(alignment: arrow == .up ? .bottom : .top) {
-        if let text {
-          Color.clear.frame(height: 0).overlay(alignment: arrow == .up ? .topLeading : .bottomLeading) {
-            TipBubble(text: text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
-              .fixedSize(horizontal: false, vertical: true)
-              .frame(minWidth: minWidth)
-              .padding(arrow == .up ? .top : .bottom, 12 + drop).padding(.horizontal, inset)
+        // Only the tip fades: an animation on the view itself would also animate whatever
+        // changed with it, such as the board showing as the round's deal hands over.
+        ZStack {
+          if let text {
+            Color.clear.frame(height: 0).overlay(alignment: arrow == .up ? .topLeading : .bottomLeading) {
+              TipBubble(text: text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(minWidth: minWidth)
+                .padding(arrow == .up ? .top : .bottom, 12 + drop).padding(.horizontal, inset)
+            }
+            .transition(.opacity)
           }
-          .transition(.opacity)
         }
+        .animation(.easeOut(duration: Self.fade), value: text)
       }
       .background { if text != nil { AnyTouch(action: onDismiss) } }
-      .animation(.easeOut(duration: Self.fade), value: text)
       .zIndex(raised || text != nil ? 2 : rest)
       .task(id: text != nil) {
         if text != nil {
