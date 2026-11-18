@@ -445,6 +445,7 @@ func shopIcon(_ item: ShopItem) -> String {
 /// Streak freezes: held for a missed day, used on their own, up to 2.
 private struct StreakFreezeRow: View {
   @Environment(AppStore.self) private var store
+  @State private var confirming = false
 
   var body: some View {
     let held = store.state.pawnStreak.freezes
@@ -458,9 +459,13 @@ private struct StreakFreezeRow: View {
           .font(.system(size: 13)).foregroundStyle(Theme.text2)
       }
       Spacer(minLength: 0)
-      Button { store.update { $0.buyFreeze() } } label: { PawnAmount(count: FREEZE_PRICE, size: 15) }
+      Button { confirming = true } label: { PawnAmount(count: FREEZE_PRICE, size: 15) }
         .buttonStyle(PlayButtonStyle(kind: afford && !full ? .accent : .plain, height: 40, inset: 14))
         .disabled(full || !afford)
+        .confirmationDialog("Buy a streak freeze?", isPresented: $confirming, titleVisibility: .visible) {
+          Button("Buy for \(FREEZE_PRICE.formatted()) pawns") { store.update { $0.buyFreeze() } }
+          Button("Cancel", role: .cancel) {}
+        }
     }
     .padding(14)
     .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))

@@ -161,6 +161,7 @@ struct MilestoneBadge: View {
 /// The quiet offer to repair yesterday, missed: in the Milestones sheet, never a popup.
 private struct StreakRepair: View {
   @Environment(AppStore.self) private var store
+  @State private var confirming = false
 
   var body: some View {
     let afford = store.state.pawns >= REPAIR_PRICE
@@ -171,9 +172,13 @@ private struct StreakRepair: View {
         Text("Yesterday was missed. Repair it any time today.").font(.system(size: 13)).foregroundStyle(Theme.text2)
       }
       Spacer(minLength: 0)
-      Button { store.update { $0.repairStreak() } } label: { PawnAmount(count: REPAIR_PRICE) }
+      Button { confirming = true } label: { PawnAmount(count: REPAIR_PRICE) }
         .buttonStyle(PlayButtonStyle(kind: afford ? .accent : .plain, height: 40, inset: 14))
         .disabled(!afford)
+        .confirmationDialog("Repair your streak?", isPresented: $confirming, titleVisibility: .visible) {
+          Button("Repair for \(REPAIR_PRICE.formatted()) pawns") { store.update { $0.repairStreak() } }
+          Button("Cancel", role: .cancel) {}
+        }
     }
     .padding(14)
     .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
