@@ -32,6 +32,8 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
   case freeformGame
   /// A Play game ends without a blunder, its moves left to look back on.
   case analysis
+  /// Pawns paid in a game take the balance to `END_SESSION_TIP_PAWNS` or more.
+  case endSession
 
   /* ── Home ── */
   /// A feature bought: its control on Home.
@@ -56,6 +58,7 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     case .lens: "Tap a lens for hints."
     case .freeformGame: "Freeform lets you play any of your lines from move 1. Your opponent will always stay within your Playbook."
     case .analysis: "The game\u{2019}s over. Step through your moves or try others on the board."
+    case .endSession: "Tap \u{2715} to end the session and spend your pawns in the Pawn Shop."
     case .sidePicker: "Choose your side."
     case .openingPicker: "Choose an opening to focus on."
     case .playbook: "Your openings live here as a tree. Tap one to see its branches, and a new one to unlock it."
@@ -71,6 +74,9 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     }
   }
 }
+
+/// The balance at which a game points out its close button: enough for the cheapest feature in the Pawn Shop.
+public let END_SESSION_TIP_PAWNS = 50
 
 extension Settings {
   public func seen(_ tip: GameTip) -> Bool { seenTips.contains(tip) }

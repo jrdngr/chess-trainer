@@ -196,10 +196,10 @@ struct RunView: View {
   /// The tips hung from the board.
   private static let boardTips: Set<GameTip?> = [.flashCards, .prepDone, .missedMove, .freeformGame]
 
-  /// The tips hung from the header: at the prep bar, or at the pawn counter.
-  private static let headerTips: Set<GameTip?> = [.prepBar, .pawns]
+  /// The tips hung from the header: at the prep bar, the pawn counter, or the close button.
+  private static let headerTips: Set<GameTip?> = [.prepBar, .pawns, .endSession]
 
-  private var headerArrowAt: CGFloat { model.tip == .pawns ? 0.92 : 0.5 }
+  private var headerArrowAt: CGFloat { model.tip == .pawns ? 0.92 : model.tip == .endSession ? 0.08 : 0.5 }
 
   /// The board's rim and what the status line calls it: a replay, adding moves, a moment to find, your prep.
   private var rim: (color: SwiftUI.Color, label: String)? {

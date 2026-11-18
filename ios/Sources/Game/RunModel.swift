@@ -722,6 +722,12 @@ public final class RunModel {
     store.update { $0.sawTip(next) }
   }
 
+  /// Pawns paid: what they are for, and in Play, once there are enough to spend, the way to the Pawn Shop.
+  private func offerPawnTips() {
+    offer(.pawns)
+    if round != nil && store.state.pawns >= END_SESSION_TIP_PAWNS { offer(.endSession) }
+  }
+
   /// A tap on the tip, or your next move.
   public func dismissTip() { tip = nil }
 
@@ -847,7 +853,7 @@ public final class RunModel {
         heldPrepPawn = award
       case .pawns(let award):
         pay(award)
-        offer(.pawns)
+        offerPawnTips()
       case .finish(let f):
         if case .blunder = f.how, !continued, store.state.pawns >= CONTINUE_PRICE { holdBlunder(f) } else { finished(f) }
       }
@@ -869,7 +875,7 @@ public final class RunModel {
     heldPrepPawn = nil
     pot = 0
     if fresh, let square = lastPotSquare { store.payPot(award, lastSquare: square) } else { pay(award) }
-    offer(.pawns)
+    offerPawnTips()
   }
 
   /// The held prep pawns, lost: growth was left with nothing added. The pot drains.

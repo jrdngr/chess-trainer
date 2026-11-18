@@ -28,6 +28,7 @@ and `firstGameGrowsThePlaybookFromMoveOne` in `PlayFlowTests.swift` for rule 2.
    - a lens owned, past your prep: tap a lens for hints
    - a Freeform game starts: play any of your lines
    - a Play game ends without a blunder: it is over, and its moves can be stepped through or played from
+   - pawns paid in Play take the balance to 50 or more: tap ✕ to end the session and spend them in the Pawn Shop (test: `enoughPawnsPointToTheShop` in `PlayFlowTests.swift`)
 3. **Home's tip** is a just bought side picker's or opening picker's, at
    its control on Home. No other bought feature has a tip. The Shop tab
    shows a badge with the number of items you can buy now, and none at

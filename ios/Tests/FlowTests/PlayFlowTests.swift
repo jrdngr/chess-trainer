@@ -98,6 +98,35 @@ import Testing
   }
 }
 
+/// Pawns paid in Play that take the balance to 50 point out the close button, the way to the Pawn Shop.
+@MainActor @Test func enoughPawnsPointToTheShop() async throws {
+  try await headless { app in
+    try await drillAsWhite(app)
+    app.store.update {
+      $0.settings.seenTips = Set(GameTip.allCases).subtracting([.endSession])
+      $0.pawns = END_SESSION_TIP_PAWNS - 1
+    }
+    try await playPrep(app)
+    #expect(app.state.pawns >= END_SESSION_TIP_PAWNS)
+    #expect(app.run?.tip == .endSession)
+    #expect(app.state.settings.seen(.endSession))
+  }
+}
+
+/// Short of 50, pawns paid say nothing about the Pawn Shop.
+@MainActor @Test func fewPawnsDontPointToTheShop() async throws {
+  try await headless { app in
+    try await drillAsWhite(app)
+    app.store.update {
+      $0.settings.seenTips = Set(GameTip.allCases).subtracting([.endSession])
+      $0.pawns = 0
+    }
+    try await playPrep(app)
+    #expect(app.state.pawns < END_SESSION_TIP_PAWNS)
+    #expect(app.run?.tip != .endSession && !app.state.settings.seen(.endSession))
+  }
+}
+
 /// A Play game ended before its prep was completed doesn't make the streak's day.
 @MainActor @Test func theStreakWaitsForACompletedPrep() async throws {
   try await headless { app in
