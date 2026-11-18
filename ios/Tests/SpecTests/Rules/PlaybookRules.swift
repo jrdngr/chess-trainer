@@ -84,4 +84,54 @@ import Testing
     #expect(mapWhen(.locked(.games(40))) == "Game 40")
     #expect(mapWhen(.locked(.green(7, of: 9))) == "Green 7/9")
   }
+
+  /// Rule 4: an opening's page counts your moves to it and under it, and its form is its last answers.
+  @Test func anOpeningsPageIsAboutItsPosition() throws {
+    let tree = openingTree(bookIndex)
+    var state = AppState()
+    state.addLine(state.ensurePlaybook(.w), line("d4 d5 c4 e6 Nc3 Nf6"), .fixed(.book))
+    state.addLine(state.playbookList[0].id, line("e4 e5 Nf3"), .fixed(.book))
+    let qgd = try #require(deepestNodeAlong(tree, line("d4 d5 c4 e6")))
+    for _ in 0..<4 { state.form[.w][qgd.id, default: []].append(1) }
+    var page = nodePage(state, tree, side: .w, id: qgd.id, line: qgd.sans)
+    #expect(page.movesKnown == 3, "d4, c4 and Nc3; not the 1.e4 line")
+    #expect(page.answers == [1, 1, 1, 1] && page.form == nil, "no form under 5 answers")
+    state.form[.w][qgd.id, default: []].append(0)
+    page = nodePage(state, tree, side: .w, id: qgd.id, line: qgd.sans)
+    #expect(page.form == 0.8)
+    let holes = curveHoles(curveSides(state), bookIndex, tree: tree)
+    #expect(page.linesToGrow == holes.filter { $0.line.count > 4 && $0.line.starts(with: qgd.sans) }.count)
+    #expect(page.linesToGrow > 0)
+  }
+
+  /// Rule 5: Grow takes the first hole under the opening an open level allows; else it says what it waits for.
+  @Test func growWaitsForTheCurve() throws {
+    let tree = openingTree(bookIndex)
+    let all = curveHoles([rep(.w, ["c4 e5 Nc3 Nf6 Nf3 Nc6"])], bookIndex, tree: tree)
+    let depth = all.filter { curveLevel($0) == 0 }
+    let first = all.filter { curveLevel($0) == 1 }
+    try #require(!depth.isEmpty && !first.isEmpty)
+    let green = CurveGate(games: 40, green: 3, openings: 3)
+    #expect(nodeGrow(depth, all, green) == .ready(depth[0]))
+    #expect(nodeGrow(first, all, green) == .after(next: depth[0], count: depth.count), "depth holes elsewhere grow first")
+    let short = CurveGate(games: 25, green: 2, openings: 3)
+    #expect(nodeGrow(first, first, short) == .level(1, games: 25, gamesNeeded: 40, green: 2, openings: 3))
+    #expect(nodeGrow([], all, green) == .none)
+  }
+
+  /// Rule 7: Delete takes the opening's last move and everything after it, and the undo puts it back.
+  @Test func deleteTakesTheOpeningAndUndoes() throws {
+    var state = AppState()
+    state.addLine(state.ensurePlaybook(.w), line("d4 d5 c4 e6 Nc3 Nf6"), .fixed(.book))
+    state.addLine(state.playbookList[0].id, line("d4 d5 c4 c6 Nf3"), .fixed(.book))
+    let qgd = line("d4 d5 c4 e6")
+    #expect(state.movesUnder(.w, qgd) == 3)
+    let removed = state.removeNodeAt(.w, qgd)
+    let undo = try #require(removed)
+    let rep = state.playbookList[0]
+    #expect(nodeAtLine(rep, qgd) == nil)
+    #expect(nodeAtLine(rep, line("d4 d5 c4 c6 Nf3")) != nil, "the Slav stays")
+    state.undo(undo)
+    #expect(nodeAtLine(state.playbookList[0], line("d4 d5 c4 e6 Nc3 Nf6")) != nil)
+  }
 }

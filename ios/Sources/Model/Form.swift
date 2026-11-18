@@ -3,8 +3,8 @@ import Foundation
 import Shared
 
 /// Form: how you are doing in an opening right now, from its last few prep
-/// answers, shown as signal bars. Endgames families have the same from their
-/// last few rounds.
+/// answers, 0 to 1, shown as a ring that fills from red to green. Endgames
+/// families have the same from their last few rounds.
 
 /// The answers an opening's form reads.
 public let FORM_ANSWERS = 10
@@ -22,11 +22,10 @@ public func formScore(correct: Bool, seconds: Double?) -> Double {
   return seconds < 3 ? 1 : seconds < 8 ? 0.8 : 0.5
 }
 
-/// Signal bars, 1 to 3, from the average of recent scores; nil without enough of them.
-public func formBars(_ scores: [Double], least: Int = FORM_MIN_ANSWERS) -> Int? {
+/// Form, 0 to 1: the average of recent scores; nil without enough of them.
+public func formOf(_ scores: [Double], least: Int = FORM_MIN_ANSWERS) -> Double? {
   guard scores.count >= least, !scores.isEmpty else { return nil }
-  let average = scores.reduce(0, +) / Double(scores.count)
-  return average >= 0.8 ? 3 : average >= 0.5 ? 2 : 1
+  return scores.reduce(0, +) / Double(scores.count)
 }
 
 /// Each opening's last answers, newest last, apart for each side: White's
@@ -59,16 +58,16 @@ public struct FormRecord: Equatable, Sendable, Codable {
     }
   }
 
-  /// An opening's bars on one side, or nil before it has enough answers.
-  public func bars(_ id: String, _ color: Color) -> Int? { formBars(scores(id, color)) }
+  /// An opening's form on one side, or nil before it has enough answers.
+  public func value(_ id: String, _ color: Color) -> Double? { formOf(scores(id, color)) }
 
   /// The sum of every answer: changes whenever form does.
   public var stamp: Double { (Array(openings.values) + Array(black.values)).reduce(0) { $0 + $1.reduce(0, +) } }
 }
 
-/// An Endgames family's bars from its last rounds: goals met out of them.
-public func endgameFormBars(_ results: [Bool]) -> Int? {
-  formBars(results.suffix(FORM_ROUNDS).map { $0 ? 1 : 0 }, least: FORM_MIN_ROUNDS)
+/// An Endgames family's form from its last rounds: the share of them with the goal met.
+public func endgameForm(_ results: [Bool]) -> Double? {
+  formOf(results.suffix(FORM_ROUNDS).map { $0 ? 1 : 0 }, least: FORM_MIN_ROUNDS)
 }
 
 extension AppState {
@@ -79,6 +78,6 @@ extension AppState {
     return holding.count == 1 ? holding[0] : playerOf(node.sans)
   }
 
-  /// An opening's bars on the side it is shown for.
-  public func formBars(_ node: OpeningNode) -> Int? { form.bars(node.id, formSide(node)) }
+  /// An opening's form on the side it is shown for.
+  public func formValue(_ node: OpeningNode) -> Double? { form.value(node.id, formSide(node)) }
 }

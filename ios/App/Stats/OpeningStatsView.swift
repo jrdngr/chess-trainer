@@ -47,7 +47,7 @@ struct OpeningStatsView: View {
     let rounds = roundsOf(stats)
     let acc = accuracy(answered: stats.answered, correct: stats.correct)
     return VStack(alignment: .leading, spacing: 0) {
-      FormBars(bars: store.state.formBars(node), scale: 3)
+      FormRing(form: store.state.formValue(node), size: 48, lineWidth: 4, value: true)
       HStack(alignment: .top, spacing: 0) {
         figure("\(rounds)", rounds == 1 ? "round" : "rounds")
         if let acc { figure(percentText(acc), "accuracy") }

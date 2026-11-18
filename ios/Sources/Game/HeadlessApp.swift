@@ -212,6 +212,25 @@ public final class HeadlessApp: SignalSink {
   /// The Playbook tab's tree for one side.
   public func map(_ side: ChessCore.Color) -> [MapNode] { playbookMap(state, tree, side: side) }
 
+  /// An opening of yours on the tree, as its page shows it.
+  public func page(_ node: MapNode) -> NodePage { nodePage(state, tree, side: node.color, id: node.id, line: node.line) }
+
+  /// Grow from an opening's page: the hole under it the curve allows now.
+  public func grow(_ node: MapNode) async throws {
+    guard case .ready(let gap) = page(node).grow else { throw Failure.notHere("Nothing under \(node.name) can grow yet") }
+    try await grow(gap)
+  }
+
+  /// Delete from an opening's page; the undo puts it back.
+  public func delete(_ node: MapNode) throws -> PlaybookUndo {
+    var undo: PlaybookUndo?
+    store.update { undo = $0.removeNodeAt(node.color, node.line) }
+    guard let undo else { throw Failure.notHere("\(node.name) isn't in your Playbook") }
+    return undo
+  }
+
+  public func undo(_ undo: PlaybookUndo) { store.update { $0.undo(undo) } }
+
   /// Buy an opening for sale on the tree, at its side's price.
   public func buyFamily(_ node: MapNode) throws {
     guard let id = node.family, node.forSale else { throw Failure.notHere("\(node.name) isn't for sale") }
@@ -268,13 +287,14 @@ public final class HeadlessApp: SignalSink {
     endgame = EndgameSession(store: store)
   }
 
-  /// Middlegame mode: a line drawn from your setup, or `line` exactly, built and started.
-  public func openMiddlegame(line: MiddlegameLine? = nil) async throws {
+  /// Middlegame mode: a line drawn from your setup, or through `opening` as an opening's
+  /// page on the Playbook tree starts it, built and started.
+  public func openMiddlegame(from opening: Selection? = nil) async throws {
     guard state.owns(.middlegame) else { throw Failure.notHere("Middlegame is locked: it is in the Pawn Shop") }
     closeModes()
-    let session = MiddlegameSession(store: store, tree: tree, index: index, exact: line)
+    let session = MiddlegameSession(store: store, tree: tree, index: index, opening: opening)
     middlegame = session
-    session.start(state.settings.middlegame, line: line)
+    session.start(state.settings.middlegame)
     await idle()
   }
 

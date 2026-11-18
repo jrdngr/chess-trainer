@@ -54,8 +54,6 @@ struct RunSummary: View {
 /// The prepared positions answered with something else, each one a jump to it.
 struct MissedPrepList: View {
   let misses: [Miss]
-  var hints: [Int: TidyFind] = [:]
-  var onTidy: ((TidyFind) -> Void)? = nil
   let onSeek: (Int) -> Void
 
   var body: some View {
@@ -64,7 +62,6 @@ struct MissedPrepList: View {
         PlaySection(title: "Missed your prep")
         ListCard {
           ForEach(misses, id: \.ply) { miss in
-            VStack(spacing: 0) {
             Button { onSeek(miss.ply) } label: {
               HStack(spacing: 12) {
                 Text("\(moveNumber(miss.ply))\(miss.ply % 2 == 0 ? "." : "...") \(miss.played)")
@@ -76,8 +73,6 @@ struct MissedPrepList: View {
               .padding(.horizontal, 16).frame(minHeight: 48).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            if let hint = hints[miss.ply], let onTidy { OffPrepHint(find: hint, onTidy: { onTidy(hint) }, compact: true) }
-            }
           }
         }
       }

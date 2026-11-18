@@ -121,11 +121,11 @@ struct BrowsePicker: View {
 
   private func rowView(_ ctx: BrowseContext, _ row: BrowseRow) -> some View {
     let at = nodeAt(ctx.tree, row.sans)
-    let bars = at.flatMap { ctx.state.formBars($0) }
+    let form = at.flatMap { ctx.state.formValue($0) }
     return Button { tapRow(row) } label: {
       HStack(spacing: 12) {
         BrowseRowLabel(row: row)
-        if bars != nil { FormBars(bars: bars) }
+        if form != nil { FormRing(form: form) }
       }
       .padding(.horizontal, 14).padding(.vertical, 8).frame(minHeight: 56).contentShape(Rectangle())
       .modifier(RowTint(on: previewed == row.key))

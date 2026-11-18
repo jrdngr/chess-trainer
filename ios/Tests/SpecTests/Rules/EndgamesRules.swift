@@ -100,7 +100,7 @@ private func coordsOf(_ square: String) -> (Int, Int) {
     record.review(entry, success: true)
     record.review(entry, success: false)
     #expect(record.results[entry.family] == [true, false])
-    #expect(record.formBars(entry.family) == nil)
+    #expect(record.form(entry.family) == nil)
   }
 
   /// Rule 6.

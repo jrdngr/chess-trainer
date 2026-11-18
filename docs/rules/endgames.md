@@ -29,7 +29,7 @@ Play run are in [past prep](past-prep.md).
    it due at once.
 6. **The next round** is the position due longest, else the first never
    played. A position never played isn't due; it waits its turn.
-7. **Each family has a form:** its last rounds, read as signal bars (see
+7. **Each family has a form:** its last rounds, read as a form ring (see
    [form](form.md)).
 8. **Bounties, not rounds, pay.** Each library ending pays once for its
    first clear (250), its first mission met (100) and mastery (500).

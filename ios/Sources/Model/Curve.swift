@@ -104,11 +104,7 @@ public func ownedOpenings(_ reps: [Playbook], _ tree: OpeningTree) -> [OwnedOpen
 }
 
 /// An opening's form on one side, the average of its last answers; nil before it has enough.
-public func formAverage(_ form: FormRecord, _ id: String, _ color: Color) -> Double? {
-  let scores = form.scores(id, color)
-  guard scores.count >= FORM_MIN_ANSWERS else { return nil }
-  return scores.reduce(0, +) / Double(scores.count)
-}
+public func formAverage(_ form: FormRecord, _ id: String, _ color: Color) -> Double? { form.value(id, color) }
 
 /// Whether an opening is green on one side: enough answers, averaging at least `CURVE_GREEN`.
 public func isGreen(_ form: FormRecord, _ id: String, _ color: Color) -> Bool { (formAverage(form, id, color) ?? 0) >= CURVE_GREEN }

@@ -203,8 +203,8 @@ public struct EndgameRecord: Equatable, Sendable, Codable {
     families = try c.decodeIfPresent(Set<String>.self, forKey: .families)
   }
 
-  /// A family's form: signal bars from its last rounds, or nil before it has enough.
-  public func formBars(_ family: String) -> Int? { endgameFormBars(results[family] ?? []) }
+  /// A family's form from its last rounds, or nil before it has enough.
+  public func form(_ family: String) -> Double? { endgameForm(results[family] ?? []) }
 
   /// Every position to play: the library's families that are yours, then your saved ones.
   public var entries: [EndgameEntry] {

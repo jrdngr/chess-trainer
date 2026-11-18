@@ -4,7 +4,7 @@ import Engine
 import Model
 import Observation
 
-/// A line your Playbook asked for, to play out exactly: from the opening sheet.
+/// A line to play out exactly: the one a run drew, for Same line.
 public struct MiddlegameLine: Equatable, Sendable {
   public var color: ChessCore.Color
   public var sans: [String]
@@ -24,8 +24,9 @@ public struct MiddlegameLine: Equatable, Sendable {
 public final class MiddlegameSession {
   public let tree: OpeningTree
   public let index: ReferenceIndex
-  /// The exact line to play out; nil to draw one from your setup each run.
-  public let exact: MiddlegameLine?
+  /// The opening to draw lines through, from its page on the Playbook tree, as
+  /// if picked in the opening picker; nil draws from the round's selection.
+  public let opening: Selection?
   @ObservationIgnored private let store: AppStore
 
   public private(set) var model: RunModel?
@@ -37,20 +38,19 @@ public final class MiddlegameSession {
   @ObservationIgnored public var onFail: ((_ message: String, _ close: Bool) -> Void)?
   @ObservationIgnored private var job: Task<Void, Never>?
 
-  public init(store: AppStore, tree: OpeningTree, index: ReferenceIndex, exact: MiddlegameLine? = nil) {
+  public init(store: AppStore, tree: OpeningTree, index: ReferenceIndex, opening: Selection? = nil) {
     self.store = store
     self.tree = tree
     self.index = index
-    self.exact = exact
+    self.opening = opening
   }
 
   private var services: GameServices { store.services }
 
   /// Draw a line from the setup (or take `line`), build its handoff, then begin the run there.
-  /// A run from the opening sheet draws its next lines through that line's own opening.
   public func start(_ saved: RunPrefs, line: MiddlegameLine? = nil) {
     let prefs = middlegamePrefs(saved)
-    let selection = (line ?? exact).map(selectionOf) ?? store.takeRoundSelection()
+    let selection = line.map(selectionOf) ?? opening ?? store.takeRoundSelection()
     let seed = (Env.random() * 2_147_483_648).rounded(.down)
     var options = runStart(prefs, selection, store.state, tree, seed: seed)
     guard let drawn = line ?? startRun(options).map({ begun -> MiddlegameLine in
@@ -60,7 +60,7 @@ public final class MiddlegameSession {
       !drawn.sans.isEmpty
     else {
       services.emit(.toast("No line to play out here"))
-      onFail?("No line to play out here", exact != nil && model == nil)
+      onFail?("No line to play out here", opening != nil && model == nil)
       return
     }
     options.color = drawn.color == .w ? .w : .b
@@ -86,7 +86,7 @@ public final class MiddlegameSession {
           store: self.store, tree: self.tree, index: self.index, engine: engine)
       else {
         self.services.emit(.toast("This line couldn't be played out"))
-        self.onFail?("This line couldn't be played out", self.exact != nil)
+        self.onFail?("This line couldn't be played out", self.opening != nil)
         return
       }
       self.model = run

@@ -260,7 +260,7 @@ struct QuickPicker: View {
       HStack(spacing: 8) {
         Text(label).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(2).minimumScaleFactor(0.85)
           .frame(maxWidth: .infinity, alignment: .leading)
-        FormBars(bars: store.state.form.bars(id, side))
+        FormRing(form: store.state.form.value(id, side))
       }
       .padding(.horizontal, 12).padding(.vertical, 10).frame(maxWidth: .infinity, alignment: .leading)
       .background(tileBackground(chosen))
@@ -412,7 +412,7 @@ struct RecentHistory: View {
         Text(openingLabel(catalog, node)).font(.system(size: 15, weight: .semibold))
           .foregroundStyle(chosen ? Theme.accent : Theme.text).lineLimit(1)
         Spacer(minLength: 4)
-        FormBars(bars: store.state.form.bars(pick.opening, recentSide(pick, catalog, node)))
+        FormRing(form: store.state.form.value(pick.opening, recentSide(pick, catalog, node)))
       }
       .padding(.horizontal, 14).frame(minHeight: 50).contentShape(Rectangle())
     }

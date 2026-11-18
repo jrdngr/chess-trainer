@@ -66,7 +66,7 @@ struct EndgameHomeView: View {
       HStack(spacing: 12) {
         Text(family.name).font(.system(size: 17, weight: .heavy)).foregroundStyle(Theme.text)
         Spacer()
-        FormBars(bars: record.formBars(family.id))
+        FormRing(form: record.form(family.id))
       }
       .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 6)
       ForEach(rows, id: \.id) { entry in
@@ -259,7 +259,7 @@ struct EndgameRoundView: View {
       }
       HStack(spacing: 8) {
         Text(game.entry.family == "games" ? "From your games" : familyName).font(.system(size: 13)).foregroundStyle(Theme.text3)
-        FormBars(bars: store.state.endgames.formBars(game.entry.family))
+        FormRing(form: store.state.endgames.form(game.entry.family))
       }
       HStack(spacing: 8) {
         Button(action: onClose) { Text("Library").frame(maxWidth: .infinity) }

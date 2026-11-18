@@ -88,20 +88,6 @@ struct SectionHead: View {
   }
 }
 
-/// Nothing to show yet, and what would fill it.
-struct EmptyNote: View {
-  var title: String
-  var hint: String? = nil
-
-  var body: some View {
-    VStack(spacing: 4) {
-      Text(title).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text2)
-      if let hint { Text(hint).font(.system(size: 14)).foregroundStyle(Theme.text3).multilineTextAlignment(.center) }
-    }
-    .frame(maxWidth: .infinity).padding(.vertical, 40).padding(.horizontal, 20)
-  }
-}
-
 /// Opens the settings of the mode in play, from its top bar.
 extension EnvironmentValues {
   @Entry var openModeSettings: (() -> Void)? = nil

@@ -22,7 +22,6 @@ struct EndView: View {
   /// Middlegame's: the same line played out again.
   let onSameLine: (() -> Void)?
   @Environment(AppStore.self) private var store
-  @Environment(\.openTidy) private var openTidy
   /// How many of the run's moves are on the board.
   @State private var cursor: Int
   @State private var lens: LensKind?
@@ -69,13 +68,6 @@ struct EndView: View {
   private var weighed: String { onBlunder ? (applySan(run.fen, blunder!.played)?.after ?? shownFen) : shownFen }
 
   private func seek(_ n: Int) { cursor = max(0, min(last, n)) }
-
-  /// The misses Tidy has a switch for; only when there is a Tidy to go to.
-  private var hints: [Int: TidyFind] {
-    guard openTidy != nil, let index = store.index else { return [:] }
-    let rep = store.state.playbookList.first { $0.color == run.color }
-    return tidyHints(finish.ended.misses, rep, index, model.round != nil ? AUTO_GROWTH : store.state.settings.growth)
-  }
 
   var body: some View {
     VStack(spacing: 0) {
@@ -183,7 +175,7 @@ struct EndView: View {
       if let blunder { compare(blunder) }
       Group {
         VStack(spacing: 0) {
-          MissedPrepList(misses: finish.ended.misses, hints: hints, onTidy: openTidy, onSeek: seek)
+          MissedPrepList(misses: finish.ended.misses, onSeek: seek)
           if let handoff = model.handoff {
             MovesSurvivedList(
               tree: model.tree, line: Array(handoff.line.prefix(handoff.prep)), opening: playedNode.id,

@@ -329,49 +329,6 @@ func compactMoves(_ sans: [String]) -> String {
   sansToMoveText(sans).replacingOccurrences(of: ". ", with: ".")
 }
 
-/// A form's color, from red through orange and amber to green.
-func formColor(_ form: Double) -> SwiftUI.Color {
-  if form < 0.4 { return Theme.bad }
-  if form < 0.55 { return SwiftUI.Color(hex: 0xfb923c) }
-  if form < CURVE_GREEN { return Theme.warn }
-  return Theme.good
-}
-
-/// An opening's form as an arc that fills clockwise from the top; nothing while there is too little to tell.
-struct FormArc: View {
-  var form: Double?
-  var lineWidth: CGFloat = 3
-
-  var body: some View {
-    if let form {
-      ZStack {
-        Circle().stroke(SwiftUI.Color.white.opacity(0.13), lineWidth: lineWidth)
-        Circle().trim(from: 0, to: max(0.001, min(1, form)))
-          .stroke(formColor(form), style: StrokeStyle(lineWidth: lineWidth, lineCap: form >= 1 ? .butt : .round))
-          .rotationEffect(.degrees(-90))
-      }
-      .padding(lineWidth / 2)
-    }
-  }
-}
-
-/// The form arc on its own, where the tab's rows had signal bars.
-struct FormRing: View {
-  var form: Double?
-
-  var body: some View {
-    Group {
-      if form != nil {
-        FormArc(form: form, lineWidth: 2.5).frame(width: 18, height: 18)
-      } else {
-        FormBars(bars: nil)
-      }
-    }
-    .accessibilityElement()
-    .accessibilityLabel(form.map { "Form \(Int(($0 * 100).rounded())) percent" } ?? "No form yet")
-  }
-}
-
 /// One opening on the tree: its disc with the move and the form arc, its name,
 /// and for a locked one when it grows.
 private struct MapNodeView: View {

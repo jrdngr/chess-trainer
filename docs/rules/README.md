@@ -16,7 +16,7 @@ Play:
 - [Past prep](past-prep.md): misses, blunders, the book phase and endgame rules.
 - [Scoring](scoring.md): moments and missions.
 - [Pawns](pawns.md): what earns them, and the daily streak.
-- [Form](form.md): each opening's signal bars.
+- [Form](form.md): each opening's form.
 - [The Pawn Shop](shop.md): what pawns buy, and what stays locked until then.
 - [Tips](tips.md): what each tip waits for, and that it shows once.
 - [Scheduling](scheduling.md): cards, need, staleness and weakness, in runs.

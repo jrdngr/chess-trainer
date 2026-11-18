@@ -37,7 +37,7 @@ struct OpeningsLadder: View {
     var node: OpeningNode
     var side: ChessCore.Color
     var label: String
-    var bars: Int?
+    var form: Double?
     var key: String { "\(side.rawValue) \(node.id)" }
   }
 
@@ -58,7 +58,7 @@ struct OpeningsLadder: View {
                 SideDot(side: row.side)
                 Text(row.label).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1).minimumScaleFactor(0.75)
                   .frame(maxWidth: .infinity, alignment: .leading)
-                FormBars(bars: row.bars).frame(width: 32, alignment: .trailing)
+                FormRing(form: row.form).frame(width: 32, alignment: .trailing)
               }
               .padding(.horizontal, 6).frame(minHeight: 36)
               .background(RoundedRectangle(cornerRadius: 10).fill(selected ? Theme.accent.opacity(0.16) : .clear))
@@ -83,7 +83,7 @@ struct OpeningsLadder: View {
   /// Every one of your openings, most worth focusing on first.
   private var rows: [Row] {
     store.yourOpenings().map { opening in
-      Row(node: opening.node, side: opening.side, label: shortLabel(opening.name), bars: store.state.form.bars(opening.node.id, opening.side))
+      Row(node: opening.node, side: opening.side, label: shortLabel(opening.name), form: store.state.form.value(opening.node.id, opening.side))
     }
   }
 }

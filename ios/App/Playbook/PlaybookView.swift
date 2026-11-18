@@ -6,64 +6,55 @@ import SwiftUI
 import UIKit
 
 /// The Playbook tab: one side at a time, its openings as a tree that grows from
-/// the first moves, with the openings the curve adds next locked in place.
-/// Tidy is in the more menu when it has something.
+/// the first moves, with the openings the curve adds next locked in place. A tap
+/// on an opening of yours opens its page.
 struct PlaybookView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
   /// The page open and the side shown: kept above the tabs, so Grow and Middlegame come back to them.
   @Binding var page: Page?
   @Binding var side: ChessCore.Color
-  var tidyFocus: TidyFind? = nil
-  /// The focus is taken: Tidy holds it from here.
-  var onConsumedTidyFocus: () -> Void = {}
   /// An opening for the tree to open at, from Home's Next line.
   var mapFocus: MapFocus? = nil
   var onConsumedMapFocus: () -> Void = {}
-  var onExplore: ([String], ChessCore.Color) -> Void = { _, _ in }
-  /// Grow an opening, from Growth's own pick for it.
-  var onGrow: (GrowOffer) -> Void = { _ in }
-  /// Play a line out to a middlegame, as this side.
-  var onMiddlegame: (ChessCore.Color, [String]) -> Void = { _, _ in }
+  /// Analysis on a line, seen from a side.
+  var onAnalyze: ([String], ChessCore.Color) -> Void = { _, _ in }
+  /// Grow a hole, from an opening's page.
+  var onGrow: (Gap) -> Void = { _ in }
+  /// Middlegame through an opening, as if picked in the opening picker.
+  var onMiddlegame: (Selection) -> Void = { _ in }
   /// Go to Home, after an opening page selected its opening.
   var onHome: () -> Void = {}
 
   @Environment(AppStore.self) private var store
-  @Environment(Toasts.self) private var toasts
-  @State private var scan = TidyScan(checks: EngineChecks.shared)
-  @State private var focus: TidyFind?
+  /// The tree's own focus, from an opening's page: the opening the curve grows next.
+  @State private var nextFocus: MapFocus?
 
   enum Page: Equatable {
-    case tidy
-    case opening(repId: String, name: String)
-    case browse(repId: String, nodeId: String?, title: String)
+    case opening(MapNode)
   }
 
   var body: some View {
-    let state = store.state
     Group {
       switch page {
-      case .tidy: TidyView(scan: scan, focus: focus, onFocusShown: { focus = nil }) { page = nil }
-      case .opening(let repId, let name):
+      case .opening(let node):
         OpeningPage(
-          tree: tree, index: index, repId: repId, name: name, onBack: { page = nil },
-          onOpenLine: { tipId, title in page = .browse(repId: repId, nodeId: tipId, title: title) },
-          onGrow: onGrow, onMiddlegame: onMiddlegame,
+          tree: tree, node: node, onBack: { page = nil }, onGrow: onGrow, onMiddlegame: onMiddlegame,
+          onAnalyze: onAnalyze,
+          onShowNext: {
+            if let next = nextMapNode(store.state, tree) {
+              nextFocus = MapFocus(side: next.color, id: next.id)
+              side = next.color
+            }
+            page = nil
+          },
           onSelected: {
             page = nil
             onHome()
           })
-      case .browse(let repId, let nodeId, let title):
-        if state.playbooks[repId] != nil {
-          PlaybookBrowser(
-            repId: repId, startNodeId: nodeId, title: title, onBack: { page = nil }, onExplore: onExplore)
-        } else {
-          Color.clear.onAppear { page = nil }
-        }
       case nil: list
       }
     }
-    .task(id: scanInput) { await scan.run(scanInput, tree, index) }
     .onChange(of: mapFocus) { _, focus in
       guard let focus else { return }
       page = nil
@@ -76,88 +67,22 @@ struct PlaybookView: View {
       } else if store.state.playbookList.first(where: { $0.color == side }) == nil, let other = store.state.playbookList.first {
         side = other.color
       }
-      guard let tidyFocus else { return }
-      focus = tidyFocus
-      page = .tidy
-      onConsumedTidyFocus()
     }
   }
 
-  private var scanInput: TidyScan.Input {
-    let state = store.state
-    return TidyScan.Input(
-      playbooks: state.playbooks, order: state.playbookOrder, selection: state.settings.selection,
-      growth: state.settings.growth)
-  }
-
   private var list: some View {
-    let reps = store.state.playbookList
-    let rep = reps.first { $0.color == side }
-    let untidy = scan.count ?? 0
-    return VStack(spacing: 0) {
-      AppBar(title: "Playbook", large: true) {
-        Menu {
-          if untidy > 0 {
-            Button { page = .tidy } label: { Label("Tidy (\(untidy))", systemImage: "wand.and.stars") }
-          }
-          if !reps.isEmpty {
-            ShareLink(item: exportFile(reps)) { Label("Export", systemImage: "square.and.arrow.up") }
-          }
-        } label: {
-          Icon(name: "more", size: 20).foregroundStyle(Theme.text).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
-        }
-        .accessibilityLabel("More")
-      }
+    VStack(spacing: 0) {
+      AppBar(title: "Playbook", large: true) {}
       SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")])
         .padding(.horizontal, 16)
       // With nothing on a side, its tree is every family for sale.
       PlaybookMapView(
-        tree: tree, side: side, focus: mapFocus, onConsumedFocus: onConsumedMapFocus,
-        onOpen: { node in if let rep { open(rep, node) } })
+        tree: tree, side: side, focus: mapFocus ?? nextFocus,
+        onConsumedFocus: {
+          if mapFocus != nil { onConsumedMapFocus() } else { nextFocus = nil }
+        },
+        onOpen: { node in page = .opening(node) })
         .padding(.top, 4)
     }
   }
-
-  /// An opening of yours on its page: the tab's row of that name, else the first row
-  /// along its line, else the tree of moves at it.
-  private func open(_ rep: Playbook, _ node: MapNode) {
-    let rows = playbookRows(rep, index)
-    let along = { (row: PlaybookRow) in
-      row.parts.contains { $0.path.starts(with: node.line) || node.line.starts(with: $0.path) }
-    }
-    if let row = rows.first(where: { $0.name == node.name }) ?? rows.first(where: along) {
-      page = .opening(repId: rep.id, name: row.name)
-    } else {
-      page = .browse(repId: rep.id, nodeId: nodeAtLine(rep, node.line)?.id, title: node.name)
-    }
-  }
-
-  /// Where along the app bar the tip points: its more button.
-
-  /// Your playbook with the log of how it got that way, as a JSON file to share.
-  private func exportFile(_ reps: [Playbook]) -> URL {
-    let date = String(ISO8601DateFormatter().string(from: Date()).prefix(10))
-    let url = FileManager.default.temporaryDirectory.appending(path: "playbook-\(date).json")
-    struct Export: Encodable {
-      var format = "chess-trainer-playbook"
-      var version = 1
-      var exportedAt: String
-      var playbooks: [Playbook]
-      var events: [AppEvent]
-    }
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-    if let data = try? encoder.encode(Export(exportedAt: date, playbooks: reps, events: store.state.events)) {
-      try? data.write(to: url)
-    }
-    return url
-  }
-}
-
-struct RepRef: Identifiable { var id: String }
-
-/// The book's opening a Playbook row stands for, where its form is kept:
-/// the shallowest node of that name, else the node at the row's first move order.
-@MainActor func openingNode(_ tree: OpeningTree, _ row: PlaybookRow) -> OpeningNode? {
-  row.parts.first.flatMap { familyNode(tree, row.name, path: $0.path) }
 }

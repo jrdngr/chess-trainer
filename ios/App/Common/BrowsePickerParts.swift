@@ -65,7 +65,7 @@ struct BrowseNameBar: View {
   var body: some View {
     let node = moves.isEmpty ? nil : nodeAt(ctx.tree, moves)
     let exact = node.flatMap { $0.depth > 0 && !$0.custom ? $0 : nil }
-    let bars = exact.flatMap { ctx.state.formBars($0) }
+    let form = exact.flatMap { ctx.state.formValue($0) }
     HStack(spacing: 8) {
       VStack(alignment: .leading, spacing: 2) {
         Text(lineName(ctx.tree, ctx.catalog, moves)).font(.system(size: 15.5, weight: .bold)).foregroundStyle(Theme.text)
@@ -73,7 +73,7 @@ struct BrowseNameBar: View {
           .lineLimit(1).truncationMode(.head)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
-      if bars != nil { FormBars(bars: bars) }
+      if form != nil { FormRing(form: form) }
       Button(action: onChoose) {
         Text("Choose").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.accentInk)
           .padding(.horizontal, 16).frame(minHeight: 44)

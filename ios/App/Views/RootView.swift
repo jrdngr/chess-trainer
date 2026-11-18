@@ -20,14 +20,12 @@ struct RootView: View {
   @State private var explore: (sans: [String], side: ChessCore.Color)?
   /// A line a mode sent to Analysis, opened over it: the mode stays underneath, and Back returns to it.
   @State private var analyzing: (sans: [String], side: ChessCore.Color)?
-  /// A find handed over from the end of a round, for Tidy to open on.
-  @State private var tidyFocus: TidyFind?
   /// The opening Home's Next line opens the Playbook tree at.
   @State private var mapFocus: MapFocus?
   /// A Growth sitting, from an opening's Grow.
   @State private var growing: GrowthModel?
   /// A line from the opening sheet for Middlegame mode to play out.
-  @State private var middlegameLine: MiddlegameLine?
+  @State private var middlegameFrom: Selection?
   /// The Pawn Shop item to open, from a locked control.
   @State private var shopFocus: String?
   @State private var playbookPage: PlaybookView.Page?
@@ -73,13 +71,6 @@ struct RootView: View {
       ZStack {
         modeView(mode, tree, index)
           .opacity(analyzing == nil ? 1 : 0).allowsHitTesting(analyzing == nil)
-          .environment(\.openTidy) { find in
-            // Leave the mode for Tidy, on the Playbook tab, open on the position the round ended at.
-            tidyFocus = find
-            analyzing = nil
-            self.mode = nil
-            tab = .playbook
-          }
         if let analyzing {
           AnalysisTab(tree: tree, index: index, line: analyzing.sans, orientation: analyzing.side) { self.analyzing = nil }
             .id(analyzing.sans.joined(separator: " "))
@@ -99,14 +90,14 @@ struct RootView: View {
         }, onPlaybook: { tab = .playbook })
           .background(Theme.background.ignoresSafeArea())
           .tabItem { Label(Tab.home.label, systemImage: Tab.home.symbol) }.tag(Tab.home)
-        PlaybookView(tree: tree, index: index, page: $playbookPage, side: $playbookSide, tidyFocus: tidyFocus, onConsumedTidyFocus: { tidyFocus = nil },
-          mapFocus: mapFocus, onConsumedMapFocus: { mapFocus = nil }, onExplore: { sans, side in
+        PlaybookView(tree: tree, index: index, page: $playbookPage, side: $playbookSide,
+          mapFocus: mapFocus, onConsumedMapFocus: { mapFocus = nil }, onAnalyze: { sans, side in
           explore = (sans, side)
           tab = .analysis
-        }, onGrow: { offer in
-          growing = GrowthModel(offer: offer, store: store, tree: tree, index: index)
-        }, onMiddlegame: { side, sans in
-          middlegameLine = MiddlegameLine(color: side, sans: sans)
+        }, onGrow: { gap in
+          growing = GrowthModel(gap: gap, store: store, tree: tree, index: index)
+        }, onMiddlegame: { selection in
+          middlegameFrom = selection
           returnTab = .playbook
           mode = .middlegame
         }, onHome: { tab = .home })
@@ -140,7 +131,7 @@ struct RootView: View {
     case .endgame: EndgameView { leave() }
     case .middlegame:
       MiddlegameView(
-        tree: tree, index: index, exact: middlegameLine, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) },
+        tree: tree, index: index, opening: middlegameFrom, onExit: { leave() }, onAnalyze: { analyzing = ($0, $1) },
         straight: !setupFirst)
     }
   }
@@ -158,7 +149,7 @@ struct RootView: View {
   private func leave() {
     analyzing = nil
     mode = nil
-    middlegameLine = nil
+    middlegameFrom = nil
     tab = returnTab ?? .home
     returnTab = nil
   }

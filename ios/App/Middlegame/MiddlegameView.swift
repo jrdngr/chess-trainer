@@ -13,8 +13,8 @@ import SwiftUI
 struct MiddlegameView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
-  /// The exact line to play out; nil to draw one from your setup each run.
-  var exact: MiddlegameLine?
+  /// The opening to draw lines through, from its page on the Playbook tree; nil draws from your setup.
+  var opening: Selection?
   let onExit: () -> Void
   /// Leave for the Analysis tab on this line, seen from this side.
   let onAnalyze: (_ sans: [String], _ side: ChessCore.Color) -> Void
@@ -35,14 +35,14 @@ struct MiddlegameView: View {
     .sheet(isPresented: $settings) {
       MiddlegameSetupView(tree: tree, onStart: { prefs in
         settings = false
-        session?.start(prefs, line: exact)
+        session?.start(prefs)
       }, onExit: { settings = false }, startLabel: "Restart")
       .presentationBackground(Theme.background)
     }
     .task {
       let session = self.session ?? made()
-      if let exact, session.model == nil, session.building == nil {
-        session.start(store.state.settings.middlegame, line: exact)
+      if opening != nil, session.model == nil, session.building == nil {
+        session.start(store.state.settings.middlegame)
       } else if straight && !opened && session.model == nil && session.building == nil {
         session.start(store.state.settings.middlegame)
       }
@@ -51,7 +51,7 @@ struct MiddlegameView: View {
   }
 
   private func made() -> MiddlegameSession {
-    let made = MiddlegameSession(store: store, tree: tree, index: index, exact: exact)
+    let made = MiddlegameSession(store: store, tree: tree, index: index, opening: opening)
     made.onFail = { message, close in
       toasts.show(message)
       if close { onExit() }
@@ -76,13 +76,13 @@ struct MiddlegameView: View {
         EndView(
           model: model, finish: finish, onNext: { session.start(store.state.settings.middlegame) },
           onAnalyze: { onAnalyze(model.run.played, model.run.color) }, onExit: exit,
-          onChangeOptions: exact == nil ? { session.setup() } : nil,
+          onChangeOptions: opening == nil ? { session.setup() } : nil,
           onSameLine: session.last == nil ? nil : { if let last = session.last { session.start(store.state.settings.middlegame, line: last) } })
       } else {
         RunView(model: model, onExit: exit, onAnalyze: { onAnalyze(model.run.played, model.run.color) })
           .environment(\.openModeSettings) { settings = true }
       }
-    } else if exact != nil || (straight && !opened) {
+    } else if opening != nil || (straight && !opened) {
       Theme.background.ignoresSafeArea()
     } else {
       MiddlegameSetupView(tree: tree, onStart: { session.start($0) }, onExit: onExit)
