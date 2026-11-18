@@ -143,15 +143,4 @@ private func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.
     let d4 = choosing.pick("slav")
     #expect(d4 && choosing.ids == ["english", "najdorf", "slav"])
   }
-
-  /// Rule 8.
-  @Test func linesSavedByHandStayInsideYourOpenings() {
-    let state = starter()
-    #expect(state.inYourFamilies(line("e4 e5 Nf3 Nc6 Bc4 Nf6"), .w))
-    #expect(state.inYourFamilies(line("e4 e5"), .w), "a line leading into an opening you have")
-    #expect(!state.inYourFamilies(line("e4 e5 Nf3 Nc6 Bb5"), .w))
-    #expect(!state.inYourFamilies(line("d4"), .w))
-    #expect(state.inYourFamilies(line("d4 d5 c4 e6 Nf3"), .b))
-    #expect(!state.inYourFamilies(line("d4 d5 c4 c6"), .b))
-  }
 }

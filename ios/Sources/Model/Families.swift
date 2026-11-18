@@ -139,11 +139,6 @@ extension AppState {
     return ownedFamilies(opening.color).contains { $0.id == id }
   }
 
-  /// Whether a line stays inside your openings: in one, or leading into one.
-  public func inYourFamilies(_ line: [String], _ color: Color) -> Bool {
-    ownedFamilies(color).contains { $0.holds(line) || $0.leadsInto(line) }
-  }
-
   /// Buy an opening at its side's price: its seed lines go into the Playbook, the price rises, and
   /// every third one bought earns a swap token. Returns whether it was bought.
   @discardableResult

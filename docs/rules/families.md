@@ -44,6 +44,3 @@ What pawns buy on the Playbook tree: a curated list of openings. Code:
    The picks go in free with their lines (rule 5) and don't raise a price.
    There are no other ways in: after this, new openings come only from the
    tree. Code: `Choosing.swift`.
-8. **Lines saved by hand stay inside your openings.** The board editor and
-   Analysis save a line only when it is in an opening you have, or leads
-   into one; anything else shows as not saved.

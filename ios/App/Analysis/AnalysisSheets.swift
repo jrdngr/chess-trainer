@@ -7,14 +7,12 @@ enum AnalysisSheet: Identifiable {
   case pgn
   case bookLine(BookLine)
   case game(ReferenceGame)
-  case save(SaveRequest)
 
   var id: String {
     switch self {
     case .pgn: return "pgn"
     case .bookLine(let line): return "line:\(line.id)"
     case .game(let game): return "game:\(game.id)"
-    case .save(let request): return "save:\(request.id)"
     }
   }
 }
@@ -35,16 +33,12 @@ extension AnalysisTab {
       BookLineSheet(line: line, onPlay: { moves in
         load(moves)
         close()
-      }, onAdd: { line in
-        sheet = .save(SaveRequest(sans: line.moves, note: line.summary, title: line.name, color: line.forColor))
       }, onClose: close)
     case .game(let game):
       GameSheet(game: game, onReplay: {
         load(game.moves, at: min(game.moves.count, visible.count + 2))
         close()
       }, onClose: close)
-    case .save(let request):
-      SaveSheet(sans: request.sans, preferColor: request.color, trim: true, title: request.title, source: .analysis, note: request.note, onClose: close)
     }
   }
 
@@ -59,13 +53,12 @@ extension AnalysisTab {
     #endif
   }
 
-  /// `ANALYSIS_SHEET=pgn|line|save|game` opens on a sheet.
+  /// `ANALYSIS_SHEET=pgn|line|game` opens on a sheet.
   static func debugSheet(_ line: [String]) -> AnalysisSheet? {
     #if DEBUG
       switch ProcessInfo.processInfo.environment["ANALYSIS_SHEET"] {
       case "pgn": return .pgn
       case "line": return bookLinesFrom(line).first.map { .bookLine($0) }
-      case "save": return .save(SaveRequest(sans: line, title: "Save line"))
       case "game": return topGames(walkSan(line).fens.last!).first.map { .game($0) }
       default: return nil
       }
@@ -115,11 +108,3 @@ struct AnalysisAppBar: View {
   }
 }
 
-/// What to save, as the Save sheet is asked: the whole line, a note, a side to suggest.
-struct SaveRequest: Identifiable {
-  var sans: [String]
-  var note: String?
-  var title: String
-  var color: ChessCore.Color?
-  var id: String { "\(title)|\(sans.joined(separator: " "))" }
-}

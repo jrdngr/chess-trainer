@@ -45,11 +45,10 @@ struct NamedLines: View {
   }
 }
 
-/// A named line, its ideas, and Play or Add: `BookLineSheet`.
+/// A named line, its ideas, and Play: `BookLineSheet`.
 struct BookLineSheet: View {
   let line: BookLine
   let onPlay: ([String]) -> Void
-  let onAdd: (BookLine) -> Void
   let onClose: () -> Void
 
   var body: some View {
@@ -74,10 +73,7 @@ struct BookLineSheet: View {
         .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface2))
       }
       Spacer().frame(height: 16)
-      HStack(spacing: 8) {
-        WideButton(title: "Play", icon: "play") { onPlay(line.moves) }
-        WideButton(title: "Add", icon: "plus", kind: .primary) { onAdd(line) }
-      }
+      WideButton(title: "Play", icon: "play", kind: .primary) { onPlay(line.moves) }
     }
   }
 }

@@ -4,17 +4,14 @@ import Game
 import Model
 import SwiftUI
 
-/// One side's tree, from a node: the board, the line, the moves here, the
-/// book's moves to add, and Explore. A new move played on the board
-/// opens the board editor there. `PlaybookBrowser`.
+/// One side's tree, from a node: the board, the line, the moves here, and
+/// Explore. Moves come in only through growth. `PlaybookBrowser`.
 struct PlaybookBrowser: View {
   let repId: String
   let startNodeId: String?
   let title: String
   let onBack: () -> Void
   let onExplore: ([String], ChessCore.Color) -> Void
-  /// Open the board editor on this line.
-  let onEdit: ([String]) -> Void
 
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
@@ -48,7 +45,6 @@ struct PlaybookBrowser: View {
     let kids = childrenOf(rep, at)
     let ourTurn = fenTurn(fen) == rep.color
     let opening = openingNameForPath(index, pathSans)
-    let book = lookup(index, fen)
 
     VStack(spacing: 0) {
       AppBar(title: opening?.name ?? title,
@@ -75,7 +71,7 @@ struct PlaybookBrowser: View {
           .padding(.top, 10)
           SectionHead(title: ourTurn ? "Your move" : "Replies", aside: kids.isEmpty ? nil : "\(kids.count)")
           if kids.isEmpty {
-            EmptyNote(title: ourTurn ? "No move here" : "No replies", hint: "Play a move to add it")
+            EmptyNote(title: ourTurn ? "No move here" : "No replies")
           } else {
             ListCard {
               ForEach(kids, id: \.id) { kid in
@@ -83,10 +79,6 @@ struct PlaybookBrowser: View {
                         onOpen: { goTo(kid.id, line) }, onMenu: { menuFor = kid.id })
               }
             }
-          }
-          if let book, !book.moves.isEmpty {
-            SectionHead(title: "The book", aside: "Tap to add")
-            BookMoves(entry: book, inPlaybook: Set(kids.map(\.san))) { san in addFromBook(rep, index, pathSans, san, at) }
           }
           SheetButton("Explore", style: .soft) { onExplore(pathSans, rep.color) }
             .padding(.top, 24)
@@ -142,22 +134,10 @@ struct PlaybookBrowser: View {
     if let existing = kids.first(where: { $0.san == move.san }) {
       nodeId = existing.id
       if lineTip.map({ pathTo(rep, $0).contains { $0.id == existing.id } }) != true { lineTip = existing.id }
-      return
     }
-    onEdit(pathSans + [move.san])
   }
 
-  private func addFromBook(_ rep: Playbook, _ index: ReferenceIndex, _ pathSans: [String], _ san: String, _ at: String?) {
-    store.update { $0.addLine(repId, pathSans + [san], .fixed(.book)) }
-    descend(san, at: at)
-    toasts.show("\(san) added")
-  }
 
-  private func descend(_ san: String, at: String?) {
-    guard let fresh = store.state.playbooks[repId], let child = childrenOf(fresh, at).first(where: { $0.san == san }) else { return }
-    nodeId = child.id
-    lineTip = child.id
-  }
 }
 
 struct LineRef: Identifiable {
@@ -165,28 +145,3 @@ struct LineRef: Identifiable {
   var id: String { sans.joined(separator: " ") }
 }
 
-/// The book's moves here, most played first, with what you already have marked; tap to add.
-struct BookMoves: View {
-  let entry: ExplorerEntry
-  let inPlaybook: Set<String>
-  let onPlay: (String) -> Void
-
-  var body: some View {
-    let total = max(1, entry.moves.reduce(0) { $0 + $1.games })
-    ListCard {
-      ForEach(entry.moves.prefix(8), id: \.san) { move in
-        Button { onPlay(move.san) } label: {
-          HStack(spacing: 12) {
-            Text(move.san).font(.system(size: 15, weight: .bold)).foregroundStyle(inPlaybook.contains(move.san) ? Theme.accent : Theme.text)
-              .frame(width: 56, alignment: .leading)
-            Text("\(Int(JSRound(move.games / total * 100)))%").font(.system(size: 13).monospacedDigit()).foregroundStyle(Theme.text2)
-            Spacer()
-            if inPlaybook.contains(move.san) { Icon(name: "check", size: 16).foregroundStyle(Theme.accent) }
-          }
-          .padding(.horizontal, 16).frame(minHeight: 44).contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-      }
-    }
-  }
-}

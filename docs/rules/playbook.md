@@ -1,11 +1,14 @@
 # What the Playbook holds
 
-Code: `BookMoves.swift`, `PlaybookMap.swift`, and the save and board-building sheets in the app.
+Code: `BookMoves.swift`, `PlaybookMap.swift`.
+
+Moves come in only through growth, choosing your openings, and buying
+them on the tree. Nothing is saved by hand.
 Tests: the `docs/rules/playbook.md` suite in
 `Tests/SpecTests/Rules/PlaybookRules.swift`.
 
 1. **Only book moves.** A move is a book move when the book has it at that
-   position, however rarely it is played. Saving a line keeps it up to the
+   position, however rarely it is played. Adding a line keeps it up to the
    first move the book lacks, for either side, and growth only offers book
    moves (see [growth](growth.md)).
 2. **The tab is a tree.** One side at a time, the first moves on top. Under
