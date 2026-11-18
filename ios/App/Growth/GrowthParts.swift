@@ -149,3 +149,13 @@ struct HoleAnswerList<Source: HoleAnswers>: View {
     .map { BoardArrow(from: $0.from, to: $0.to, color: Theme.text2, glow: nudgeColor($0.tone)) }
   return familiar + roles.reversed().map { BoardArrow(from: $0.from, to: $0.to, color: roleColor($0.role) ?? Theme.accent, glow: glow($0.san)) }
 }
+
+/// The color a nudge is drawn in: green toward, yellow toward from off the list, red away.
+func nudgeColor(_ tone: NudgeTone?) -> SwiftUI.Color {
+  switch tone {
+  case .toward: Theme.good
+  case .towardFar: Theme.warn
+  case .away: Theme.bad
+  default: Theme.text
+  }
+}
