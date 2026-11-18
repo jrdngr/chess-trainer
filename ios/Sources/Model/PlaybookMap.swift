@@ -141,7 +141,7 @@ public func playbookMap(_ state: AppState, _ tree: OpeningTree, side: Color) -> 
     let family = openingList(side).first { $0.roots.contains(node.sans) }?.id
     return MapNode(
       id: node.id, name: node.name, label: shown, move: node.depth == 1 ? moveLabel(node.sans) : node.sans.last ?? "",
-      color: side, line: node.sans, state: .owned, form: formAverage(state.form, node.id), lines: lines[node.id] ?? 0, shelf: shelfOf(tree, node)?.id,
+      color: side, line: node.sans, state: .owned, form: formAverage(state.form, node.id, side), lines: lines[node.id] ?? 0, shelf: shelfOf(tree, node)?.id,
       gap: nil, children: kids.map { build($0, node.name) } + lockedOrder(locked[node.id] ?? []) + forSale[node.id, default: []],
       family: family)
   }

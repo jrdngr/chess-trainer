@@ -13,3 +13,8 @@ suite in `Tests/SpecTests/Rules/FormRules.swift`.
 4. **Endgames families** keep their last 5 rounds, each a goal met or not,
    and read them the same way: 3 bars at 4 or 5 goals met of 5, 2 at 3, 1 at
    2 or fewer. Under 3 rounds, dashes.
+5. **Each side has its own form.** An answer playing White counts only for
+   White's form, one playing Black only for Black's, so White's 1.e4 and
+   Black's answers to it never mix. A page that shows an opening without a
+   side shows the side whose Playbook holds it, else the side whose move
+   names it. Saves from before the split read their form as White's.

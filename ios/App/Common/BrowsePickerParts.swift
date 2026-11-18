@@ -65,7 +65,7 @@ struct BrowseNameBar: View {
   var body: some View {
     let node = moves.isEmpty ? nil : nodeAt(ctx.tree, moves)
     let exact = node.flatMap { $0.depth > 0 && !$0.custom ? $0 : nil }
-    let bars = exact.flatMap { ctx.state.form.bars($0.id) }
+    let bars = exact.flatMap { ctx.state.formBars($0) }
     HStack(spacing: 8) {
       VStack(alignment: .leading, spacing: 2) {
         Text(lineName(ctx.tree, ctx.catalog, moves)).font(.system(size: 15.5, weight: .bold)).foregroundStyle(Theme.text)

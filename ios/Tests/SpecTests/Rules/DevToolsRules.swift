@@ -93,13 +93,13 @@ import Testing
     let owned = ownedOpenings(curveSides(s), tree)
     #expect(!owned.isEmpty)
     s.devAddPlayGames(40)
-    for node in owned { s.devSetForm(node.id, .green) }
+    for o in owned { s.devSetForm(o.node.id, o.color, .green) }
     let gate = curveGate(s, tree)
     #expect(gate.games == 40 && gate.allGreen && gate.met(1))
 
-    s.devSetForm(owned[0].id, .red)
+    s.devSetForm(owned[0].node.id, owned[0].color, .red)
     #expect(!curveGate(s, tree).allGreen)
-    s.devSetForm(owned[0].id, .none)
-    #expect(s.form.openings[owned[0].id] == nil)
+    s.devSetForm(owned[0].node.id, owned[0].color, .none)
+    #expect(s.form.scores(owned[0].node.id, owned[0].color).isEmpty)
   }
 }

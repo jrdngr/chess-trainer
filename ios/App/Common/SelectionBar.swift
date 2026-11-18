@@ -188,7 +188,7 @@ struct QuickPicker: View {
         if !yours.isEmpty {
           section("Your openings")
           sided(yours, side: side, limit: showAll ? nil : shownCount(side)) { opening in
-            openingTile(opening.node.id, shortLabel(opening.name), chosen: chosen(opening, selection)) {
+            openingTile(opening.node.id, opening.side, shortLabel(opening.name), chosen: chosen(opening, selection)) {
               choose(opening.node.id, opening.side)
             }
           }
@@ -200,7 +200,7 @@ struct QuickPicker: View {
         if !recentShown.isEmpty {
           section("Recent")
           sided(recentShown, side: side, limit: nil) { item in
-            openingTile(item.pick.opening, item.label, chosen: selection.opening == item.pick.opening) {
+            openingTile(item.pick.opening, item.side, item.label, chosen: selection.opening == item.pick.opening) {
               choose(item.pick.opening, nil, color: item.pick.color)
             }
           }
@@ -255,12 +255,12 @@ struct QuickPicker: View {
   }
 
   /// An opening's tile: its name and its form. The column or tab says its side.
-  private func openingTile(_ id: String, _ label: String, chosen: Bool, action: @escaping () -> Void) -> some View {
+  private func openingTile(_ id: String, _ side: ChessCore.Color, _ label: String, chosen: Bool, action: @escaping () -> Void) -> some View {
     Button(action: action) {
       HStack(spacing: 8) {
         Text(label).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
           .frame(maxWidth: .infinity, alignment: .leading)
-        FormBars(bars: store.state.form.bars(id))
+        FormBars(bars: store.state.form.bars(id, side))
       }
       .padding(.horizontal, 12).padding(.vertical, 10).frame(maxWidth: .infinity, alignment: .leading)
       .background(tileBackground(chosen))
@@ -412,7 +412,7 @@ struct RecentHistory: View {
         Text(openingLabel(catalog, node)).font(.system(size: 15, weight: .semibold))
           .foregroundStyle(chosen ? Theme.accent : Theme.text).lineLimit(1)
         Spacer(minLength: 4)
-        FormBars(bars: store.state.form.bars(pick.opening))
+        FormBars(bars: store.state.form.bars(pick.opening, recentSide(pick, catalog, node)))
       }
       .padding(.horizontal, 14).frame(minHeight: 50).contentShape(Rectangle())
     }

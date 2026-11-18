@@ -81,35 +81,44 @@ public struct CurveGate: Equatable, Sendable {
   public func met(_ level: Int) -> Bool { allGreen && games >= (CURVE_LEVEL_GAMES[level] ?? 0) }
 }
 
+/// An opening you have, on the side you play it.
+public struct OwnedOpening: Sendable {
+  public var node: OpeningNode
+  public var color: Color
+  public var id: String { "\(color.rawValue) \(node.id)" }
+}
+
 /// The openings you have on some sides: the deepest named opening each of your lines reaches.
-public func ownedOpenings(_ reps: [Playbook], _ tree: OpeningTree) -> [OpeningNode] {
+/// The same opening on both sides counts twice.
+public func ownedOpenings(_ reps: [Playbook], _ tree: OpeningTree) -> [OwnedOpening] {
   var seen = Set<String>()
-  var out: [OpeningNode] = []
+  var out: [OwnedOpening] = []
   for rep in reps {
     for line in leafLines(rep) {
-      guard let node = deepestNodeAlong(tree, line.sans), node.depth >= 2, seen.insert(node.id).inserted else { continue }
-      out.append(node)
+      guard let node = deepestNodeAlong(tree, line.sans), node.depth >= 2 else { continue }
+      let owned = OwnedOpening(node: node, color: rep.color)
+      if seen.insert(owned.id).inserted { out.append(owned) }
     }
   }
   return out
 }
 
-/// An opening's form, the average of its last answers; nil before it has enough.
-public func formAverage(_ form: FormRecord, _ id: String) -> Double? {
-  let scores = form.openings[id] ?? []
+/// An opening's form on one side, the average of its last answers; nil before it has enough.
+public func formAverage(_ form: FormRecord, _ id: String, _ color: Color) -> Double? {
+  let scores = form.scores(id, color)
   guard scores.count >= FORM_MIN_ANSWERS else { return nil }
   return scores.reduce(0, +) / Double(scores.count)
 }
 
-/// Whether an opening is green: enough answers, averaging at least `CURVE_GREEN`.
-public func isGreen(_ form: FormRecord, _ id: String) -> Bool { (formAverage(form, id) ?? 0) >= CURVE_GREEN }
+/// Whether an opening is green on one side: enough answers, averaging at least `CURVE_GREEN`.
+public func isGreen(_ form: FormRecord, _ id: String, _ color: Color) -> Bool { (formAverage(form, id, color) ?? 0) >= CURVE_GREEN }
 
 /// The Play games you have played.
 public func playGames(_ state: AppState) -> Int { state.games.filter { $0.mode == .play }.count }
 
 public func curveGate(_ state: AppState, _ tree: OpeningTree) -> CurveGate {
   let owned = ownedOpenings(curveSides(state), tree)
-  return CurveGate(games: playGames(state), green: owned.filter { isGreen(state.form, $0.id) }.count, openings: owned.count)
+  return CurveGate(games: playGames(state), green: owned.filter { isGreen(state.form, $0.node.id, $0.color) }.count, openings: owned.count)
 }
 
 /// The levels open now. Depth is always open. Level 2 opens once no hole is left

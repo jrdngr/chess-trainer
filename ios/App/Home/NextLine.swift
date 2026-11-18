@@ -36,7 +36,7 @@ struct NextLine: View {
   private var next: MapNode? {
     let state = store.state
     let key = state.playbookList.map { "\($0.id):\($0.nodes.count)" }.joined(separator: ",")
-      + "|\(lastAddedAt(state.playbookList))|\(state.games.count)|\(state.form.openings.values.reduce(0) { $0 + $1.reduce(0, +) })"
+      + "|\(lastAddedAt(state.playbookList))|\(state.games.count)|\(state.form.stamp)"
       + "|\(state.owns(.sidePicker))"
     return memo.get(key) { nextMapNode(state, tree) }
   }

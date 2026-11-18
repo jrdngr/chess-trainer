@@ -141,7 +141,7 @@ extension AppState {
   }
 
   /// An opening's form set by hand.
-  public mutating func devSetForm(_ id: String, _ level: DevForm) {
-    form.openings[id] = level.answers
+  public mutating func devSetForm(_ id: String, _ color: Color, _ level: DevForm) {
+    form[color][id] = level.answers
   }
 }

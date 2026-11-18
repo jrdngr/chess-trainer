@@ -3,8 +3,8 @@ import Foundation
 import Model
 import Testing
 
-private func answer(_ line: String, correct: Bool = true, seconds: Double? = 1) -> MoveResult {
-  MoveResult(mode: .run, line: line.isEmpty ? [] : line.split(separator: " ").map(String.init), color: .w, correct: correct, rated: true, at: 0, seconds: seconds)
+private func answer(_ line: String, correct: Bool = true, seconds: Double? = 1, color: Color = .w) -> MoveResult {
+  MoveResult(mode: .run, line: line.isEmpty ? [] : line.split(separator: " ").map(String.init), color: color, correct: correct, rated: true, at: 0, seconds: seconds)
 }
 
 @Suite("docs/rules/form.md") struct FormRules {
@@ -41,7 +41,26 @@ private func answer(_ line: String, correct: Bool = true, seconds: Double? = 1) 
     var state = AppState()
     for i in 0..<5 { state.recordMove(tree, answer("e4 e5", seconds: Double(i))) }
     let id = try #require(deepestNodeAlong(tree, line("e4 e5"))).id
-    #expect(state.form.bars(id) == 3)
+    #expect(state.form.bars(id, .w) == 3)
+  }
+
+  /// Rule 5: White's answers and Black's answers in the same opening are kept apart.
+  @Test func eachSideKeepsItsOwnForm() throws {
+    let tree = openingTree(bookIndex)
+    var form = FormRecord()
+    for _ in 0..<5 { form.add(tree, answer("e4 e5 Nf3", color: .w)) }
+    for _ in 0..<5 { form.add(tree, answer("e4 e5 Nf3", correct: false, color: .b)) }
+    let id = try #require(deepestNodeAlong(tree, line("e4 e5"))).id
+    #expect(form.bars(id, .w) == 3)
+    #expect(form.bars(id, .b) == 1)
+  }
+
+  /// Rule 5: a save from before the split reads its form as White's.
+  @Test func anOlderSavesFormIsWhites() throws {
+    let old = #"{"openings":{"e4 e5":[1,1,1,1,1]}}"#
+    let form = try JSONDecoder().decode(FormRecord.self, from: Data(old.utf8))
+    #expect(form.bars("e4 e5", .w) == 3)
+    #expect(form.bars("e4 e5", .b) == nil)
   }
 
   /// Rule 4.

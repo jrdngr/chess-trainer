@@ -121,7 +121,7 @@ struct BrowsePicker: View {
 
   private func rowView(_ ctx: BrowseContext, _ row: BrowseRow) -> some View {
     let at = nodeAt(ctx.tree, row.sans)
-    let bars = at.flatMap { ctx.state.form.bars($0.id) }
+    let bars = at.flatMap { ctx.state.formBars($0) }
     return Button { tapRow(row) } label: {
       HStack(spacing: 12) {
         BrowseRowLabel(row: row)

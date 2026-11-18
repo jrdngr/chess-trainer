@@ -97,11 +97,11 @@ private func morra() -> (AppState, String) {
   @Test func greenNeedsEnoughGoodAnswers() {
     var form = FormRecord()
     form.openings["x"] = Array(repeating: 1, count: FORM_MIN_ANSWERS - 1)
-    #expect(!isGreen(form, "x"))
+    #expect(!isGreen(form, "x", .w))
     form.openings["x"] = Array(repeating: 0.8, count: FORM_MIN_ANSWERS)
-    #expect(isGreen(form, "x"))
+    #expect(isGreen(form, "x", .w))
     form.openings["x"] = Array(repeating: 0.7, count: FORM_MIN_ANSWERS)
-    #expect(!isGreen(form, "x"))
+    #expect(!isGreen(form, "x", .w))
   }
 
   /// Rule 11: as Black a new reply is answered with the calmest of the three most played; as White the order stays.

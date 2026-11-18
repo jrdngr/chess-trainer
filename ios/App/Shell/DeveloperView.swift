@@ -238,16 +238,18 @@ struct DeveloperView: View {
         HStack(spacing: 8) {
           chip("+10 Play games") { store.devUpdate { $0.devAddPlayGames(10) } }
           chip("All green") {
-            let ids = ownedOpenings(curveSides(state), tree).map(\.id)
-            store.devUpdate { s in for id in ids { s.devSetForm(id, .green) } }
+            let owned = ownedOpenings(curveSides(state), tree)
+            store.devUpdate { s in for o in owned { s.devSetForm(o.node.id, o.color, .green) } }
           }
         }
         .padding(12)
-        ForEach(ownedOpenings(curveSides(state), tree), id: \.id) { node in
+        ForEach(ownedOpenings(curveSides(state), tree), id: \.id) { owned in
           VStack(alignment: .leading, spacing: 8) {
-            Text(node.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+            Text(owned.color == .w ? owned.node.name : "\(owned.node.name) (Black)").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
             SegmentedControl(
-              value: Binding(get: { formLevel(state.form, node.id) }, set: { level in store.devUpdate { $0.devSetForm(node.id, level) } }),
+              value: Binding(
+                get: { formLevel(state.form, owned.node.id, owned.color) },
+                set: { level in store.devUpdate { $0.devSetForm(owned.node.id, owned.color, level) } }),
               options: [(DevForm.green, "Green"), (.middle, "Middle"), (.red, "Red"), (.none, "None")]
             )
           }
@@ -315,9 +317,10 @@ struct DeveloperView: View {
     return daysBefore(now, 3).firstIndex(of: day).map { $0 + 1 }
   }
 
-  private func formLevel(_ form: FormRecord, _ id: String) -> DevForm {
-    guard let scores = form.openings[id], !scores.isEmpty else { return .none }
-    return DevForm.allCases.first { $0.answers == scores } ?? (isGreen(form, id) ? .green : .middle)
+  private func formLevel(_ form: FormRecord, _ id: String, _ color: ChessCore.Color) -> DevForm {
+    let scores = form.scores(id, color)
+    guard !scores.isEmpty else { return .none }
+    return DevForm.allCases.first { $0.answers == scores } ?? (isGreen(form, id, color) ? .green : .middle)
   }
 
   /* ── profiles ── */

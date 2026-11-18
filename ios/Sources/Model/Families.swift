@@ -184,7 +184,7 @@ extension AppState {
       guard let cut, let fresh = playbooks[repId], let node = nodeAtLine(fresh, Array(root.prefix(cut))) else { continue }
       removeNode(repId, node.id)
     }
-    for key in form.openings.keys where old.holds(key.split(separator: " ").map(String.init)) { form.openings[key] = nil }
+    for key in form[old.color].keys where old.holds(key.split(separator: " ").map(String.init)) { form[old.color][key] = nil }
   }
 
   /// An opening's seed lines into its side's Playbook, one per root.

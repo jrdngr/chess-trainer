@@ -83,7 +83,7 @@ struct OpeningsLadder: View {
   /// Every one of your openings, most worth focusing on first.
   private var rows: [Row] {
     store.yourOpenings().map { opening in
-      Row(node: opening.node, side: opening.side, label: shortLabel(opening.name), bars: store.state.form.bars(opening.node.id))
+      Row(node: opening.node, side: opening.side, label: shortLabel(opening.name), bars: store.state.form.bars(opening.node.id, opening.side))
     }
   }
 }

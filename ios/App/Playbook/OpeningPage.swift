@@ -46,7 +46,7 @@ struct OpeningPage: View {
       }
       ScrollView {
         VStack(spacing: 0) {
-          hero(row, node.flatMap { store.state.form.bars($0.id) })
+          hero(row, node.flatMap { store.state.form.bars($0.id, rep.color) })
           VStack(spacing: 8) {
             SheetButton("Select", icon: "check", style: .accent) { select(rep, node) }
               .disabled(node == nil)
