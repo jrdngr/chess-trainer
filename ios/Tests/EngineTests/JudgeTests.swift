@@ -39,3 +39,13 @@ struct JudgeTests {
     #expect(!far.ok, "far under the next best is a blunder")
   }
 }
+
+/// Scores read with a true minus sign, and zero as +0.00.
+@Test func scoresUseATrueMinus() {
+  func line(cp: Double? = nil, mate: Double? = nil) -> EngineLine { EngineLine(multipv: 1, depth: 1, cp: cp, mate: mate, pv: []) }
+  #expect(formatScore(line(cp: -35)) == "\u{2212}0.35")
+  #expect(formatScore(line(cp: 120)) == "+1.20")
+  #expect(formatScore(line(cp: 0)) == "+0.00")
+  #expect(formatScore(line(mate: -3)) == "\u{2212}M3")
+  #expect(formatScore(line(mate: 2)) == "M2")
+}
