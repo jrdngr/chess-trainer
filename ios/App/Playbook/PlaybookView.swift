@@ -32,8 +32,6 @@ struct PlaybookView: View {
   @Environment(Toasts.self) private var toasts
   @State private var scan = TidyScan(checks: EngineChecks.shared)
   @State private var focus: TidyFind?
-  /// The app bar's width, to point a tip at its more button.
-  @State private var barWidth: CGFloat = 393
 
   enum Page: Equatable {
     case tidy
@@ -95,8 +93,6 @@ struct PlaybookView: View {
   private var list: some View {
     let reps = store.state.playbookList
     let rep = reps.first { $0.color == side }
-    let tip: GameTip? = store.state.settings.seen(.playbook) ? nil : .playbook
-    let putAway = { dismissTip(store, tip) }
     let untidy = scan.count ?? 0
     return VStack(spacing: 0) {
       AppBar(title: "Playbook", large: true) {
@@ -112,8 +108,6 @@ struct PlaybookView: View {
         }
         .accessibilityLabel("More")
       }
-      .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { barWidth = $0 }
-      .tip(tip, when: tip != nil, arrowAt: barArrowAt, inset: 16, onDismiss: putAway)
       SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")])
         .padding(.horizontal, 16)
       // With nothing on a side, its tree is every family for sale.
@@ -139,11 +133,6 @@ struct PlaybookView: View {
   }
 
   /// Where along the app bar the tip points: its more button.
-  private var barArrowAt: CGFloat {
-    // The bar's 20pt sides, 38pt buttons; the tip spans the bar less 16pt each side.
-    let more = barWidth - 20 - 19
-    return (more - 16) / max(barWidth - 32, 1)
-  }
 
   /// Your playbook with the log of how it got that way, as a JSON file to share.
   private func exportFile(_ reps: [Playbook]) -> URL {

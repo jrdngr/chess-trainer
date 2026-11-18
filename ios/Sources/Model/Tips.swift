@@ -39,10 +39,6 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
   /// A feature bought: its control on Home.
   case sidePicker, openingPicker
 
-  /* ── the Playbook tab ── */
-  /// The tab opened.
-  case playbook
-
   public var text: String {
     switch self {
     case .flashCards: "Your openings are flashcards. Each move is graded on speed and accuracy."
@@ -61,7 +57,6 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     case .endSession: "Tap \u{2715} to end the session and spend your pawns in the Pawn Shop."
     case .sidePicker: "Choose your side."
     case .openingPicker: "Choose an opening to focus on."
-    case .playbook: "Your openings live here as a tree. Tap one to see its branches, and a new one to unlock it."
     }
   }
 
