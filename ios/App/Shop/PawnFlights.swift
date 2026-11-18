@@ -287,6 +287,7 @@ private struct PawnFlightLayer: View {
     // Out of the pot beside the prep bar.
     case .pot: return spots["pot"] ?? spots["prep"] ?? spots["board"]
     case .goal: return spots["goal"] ?? spots["board"]
+    case .marker: return spots["marker"] ?? spots["prep"] ?? spots["board"]
     case .board: return spots["board"].map { CGRect(x: $0.midX - 22, y: $0.midY - 22, width: 44, height: 44) }
     case .streak: return spots["streak"]
     }

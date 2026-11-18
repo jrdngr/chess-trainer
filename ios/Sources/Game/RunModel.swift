@@ -237,6 +237,15 @@ public final class RunModel {
   }
   public var run: Run { session.state.run }
 
+  /// The distance bar in the header, once your prep is behind you: your moves toward the next
+  /// marker and what it pays. Nil while the prep's bar shows: in your prep, and past it until
+  /// your first move there, so the prep's pot can pay out or drain.
+  public var marker: (moves: Int, pays: Int)? {
+    guard intro == .done else { return nil }
+    if session.pastPrep == 0 && !session.middlegame && prepLabel(session) != nil { return nil }
+    return nextMarker(session.pastPrep, middlegame: session.middlegame)
+  }
+
   @ObservationIgnored private var reachedFor: (played: [String], on: Bool)?
   /// The game has been an endgame at some point, so its endgame rules are on.
   public var endgameOn: Bool {

@@ -418,3 +418,19 @@ private func quietMove(_ fen: String) -> String? {
     #expect(run.headerFamily == "Sicilian Defense")
   }
 }
+
+/// Past the prep the header's bar counts toward the next distance marker; it waits for your first
+/// move there, so the prep's pot pays out under its own bar.
+@MainActor @Test func theDistanceBarTakesOverPastThePrep() async throws {
+  try await headless { app in
+    try await drillAsWhite(app)
+    #expect(app.run?.marker == nil, "in the prep, the prep's bar shows")
+    try await playPrep(app)
+    #expect(app.run?.marker == nil, "until the first move past it")
+    let run = try #require(app.run)
+    #expect(run.live && run.myTurn)
+    try await app.move(try #require(quietMove(run.run.fen)))
+    let marker = try #require(app.run?.marker)
+    #expect(marker == (1, 10))
+  }
+}

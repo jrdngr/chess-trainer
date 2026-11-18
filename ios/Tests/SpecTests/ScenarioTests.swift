@@ -25,6 +25,7 @@ private func sourceJSON(_ source: PawnSource) -> JSON {
   case .square(let square): return .string(square)
   case .pot: return "pot".json
   case .goal: return "goal".json
+  case .marker: return "marker".json
   case .board: return "board".json
   case .streak: return "streak".json
   }

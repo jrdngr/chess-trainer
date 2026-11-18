@@ -181,13 +181,19 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
     #expect((1...4).map { distancePawns($0, middlegame: true) } == [4, 6, 8, 8])
     var s = prepRanOut(try session(at: line("e4 e5 Nf3 Nc6 Bb5 a6")), bookIndex).session
     var paid: [Int] = []
+    var from: [PawnSource] = []
     for (mine, theirs) in [("Ba4", "Nf6"), ("O-O", "Be7"), ("Re1", "b5"), ("Bb3", "d6"), ("c3", "O-O"), ("h3", "Nb8")] {
       let step = judgedMove(s, ctx, judged(mine), 1, 0)
       paid += awards(step.effects).filter { $0.event == .distance }.map(\.count)
+      from += awards(step.effects).filter { $0.event == .distance }.map(\.source)
       s = engineMove(step.session, theirs).session
     }
     #expect(paid == [10])
+    #expect(from == [.marker])
     #expect(s.pastPrep == 6)
+    // The header's bar counts toward the next marker: one move past the first, the second pays 15.
+    #expect(nextMarker(s.pastPrep) == (1, 15))
+    #expect(nextMarker(4) == (4, 10) && nextMarker(14, middlegame: true) == (4, 8))
     // A move your prep had doesn't count.
     let prep = try session()
     let e4 = try #require(applySan(prep.state.run.fen, "e4"))

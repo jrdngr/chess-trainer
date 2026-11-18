@@ -291,6 +291,8 @@ struct RunView: View {
         if model.endgameOn {
           // Endgame rules, on for the rest of the game once it reaches an endgame: moves are judged by the result they keep.
           Text("ENDGAME").font(.system(size: 11, weight: .bold)).tracking(0.7).foregroundStyle(Theme.text2)
+        } else if let marker = model.marker {
+          MarkerBar(moves: marker.moves, height: 4).frame(maxWidth: 150)
         } else {
           HStack(spacing: 6) {
             PrepSegmentsView(span: model.span, height: 4).frame(maxWidth: 150).pawnSpot("prep")

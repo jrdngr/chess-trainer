@@ -366,7 +366,7 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     if expected.isEmpty {
       s.pastPrep += 1
       if s.pastPrep % DISTANCE_EVERY == 0 {
-        let award = PawnAward(.distance, at, count: distancePawns(s.pastPrep / DISTANCE_EVERY, middlegame: s.middlegame))
+        let award = PawnAward(.distance, .marker, count: distancePawns(s.pastPrep / DISTANCE_EVERY, middlegame: s.middlegame))
         scored.extras.pawns += award.count
         effects.append(.pawns(award))
       }

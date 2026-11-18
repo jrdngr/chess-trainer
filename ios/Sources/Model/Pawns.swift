@@ -72,6 +72,11 @@ public let DISTANCE_PAWNS = [10, 15, 20]
 /// The share of a marker Middlegame pays.
 public let MIDDLEGAME_DISTANCE_SHARE = 0.4
 
+/// Your moves toward the next distance marker, 0 to 4, and what it pays.
+public func nextMarker(_ pastPrep: Int, middlegame: Bool = false) -> (moves: Int, pays: Int) {
+  (pastPrep % DISTANCE_EVERY, distancePawns(pastPrep / DISTANCE_EVERY + 1, middlegame: middlegame))
+}
+
 /// What the `n`th distance marker of a run pays (from 1).
 public func distancePawns(_ n: Int, middlegame: Bool = false) -> Int {
   let full = DISTANCE_PAWNS[min(max(n, 1), DISTANCE_PAWNS.count) - 1]
@@ -107,6 +112,8 @@ public enum PawnSource: Equatable, Sendable {
   case pot
   /// The goal card, for a mission done.
   case goal
+  /// The pawn at the end of the distance bar in the header, for a distance marker.
+  case marker
   /// The board as a whole: an endgame reached, a held draw, an Endgames bounty.
   case board
   /// The streak ring on Home, for a streak day.

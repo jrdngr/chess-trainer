@@ -38,6 +38,38 @@ struct PrepSegmentsView: View {
   }
 }
 
+/// Past your prep, in the prep bar's place: a gold step for each of your moves toward the next
+/// distance marker, and the pawn its pawns pop out of, brighter with each step.
+struct MarkerBar: View {
+  let moves: Int
+  var height: CGFloat = 5
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var paid = 0
+
+  var body: some View {
+    HStack(spacing: 6) {
+      HStack(spacing: 3) {
+        ForEach(0..<DISTANCE_EVERY, id: \.self) { i in
+          RoundedRectangle(cornerRadius: 3).fill(i < moves ? Theme.pawn : SwiftUI.Color(hex: 0x3a3a48))
+        }
+      }
+      .frame(height: height)
+      .animation(.easeOut(duration: 0.2), value: moves)
+      PawnCoin(stroked: false, size: 13, fill: Theme.pawn)
+        .opacity(0.35 + 0.13 * Double(moves))
+        .keyframeAnimator(initialValue: 1.0, trigger: paid) { view, scale in view.scaleEffect(scale) } keyframes: { _ in
+          CubicKeyframe(reduceMotion ? 1 : 1.35, duration: 0.12)
+          CubicKeyframe(1, duration: 0.18)
+        }
+        .frame(width: 28, alignment: .leading)
+        .pawnSpot("marker")
+    }
+    .onChange(of: moves) { old, new in if new < old { paid += 1 } }
+    .accessibilityElement()
+    .accessibilityLabel("\(DISTANCE_EVERY - moves) moves to the next pawns")
+  }
+}
+
 /// The side you play, as a small square.
 struct SideSquare: View {
   let color: ChessCore.Color
