@@ -933,7 +933,8 @@ public final class RunModel {
     let line = f.ended.run.played
     // After a Continue, the moves that follow don't count toward your best.
     let counted = min(f.ended.moves, movesAtContinue ?? f.ended.moves)
-    store.finishedGame()
+    // The streak's day comes from a game whose prep was completed; Middlegame asks no prep.
+    if handoff != nil || session.prepStatus == .complete { store.finishedGame() }
     // An endgame result that slipped away is kept for Endgame mode, from the position before the move.
     let given = endgameGivenAway(f.how, fen: f.ended.run.fen, name: openingName(tree, f.ended.run.openingId), at: Env.now())
     // Built before the update: reading the store inside its own update is an exclusivity crash.

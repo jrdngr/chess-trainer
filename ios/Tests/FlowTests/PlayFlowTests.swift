@@ -98,6 +98,17 @@ import Testing
   }
 }
 
+/// A Play game ended before its prep was completed doesn't make the streak's day.
+@MainActor @Test func theStreakWaitsForACompletedPrep() async throws {
+  try await headless { app in
+    try await drillAsWhite(app)
+    let before = app.state.pawns
+    await app.endRound()
+    #expect(app.state.pawnStreak.days == 0 && app.store.streakWaiting == 0)
+    #expect(app.state.pawns == before)
+  }
+}
+
 /// Under the counter, the first pawn of each award to land says why it was paid; pawns going into the pot say nothing.
 @MainActor @Test func landingPawnsSayWhyTheyWerePaid() async throws {
   try await headless { app in

@@ -32,6 +32,9 @@ target. Tests: the `docs/rules/pawns.md` suite in
    give it, never when you take it.
 5. **The streak.** The first game you finish each day pays 10 on the
    streak's first day and 10 more each day after, up to 90 from day 9 on.
+   In Play, only a game whose prep you completed counts: one you quit or
+   missed before then doesn't. Test: `theStreakWaitsForACompletedPrep` in
+   `Tests/FlowTests/PlayFlowTests.swift`.
    A missed day starts it again at day 1, unless a freeze or a repair keeps
    it (rule 11). The pawns go onto the balance when the game ends, but the
    counter takes them only when you next open Home, where they pop out of
