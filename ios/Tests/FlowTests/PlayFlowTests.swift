@@ -98,6 +98,27 @@ import Testing
   }
 }
 
+/// Under the counter, the first pawn of each award to land says why it was paid; pawns going into the pot say nothing.
+@MainActor @Test func landingPawnsSayWhyTheyWerePaid() async throws {
+  try await headless { app in
+    try await drillAsWhite(app)
+    app.store.dropInPot("e4")
+    let toPot = try #require(app.store.pawnDrops.last)
+    app.store.landed(toPot.id)
+    #expect(app.store.pawnReason == nil, "a pawn into the pot isn't paid yet")
+    app.store.pay(PawnAward(.blunderPunished, .square("d5"), count: 3))
+    let drop = try #require(app.store.pawnDrops.last)
+    app.store.landed(drop.id)
+    #expect(app.store.pawnReason == PawnReason(text: "Blunder punished", id: drop.id))
+    app.store.pay(PawnAward(.checkmate, .board, count: 15))
+    let mate = try #require(app.store.pawnDrops.last)
+    app.store.landed(drop.id)
+    #expect(app.store.pawnReason?.text == "Blunder punished", "only the first pawn of an award names it")
+    app.store.landed(mate.id)
+    #expect(app.store.pawnReason?.text == "Checkmate")
+  }
+}
+
 /// A wrong move on your prep shows the prepared one, fails its card and logs the mistake.
 @MainActor @Test func missingAPreparedMoveShowsItAndLogsIt() async throws {
   try await headless { app in

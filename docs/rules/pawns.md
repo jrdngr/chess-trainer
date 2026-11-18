@@ -37,7 +37,14 @@ target. Tests: the `docs/rules/pawns.md` suite in
    counter takes them only when you next open Home, where they pop out of
    the streak ring and the ring lights up.
 6. **Pawns land as they are earned.** Each goes straight onto the balance;
-   the counter on screen takes it when it arrives. A run's score is the
+   the counter on screen takes it when it arrives. As the first pawn of an
+   award lands, why it was paid shows under the counter for 1.5 seconds,
+   with no count: Prep complete, Blunder punished, Found it, Mission
+   complete, Endgame reached, Checkmate, 5 more moves, Held the draw, and
+   for Endgames First clear, First mission, Mastered, Tune-up passed and
+   Converted. Pawns flying into the prep's pot say nothing until it pays.
+   Test: `landingPawnsSayWhyTheyWerePaid` in
+   `Tests/FlowTests/PlayFlowTests.swift`. A run's score is the
    pawns its events earned, the streak's aside.
 7. **A personal best is moves survived,** for Play and for Middlegame alike.
 8. **The streak ring** on Milestones has a part for each day of the

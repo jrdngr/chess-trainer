@@ -12,6 +12,17 @@ public struct PawnDrop: Equatable, Identifiable, Sendable {
   public var toPot = false
 }
 
+/// Why the latest pawns were paid. Each landing drop gets a new id, so the same reason twice shows twice.
+public struct PawnReason: Equatable, Sendable {
+  public var text: String
+  public var id: Int
+
+  public init(text: String, id: Int) {
+    self.text = text
+    self.id = id
+  }
+}
+
 extension AppStore {
   /// How long a drop may take before its pawns count anyway.
   public static let dropSeconds = 3.0
@@ -79,9 +90,12 @@ extension AppStore {
     }
   }
 
-  /// One of a drop's pawns reached the counter.
+  /// One of a drop's pawns reached the counter. The first to land says why they were paid.
   public func landed(_ id: Int) {
     guard let i = pawnDrops.firstIndex(where: { $0.id == id }) else { return }
+    if !pawnDrops[i].toPot && pawnDrops[i].flying == pawnDrops[i].award.count {
+      pawnReason = PawnReason(text: Model.pawnReason(pawnDrops[i].award.event), id: id)
+    }
     pawnDrops[i].flying -= 1
     if pawnDrops[i].flying <= 0 { pawnDrops.remove(at: i) }
   }

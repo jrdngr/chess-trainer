@@ -26,6 +26,26 @@ public enum PawnEvent: String, Sendable, Codable, CaseIterable {
   case streak
 }
 
+/// Why pawns were paid, shown under the counter as they land.
+public func pawnReason(_ event: PawnEvent) -> String {
+  switch event {
+  case .prepComplete: return "Prep complete"
+  case .blunderPunished: return "Blunder punished"
+  case .moment: return "Found it"
+  case .mission: return "Mission complete"
+  case .endgame: return "Endgame reached"
+  case .checkmate: return "Checkmate"
+  case .distance: return "5 more moves"
+  case .heldDraw: return "Held the draw"
+  case .endgameClear: return "First clear"
+  case .endgameMission: return "First mission"
+  case .endgameMastery: return "Mastered"
+  case .endgameTuneUp: return "Tune-up passed"
+  case .endgameConverted: return "Converted"
+  case .streak: return "Daily streak"
+  }
+}
+
 /// What an event pays. Prep complete pays this for each prep move asked; a streak day pays by
 /// the streak's length.
 public func pawnsFor(_ event: PawnEvent) -> Int {

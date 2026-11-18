@@ -18,6 +18,8 @@ public final class AppStore {
   public internal(set) var pawnDrops: [PawnDrop] = []
   /// Streak pawns paid but not shown yet: they pop out of the streak ring on Home.
   public internal(set) var streakWaiting = 0
+  /// Why the latest pawns were paid, from when the first of them lands in the counter.
+  public internal(set) var pawnReason: PawnReason?
   /// The feature just bought, until its place shows it off.
   public internal(set) var justUnlocked: ShopFeature?
   @ObservationIgnored var dropCount = 0

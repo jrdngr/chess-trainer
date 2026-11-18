@@ -368,11 +368,15 @@ struct PawnCoin: View {
 }
 
 /// The balance in a box: the pawn and the count. Each pawn landing brightens the pawn
-/// and bumps pawn and count together; the box never moves.
+/// and bumps pawn and count together; the box never moves. Under it, why the latest pawns
+/// were paid shows as they land, then fades.
 struct PawnCounter: View {
   @Environment(AppStore.self) private var store
   @Environment(\.openShop) private var openShop
   @State private var landings = 0
+  @State private var reason: PawnReason?
+
+  static let reasonSeconds = 1.5
 
   var body: some View {
     let count = store.shownPawns
@@ -395,7 +399,23 @@ struct PawnCounter: View {
     .padding(.horizontal, 8).frame(minWidth: 58, minHeight: 37)
     .background(RoundedRectangle(cornerRadius: 11).fill(Theme.surface2))
     .pawnSpot("counter")
+    .overlay(alignment: .bottomTrailing) {
+      if let reason {
+        Text(reason.text).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.pawn)
+          .fixedSize().offset(y: 18)
+          .transition(.opacity)
+          .id(reason.id)
+          .allowsHitTesting(false)
+      }
+    }
     .onChange(of: count) { old, new in if new > old { landings += 1 } }
+    .onChange(of: store.pawnReason) { _, now in withAnimation(.easeOut(duration: 0.15)) { reason = now } }
+    .task(id: reason?.id) {
+      guard reason != nil else { return }
+      try? await Task.sleep(for: .seconds(Self.reasonSeconds))
+      guard !Task.isCancelled else { return }
+      withAnimation(.easeOut(duration: 0.4)) { reason = nil }
+    }
     .accessibilityElement()
     .accessibilityLabel("\(count) pawn\(count == 1 ? "" : "s")")
     if let openShop {
