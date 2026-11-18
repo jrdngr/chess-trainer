@@ -5,7 +5,7 @@ import Book
 /// Book families that only name a first move or two. They never name one of
 /// your openings: a line covered only by one of them has no row.
 public let FIRST_MOVE_FAMILIES: Set<String> = [
-  "King's Pawn Game", "King's Knight Opening", "Queen's Pawn Game", "Zukertort Opening", "Indian Defence",
+  "King's Pawn Game", "King's Knight Opening", "Queen's Pawn Game", "Zukertort Opening", "Indian Defense",
 ]
 
 /// The family a book name is listed under: the book's family, or inside a
@@ -21,7 +21,7 @@ public func openingFamily(_ index: ReferenceIndex, _ name: String) -> String? {
 }
 
 /// The family shown over an opening's name, where it says more than the name:
-/// "Sicilian Defence" over "Sicilian Defence: Najdorf Variation", nothing over "Sicilian Defence".
+/// "Sicilian Defense" over "Sicilian Defense: Najdorf Variation", nothing over "Sicilian Defense".
 public func familyAbove(_ index: ReferenceIndex, _ name: String) -> String? {
   let family = familyName(index, name)
   return family == name ? nil : family
@@ -65,7 +65,7 @@ public struct YourOpening: Sendable {
 }
 
 /// Your openings, most worth focusing on first: every Playbook family of
-/// both sides. Value grows with how often the book reaches the family, how
+/// both sides, and every opening off the list you have that no family names. Value grows with how often the book reaches the family, how
 /// many lines you hold in it, and how few runs ago you played it.
 public func yourOpenings(_ reps: [Playbook], _ tree: OpeningTree, _ score: ScoreState) -> [YourOpening] {
   let total = max(1, tree.root.games)
@@ -79,6 +79,18 @@ public func yourOpenings(_ reps: [Playbook], _ tree: OpeningTree, _ score: Score
         continue
       }
       out.append(YourOpening(node: node, side: rep.color, name: row.name, lines: lines, value: 0))
+    }
+    // An opening off the list whose lines no book family names, like 1...e5, is listed by its own name.
+    let leaves = leafLines(rep).map(\.sans)
+    for opening in openingList(rep.color) {
+      let held = leaves.filter { opening.holds($0) }.count
+      guard held > 0, let root = opening.roots.first else { continue }
+      let covered = out.contains { mine in
+        mine.side == rep.color && opening.roots.contains { $0.starts(with: mine.node.sans) || mine.node.sans.starts(with: $0) }
+      }
+      let node = nodeById(tree, root.joined(separator: " "))
+      guard !covered, node.depth > 0 else { continue }
+      out.append(YourOpening(node: node, side: rep.color, name: opening.name, lines: held, value: 0))
     }
   }
   for i in out.indices {

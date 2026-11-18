@@ -10,7 +10,7 @@ import Testing
   #expect(openingFamily(bookIndex, "Zukertort Opening: Sicilian Invitation") == nil)
   #expect(openingFamily(bookIndex, "Queen's Pawn Game: London System") == "London System")
   #expect(openingFamily(bookIndex, "Queen's Pawn Game: Colle System, Anti-Colle") == "Colle System")
-  #expect(openingFamily(bookIndex, "Sicilian Defence: Najdorf Variation") == "Sicilian Defence")
+  #expect(openingFamily(bookIndex, "Sicilian Defense: Najdorf Variation") == "Sicilian Defense")
 }
 
 /// Black's openings are the ones named after its first move, and a line that
@@ -24,11 +24,20 @@ import Testing
   #expect(mine.allSatisfy { $0.node.depth > 0 })
 }
 
+/// An opening off the list that no book family names is yours by its own name.
+@Test func yourOpeningsListOpeningsNoFamilyNames() {
+  let tree = openingTree(bookIndex)
+  let mine = yourOpenings([rep(.b, ["e4 e5 Nf3 Nc6"])], tree, ScoreState())
+  #expect(mine.map { "\($0.side.rawValue) \($0.name)" } == ["b 1...e5"])
+  let named = yourOpenings([rep(.b, ["e4 e5 Nf3 Nc6 Bb5 a6"])], tree, ScoreState())
+  #expect(named.map(\.name) == ["Ruy Lopez"], "a family inside it lists it already")
+}
+
 /// The same family played from both sides is two openings.
 @Test func yourOpeningsKeepEachSide() {
   let tree = openingTree(bookIndex)
   let mine = yourOpenings([rep(.w, ["e4 c5 Nf3"]), rep(.b, ["e4 c5 Nf3 d6"])], tree, ScoreState())
-  #expect(mine.map(\.name) == ["Sicilian Defence", "Sicilian Defence"])
+  #expect(mine.map(\.name) == ["Sicilian Defense", "Sicilian Defense"])
   #expect(Set(mine.map(\.key)).count == 2)
 }
 
@@ -37,7 +46,7 @@ import Testing
   let tree = openingTree(bookIndex)
   let white = rep(.w, ["e4 c5 c3", "e4 e5 Qh5"])
   let unplayed = yourOpenings([white], tree, ScoreState())
-  #expect(unplayed.map(\.name) == ["Sicilian Defence", "Wayward Queen Attack"])
+  #expect(unplayed.map(\.name) == ["Sicilian Defense", "Wayward Queen Attack"])
   var score = ScoreState()
   let wayward = unplayed[1]
   var stats = NodeStats()
