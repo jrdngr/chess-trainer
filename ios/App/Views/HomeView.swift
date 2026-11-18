@@ -104,7 +104,7 @@ struct HomeView: View {
     let selection = store.peekRoundSelection()
     if nextRound(store.state, tree, selection, store.autoHistory) != nil {
       Button { onOpen(.play) } label: { PlayLabel() }
-        .buttonStyle(PlayStackStyle())
+        .buttonStyle(PlayButtonStyle())
     } else {
       Button { onPlaybook() } label: {
         HStack(spacing: 13) {
@@ -164,26 +164,16 @@ struct PlayLabel: View {
   }
 }
 
-/// Home's Play button: the top card of a stack of three, each lower card narrower.
-/// Pressed, the top card goes down into the stack and the stack closes under it.
-struct PlayStackStyle: ButtonStyle {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
+/// Home's Play button: a filled button, darker while pressed.
+struct PlayButtonStyle: ButtonStyle {
   func makeBody(configuration: Configuration) -> some View {
     let down = configuration.isPressed
-    let shape = RoundedRectangle(cornerRadius: 12)
-    ZStack(alignment: .top) {
-      shape.fill(Theme.deck3).frame(height: 54).padding(.horizontal, 14).offset(y: 8)
-      shape.fill(Theme.deck2).frame(height: 54).padding(.horizontal, 7).offset(y: down && !reduceMotion ? 8 : 4)
-      configuration.label
-        .frame(maxWidth: .infinity, minHeight: 54)
-        .background(shape.fill(down ? Theme.buttonPressed : Theme.button))
-        .offset(y: down && !reduceMotion ? 8 : 0)
-    }
-    .frame(height: 62, alignment: .top)
-    .contentShape(Rectangle())
-    .animation(down ? .easeOut(duration: 0.07) : .timingCurve(0.2, 0.8, 0.3, 1, duration: 0.24), value: down)
-    .sensoryFeedback(.impact(weight: .light), trigger: down) { _, pressed in pressed }
+    configuration.label
+      .frame(maxWidth: .infinity, minHeight: 54)
+      .background(RoundedRectangle(cornerRadius: 12).fill(down ? Theme.buttonPressed : Theme.button))
+      .contentShape(Rectangle())
+      .animation(.easeOut(duration: 0.1), value: down)
+      .sensoryFeedback(.impact(weight: .light), trigger: down) { _, pressed in pressed }
   }
 }
 

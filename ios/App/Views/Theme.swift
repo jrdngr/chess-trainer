@@ -17,9 +17,6 @@ enum Theme {
   static let buttonInk = Color(hex: 0x111116)
   /// Home's Play button pressed.
   static let buttonPressed = Color(hex: 0xd4d4dc)
-  /// The two cards under Home's Play button, top one first.
-  static let deck2 = Color(hex: 0xa9a9b5)
-  static let deck3 = Color(hex: 0x73737d)
   static let good = Color(hex: 0x4ade80)
   static let bad = Color(hex: 0xfb7185)
   static let warn = Color(hex: 0xfbbf24)
