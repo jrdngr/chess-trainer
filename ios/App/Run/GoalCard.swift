@@ -2,7 +2,7 @@ import Game
 import Model
 import SwiftUI
 
-/// The run's current mission under the board: the turns left, its name and what it asks for.
+/// The run's current mission under the board: the turns left and its name.
 struct GoalCard: View {
   let mission: Mission
   static let height: CGFloat = 66
@@ -18,11 +18,7 @@ struct GoalCard: View {
       .foregroundStyle(tint)
       .frame(width: 46, height: 44)
       .background(RoundedRectangle(cornerRadius: 12).fill(tint.opacity(0.14)))
-      VStack(alignment: .leading, spacing: 3) {
-        Text(missionTitle(mission.kind).uppercased()).font(.system(size: 11, weight: .bold)).tracking(0.6).foregroundStyle(tint)
-        Text(missionTarget(mission.kind)).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-      }
-      .lineLimit(1)
+      Text(missionTitle(mission.kind)).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
       Spacer(minLength: 0)
     }
     .padding(.horizontal, 11)

@@ -65,16 +65,6 @@ public func missionTitle(_ kind: MissionKind) -> String {
   }
 }
 
-/// What the goal card asks for, under the mission's name.
-public func missionTarget(_ kind: MissionKind) -> String {
-  switch kind {
-  case .edge: return "Stay at +1 or better"
-  case .lead: return "Reach +1"
-  case .dig: return "Get back to \u{2212}0.5"
-  case .convert: return "Trade a piece"
-  }
-}
-
 /// Your moves left before the mission is settled.
 public func missionTurnsLeft(_ mission: Mission) -> Int {
   switch mission.kind {
