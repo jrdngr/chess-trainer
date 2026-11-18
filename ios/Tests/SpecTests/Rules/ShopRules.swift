@@ -14,11 +14,11 @@ private func state(pawns: Int, owning: [String] = []) -> AppState {
   @Test func featuresAndTheirPrerequisites() throws {
     let features = SHOP.filter { $0.feature != nil }.map { "\($0.id) \($0.price) \($0.needs.joined(separator: ","))" }
     #expect(features == [
-      "sidePicker 200 ", "lensPawns 300 ", "lensPieces 500 lensPawns", "lensKings 800 lensPieces", "lensEval 1500 lensKings",
+      "sidePicker 50 ", "lensPawns 300 ", "lensPieces 500 lensPawns", "lensKings 800 lensPieces", "lensEval 1500 lensKings",
       "lensPlan 1000 ", "openingPicker 1000 sidePicker", "freeform 3000 openingPicker",
       "middlegame 8000 lensPieces", "endgames 5000 ", "endgamesPawn 5000 endgames", "endgamesRook 3500 endgames",
     ])
-    #expect(FEATURE_TREE.reduce(0) { $0 + $1.price } == 21_300, "the $10 unlock's worth")
+    #expect(FEATURE_TREE.reduce(0) { $0 + $1.price } == 21_150, "the $10 unlock's worth")
   }
 
   /// Rule 1: Endgames plays Basic mates and From your games; King and pawn and Rook endings are bought apart.
@@ -38,15 +38,16 @@ private func state(pawns: Int, owning: [String] = []) -> AppState {
     #expect(!early)
     #expect(s.status(try #require(shopItem("openingPicker"))) == .locked)
     let side = s.buy("sidePicker")
-    #expect(side && s.pawns == 1_800 && s.owns(.sidePicker))
+    #expect(side && s.pawns == 1_950 && s.owns(.sidePicker))
+    #expect(s.settings.selection.color == .either, "the side picker starts on Either")
     let again = s.buy("sidePicker")
     #expect(!again, "an item is bought once")
     let opening = s.buy("openingPicker")
-    #expect(opening && s.pawns == 800)
-    var poor = state(pawns: 199)
+    #expect(opening && s.pawns == 950)
+    var poor = state(pawns: 49)
     #expect(poor.status(try #require(shopItem("sidePicker"))) == .short(1))
     let bought = poor.buy("sidePicker")
-    #expect(!bought && poor.pawns == 199)
+    #expect(!bought && poor.pawns == 49)
   }
 
   /// Rule 3: content and cosmetics are shown but not for sale.

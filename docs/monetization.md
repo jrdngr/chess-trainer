@@ -77,7 +77,7 @@ than the owner's.
 
 | Item | Price |
 | --- | --- |
-| Side picker | 200 |
+| Side picker | 50 |
 | Pawns lens | 300 |
 | Pieces lens | 500 |
 | Kings lens | 800 |
@@ -87,7 +87,7 @@ than the owner's.
 | Freeform | 3,000 |
 | Middlegame | 8,000 |
 | Endgames (Basic mates, From your games) | 5,000 |
-| All of it | 21,300 |
+| All of it | 21,150 |
 
 Lenses are free to use once owned.
 

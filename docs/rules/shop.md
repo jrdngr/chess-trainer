@@ -5,11 +5,11 @@ and `HeadlessApp.buy` in the Game target. Tests: the `docs/rules/shop.md`
 suite in `Tests/SpecTests/Rules/ShopRules.swift`.
 
 1. **The features**, each with its price and what it needs first: side
-   picker 200; the Pawns lens 300, then the Pieces lens 500, the Kings lens
+   picker 50; the Pawns lens 300, then the Pieces lens 500, the Kings lens
    800 and the Eval lens 1,500, each after the one before; Plan 1,000;
    opening picker 1,000, after the side picker; Freeform 3,000, after the
    opening picker; Middlegame 8,000, after the Pieces lens; Endgames 5,000,
-   with Basic mates and From your games. All of them come to 21,300. King
+   with Basic mates and From your games. All of them come to 21,150. King
    and pawn (5,000) and Rook endings (3,500) are Endgames families bought
    on their own, after Endgames, in their own row. Each item's sheet says
    in a sentence what it does.
@@ -23,7 +23,8 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    for sale yet.
 4. **Home holds to what you own.** Without the side picker you play
    White. Without the opening picker you play Any Opening. Without
-   Freeform you play Drill. The side picker offers White, Black and Either. Home shows a
+   Freeform you play Drill. The side picker offers White, Black and Either, and starts on Either
+   when bought. Home shows a
    feature's control only once it is yours: the side picker, the Freeform
    switch, the opening picker, Middlegame and Endgames.
 5. **Each lens shows once it is yours,** in Play, on the end screen and in

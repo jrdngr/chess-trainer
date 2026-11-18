@@ -15,10 +15,11 @@ import Testing
     #expect(throws: HeadlessApp.Failure.self) { try app.openEndgames() }
     #expect(throws: HeadlessApp.Failure.self) { try app.buy("sidePicker") }
 
-    app.store.update { $0.pawns = 1_200 }
+    app.store.update { $0.pawns = 1_050 }
     #expect(throws: HeadlessApp.Failure.self) { try app.buy("freeform") }
     try app.buy("sidePicker")
     #expect(app.state.pawns == 1_000)
+    #expect(app.state.settings.selection.color == .either, "the side picker starts on Either")
     #expect(app.store.justUnlocked == .sidePicker, "Home shows it off next")
     try app.select(side: .b)
     #expect(app.state.settings.selection.color == .b)

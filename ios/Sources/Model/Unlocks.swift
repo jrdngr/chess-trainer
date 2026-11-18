@@ -63,7 +63,7 @@ public struct ShopItem: Equatable, Sendable, Identifiable {
 
 /// Everything in the shop, in its tree's order.
 public let SHOP: [ShopItem] = [
-  ShopItem("sidePicker", "Side picker", .features, 200, feature: .sidePicker, about: "Play as White, Black, or random."),
+  ShopItem("sidePicker", "Side picker", .features, 50, feature: .sidePicker, about: "Play as White, Black, or random."),
   ShopItem("lensPawns", "Pawns lens", .features, 300, feature: .lensPawns, about: "Tap it under the board in a game to show weak and passed pawns."),
   ShopItem("lensPieces", "Pieces lens", .features, 500, needs: ["lensPawns"], feature: .lensPieces, about: "Tap it under the board in a game to show loose and attacked pieces."),
   ShopItem("lensKings", "Kings lens", .features, 800, needs: ["lensPieces"], feature: .lensKings, about: "Tap it under the board in a game to show how safe each king is."),
@@ -140,6 +140,8 @@ extension AppState {
     guard let item = shopItem(id), status(item) == .buyable else { return false }
     pawns -= item.price
     unlocked.insert(id)
+    // The side picker starts on Either, so Black comes up straight away.
+    if item.feature == .sidePicker { settings.selection.color = .either }
     syncEndgameFamilies()
     logEvent(AppEvent(kind: "buy", count: item.price, picked: id, text: "balance \(pawns)"))
     return true
