@@ -33,8 +33,9 @@ at a hole), `prepRanOut`
 4. **The question at the hole.** The answer is yes when the pace (Play runs
    since anything was added to the Playbook, over Moves per fill, default 3)
    has reached 1 and the hole is the curve's next one in the selection. A run
-   set to grow at a gap (see [drill](drill.md) and [next run](next-run.md))
-   grows there whatever the answer.
+   set to grow at a gap (see [drill](drill.md), [next run](next-run.md) and
+   an opening's Grow in [playbook](playbook.md)) grows there whatever the
+   answer.
 5. **Green** is an opening's form (see [form](form.md)) of at least 0.8 over
    at least 5 answers. The openings that count are the deepest named opening
    each of your lines reaches, on the sides the curve grows: White, and
@@ -42,8 +43,8 @@ at a hole), `prepRanOut`
 6. **The opponent plays only what you have unlocked.** Where your Playbook
    has replies, it plays only those (see [opponent](opponent.md)); a hole
    is met in a run only on the way to a gap.
-7. **On a yes, the board turns into New move.** It offers the answers a
-   Growth sitting would offer, and each pick is saved as it is made. The
+7. **On a yes, the board turns into New move.** It offers the book's most
+   played answers, and each pick is saved as it is made. The
    opponent replies along the gap's line while it can, then with the book's
    most played reply. It stops after Moves per fill of your moves, at the end
    of the named opening, or when no reply is played in 5% of games. Done

@@ -10,6 +10,8 @@ import SwiftUI
 struct PlayView: View {
   let tree: OpeningTree
   let index: ReferenceIndex
+  /// An opening's Grow: the first run starts at this gap and grows there.
+  var grow: Gap? = nil
   /// Analysis on a line grown here, seen from a side, opened over the mode.
   let onAnalyze: ([String], ChessCore.Color) -> Void
   let onExit: () -> Void
@@ -28,7 +30,7 @@ struct PlayView: View {
     }
     .task {
       if session == nil {
-        let made = PlaySession(store: store, tree: tree, index: index)
+        let made = PlaySession(store: store, tree: tree, index: index, grow: grow)
         session = made
         made.open()
       }

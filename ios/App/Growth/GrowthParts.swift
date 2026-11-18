@@ -5,24 +5,7 @@ import Model
 import Shared
 import SwiftUI
 
-// The pieces of Growth's sitting: `.verdict`, the answer rows and their eval tags.
-
-/// A verdict line: `.verdict` and its tone.
-struct GrowthVerdict: View {
-  enum Tone { case ok, warn, no }
-  var tone: Tone
-  var text: String
-
-  var body: some View {
-    let ink = tone == .ok ? Theme.good : tone == .warn ? Theme.warn : Theme.bad
-    HStack(spacing: 8) {
-      Icon(name: tone == .ok ? "check" : tone == .warn ? "warn" : "cross", size: tone == .no ? 14 : 16)
-        .frame(width: 26, height: 26).background(Circle().fill(ink.opacity(0.14)))
-      Text(text).font(.system(size: 19, weight: .heavy)).tracking(-0.2).lineLimit(1).minimumScaleFactor(0.8)
-    }
-    .foregroundStyle(ink)
-  }
-}
+// The pieces of growth in a run: the answer rows, their arrows' colors and their eval tags.
 
 /// The colour of an answer's arrow and row, by who recommends it: `roleColor`.
 func roleColor(_ role: AnswerRole?) -> SwiftUI.Color? {
@@ -98,16 +81,6 @@ struct DeltaTag: View {
     Text(cp.map(formatDelta) ?? "\u{2026}").font(.system(size: 14).monospacedDigit())
       .foregroundStyle(worse ? Theme.bad : Theme.text3)
       .frame(minWidth: 40, alignment: .trailing)
-  }
-}
-
-/// The line under the board, your added moves in green: `Strip`.
-func growthStrip(_ path: [String], _ added: [Int], _ color: ChessCore.Color) -> [StripItem] {
-  path.enumerated().map { i, san in
-    StripItem(
-      san: san, label: i % 2 == 0 ? "\(i / 2 + 1)." : nil,
-      tone: added.contains(i) ? .good : (i % 2 == 0) == (color == .w) ? .mine : .theirs,
-      current: i == path.count - 1)
   }
 }
 

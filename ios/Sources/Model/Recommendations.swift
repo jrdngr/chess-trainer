@@ -237,10 +237,3 @@ public func steerGap(_ state: AppState, _ tree: OpeningTree, _ selection: Select
   guard runsUntilGrowth(state) == 0 else { return nil }
   return curveSelectionGaps(state, tree, selection).first
 }
-
-/// A gap as Growth's one row, so a sitting can start on its reply.
-public func gapRow(_ gap: Gap) -> GrowthRow {
-  GrowthRow(
-    id: gap.id, playbookId: gap.playbookId, color: gap.color, name: gap.name, eco: nil, depth: gap.path.count,
-    topShare: gap.share, urgency: 0, score: 0, holes: gap.hole.san.isEmpty ? [] : [gap.hole], ends: [])
-}

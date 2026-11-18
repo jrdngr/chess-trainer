@@ -1056,6 +1056,6 @@ extension RunModel: HoleAnswers {
     let prefs = store.state.settings.growth
     return NudgePrefs(priority: prefs.nudgePriority, pawns: prefs.nudgePawns)
   }
-  /// A fill answers gaps, so it offers what a gap's Growth sitting would.
+  /// A fill answers gaps: it offers the replies a gap counts.
   public var minShare: Double { GAP_SHARE }
 }

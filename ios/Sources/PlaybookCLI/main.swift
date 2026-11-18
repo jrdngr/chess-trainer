@@ -20,7 +20,6 @@ let HELP = """
              play · tree [w|b] · unlock OPENING (id or name) · endgames · middlegame · shop · buy ID · purchase unlock|pawns2000|pawns6000|pawns13000
   Board:     <san> (or move <san> <san>...) · think SECONDS
   Play:      end · continue · takeback · next · undo · done · grow · replay
-  Growth:    save · more · play-on · back
   Endgames:  practice · ending ID · resign · next
   """
 
@@ -114,10 +113,6 @@ func perform(_ app: HeadlessApp, _ words: [String]) async throws -> Bool {
   case "replay":
     app.run?.replayMoves()
     await app.idle()
-  case "save": app.saveGrowth()
-  case "more": await app.addMore()
-  case "play-on": try await app.playOnFromGrowth()
-  case "back": app.backToTheLine()
   case "practice": try await app.practice()
   case "ending": try await app.playEnding(rest.first ?? "")
   case "resign": await app.resign()

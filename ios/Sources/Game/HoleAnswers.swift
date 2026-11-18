@@ -2,8 +2,8 @@ import Book
 import ChessCore
 import Model
 
-/// A screen that offers answers at a hole: Growth's sitting, and a Play run
-/// adding moves. Both show the same answers, arrows and evals from these.
+/// A screen that offers answers at a hole: a Play run adding moves. Its answers,
+/// arrows and evals come from these.
 @MainActor public protocol HoleAnswers: AnyObject {
   var index: ReferenceIndex { get }
   /// The engines the evals and checks are asked of.

@@ -4,7 +4,7 @@ import Engine
 import Foundation
 import Model
 
-/// The whole app without its screens: the same store, rounds and sittings the
+/// The whole app without its screens: the same store, rounds and modes the
 /// app runs, driven by calls instead of taps, on a clock that moves only when
 /// the game is waiting. Every action settles before it returns: the opponent
 /// has replied, popups have come and gone, and what they said is in `signals`.
@@ -15,7 +15,7 @@ import Model
 public final class HeadlessApp: SignalSink {
   /// What's on screen.
   public enum Screen: String, Sendable {
-    case welcome, onboarding, home, play, growth, playOn, endgame, middlegame
+    case welcome, onboarding, home, play, endgame, middlegame
   }
 
   public enum Failure: Error, CustomStringConvertible {
@@ -42,11 +42,8 @@ public final class HeadlessApp: SignalSink {
   public private(set) var signals: [GameSignal] = []
 
   public private(set) var play: PlaySession?
-  public private(set) var growth: GrowthModel?
   public private(set) var endgame: EndgameSession?
   public private(set) var middlegame: MiddlegameSession?
-  /// A game played on from the end of a Growth line, over the sitting.
-  public private(set) var playOn: PlayOnGame?
 
   private init(store: AppStore, clock: VirtualClock, services: GameServices, tree: OpeningTree, index: ReferenceIndex) {
     self.store = store
@@ -137,8 +134,6 @@ public final class HeadlessApp: SignalSink {
   public var screen: Screen {
     if !state.settings.seenIntro { return .welcome }
     if !state.settings.onboarded && play == nil { return .onboarding }
-    if playOn != nil { return .playOn }
-    if growth != nil { return .growth }
     if play != nil { return .play }
     if endgame != nil { return .endgame }
     if middlegame != nil { return .middlegame }
@@ -197,10 +192,11 @@ public final class HeadlessApp: SignalSink {
     store.update { change(&$0.settings) }
   }
 
-  /// Home's Play: the next round starts, and the game settles.
-  public func openPlay() async {
+  /// Home's Play: the next round starts, and the game settles. With `grow`, an opening page's Grow:
+  /// the first round starts at that gap and grows there.
+  public func openPlay(grow: Gap? = nil) async {
     closeModes()
-    let session = PlaySession(store: store, tree: tree, index: index)
+    let session = PlaySession(store: store, tree: tree, index: index, grow: grow)
     play = session
     session.open()
     await idle()
@@ -215,10 +211,10 @@ public final class HeadlessApp: SignalSink {
   /// An opening of yours on the tree, as its page shows it.
   public func page(_ node: MapNode) -> NodePage { nodePage(state, tree, side: node.color, id: node.id, line: node.line) }
 
-  /// Grow from an opening's page: the hole under it the curve allows now.
+  /// Grow from an opening's page: a Play run at the hole under it the curve allows now.
   public func grow(_ node: MapNode) async throws {
     guard case .ready(let gap) = page(node).grow else { throw Failure.notHere("Nothing under \(node.name) can grow yet") }
-    try await grow(gap)
+    await openPlay(grow: gap)
   }
 
   /// Delete from an opening's page; the undo puts it back.
@@ -264,22 +260,6 @@ public final class HeadlessApp: SignalSink {
     }
   }
 
-  /// Fill a hole in Growth.
-  public func grow(_ gap: Gap) async throws {
-    closeModes()
-    guard let model = GrowthModel(gap: gap, store: store, tree: tree, index: index) else { throw Failure.notHere("That can't be grown") }
-    growth = model
-    await idle()
-  }
-
-  /// The end of a round's offer to grow, taken.
-  public func grow(_ offer: GrowOffer) async throws {
-    closeModes()
-    guard let model = GrowthModel(offer: offer, store: store, tree: tree, index: index) else { throw Failure.notHere("That can't be grown") }
-    growth = model
-    await idle()
-  }
-
   /// Endgames, on its library.
   public func openEndgames() throws {
     guard state.owns(.endgames) else { throw Failure.notHere("Endgames is locked: it is in the Pawn Shop") }
@@ -304,12 +284,8 @@ public final class HeadlessApp: SignalSink {
   }
 
   private func closeModes() {
-    playOn?.stop()
-    playOn = nil
     play?.leave()
     play = nil
-    growth?.leave()
-    growth = nil
     endgame?.close()
     endgame = nil
     middlegame?.exit()
@@ -327,8 +303,6 @@ public final class HeadlessApp: SignalSink {
 
   /// The board as it stands.
   public var fen: String? {
-    if let playOn { return playOn.fen }
-    if let growth { return growth.introFen ?? growth.fen }
     if let run { return run.shownFen }
     if let game = endgame?.game { return game.fen }
     return nil
@@ -336,8 +310,6 @@ public final class HeadlessApp: SignalSink {
 
   /// The side you play on the board.
   public var side: ChessCore.Color? {
-    if let playOn { return playOn.color }
-    if let growth { return growth.run.color }
     if let run { return run.run.color }
     if let game = endgame?.game { return game.color }
     return nil
@@ -345,30 +317,24 @@ public final class HeadlessApp: SignalSink {
 
   /// The moves played on the board.
   public var moves: [String] {
-    if let playOn { return playOn.sans }
-    if let growth { return growth.run.path }
     if let run { return run.run.played }
     if let game = endgame?.game { return game.moves }
     return []
   }
 
   /// Play a move on the board, by SAN, and let the game settle. While adding moves
-  /// the move is added to the Playbook; in Growth it answers the hole or walks your prep.
+  /// the move is added to the Playbook.
   public func move(_ san: String) async throws {
     guard let fen else { throw Failure.notHere("No board") }
     guard let move = applySan(fen, san) else { throw Failure.illegal(san) }
-    let before = (moves.count, growth?.session, endgame?.game?.moves.count)
-    if let playOn {
-      playOn.play(move)
-    } else if let growth {
-      growth.play(move)
-    } else if let run {
+    let before = (moves.count, endgame?.game?.moves.count)
+    if let run {
       run.play(move)
     } else if let game = endgame?.game {
       game.play(move)
     }
     await idle()
-    if before.0 == moves.count && before.1 == growth?.session && before.2 == endgame?.game?.moves.count && run?.finish == nil && run?.heldBlunder == nil {
+    if before.0 == moves.count && before.1 == endgame?.game?.moves.count && run?.finish == nil && run?.heldBlunder == nil {
       throw Failure.refused(san)
     }
   }
@@ -378,15 +344,14 @@ public final class HeadlessApp: SignalSink {
     for san in sans.split(separator: " ") where !san.isEmpty { try await move(String(san)) }
   }
 
-  /// The answers on offer while adding moves (in Play or Growth), best first.
+  /// The answers on offer while adding moves, best first.
   public var choices: [String] {
-    if let growth { return growth.atHole ? growth.ranked.map(\.san) : [] }
     return run?.fillChoices.map(\.san) ?? []
   }
 
   /// Undo the last move added.
   public func undo() async {
-    if let playOn { playOn.takeBack() } else if let growth { growth.undoLast() } else { run?.undoAdded() }
+    run?.undoAdded()
     await idle()
   }
 
@@ -443,32 +408,6 @@ public final class HeadlessApp: SignalSink {
       throw Failure.notHere("Nothing to go on to")
     }
     await idle()
-  }
-
-  /* ── Growth ── */
-
-  /// Save Line: the sitting's moves go into the Playbook.
-  public func saveGrowth() {
-    growth?.save()
-  }
-
-  /// Another batch of moves, once a sitting has come to rest.
-  public func addMore() async {
-    growth?.addMore()
-    await idle()
-  }
-
-  /// Play on from the end of the sitting's line against the engine. Nothing is recorded.
-  public func playOnFromGrowth() async throws {
-    guard let growth else { throw Failure.notHere("Growth isn't open") }
-    playOn = PlayOnGame(from: growth.fen, color: growth.run.color, services: services)
-    await idle()
-  }
-
-  /// Back from playing on, to the sitting.
-  public func backToTheLine() {
-    playOn?.stop()
-    playOn = nil
   }
 
   /* ── Endgames ── */

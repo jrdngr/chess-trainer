@@ -76,6 +76,14 @@ public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selec
   return AutoRound(pick: pick, at: nil, aim: gap?.line, grow: gap)
 }
 
+/// Grow on an opening's page: a run started at the gap, the moves to it played for you, growing there at once.
+/// A gap at Black's first move starts from move one, its answer added before the game goes on.
+public func growRound(_ tree: OpeningTree, _ gap: Gap) -> AutoRound {
+  if gap.hole.path.isEmpty { return firstMoveRound(tree, gap) }
+  let pick = Recommendation(focus: .test, opening: deepestNodeWithin(tree, tree.root, gap.line), color: gap.color)
+  return AutoRound(pick: pick, at: gap.line, aim: gap.line, grow: gap)
+}
+
 /// A Freeform round, from move one, steered only toward the opening picked on Home: the
 /// picked side, or on Either the side the recommendation picks. Gaps due a new move are
 /// leaned toward, never set as the goal.

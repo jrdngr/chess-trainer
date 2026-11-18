@@ -12,8 +12,6 @@ extension HeadlessApp {
     case .onboarding: lines.append("Choosing openings. `recommend` seeds the recommended openings and starts Play, or `choose WHITE E4 D4` picks an opening per slot by id and starts Play.")
     case .home: lines += homeLines()
     case .play, .middlegame: lines += runLines()
-    case .growth: lines += growthLines()
-    case .playOn: lines += playOnLines()
     case .endgame: lines += endgameLines()
     }
     let flashed = takeSignals().compactMap(Self.describe)
@@ -54,30 +52,6 @@ extension HeadlessApp {
       lines.append("A reply with no answer: `grow` adds moves here.")
     }
     lines.append(model.myTurn ? "Your move." : model.thinking ? "Opponent thinking." : "Waiting.")
-    return lines
-  }
-
-  private func growthLines() -> [String] {
-    guard let growth else { return [] }
-    var lines = ["Growth · \(growth.launch.row.name) · you play \(growth.run.color == .w ? "White" : "Black")"]
-    lines.append(board(growth.fen, growth.run.color))
-    lines.append("Moves: \(sansToMoveText(growth.run.path))")
-    lines.append("Added: \(growth.addedSans.isEmpty ? "nothing yet" : growth.addedSans.joined(separator: ", "))")
-    switch growth.phase {
-    case .hole: lines.append("Answers: \(choices.joined(separator: ", ")). Play one.")
-    case .done, .lost: lines.append("Done: \(growth.verdictText). `save` keeps the moves, `more` adds another batch.")
-    default: lines.append("Walking your line.")
-    }
-    return lines
-  }
-
-  private func playOnLines() -> [String] {
-    guard let playOn else { return [] }
-    var lines = ["Playing on · you play \(playOn.color == .w ? "White" : "Black")"]
-    lines.append(board(playOn.fen, playOn.color))
-    lines.append("Moves: \(playOn.sans.joined(separator: " "))")
-    if let best = playOn.best { lines.append("Eval: \(formatScore(best))") }
-    lines.append(playOn.result.map { "Over: \($0)" } ?? (playOn.engineTurn ? "Engine thinking." : "Your move. `undo` takes back a pair; `back` returns to the line."))
     return lines
   }
 
@@ -140,21 +114,12 @@ extension HeadlessApp {
   /// A signal as a few words; nil for a buzz.
   static func describe(_ signal: GameSignal) -> String? {
     switch signal {
-    case .buzz, .success, .edgeFlash: return nil
+    case .buzz, .success: return nil
     case .callout(let text, _): return text
     case .pop(let pop): return "\(pop.book ? "book" : pop.found ? "✓" : "score") \(pop.text) on \(pop.square)"
     case .miss(let miss): return "missed: \(miss.expected) was prepared"
     case .toast(let text): return text
     case .pawns(let award): return "+\(award.count) pawn\(award.count == 1 ? "" : "s"): \(award.event.rawValue)"
     }
-  }
-}
-
-extension GrowthModel {
-  /// What the end of a batch says.
-  public var verdictText: String {
-    let sans = addedSans
-    if sans.isEmpty { return session.edge ? "End of the book" : "Nothing to add here" }
-    return sans.count == 1 ? "\(sans[0]) added" : "\(sans.count) moves added"
   }
 }

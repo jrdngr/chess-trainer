@@ -20,11 +20,14 @@ public final class PlaySession {
   public private(set) var upcoming: RunModel?
   /// The finished round's start is already counted for the next one.
   @ObservationIgnored private var counted = false
+  /// Grow on an opening's page: the gap the first round starts at and grows. Later rounds are Home's.
+  @ObservationIgnored private var grow: Gap?
 
-  public init(store: AppStore, tree: OpeningTree, index: ReferenceIndex) {
+  public init(store: AppStore, tree: OpeningTree, index: ReferenceIndex, grow: Gap? = nil) {
     self.store = store
     self.tree = tree
     self.index = index
+    self.grow = grow
   }
 
   private var engine: ChessEngine { store.services.engine("play") }
@@ -49,6 +52,12 @@ public final class PlaySession {
 
   /// The next round's run, not yet started.
   private func make() -> RunModel? {
+    if let gap = grow {
+      grow = nil
+      // The opening's own selection, so Home's stays as it was.
+      let selection = Selection(color: gap.color == .w ? .w : .b, opening: deepestNodeWithin(tree, tree.root, gap.line).id)
+      return RunModel(round: growRound(tree, gap), selection: selection, store: store, tree: tree, index: index, engine: engine)
+    }
     if store.state.playbooks.values.allSatisfy({ $0.nodes.isEmpty }) {
       return RunModel(firstGame: store, tree: tree, index: index, engine: engine)
     }

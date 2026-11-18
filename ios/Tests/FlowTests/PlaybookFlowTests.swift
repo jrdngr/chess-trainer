@@ -6,8 +6,9 @@ import Testing
 
 private func everyNode(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + everyNode($0.children) } }
 
-/// An opening's page on the tree: Grow fills the hole the curve allows under it, Select
-/// makes Middlegame play out a line through it, and Delete takes it until the undo puts it back.
+/// An opening's page on the tree: Grow starts a Play run at the hole the curve allows under it,
+/// growing there at once and leaving Home's selection as it was; Select makes Middlegame play out
+/// a line through it, and Delete takes it until the undo puts it back.
 @MainActor @Test func anOpeningsPageGrowsSelectsAndDeletes() async throws {
   try await headless { app in
     onboard(app)
@@ -15,8 +16,17 @@ private func everyNode(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + e
     let node = try #require(owned.first { if case .ready = app.page($0).grow { true } else { false } })
     guard case .ready(let gap) = app.page(node).grow else { return }
     #expect(gap.line.starts(with: node.line), "the hole is under the opening")
+    let selection = app.state.settings.selection
     try await app.grow(node)
-    #expect(app.screen == .growth)
+    #expect(app.screen == .play)
+    let run = try #require(app.run)
+    #expect(run.run.played == gap.line, "the run opens at the reply with no answer")
+    #expect(run.fill?.gap.line == gap.line, "growth is open there")
+    let answer = try #require(app.choices.first)
+    try await app.move(answer)
+    let rep = try #require(app.state.playbooks[gap.playbookId])
+    #expect(nodeAtLine(rep, gap.line + [answer]) != nil, "the answer is in the Playbook")
+    #expect(app.state.settings.selection == selection, "Home's selection is untouched")
     await app.home()
 
     try app.select(side: .w, opening: node.id)

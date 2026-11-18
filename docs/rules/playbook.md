@@ -31,7 +31,11 @@ Tests: the `docs/rules/playbook.md` suite in
    shows the opening's form: its last 10 answers and their average (see
    [form](form.md)).
 5. **Grow waits for the curve.** Grow fills the first hole under the
-   opening that an open level allows (see [growth](growth.md)). Otherwise the
+   opening that an open level allows (see [growth](growth.md)). It starts a
+   Play run at the hole, the moves to it played for you, and growth opens
+   there at once; a hole at Black's first move starts from move one. The run
+   is a Play run like any other, played on this opening without changing
+   Home's, and its X returns to the page. Otherwise the
    page says what it waits for. Holes in open levels elsewhere grow first, so
    it names the next of them and how many there are. Failing that, it shows
    the games and green openings its first hole's level needs. With no hole

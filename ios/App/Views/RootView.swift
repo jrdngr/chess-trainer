@@ -22,8 +22,10 @@ struct RootView: View {
   @State private var analyzing: (sans: [String], side: ChessCore.Color)?
   /// The opening Home's Next line opens the Playbook tree at.
   @State private var mapFocus: MapFocus?
-  /// A Growth sitting, from an opening's Grow.
-  @State private var growing: GrowthModel?
+  /// An opening's Grow: the gap Play's first run starts at.
+  @State private var growFrom: Gap?
+  /// Where leaving a mode goes: the Playbook for a run started from an opening's Grow, else Home.
+  @State private var returnTab: Tab?
   /// The Pawn Shop item to open, from a locked control.
   @State private var shopFocus: String?
   @State private var playbookPage: PlaybookView.Page?
@@ -57,12 +59,6 @@ struct RootView: View {
         setupFirst = false
         mode = .play
       }
-    } else if let growing {
-      GrowthSitting(model: growing, onAnalyze: { sans, side in
-        explore = (sans, side)
-        self.growing = nil
-        tab = .analysis
-      }, onExit: { self.growing = nil })
     } else if let mode {
       ZStack {
         modeView(mode, tree, index)
@@ -91,7 +87,10 @@ struct RootView: View {
           explore = (sans, side)
           tab = .analysis
         }, onGrow: { gap in
-          growing = GrowthModel(gap: gap, store: store, tree: tree, index: index)
+          growFrom = gap
+          returnTab = .playbook
+          setupFirst = false
+          mode = .play
         }, onHome: { tab = .home })
           .background(Theme.background.ignoresSafeArea())
           .tabItem { Label(Tab.playbook.label, systemImage: Tab.playbook.symbol) }.tag(Tab.playbook)
@@ -119,7 +118,7 @@ struct RootView: View {
   @ViewBuilder private func modeView(_ mode: Mode, _ tree: OpeningTree, _ index: ReferenceIndex) -> some View {
     switch mode {
     case .play:
-      PlayView(tree: tree, index: index, onAnalyze: { analyzing = ($0, $1) }) { leave() }
+      PlayView(tree: tree, index: index, grow: growFrom, onAnalyze: { analyzing = ($0, $1) }) { leave() }
     case .endgame: EndgameView { leave() }
     case .middlegame:
       MiddlegameView(
@@ -141,7 +140,9 @@ struct RootView: View {
   private func leave() {
     analyzing = nil
     mode = nil
-    tab = .home
+    growFrom = nil
+    tab = returnTab ?? .home
+    returnTab = nil
   }
 
   /// Debug builds open on a tab with `OPEN_TAB=stats`, for screenshots.

@@ -83,8 +83,8 @@ Home's one line says what grows next. The rules: [growth](rules/growth.md),
 - It is not a mode picker. Freeform and Drill are one kind of round that
   only starts differently.
 - It is not a Playbook editor. It adds moves only at the one hole a run
-  reaches. Other growing is an opening's Grow, or unlocking an opening
-  early on the Playbook tree.
+  reaches. An opening's Grow starts a run at its hole; the only other
+  growing is unlocking an opening on the Playbook tree.
 - It is not where you choose an exact line, side, steer or clock.
 - It never starts from the opening's named position just because it is
   named, and never asks which first move an opening wants: learning names is

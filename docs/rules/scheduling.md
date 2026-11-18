@@ -8,7 +8,7 @@ to show. Code: `Srs.swift`, `Freshness.swift`, `weaknessFromCards`
 `srs.json`.
 
 1. **A run is a finished Play run.** Each one moves the run count on by
-   one. Growth sittings and Middlegame rounds don't.
+   one. Middlegame rounds don't.
 2. **Each of your positions has a card.** A run that asks it reviews the
    card. A right answer is graded by speed: under 3 seconds Easy, under 8
    Good, slower Hard. A miss is Again. The first answer a position ever gets

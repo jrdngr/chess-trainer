@@ -31,10 +31,8 @@ public enum GameSignal: Equatable, Sendable {
   case pop(Pop)
   /// Your prepared move shown after a miss.
   case miss(MissFlash)
-  /// A short message: Growth's toasts, or a mode saying it can't start.
+  /// A short message: a mode saying it can't start.
   case toast(String)
-  /// "End of the book" over a Growth sitting's board.
-  case edgeFlash
   /// Pawns earned.
   case pawns(PawnAward)
 }

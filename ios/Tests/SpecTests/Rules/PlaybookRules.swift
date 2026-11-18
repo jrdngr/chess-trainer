@@ -114,6 +114,22 @@ import Testing
     #expect(nodeGrow([], all, green) == .none)
   }
 
+  /// Rule 5: Grow starts a Play run at the hole, the moves to it played for you, growing there whatever the
+  /// answer at the hole; a hole at Black's first move starts from move one.
+  @Test func growStartsARunAtTheHole() throws {
+    let tree = openingTree(bookIndex)
+    let gap = try #require(curveHoles([rep(.w, ["c4 e5 Nc3 Nf6 Nf3 Nc6"])], bookIndex, tree: tree).first)
+    let round = growRound(tree, gap)
+    #expect(round.at == gap.line && round.aim == gap.line && round.grow?.line == gap.line)
+    #expect(round.pick.color == .w && gap.line.starts(with: round.pick.opening.sans))
+
+    var first = gap
+    first.hole.path = []
+    first.color = .b
+    let opening = growRound(tree, first)
+    #expect(opening.at == nil && opening.grow?.hole.path == [], "Black's first answer is added from move one")
+  }
+
   /// Rule 7: Delete takes the opening's last move and everything after it, and the undo puts it back.
   @Test func deleteTakesTheOpeningAndUndoes() throws {
     var state = AppState()
