@@ -44,7 +44,7 @@ struct RootView: View {
     .sheet(isPresented: Binding(get: { !store.restoreOffer.isEmpty }, set: { if !$0 { store.restoreOffer = [] } })) {
       RestoreView(offered: store.restoreOffer).presentationBackground(Theme.background).interactiveDismissDisabled()
     }
-    .environment(\.boardLook, BoardLook(theme: store.state.settings.boardTheme, coordinates: store.state.settings.showCoordinates))
+    .environment(\.boardLook, BoardLook(coordinates: store.state.settings.showCoordinates))
     .task(id: store.tree != nil) { debugSeed() }
   }
 

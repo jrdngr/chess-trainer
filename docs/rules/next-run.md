@@ -16,9 +16,8 @@ questions in `Recommendations.swift`; the first step is in
    has no answer to 1.e4 or to 1.d4, the run is Black from move one: the
    opponent plays the move with no answer (1.e4 first), and growth opens
    there. A specific opening picked on Home never gets these runs.
-3. **A new move is due after Moves per fill runs.** Pace is the Play runs
-   since anything was added to the Playbook, from any source, over Moves per
-   fill (default 3). From a pace of 1, the run heads for the curve's next
+3. **A new move is due after 3 runs.** Pace is the Play runs
+   since anything was added to the Playbook, from any source, over 3. From a pace of 1, the run heads for the curve's next
    hole in the selection (see [growth](growth.md)). A reply outside your
    openings is no hole: another opening is bought, not grown (see
    [families](families.md)).

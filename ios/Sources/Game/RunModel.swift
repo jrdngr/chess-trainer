@@ -135,7 +135,7 @@ public final class RunModel {
       first.playbookId = repId
       basicRun = true
       holeAsked = true
-      fill = Fill(gap: first, size: store.state.settings.movesPerFill)
+      fill = Fill(gap: first, size: MOVES_PER_FILL)
     }
   }
 
@@ -149,7 +149,7 @@ public final class RunModel {
       engine: engine)
     firstGame = true
     holeAsked = true
-    fill = Fill(gap: firstMoveGap(rep, index), size: store.state.settings.movesPerFill)
+    fill = Fill(gap: firstMoveGap(rep, index), size: MOVES_PER_FILL)
   }
 
   /// A run set up on Run's screen, on those options: `start` with no plan.
@@ -652,7 +652,7 @@ public final class RunModel {
 
   private func startFill(_ gap: Gap) {
     holeGap = nil
-    fill = Fill(gap: gap, size: store.state.settings.movesPerFill)
+    fill = Fill(gap: gap, size: MOVES_PER_FILL)
     pulseEdge()
     // Adding moves takes the screen: whatever tip was up gives way to growth's.
     tip = nil

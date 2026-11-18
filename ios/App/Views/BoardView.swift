@@ -363,7 +363,7 @@ struct PopView: View {
   }
 }
 
-/// How boards look, from the settings: the theme and whether coordinates show.
+/// How boards look: the theme, and from the settings whether coordinates show.
 struct BoardLook {
   var theme = BoardTheme.slate
   var coordinates = true

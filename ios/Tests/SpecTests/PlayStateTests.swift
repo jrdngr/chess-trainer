@@ -10,7 +10,7 @@ import Testing
   #expect(!old.settings.seenIntro)
 
   var state = AppState()
-  state.settings.boardTheme = .walnut
+  state.settings.showCoordinates = false
   let data = try JSONEncoder().encode(state)
   #expect(try JSONDecoder().decode(AppState.self, from: data) == state)
 }

@@ -81,7 +81,7 @@ extension AppState {
   /// "Choose my openings" done: each picked opening goes in with its seed lines, free, and onboarding is done.
   /// An opening no slot takes is left out.
   public mutating func choose(_ tree: OpeningTree, _ ids: [String]) {
-    let size = settings.movesPerFill
+    let size = MOVES_PER_FILL
     onboarded(tree, ids.compactMap(curatedOpening).filter { choiceSlot($0.id) != nil }.flatMap { opening in
       opening.roots.map { SeedOpening(sans: familySeed(tree, $0, opening.color, size: size), color: opening.color) }
     })

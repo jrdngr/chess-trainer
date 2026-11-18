@@ -46,10 +46,8 @@ Every change should pass these tests:
   and someone who plays one a week both get repetition that fits how much
   they play.
 - **No setup.** Play's settings are matters of taste, such as turning
-  feedback on or off. They never change what you practice or how. Two
-  exceptions: Moves per fill, which sets how many moves a fill adds and so
-  how often new moves come, and the Freeform/Drill switch under Home's Play
-  button.
+  feedback on or off. They never change what you practice or how. The one
+  exception is the Freeform/Drill switch under Home's Play button.
 - **It is the whole product.** If a player can't get somewhere without
   Middlegame or Endgames, Play has a gap.
 

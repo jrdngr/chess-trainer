@@ -16,14 +16,9 @@ public struct Settings: Equatable, Sendable, Codable {
   public var onboarded = false
   /// Whether the pages on how the app works have been shown.
   public var seenIntro = false
-  /// Rounds that start inside an opening play the moves into it for you first.
-  public var autoplay = true
-  public var boardTheme = BoardTheme.slate
   public var lichessUsername = ""
   public var chesscomUsername = ""
   public var growth = DEFAULT_GROWTH
-  /// How many of your moves one fill adds, and how many runs pass between new moves.
-  public var movesPerFill = DEFAULT_MOVES_PER_FILL
   /// Whether the note on autoplay has been shown.
   public var seenAutoplayNote = false
   /// Whether the tip on drawing from the deck after a Play round has been put away.
@@ -39,9 +34,9 @@ public struct Settings: Equatable, Sendable, Codable {
   public init() {}
 
   enum CodingKeys: String, CodingKey {
-    case selection, favoriteOpenings, play, hapticFeedback, showCoordinates, onboarded, seenIntro, autoplay
-    case boardTheme, lichessUsername, chesscomUsername, growth
-    case movesPerFill, seenAutoplayNote, seenDeckTip, seenTips
+    case selection, favoriteOpenings, play, hapticFeedback, showCoordinates, onboarded, seenIntro
+    case lichessUsername, chesscomUsername, growth
+    case seenAutoplayNote, seenDeckTip, seenTips
     case middlegame
     case start
     case openingNames
@@ -59,15 +54,12 @@ public struct Settings: Equatable, Sendable, Codable {
     showCoordinates = try c.decodeIfPresent(Bool.self, forKey: .showCoordinates) ?? showCoordinates
     onboarded = try c.decodeIfPresent(Bool.self, forKey: .onboarded) ?? onboarded
     seenIntro = try c.decodeIfPresent(Bool.self, forKey: .seenIntro) ?? seenIntro
-    autoplay = try c.decodeIfPresent(Bool.self, forKey: .autoplay) ?? autoplay
-    boardTheme = try c.decodeIfPresent(BoardTheme.self, forKey: .boardTheme) ?? boardTheme
     lichessUsername = try c.decodeIfPresent(String.self, forKey: .lichessUsername) ?? lichessUsername
     chesscomUsername = try c.decodeIfPresent(String.self, forKey: .chesscomUsername) ?? chesscomUsername
     growth = try c.decodeIfPresent(GrowthPrefs.self, forKey: .growth) ?? growth
     // How common and how deep are no longer settings.
     growth.minShare = DEFAULT_GROWTH.minShare
     growth.maxPly = DEFAULT_GROWTH.maxPly
-    movesPerFill = try c.decodeIfPresent(Int.self, forKey: .movesPerFill) ?? movesPerFill
     seenAutoplayNote = try c.decodeIfPresent(Bool.self, forKey: .seenAutoplayNote) ?? seenAutoplayNote
     seenDeckTip = try c.decodeIfPresent(Bool.self, forKey: .seenDeckTip) ?? seenDeckTip
     // Names this version doesn't know are dropped.

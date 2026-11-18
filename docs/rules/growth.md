@@ -31,7 +31,7 @@ at a hole), `prepRanOut`
    the most met hole in the open levels; for a selection, the most met one
    inside it, with the levels opened by the whole Playbook.
 4. **The question at the hole.** The answer is yes when the pace (Play runs
-   since anything was added to the Playbook, over Moves per fill, default 3)
+   since anything was added to the Playbook, over 3)
    has reached 1 and the hole is the curve's next one in the selection. A run
    set to grow at a gap (see [drill](drill.md), [next run](next-run.md) and
    an opening's Grow in [playbook](playbook.md)) grows there whatever the
@@ -46,7 +46,7 @@ at a hole), `prepRanOut`
 7. **On a yes, the board turns into New move.** It offers the book's most
    played answers, and each pick is saved as it is made. The
    opponent replies along the gap's line while it can, then with the book's
-   most played reply. It stops after Moves per fill of your moves, at the end
+   most played reply. It stops after 3 of your moves, at the end
    of the named opening, or when no reply is played in 5% of games. Done
    stops it at any time; Undo takes the last pick back out.
 8. **New moves aren't graded that run.** They count in the book's color,

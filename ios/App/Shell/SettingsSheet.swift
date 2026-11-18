@@ -32,19 +32,12 @@ struct SettingsSheet: View {
         VStack(alignment: .leading, spacing: 0) {
           section("Board", first: true)
           ListCard {
-            SegmentedControl(
-              value: Binding(get: { settings.boardTheme }, set: { t in store.update { $0.settings.boardTheme = t } }),
-              options: BoardTheme.allCases.map { ($0, $0.rawValue.prefix(1).uppercased() + $0.rawValue.dropFirst()) }
-            )
-            .padding(.horizontal, 16).padding(.vertical, 10)
             ToggleRow(label: "Coordinates", on: settings.showCoordinates) { store.update { $0.settings.showCoordinates.toggle() } }
             ToggleRow(label: "Haptics", on: settings.hapticFeedback) { store.update { $0.settings.hapticFeedback.toggle() } }
-            ToggleRow(label: "Replay", on: settings.autoplay) { store.update { $0.settings.autoplay.toggle() } }
           }
           section("Play")
           ListCard {
             ToggleRow(label: "Move scores", on: settings.play.moveScores) { store.update { $0.settings.play.moveScores.toggle() } }
-            FillSizeRow(value: settings.movesPerFill) { n in store.update { $0.settings.movesPerFill = n } }
             HStack(spacing: 12) {
               Text("Opening names").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
               Spacer()
@@ -146,29 +139,6 @@ struct ListCard<Content: View>: View {
 }
 
 /// A setting that is on or off.
-/// New moves per round: how many of your moves a run or a recommendation adds at
-/// once, and so how many runs go by between new moves.
-struct FillSizeRow: View {
-  var value: Int
-  var onChange: (Int) -> Void
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      HStack {
-        Text("New moves per round").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-        Spacer()
-        Text("\(value)").font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text2)
-      }
-      Slider(
-        value: Binding(get: { Double(value) }, set: { onChange(Int($0.rounded())) }),
-        in: Double(MOVES_PER_FILL_RANGE.lowerBound)...Double(MOVES_PER_FILL_RANGE.upperBound), step: 1
-      )
-      .tint(Theme.accent)
-    }
-    .padding(.horizontal, 16).padding(.vertical, 12)
-  }
-}
-
 struct ToggleRow: View {
   var label: String
   var hint: String?

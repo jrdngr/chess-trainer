@@ -149,7 +149,7 @@ public func curveSelectionGaps(_ state: AppState, _ tree: OpeningTree, _ selecti
 
 /// Play runs until the next growth is due, 0 when it is due now.
 public func runsUntilGrowth(_ state: AppState) -> Int {
-  max(0, state.settings.movesPerFill - runsSinceAdded(state.games, state.playbookList))
+  max(0, MOVES_PER_FILL - runsSinceAdded(state.games, state.playbookList))
 }
 
 

@@ -107,9 +107,8 @@ public let NEW_PER_ROUND = 8
 /// Growth's own defaults.
 public let DEFAULT_GROWTH = GrowthPrefs(minShare: 1, maxPly: 18, nudgePriority: .transposition, nudgePawns: false)
 
-/// One fill's size, in your moves; the settings slider runs 1...5.
-public let DEFAULT_MOVES_PER_FILL = 3
-public let MOVES_PER_FILL_RANGE = 1...5
+/// One fill's size, in your moves, and how many Play runs pass between new moves.
+public let MOVES_PER_FILL = 3
 
 public let AUTO_GROWTH = GrowthPrefs(minShare: 1, maxPly: 18, nudgePriority: .transposition, nudgePawns: false)
 

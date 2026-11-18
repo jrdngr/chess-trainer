@@ -79,7 +79,7 @@ private func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.
     #expect(bought)
     let rep = state.playbookList.first { $0.color == .w }!
     for root in curatedOpening("london")!.roots {
-      #expect(nodeAtLine(rep, familySeed(tree, root, .w, size: state.settings.movesPerFill)) != nil)
+      #expect(nodeAtLine(rep, familySeed(tree, root, .w, size: MOVES_PER_FILL)) != nil)
     }
     #expect(state.ownsFamily("london"))
   }

@@ -188,7 +188,7 @@ extension AppState {
     let id = ensurePlaybook(opening.color)
     var added = 0
     for root in opening.roots {
-      added += addLine(id, familySeed(tree, root, opening.color, size: settings.movesPerFill), .fixed(.growth), via: .growth)
+      added += addLine(id, familySeed(tree, root, opening.color, size: MOVES_PER_FILL), .fixed(.growth), via: .growth)
     }
     return added > 0
   }
