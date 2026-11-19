@@ -81,7 +81,7 @@ than the owner's.
 | Opening picker | 100 |
 | Freeform | 3,000 |
 | Pawns lens | 100 |
-| Structure names (Pawns upgrade) | 400 |
+| Pawn structure (Pawns upgrade) | 400 |
 | Endgame pawns (Pawns upgrade) | 600 |
 | Pieces lens | 200 |
 | Square control (Pieces upgrade) | 600 |

@@ -70,7 +70,7 @@ public let SHOP: [ShopItem] = [
   ShopItem("openingPicker", "Opening picker", .features, 100, needs: ["sidePicker"], feature: .openingPicker, about: "Play a specific opening."),
   ShopItem("freeform", "Freeform", .features, 3_000, needs: ["openingPicker"], feature: .freeform, about: "Play any of your lines from move one."),
   ShopItem("lensPawns", "Pawns lens", .features, 100, feature: .lensPawns, about: "Tap it under the board in a game to show weak and passed pawns and holes."),
-  ShopItem("lensStructure", "Structure names", .features, 400, needs: ["lensPawns"], feature: .lensStructure, about: "The Pawns lens names the pawn structure."),
+  ShopItem("lensStructure", "Pawn structure", .features, 400, needs: ["lensPawns"], feature: .lensStructure, about: "The Pawns lens names the pawn structure."),
   ShopItem("lensEndgamePawns", "Endgame pawns", .features, 600, needs: ["lensPawns"], feature: .lensEndgamePawns, about: "In endgames, the Pawns lens shows each passed pawn's kind and its square."),
   ShopItem("lensPieces", "Pieces lens", .features, 200, needs: ["lensPawns"], feature: .lensPieces, about: "Tap it under the board in a game to show how active each piece is."),
   ShopItem("lensControl", "Square control", .features, 600, needs: ["lensPieces"], feature: .lensControl, about: "The Pieces lens shows who holds each square."),

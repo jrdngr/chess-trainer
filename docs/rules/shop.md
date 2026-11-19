@@ -10,7 +10,7 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    the Kings lens 300 and the Eval lens 500, each after the one before;
    Plan 1,000; Middlegame 8,000; Endgames 5,000,
    with Basic mates and From your games. Each lens has upgrades, bought
-   after it: Structure names 400 and Endgame pawns 600 for Pawns, Square
+   after it: Pawn structure 400 and Endgame pawns 600 for Pawns, Square
    control 600 and Endgame pieces 800 for Pieces, Endgame kings 1,000 for
    Kings, Eval history 1,200 for Eval. All of them come to 22,850. King
    and pawn (5,000) and Rook endings (3,500) are Endgames families bought
@@ -35,7 +35,7 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    breaks; Pieces rings each piece by how active it is and badges each
    side's least active; Kings grades each king and shows its shield, its
    zone's attackers and the open lines to it; Eval shows the bar. Its
-   upgrades add: Structure names, the structure's name; Square control,
+   upgrades add: Pawn structure, the structure's name; Square control,
    who holds each square; Eval history, the run's chart and the last move's
    cost. In an endgame a lens keeps its first part until its endgame
    upgrade is yours: Endgame pawns adds each passer's kind and its square,

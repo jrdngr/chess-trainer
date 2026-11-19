@@ -106,7 +106,7 @@ private func state(pawns: Int, owning: [String] = []) -> AppState {
   /// Rule 5: a lens draws its first part; each upgrade adds its own.
   @Test func lensUpgradesAddTheirParts() {
     let none = LensParts([])
-    // An isolated queen pawn: the Pawns lens names it only with Structure names.
+    // An isolated queen pawn: the Pawns lens names it only with Pawn structure.
     var iqp = START_FEN
     for san in "e4 c6 d4 d5 exd5 cxd5 c4 Nf6 Nc3 e6 Nf3 Be7 cxd5 Nxd5".split(separator: " ") {
       iqp = applySan(iqp, String(san))!.after
