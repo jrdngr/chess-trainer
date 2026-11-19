@@ -44,4 +44,20 @@ import Testing
     _ = s.buy("lensPawns")
     #expect(s.homeTip == nil, "the lenses have their tip in a game")
   }
+
+  /// Rule 3: once a streak day has paid, Home explains daily rewards at the streak ring, after any bought picker's tip.
+  @Test func homeExplainsDailyRewardsOnceAStreakDayPays() {
+    var s = AppState()
+    s.pawns = 120
+    _ = s.buy("sidePicker")
+    s.pawnStreak.days = 1
+    #expect(s.homeTip == .sidePicker, "a bought picker's tip first")
+    s.settings.see(.sidePicker)
+    #expect(s.homeTip == .dailyRewards)
+    s.settings.see(.dailyRewards)
+    #expect(s.homeTip == nil)
+    var fresh = AppState()
+    fresh.pawnStreak.days = 0
+    #expect(fresh.homeTip == nil, "no streak paid yet")
+  }
 }

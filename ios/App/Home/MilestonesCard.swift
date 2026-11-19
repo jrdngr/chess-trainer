@@ -24,6 +24,10 @@ struct MilestonesCard: View {
       }
     }
     .buttonStyle(.plain)
+    // Over the card, its arrow at the streak ring in the first of four columns.
+    .tip(text: store.state.homeTip == .dailyRewards ? GameTip.dailyRewards.text : nil, arrow: .down, arrowAt: 0.125) {
+      dismissTip(store, .dailyRewards)
+    }
     .sheet(isPresented: $open) {
       ScrollView {
         VStack(alignment: .leading, spacing: 16) {

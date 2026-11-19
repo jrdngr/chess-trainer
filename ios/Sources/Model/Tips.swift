@@ -44,6 +44,8 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
   /* ── Home ── */
   /// A feature bought: its control on Home.
   case sidePicker, openingPicker
+  /// The streak's first day paid: the streak ring on Home.
+  case dailyRewards
 
   public var text: String {
     switch self {
@@ -66,6 +68,7 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     case .endSession: "Tap \u{2715} to end the session and spend your pawns in the Pawn Shop."
     case .sidePicker: "Choose your side."
     case .openingPicker: "Choose an opening to focus on."
+    case .dailyRewards: "Complete your prep once a day to earn daily rewards."
     }
   }
 
@@ -103,11 +106,12 @@ extension AppState {
     logEvent(AppEvent(kind: "tip", picked: tip.rawValue))
   }
 
-  /// Home's tip now: a feature bought, at its control.
+  /// Home's tip now: a feature bought, at its control; else, once a streak day has paid, the daily rewards.
   public var homeTip: GameTip? {
     for feature in ShopFeature.allCases where owns(feature) {
       if let tip = GameTip.bought(feature), !settings.seen(tip) { return tip }
     }
+    if pawnStreak.days > 0, !settings.seen(.dailyRewards) { return .dailyRewards }
     return nil
   }
 

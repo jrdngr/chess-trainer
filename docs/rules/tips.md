@@ -32,6 +32,9 @@ and `firstGameGrowsThePlaybookFromMoveOne` in `PlayFlowTests.swift` for rule 2.
    - a Play game ends without a blunder: it is over, and its moves can be stepped through or played from
    - pawns paid in Play take the balance to 50 or more: tap ✕ to end the session and spend them in the Pawn Shop (test: `enoughPawnsPointToTheShop` in `PlayFlowTests.swift`)
 3. **Home's tip** is a just bought side picker's or opening picker's, at
-   its control on Home. No other bought feature has a tip. The Shop tab
+   its control on Home. No other bought feature has a tip. Once a streak
+   day has paid and no picker's tip is waiting, Home shows the daily
+   rewards tip at the streak ring: complete your prep once a day to earn
+   them. The Shop tab
    shows a badge with the number of items you can buy now, and none at
    zero.
