@@ -17,8 +17,8 @@ struct ShopView: View {
   @State private var frames: [String: CGRect] = [:]
   @State private var flights: [Flight] = []
   @State private var sheetHeight: CGFloat = 300
-  /// A sheet's picture open full screen. Presented outside the measured sheet, which a
-  /// presentation inside it would stop from growing to its content.
+  /// A sheet's picture shown whole: the sheet grows to full height to hold it. A presentation
+  /// of its own inside the sheet would keep the sheet from sizing to its content.
   @State private var fullScreen: String?
 
   var body: some View {
@@ -49,19 +49,9 @@ struct ShopView: View {
       if let id = selected, let item = shopItem(id) {
         BuySheet(item: item, purchase: purchase, fullScreen: $fullScreen, onSelect: { selected = $0 }, onBuy: { buy(item) }) { selected = nil }
           .fixedSize(horizontal: false, vertical: true)
-          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sheetHeight = min($0 + 24, 760) }
+          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if fullScreen == nil { sheetHeight = min($0 + 24, 760) } }
           .frame(maxHeight: .infinity, alignment: .top)
-          .fullScreenCover(item: Binding(get: { fullScreen.map(FullShot.init) }, set: { fullScreen = $0?.id })) { shot in
-            Image(shot.id + "-full").resizable().scaledToFit()
-              .clipShape(RoundedRectangle(cornerRadius: 22))
-              .padding(16)
-              .frame(maxWidth: .infinity, maxHeight: .infinity)
-              .background(SwiftUI.Color.black.opacity(0.92).ignoresSafeArea())
-              .contentShape(Rectangle())
-              .onTapGesture { fullScreen = nil }
-              .accessibilityAddTraits(.isButton).accessibilityLabel("Close")
-          }
-          .presentationDetents([.height(sheetHeight)])
+          .presentationDetents(fullScreen == nil ? [.height(sheetHeight)] : [.large])
           .presentationBackground(SwiftUI.Color(hex: 0x131317))
           .presentationBackgroundInteraction(.enabled)
           .interactiveDismissDisabled(purchase != nil)
@@ -324,8 +314,22 @@ private struct BuySheet: View {
   @State private var width: CGFloat = 0
 
   var body: some View {
+    if let name = fullScreen {
+      Image(name + "-full").resizable().scaledToFit()
+        .clipShape(RoundedRectangle(cornerRadius: 22))
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .onTapGesture { fullScreen = nil }
+        .accessibilityAddTraits(.isButton).accessibilityLabel("Close")
+    } else {
+      card
+    }
+  }
+
+  private var card: some View {
     let status = store.state.status(item)
-    VStack(spacing: 0) {
+    return VStack(spacing: 0) {
       ZStack {
         Text(status == .soon ? "Coming later" : item.name).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.text)
         HStack {
@@ -570,11 +574,6 @@ private struct StreakFreezeRow: View {
     .padding(14)
     .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
   }
-}
-
-/// A picture open full screen.
-private struct FullShot: Identifiable {
-  let id: String
 }
 
 /// What an item's sheet shows in place of its control: a game with the item in use.
