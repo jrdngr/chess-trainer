@@ -35,8 +35,6 @@ extension Icon {
       IconPart(.path("M4 9h10.5a5.5 5.5 0 0 1 0 11H11"), fill: .none, stroke: .current, opacity: (1, 1))]),
     "close": IconSpec(strokeWidth: 2.4, parts: [
       IconPart(.path("M6 6l12 12M18 6L6 18"), fill: .none, stroke: .current, opacity: (1, 1))]),
-    "expand": IconSpec(strokeWidth: 2.4, parts: [
-      IconPart(.path("M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"), fill: .none, stroke: .current, opacity: (1, 1))]),
     "plus": IconSpec(strokeWidth: 2.4, parts: [
       IconPart(.path("M12 5v14M5 12h14"), fill: .none, stroke: .current, opacity: (1, 1))]),
     "check": IconSpec(strokeWidth: 3, parts: [

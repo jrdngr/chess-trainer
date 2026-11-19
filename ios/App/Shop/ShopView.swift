@@ -49,7 +49,7 @@ struct ShopView: View {
       if let id = selected, let item = shopItem(id) {
         BuySheet(item: item, purchase: purchase, fullScreen: $fullScreen, onSelect: { selected = $0 }, onBuy: { buy(item) }) { selected = nil }
           .fixedSize(horizontal: false, vertical: true)
-          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if fullScreen == nil { sheetHeight = min($0 + 24, 760) } }
+          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if fullScreen == nil { sheetHeight = min($0, 760) } }
           .frame(maxHeight: .infinity, alignment: .top)
           .presentationDetents(fullScreen == nil ? [.height(sheetHeight)] : [.large])
           .presentationBackground(SwiftUI.Color(hex: 0x131317))
@@ -375,11 +375,6 @@ private struct BuySheet: View {
       Image(name).resizable()
         .frame(width: box.width, height: box.height)
         .clipShape(shape)
-        .overlay(alignment: .topTrailing) {
-          Icon(name: "expand", size: 14).foregroundStyle(Theme.text).frame(width: 30, height: 30)
-            .background(Circle().fill(Theme.background.opacity(0.72))).padding(8)
-            .allowsHitTesting(false)
-        }
         .onTapGesture { fullScreen = name }
         .accessibilityAddTraits(.isButton).accessibilityLabel("Show full screen")
     case .video(let name, let aspect):
