@@ -27,7 +27,7 @@ struct RootView: View {
   /// Where leaving a mode goes: the Playbook for a run started from an opening's Grow, else Home.
   @State private var returnTab: Tab?
   /// The Pawn Shop item to open, from a locked control.
-  @State private var shopFocus: String?
+  @State private var shopFocus: String? = Self.debugShopItem
   @State private var playbookPage: PlaybookView.Page?
   @State private var playbookSide = ChessCore.Color.w
 
@@ -143,6 +143,15 @@ struct RootView: View {
     growFrom = nil
     tab = returnTab ?? .home
     returnTab = nil
+  }
+
+  /// Debug builds open a Pawn Shop item's sheet with `OPEN_SHOP=lensPawns` (with `OPEN_TAB=shop`), for screenshots.
+  private static var debugShopItem: String? {
+    #if DEBUG
+      ProcessInfo.processInfo.environment["OPEN_SHOP"]
+    #else
+      nil
+    #endif
   }
 
   /// Debug builds open on a tab with `OPEN_TAB=stats`, for screenshots.

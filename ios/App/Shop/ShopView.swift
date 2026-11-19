@@ -46,7 +46,7 @@ struct ShopView: View {
       if let id = selected, let item = shopItem(id) {
         BuySheet(item: item, purchase: purchase, onSelect: { selected = $0 }, onBuy: { buy(item) }) { selected = nil }
           .fixedSize(horizontal: false, vertical: true)
-          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sheetHeight = $0 + 24 }
+          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sheetHeight = min($0 + 24, 760) }
           .frame(maxHeight: .infinity, alignment: .top)
           .presentationDetents([.height(sheetHeight)])
           .presentationBackground(SwiftUI.Color(hex: 0x131317))
@@ -305,6 +305,9 @@ private struct BuySheet: View {
   let onClose: () -> Void
   @Environment(AppStore.self) private var store
   @State private var fullScreen = false
+  /// The sheet's width inside its padding: the picture is sized from it, since a resizable
+  /// image's own size would push the sheet wider than the screen.
+  @State private var width: CGFloat = 0
 
   var body: some View {
     let status = store.state.status(item)
@@ -325,12 +328,11 @@ private struct BuySheet: View {
       if status == .soon {
         SoonGrid()
       } else if let shot = ShopShot.of(item.id) {
-        shotView(shot).opacity(status == .locked ? 0.4 : 1)
+        shotView(shot)
       } else {
         ShopPreview(item: item)
           .padding(14).frame(maxWidth: .infinity)
           .background(RoundedRectangle(cornerRadius: 22).fill(Theme.surface))
-          .opacity(status == .locked ? 0.4 : 1)
       }
       Text(status == .soon ? "These items are not built yet." : item.about).font(.system(size: 15)).foregroundStyle(Theme.text2)
         .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
@@ -338,15 +340,23 @@ private struct BuySheet: View {
       action(status).padding(.top, 16)
     }
     .padding(.horizontal, 16).padding(.top, 10)
+    .onGeometryChange(for: CGFloat.self) { $0.size.width - 32 } action: { width = $0 }
+  }
+
+  /// The picture's size: the sheet's width, unless that would make it taller than the cap.
+  private func size(_ aspect: CGFloat) -> CGSize {
+    let height = min(ShopShot.maxHeight, max(0, width) / aspect)
+    return CGSize(width: height * aspect, height: height)
   }
 
   @ViewBuilder private func shotView(_ shot: ShopShot) -> some View {
     let shape = RoundedRectangle(cornerRadius: 16)
     switch shot {
     case .image(let name):
-      Image(name).resizable().scaledToFit()
+      let box = size(ShopShot.aspect(name))
+      Image(name).resizable()
+        .frame(width: box.width, height: box.height)
         .clipShape(shape)
-        .frame(maxHeight: ShopShot.maxHeight)
         .overlay(alignment: .bottomTrailing) {
           Icon(name: "expand", size: 14).foregroundStyle(Theme.text).frame(width: 30, height: 30)
             .background(Circle().fill(Theme.background.opacity(0.72))).padding(10)
@@ -365,10 +375,10 @@ private struct BuySheet: View {
         }
         .accessibilityAddTraits(.isButton).accessibilityLabel("Show full screen")
     case .video(let name, let aspect):
+      let box = size(aspect)
       LoopingVideo(name: name)
-        .aspectRatio(aspect, contentMode: .fit)
+        .frame(width: box.width, height: box.height)
         .clipShape(shape)
-        .frame(maxHeight: ShopShot.maxHeight)
     }
   }
 
@@ -564,6 +574,12 @@ private enum ShopShot {
 
   /// Keeps the sheet under three quarters of the screen.
   static let maxHeight: CGFloat = 400
+
+  /// A picture's width over its height, from the asset.
+  static func aspect(_ name: String) -> CGFloat {
+    guard let size = UIImage(named: name)?.size, size.height > 0 else { return 0.75 }
+    return size.width / size.height
+  }
 
   static func of(_ id: String) -> ShopShot? {
     switch id {
