@@ -7,7 +7,7 @@ target. Tests: the `docs/rules/pawns.md` suite in
 
 1. **Only these events pay**, in Play and Middlegame runs and Endgames
    rounds: prep complete 1 for each prep move asked, blunder punished 3, a
-   found moment 6, a mission done 6, reaching the endgame 3, checkmate 15,
+   found moment 6, a mission done 6, reaching the endgame 3, checkmate (rule 4),
    distance markers and a held draw (rules 9 and 10), and Endgames bounties
    (see [endgames](endgames.md)). Single moves, growth and milestones pay
    nothing.
@@ -29,7 +29,9 @@ target. Tests: the `docs/rules/pawns.md` suite in
    and your reply gave back 50 or less.
 4. **Reaching the endgame** pays once a game, on the move that reaches
    endgame rules (see [past prep](past-prep.md)). **Checkmate** pays when you
-   give it, never when you take it.
+   give it, never when you take it: 100, less 2 for each of your moves
+   played under endgame rules before the mate, down to 25. A quick finish
+   pays the most, and dragging out a won ending only costs.
 5. **The streak.** The first game you finish each day pays 10 on the
    streak's first day and 10 more each day after, up to 90 from day 9 on.
    In Play, only a game whose prep you completed counts: one you quit or
@@ -63,10 +65,11 @@ target. Tests: the `docs/rules/pawns.md` suite in
    each move toward the next marker, and a pawn at its end that brightens
    with each step and that the marker's pawns pop out of. In Middlegame, where every move is past prep,
    they pay 40%: 4, 6, then 8. Growth moves and your prep's own moves don't
-   count.
-10. **Held the draw** pays half of checkmate, rounded down (7), when a game
-   ends drawn and you stood at −1.5 or worse after your prep (the engine's
-   word before your first move past it). Other draws pay nothing extra.
+   count. Markers stop once the game reaches endgame rules, and after the
+   run's 10th (185 pawns in all); the bar goes with them.
+10. **Held the draw** pays 20, under the least a mate pays, when a game ends
+   drawn and, once it reached endgame rules, you stood at −3 or worse (a
+   lost ending). Other draws pay nothing extra.
 11. **Freezes and repairs keep the streak.** A freeze costs 1,000 in the
    Pawn Shop, and you can hold 2. Each missed day uses one on its own,
    oldest first. A repair costs 2,000 and is offered only when yesterday is

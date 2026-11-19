@@ -14,6 +14,7 @@ public enum PawnEvent: String, Sendable, Codable, CaseIterable {
   case mission
   /// The game reached endgame rules.
   case endgame
+  /// A mate you gave; its pawns come from `winPawns`.
   case checkmate
   /// Every 5 of your moves past prep; its pawns come from `distancePawns`.
   case distance
@@ -59,8 +60,8 @@ public func pawnsFor(_ event: PawnEvent) -> Int {
   case .endgameConverted: return ENDGAME_CONVERTED_PAWNS
   case .blunderPunished, .endgame: return 3
   case .moment, .mission: return 6
-  case .checkmate: return 15
-  case .heldDraw: return pawnsFor(.checkmate) / 2
+  case .checkmate: return WIN_PAWNS
+  case .heldDraw: return HELD_DRAW_PAWNS
   case .distance: return DISTANCE_PAWNS[0]
   case .streak: return 1
   }
@@ -72,6 +73,14 @@ public let DISTANCE_EVERY = 5
 public let DISTANCE_PAWNS = [10, 15, 20]
 /// The share of a marker Middlegame pays.
 public let MIDDLEGAME_DISTANCE_SHARE = 0.4
+/// The most distance markers a run pays.
+public let DISTANCE_MAX_MARKERS = 10
+
+/// Whether your next move past prep counts toward a distance marker: not once the game has
+/// reached endgame rules, and not past the run's last marker.
+public func countsTowardMarker(pastPrep: Int, endgame: Bool) -> Bool {
+  !endgame && pastPrep < DISTANCE_MAX_MARKERS * DISTANCE_EVERY
+}
 
 /// Your moves toward the next distance marker, 0 to 4, and what it pays.
 public func nextMarker(_ pastPrep: Int, middlegame: Bool = false) -> (moves: Int, pays: Int) {
@@ -89,13 +98,29 @@ public func distancePawns(markers count: Int, middlegame: Bool = false) -> Int {
   count > 0 ? (1...count).reduce(0) { $0 + distancePawns($1, middlegame: middlegame) } : 0
 }
 
-/// How far behind after the prep a draw must be held from to pay, in centipawns from your side.
-public let HELD_DRAW_FROM: Double = -150
+/// What a mate you give pays at most: with no move of yours played under endgame rules.
+public let WIN_PAWNS = 100
+/// What each of your moves under endgame rules before the mate takes off it.
+public let WIN_PAWNS_STEP = 2
+/// The least a mate you give pays.
+public let WIN_PAWNS_FLOOR = 25
 
-/// Whether a draw was held: you stood at `HELD_DRAW_FROM` or worse after the prep. `cp` is White's.
-public func heldDraw(_ color: Color, afterPrep cp: Double?) -> Bool {
-  guard let cp else { return false }
-  return (color == .w ? cp : -cp) <= HELD_DRAW_FROM
+/// What a mate you give pays, after `endgameMoves` of your moves under endgame rules.
+public func winPawns(endgameMoves: Int) -> Int {
+  max(WIN_PAWNS_FLOOR, WIN_PAWNS - WIN_PAWNS_STEP * endgameMoves)
+}
+
+/// What a held draw pays: under the least a win pays, so any win beats it.
+public let HELD_DRAW_PAWNS = 20
+/// How far behind under endgame rules a draw must be held from to pay, in centipawns from your
+/// side: a lost ending.
+public let HELD_DRAW_FROM: Double = -RESULT_WIN_CP
+
+/// Whether a draw was held: under endgame rules you stood at `HELD_DRAW_FROM` or worse.
+/// `low` is your worst score there, from your side.
+public func heldDraw(low: Double?) -> Bool {
+  guard let low else { return false }
+  return low <= HELD_DRAW_FROM
 }
 
 /// A prepared move this quick is fast: the time that grades its card easy.

@@ -148,7 +148,8 @@ code, .formula { font-family: var(--mono); font-size: 13px; }
 const RAW = /*DATA*/[];
 const EVENTS = [
   ["prepComplete", "Prep complete, per prep move asked", 1], ["blunderPunished", "Blunder punished", 3], ["moment", "Found moment", 6],
-  ["mission", "Mission done", 6], ["endgame", "Reached the endgame", 3], ["checkmate", "Checkmate", 15],
+  ["mission", "Mission done", 6], ["endgame", "Reached the endgame", 3], ["checkmate", "Checkmate, % of what the game paid", 100],
+  ["heldDraw", "Held the draw", 20],
 ];
 const TIMES = [
   ["prep", "Per prep move", 2], ["growth", "Per growth move", 2], ["other", "Per move past prep", 3],
@@ -172,7 +173,7 @@ const CATALOG = [
   ["In play", "continue", "Continue after a blunder", 500, ""],
   ["Pawn packs", "pack2", "Pawns for $2", 2000, ""], ["Pawn packs", "pack5", "Pawns for $5", 6000, ""], ["Pawn packs", "pack10", "Pawns for $10", 13000, ""],
 ];
-const MARKERS = [["mkEvery", "Every N moves past prep", 5], ["mkFirst", "First marker pays", 10], ["mkStep", "Each marker after, +", 5], ["mkCap", "Most a marker pays", 20], ["mkMiddlegame", "In Middlegame, % of value", 40]];
+const MARKERS = [["mkFirst", "First marker pays", 10], ["mkStep", "Each marker after, +", 5], ["mkCap", "Most a marker pays", 20], ["mkMiddlegame", "In Middlegame, % of value", 40]];
 const BOUNTY = [["egFirst", "First clear, each ending", 250], ["egMission", "First mission, each ending", 100], ["egMastered", "Mastered, each ending", 500], ["egTune", "Tune-up passed", 100], ["egGames", "From your games, each position", 100]];
 const STREAK = [["stStart", "Day 1 pays", 10], ["stStep", "Each day after, +", 10], ["stCap", "Most a day pays", 90]];
 const KEY = "pawn-rates-v10";
@@ -202,16 +203,21 @@ document.getElementById("reset").addEventListener("click", () => {
 });
 
 // One run's pawns and minutes under the current values.
-// Distance markers aren't in the game yet: they're worked out from each run's moves past prep.
+// Distance markers: the markers the game paid (it stops them in the endgame and after the 10th), valued here.
 function markerPawns(r) {
-  if (r.strategy === "endgames" || V.mkEvery <= 0) return 0;
+  if (r.strategy === "endgames") return 0;
   let p = 0;
-  const n = Math.floor(r.otherMoves / V.mkEvery);
+  const n = r.events.distance || 0;
   for (let k = 0; k < n; k++) p += Math.min(V.mkFirst + k * V.mkStep, V.mkCap);
   return r.strategy === "middlegame" ? p * V.mkMiddlegame / 100 : p;
 }
 // Prep complete pays once per run, one pawn value for each prep move asked.
-function eventPawns(r, k) { return k === "prepComplete" ? (r.events[k] ? r.prepMoves : 0) * V[k] : (r.events[k] || 0) * V[k]; }
+// Checkmate is recorded as the pawns it paid (100, less 2 per move in the endgame, down to 25).
+function eventPawns(r, k) {
+  if (k === "prepComplete") return (r.events[k] ? r.prepMoves : 0) * V[k];
+  if (k === "checkmate") return (r.events[k] || 0) * V[k] / 100;
+  return (r.events[k] || 0) * V[k];
+}
 function pawns(r) { let p = markerPawns(r); for (const [k] of EVENTS) p += eventPawns(r, k); return p; }
 function minutes(r, slow) {
   const other = slow ? V.slowOther : V.other;
@@ -401,7 +407,7 @@ function render() {
       ["T4 · Freeform against Drill, long runs", "equal", fmt(ffX, 2) + "×", near(ffX, 1, 0.1)],
       ["T5 · A miss", "loses the prep pawns only", "by rule", true],
       ["T6 · Runs ending in your mate", "at least 2×", fmt(mateX, 2) + "×", mateX >= 2],
-      ["Held the draw", "half of mate, rounded down", `${Math.floor(V.checkmate / 2)}`, true],
+      ["Held the draw", "under the least a mate pays (25)", `${V.heldDraw}`, V.heldDraw < 25],
       ["T7 · Basic mates bounties against the Endgames unlock", "about ½", fmt(egShare("mates", V.c_endgames), 2), near(egShare("mates", V.c_endgames), 0.5, 0.1)],
       ["T7 · King and pawn bounties against its price", "about ½", fmt(egShare("pawn", V.c_egPawn), 2), near(egShare("pawn", V.c_egPawn), 0.5, 0.1)],
       ["T7 · Rook endings bounties against its price", "about ½", fmt(egShare("rook", V.c_egRook), 2), near(egShare("rook", V.c_egRook), 0.5, 0.1)],
@@ -423,13 +429,13 @@ function render() {
 
   document.getElementById("formulas").textContent =
 `pawns(run)   = Σ count(event) × value(event) + markers(run)
-markers(run) = Σ min(${V.mkFirst} + (k − 1) × ${V.mkStep}, ${V.mkCap})  for k = 1 … ⌊past-prep moves / ${V.mkEvery}⌋
+markers(run) = Σ min(${V.mkFirst} + (k − 1) × ${V.mkStep}, ${V.mkCap})  for k = 1 … markers the run paid (none in the endgame, 10 at most)
 minutes(run) = (prep × ${V.prep}s + growth × ${V.growth}s + past-prep × ${V.other}s + ${V.overhead}s) / 60
              = (Endgames moves × ${V.ending}s + ${V.overhead}s) / 60       for Endgames rounds
 rate(group)  = Σ pawns(run) / Σ minutes(run)
 hours(price) = price / rate / 60
 family k     = ${V.famStart} + (k − 1) × ${V.famStep}
-prep complete pays ${V.prepComplete} × prep moves asked, once per run; held the draw (half of checkmate, rounded down) and the streak are not counted`;
+prep complete pays ${V.prepComplete} × prep moves asked, once per run; checkmate as the game paid it; the streak is not counted`;
 }
 render();
 </script>

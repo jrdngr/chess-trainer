@@ -55,10 +55,13 @@ than the owner's.
    breathes while it waits for the first growth move, and Done with nothing
    added drains it.
 2. **Distance markers** pay every 5 of your moves past prep: 10, then 15,
-   then 20 for each one after. In Middlegame they pay 40%.
-3. **Checkmate** pays 15. **Held the draw** pays half of checkmate, rounded
-   down, and only when you were at −1.5 or worse after the prep. Other
-   draws pay nothing extra.
+   then 20 for each one after. In Middlegame they pay 40%. They stop once
+   the game reaches the endgame, and after a run's 10th marker, so stalling
+   a won game earns nothing.
+3. **Checkmate** pays 100, less 2 for each of your moves in the endgame
+   before the mate, down to 25: finishing quickly pays most. **Held the
+   draw** pays 20, under any win, and only when you were at −3 or worse in
+   the endgame. Other draws pay nothing extra.
 4. **Other events** keep paying: blunder punished 3, found moment 6,
    mission done 6, reached the endgame 3.
 5. **Endgames pays bounties, not rounds.** Each ending pays once for its

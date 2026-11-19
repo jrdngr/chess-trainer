@@ -44,8 +44,8 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
   @Test func whatEachEventPays() {
     let paid = Dictionary(uniqueKeysWithValues: PawnEvent.allCases.map { ($0, pawnsFor($0)) })
     #expect(paid == [
-      .prepComplete: 1, .blunderPunished: 3, .moment: 6, .mission: 6, .endgame: 3, .checkmate: 15,
-      .streak: 1, .distance: 10, .heldDraw: 7,
+      .prepComplete: 1, .blunderPunished: 3, .moment: 6, .mission: 6, .endgame: 3, .checkmate: 100,
+      .streak: 1, .distance: 10, .heldDraw: 20,
       .endgameClear: 250, .endgameMission: 100, .endgameMastery: 500, .endgameTuneUp: 100, .endgameConverted: 100,
     ])
   }
@@ -118,6 +118,21 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
     #expect(awards(engineMove(reached.session, "Kd8").effects).isEmpty)
   }
 
+  /// Rule 4: a mate pays 100, less 2 for each of your moves under endgame rules before it, down to 25.
+  @Test func aQuickMatePaysMore() throws {
+    #expect([0, 1, 10, 25, 37, 38, 100].map { winPawns(endgameMoves: $0) } == [100, 98, 80, 50, 26, 25, 25])
+    // King and queen against king: one quiet move, then mate.
+    var s = try session()
+    s.state.run.played = []
+    s.state.run.fen = "7k/8/6K1/8/8/8/8/5Q2 w - - 0 1"
+    s.state.extras.endgame = true
+    s = judgedMove(s, ctx, judged("Qe2"), 1, 0).session
+    #expect(s.endgameMoves == 1)
+    s = engineMove(s, "Kg8").session
+    let mate = judgedMove(s, ctx, judged("Qe8#"), 1, 0)
+    #expect(awards(mate.effects).filter { $0.event == .checkmate }.map(\.count) == [98])
+  }
+
   /// Rule 5: 10 more each day, up to 90; a missed day starts again.
   @Test func theStreakClimbsDaily() {
     #expect([1, 2, 5, 8, 9, 10, 100].map(streakPawns) == [10, 20, 50, 80, 90, 90, 90])
@@ -176,6 +191,7 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
   }
 
   /// Rule 9: markers at 5, 10, 15 and 20 moves past prep pay 10, 15, 20, 20; Middlegame pays 40%.
+  /// They stop under endgame rules and after the run's 10th.
   @Test func distanceMarkersPay() throws {
     #expect((1...4).map { distancePawns($0) } == [10, 15, 20, 20])
     #expect((1...4).map { distancePawns($0, middlegame: true) } == [4, 6, 8, 8])
@@ -198,23 +214,40 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
     let prep = try session()
     let e4 = try #require(applySan(prep.state.run.fen, "e4"))
     #expect(playPrepared(prep, ctx, e4, 1, 0).session.pastPrep == 0)
+    // The 10th marker is the last.
+    var last = s
+    last.pastPrep = 49
+    let tenth = judgedMove(last, ctx, judged("d4"), 1, 0)
+    #expect(awards(tenth.effects).filter { $0.event == .distance }.map(\.count) == [20])
+    #expect(tenth.session.pastPrep == 50)
+    let after = judgedMove(engineMove(tenth.session, "Nd7").session, ctx, judged("d5"), 1, 0)
+    #expect(after.session.pastPrep == 50 && awards(after.effects).isEmpty)
+    // Under endgame rules no move counts.
+    var ending = s
+    ending.state.extras.endgame = true
+    #expect(judgedMove(ending, ctx, judged("d4"), 1, 0).session.pastPrep == 6)
   }
 
-  /// Rule 10: a draw pays when you stood at −1.5 or worse after the prep.
+  /// Rule 10: a draw pays 20 when, under endgame rules, you stood at −3 or worse.
   @Test func heldDrawsPay() throws {
-    #expect(heldDraw(.w, afterPrep: -150) && heldDraw(.b, afterPrep: 200))
-    #expect(!heldDraw(.w, afterPrep: -149) && !heldDraw(.w, afterPrep: nil))
+    #expect(heldDraw(low: -300) && !heldDraw(low: -299) && !heldDraw(low: nil))
+    // Your worst score under endgame rules is kept from your side, before and after your moves.
+    var black = try session(at: line("e4 e5 Nf3 Nc6 Bb5"))
+    black.state.run.color = .b
+    black.state.extras.endgame = true
+    let low = judgedMove(black, ctx, judged("a6", before: 320, after: 250), 1, 0).session
+    #expect(low.endgameLow == -320)
     // Stalemate: White mates nothing; Black has no move.
     var held = try session()
     held.state.run.played = []
     held.state.run.fen = "7k/8/5Q2/8/8/8/8/K7 w - - 0 1"
-    held.evalTrail = [-200, -300]
     held.state.extras.endgame = true
+    held.endgameLow = -300
     let stale = engineMove(held, "Qf7")
-    #expect(awards(stale.effects) == [PawnAward(.heldDraw, .board)])
+    #expect(awards(stale.effects) == [PawnAward(.heldDraw, .board, count: 20)])
     if case .draw = stale.session.ending {} else { Issue.record("not a draw") }
-    held.evalTrail = [-100]
-    #expect(awards(engineMove(held, "Qf7").effects).isEmpty, "not behind enough after the prep")
+    held.endgameLow = -150
+    #expect(awards(engineMove(held, "Qf7").effects).isEmpty, "never lost enough under endgame rules")
   }
 
   /// Rule 11: freezes cover missed days on their own, oldest first, and count toward the length.

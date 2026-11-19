@@ -74,7 +74,7 @@ public struct MeasuredRun: Codable, Sendable, Equatable {
   /// blunder, won, lost, draw, ended (the X), capped; for Endgames, success or failure.
   public var ending = ""
   /// How many times each pawn event paid, by `PawnEvent` name; prep complete counts its prep
-  /// moves. `measuredPawns` values them.
+  /// moves, and checkmate the pawns it paid. `measuredPawns` values them.
   public var events: [String: Int] = [:]
   /// Pawns earned at the values the run was played with.
   public var pawns = 0
@@ -86,6 +86,7 @@ public func measuredPawns(_ events: [String: Int], middlegame: Bool) -> Int {
   events.reduce(0) { total, entry in
     guard let event = PawnEvent(rawValue: entry.key) else { return total }
     if event == .distance { return total + distancePawns(markers: entry.value, middlegame: middlegame) }
+    if event == .checkmate { return total + entry.value }
     return total + pawnsFor(event) * entry.value
   }
 }
@@ -153,7 +154,7 @@ extension HeadlessApp {
       for signal in takeSignals() {
         guard case .pawns(let award) = signal, award.event != .streak else { continue }
         // Prep complete counts its prep moves; every other event, the times it paid.
-        counted.events[award.event.rawValue, default: 0] += award.event == .prepComplete ? award.count : 1
+        counted.events[award.event.rawValue, default: 0] += award.event == .prepComplete || award.event == .checkmate ? award.count : 1
         counted.pawns += award.count
       }
       runs.append(counted)

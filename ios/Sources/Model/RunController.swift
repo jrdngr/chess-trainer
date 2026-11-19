@@ -134,8 +134,12 @@ public struct RunSession {
   public var ending: Ending?
   /// Middlegame mode's run: handed over past your prep and the book, so neither is asked.
   public var middlegame = false
-  /// Your moves played past your prep, for distance markers.
+  /// Your moves past your prep counted toward distance markers.
   public var pastPrep = 0
+  /// Your moves played once the game reached endgame rules, which a mate's pawns shrink by.
+  public var endgameMoves = 0
+  /// Your worst score once the game reached endgame rules, from your side, for a held draw.
+  public var endgameLow: Double?
 }
 
 /// One of your judged moves: where it went, and the eval swing it closed on from your side (nil across a mate).
@@ -235,7 +239,10 @@ private func afterMove(_ session: RunSession, _ state: RunTally) -> Step {
   }
   let status = positionStatus(fen)
   let won = status.checkmate && fenTurn(fen) != state.run.color
-  if won { effects.append(earn(&state, PawnAward(.checkmate, kingSquare(fen, fenTurn(fen)).map(PawnSource.square) ?? .board))) }
+  if won {
+    let at = kingSquare(fen, fenTurn(fen)).map(PawnSource.square) ?? .board
+    effects.append(earn(&state, PawnAward(.checkmate, at, count: winPawns(endgameMoves: session.endgameMoves))))
+  }
   var next = session
   next.state = state
   let ended: Step
@@ -244,8 +251,8 @@ private func afterMove(_ session: RunSession, _ state: RunTally) -> Step {
   } else if status.checkmate {
     ended = finish(next, state, won ? .won : .lost)
   } else {
-    // A draw held from well behind after the prep pays.
-    if heldDraw(state.run.color, afterPrep: session.evalTrail.first) {
+    // A draw held from a lost ending pays.
+    if heldDraw(low: session.endgameLow) {
       effects.append(earn(&state, PawnAward(.heldDraw, .board)))
       next.state = state
     }
@@ -362,8 +369,14 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     }
     if let moment = scored.earned.moment, moment.found { effects.append(.pawns(PawnAward(.moment, at))) }
     if let mission = scored.earned.mission, mission.result == .done { effects.append(.pawns(PawnAward(.mission, .goal))) }
-    // Every 5 of your moves past prep is a distance marker.
-    if expected.isEmpty {
+    // Under endgame rules your worst score is kept for a held draw.
+    let inEndgame = s.state.extras.endgame
+    if inEndgame {
+      let mine = [judged.before, judged.after].map { run.color == .w ? $0 : -$0 }
+      s.endgameLow = ([s.endgameLow].compactMap { $0 } + mine).min()
+    }
+    // Every 5 of your moves past prep is a distance marker, until the endgame or the last marker.
+    if expected.isEmpty && countsTowardMarker(pastPrep: s.pastPrep, endgame: inEndgame) {
       s.pastPrep += 1
       if s.pastPrep % DISTANCE_EVERY == 0 {
         let award = PawnAward(.distance, .marker, count: distancePawns(s.pastPrep / DISTANCE_EVERY, middlegame: s.middlegame))
@@ -371,7 +384,8 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
         effects.append(.pawns(award))
       }
     }
-    let moved = afterMove(s, playYours(s.state, judged.san, expected.first, scored.extras))
+    var moved = afterMove(s, playYours(s.state, judged.san, expected.first, scored.extras))
+    if inEndgame { moved.session.endgameMoves += 1 }
     return (moved.session, effects + moved.effects)
   }
 }

@@ -239,9 +239,10 @@ public final class RunModel {
 
   /// The distance bar in the header, once your prep is behind you: your moves toward the next
   /// marker and what it pays. Nil while the prep's bar shows: in your prep, and past it until
-  /// your first move there, so the prep's pot can pay out or drain.
+  /// your first move there, so the prep's pot can pay out or drain. Nil again once markers stop:
+  /// under endgame rules, or past the run's last marker.
   public var marker: (moves: Int, pays: Int)? {
-    guard intro == .done else { return nil }
+    guard intro == .done, countsTowardMarker(pastPrep: session.pastPrep, endgame: session.state.extras.endgame) else { return nil }
     if session.pastPrep == 0 && !session.middlegame && prepLabel(session) != nil { return nil }
     return nextMarker(session.pastPrep, middlegame: session.middlegame)
   }
