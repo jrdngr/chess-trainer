@@ -30,6 +30,7 @@ struct PlaybookView: View {
 
   enum Page: Equatable {
     case opening(MapNode)
+    case tidy
   }
 
   var body: some View {
@@ -50,6 +51,7 @@ struct PlaybookView: View {
             page = nil
             onHome()
           })
+      case .tidy: TidyView(onBack: { page = nil })
       case nil: list
       }
     }
@@ -70,7 +72,7 @@ struct PlaybookView: View {
 
   private var list: some View {
     VStack(spacing: 0) {
-      AppBar(title: "Playbook", large: true) {}
+      AppBar(title: "Playbook", large: true) { TidyButton(onOpen: { page = .tidy }) }
       SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")])
         .padding(.horizontal, 16)
       // With nothing on a side, its tree is every family for sale.

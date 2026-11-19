@@ -2,7 +2,7 @@ import Book
 import ChessCore
 import Shared
 
-/// Rare book moves that are familiar anyway.
+/// Rare book moves, and what a switch takes away for Tidy.
 
 /// Book moves ranked under `minShare` that are familiar anyway: they transpose, head toward your lines, or are a habit.
 /// Soundness is not judged here; the engine does that before any is shown.
@@ -59,4 +59,13 @@ private func sansBySame(_ fen: String) -> [String: String] {
   var out: [String: String] = [:]
   for san in legalSans(fen) { out[sameMove(san)] = san }
   return out
+}
+
+/// The positions only a subtree reaches: what goes if the move at its top is
+/// switched away. A position another line also reaches stays.
+public func goneWith(_ rep: Playbook, _ index: ReferenceIndex, _ nodeId: String) -> Set<String> {
+  let profile = profileOf(rep, index)
+  let inside = Set(subtreeIds(rep, nodeId))
+  let outside = Set(profile.nodes.filter { !inside.contains($0.id) }.map(\.after))
+  return Set(profile.nodes.filter { inside.contains($0.id) && !outside.contains($0.after) }.map(\.after))
 }

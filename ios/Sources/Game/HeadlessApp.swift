@@ -227,6 +227,30 @@ public final class HeadlessApp: SignalSink {
 
   public func undo(_ undo: PlaybookUndo) { store.update { $0.undo(undo) } }
 
+  /// Tidy's list, once the scan and the engine are done with it.
+  public func tidyFinds() async -> [TidyFind] {
+    await services.tidy.run(TidyScan.Input(state), index)
+    // The engine is asked as the list is read; read again until nothing waits.
+    while true {
+      let before = services.checks.checks.count
+      _ = services.tidy.finds(state, index)
+      await idle()
+      if services.checks.checks.count == before { break }
+    }
+    return services.tidy.finds(state, index)
+  }
+
+  /// The Playbook tab's Tidy count: nil before the scan is whole.
+  public var tidyCount: Int? { services.tidy.count(state, index) }
+
+  /// Switch these moves, from a Tidy card; the undo puts them back.
+  public func tidySwitch(_ find: TidyFind) throws -> PlaybookUndo {
+    var undo: PlaybookUndo?
+    store.update { undo = $0.tidySwitch(find.playbookId, find.nodeId, find.suggestion) }
+    guard let undo else { throw Failure.notHere("\(find.suggestion) can't be played there") }
+    return undo
+  }
+
   /// Buy an opening for sale on the tree, at its side's price.
   public func buyFamily(_ node: MapNode) throws {
     guard let id = node.family, node.forSale else { throw Failure.notHere("\(node.name) isn't for sale") }

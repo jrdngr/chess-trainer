@@ -66,6 +66,8 @@ public enum GameSignal: Equatable, Sendable {
   public private(set) lazy var growthEngine = GrowthEngine(services: self)
   /// Single-move checks: soundness and what a move gives away.
   public private(set) lazy var checks = EngineChecks(services: self)
+  /// Tidy's scan of the Playbook, shared by the tab's button and Tidy itself.
+  public private(set) lazy var tidy = TidyScan(services: self)
 
   /// Engines kept per use, made on first ask: Play's opponent, Middlegame's builder.
   private var slots: [String: ChessEngine] = [:]

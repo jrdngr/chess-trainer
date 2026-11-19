@@ -117,6 +117,9 @@ extension Icon {
       IconPart(.circle(12, 6.5, 3.7), fill: .current, stroke: .none, opacity: (1, 1)),
       IconPart(.path("M8 11h8v1.7h-2.2c.3 3 1.5 4.6 3.2 6H7c1.7-1.4 2.9-3 3.2-6H8z"), fill: .current, stroke: .none, opacity: (1, 1)),
       IconPart(.rect(5.5, 19.5, 13, 2.7, 1), fill: .current, stroke: .none, opacity: (1, 1))]),
+    "wand": IconSpec(strokeWidth: 2, parts: [
+      IconPart(.path("M4 20 14 10"), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.path("M17 3v2.5M17 8.5V11M13 7h2.5M18.5 7H21"), fill: .none, stroke: .current, opacity: (1, 1))]),
     "lock": IconSpec(strokeWidth: 2, parts: [
       IconPart(.rect(5, 11, 14, 9, 2.5), fill: .none, stroke: .current, opacity: (1, 1)),
       IconPart(.path("M8 11V8a4 4 0 0 1 8 0v3"), fill: .none, stroke: .current, opacity: (1, 1))]),

@@ -2,8 +2,8 @@
 
 Code: `BookMoves.swift`, `PlaybookMap.swift`, `NodePage.swift`.
 
-Moves come in only through growth, choosing your openings, and buying
-them on the tree. Nothing is saved by hand.
+Moves come in only through growth, choosing your openings, buying them
+on the tree, and Tidy's switch (see [tidy](tidy.md)). Nothing is saved by hand.
 Tests: the `docs/rules/playbook.md` suite in
 `Tests/SpecTests/Rules/PlaybookRules.swift`.
 

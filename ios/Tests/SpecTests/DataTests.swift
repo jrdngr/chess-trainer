@@ -27,6 +27,7 @@ import Testing
         case "prefer": state.preferMove(rep(a[1]), node(a[1], a[2]))
         case "note": state.annotate(rep(a[1]), node(a[1], a[2]), "a note")
         case "reorder": state.reorder(rep(a[1]), node(a[1], a[2]), a[3].int)
+        case "tidySwitch": undo = state.tidySwitch(rep(a[1]), node(a[1], a[2]), a[3].string)
         case "undo":
           if let u = undo { state.undo(u) }
           undo = nil
