@@ -304,7 +304,8 @@ private struct BuySheet: View {
   let onBuy: () -> Void
   let onClose: () -> Void
   @Environment(AppStore.self) private var store
-  @State private var fullScreen = false
+  /// The picture shown full screen, by asset name.
+  @State private var fullScreen: String?
   /// The sheet's width inside its padding: the picture is sized from it, since a resizable
   /// image's own size would push the sheet wider than the screen.
   @State private var width: CGFloat = 0
@@ -341,6 +342,16 @@ private struct BuySheet: View {
     }
     .padding(.horizontal, 16).padding(.top, 10)
     .onGeometryChange(for: CGFloat.self) { $0.size.width - 32 } action: { width = $0 }
+    .fullScreenCover(item: Binding(get: { fullScreen.map(FullShot.init) }, set: { fullScreen = $0?.id })) { shot in
+      Image(shot.id + "-full").resizable().scaledToFit()
+        .clipShape(RoundedRectangle(cornerRadius: 22))
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(SwiftUI.Color.black.opacity(0.92).ignoresSafeArea())
+        .contentShape(Rectangle())
+        .onTapGesture { fullScreen = nil }
+        .accessibilityAddTraits(.isButton).accessibilityLabel("Close")
+    }
   }
 
   /// The picture's size: the sheet's width, unless that would make it taller than the cap.
@@ -357,22 +368,12 @@ private struct BuySheet: View {
       Image(name).resizable()
         .frame(width: box.width, height: box.height)
         .clipShape(shape)
-        .overlay(alignment: .bottomTrailing) {
+        .overlay(alignment: .topTrailing) {
           Icon(name: "expand", size: 14).foregroundStyle(Theme.text).frame(width: 30, height: 30)
-            .background(Circle().fill(Theme.background.opacity(0.72))).padding(10)
+            .background(Circle().fill(Theme.background.opacity(0.72))).padding(8)
+            .allowsHitTesting(false)
         }
-        .contentShape(shape)
-        .onTapGesture { fullScreen = true }
-        .fullScreenCover(isPresented: $fullScreen) {
-          Image(name + "-full").resizable().scaledToFit()
-            .clipShape(RoundedRectangle(cornerRadius: 22))
-            .padding(16)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(SwiftUI.Color.black.opacity(0.92).ignoresSafeArea())
-            .contentShape(Rectangle())
-            .onTapGesture { fullScreen = false }
-            .accessibilityAddTraits(.isButton).accessibilityLabel("Close")
-        }
+        .onTapGesture { fullScreen = name }
         .accessibilityAddTraits(.isButton).accessibilityLabel("Show full screen")
     case .video(let name, let aspect):
       let box = size(aspect)
@@ -566,6 +567,11 @@ private struct StreakFreezeRow: View {
     .padding(14)
     .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
   }
+}
+
+/// A picture open full screen.
+private struct FullShot: Identifiable {
+  let id: String
 }
 
 /// What an item's sheet shows in place of its control: a game with the item in use.
