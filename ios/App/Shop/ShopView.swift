@@ -17,6 +17,9 @@ struct ShopView: View {
   @State private var frames: [String: CGRect] = [:]
   @State private var flights: [Flight] = []
   @State private var sheetHeight: CGFloat = 300
+  /// A sheet's picture open full screen. Presented outside the measured sheet, which a
+  /// presentation inside it would stop from growing to its content.
+  @State private var fullScreen: String?
 
   var body: some View {
     VStack(spacing: 0) {
@@ -44,10 +47,20 @@ struct ShopView: View {
     .coordinateSpace(name: Self.space)
     .sheet(isPresented: Binding(get: { selected != nil }, set: { if !$0, purchase == nil { selected = nil } })) {
       if let id = selected, let item = shopItem(id) {
-        BuySheet(item: item, purchase: purchase, onSelect: { selected = $0 }, onBuy: { buy(item) }) { selected = nil }
+        BuySheet(item: item, purchase: purchase, fullScreen: $fullScreen, onSelect: { selected = $0 }, onBuy: { buy(item) }) { selected = nil }
           .fixedSize(horizontal: false, vertical: true)
           .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sheetHeight = min($0 + 24, 760) }
           .frame(maxHeight: .infinity, alignment: .top)
+          .fullScreenCover(item: Binding(get: { fullScreen.map(FullShot.init) }, set: { fullScreen = $0?.id })) { shot in
+            Image(shot.id + "-full").resizable().scaledToFit()
+              .clipShape(RoundedRectangle(cornerRadius: 22))
+              .padding(16)
+              .frame(maxWidth: .infinity, maxHeight: .infinity)
+              .background(SwiftUI.Color.black.opacity(0.92).ignoresSafeArea())
+              .contentShape(Rectangle())
+              .onTapGesture { fullScreen = nil }
+              .accessibilityAddTraits(.isButton).accessibilityLabel("Close")
+          }
           .presentationDetents([.height(sheetHeight)])
           .presentationBackground(SwiftUI.Color(hex: 0x131317))
           .presentationBackgroundInteraction(.enabled)
@@ -300,12 +313,12 @@ private struct ShopNode: View {
 private struct BuySheet: View {
   let item: ShopItem
   let purchase: Purchase?
+  /// The picture shown full screen, by asset name.
+  @Binding var fullScreen: String?
   let onSelect: (String) -> Void
   let onBuy: () -> Void
   let onClose: () -> Void
   @Environment(AppStore.self) private var store
-  /// The picture shown full screen, by asset name.
-  @State private var fullScreen: String?
   /// The sheet's width inside its padding: the picture is sized from it, since a resizable
   /// image's own size would push the sheet wider than the screen.
   @State private var width: CGFloat = 0
@@ -342,16 +355,6 @@ private struct BuySheet: View {
     }
     .padding(.horizontal, 16).padding(.top, 10)
     .onGeometryChange(for: CGFloat.self) { $0.size.width - 32 } action: { width = $0 }
-    .fullScreenCover(item: Binding(get: { fullScreen.map(FullShot.init) }, set: { fullScreen = $0?.id })) { shot in
-      Image(shot.id + "-full").resizable().scaledToFit()
-        .clipShape(RoundedRectangle(cornerRadius: 22))
-        .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(SwiftUI.Color.black.opacity(0.92).ignoresSafeArea())
-        .contentShape(Rectangle())
-        .onTapGesture { fullScreen = nil }
-        .accessibilityAddTraits(.isButton).accessibilityLabel("Close")
-    }
   }
 
   /// The picture's size: the sheet's width, unless that would make it taller than the cap.
