@@ -104,7 +104,7 @@ struct HomeView: View {
     let selection = store.peekRoundSelection()
     if nextRound(store.state, tree, selection, store.autoHistory) != nil {
       Button { onOpen(.play) } label: { PlayLabel() }
-        .buttonStyle(PlayButtonStyle())
+        .buttonStyle(PlayButtonStyle(kind: .accent, height: 54, radius: 12, block: true))
     } else {
       Button { onPlaybook() } label: {
         HStack(spacing: 13) {
@@ -161,19 +161,6 @@ struct PlayLabel: View {
       Text("Play").font(.system(size: 21, weight: .heavy))
     }
     .foregroundStyle(Theme.buttonInk)
-  }
-}
-
-/// Home's Play button: a filled button, darker while pressed.
-struct PlayButtonStyle: ButtonStyle {
-  func makeBody(configuration: Configuration) -> some View {
-    let down = configuration.isPressed
-    configuration.label
-      .frame(maxWidth: .infinity, minHeight: 54)
-      .background(RoundedRectangle(cornerRadius: 12).fill(down ? Theme.buttonPressed : Theme.button))
-      .contentShape(Rectangle())
-      .animation(.easeOut(duration: 0.1), value: down)
-      .sensoryFeedback(.impact(weight: .light), trigger: down) { _, pressed in pressed }
   }
 }
 
