@@ -11,12 +11,11 @@ struct MilestonesCard: View {
   var body: some View {
     let list = milestones(store.state.score, store.state.runRecord)
     let today = store.state.streakNow()
-    let done = list.filter(earned).count
     // The streak always leads; the three closest of the rest follow it.
     let rest = list.filter { $0.kind != .streak }
     let next = nextUp(rest, 3)
     Button { open = true } label: {
-      HomeCard(title: "Milestones", aside: "\(done) of \(list.count)") {
+      HomeCard(title: "Milestones") {
         HStack(spacing: 6) {
           StreakBadge(today: today, waiting: store.streakWaiting > 0).frame(maxWidth: .infinity)
           ForEach(next.isEmpty ? Array(rest.suffix(3)) : next, id: \.id) { MilestoneBadge(milestone: $0).frame(maxWidth: .infinity) }
