@@ -9,7 +9,7 @@ value or price change needs no new games.
 
 ## Files
 
-- `runs.jsonl`: the measured runs, one per line (2,340 runs, measured 2026-11-18, under
+- `runs.jsonl`: the measured runs, one per line (2,340 runs, measured 2026-11-19, under
   the pawn rules in docs/monetization.md).
 - `jobs.txt`: the sweep, one `playbook measure` call per line: the seed, then its options.
 - `pawn-rates.template.html`: the calculator. Its inputs (pawns per event, distance
