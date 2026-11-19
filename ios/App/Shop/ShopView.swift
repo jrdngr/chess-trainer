@@ -1,3 +1,4 @@
+import AVFoundation
 import Game
 import Model
 import SwiftUI
@@ -15,6 +16,7 @@ struct ShopView: View {
   @State private var purchase: Purchase?
   @State private var frames: [String: CGRect] = [:]
   @State private var flights: [Flight] = []
+  @State private var sheetHeight: CGFloat = 300
 
   var body: some View {
     VStack(spacing: 0) {
@@ -34,7 +36,7 @@ struct ShopView: View {
           StreakFreezeRow()
           PawnPacksRow()
         }
-        .padding(.horizontal, 16).padding(.bottom, selected == nil ? 24 : 330)
+        .padding(.horizontal, 16).padding(.bottom, selected == nil ? 24 : sheetHeight + 30)
       }
     }
     .background(Theme.background.ignoresSafeArea())
@@ -43,7 +45,10 @@ struct ShopView: View {
     .sheet(isPresented: Binding(get: { selected != nil }, set: { if !$0, purchase == nil { selected = nil } })) {
       if let id = selected, let item = shopItem(id) {
         BuySheet(item: item, purchase: purchase, onSelect: { selected = $0 }, onBuy: { buy(item) }) { selected = nil }
-          .presentationDetents([.height(300)])
+          .fixedSize(horizontal: false, vertical: true)
+          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sheetHeight = $0 + 24 }
+          .frame(maxHeight: .infinity, alignment: .top)
+          .presentationDetents([.height(sheetHeight)])
           .presentationBackground(SwiftUI.Color(hex: 0x131317))
           .presentationBackgroundInteraction(.enabled)
           .interactiveDismissDisabled(purchase != nil)
@@ -290,8 +295,8 @@ private struct ShopNode: View {
   }
 }
 
-/// The short sheet over the tree: the item as it will look, what it does, and Buy, how
-/// short you are, or the item it needs first.
+/// The sheet over the tree: the item as it looks in use, one sentence on what it does, and
+/// Buy, how short you are, or the item it needs first. Items not built yet share one card.
 private struct BuySheet: View {
   let item: ShopItem
   let purchase: Purchase?
@@ -299,12 +304,13 @@ private struct BuySheet: View {
   let onBuy: () -> Void
   let onClose: () -> Void
   @Environment(AppStore.self) private var store
+  @State private var fullScreen = false
 
   var body: some View {
     let status = store.state.status(item)
     VStack(spacing: 0) {
       ZStack {
-        Text(item.name).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.text)
+        Text(status == .soon ? "Coming later" : item.name).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.text)
         HStack {
           Button(action: onClose) {
             Icon(name: "close", size: 19).foregroundStyle(Theme.text).frame(width: 37, height: 37)
@@ -316,16 +322,54 @@ private struct BuySheet: View {
         }
       }
       .frame(height: 56).padding(.horizontal, 4).padding(.bottom, 8)
-      ShopPreview(item: item)
-        .padding(14).frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 22).fill(Theme.surface))
-        .opacity(status == .locked ? 0.4 : 1)
-      Text(item.about).font(.system(size: 14)).foregroundStyle(Theme.text2)
-        .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: .infinity).padding(.top, 12).padding(.horizontal, 8)
-      action(status).padding(.top, 14)
+      if status == .soon {
+        SoonGrid()
+      } else if let shot = ShopShot.of(item.id) {
+        shotView(shot).opacity(status == .locked ? 0.4 : 1)
+      } else {
+        ShopPreview(item: item)
+          .padding(14).frame(maxWidth: .infinity)
+          .background(RoundedRectangle(cornerRadius: 22).fill(Theme.surface))
+          .opacity(status == .locked ? 0.4 : 1)
+      }
+      Text(status == .soon ? "These items are not built yet." : item.about).font(.system(size: 15)).foregroundStyle(Theme.text2)
+        .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 14).padding(.horizontal, 4)
+      action(status).padding(.top, 16)
     }
     .padding(.horizontal, 16).padding(.top, 10)
+  }
+
+  @ViewBuilder private func shotView(_ shot: ShopShot) -> some View {
+    let shape = RoundedRectangle(cornerRadius: 16)
+    switch shot {
+    case .image(let name):
+      Image(name).resizable().scaledToFit()
+        .clipShape(shape)
+        .frame(maxHeight: ShopShot.maxHeight)
+        .overlay(alignment: .bottomTrailing) {
+          Icon(name: "expand", size: 14).foregroundStyle(Theme.text).frame(width: 30, height: 30)
+            .background(Circle().fill(Theme.background.opacity(0.72))).padding(10)
+        }
+        .contentShape(shape)
+        .onTapGesture { fullScreen = true }
+        .fullScreenCover(isPresented: $fullScreen) {
+          Image(name + "-full").resizable().scaledToFit()
+            .clipShape(RoundedRectangle(cornerRadius: 22))
+            .padding(16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(SwiftUI.Color.black.opacity(0.92).ignoresSafeArea())
+            .contentShape(Rectangle())
+            .onTapGesture { fullScreen = false }
+            .accessibilityAddTraits(.isButton).accessibilityLabel("Close")
+        }
+        .accessibilityAddTraits(.isButton).accessibilityLabel("Show full screen")
+    case .video(let name, let aspect):
+      LoopingVideo(name: name)
+        .aspectRatio(aspect, contentMode: .fit)
+        .clipShape(shape)
+        .frame(maxHeight: ShopShot.maxHeight)
+    }
   }
 
   @ViewBuilder private func action(_ status: ShopStatus) -> some View {
@@ -398,7 +442,7 @@ private struct ShopPreview: View {
       HStack(spacing: 8) {
         ColorSquare(choice: .w, size: 21).frame(width: 42, height: 42).background(field.fill(Theme.surface2))
         HStack {
-          Text("Any Opening").font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.text)
+          Text("King\u{2019}s Gambit").font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.text)
           Spacer()
           Icon(name: "down", size: 17).foregroundStyle(Theme.text3)
         }
@@ -510,5 +554,72 @@ private struct StreakFreezeRow: View {
     }
     .padding(14)
     .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
+  }
+}
+
+/// What an item's sheet shows in place of its control: a game with the item in use.
+private enum ShopShot {
+  case image(String)
+  case video(String, aspect: CGFloat)
+
+  /// Keeps the sheet under three quarters of the screen.
+  static let maxHeight: CGFloat = 400
+
+  static func of(_ id: String) -> ShopShot? {
+    switch id {
+    case "middlegame": return .video("shop-middlegame", aspect: 560.0 / 848.0)
+    case "lensPawns", "lensStructure", "lensEndgamePawns", "lensPieces", "lensControl", "lensEndgamePieces",
+      "lensKings", "lensEndgameKings", "lensEval", "lensEvalHistory", "lensPlan", "endgames", "endgamesPawn", "endgamesRook":
+      return .image("shop-\(id)")
+    default: return nil
+    }
+  }
+}
+
+/// Every item not built yet, on the one card they share.
+private struct SoonGrid: View {
+  var body: some View {
+    LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+      ForEach(SHOP.filter { $0.feature == nil }, id: \.id) { item in
+        HStack(spacing: 9) {
+          Icon(name: "lock", size: 17).foregroundStyle(Theme.text3)
+          Text(item.name).font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.text2)
+            .lineLimit(2).minimumScaleFactor(0.85)
+          Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12).frame(maxWidth: .infinity, minHeight: 50)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface2))
+      }
+    }
+  }
+}
+
+/// A muted clip from the app bundle, looping.
+private struct LoopingVideo: UIViewRepresentable {
+  let name: String
+
+  final class PlayerView: UIView {
+    override static var layerClass: AnyClass { AVPlayerLayer.self }
+    var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
+    var looper: AVPlayerLooper?
+  }
+
+  func makeUIView(context: Context) -> PlayerView {
+    let view = PlayerView()
+    view.backgroundColor = .black
+    guard let url = Bundle.main.url(forResource: name, withExtension: "mp4") else { return view }
+    let player = AVQueuePlayer()
+    player.isMuted = true
+    view.looper = AVPlayerLooper(player: player, templateItem: AVPlayerItem(url: url))
+    view.playerLayer.player = player
+    view.playerLayer.videoGravity = .resizeAspectFill
+    player.play()
+    return view
+  }
+
+  func updateUIView(_ uiView: PlayerView, context: Context) {}
+
+  static func dismantleUIView(_ uiView: PlayerView, coordinator: ()) {
+    uiView.playerLayer.player?.pause()
   }
 }
