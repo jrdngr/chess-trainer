@@ -64,7 +64,7 @@ target. Tests: the `docs/rules/pawns.md` suite in
    prep), a gold bar takes the prep bar's place in the header: a step for
    each move toward the next marker, and a pawn at its end that brightens
    with each step and that the marker's pawns pop out of. In Middlegame, where every move is past prep,
-   they pay 40%: 8 each. Growth moves and your prep's own moves don't
+   they pay 15 each. Growth moves and your prep's own moves don't
    count. Markers stop once the game reaches endgame rules, and after the
    run's 10th (200 pawns in all); the bar goes with them.
 10. **Held the draw** pays 20, under the least a mate pays, when a game ends

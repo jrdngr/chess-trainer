@@ -62,7 +62,7 @@ public func pawnsFor(_ event: PawnEvent) -> Int {
   case .moment, .mission: return 6
   case .checkmate: return WIN_PAWNS
   case .heldDraw: return HELD_DRAW_PAWNS
-  case .distance: return DISTANCE_PAWNS[0]
+  case .distance: return DISTANCE_PAWNS
   case .streak: return 1
   }
 }
@@ -70,9 +70,9 @@ public func pawnsFor(_ event: PawnEvent) -> Int {
 /// How many of your moves past prep make a distance marker.
 public let DISTANCE_EVERY = 5
 /// What each marker pays.
-public let DISTANCE_PAWNS = [20]
-/// The share of a marker Middlegame pays.
-public let MIDDLEGAME_DISTANCE_SHARE = 0.4
+public let DISTANCE_PAWNS = 20
+/// What each marker pays in Middlegame.
+public let MIDDLEGAME_DISTANCE_PAWNS = 15
 /// The most distance markers a run pays.
 public let DISTANCE_MAX_MARKERS = 10
 
@@ -89,8 +89,7 @@ public func nextMarker(_ pastPrep: Int, middlegame: Bool = false) -> (moves: Int
 
 /// What the `n`th distance marker of a run pays (from 1).
 public func distancePawns(_ n: Int, middlegame: Bool = false) -> Int {
-  let full = DISTANCE_PAWNS[min(max(n, 1), DISTANCE_PAWNS.count) - 1]
-  return middlegame ? Int((Double(full) * MIDDLEGAME_DISTANCE_SHARE).rounded()) : full
+  middlegame ? MIDDLEGAME_DISTANCE_PAWNS : DISTANCE_PAWNS
 }
 
 /// What a run's first `count` distance markers pay together.
