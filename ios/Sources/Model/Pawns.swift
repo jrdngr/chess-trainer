@@ -70,7 +70,7 @@ public func pawnsFor(_ event: PawnEvent) -> Int {
 /// How many of your moves past prep make a distance marker.
 public let DISTANCE_EVERY = 5
 /// What the first markers pay; each one after pays the last.
-public let DISTANCE_PAWNS = [10, 15, 20]
+public let DISTANCE_PAWNS = [15, 20]
 /// The share of a marker Middlegame pays.
 public let MIDDLEGAME_DISTANCE_SHARE = 0.4
 /// The most distance markers a run pays.

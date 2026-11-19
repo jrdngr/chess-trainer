@@ -31,9 +31,9 @@ than the owner's.
 
 | What | Target |
 | --- | --- |
-| Long runs (20 or more of your moves past prep) | 2x |
-| Shorter full runs | between 1x and 2x |
-| A run ending in your mate | at least 2x |
+| Long runs (20 or more of your moves past prep) | 1.5x |
+| Shorter full runs | 1.25x |
+| A run ending in your mate | 2x |
 | Middlegame | 1x |
 | Freeform | the same as Drill for the same run length |
 | White and Black | the same |
@@ -54,8 +54,8 @@ than the owner's.
    of the run still pays. When growth opens at the end of the prep, the pot
    breathes while it waits for the first growth move, and Done with nothing
    added drains it.
-2. **Distance markers** pay every 5 of your moves past prep: 10, then 15,
-   then 20 for each one after. In Middlegame they pay 40%. They stop once
+2. **Distance markers** pay every 5 of your moves past prep: 15, then 20
+   for each one after. In Middlegame they pay 40%. They stop once
    the game reaches the endgame, and after a run's 10th marker, so stalling
    a won game earns nothing.
 3. **Checkmate** pays 100, less 2 for each of your moves in the endgame

@@ -173,7 +173,7 @@ const CATALOG = [
   ["In play", "continue", "Continue after a blunder", 500, ""],
   ["Pawn packs", "pack2", "Pawns for $2", 2000, ""], ["Pawn packs", "pack5", "Pawns for $5", 6000, ""], ["Pawn packs", "pack10", "Pawns for $10", 13000, ""],
 ];
-const MARKERS = [["mkFirst", "First marker pays", 10], ["mkStep", "Each marker after, +", 5], ["mkCap", "Most a marker pays", 20], ["mkMiddlegame", "In Middlegame, % of value", 40]];
+const MARKERS = [["mkFirst", "First marker pays", 15], ["mkAfter", "Each marker after pays", 20], ["mkMiddlegame", "In Middlegame, % of value", 40]];
 const BOUNTY = [["egFirst", "First clear, each ending", 250], ["egMission", "First mission, each ending", 100], ["egMastered", "Mastered, each ending", 500], ["egTune", "Tune-up passed", 100], ["egGames", "From your games, each position", 100]];
 const STREAK = [["stStart", "Day 1 pays", 10], ["stStep", "Each day after, +", 10], ["stCap", "Most a day pays", 90]];
 const KEY = "pawn-rates-v10";
@@ -208,7 +208,7 @@ function markerPawns(r) {
   if (r.strategy === "endgames") return 0;
   let p = 0;
   const n = r.events.distance || 0;
-  for (let k = 0; k < n; k++) p += Math.min(V.mkFirst + k * V.mkStep, V.mkCap);
+  for (let k = 0; k < n; k++) p += k === 0 ? V.mkFirst : V.mkAfter;
   return r.strategy === "middlegame" ? p * V.mkMiddlegame / 100 : p;
 }
 // Prep complete pays once per run, one pawn value for each prep move asked.
@@ -401,12 +401,12 @@ function render() {
     const capDay = V.stStep > 0 ? Math.ceil((V.stCap - V.stStart) / V.stStep) + 1 : 1;
     const near = (v, t, tol) => Math.abs(v - t) <= tol;
     const T = [
-      ["T1, T2 · Long runs (20+ moves past prep)", "2×", fmt(longX, 2) + "×", longX >= 1.9],
-      ["Shorter full runs", "between 1× and 2×", fmt(shortX, 2) + "×", shortX >= 1 && shortX <= 2],
+      ["T1, T2 · Long runs (20+ moves past prep)", "1.5×", fmt(longX, 2) + "×", near(longX, 1.5, 0.1)],
+      ["Shorter full runs", "1.25×", fmt(shortX, 2) + "×", near(shortX, 1.25, 0.1)],
       ["T3 · Middlegame", "1×", fmt(mgX, 2) + "×", near(mgX, 1, 0.1)],
       ["T4 · Freeform against Drill, long runs", "equal", fmt(ffX, 2) + "×", near(ffX, 1, 0.1)],
       ["T5 · A miss", "loses the prep pawns only", "by rule", true],
-      ["T6 · Runs ending in your mate", "at least 2×", fmt(mateX, 2) + "×", mateX >= 2],
+      ["T6 · Runs ending in your mate", "2×", fmt(mateX, 2) + "×", mateX >= 1.9],
       ["Held the draw", "under the least a mate pays (25)", `${V.heldDraw}`, V.heldDraw < 25],
       ["T7 · Basic mates bounties against the Endgames unlock", "about ½", fmt(egShare("mates", V.c_endgames), 2), near(egShare("mates", V.c_endgames), 0.5, 0.1)],
       ["T7 · King and pawn bounties against its price", "about ½", fmt(egShare("pawn", V.c_egPawn), 2), near(egShare("pawn", V.c_egPawn), 0.5, 0.1)],
@@ -429,7 +429,7 @@ function render() {
 
   document.getElementById("formulas").textContent =
 `pawns(run)   = Σ count(event) × value(event) + markers(run)
-markers(run) = Σ min(${V.mkFirst} + (k − 1) × ${V.mkStep}, ${V.mkCap})  for k = 1 … markers the run paid (none in the endgame, 10 at most)
+markers(run) = ${V.mkFirst} for the first, ${V.mkAfter} for each k = 1 … markers the run paid (none in the endgame, 10 at most)
 minutes(run) = (prep × ${V.prep}s + growth × ${V.growth}s + past-prep × ${V.other}s + ${V.overhead}s) / 60
              = (Endgames moves × ${V.ending}s + ${V.overhead}s) / 60       for Endgames rounds
 rate(group)  = Σ pawns(run) / Σ minutes(run)

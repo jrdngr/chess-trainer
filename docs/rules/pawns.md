@@ -58,15 +58,15 @@ target. Tests: the `docs/rules/pawns.md` suite in
    and the pawns it will pay in outline; once played, the day it made and
    the pawns filled in. Days kept by a freeze or a repair show icy, with no
    pawns.
-9. **Distance markers** pay every 5 of your moves past your prep: 10 for
-   the first, 15 for the second and 20 for each one after. Once your prep
+9. **Distance markers** pay every 5 of your moves past your prep: 15 for
+   the first and 20 for each one after. Once your prep
    is behind you (from your first move past it, or from the start with no
    prep), a gold bar takes the prep bar's place in the header: a step for
    each move toward the next marker, and a pawn at its end that brightens
    with each step and that the marker's pawns pop out of. In Middlegame, where every move is past prep,
-   they pay 40%: 4, 6, then 8. Growth moves and your prep's own moves don't
+   they pay 40%: 6, then 8. Growth moves and your prep's own moves don't
    count. Markers stop once the game reaches endgame rules, and after the
-   run's 10th (185 pawns in all); the bar goes with them.
+   run's 10th (195 pawns in all); the bar goes with them.
 10. **Held the draw** pays 20, under the least a mate pays, when a game ends
    drawn and, once it reached endgame rules, you stood at −3 or worse (a
    lost ending). Other draws pay nothing extra.
