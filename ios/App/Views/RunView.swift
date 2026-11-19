@@ -197,7 +197,7 @@ struct RunView: View {
   private static let boardTips: Set<GameTip?> = [.flashCards, .prepDone, .missedMove, .freeformGame]
 
   /// The tips hung from the header: at the prep bar, the pawn counter, or the close button.
-  private static let headerTips: Set<GameTip?> = [.prepBar, .pawns, .endSession]
+  private static let headerTips: Set<GameTip?> = [.prepBar, .distancePawns, .pawns, .endSession]
 
   private var headerArrowAt: CGFloat { model.tip == .pawns ? 0.92 : model.tip == .endSession ? 0.08 : 0.5 }
 

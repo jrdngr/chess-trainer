@@ -93,8 +93,8 @@ extension AppStore {
   /// One of a drop's pawns reached the counter. The first to land says why they were paid.
   public func landed(_ id: Int) {
     guard let i = pawnDrops.firstIndex(where: { $0.id == id }) else { return }
-    if !pawnDrops[i].toPot && pawnDrops[i].flying == pawnDrops[i].award.count {
-      pawnReason = PawnReason(text: Model.pawnReason(pawnDrops[i].award.event), id: id)
+    if !pawnDrops[i].toPot && pawnDrops[i].flying == pawnDrops[i].award.count, let text = Model.pawnReason(pawnDrops[i].award.event) {
+      pawnReason = PawnReason(text: text, id: id)
     }
     pawnDrops[i].flying -= 1
     if pawnDrops[i].flying <= 0 { pawnDrops.remove(at: i) }

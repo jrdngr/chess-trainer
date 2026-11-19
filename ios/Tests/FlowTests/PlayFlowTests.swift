@@ -156,6 +156,10 @@ import Testing
     #expect(app.store.pawnReason?.text == "Blunder punished", "only the first pawn of an award names it")
     app.store.landed(mate.id)
     #expect(app.store.pawnReason?.text == "Checkmate")
+    app.store.pay(PawnAward(.distance, .marker, count: 10))
+    let marker = try #require(app.store.pawnDrops.last)
+    app.store.landed(marker.id)
+    #expect(app.store.pawnReason?.text == "Checkmate", "distance pawns say nothing: the bar they leave says it")
   }
 }
 
@@ -432,5 +436,12 @@ private func quietMove(_ fen: String) -> String? {
     try await app.move(try #require(quietMove(run.run.fen)))
     let marker = try #require(app.run?.marker)
     #expect(marker == (1, 10))
+    #expect(!app.store.state.settings.seen(.distancePawns))
+    while let run = app.run, run.live, run.marker?.moves != 0 {
+      run.dismissTip()
+      try await app.move(try #require(quietMove(run.run.fen)))
+    }
+    #expect(app.run?.marker?.moves == 0, "five moves past the prep, still playing")
+    #expect(app.run?.tip == .distancePawns, "the first distance pawns explain the bar")
   }
 }

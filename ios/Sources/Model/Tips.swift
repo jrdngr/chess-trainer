@@ -26,6 +26,8 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
   case blunder
   /// Pawns earned.
   case pawns
+  /// The first distance pawns, out of the bar past your prep.
+  case distancePawns
   /// A mission is set.
   case mission
   /// Next run shows, past your prep in a Play game.
@@ -55,6 +57,7 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     case .redMove: "Red moves break a pattern in your Playbook, so they\u{2019}re harder to remember."
     case .blunder: "A blunder ends the game."
     case .pawns: "You earn pawns for various accomplishments. Spend them in the Pawn Shop."
+    case .distancePawns: "You earn pawns every 5 moves past your prep."
     case .mission: "Complete missions to earn pawns."
     case .nextRun: "Once your prep is done, tap \u{201C}Next run\u{201D} to end early. This can be helpful for drilling openings quickly."
     case .lens: "Tap a lens for hints."

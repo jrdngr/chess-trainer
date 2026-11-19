@@ -43,9 +43,10 @@ target. Tests: the `docs/rules/pawns.md` suite in
    the counter on screen takes it when it arrives. As the first pawn of an
    award lands, why it was paid shows under the counter for 1.5 seconds,
    with no count: Prep complete, Blunder punished, Found it, Mission
-   complete, Endgame reached, Checkmate, 5 more moves, Held the draw, and
+   complete, Endgame reached, Checkmate, Held the draw, and
    for Endgames First clear, First mission, Mastered, Tune-up passed and
-   Converted. Pawns flying into the prep's pot say nothing until it pays.
+   Converted. Distance pawns say nothing: they pop out of the bar
+   past the prep. Pawns flying into the prep's pot say nothing until it pays.
    Test: `landingPawnsSayWhyTheyWerePaid` in
    `Tests/FlowTests/PlayFlowTests.swift`. A run's score is the
    pawns its events earned, the streak's aside.

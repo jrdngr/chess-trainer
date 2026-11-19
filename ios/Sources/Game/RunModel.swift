@@ -873,6 +873,7 @@ public final class RunModel {
         heldPrepPawn = award
       case .pawns(let award):
         pay(award)
+        if award.event == .distance { offer(.distancePawns) }
         offerPawnTips()
       case .finish(let f):
         if case .blunder = f.how, !continued, store.state.pawns >= CONTINUE_PRICE { holdBlunder(f) } else { finished(f) }

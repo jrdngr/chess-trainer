@@ -26,8 +26,9 @@ public enum PawnEvent: String, Sendable, Codable, CaseIterable {
   case streak
 }
 
-/// Why pawns were paid, shown under the counter as they land.
-public func pawnReason(_ event: PawnEvent) -> String {
+/// Why pawns were paid, shown under the counter as they land. Distance pawns say nothing:
+/// the bar they pop out of says it.
+public func pawnReason(_ event: PawnEvent) -> String? {
   switch event {
   case .prepComplete: return "Prep complete"
   case .blunderPunished: return "Blunder punished"
@@ -35,7 +36,7 @@ public func pawnReason(_ event: PawnEvent) -> String {
   case .mission: return "Mission complete"
   case .endgame: return "Endgame reached"
   case .checkmate: return "Checkmate"
-  case .distance: return "5 more moves"
+  case .distance: return nil
   case .heldDraw: return "Held the draw"
   case .endgameClear: return "First clear"
   case .endgameMission: return "First mission"
