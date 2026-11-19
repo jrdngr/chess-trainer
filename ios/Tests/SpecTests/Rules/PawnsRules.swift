@@ -45,7 +45,7 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
     let paid = Dictionary(uniqueKeysWithValues: PawnEvent.allCases.map { ($0, pawnsFor($0)) })
     #expect(paid == [
       .prepComplete: 1, .blunderPunished: 3, .moment: 6, .mission: 6, .endgame: 3, .checkmate: 100,
-      .streak: 1, .distance: 15, .heldDraw: 20,
+      .streak: 1, .distance: 20, .heldDraw: 20,
       .endgameClear: 250, .endgameMission: 100, .endgameMastery: 500, .endgameTuneUp: 100, .endgameConverted: 100,
     ])
   }
@@ -190,11 +190,11 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
     #expect(streakToday(kept, today: "d10", yesterday: "d9").frozen == [2])
   }
 
-  /// Rule 9: markers at 5, 10, 15 and 20 moves past prep pay 15, 20, 20, 20; Middlegame pays 40%.
+  /// Rule 9: markers at 5, 10, 15 and 20 moves past prep pay 20 each; Middlegame pays 40%.
   /// They stop under endgame rules and after the run's 10th.
   @Test func distanceMarkersPay() throws {
-    #expect((1...4).map { distancePawns($0) } == [15, 20, 20, 20])
-    #expect((1...4).map { distancePawns($0, middlegame: true) } == [6, 8, 8, 8])
+    #expect((1...4).map { distancePawns($0) } == [20, 20, 20, 20])
+    #expect((1...4).map { distancePawns($0, middlegame: true) } == [8, 8, 8, 8])
     var s = prepRanOut(try session(at: line("e4 e5 Nf3 Nc6 Bb5 a6")), bookIndex).session
     var paid: [Int] = []
     var from: [PawnSource] = []
@@ -204,12 +204,12 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
       from += awards(step.effects).filter { $0.event == .distance }.map(\.source)
       s = engineMove(step.session, theirs).session
     }
-    #expect(paid == [15])
+    #expect(paid == [20])
     #expect(from == [.marker])
     #expect(s.pastPrep == 6)
-    // The header's bar counts toward the next marker: one move past the first, the second pays 20.
+    // The header's bar counts toward the next marker: one move past the first, the second pays 20 too.
     #expect(nextMarker(s.pastPrep) == (1, 20))
-    #expect(nextMarker(4) == (4, 15) && nextMarker(14, middlegame: true) == (4, 8))
+    #expect(nextMarker(4) == (4, 20) && nextMarker(14, middlegame: true) == (4, 8))
     // A move your prep had doesn't count.
     let prep = try session()
     let e4 = try #require(applySan(prep.state.run.fen, "e4"))

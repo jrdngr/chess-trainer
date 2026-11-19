@@ -435,7 +435,7 @@ private func quietMove(_ fen: String) -> String? {
     #expect(run.live && run.myTurn)
     try await app.move(try #require(quietMove(run.run.fen)))
     let marker = try #require(app.run?.marker)
-    #expect(marker == (1, 15))
+    #expect(marker == (1, 20))
     #expect(!app.store.state.settings.seen(.distancePawns))
     while let run = app.run, run.live, run.marker?.moves != 0 {
       run.dismissTip()

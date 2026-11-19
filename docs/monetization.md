@@ -54,8 +54,8 @@ than the owner's.
    of the run still pays. When growth opens at the end of the prep, the pot
    breathes while it waits for the first growth move, and Done with nothing
    added drains it.
-2. **Distance markers** pay every 5 of your moves past prep: 15, then 20
-   for each one after. In Middlegame they pay 40%. They stop once
+2. **Distance markers** pay 20 for every 5 of your moves past prep,
+   up to 200 a run. In Middlegame they pay 40%. They stop once
    the game reaches the endgame, and after a run's 10th marker, so stalling
    a won game earns nothing.
 3. **Checkmate** pays 100, less 2 for each of your moves in the endgame
