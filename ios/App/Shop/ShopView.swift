@@ -400,8 +400,9 @@ private struct BuySheet: View {
           .frame(maxWidth: .infinity, minHeight: 54).background(shape.fill(Theme.text))
         }
         .buttonStyle(PressScale()).disabled(purchase != nil)
-      case .short(let by):
-        Text("\(by) short").font(.system(size: 17, weight: .semibold).monospacedDigit()).foregroundStyle(Theme.text3)
+      case .short:
+        PawnAmount(count: item.price, size: 17, color: Theme.text3)
+          .font(.system(size: 17, weight: .semibold))
           .frame(maxWidth: .infinity, minHeight: 54).background(shape.fill(Theme.surface2))
       case .locked:
         if let need = item.needs.compactMap(shopItem).first(where: { !store.state.unlocked.contains($0.id) }) {
