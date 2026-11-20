@@ -236,7 +236,7 @@ struct PlaybookMapView: View {
         Button { buy(node) } label: {
           HStack(spacing: 6) {
             Text("Unlock").foregroundStyle(Theme.text)
-            PawnAmount(count: price, size: 15)
+            PawnAmount(count: price, size: 15).fixedSize()
           }
           .font(.system(size: 15, weight: .semibold))
           .padding(.horizontal, 12).frame(height: 36)

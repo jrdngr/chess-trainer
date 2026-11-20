@@ -53,21 +53,21 @@ private func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.
     #expect(all(e4.map { [$0] } ?? []).contains { $0.family == "ruy" && $0.forSale })
   }
 
-  /// Rule 4: 2,000, then 500 more each; White and Black apart.
+  /// Rule 4: 500, then 500 more each; White and Black apart.
   @Test func pricesRise() {
     let tree = openingTree(bookIndex)
     var state = starter()
     state.pawns = 10_000
-    #expect(state.families.price(.w) == 2_000)
+    #expect(state.families.price(.w) == 500)
     let london = state.buyFamily("london", tree)
-    #expect(london && state.pawns == 8_000)
-    #expect(state.families.price(.w) == 2_500 && state.families.price(.b) == 2_000)
+    #expect(london && state.pawns == 9_500)
+    #expect(state.families.price(.w) == 1_000 && state.families.price(.b) == 500)
     let again = state.buyFamily("london", tree)
     #expect(!again, "an opening is bought once")
     var poor = starter()
-    poor.pawns = 1_999
+    poor.pawns = 499
     let short = poor.buyFamily("london", tree)
-    #expect(!short && poor.pawns == 1_999)
+    #expect(!short && poor.pawns == 499)
   }
 
   /// Rule 5: buying adds a seed line from each of its roots.

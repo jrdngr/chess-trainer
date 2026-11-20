@@ -23,7 +23,7 @@ What pawns buy on the Playbook tree: a curated list of openings. Code:
 3. **The rest are for sale on the tree,** under the nearest opening of
    yours on their way, or else under their first move, which then shows as
    the way to them.
-4. **Prices rise.** The first opening bought on a side costs 2,000, and
+4. **Prices rise.** The first opening bought on a side costs 500, and
    each one after it 500 more. White and Black climb their own ladders.
 5. **Buying adds the opening's lines:** from each of its starts, the most
    played reply and your most played answer in turn (as Black the calmest

@@ -110,7 +110,7 @@ upgrades add the rest.
   you picked: an Italian player never drills 1...c5.
 - **A new player starts with 3 openings:** one White, one Black against
   1.e4 and one Black against 1.d4.
-- **Each opening after that costs pawns** on a rising ladder: 2,000 for the
+- **Each opening after that costs pawns** on a rising ladder: 500 for the
   first, then 500 more for each one after. White and Black have separate
   ladders. The $10 unlock includes no openings.
 - **Pawns buy breadth, play earns depth.** On the Playbook tree, an opening

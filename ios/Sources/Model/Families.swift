@@ -7,7 +7,7 @@ import ChessCore
 /// stays inside them. Pawns buy openings; everything inside one grows through the curve.
 
 /// What the first opening past the starting ones costs, and how much more each one after.
-public let FAMILY_FIRST_PRICE = 2_000, FAMILY_PRICE_STEP = 500
+public let FAMILY_FIRST_PRICE = 500, FAMILY_PRICE_STEP = 500
 /// Openings bought to earn a swap token, and the most tokens held.
 public let FAMILIES_PER_TOKEN = 3, MAX_SWAP_TOKENS = 1
 
