@@ -108,6 +108,9 @@ struct RootView: View {
           .tabItem { Label { Text(Tab.shop.label) } icon: { Image.pawn } }.badge(store.state.buyableCount).tag(Tab.shop)
       }
       .tint(Theme.accent)
+      // Leaving the Playbook tab closes its page, so coming back shows the tree. A run from an
+      // opening's Grow keeps the tab, so its page is still there afterward.
+      .onChange(of: tab) { old, _ in if old == .playbook { playbookPage = nil } }
       .environment(\.openShop) { id in
         shopFocus = id
         tab = .shop
