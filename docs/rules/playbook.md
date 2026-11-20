@@ -29,8 +29,8 @@ Tests: the `docs/rules/playbook.md` suite in
    back through your moves to it, never past them; an opening you reach in
    another order than the book's opens at your order; Analysis opens from there.
    Lines past it are reached through their own openings on the tree. The page
-   shows the opening's form: its last 10 answers and their average (see
-   [form](form.md)).
+   shows the opening's form at your move: its last 10 answers to that move
+   and their average (see [form](form.md)).
 5. **Grow waits for the curve.** Grow fills the first hole under the
    opening that an open level allows (see [growth](growth.md)). It starts a
    Play run at the hole, the moves to it played for you, and growth opens

@@ -65,6 +65,53 @@ public struct FormRecord: Equatable, Sendable, Codable {
   public var stamp: Double { (Array(openings.values) + Array(black.values)).reduce(0) { $0 + $1.reduce(0, +) } }
 }
 
+/// What the Playbook shows at each position: the last answers to your move there, by side,
+/// read from the event log's prep answers and misses. An answer counts for the position it
+/// was asked at and the position the prepared move reaches, so an opening shows the answers
+/// to your move there however its name falls.
+public struct FormAtMove: Equatable, Sendable {
+  public var white: [String: [Double]] = [:]
+  public var black: [String: [Double]] = [:]
+
+  public init(_ events: [AppEvent]) {
+    for event in events {
+      guard let color = event.color, let fen = event.fen else { continue }
+      let score: Double
+      let move: String?
+      switch event.kind {
+      case "prep-answer":
+        score = event.text.flatMap(Grade.init(rawValue:)).map { formScore($0) } ?? 1
+        move = event.san
+      case "prep-miss":
+        score = 0
+        move = event.best
+      default: continue
+      }
+      var keys = [positionKey(fen)]
+      if let move, let after = applySan(fen, move) { keys.append(positionKey(after.after)) }
+      for key in Set(keys) {
+        if color == .w { white[key, default: []].append(score) } else { black[key, default: []].append(score) }
+      }
+    }
+    white = white.mapValues { Array($0.suffix(FORM_ANSWERS)) }
+    black = black.mapValues { Array($0.suffix(FORM_ANSWERS)) }
+  }
+
+  /// The last answers to your move at a position, oldest first.
+  public func scores(_ key: String, _ color: Color) -> [Double] { (color == .w ? white : black)[key] ?? [] }
+  public func value(_ key: String, _ color: Color) -> Double? { formOf(scores(key, color)) }
+}
+
+/// A prep answer's grade as an answer score: quick 1, 3 to 8 seconds 0.8, slower 0.5.
+private func formScore(_ grade: Grade) -> Double {
+  switch grade {
+  case .easy: 1
+  case .good: 0.8
+  case .hard: 0.5
+  case .again: 0
+  }
+}
+
 /// An Endgames family's form from its last rounds: the share of them with the goal met.
 public func endgameForm(_ results: [Bool]) -> Double? {
   formOf(results.suffix(FORM_ROUNDS).map { $0 ? 1 : 0 }, least: FORM_MIN_ROUNDS)

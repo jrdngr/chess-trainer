@@ -41,7 +41,7 @@ public struct MapNode: Equatable, Sendable, Identifiable {
   /// The moves to it.
   public var line: [String]
   public var state: MapState
-  /// Its form, 0...1; nil before it has enough answers or while locked.
+  /// Its form at your move there, 0...1, for showing; nil before it has enough answers or while locked.
   public var form: Double?
   /// Your lines through it.
   public var lines: Int
@@ -100,6 +100,7 @@ public func playbookMap(_ state: AppState, _ tree: OpeningTree, side: Color) -> 
     }
     for id in through { lines[id, default: 0] += 1 }
   }
+  let atMove = FormAtMove(state.events)
   let next = curvePlaybookGaps(state, tree).first
   let runs = runsUntilGrowth(state)
   let gate = curveGate(state, tree)
@@ -149,7 +150,7 @@ public func playbookMap(_ state: AppState, _ tree: OpeningTree, side: Color) -> 
     let family = openingList(side).first { $0.roots.contains(node.sans) }?.id
     return MapNode(
       id: node.id, name: node.name, label: shown, move: node.depth == 1 ? moveLabel(node.sans) : node.sans.last ?? "",
-      color: side, line: yours[node.key] ?? node.sans, state: .owned, form: formAverage(state.form, node.id, side), lines: lines[node.id] ?? 0, shelf: shelfOf(tree, node)?.id,
+      color: side, line: yours[node.key] ?? node.sans, state: .owned, form: atMove.value(node.key, side), lines: lines[node.id] ?? 0, shelf: shelfOf(tree, node)?.id,
       gap: nil, children: kids.map { build($0, node.name) } + lockedOrder(locked[node.id] ?? []) + forSale[node.id, default: []],
       family: family)
   }

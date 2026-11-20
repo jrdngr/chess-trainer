@@ -91,10 +91,11 @@ import Testing
     var state = AppState()
     state.addLine(state.ensurePlaybook(.w), line("d4 d5 c4 e6 Nc3 Nf6"), .fixed(.book))
     let qgd = try #require(deepestNodeAlong(tree, line("d4 d5 c4 e6")))
-    for _ in 0..<4 { state.form[.w][qgd.id, default: []].append(1) }
+    let fen = walkSan(qgd.sans).fens.last!
+    for _ in 0..<4 { state.logEvent(AppEvent(kind: "prep-answer", color: .w, san: "Nc3", fen: fen, text: "easy")) }
     var page = nodePage(state, tree, side: .w, id: qgd.id, line: qgd.sans)
     #expect(page.answers == [1, 1, 1, 1] && page.form == nil, "no form under 5 answers")
-    state.form[.w][qgd.id, default: []].append(0)
+    state.logEvent(AppEvent(kind: "prep-miss", color: .w, san: "h3", fen: fen, best: "Nc3"))
     page = nodePage(state, tree, side: .w, id: qgd.id, line: qgd.sans)
     #expect(page.form == 0.8)
   }

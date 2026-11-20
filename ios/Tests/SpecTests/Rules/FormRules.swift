@@ -7,6 +7,14 @@ private func answer(_ line: String, correct: Bool = true, seconds: Double? = 1, 
   MoveResult(mode: .run, line: line.isEmpty ? [] : line.split(separator: " ").map(String.init), color: color, correct: correct, rated: true, at: 0, seconds: seconds)
 }
 
+private func fenAfter(_ moves: String) -> String { walkSan(line(moves)).fens.last! }
+
+/// A prep answer or miss in the event log, as a run logs it.
+private func logged(_ moves: String, _ san: String, _ grade: Grade?, color: Color = .w) -> AppEvent {
+  grade.map { AppEvent(kind: "prep-answer", color: color, san: san, fen: fenAfter(moves), text: "\($0)") }
+    ?? AppEvent(kind: "prep-miss", color: color, san: "h3", fen: fenAfter(moves), best: san)
+}
+
 @Suite("docs/rules/form.md") struct FormRules {
   /// Rule 1.
   @Test func anAnswersScore() {
@@ -30,7 +38,26 @@ private func answer(_ line: String, correct: Bool = true, seconds: Double? = 1, 
     #expect(above.count > 1 && above.allSatisfy { form.openings[$0]?.count == 10 })
   }
 
-  /// Rule 3.
+  /// Rule 3: the Playbook shows each opening's answers to your move there, read from your history.
+  @Test func thePlaybookShowsFormAtYourMove() throws {
+    let tree = openingTree(bookIndex)
+    var state = AppState()
+    state.addLine(state.ensurePlaybook(.w), line("d4 d5 c4 e6 Nc3"), .fixed(.book))
+    for _ in 0..<5 { state.logEvent(logged("d4 d5", "c4", .hard)) }
+    state.logEvent(logged("d4 d5 c4 e6", "Nc3", nil))
+    state.logEvent(logged("d4 d5", "c4", .easy, color: .b))
+    let at = FormAtMove(state.events)
+    let (qpg, qg, qgd) = (positionKey(fenAfter("d4 d5")), positionKey(fenAfter("d4 d5 c4")), positionKey(fenAfter("d4 d5 c4 e6")))
+    #expect(at.scores(qpg, .w) == Array(repeating: 0.5, count: 5), "where your move was asked")
+    #expect(at.scores(qg, .w) == Array(repeating: 0.5, count: 5), "where your move goes")
+    #expect(at.scores(qgd, .w) == [0], "a miss further down shows only there")
+
+    let qpgNode = try #require(tree.byKey[qpg])
+    let page = nodePage(state, tree, side: .w, id: qpgNode.id, line: line("d4 d5"))
+    #expect(page.answers == Array(repeating: 0.5, count: 5))
+  }
+
+  /// Rule 4.
   @Test func formIsTheAverage() throws {
     #expect(formOf([1, 1, 1, 1]) == nil)
     #expect(abs(try #require(formOf([1, 1, 1, 0.8, 0])) - 0.76) < 1e-9)
@@ -42,7 +69,7 @@ private func answer(_ line: String, correct: Bool = true, seconds: Double? = 1, 
     #expect(abs(try #require(state.form.value(id, .w)) - 0.92) < 1e-9)
   }
 
-  /// Rule 5: White's answers and Black's answers in the same opening are kept apart.
+  /// Rule 6: White's answers and Black's answers in the same opening are kept apart.
   @Test func eachSideKeepsItsOwnForm() throws {
     let tree = openingTree(bookIndex)
     var form = FormRecord()
@@ -53,7 +80,7 @@ private func answer(_ line: String, correct: Bool = true, seconds: Double? = 1, 
     #expect(form.value(id, .b) == 0)
   }
 
-  /// Rule 5: a save from before the split reads its form as White's.
+  /// Rule 6: a save from before the split reads its form as White's.
   @Test func anOlderSavesFormIsWhites() throws {
     let old = #"{"openings":{"e4 e5":[1,1,1,1,1]}}"#
     let form = try JSONDecoder().decode(FormRecord.self, from: Data(old.utf8))
@@ -61,7 +88,7 @@ private func answer(_ line: String, correct: Bool = true, seconds: Double? = 1, 
     #expect(form.value("e4 e5", .b) == nil)
   }
 
-  /// Rule 4.
+  /// Rule 5.
   @Test func endgamesFamiliesReadTheirLastFiveRounds() {
     #expect(endgameForm([true, true]) == nil)
     #expect(endgameForm([true, true, true]) == 1)

@@ -18,7 +18,7 @@ public enum NodeGrow: Equatable, Sendable {
 }
 
 public struct NodePage: Equatable, Sendable {
-  /// The opening's last answers on this side, oldest first.
+  /// The opening's last answers to your move on this side, oldest first.
   public var answers: [Double]
   /// Their average, 0 to 1; nil before there are enough of them.
   public var form: Double?
@@ -27,7 +27,8 @@ public struct NodePage: Equatable, Sendable {
 
 /// The page for the opening `id`, reached by `line`, on `side`'s tree.
 public func nodePage(_ state: AppState, _ tree: OpeningTree, side: Color, id: String, line: [String]) -> NodePage {
-  let answers = state.form.scores(id, side)
+  let key = tree.byId[id]?.key ?? positionKey(walkSan(line).fens.last ?? START_FEN)
+  let answers = FormAtMove(state.events).scores(key, side)
   let all = curveHoles(curveSides(state), tree.index, tree: tree)
   let under = all.filter { $0.color == side && $0.line.count > line.count && $0.line.starts(with: line) }
   return NodePage(answers: answers, form: formOf(answers), grow: nodeGrow(under, all, curveGate(state, tree)))
