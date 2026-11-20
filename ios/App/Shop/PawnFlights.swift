@@ -38,7 +38,8 @@ enum PawnMotion {
   static let popDistance = 50.0
   static let spreadDeg = 30.0
   static let spawnStaggerMs = 40.0
-  static let leaveStaggerMs = 100.0
+  /// From the last pawn stopping after its pop to the last one landing, however many pawns a drop holds.
+  static let collectWindowMs = 1000.0
   static let bowPx = 18.0
   static let bowPeak = 0.5
   static let popBowPx = 0.0
@@ -176,11 +177,17 @@ func planTrips(drop: Int, count: Int, from source: CGRect, to target: CGPoint, w
     return (trip, len)
   }
   trips.sort { $0.far < $1.far }
+  let reach = { (far: Double) in min(1, max(0, (far - 80) / 240)) }
+  let flight = { (far: Double) in PawnMotion.collectMinMs + (PawnMotion.collectMaxMs - PawnMotion.collectMinMs) * reach(far) }
+  // The leaves spread so the last pawn lands when the collect window closes.
+  let leaveStagger = trips.count > 1 ? max(0, PawnMotion.collectWindowMs - flight(trips[trips.count - 1].far)) / Double(trips.count - 1) : 0
+  // The window opens once the last pawn has popped out and stopped.
+  let popped = start + PawnMotion.spawnStaggerMs * Double(trips.count - 1) + PawnMotion.popMs + PawnMotion.holdMs
   for rank in trips.indices {
-    let f = min(1, max(0, (trips[rank].far - 80) / 240))
-    let collect = PawnMotion.collectMinMs + (PawnMotion.collectMaxMs - PawnMotion.collectMinMs) * f
+    let f = reach(trips[rank].far)
+    let collect = flight(trips[rank].far)
     let spawn = start + PawnMotion.spawnStaggerMs * Double(rank)
-    let leave = max(spawn + PawnMotion.popMs, start + PawnMotion.popMs + PawnMotion.holdMs + PawnMotion.leaveStaggerMs * Double(rank))
+    let leave = popped + leaveStagger * Double(rank)
     trips[rank].trip.spawn = spawn
     trips[rank].trip.leave = leave
     trips[rank].trip.collect = collect
