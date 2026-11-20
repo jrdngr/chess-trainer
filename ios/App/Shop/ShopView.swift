@@ -40,6 +40,13 @@ struct ShopView: View {
           PawnPacksRow()
         }
         .padding(.horizontal, 16).padding(.bottom, selected == nil ? 24 : sheetHeight + 30)
+        // While a sheet is up, a tap behind it closes the sheet and reaches nothing else.
+        .overlay {
+          if selected != nil {
+            SwiftUI.Color.clear.contentShape(Rectangle())
+              .onTapGesture { if purchase == nil { selected = nil } }
+          }
+        }
       }
     }
     .background(Theme.background.ignoresSafeArea())
