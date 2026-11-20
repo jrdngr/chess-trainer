@@ -34,6 +34,9 @@ public struct CuratedOpening: Equatable, Sendable, Identifiable {
 
   /// Whether a line leads into it: a start of one of its roots.
   public func leadsInto(_ line: [String]) -> Bool { roots.contains { $0.starts(with: line) } }
+
+  /// Whether two openings fill the same slot: White's, or Black's against the same first move.
+  public func sameSlot(_ other: CuratedOpening) -> Bool { color == other.color && (color == .w || firstMove == other.firstMove) }
 }
 
 /// The list, most played first on each side.
@@ -80,17 +83,20 @@ public func curatedOpening(_ id: String) -> CuratedOpening? { OPENING_LIST.first
 /// The openings on the list for one side.
 public func openingList(_ color: Color) -> [CuratedOpening] { OPENING_LIST.filter { $0.color == color } }
 
-/// What openings cost.
+/// What openings cost, and the ones you have turned off.
 public struct FamilyRecord: Equatable, Sendable, Codable {
   /// Openings bought on each side, by color ("w", "b"): each one raises its side's price.
   public var bought: [String: Int] = [:]
+  /// Openings you have and turned off, by id: left out of every automatic pick.
+  public var off: Set<String> = []
   public init() {}
 
-  enum CodingKeys: String, CodingKey { case bought }
+  enum CodingKeys: String, CodingKey { case bought, off }
 
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
     bought = try c.decodeIfPresent([String: Int].self, forKey: .bought) ?? [:]
+    off = try c.decodeIfPresent(Set<String>.self, forKey: .off) ?? []
   }
 
   /// The next opening's price on a side.
@@ -150,14 +156,74 @@ extension AppState {
   /// An opening out of the Playbook, with every move, card and form inside it. Moves it shares
   /// with another opening you have stay.
   mutating func dropFamily(_ old: CuratedOpening, from repId: String) {
-    let kept = ownedFamilies(old.color).filter { $0.id != old.id }
+    cutFamily(old, from: repId, keeping: ownedFamilies(old.color).filter { $0.id != old.id })
+    for key in form[old.color].keys where old.holds(key.split(separator: " ").map(String.init)) { form[old.color][key] = nil }
+    families.off.remove(old.id)
+  }
+
+  /// An opening's moves out of a Playbook, cut where each root leaves every opening kept.
+  private mutating func cutFamily(_ old: CuratedOpening, from repId: String, keeping kept: [CuratedOpening]) {
     for root in old.roots {
-      // Cut where the root leaves every other opening you have.
       let cut = (1...root.count).first { n in !kept.contains { $0.leadsInto(Array(root.prefix(n))) || $0.holds(Array(root.prefix(n))) } }
       guard let cut, let fresh = playbooks[repId], let node = nodeAtLine(fresh, Array(root.prefix(cut))) else { continue }
       removeNode(repId, node.id)
     }
-    for key in form[old.color].keys where old.holds(key.split(separator: " ").map(String.init)) { form[old.color][key] = nil }
+  }
+
+  /* ── Openings turned off ── */
+
+  /// Whether an opening you have is turned off.
+  public func isOff(_ id: String) -> Bool { families.off.contains(id) && ownsFamily(id) }
+
+  /// The openings you have and turned off on a side.
+  public func offFamilies(_ color: Color) -> [CuratedOpening] { ownedFamilies(color).filter { families.off.contains($0.id) } }
+
+  /// Whether an opening can be turned off: you have it, it's on, and another opening in its
+  /// slot (White, or Black against the same first move) stays on.
+  public func canTurnOff(_ id: String) -> Bool {
+    guard let opening = curatedOpening(id), ownsFamily(id), !families.off.contains(id) else { return false }
+    return ownedFamilies(opening.color).contains { $0.id != id && !families.off.contains($0.id) && $0.sameSlot(opening) }
+  }
+
+  /// Turn an opening you have off or back on. Returns whether it changed.
+  @discardableResult
+  public mutating func setOpening(_ id: String, on: Bool) -> Bool {
+    guard let opening = curatedOpening(id), ownsFamily(id) else { return false }
+    if on {
+      guard families.off.remove(id) != nil else { return false }
+    } else {
+      guard canTurnOff(id) else { return false }
+      families.off.insert(id)
+    }
+    logEvent(AppEvent(kind: on ? "opening-on" : "opening-off", color: opening.color, picked: id))
+    return true
+  }
+
+  /// The state automatic picks see for a selection: the openings that are off cut out of the
+  /// Playbooks, except one the selection sits inside. Moves they share with an opening that's on stay.
+  public func forAutoPicks(_ tree: OpeningTree, _ selection: Selection) -> AppState {
+    let chosen = nodeById(tree, selection.opening).sans
+    var out = self
+    for color in [Color.w, .b] {
+      let off = offFamilies(color).filter { !$0.holds(chosen) }
+      guard !off.isEmpty, let rep = playbookList.first(where: { $0.color == color }) else { continue }
+      let on = ownedFamilies(color).filter { opening in !off.contains { $0.id == opening.id } }
+      for opening in off { out.cutFamily(opening, from: rep.id, keeping: on) }
+    }
+    return out
+  }
+
+  /// Whether a line runs through an opening that's off, outside the one a selection sits inside.
+  public func lineIsOff(_ color: Color, _ line: [String], except selection: [String] = []) -> Bool {
+    offFamilies(color).contains { $0.holds(line) && !$0.holds(selection) }
+  }
+
+  /* ── Deleting ── */
+
+  /// Whether the moves at a line can be deleted: never an opening's named position or the moves
+  /// leading to it, for any opening you have. Moves past it, and lines outside every opening, can go.
+  public func canDelete(_ color: Color, _ line: [String]) -> Bool {
+    !ownedFamilies(color).contains { $0.leadsInto(line) }
   }
 
   /// An opening's seed lines into its side's Playbook, one per root.

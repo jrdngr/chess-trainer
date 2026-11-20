@@ -52,6 +52,8 @@ public struct MapNode: Equatable, Sendable, Identifiable {
   public var children: [MapNode]
   /// The opening on the list it stands for, by id, where it is one.
   public var family: String?
+  /// An opening of yours that's turned off.
+  public var off = false
 
   public var owned: Bool { state == .owned }
   public var forSale: Bool { if case .forSale = state { true } else { false } }
@@ -152,7 +154,7 @@ public func playbookMap(_ state: AppState, _ tree: OpeningTree, side: Color) -> 
       id: node.id, name: node.name, label: shown, move: node.depth == 1 ? moveLabel(node.sans) : node.sans.last ?? "",
       color: side, line: yours[node.key] ?? node.sans, state: .owned, form: atMove.value(node.key, side), lines: lines[node.id] ?? 0, shelf: shelfOf(tree, node)?.id,
       gap: nil, children: kids.map { build($0, node.name) } + lockedOrder(locked[node.id] ?? []) + forSale[node.id, default: []],
-      family: family)
+      family: family, off: family.map { state.isOff($0) } ?? false)
   }
 
   // The openings on the list you don't have, for sale where they would hang: under the

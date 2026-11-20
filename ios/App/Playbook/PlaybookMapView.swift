@@ -197,7 +197,7 @@ struct PlaybookMapView: View {
           .foregroundStyle(tag.color)
         }
         Spacer(minLength: 0)
-        if node.owned {
+        if node.owned && !node.off {
           Text("LINES").font(.system(size: 11, weight: .semibold)).tracking(1).foregroundStyle(Theme.text3).padding(.trailing, 28)
         }
       }
@@ -215,11 +215,21 @@ struct PlaybookMapView: View {
   private func ownedRow(_ node: MapNode) -> some View {
     Button { onOpen(node) } label: {
       HStack(spacing: 10) {
-        Text(node.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
+        Text(node.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(node.off ? Theme.text2 : Theme.text).lineLimit(1)
           .frame(maxWidth: .infinity, alignment: .leading)
-        FormRing(form: node.form).frame(width: 32, alignment: .trailing)
-        Text("\(node.lines)").font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text)
-          .frame(width: 40, alignment: .trailing)
+        if node.off, let id = node.family {
+          Button { store.update { $0.setOpening(id, on: true) } } label: {
+            Text("Enable").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+              .padding(.horizontal, 12).frame(height: 36)
+              .background(RoundedRectangle(cornerRadius: 10).fill(Theme.surface3))
+              .contentShape(RoundedRectangle(cornerRadius: 10))
+          }
+          .buttonStyle(.plain)
+        } else {
+          FormRing(form: node.form).frame(width: 32, alignment: .trailing)
+          Text("\(node.lines)").font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text)
+            .frame(width: 40, alignment: .trailing)
+        }
         Icon(name: "chevron", size: 18).foregroundStyle(Theme.text3)
       }
       .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 60).contentShape(Rectangle())
@@ -385,6 +395,12 @@ private struct MapNodeView: View {
         Text("Next").font(.system(size: 10, weight: .bold)).foregroundStyle(.white)
           .padding(.horizontal, 5).frame(height: 14)
           .background(RoundedRectangle(cornerRadius: 4).fill(Theme.key))
+          .offset(y: -8)
+      } else if node.off {
+        Text("Off").font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.text2)
+          .padding(.horizontal, 5).frame(height: 14)
+          .background(RoundedRectangle(cornerRadius: 4).fill(Theme.background))
+          .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(Theme.text3, lineWidth: 1))
           .offset(y: -8)
       }
     }

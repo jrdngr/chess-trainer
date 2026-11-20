@@ -44,8 +44,10 @@ public func prepAccuracy(_ rounds: [RoundRecord], _ colors: [Color]) -> Double? 
   return asked > 0 ? Double(recent.reduce(0) { $0 + $1.prep!.found }) / Double(asked) : nil
 }
 
-/// Play's next run, or nil with nothing prepared inside the selection.
+/// Play's next run, or nil with nothing prepared inside the selection. Openings that are off
+/// sit out unless the selection is inside one.
 public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _ history: AutoHistory) -> AutoRound? {
+  let state = state.forAutoPicks(tree, selection)
   if let gap = blackFirstGap(state, tree, selection) { return firstMoveRound(tree, gap) }
   if state.settings.start == .freeform { return freeRound(state, tree, selection, history) }
   let accuracy = { (color: Color) in prepAccuracy(state.score.rounds, [color]) }
@@ -109,8 +111,9 @@ public func afterRound(_ history: AutoHistory, _ round: AutoRound, _ selection: 
   return next
 }
 
-/// The run Play plays for a round.
+/// The run Play plays for a round, on the Playbook its automatic picks see.
 public func runOptions(_ round: AutoRound, _ state: AppState, _ tree: OpeningTree, _ selection: Selection, seed: Double) -> StartOptions {
+  let state = state.forAutoPicks(tree, selection)
   var opts = StartOptions(steer: .lines, tree: tree, reps: state.playbookList, node: nodeById(tree, selection.opening), color: round.pick.color == .w ? .w : .b)
   opts.lean = LEAN_FOR[round.pick.focus]
   opts.toward = round.pick.opening

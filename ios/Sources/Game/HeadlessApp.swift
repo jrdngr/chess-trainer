@@ -227,6 +227,14 @@ public final class HeadlessApp: SignalSink {
 
   public func undo(_ undo: PlaybookUndo) { store.update { $0.undo(undo) } }
 
+  /// Turn an opening of yours off or back on from its page's menu.
+  public func turnOpening(_ node: MapNode, on: Bool) throws {
+    guard let id = node.family, node.owned else { throw Failure.notHere("\(node.name) isn't an opening of yours") }
+    var changed = false
+    store.update { changed = $0.setOpening(id, on: on) }
+    if !changed { throw Failure.notHere("\(node.name) can't be turned \(on ? "on" : "off")") }
+  }
+
   /// Tidy's list, once the scan and the engine are done with it.
   public func tidyFinds() async -> [TidyFind] {
     await services.tidy.run(TidyScan.Input(state), index)

@@ -29,9 +29,9 @@ What pawns buy on the Playbook tree: a curated list of openings. Code:
    played reply and your most played answer in turn (as Black the calmest
    of the top three answers), for one fill of your moves, ending with the
    named opening or where no reply is common enough.
-6. **Removing pays nothing back.** Deleting an opening's moves from the
-   Playbook takes it out and puts it on sale again. No pawns come back, and
-   the price ladder doesn't step down.
+6. **Your openings are yours for good,** bought or picked when choosing.
+   Delete can't take an opening's named position or the moves to it, and
+   the price ladder never steps down.
 7. **Choosing openings.** Welcome offers "Recommend some openings" (the
    Italian, 1...e5 and the Queen's Gambit Declined) or "Choose my
    openings": the tree in a choosing mode, with no prices, and three slots
@@ -43,3 +43,12 @@ What pawns buy on the Playbook tree: a curated list of openings. Code:
    The picks go in free with their lines (rule 5) and don't raise a price.
    There are no other ways in: after this, new openings come only from the
    tree. Code: `Choosing.swift`.
+8. **Turning an opening off.** An opening you have can be turned off from
+   the menu on its page, and back on there or with Enable on the tree. An
+   opening that's off sits out every automatic pick: Drill and Freeform on
+   a selection it isn't inside (Any Opening, a side, a first move), the
+   Next opening and its growth, and its moves coming due. Picked itself,
+   it plays as usual without turning on. Its moves, cards and form stay.
+   The last opening on in its slot (White, Black against 1.e4, Black
+   against 1.d4) offers no way to turn it off. On the tree it carries an
+   Off tag.

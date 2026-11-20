@@ -54,10 +54,11 @@ extension AppState {
     return subtreeIds(rep, at.id).count
   }
 
-  /// Delete from an opening's page: its last move and everything after it, with an undo.
+  /// Delete from an opening's page: its last move and everything after it, with an undo. Nothing at
+  /// or before the named position of an opening you have.
   @discardableResult
   public mutating func removeNodeAt(_ side: Color, _ line: [String]) -> PlaybookUndo? {
-    guard let rep = playbookList.first(where: { $0.color == side }), let at = nodeAtLine(rep, line) else { return nil }
+    guard canDelete(side, line), let rep = playbookList.first(where: { $0.color == side }), let at = nodeAtLine(rep, line) else { return nil }
     return removeNode(rep.id, at.id)
   }
 }

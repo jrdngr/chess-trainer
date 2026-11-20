@@ -128,23 +128,29 @@ public func openLevels(_ holes: [Gap], _ gate: CurveGate) -> Set<Int> {
   return open
 }
 
-/// The holes the curve may grow now in the whole Playbook, most met first.
+/// The holes the curve may grow now in the whole Playbook, most met first. Openings that are
+/// off grow nothing and hold no level shut.
 public func curvePlaybookGaps(_ state: AppState, _ tree: OpeningTree) -> [Gap] {
-  let holes = curveHoles(curveSides(state), tree.index, tree: tree)
+  let holes = curveHoles(curveSides(state), tree.index, tree: tree).filter { !state.lineIsOff($0.color, $0.line) }
   let open = openLevels(holes, curveGate(state, tree))
   return holes.filter { open.contains(curveLevel($0)) }
 }
 
 /// The holes the curve may grow now inside a selection. Levels open by the whole Playbook.
+/// Openings that are off grow only when the selection is inside one.
 public func curveSelectionGaps(_ state: AppState, _ tree: OpeningTree, _ selection: Selection) -> [Gap] {
   let sides = curveSides(state)
-  let open = openLevels(curveHoles(sides, tree.index, tree: tree), curveGate(state, tree))
+  let chosen = nodeById(tree, selection.opening).sans
+  let all = curveHoles(sides, tree.index, tree: tree).filter { !state.lineIsOff($0.color, $0.line) }
+  let open = openLevels(all, curveGate(state, tree))
   var out: [Gap] = []
   for region in regionsBySide(tree, selection) {
     out += curveHoles(sides.filter { $0.color == region.side }, tree.index, tree: tree, scope: region.node)
   }
   var seen = Set<String>()
-  return rankGaps(out.filter { open.contains(curveLevel($0)) && seen.insert($0.id).inserted })
+  return rankGaps(out.filter {
+    open.contains(curveLevel($0)) && !state.lineIsOff($0.color, $0.line, except: chosen) && seen.insert($0.id).inserted
+  })
 }
 
 /// Play runs until the next growth is due, 0 when it is due now.

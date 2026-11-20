@@ -35,9 +35,36 @@ private func everyNode(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + e
     #expect(handoff.line.starts(with: node.line), "the line drawn goes through the selected opening")
     await app.home()
 
-    let undo = try app.delete(node)
-    #expect(!everyNode(app.map(.w)).contains { $0.id == node.id && $0.owned })
+    let named = try #require(everyNode(app.map(.w)).first { $0.owned && $0.family != nil })
+    #expect(throws: HeadlessApp.Failure.self) { try app.delete(named) }
+    let branch = try #require(everyNode(app.map(.w)).first { $0.owned && app.state.canDelete($0.color, $0.line) })
+    let undo = try app.delete(branch)
+    #expect(!everyNode(app.map(.w)).contains { $0.id == branch.id && $0.owned })
     app.undo(undo)
-    #expect(everyNode(app.map(.w)).contains { $0.id == node.id && $0.owned })
+    #expect(everyNode(app.map(.w)).contains { $0.id == branch.id && $0.owned })
+  }
+}
+
+/// Turning an opening off: a second White opening bought, the first turned off from its page,
+/// Play on Any Opening keeps to the one still on, and Enable on the tree brings it back.
+@MainActor @Test func anOpeningTurnsOffAndBackOn() async throws {
+  try await headless { app in
+    onboard(app)
+    let first = try #require(everyNode(app.map(.w)).first { $0.owned && $0.family != nil })
+    #expect(throws: HeadlessApp.Failure.self) { try app.turnOpening(first, on: false) }
+    let sale = try #require(everyNode(app.map(.w)).first { $0.forSale && $0.line.first != first.line.first })
+    app.store.update { $0.pawns = 500 }
+    try app.buyFamily(sale)
+    try app.turnOpening(first, on: false)
+    #expect(everyNode(app.map(.w)).contains { $0.id == first.id && $0.off })
+    try app.select(side: .w, opening: ANY_OPENING)
+    for _ in 0..<3 {
+      await app.openPlay()
+      let run = try #require(app.run)
+      #expect(!run.run.played.starts(with: first.line), "Any Opening keeps out of it")
+      await app.home()
+    }
+    try app.turnOpening(first, on: true)
+    #expect(everyNode(app.map(.w)).contains { $0.id == first.id && !$0.off })
   }
 }

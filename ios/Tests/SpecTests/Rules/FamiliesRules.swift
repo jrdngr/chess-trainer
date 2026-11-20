@@ -84,17 +84,25 @@ private func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.
     #expect(state.ownsFamily("london"))
   }
 
-  /// Rule 6: deleting an opening's moves gives nothing back; it goes on sale again and the price stays.
-  @Test func removingPaysNothing() {
+  /// Rule 6: Delete can't take an opening you have, only what's past its named position.
+  @Test func openingsAreKept() throws {
     let tree = openingTree(bookIndex)
     var state = starter()
+    state.addLine(state.playbookList[0].id, line("e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6"), .fixed(.book))
+    let way = state.removeNodeAt(.w, line("e4")), named = state.removeNodeAt(.w, line("e4 e5 Nf3 Nc6 Bc4"))
+    #expect(way == nil, "not the moves to it")
+    #expect(named == nil, "not its named position")
+    #expect(state.ownsFamily("italian"))
+    let past = state.removeNodeAt(.w, line("e4 e5 Nf3 Nc6 Bc4 Bc5 c3"))
+    #expect(past != nil && state.ownsFamily("italian"), "a branch past it goes")
+    state.addLine(state.playbookList[0].id, line("d4 d5"), .fixed(.book))
+    let outside = state.removeNodeAt(.w, line("d4"))
+    #expect(outside != nil, "a line outside every opening goes")
     state.pawns = 500
-    let bought = state.buyFamily("london", tree)
-    #expect(bought && state.pawns == 0)
-    let removed = state.removeNodeAt(.w, line("d4"))
-    #expect(removed != nil && !state.ownsFamily("london"))
-    #expect(state.pawns == 0, "no refund")
-    #expect(state.families.price(.w) == 1_000, "the ladder doesn't step down")
+    _ = state.buyFamily("london", tree)
+    #expect(state.families.price(.w) == 1_000)
+    let london = state.removeNodeAt(.w, line("d4 Nf6 Bf4"))
+    #expect(london == nil, "nor one bought")
   }
 
   /// Rule 7: the choosing tree offers only what a slot takes, and the picks go in free.
@@ -136,5 +144,41 @@ private func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.
     #expect(changed && choosing.slot == .d4, "back to the first empty slot")
     let d4 = choosing.pick("slav")
     #expect(d4 && choosing.ids == ["english", "najdorf", "slav"])
+  }
+
+  /// Rule 8: an opening that's off sits out the automatic picks, still plays when picked itself,
+  /// and the last one on in its slot can't be turned off.
+  @Test func turningAnOpeningOff() throws {
+    let tree = openingTree(bookIndex)
+    var state = starter()
+    #expect(!state.canTurnOff("italian"), "the only White opening stays on")
+    state.pawns = 500
+    _ = state.buyFamily("london", tree)
+    #expect(state.canTurnOff("italian") && state.canTurnOff("london"))
+    #expect(!state.canTurnOff("najdorf"), "only an opening you have")
+    let turnedOff = state.setOpening("italian", on: false)
+    #expect(turnedOff && state.isOff("italian"))
+    #expect(!state.canTurnOff("london"), "London is now the last one on")
+    let last = state.setOpening("london", on: false)
+    #expect(!last)
+    #expect(!state.canTurnOff("qgd"), "Black against 1.d4 is a slot of its own")
+
+    let any = Selection(color: .w, opening: ANY_OPENING)
+    let auto = state.forAutoPicks(tree, any)
+    #expect(auto.ownedFamilies(.w).map(\.id) == ["london"], "off is cut out of Any Opening")
+    #expect(state.ownedFamilies(.w).count == 2, "and kept in the Playbook")
+    let italian = try #require(deepestNodeAlong(tree, line("e4 e5 Nf3 Nc6 Bc4")))
+    let picked = Selection(color: .w, opening: italian.id)
+    #expect(state.forAutoPicks(tree, picked).ownsFamily("italian"), "picked itself, it plays")
+    #expect(!curvePlaybookGaps(state, tree).contains { $0.color == .w && $0.line.starts(with: line("e4 e5 Nf3 Nc6 Bc4")) },
+      "it grows nothing next")
+    let round = try #require(nextRound(state, tree, any, AutoHistory()))
+    #expect(round.pick.color == .w && (round.at ?? round.aim ?? []).first != "e4", "Any Opening keeps out of it")
+    let node = try #require(all(playbookMap(state, tree, side: .w)).first { $0.family == "italian" })
+    #expect(node.off && node.owned)
+
+    let turnedOn = state.setOpening("italian", on: true)
+    #expect(turnedOn && !state.isOff("italian"))
+    #expect(state.forAutoPicks(tree, any).ownsFamily("italian"))
   }
 }

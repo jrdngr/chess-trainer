@@ -5,7 +5,8 @@ import Model
 import SwiftUI
 
 /// An opening of yours on the tree, at its position: the board and the moves to
-/// it, its form, Grow as the curve allows it, Analyze and Select. Its menu deletes it.
+/// it, its form, Grow as the curve allows it, Analyze and Select. Its menu turns an opening
+/// of yours off or on, and deletes what's past one.
 struct OpeningPage: View {
   let tree: OpeningTree
   let node: MapNode
@@ -42,15 +43,29 @@ struct OpeningPage: View {
   }
 
   private func content(_ page: NodePage) -> some View {
-    let removes = store.state.movesUnder(node.color, node.line)
+    let state = store.state
+    let removes = state.movesUnder(node.color, node.line)
+    let canDelete = state.canDelete(node.color, node.line)
+    let family = node.family.flatMap { state.ownsFamily($0) ? $0 : nil }
+    let off = family.map { state.isOff($0) } ?? false
+    let canTurnOff = family.map { state.canTurnOff($0) } ?? false
     return VStack(spacing: 0) {
       AppBar(title: node.name, onBack: onBack) {
-        Menu {
-          Button(role: .destructive) { deleting = true } label: { Label("Delete", systemImage: "trash") }
-        } label: {
-          Icon(name: "more", size: 20).foregroundStyle(Theme.text).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
+        if canDelete || off || canTurnOff {
+          Menu {
+            if let family, off {
+              Button { turn(family, on: true) } label: { Label("Enable opening", systemImage: "play.circle") }
+            } else if let family, canTurnOff {
+              Button { turn(family, on: false) } label: { Label("Disable opening", systemImage: "pause.circle") }
+            }
+            if canDelete {
+              Button(role: .destructive) { deleting = true } label: { Label("Delete", systemImage: "trash") }
+            }
+          } label: {
+            Icon(name: "more", size: 20).foregroundStyle(Theme.text).frame(width: 38, height: 38).background(Circle().fill(Theme.surface))
+          }
+          .accessibilityLabel("More")
         }
-        .accessibilityLabel("More")
       }
       ScrollView {
         VStack(spacing: 12) {
@@ -180,6 +195,10 @@ struct OpeningPage: View {
       $0.settings.selection.color = node.color == .w ? .w : .b
     }
     onSelected()
+  }
+
+  private func turn(_ id: String, on: Bool) {
+    store.update { $0.setOpening(id, on: on) }
   }
 
   private func delete(_ removes: Int) {

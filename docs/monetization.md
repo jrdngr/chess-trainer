@@ -116,8 +116,9 @@ upgrades add the rest.
 - **Pawns buy breadth, play earns depth.** On the Playbook tree, an opening
   for sale costs its ladder price. Variations inside an opening you own are
   free and open only through growth's level gates. There's no early unlock.
-- **Removing an opening pays nothing back.** A player can delete lines or
-  whole openings, but gets no pawns for them.
+- **Openings are kept for good.** A player can delete branches inside an
+  opening but not the opening itself. An opening they no longer want to
+  meet can be turned off, which keeps it out of automatic picks.
 - **Trials** let a player walk any opening for sale for free before buying it.
   See [trials.md](trials.md).
 

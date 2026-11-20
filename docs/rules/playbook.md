@@ -45,4 +45,7 @@ Tests: the `docs/rules/playbook.md` suite in
    picker, so Play and Middlegame draw their lines through it. It shows only
    once the opening picker is yours.
 7. **Delete** takes the opening's last move and everything after it, with
-   an undo. Nothing else edits the Playbook by hand.
+   an undo. It's offered only past the named position of an opening you
+   have, or on lines outside all of them: an opening you have stays yours
+   (see [openings for sale](families.md)). Nothing else edits the Playbook
+   by hand.
