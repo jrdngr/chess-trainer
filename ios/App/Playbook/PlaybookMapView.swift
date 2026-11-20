@@ -232,7 +232,6 @@ struct PlaybookMapView: View {
       Text(node.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text2).lineLimit(1)
         .frame(maxWidth: .infinity, alignment: .leading)
       if case .forSale(let price) = node.state {
-        if store.state.families.tokens > 0, !store.state.ownedFamilies(side).isEmpty { swapMenu(node) }
         Button { buy(node) } label: {
           HStack(spacing: 6) {
             Text("Unlock").foregroundStyle(Theme.text)
@@ -288,33 +287,11 @@ struct PlaybookMapView: View {
     }
   }
 
-  /// Swap: an opening you have goes, with everything under it, and this one comes in its place.
-  private func swapMenu(_ node: MapNode) -> some View {
-    Menu {
-      Section("Swap out, losing its progress") {
-        ForEach(store.state.ownedFamilies(side)) { out in
-          Button(out.name) { swap(out.id, for: node) }
-        }
-      }
-    } label: {
-      Text("Swap").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-        .padding(.horizontal, 12).frame(height: 36)
-        .background(RoundedRectangle(cornerRadius: 10).strokeBorder(Theme.surface3, lineWidth: 1.5))
-    }
-  }
-
   private func buy(_ node: MapNode) {
     guard let id = node.family else { return }
     var bought = false
     store.update { bought = $0.buyFamily(id, tree) }
     if bought { toasts.show("\(node.name) added") }
-  }
-
-  private func swap(_ out: String, for node: MapNode) {
-    guard let id = node.family else { return }
-    var swapped = false
-    store.update { swapped = $0.swapFamily(out, for: id, tree) }
-    if swapped { toasts.show("\(node.name) added") }
   }
 
   private func shelfTag(_ node: MapNode) -> (word: String, color: SwiftUI.Color)? {

@@ -8,8 +8,6 @@ import ChessCore
 
 /// What the first opening past the starting ones costs, and how much more each one after.
 public let FAMILY_FIRST_PRICE = 500, FAMILY_PRICE_STEP = 500
-/// Openings bought to earn a swap token, and the most tokens held.
-public let FAMILIES_PER_TOKEN = 3, MAX_SWAP_TOKENS = 1
 
 /// One opening on the list.
 public struct CuratedOpening: Equatable, Sendable, Identifiable {
@@ -82,20 +80,17 @@ public func curatedOpening(_ id: String) -> CuratedOpening? { OPENING_LIST.first
 /// The openings on the list for one side.
 public func openingList(_ color: Color) -> [CuratedOpening] { OPENING_LIST.filter { $0.color == color } }
 
-/// What openings cost and how swaps are earned.
+/// What openings cost.
 public struct FamilyRecord: Equatable, Sendable, Codable {
   /// Openings bought on each side, by color ("w", "b"): each one raises its side's price.
   public var bought: [String: Int] = [:]
-  /// Swap tokens held.
-  public var tokens = 1
   public init() {}
 
-  enum CodingKeys: String, CodingKey { case bought, tokens }
+  enum CodingKeys: String, CodingKey { case bought }
 
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
     bought = try c.decodeIfPresent([String: Int].self, forKey: .bought) ?? [:]
-    tokens = try c.decodeIfPresent(Int.self, forKey: .tokens) ?? 1
   }
 
   /// The next opening's price on a side.
@@ -139,8 +134,8 @@ extension AppState {
     return ownedFamilies(opening.color).contains { $0.id == id }
   }
 
-  /// Buy an opening at its side's price: its seed lines go into the Playbook, the price rises, and
-  /// every third one bought earns a swap token. Returns whether it was bought.
+  /// Buy an opening at its side's price: its seed lines go into the Playbook and the price rises.
+  /// Returns whether it was bought.
   @discardableResult
   public mutating func buyFamily(_ id: String, _ tree: OpeningTree) -> Bool {
     guard let opening = curatedOpening(id), !ownsFamily(id) else { return false }
@@ -148,24 +143,7 @@ extension AppState {
     guard pawns >= price, seedFamily(opening, tree) else { return false }
     pawns -= price
     families.bought[opening.color.rawValue, default: 0] += 1
-    let total = families.bought.values.reduce(0, +)
-    if total % FAMILIES_PER_TOKEN == 0 { families.tokens = min(MAX_SWAP_TOKENS, families.tokens + 1) }
     logEvent(AppEvent(kind: "buy", color: opening.color, count: price, picked: id, text: "balance \(pawns)"))
-    return true
-  }
-
-  /// Swap an opening you have for one you don't, on the same side, with a token: the old one goes
-  /// with every move, card and form inside it. Moves it shares with another opening you have stay.
-  /// Returns whether it was swapped.
-  @discardableResult
-  public mutating func swapFamily(_ out: String, for id: String, _ tree: OpeningTree) -> Bool {
-    guard families.tokens > 0, let old = curatedOpening(out), let new = curatedOpening(id), old.color == new.color,
-      ownsFamily(out), !ownsFamily(id), let rep = playbookList.first(where: { $0.color == old.color })
-    else { return false }
-    dropFamily(old, from: rep.id)
-    guard seedFamily(new, tree) else { return false }
-    families.tokens -= 1
-    logEvent(AppEvent(kind: "swap", color: old.color, picked: id, text: "out \(out)"))
     return true
   }
 

@@ -94,11 +94,6 @@ extension AppState {
     return true
   }
 
-  /// Swap tokens held, from 0 to the most you can hold.
-  public mutating func devSetTokens(_ count: Int) {
-    families.tokens = min(MAX_SWAP_TOKENS, max(0, count))
-  }
-
   /* ── onboarding ── */
 
   /// Welcome again, then onboarding; the save stays, and the openings picked go in beside it.

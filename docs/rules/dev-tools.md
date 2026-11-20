@@ -17,9 +17,8 @@ can't be a TestFlight build). Tests: the `docs/rules/dev-tools.md` suite in
    do the whole tree and the endgame families.
 3. **Pawns** are added in steps or zeroed. The balance never goes below 0.
 4. **Openings on the list** go into the Playbook free, with their seed lines,
-   or come out with their moves, cards and form, as a swap takes them.
-   Neither moves the price ladder. Swap tokens are set from 0 to the most
-   you can hold.
+   or come out with their moves, cards and form.
+   Neither moves the price ladder.
 5. **Tips** are marked seen or unseen, one at a time or all at once. An
    unseen tip shows again at its trigger.
 6. **The streak** is set by hand: its days, its freezes, and its last day,

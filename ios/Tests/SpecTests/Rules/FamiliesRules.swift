@@ -84,23 +84,17 @@ private func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.
     #expect(state.ownsFamily("london"))
   }
 
-  /// Rule 6: one token to start, one more per 3 bought, at most 1; a swap drops the old opening but keeps shared moves.
-  @Test func swapTokens() {
+  /// Rule 6: deleting an opening's moves gives nothing back; it goes on sale again and the price stays.
+  @Test func removingPaysNothing() {
     let tree = openingTree(bookIndex)
     var state = starter()
-    #expect(state.families.tokens == 1)
-    let swapped = state.swapFamily("italian", for: "ruy", tree)
-    #expect(swapped && state.ownedFamilies(.w).map(\.id) == ["ruy"] && state.families.tokens == 0)
-    let rep = state.playbookList.first { $0.color == .w }!
-    #expect(nodeAtLine(rep, line("e4 e5 Nf3 Nc6 Bc4")) == nil)
-    #expect(nodeAtLine(rep, line("e4 e5 Nf3 Nc6 Bb5")) != nil, "the moves on the way are kept")
-    let none = state.swapFamily("ruy", for: "london", tree)
-    #expect(!none, "no token left")
-    state.pawns = 100_000
-    for id in ["london", "english", "catalan"] { _ = state.buyFamily(id, tree) }
-    #expect(state.families.tokens == 1, "the third bought earns one")
-    for id in ["french", "caro", "slav"] { _ = state.buyFamily(id, tree) }
-    #expect(state.families.tokens == 1, "held at most 1")
+    state.pawns = 500
+    let bought = state.buyFamily("london", tree)
+    #expect(bought && state.pawns == 0)
+    let removed = state.removeNodeAt(.w, line("d4"))
+    #expect(removed != nil && !state.ownsFamily("london"))
+    #expect(state.pawns == 0, "no refund")
+    #expect(state.families.price(.w) == 1_000, "the ladder doesn't step down")
   }
 
   /// Rule 7: the choosing tree offers only what a slot takes, and the picks go in free.

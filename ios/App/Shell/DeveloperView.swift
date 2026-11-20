@@ -173,9 +173,6 @@ struct DeveloperView: View {
     let state = store.state
     section("Openings")
     ListCard {
-      CountRow(label: "Swap tokens", value: state.families.tokens, range: 0...MAX_SWAP_TOKENS) { n in
-        store.devUpdate { $0.devSetTokens(n) }
-      }
       ForEach(OPENING_LIST, id: \.id) { opening in
         let owned = state.ownsFamily(opening.id)
         ToggleRow(label: opening.name, hint: opening.color == .w ? "White" : "Black", on: owned) {

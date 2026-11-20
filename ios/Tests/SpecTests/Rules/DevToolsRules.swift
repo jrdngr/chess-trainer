@@ -48,11 +48,6 @@ import Testing
     #expect(s.form.openings["d4 d5 Bf4"] == nil)
     #expect(s.ownsFamily("italian"), "the other openings stay")
     #expect(s.families.price(.w) == price)
-
-    s.devSetTokens(5)
-    #expect(s.families.tokens == MAX_SWAP_TOKENS)
-    s.devSetTokens(-1)
-    #expect(s.families.tokens == 0)
   }
 
   /// Rule 5: an unseen tip shows again at its trigger.

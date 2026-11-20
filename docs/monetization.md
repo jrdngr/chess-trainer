@@ -116,9 +116,8 @@ upgrades add the rest.
 - **Pawns buy breadth, play earns depth.** On the Playbook tree, an opening
   for sale costs its ladder price. Variations inside an opening you own are
   free and open only through growth's level gates. There's no early unlock.
-- **Swap tokens.** A player starts with 1 and earns 1 more for every 3
-  openings bought, holding at most 1. Swapping an opening out deletes its
-  progress.
+- **Removing an opening pays nothing back.** A player can delete lines or
+  whole openings, but gets no pawns for them.
 - **Trials** let a player walk any opening for sale for free before buying it.
   See [trials.md](trials.md).
 

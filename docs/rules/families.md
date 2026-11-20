@@ -29,10 +29,9 @@ What pawns buy on the Playbook tree: a curated list of openings. Code:
    played reply and your most played answer in turn (as Black the calmest
    of the top three answers), for one fill of your moves, ending with the
    named opening or where no reply is common enough.
-6. **Swap tokens.** You start with 1 and earn 1 more for every 3 openings
-   bought, holding at most 1. A swap trades an opening you have for one for
-   sale on the same side, free: the old one goes with every move, card and
-   form inside it. Moves on the way to another opening you have stay.
+6. **Removing pays nothing back.** Deleting an opening's moves from the
+   Playbook takes it out and puts it on sale again. No pawns come back, and
+   the price ladder doesn't step down.
 7. **Choosing openings.** Welcome offers "Recommend some openings" (the
    Italian, 1...e5 and the Queen's Gambit Declined) or "Choose my
    openings": the tree in a choosing mode, with no prices, and three slots

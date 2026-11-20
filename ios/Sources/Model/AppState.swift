@@ -106,7 +106,7 @@ public struct AppState: Equatable, Sendable, Codable {
   public var pawnStreak = PawnStreak()
   /// What the Pawn Shop sold you, by item id.
   public var unlocked: Set<String> = []
-  /// Opening families bought, and swap tokens held.
+  /// Opening families bought.
   public var families = FamilyRecord()
   /// App Store transactions already credited, by id: each one pays once.
   public var credited: Set<String> = []

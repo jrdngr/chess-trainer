@@ -34,7 +34,7 @@ import Testing
 }
 
 /// The Playbook tree: Home names the Next opening, and openings you don't have are for sale on
-/// a rising ladder; a swap token trades one for another.
+/// a rising ladder.
 @MainActor @Test func buyingAnOpeningOnTheTree() async throws {
   try await headless { app in
     onboard(app)
@@ -51,10 +51,5 @@ import Testing
     let english = try #require(all(app.map(.w)).first { $0.family == "english" })
     #expect(english.state == .forSale(price: 1_000), "the next one costs 500 more")
     #expect(all(app.map(.b)).contains { $0.family == "najdorf" && $0.forSale })
-
-    try app.swapFamily("london", for: english)
-    #expect(app.state.ownedFamilies(.w).map(\.id) == ["italian", "english"])
-    #expect(app.state.families.tokens == 0)
-    #expect(app.state.pawns == 4_500, "a swap is free")
   }
 }

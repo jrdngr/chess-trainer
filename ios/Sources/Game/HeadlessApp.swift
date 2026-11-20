@@ -259,14 +259,6 @@ public final class HeadlessApp: SignalSink {
     if !bought { throw Failure.notHere("\(node.name) needs \(state.families.price(node.color)) pawns") }
   }
 
-  /// Swap an opening you have (by id) for one for sale, with a swap token.
-  public func swapFamily(_ out: String, for node: MapNode) throws {
-    guard let id = node.family, node.forSale else { throw Failure.notHere("\(node.name) isn't for sale") }
-    var swapped = false
-    store.update { swapped = $0.swapFamily(out, for: id, tree) }
-    if !swapped { throw Failure.notHere("No swap: \(state.families.tokens) token\(state.families.tokens == 1 ? "" : "s") held") }
-  }
-
   /// A cash purchase as the App Store would complete it, as a new transaction.
   public func purchase(_ product: CashProduct) {
     store.credit(product, transaction: "headless-\(state.credited.count + 1)")
