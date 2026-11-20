@@ -15,9 +15,13 @@ and switches to it on request. Tests: the `docs/rules/tidy.md` suite in
    book's minimum share, that reaches the rest of your lines better than
    yours does: it **transposes** (lands on a position you have, now or after
    at least a quarter of the replies), or failing that it **heads toward**
-   one (a common reply and then one move of yours land on it). Your move is
-   judged without its own subtree. A move you play in similar positions
-   elsewhere (a habit) is never a reason.
+   one (a common reply and then one move of yours land on it), or failing
+   that it is a **habit**: you play it in at least `HABIT_MIN` similar
+   positions elsewhere, and choose it there at least as often as you pass
+   it up. A move that finishes a setup (such as ...Bg7 after ...g6) counts
+   as a habit when at least `HABIT_MIN` of your other lines finish it the
+   same way. A habit never replaces a move that is itself a habit. Your
+   move is judged without its own subtree.
 3. **Eval decides.** Of the moves that count, the one that gives up the
    least against the best move is offered: the book's Stockfish table where
    it has the position, otherwise the engine. A move giving up more than
@@ -28,9 +32,16 @@ and switches to it on request. Tests: the `docs/rules/tidy.md` suite in
    have, then up to 3 moves of your Playbook from there
    (`TIDY_KNOWN_STEPS`). The current line plays your move and then the same
    number of moves, or fewer if it ends: your preferred move on your turn,
-   the book's most played of your replies on theirs.
-5. **The list.** Most moves removed first, then the earliest. The Playbook
-   tab shows the count while it is above 0.
+   the book's most played of your replies on theirs. A habit's card has one
+   step: the switch.
+5. **The list.** Habits last; otherwise most moves removed first, then the
+   earliest. The
+   Playbook tab shows the count while it is above 0.
 6. **Switch these moves.** The offered move becomes yours there and your
    move goes with everything under it. The position's card starts over and
    the misses logged there are cleared. An undo puts it all back.
+7. **Tips.** The Playbook tab's Tidy button explains Tidy the first time it
+   shows. Each kind of find (joins your line, can join your line, your
+   usual move) explains itself on the first card of that kind, once. When
+   several kinds are on the list unexplained, their tips follow one
+   another in list order.

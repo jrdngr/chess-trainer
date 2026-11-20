@@ -47,6 +47,12 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
   /// The streak's first day paid: the streak ring on Home.
   case dailyRewards
 
+  /* ── Playbook ── */
+  /// Tidy has something to list: its button on the Playbook tab.
+  case tidy
+  /// The first time Tidy lists each kind of find, on its card.
+  case tidyJoins, tidyCanJoin, tidyHabit
+
   public var text: String {
     switch self {
     case .flashCards: "Your openings are flashcards. Each move is graded on speed and accuracy."
@@ -69,6 +75,10 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
     case .sidePicker: "Choose your side."
     case .openingPicker: "Choose an opening to focus on."
     case .dailyRewards: "Complete your prep once a day to earn daily rewards."
+    case .tidy: "Tidy finds moves that bring your lines together so you have less to remember."
+    case .tidyJoins: "This move transposes. It reaches a position you already play, so two lines become one."
+    case .tidyCanJoin: "This move leads to transposition. It can reach a position you already play once you add a few more moves."
+    case .tidyHabit: "This move is a habit. You play it in your other lines."
     }
   }
 
@@ -86,6 +96,25 @@ public enum GameTip: String, Sendable, Codable, CaseIterable {
 public func toneTip(_ tones: [NudgeTone?], seen: (GameTip) -> Bool) -> GameTip? {
   if tones.contains(.toward), !seen(.greenMove) { return .greenMove }
   if tones.contains(.away), !seen(.redMove) { return .redMove }
+  return nil
+}
+
+/// The tip for a kind of Tidy find.
+public func tidyTip(_ kind: TowardKind) -> GameTip? {
+  switch kind {
+  case .transposes: .tidyJoins
+  case .heads: .tidyCanJoin
+  case .habit: .tidyHabit
+  case .pawns: nil
+  }
+}
+
+/// Tidy's tip now: the first find down the list whose kind has not been
+/// explained, one at a time, so several new kinds explain themselves in turn.
+public func tidyListTip(_ finds: [TidyFind], seen: (GameTip) -> Bool) -> (tip: GameTip, findId: String)? {
+  for find in finds {
+    if let tip = tidyTip(find.kind), !seen(tip) { return (tip, find.id) }
+  }
   return nil
 }
 

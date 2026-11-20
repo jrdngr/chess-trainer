@@ -66,12 +66,16 @@ extension View {
   /// never moves anything. A `minWidth` wider than a narrow view runs the tip
   /// right from the view's leading edge with `arrowAt` along the tip. `drop`
   /// sets it further out. `rest` is the view's `zIndex` with no tip up.
+  /// `trailing` runs a wide tip left from the view's trailing edge instead.
   /// Use one per view: a second tip's `zIndex` loses to the first's.
   func tip(
     text: String?, arrow: TipBubble.Arrow = .up, arrowAt: CGFloat = 0.5, inset: CGFloat = 0, minWidth: CGFloat = 0, drop: CGFloat = 0,
-    rest: Double = 0, onDismiss: @escaping () -> Void = {}
+    trailing: Bool = false, rest: Double = 0, onDismiss: @escaping () -> Void = {}
   ) -> some View {
-    modifier(TipLayer(text: text, arrow: arrow, arrowAt: arrowAt, inset: inset, minWidth: minWidth, drop: drop, rest: rest, onDismiss: onDismiss))
+    modifier(
+      TipLayer(
+        text: text, arrow: arrow, arrowAt: arrowAt, inset: inset, minWidth: minWidth, drop: drop, trailing: trailing, rest: rest,
+        onDismiss: onDismiss))
   }
 }
 
@@ -83,6 +87,7 @@ struct TipLayer: ViewModifier {
   let inset: CGFloat
   let minWidth: CGFloat
   let drop: CGFloat
+  let trailing: Bool
   let rest: Double
   let onDismiss: () -> Void
   /// A tip is up, or still fading out.
@@ -98,7 +103,7 @@ struct TipLayer: ViewModifier {
         // changed with it, such as the board showing as the round's deal hands over.
         ZStack {
           if let text {
-            Color.clear.frame(height: 0).overlay(alignment: arrow == .up ? .topLeading : .bottomLeading) {
+            Color.clear.frame(height: 0).overlay(alignment: arrow == .up ? (trailing ? .topTrailing : .topLeading) : (trailing ? .bottomTrailing : .bottomLeading)) {
               TipBubble(text: text, arrow: arrow, arrowAt: arrowAt, onDismiss: onDismiss)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(minWidth: minWidth)

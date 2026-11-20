@@ -1,7 +1,7 @@
 # Tidy: what it is for
 
 Tidy finds the places where your Playbook could converge, and lets you
-switch to the move that brings your lines together. Agreed on 2026-11-19.
+switch to the move that brings your lines together. Agreed on 2026-11-19; habit, labels, colors and tips added 2026-11-20.
 Its rules go in `rules/tidy.md`, each with a test.
 
 ## Intent
@@ -32,16 +32,21 @@ Its rules go in `rules/tidy.md`, each with a test.
      position already in your Playbook. This ranks below a direct
      transposition.
 
-   A move you play in similar positions elsewhere (a habit) isn't a reason
-   to switch.
+   - **Habit:** you play this move in your other lines, in similar
+     positions. A fianchetto counts as one habit, whichever piece goes
+     first. A habit ranks below both, and is never offered in place of a
+     move that is itself a habit.
 4. **Eval decides.** When more than one move would tidy a position, the one
    the engine rates highest is offered. A move rated clearly worse than
    yours is never offered. A move the book lacks must pass the engine
    before it shows.
-5. **The list.** The screen opens with one line: "Simplify your Playbook by
-   switching to lines that transpose into each other." It sits in its own
-   card. Each find is a card with two boards from the position where the
-   lines split: **Current line** on the left, **Target line** on the right.
+5. **The list.** No description card: the labels explain each find. Each
+   find is a card with two boards from the position where the lines split:
+   **Current line** on the left, and on the right a label saying why:
+   **Joins your line** (transposes, teal), **Can join your line** (heads
+   toward, blue) or **Your usual move** (habit, amber). The label and the
+   Switch button take the kind's color; on the boards, red is still the
+   moves that go and green the new move.
    A stepper under them plays both lines a move at a time (one step is one
    move by either side). The target line steps until it reaches the
    position you already have, then 3 more moves from your Playbook, or as
@@ -50,11 +55,24 @@ Its rules go in `rules/tidy.md`, each with a test.
    first, its board stops there. Squares of moves that go are red; the new
    move's squares are green. When the target line reaches a position you
    already have, its board gets a green edge, and its later moves show gray
-   because you know them. The card has no other text, and its one button
-   reads **Switch these moves**. Biggest savings first.
+   because you know them. For a heads-toward find, the steps include the
+   moves that lead to your position. A habit's stepper has one step, the
+   switch, and nothing past it. The card has no other text, and its one
+   button reads **Switch these moves**. Biggest savings first, habits
+   last.
 6. **Switch.** The card's one action. The offered move becomes yours there;
    your move goes, with everything under it. A toast offers Undo. The
    position's card starts over and the misses logged against it are
    cleared. Ratings lost to the miss stay lost.
 7. **Holes after a switch.** A switch can leave a move with no answer under
    it. The growth curve fills it like any other hole.
+8. **Tips.** The Tidy button explains itself the first time it shows:
+   "Tidy finds moves that bring your lines together so you have less to
+   remember." Each kind explains itself the first time a card of that kind
+   shows, and several chain on one visit:
+   - Joins your line: "This move transposes. It reaches a position you
+     already play, so two lines become one."
+   - Can join your line: "This move leads to transposition. It can reach a
+     position you already play once you add a few more moves."
+   - Your usual move: "This move is a habit. You play it in your other
+     lines."

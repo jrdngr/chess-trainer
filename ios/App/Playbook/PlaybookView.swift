@@ -73,6 +73,7 @@ struct PlaybookView: View {
   private var list: some View {
     VStack(spacing: 0) {
       AppBar(title: "Playbook", large: true) { TidyButton(onOpen: { page = .tidy }) }
+        .zIndex(1)
       SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")])
         .padding(.horizontal, 16)
       // With nothing on a side, its tree is every family for sale.

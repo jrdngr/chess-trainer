@@ -6,17 +6,18 @@ import Shared
 ///
 /// At each move you chose, the book's other moves are compared with yours by
 /// how they reach the rest of your lines: one that lands on a position you
-/// already have (transposes), or gets there after a common reply and one more
-/// move of yours (heads toward). Your own move is judged against the playbook
+/// already have (transposes), gets there after a common reply and one more
+/// move of yours (heads toward), or is the move you play in your other lines
+/// of the opening (a habit). Your own move is judged against the playbook
 /// *without* its subtree, so it gets no credit for being the line it already
-/// is. A move you play in similar positions elsewhere is no reason to switch.
+/// is, and a habit is never offered in place of a move that is one too.
 ///
 /// Of the moves that reach your lines, the engine's best is offered, and never
 /// one clearly worse than yours. A find shows two lines from where they split:
 /// yours, and the one the switch leads into, played on into your Playbook.
 
 /// What makes a move a switch: these kinds only, transpositions first.
-let TIDY_KINDS: [TowardKind] = [.transposes, .heads]
+public let TIDY_KINDS: [TowardKind] = [.transposes, .heads, .habit]
 
 /// Moves of your Playbook the target line plays on after it reaches it.
 public let TIDY_KNOWN_STEPS = 3
@@ -70,8 +71,8 @@ public struct TidyFind: Equatable, Sendable {
   /// The target line from the split: the switch, the moves to a position you
   /// have, then up to `TIDY_KNOWN_STEPS` of your moves and replies from there.
   public var target: [String]
-  /// How many of the target's moves it takes to reach your Playbook.
-  public var joins: Int
+  /// How many of the target's moves it takes to reach your Playbook; nil for a habit, which never does.
+  public var joins: Int?
 }
 
 public struct TidyOptions: Sendable {
@@ -97,15 +98,29 @@ public func choiceAt(_ rep: Playbook, _ index: ReferenceIndex, _ node: RepMove, 
   let keys = [positionKey(rep.rootFen)] + line.map { positionKey($0.fenAfter) }
   let signalOpts = SignalOptions(gone: goneWith(rep, index, node.id), away: false, pathKeys: keys)
   let (signals, _) = signalsFor(profile, index, path, fen, [node.san] + others, NudgePrefs(priority: .transposition, pawns: false), opts.minShare, signalOpts)
+  let gone = Set(subtreeIds(rep, node.id))
+  let lineMine = Set(line.filter { fenTurn($0.fenBefore) == rep.color }.map { sameMove($0.san) })
+  func habit(_ s: Signals) -> Double? {
+    switch habitVia(s) {
+    case .move: return Double(s.habit)
+    case .setup: return Double(s.setupUses)
+    case nil:
+      let finished = setupFinishes(rep, gone, lineMine, s.san)
+      return finished >= HABIT_MIN ? Double(finished) : nil
+    }
+  }
   func reach(_ s: Signals) -> (rank: Int, strength: Double, into: [String])? {
     if s.transposes > 0, let into = s.transposesInto { return (0, s.transposes, into) }
     if s.heads > 0, let into = s.headsInto { return (1, s.heads, into) }
+    if let h = habit(s) { return (2, h, []) }
     return nil
   }
   let bar = signals.first { $0.san == node.san }.flatMap(reach)
   var options: [TidyOption] = []
   for signal in signals where signal.san != node.san {
     guard let r = reach(signal) else { continue }
+    // A habit never replaces a move that is a habit too.
+    if r.rank == 2, let bar, bar.rank == 2 { continue }
     if let bar, !(r.rank < bar.rank || (r.rank == bar.rank && r.strength > bar.strength)) { continue }
     options.append(TidyOption(san: signal.san, kind: TIDY_KINDS[r.rank], strength: r.strength, into: r.into))
   }
@@ -119,6 +134,21 @@ public func choiceAt(_ rep: Playbook, _ index: ReferenceIndex, _ node: RepMove, 
   return TidyChoice(
     playbookId: rep.id, color: rep.color, nodeId: node.id, mine: node.san, path: path, fen: fen,
     options: options, removes: subtreeIds(rep, node.id).count)
+}
+
+/// How many times your Playbook finishes, with `san`, a setup this line has
+/// started: the Bg7 after g6, wherever the fianchetto is. Your move's own
+/// subtree (`gone`) is left out.
+func setupFinishes(_ rep: Playbook, _ gone: Set<String>, _ lineMine: Set<String>, _ san: String) -> Int {
+  let move = sameMove(san)
+  if lineMine.contains(move) { return 0 }
+  let setups = setupsWith(rep.color, move).filter { signsSetup($0, lineMine, move) && !$0.sign.contains(move) }
+  if setups.isEmpty { return 0 }
+  return yourMoves(rep).filter { node in
+    guard !gone.contains(node.id), sameMove(node.san) == move else { return false }
+    let before = Set(pathTo(rep, node.parentId).filter { fenTurn($0.fenBefore) == rep.color }.map { sameMove($0.san) })
+    return setups.contains { setup in signsSetup(setup, before, move) }
+  }.count
 }
 
 /// The moves whose loss a choice needs before it can be decided.
@@ -169,7 +199,7 @@ public func tidyFrame(_ find: TidyFind, _ step: Int) -> TidyFrame {
   let c = min(max(0, step), current.moves.count), t = min(max(0, step), target.moves.count)
   return TidyFrame(
     currentFen: current.fens[c], currentMove: c > 0 && c == step ? current.moves[c - 1] : nil,
-    targetFen: target.fens[t], targetMove: t > 0 ? target.moves[t - 1] : nil, known: t >= find.joins)
+    targetFen: target.fens[t], targetMove: t > 0 ? target.moves[t - 1] : nil, known: find.joins.map { t >= $0 } ?? false)
 }
 
 /// The reply most played in the book among `kids`, or the first when the book has none of them.
@@ -202,7 +232,9 @@ func currentLine(_ rep: Playbook, _ index: ReferenceIndex, _ node: RepMove, _ co
 }
 
 /// The target line: the switch, the book's moves to a position you have, then your Playbook from there.
-func targetLine(_ rep: Playbook, _ index: ReferenceIndex, _ fen: String, _ option: TidyOption) -> (moves: [String], joins: Int) {
+/// A habit's target line is the switch alone.
+func targetLine(_ rep: Playbook, _ index: ReferenceIndex, _ fen: String, _ option: TidyOption) -> (moves: [String], joins: Int?) {
+  if option.kind == .habit { return ([option.san], nil) }
   guard let landing = nodeAtLine(rep, option.into), let after = applySan(fen, option.san) else { return ([option.san], 1) }
   let goal = positionKey(landing.fenAfter)
   var bridge: [String] = [option.san]
@@ -239,9 +271,11 @@ public func tidyPositions(_ reps: [Playbook]) -> [(rep: Playbook, node: RepMove)
   return out
 }
 
-/// Most moves removed first, then the earliest.
+/// Habits last; otherwise most moves removed first, then the earliest.
 public func sortFinds(_ finds: [TidyFind]) -> [TidyFind] {
   finds.jsSorted { a, b in
+    let habit = (a.kind == .habit ? 1 : 0) - (b.kind == .habit ? 1 : 0)
+    if habit != 0 { return Double(habit) }
     let d = b.removes - a.removes
     return Double(d != 0 ? d : a.path.count - b.path.count)
   }

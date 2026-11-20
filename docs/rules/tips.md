@@ -35,6 +35,6 @@ and `firstGameGrowsThePlaybookFromMoveOne` in `PlayFlowTests.swift` for rule 2.
    its control on Home. No other bought feature has a tip. Once a streak
    day has paid and no picker's tip is waiting, Home shows the daily
    rewards tip at the streak ring: complete your prep once a day to earn
-   them. The Shop tab
+   them. The Playbook tab's Tidy tips are in [tidy](tidy.md) rule 7. The Shop tab
    shows a badge with the number of items you can buy now, and none at
    zero.

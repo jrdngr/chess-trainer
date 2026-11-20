@@ -2,7 +2,7 @@ import SwiftUI
 
 /// A sheet's full-width button: `.btn`, `.btn.accent`, `.btn.danger`, `.btn.primary`.
 struct SheetButton: View {
-  enum Style { case plain, accent, danger, primary, soft }
+  enum Style { case plain, accent, danger, primary, soft, tint(SwiftUI.Color) }
   var title: String
   var icon: String?
   var style: Style
@@ -23,6 +23,7 @@ struct SheetButton: View {
     case .accent: (Theme.buttonInk, Theme.button)
     case .danger: (Theme.bad, Theme.bad.opacity(0.14))
     case .primary: (Theme.background, SwiftUI.Color(hex: 0xf5f5f7))
+    case .tint(let color): (Theme.background, color)
     }
     Button(action: action) {
       HStack(spacing: 8) {
