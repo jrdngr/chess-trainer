@@ -143,7 +143,14 @@ struct TidyButton: View {
 
   var body: some View {
     let count = store.index.flatMap { store.services.tidy.count(store.state, $0) } ?? 0
-    Group {
+    // The scan hangs off a view that is always there: a modifier on an empty
+    // Group reaches no view, so it would never run while the count is 0.
+    ZStack {
+      Color.clear.frame(width: 0, height: 0)
+        .task(id: TidyScan.Input(store.state)) {
+          if let index = store.index { await store.services.tidy.run(TidyScan.Input(store.state), index) }
+        }
+        .id(store.index != nil)
       if count > 0 {
         Button(action: onOpen) {
           HStack(spacing: 4) {
@@ -159,9 +166,6 @@ struct TidyButton: View {
           text: store.state.settings.seen(.tidy) ? nil : GameTip.tidy.text, arrowAt: 0.89, minWidth: 264, trailing: true,
           onDismiss: { dismissTip(store, .tidy) })
       }
-    }
-    .task(id: TidyScan.Input(store.state)) {
-      if let index = store.index { await store.services.tidy.run(TidyScan.Input(store.state), index) }
     }
   }
 }
