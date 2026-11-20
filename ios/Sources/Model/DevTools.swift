@@ -104,16 +104,14 @@ extension AppState {
 
   /* ── the streak ── */
 
-  /// The streak set by hand: its length, the freezes held, and its last day, `lastPlayed` days
-  /// before `now` (0 today, 1 yesterday); no days clears it.
-  public mutating func devSetStreak(days: Int, freezes: Int, lastPlayed: Int, now: Double = Env.now()) {
+  /// The streak set by hand: its length and its last day, `lastPlayed` days before `now`
+  /// (0 today, 1 yesterday); no days clears it.
+  public mutating func devSetStreak(days: Int, lastPlayed: Int, now: Double = Env.now()) {
     var streak = PawnStreak()
     streak.days = max(0, days)
-    streak.freezes = min(MAX_FREEZES, max(0, freezes))
     if streak.days > 0 {
       let back = max(0, lastPlayed)
       streak.day = back == 0 ? dayKey(now) : daysBefore(now, back)[back - 1]
-      streak.frozen = pawnStreak.frozen.filter { $0 <= streak.days }
     }
     pawnStreak = streak
   }

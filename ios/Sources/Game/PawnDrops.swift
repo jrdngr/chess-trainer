@@ -112,7 +112,6 @@ extension AppStore {
 
   /// Home is up: the streak pawns waiting pop out of its streak ring.
   public func showStreakPawns() {
-    if state.pawnStreak != Model.settleStreak(state.pawnStreak, past: daysBefore(Env.now())) { update { $0.settleStreak() } }
     guard streakWaiting > 0 else { return }
     let count = streakWaiting
     streakWaiting = 0

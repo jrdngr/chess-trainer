@@ -83,7 +83,7 @@ private func state(pawns: Int, owning: [String] = []) -> AppState {
     #expect(side.settings.selection.color == .either, "Either comes with the side picker")
   }
 
-  /// Rule 7: the unlock gives the feature tree and nothing else; packs add pawns; a transaction pays once.
+  /// Rule 6: the unlock gives the feature tree and nothing else; packs add pawns; a transaction pays once.
   @Test func cashBuysTheTreeAndPawns() {
     var s = AppState()
     #expect(!s.ownsFeatureTree)

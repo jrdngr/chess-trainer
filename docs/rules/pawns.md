@@ -37,10 +37,9 @@ target. Tests: the `docs/rules/pawns.md` suite in
    In Play, only a game whose prep you completed counts: one you quit or
    missed before then doesn't. Test: `theStreakWaitsForACompletedPrep` in
    `Tests/FlowTests/PlayFlowTests.swift`.
-   A missed day starts it again at day 1, unless a freeze or a repair keeps
-   it (rule 11). The pawns go onto the balance when the game ends, but the
-   counter takes them only when you next open Home, where they pop out of
-   the streak ring and the ring lights up.
+   A missed day starts it again at day 1. The pawns go onto the balance
+   when the game ends, but the counter takes them only when you next open
+   Home, where they pop out of the streak ring and the ring lights up.
 6. **Pawns land as they are earned.** Each goes straight onto the balance;
    the counter on screen takes it when it arrives. As the first pawn of an
    award lands, why it was paid shows under the counter for 1.5 seconds,
@@ -56,8 +55,7 @@ target. Tests: the `docs/rules/pawns.md` suite in
 8. **The streak ring** on Milestones has a part for each day of the
    streak's week. Before today's game it shows the day the game will make
    and the pawns it will pay in outline; once played, the day it made and
-   the pawns filled in. Days kept by a freeze or a repair show icy, with no
-   pawns.
+   the pawns filled in.
 9. **Distance markers** pay every 5 of your moves past your prep: 20
    each. Once your prep
    is behind you (from your first move past it, or from the start with no
@@ -70,14 +68,7 @@ target. Tests: the `docs/rules/pawns.md` suite in
 10. **Held the draw** pays 20, under the least a mate pays, when a game ends
    drawn and, once it reached endgame rules, you stood at −3 or worse (a
    lost ending). Other draws pay nothing extra.
-11. **Freezes and repairs keep the streak.** A freeze costs 1,000 in the
-   Pawn Shop, and you can hold 2. Each missed day uses one on its own,
-   oldest first. A repair costs 2,000 and is offered only when yesterday is
-   the one missed day, all through today: quietly, as a faint part on the
-   streak ring and a row in the Milestones sheet, never a popup. Finishing
-   a game today without it starts the streak again. A frozen or repaired
-   day counts toward the streak's length and pays nothing.
-12. **Continue after a blunder** costs 500, once a run. While you have the
+11. **Continue after a blunder** costs 500, once a run. While you have the
    pawns, a blunder holds the board with End run and Continue; Continue
    takes the blunder back, its threat drawn until your next move, and the
    run goes on. Moves after it don't count toward your best; events still

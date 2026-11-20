@@ -205,10 +205,7 @@ struct DeveloperView: View {
     section("Streak")
     ListCard {
       CountRow(label: "Days", value: streak.days, range: 0...365) { n in
-        store.devUpdate { $0.devSetStreak(days: n, freezes: streak.freezes, lastPlayed: last ?? 0) }
-      }
-      CountRow(label: "Freezes", value: streak.freezes, range: 0...MAX_FREEZES) { n in
-        store.devUpdate { $0.devSetStreak(days: streak.days, freezes: n, lastPlayed: last ?? 0) }
+        store.devUpdate { $0.devSetStreak(days: n, lastPlayed: last ?? 0) }
       }
       // A streak of 0 days has no last day.
       if streak.days > 0 {
@@ -218,7 +215,7 @@ struct DeveloperView: View {
           SegmentedControl(
             value: Binding(
               get: { last ?? 4 },
-              set: { back in store.devUpdate { $0.devSetStreak(days: streak.days, freezes: streak.freezes, lastPlayed: back) } }
+              set: { back in store.devUpdate { $0.devSetStreak(days: streak.days, lastPlayed: back) } }
             ),
             options: [(0, "Today"), (1, "1 ago"), (2, "2 ago"), (3, "3 ago"), (4, "Older")]
           )

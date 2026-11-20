@@ -185,9 +185,6 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
     #expect(streakToday(nine, today: "d9", yesterday: "d8") == StreakToday(day: 9, paid: true, pawns: 90))
     #expect(streakToday(nine, today: "d12", yesterday: "d11") == StreakToday(day: 1, paid: false, pawns: 10))
     #expect(streakToday(PawnStreak(day: "d7", days: 7), today: "d7", yesterday: "d6").weekday == 7)
-    // A frozen day shows icy in its week.
-    let kept = PawnStreak(day: "d9", days: 9, frozen: [3, 9])
-    #expect(streakToday(kept, today: "d10", yesterday: "d9").frozen == [2])
   }
 
   /// Rule 9: markers at 5, 10, 15 and 20 moves past prep pay 20 each; Middlegame pays 15.
@@ -248,45 +245,5 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
     if case .draw = stale.session.ending {} else { Issue.record("not a draw") }
     held.endgameLow = -150
     #expect(awards(engineMove(held, "Qf7").effects).isEmpty, "never lost enough under endgame rules")
-  }
-
-  /// Rule 11: freezes cover missed days on their own, oldest first, and count toward the length.
-  @Test func freezesKeepTheStreak() {
-    let past = ["d9", "d8", "d7", "d6"]
-    let held = PawnStreak(day: "d7", days: 7, freezes: 2)
-    // Missed d8 and d9: both frozen, today is day 10.
-    let played = streakDay(held, today: "d10", past: past)
-    #expect(played.streak.days == 10 && played.streak.freezes == 0 && played.pawns == 90)
-    #expect(played.streak.frozen == [8, 9])
-    // One freeze for two missed days: d8 frozen, d9 still missed, so a repair is offered.
-    let one = PawnStreak(day: "d7", days: 7, freezes: 1)
-    #expect(repairOffered(one, today: "d10", past: past))
-    #expect(streakToday(one, today: "d10", past: past).repairable)
-    #expect(streakDay(one, today: "d10", past: past).streak.days == 1, "playing without the repair starts again")
-    // Three missed days with no freeze: gone.
-    #expect(!repairOffered(PawnStreak(day: "d6", days: 6), today: "d10", past: past))
-  }
-
-  /// Rule 11: freezes cost 1,000, hold 2; a repair costs 2,000 and pays nothing for the missed day.
-  @Test func freezesAndRepairsCostPawns() {
-    var state = AppState()
-    state.pawns = 2_500
-    let first = state.buyFreeze(), second = state.buyFreeze(), third = state.buyFreeze()
-    #expect(first && second)
-    #expect(!third, "2 at most")
-    #expect(state.pawns == 500 && state.pawnStreak.freezes == 2)
-
-    var missed = AppState()
-    let noon = 1_790_000_000_000.0
-    _ = missed.finishedGame(now: noon)
-    _ = missed.finishedGame(now: noon + DAY)
-    missed.pawns = 2_000
-    let early = missed.repairStreak(now: noon + 2 * DAY)
-    #expect(!early, "nothing missed yet")
-    let repaired = missed.repairStreak(now: noon + 3 * DAY)
-    #expect(repaired)
-    #expect(missed.pawns == 0 && missed.pawnStreak.days == 3 && missed.pawnStreak.frozen == [3])
-    let today = missed.finishedGame(now: noon + 3 * DAY)
-    #expect(today == 40, "today is day 4")
   }
 }

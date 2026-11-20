@@ -140,13 +140,7 @@ Cosmetics and personalities are pawn-only.
 - **Continue after a blunder** costs 500, once per run. It takes the
   blunder back. Moves after it don't count toward your best, and events
   still pay.
-- **Streak freeze** costs 1,000. You can hold 2, and one is used
-  automatically on a missed day.
-- **Streak repair** costs 2,000. It's offered for one missed day only, all
-  through the next day, shown quietly on the streak ring and never as a
-  popup. It restores the streak but pays nothing for the missed day.
-- Frozen and repaired days count toward the streak's length and show on
-  the ring as frozen.
+- There are no streak freezes or repairs: a missed day restarts the streak.
 - There are no paid hints.
 
 ### Pawn packs

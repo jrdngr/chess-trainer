@@ -31,7 +31,6 @@ struct MilestonesCard: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 16) {
           Text("Milestones").font(.system(size: 22, weight: .heavy)).foregroundStyle(Theme.text)
-          if today.repairable { StreakRepair() }
           LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 6)], spacing: 14) {
             ForEach(list, id: \.id) { MilestoneBadge(milestone: $0) }
           }
@@ -104,12 +103,10 @@ struct StreakBadge: View {
     .accessibilityLabel("Streak day \(today.day), \(today.pawns) pawn\(today.pawns == 1 ? "" : "s") a day\(lit ? ", today's paid" : "")")
   }
 
-  /// Days before today in the week are lit, frozen ones icy; yesterday, missed but repairable, is
-  /// a faint ice; today's part is dim until its game pays.
+  /// Days before today in the week are lit; today's part is dim until its game pays.
   private func color(_ i: Int) -> SwiftUI.Color {
     let at = today.weekday - 1
-    if today.repairable && i == at - 1 { return Theme.ice.opacity(0.3) }
-    if i < at { return today.frozen.contains(i + 1) ? Theme.ice : Theme.pawn }
+    if i < at { return Theme.pawn }
     if i == at { return today.paid && !waiting ? Theme.pawn : SwiftUI.Color(hex: 0x6b5a2a) }
     return Theme.surface3
   }
@@ -158,32 +155,5 @@ struct MilestoneBadge: View {
       Text(milestone.target >= 1000 ? "\(Int(milestone.target) / 1000)k" : "\(Int(milestone.target))")
         .font(.system(size: 13, weight: .heavy).monospacedDigit())
     }
-  }
-}
-
-/// The quiet offer to repair yesterday, missed: in the Milestones sheet, never a popup.
-private struct StreakRepair: View {
-  @Environment(AppStore.self) private var store
-  @State private var confirming = false
-
-  var body: some View {
-    let afford = store.state.pawns >= REPAIR_PRICE
-    HStack(spacing: 12) {
-      Icon(name: "flame", size: 18).foregroundStyle(Theme.ice)
-      VStack(alignment: .leading, spacing: 2) {
-        Text("Repair your streak").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text)
-        Text("Yesterday was missed. Repair it any time today.").font(.system(size: 13)).foregroundStyle(Theme.text2)
-      }
-      Spacer(minLength: 0)
-      Button { confirming = true } label: { PawnAmount(count: REPAIR_PRICE) }
-        .buttonStyle(PlayButtonStyle(kind: afford ? .accent : .plain, height: 40, inset: 14))
-        .disabled(!afford)
-        .confirmationDialog("Repair your streak?", isPresented: $confirming, titleVisibility: .visible) {
-          Button("Repair for \(REPAIR_PRICE.formatted()) pawns") { store.update { $0.repairStreak() } }
-          Button("Cancel", role: .cancel) {}
-        }
-    }
-    .padding(14)
-    .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
   }
 }

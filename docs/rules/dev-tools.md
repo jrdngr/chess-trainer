@@ -21,10 +21,9 @@ can't be a TestFlight build). Tests: the `docs/rules/dev-tools.md` suite in
    Neither moves the price ladder.
 5. **Tips** are marked seen or unseen, one at a time or all at once. An
    unseen tip shows again at its trigger.
-6. **The streak** is set by hand: its days, its freezes, and its last day,
-   today or up to 3 days back. The next game goes on from there as if those
-   days had been played: freezes cover missed days, and a repair is offered
-   for yesterday.
+6. **The streak** is set by hand: its days and its last day, today or up
+   to 3 days back. The next game goes on from there as if those days had
+   been played.
 7. **Growth levels** show their gate: Play games, openings green, levels
    open. Play games are added ten at a time, each ending on your first move.
    An opening's form is set green, middle, red or empty, or every opening

@@ -39,8 +39,6 @@ enum Theme {
   static let missed = Color(hex: 0xf472b6)
   /// Pawns, their prices and the balance.
   static let pawn = Color(hex: 0xfbbf24)
-  /// A streak day kept by a freeze or a repair.
-  static let ice = Color(hex: 0x7dd3fc)
   /// The book's blue and the extension's purple.
   static let book = Color(hex: 0x4fb3ff)
   static let ext = Color(hex: 0x8a8cff)

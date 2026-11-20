@@ -174,29 +174,21 @@ public func punished(_ color: Color, lastScored: Double?, before: Double, lost: 
 
 /// The days in a row with a game, for streak pawns.
 public struct PawnStreak: Equatable, Sendable, Codable {
-  /// The last day of the streak, "YYYY-MM-DD": a day a game paid, or one frozen or repaired.
+  /// The last day of the streak, "YYYY-MM-DD": a day a game paid.
   public var day: String?
-  /// Days in a row, counting that day, frozen and repaired days among them.
+  /// Days in a row, counting that day.
   public var days = 0
-  /// Freezes held, up to `MAX_FREEZES`.
-  public var freezes = 0
-  /// The streak's days (counted from 1) that a freeze or a repair kept.
-  public var frozen: [Int] = []
-  public init(day: String? = nil, days: Int = 0, freezes: Int = 0, frozen: [Int] = []) {
+  public init(day: String? = nil, days: Int = 0) {
     self.day = day
     self.days = days
-    self.freezes = freezes
-    self.frozen = frozen
   }
 
-  enum CodingKeys: String, CodingKey { case day, days, freezes, frozen }
+  enum CodingKeys: String, CodingKey { case day, days }
 
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
     day = try c.decodeIfPresent(String.self, forKey: .day)
     days = try c.decodeIfPresent(Int.self, forKey: .days) ?? 0
-    freezes = try c.decodeIfPresent(Int.self, forKey: .freezes) ?? 0
-    frozen = try c.decodeIfPresent([Int].self, forKey: .frozen) ?? []
   }
 }
 
@@ -206,46 +198,18 @@ public func streakPawns(_ days: Int) -> Int {
 }
 
 public let STREAK_STEP = 10, STREAK_CAP = 90
-/// Freezes held at most; what one costs; what a repair costs.
-public let MAX_FREEZES = 2, FREEZE_PRICE = 1_000, REPAIR_PRICE = 2_000
 /// What Continue after a blunder costs, once a run.
 public let CONTINUE_PRICE = 500
 
 /// The days before today, newest first: yesterday, the day before, and so on.
 public typealias PastDays = [String]
 
-/// Freezes cover the days missed since the streak's last day, oldest first, one each, while
-/// they last. Only gaps short enough for freezes and a repair to reach are looked at.
-public func settleStreak(_ streak: PawnStreak, past: PastDays) -> PawnStreak {
-  guard streak.days > 0, streak.freezes > 0, let last = streak.day, let k = past.firstIndex(of: last), k > 0 else { return streak }
-  var out = streak
-  for missed in past[0..<k].reversed() {
-    guard out.freezes > 0 else { break }
-    out.freezes -= 1
-    out.days += 1
-    out.frozen.append(out.days)
-    out.day = missed
-  }
-  return out
-}
-
-/// Whether a repair is offered today: the streak's only missed day is yesterday.
-public func repairOffered(_ streak: PawnStreak, today: String, past: PastDays) -> Bool {
-  let settled = settleStreak(streak, past: past)
-  return settled.days > 0 && settled.day != today && past.count > 1 && settled.day == past[1]
-}
-
 /// A game finished on `today`: the first game of a day extends the streak, or starts it again
-/// after a missed day freezes don't cover, and pays. Later games that day pay nothing.
+/// after a missed day, and pays. Later games that day pay nothing.
 public func streakDay(_ streak: PawnStreak, today: String, past: PastDays) -> (streak: PawnStreak, pawns: Int) {
   if streak.day == today { return (streak, 0) }
-  var next = settleStreak(streak, past: past)
-  if next.day == past.first {
-    next.days += 1
-  } else {
-    next.days = 1
-    next.frozen = []
-  }
+  var next = streak
+  next.days = next.day == past.first ? next.days + 1 : 1
   next.day = today
   return (next, streakPawns(next.days))
 }
@@ -261,34 +225,21 @@ public struct StreakToday: Equatable, Sendable {
   public var day: Int
   public var paid: Bool
   public var pawns: Int
-  /// This week's places (1 to 7) kept by a freeze or a repair.
-  public var frozen: [Int] = []
-  /// Yesterday was missed and a repair can still keep the streak.
-  public var repairable = false
-  public init(day: Int, paid: Bool, pawns: Int, frozen: [Int] = [], repairable: Bool = false) {
+  public init(day: Int, paid: Bool, pawns: Int) {
     self.day = day
     self.paid = paid
     self.pawns = pawns
-    self.frozen = frozen
-    self.repairable = repairable
   }
   /// Today's place in its week of the streak, 1 to 7.
   public var weekday: Int { (day - 1) % 7 + 1 }
 }
 
 public func streakToday(_ streak: PawnStreak, today: String, past: PastDays) -> StreakToday {
-  let settled = settleStreak(streak, past: past)
-  let week = { (day: Int) in settled.frozen.filter { ($0 - 1) / 7 == (day - 1) / 7 }.map { ($0 - 1) % 7 + 1 } }
-  if settled.day == today {
-    return StreakToday(day: settled.days, paid: true, pawns: streakPawns(settled.days), frozen: week(settled.days))
+  if streak.day == today {
+    return StreakToday(day: streak.days, paid: true, pawns: streakPawns(streak.days))
   }
-  if repairOffered(streak, today: today, past: past) {
-    // Shown as it stands: a repair would make today the day after yesterday's.
-    let day = settled.days + 2
-    return StreakToday(day: day, paid: false, pawns: streakPawns(day), frozen: week(day), repairable: true)
-  }
-  let day = settled.day == past.first ? settled.days + 1 : 1
-  return StreakToday(day: day, paid: false, pawns: streakPawns(day), frozen: day == 1 ? [] : week(day))
+  let day = streak.day == past.first ? streak.days + 1 : 1
+  return StreakToday(day: day, paid: false, pawns: streakPawns(day))
 }
 
 public func streakToday(_ streak: PawnStreak, today: String, yesterday: String) -> StreakToday {
@@ -296,7 +247,7 @@ public func streakToday(_ streak: PawnStreak, today: String, yesterday: String) 
 }
 
 /// The `count` local calendar days before `at`'s, newest first.
-public func daysBefore(_ at: Double, _ count: Int = MAX_FREEZES + 2, _ calendar: Calendar = .current) -> PastDays {
+public func daysBefore(_ at: Double, _ count: Int = 1, _ calendar: Calendar = .current) -> PastDays {
   var out: PastDays = []
   var t = at
   for _ in 0..<count {
@@ -331,11 +282,6 @@ extension AppState {
     return paid.pawns
   }
 
-  /// Freezes cover the days missed since the streak's last, as they will at the next game.
-  public mutating func settleStreak(now: Double = Env.now()) {
-    pawnStreak = Model.settleStreak(pawnStreak, past: daysBefore(now))
-  }
-
   /// Where the streak stands today, for its ring.
   public func streakNow(_ now: Double = Env.now()) -> StreakToday {
     streakToday(pawnStreak, today: dayKey(now), past: daysBefore(now))
@@ -347,31 +293,6 @@ extension AppState {
     guard count >= 0, pawns >= count else { return false }
     pawns -= count
     logEvent(AppEvent(kind: "buy", count: count, picked: what, text: "balance \(pawns)"))
-    return true
-  }
-
-  /// Buy a streak freeze: held for a missed day, up to 2. Returns whether it was bought.
-  @discardableResult
-  public mutating func buyFreeze() -> Bool {
-    guard pawnStreak.freezes < MAX_FREEZES, pawns >= FREEZE_PRICE else { return false }
-    pawns -= FREEZE_PRICE
-    pawnStreak.freezes += 1
-    logEvent(AppEvent(kind: "buy", count: FREEZE_PRICE, picked: "freeze", text: "balance \(pawns)"))
-    return true
-  }
-
-  /// Repair yesterday, missed: the streak goes on as if it was played, paying nothing for it.
-  @discardableResult
-  public mutating func repairStreak(now: Double = Env.now()) -> Bool {
-    let past = daysBefore(now)
-    guard repairOffered(pawnStreak, today: dayKey(now), past: past), pawns >= REPAIR_PRICE else { return false }
-    pawns -= REPAIR_PRICE
-    var streak = Model.settleStreak(pawnStreak, past: past)
-    streak.days += 1
-    streak.frozen.append(streak.days)
-    streak.day = past[0]
-    pawnStreak = streak
-    logEvent(AppEvent(kind: "buy", count: REPAIR_PRICE, picked: "repair", text: "balance \(pawns)"))
     return true
   }
 }

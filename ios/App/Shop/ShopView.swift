@@ -20,24 +20,28 @@ struct ShopView: View {
   /// A sheet's picture shown whole: the sheet grows to full height to hold it. A presentation
   /// of its own inside the sheet would keep the sheet from sizing to its content.
   @State private var fullScreen: String?
+  /// The pawn sheet: over the item's sheet while one is up, else over the shop.
+  @State private var pawnsOpen = false
 
   var body: some View {
     VStack(spacing: 0) {
       HStack {
         Text("Pawn Shop").font(.system(size: 30, weight: .heavy)).tracking(-0.9).foregroundStyle(Theme.text)
         Spacer()
-        PawnAmount(count: purchase?.balance ?? store.state.pawns)
-          .padding(.horizontal, 14).frame(height: 42)
-          .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface))
-          .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { frames["balance"] = $0 }
+        Button { if purchase == nil { pawnsOpen = true } } label: {
+          PawnAmount(count: purchase?.balance ?? store.state.pawns)
+            .padding(.horizontal, 14).frame(height: 42)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface))
+            .contentShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(store.state.pawns) pawns, buy pawns")
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { frames["balance"] = $0 }
       }
       .padding(.horizontal, 20).padding(.top, 14).padding(.bottom, 10)
       ScrollView {
         VStack(spacing: 16) {
-          UnlockEverythingRow()
           ShopTree(selected: selected, purchase: purchase, frames: $frames) { if purchase == nil { selected = $0 } }
-          StreakFreezeRow()
-          PawnPacksRow()
         }
         .padding(.horizontal, 16).padding(.bottom, selected == nil ? 24 : sheetHeight + 30)
         // While a sheet is up, a tap behind it closes the sheet and reaches nothing else.
@@ -54,7 +58,8 @@ struct ShopView: View {
     .coordinateSpace(name: Self.space)
     .sheet(isPresented: Binding(get: { selected != nil }, set: { if !$0, purchase == nil { selected = nil } })) {
       if let id = selected, let item = shopItem(id) {
-        BuySheet(item: item, purchase: purchase, fullScreen: $fullScreen, onSelect: { selected = $0 }, onBuy: { buy(item) }) { selected = nil }
+        BuySheet(item: item, purchase: purchase, fullScreen: $fullScreen, onSelect: { selected = $0 }, onBuy: { buy(item) }, onShort: { pawnsOpen = true }) { selected = nil }
+          .pawnSheet(isPresented: $pawnsOpen)
           .fixedSize(horizontal: false, vertical: true)
           .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if fullScreen == nil { sheetHeight = min($0, 760) } }
           .frame(maxHeight: .infinity, alignment: .top)
@@ -64,6 +69,7 @@ struct ShopView: View {
           .interactiveDismissDisabled(purchase != nil)
       }
     }
+    .pawnSheet(isPresented: Binding(get: { pawnsOpen && selected == nil }, set: { if !$0 { pawnsOpen = false } }))
     .onChange(of: focus, initial: true) {
       guard let focus else { return }
       // An empty focus opens the shop on no item.
@@ -316,6 +322,8 @@ private struct BuySheet: View {
   @Binding var fullScreen: String?
   let onSelect: (String) -> Void
   let onBuy: () -> Void
+  /// A price you can't pay yet: opens the pawn sheet.
+  let onShort: () -> Void
   let onClose: () -> Void
   @Environment(AppStore.self) private var store
   /// The sheet's width inside its padding: the picture is sized from it, since a resizable
@@ -412,9 +420,21 @@ private struct BuySheet: View {
         }
         .buttonStyle(KeyButtonStyle(kind: .primary, height: 54, radius: 18)).allowsHitTesting(purchase == nil)
       case .short:
-        PawnAmount(count: item.price, size: 17, color: Theme.text3)
+        Button(action: onShort) {
+          ZStack {
+            PawnAmount(count: item.price, size: 17, color: Theme.text2)
+            HStack {
+              Spacer()
+              Icon(name: "chevron", size: 17).foregroundStyle(Theme.text3)
+            }
+          }
           .font(.system(size: 17, weight: .semibold))
+          .padding(.horizontal, 14)
           .frame(maxWidth: .infinity, minHeight: 54).background(shape.fill(Theme.surface2))
+          .contentShape(shape)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(item.price) pawns, buy pawns")
       case .locked:
         if let need = item.needs.compactMap(shopItem).first(where: { !store.state.unlocked.contains($0.id) }) {
           Button { onSelect(need.id) } label: {
@@ -539,36 +559,6 @@ func shopIcon(_ item: ShopItem) -> String {
   if item.feature?.isLensUpgrade == true { return "shop.lensUpgrade" }
   if item.feature?.endgameFamily != nil { return "shop.endgames" }
   return "shop.\(item.id)"
-}
-
-/// Streak freezes: held for a missed day, used on their own, up to 2.
-private struct StreakFreezeRow: View {
-  @Environment(AppStore.self) private var store
-  @State private var confirming = false
-
-  var body: some View {
-    let held = store.state.pawnStreak.freezes
-    let full = held >= MAX_FREEZES
-    let afford = store.state.pawns >= FREEZE_PRICE
-    HStack(spacing: 12) {
-      Icon(name: "flame", size: 20).foregroundStyle(Theme.ice)
-      VStack(alignment: .leading, spacing: 2) {
-        Text("Streak freeze").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text)
-        Text("Keeps your streak through a missed day. \(held) of \(MAX_FREEZES) held.")
-          .font(.system(size: 13)).foregroundStyle(Theme.text2)
-      }
-      Spacer(minLength: 0)
-      Button { confirming = true } label: { PawnAmount(count: FREEZE_PRICE, size: 15) }
-        .buttonStyle(PlayButtonStyle(kind: afford && !full ? .accent : .plain, height: 40, inset: 14))
-        .disabled(full || !afford)
-        .confirmationDialog("Buy a streak freeze?", isPresented: $confirming, titleVisibility: .visible) {
-          Button("Buy for \(FREEZE_PRICE.formatted()) pawns") { store.update { $0.buyFreeze() } }
-          Button("Cancel", role: .cancel) {}
-        }
-    }
-    .padding(14)
-    .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
-  }
 }
 
 /// What an item's sheet shows in place of its control: a game with the item in use.

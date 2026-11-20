@@ -62,22 +62,20 @@ import Testing
     #expect(s.homeTip == nil && s.settings.seenTips == Set(GameTip.allCases))
   }
 
-  /// Rule 6: the next game goes on from a streak set by hand: freezes cover missed days, and a
-  /// repair is offered for yesterday.
+  /// Rule 6: the next game goes on from a streak set by hand.
   @Test func theStreakGoesOnFromWhereItWasSet() {
     let now = 1_790_845_200_000.0
     var s = AppState()
-    s.devSetStreak(days: 5, freezes: 0, lastPlayed: 2, now: now)
-    #expect(s.pawnStreak.day == daysBefore(now)[1])
-    #expect(repairOffered(s.pawnStreak, today: dayKey(now), past: daysBefore(now)))
+    s.devSetStreak(days: 5, lastPlayed: 1, now: now)
+    #expect(s.pawnStreak.day == daysBefore(now)[0])
+    #expect(s.finishedGame(now: now) == streakPawns(6))
+    #expect(s.pawnStreak.days == 6)
 
-    s.devSetStreak(days: 5, freezes: 1, lastPlayed: 2, now: now)
-    let paid = s.finishedGame(now: now)
-    #expect(s.pawnStreak.days == 7 && s.pawnStreak.freezes == 0)
-    #expect(paid == streakPawns(7))
+    s.devSetStreak(days: 5, lastPlayed: 2, now: now)
+    #expect(s.finishedGame(now: now) == streakPawns(1), "a missed day starts it again")
 
-    s.devSetStreak(days: 0, freezes: 2, lastPlayed: 0, now: now)
-    #expect(s.pawnStreak == PawnStreak(freezes: 2))
+    s.devSetStreak(days: 0, lastPlayed: 0, now: now)
+    #expect(s.pawnStreak == PawnStreak())
   }
 
   /// Rule 7: games added count toward the level gates, and form set green opens them.

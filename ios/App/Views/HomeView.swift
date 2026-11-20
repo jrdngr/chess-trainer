@@ -214,13 +214,13 @@ private struct PlayFooter: View {
   }
 }
 
-/// Your pawns beside the gear: a tap opens the Pawn Shop.
+/// Your pawns beside the gear: a tap opens the pawn sheet.
 private struct HomePawns: View {
   @Environment(AppStore.self) private var store
-  @Environment(\.openShop) private var openShop
+  @State private var buying = false
 
   var body: some View {
-    Button { openShop?("") } label: {
+    Button { buying = true } label: {
       PawnAmount(count: store.shownPawns)
         .padding(.horizontal, 12).frame(minHeight: 44)
         .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface))
@@ -228,6 +228,7 @@ private struct HomePawns: View {
         .pawnSpot("counter")
     }
     .buttonStyle(.plain)
-    .accessibilityLabel("\(store.shownPawns) pawns, Pawn Shop")
+    .accessibilityLabel("\(store.shownPawns) pawns, buy pawns")
+    .pawnSheet(isPresented: $buying)
   }
 }

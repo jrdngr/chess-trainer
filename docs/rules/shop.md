@@ -42,12 +42,12 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    Endgame pieces judges rooks, bad bishops and kings, Endgame kings shows
    key squares, the opposition and cut-off lines. The key under the board
    lists only what the lens draws. Analysis has every lens and every part.
-6. **Streak freezes** are sold under the tree for 1,000 each, while you
-   hold fewer than 2 (see [pawns](pawns.md)).
-7. **Cash buys two things.** The unlock ($9.99) makes every feature in the
-   tree yours; not the endgame families, the cosmetics or openings. It sits
-   above the tree until it is yours, and comes back to every profile from
-   the App Store. Pawn packs sit under the tree: 2,000 for $1.99, 6,000 for
-   $4.99, 13,000 for $9.99. Each App Store transaction is credited once;
+6. **Cash buys two things.** The unlock ($9.99) makes every feature in the
+   tree yours; not the endgame families, the cosmetics or openings. It
+   comes back to every profile from the App Store. Pawn packs: 2,000 for
+   $1.99, 6,000 for $4.99, 13,000 for $9.99. Both are sold in the pawn
+   sheet, which the pawn balance opens on Home and in the Shop, and which
+   a price you can't pay yet opens from an item's sheet. The unlock shows
+   there until the tree is yours. Each App Store transaction is credited once;
    an unlock seen again still grants items added to the tree since.
    Code: `Purchases.swift`, and `CashStore` in the app.

@@ -12,6 +12,8 @@ final class CashStore {
   private(set) var products: [CashProduct: Product] = [:]
   /// The product being bought.
   private(set) var buying: CashProduct?
+  /// Whether the products are being asked for.
+  private(set) var loading = false
   @ObservationIgnored private weak var store: Game.AppStore?
   @ObservationIgnored private var updates: Task<Void, Never>?
 
@@ -23,10 +25,18 @@ final class CashStore {
         for await result in StoreKit.Transaction.updates { await self?.handle(result, bought: false) }
       }
     }
+    await loadProducts()
+    await restore()
+  }
+
+  /// Ask the App Store for the products, unless it has already given them or is being asked.
+  func loadProducts() async {
+    guard products.isEmpty, !loading else { return }
+    loading = true
+    defer { loading = false }
     if let found = try? await Product.products(for: CashProduct.allCases.map(\.rawValue)) {
       for product in found { if let id = CashProduct(rawValue: product.id) { products[id] = product } }
     }
-    await restore()
   }
 
   /// Buy a product. Returns whether it was bought and credited.
@@ -62,35 +72,41 @@ final class CashStore {
   }
 }
 
-/// The $10 unlock, above the shop's tree until it is yours.
-struct UnlockEverythingRow: View {
+/// The pawn sheet: the $10 unlock until the tree is yours, the pawn packs, and Restore
+/// purchases. Opened from the pawn balance and from a price you can't pay yet.
+struct PawnSheet: View {
+  let onClose: () -> Void
   @Environment(Game.AppStore.self) private var store
-  @Environment(CashStore.self) private var cash
-
-  var body: some View {
-    if let product = cash.products[.unlock], !store.state.ownsFeatureTree {
-      HStack(spacing: 12) {
-        Icon(name: "star", size: 20).foregroundStyle(Theme.accent)
-        Text("Unlock everything").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text)
-        Spacer(minLength: 0)
-        Button { Task { await cash.buy(.unlock) } } label: { Text(product.displayPrice) }
-          .buttonStyle(PlayButtonStyle(kind: .accent, height: 40, inset: 14))
-          .disabled(cash.buying != nil)
-      }
-      .padding(14)
-      .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
-    }
-  }
-}
-
-/// Pawn packs, and Restore purchases, under the tree.
-struct PawnPacksRow: View {
   @Environment(CashStore.self) private var cash
   @Environment(Toasts.self) private var toasts
 
   var body: some View {
     let packs = CashProduct.packs.compactMap { pack in cash.products[pack].map { (pack, $0) } }
-    VStack(spacing: 10) {
+    VStack(spacing: 14) {
+      ZStack {
+        Text("Pawns").font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.text)
+        HStack {
+          Button(action: onClose) {
+            Icon(name: "close", size: 19).foregroundStyle(Theme.text).frame(width: 37, height: 37)
+              .background(Circle().fill(Theme.surface2))
+          }
+          .buttonStyle(.plain).accessibilityLabel("Close")
+          Spacer()
+        }
+      }
+      .frame(height: 56).padding(.horizontal, 4)
+      if let product = cash.products[.unlock], !store.state.ownsFeatureTree {
+        HStack(spacing: 12) {
+          Icon(name: "star", size: 20).foregroundStyle(Theme.accent)
+          Text("Unlock everything").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text)
+          Spacer(minLength: 0)
+          Button { Task { await cash.buy(.unlock) } } label: { Text(product.displayPrice) }
+            .buttonStyle(PlayButtonStyle(kind: .accent, height: 40, inset: 14))
+            .disabled(cash.buying != nil)
+        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface))
+      }
       if !packs.isEmpty {
         HStack(spacing: 8) {
           ForEach(packs, id: \.0) { pack, product in
@@ -109,12 +125,39 @@ struct PawnPacksRow: View {
             .disabled(cash.buying != nil)
           }
         }
+      } else if cash.loading {
+        ProgressView().frame(minHeight: 64)
       }
       Button { Task { await cash.syncAndRestore() } } label: {
         Text("Restore purchases").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.text3)
           .frame(minHeight: 36)
       }
       .buttonStyle(.plain)
+    }
+    .padding(.horizontal, 16).padding(.top, 10).padding(.bottom, 8)
+    .task { await cash.loadProducts() }
+  }
+}
+
+extension View {
+  /// The pawn sheet, sized to what it holds.
+  func pawnSheet(isPresented: Binding<Bool>) -> some View {
+    modifier(PawnSheetPresenter(isPresented: isPresented))
+  }
+}
+
+private struct PawnSheetPresenter: ViewModifier {
+  @Binding var isPresented: Bool
+  @State private var height: CGFloat = 260
+
+  func body(content: Content) -> some View {
+    content.sheet(isPresented: $isPresented) {
+      PawnSheet { isPresented = false }
+        .fixedSize(horizontal: false, vertical: true)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+        .frame(maxHeight: .infinity, alignment: .top)
+        .presentationDetents([.height(height)])
+        .presentationBackground(SwiftUI.Color(hex: 0x131317))
     }
   }
 }
