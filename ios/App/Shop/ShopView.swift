@@ -35,7 +35,7 @@ struct ShopView: View {
       ScrollView {
         VStack(spacing: 16) {
           UnlockEverythingRow()
-          ShopTree(selected: selected, purchase: purchase, frames: $frames) { selected = $0 }
+          ShopTree(selected: selected, purchase: purchase, frames: $frames) { if purchase == nil { selected = $0 } }
           StreakFreezeRow()
           PawnPacksRow()
         }
@@ -74,15 +74,18 @@ struct ShopView: View {
 
   static let space = "shop"
 
-  /// The purchase played out: pawns fly, the ring fills, the counts run down; then it is yours.
+  /// The purchase played out: the sheet closes, pawns fly, the ring fills, the counts run down; then it is yours.
   private func buy(_ item: ShopItem) {
     guard purchase == nil, store.state.status(item) == .buyable else { return }
     let start = store.state.pawns
     purchase = Purchase(id: item.id, start: start, price: item.price, progress: 0)
-    if let from = frames["balance"], let to = frames[item.id] {
-      flights = (0..<10).map { Flight(id: $0, from: CGPoint(x: from.midX, y: from.midY), to: CGPoint(x: to.midX, y: to.midY)) }
-    }
+    selected = nil
     Task { @MainActor in
+      // The sheet slides away before the pawns take off, so the whole flight shows.
+      try? await Task.sleep(for: .milliseconds(350))
+      if let from = frames["balance"], let to = frames[item.id] {
+        flights = (0..<10).map { Flight(id: $0, from: CGPoint(x: from.midX, y: from.midY), to: CGPoint(x: to.midX, y: to.midY)) }
+      }
       try? await Task.sleep(for: .milliseconds(210))
       withAnimation(.linear(duration: 0.575)) { purchase?.progress = 1 }
       try? await Task.sleep(for: .milliseconds(575))
@@ -90,7 +93,6 @@ struct ShopView: View {
       store.buy(item.id)
       purchase?.done = true
       try? await Task.sleep(for: .milliseconds(1700))
-      selected = nil
       purchase = nil
       if let feature = item.feature { onUnlocked(feature) }
     }
