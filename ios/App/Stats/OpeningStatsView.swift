@@ -72,12 +72,8 @@ struct OpeningStatsView: View {
     let selected = store.state.settings.selection.opening == node.id
     return Button { store.update { $0.settings.selection.opening = node.id } } label: {
       Text(selected ? "Selected" : "Select this opening").font(.system(size: 16, weight: .semibold)).tracking(-0.16)
-        .foregroundStyle(selected ? Theme.text : Color(hex: 0x0b0b0e))
-        .frame(maxWidth: .infinity, minHeight: 50)
-        .background(RoundedRectangle(cornerRadius: 14).fill(selected ? Theme.surface : Theme.text))
-        .opacity(selected ? 0.35 : 1)
     }
-    .buttonStyle(.plain).disabled(selected)
+    .buttonStyle(KeyButtonStyle(kind: selected ? .secondary : .primary, height: 50, radius: 14)).disabled(selected)
   }
 
   private func modeRow(_ mode: ActivityMode, _ tally: ModeTally?) -> some View {

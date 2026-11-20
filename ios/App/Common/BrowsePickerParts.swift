@@ -75,11 +75,10 @@ struct BrowseNameBar: View {
       .frame(maxWidth: .infinity, alignment: .leading)
       if form != nil { FormRing(form: form) }
       Button(action: onChoose) {
-        Text("Choose").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.buttonInk)
-          .padding(.horizontal, 16).frame(minHeight: 44)
-          .background(RoundedRectangle(cornerRadius: 12).fill(Theme.button))
+        Text("Choose").font(.system(size: 15, weight: .bold))
+          .padding(.horizontal, 16)
       }
-      .buttonStyle(.plain)
+      .buttonStyle(KeyButtonStyle(kind: .primary, height: 44, radius: 12)).fixedSize()
     }
     .padding(.leading, 14).padding(.trailing, 8).padding(.vertical, 8).frame(minHeight: 60)
     .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface))

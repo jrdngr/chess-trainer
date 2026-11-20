@@ -38,7 +38,7 @@ struct AnalysisChip: View {
   private var colors: (fg: Color, bg: Color) {
     switch tone {
     case .plain: return (Theme.text2, Theme.surface2)
-    case .on: return (Theme.buttonInk, Theme.button)
+    case .on: return (Theme.selectedInk, Theme.selected)
     case .white: return (Color(hex: 0x111111), Color(hex: 0xf2f2f4))
     case .black: return (Color(hex: 0xe8e8ee), Color(hex: 0x2a2a31))
     }
@@ -60,21 +60,10 @@ struct WideButton: View {
         if let icon { Icon(name: icon, size: 18) }
         Text(title).font(.system(size: 16, weight: .semibold)).multilineTextAlignment(.leading)
       }
-      .foregroundStyle(colors.fg)
-      .frame(maxWidth: .infinity, minHeight: 50).padding(.horizontal, 20)
-      .background(RoundedRectangle(cornerRadius: 14).fill(colors.bg))
-      .contentShape(Rectangle())
+      .padding(.horizontal, 20)
     }
-    .buttonStyle(.plain).disabled(disabled).opacity(disabled ? 0.35 : 1)
-  }
-
-  private var colors: (fg: Color, bg: Color) {
-    switch kind {
-    case .plain: return (Theme.text, Theme.surface2)
-    case .soft: return (Theme.text, Theme.surface)
-    case .primary: return (Color(hex: 0x0b0b0e), Theme.text)
-    case .accent: return (Theme.buttonInk, Theme.button)
-    }
+    .buttonStyle(KeyButtonStyle(kind: kind == .primary || kind == .accent ? .primary : .secondary, height: 50, radius: 14))
+    .disabled(disabled)
   }
 }
 

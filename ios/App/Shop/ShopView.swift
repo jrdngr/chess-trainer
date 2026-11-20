@@ -256,7 +256,7 @@ private struct ShopNode: View {
       case .locked:
         Circle().fill(Theme.surface)
       case .buyable where purchase == nil:
-        Circle().fill(Theme.button)
+        Circle().fill(Theme.key)
       default:
         Circle().fill(Theme.surface2)
       }
@@ -290,7 +290,7 @@ private struct ShopNode: View {
     if owned { return Theme.good }
     if purchase != nil { return Theme.pawn }
     switch status {
-    case .buyable: return Theme.buttonInk
+    case .buyable: return .white
     case .locked, .soon: return Theme.text3
     default: return Theme.text2
     }
@@ -404,12 +404,11 @@ private struct BuySheet: View {
         Button(action: onBuy) {
           HStack(spacing: 7) {
             Text("Buy")
-            PawnAmount(count: purchase?.left ?? item.price, size: 17, color: SwiftUI.Color(hex: 0x0b0b0e))
+            PawnAmount(count: purchase?.left ?? item.price, size: 17, color: .white)
           }
-          .font(.system(size: 17, weight: .semibold)).foregroundStyle(SwiftUI.Color(hex: 0x0b0b0e))
-          .frame(maxWidth: .infinity, minHeight: 54).background(shape.fill(Theme.text))
+          .font(.system(size: 17, weight: .semibold))
         }
-        .buttonStyle(PressScale()).disabled(purchase != nil)
+        .buttonStyle(KeyButtonStyle(kind: .primary, height: 54, radius: 18)).allowsHitTesting(purchase == nil)
       case .short:
         PawnAmount(count: item.price, size: 17, color: Theme.text3)
           .font(.system(size: 17, weight: .semibold))
@@ -436,14 +435,6 @@ private struct BuySheet: View {
         EmptyView()
       }
     }
-  }
-}
-
-/// A button that gives a little under the finger.
-private struct PressScale: ButtonStyle {
-  func makeBody(configuration: Configuration) -> some View {
-    configuration.label.scaleEffect(configuration.isPressed ? 0.96 : 1)
-      .animation(.easeOut(duration: 0.13), value: configuration.isPressed)
   }
 }
 

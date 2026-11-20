@@ -107,7 +107,7 @@ struct MoveStrip: View {
     case .dubious: return (Theme.warn, Theme.warn.opacity(item.current ? 0.2 : 0.12))
     case .blunder: return (Theme.bad, Theme.bad.opacity(item.current ? 0.2 : 0.12))
     default:
-      if item.current { return (Theme.background, Theme.text) }
+      if item.current { return (Theme.selectedInk, Theme.selected) }
       return item.tone == .mine ? (Theme.text, Theme.surface3) : (Theme.text2, Theme.surface)
     }
   }
@@ -126,6 +126,6 @@ struct MoveStrip: View {
     if item.tone == .book && item.current { return Theme.accentInk.opacity(0.55) }
     if [.book, .offBook, .dubious, .blunder].contains(item.tone) { return colors(item).0.opacity(0.6) }
     if item.tone == .bad || item.tone == .good || item.tone == .mine { return colors(item).0.opacity(0.5) }
-    return item.current ? .black.opacity(0.45) : Theme.text3
+    return item.current ? Theme.selectedInk.opacity(0.5) : Theme.text3
   }
 }

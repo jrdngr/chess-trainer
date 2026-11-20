@@ -33,9 +33,11 @@ struct PlayAppBar<Trailing: View>: View {
 
 /// A filled, rounded button.
 struct PlayButtonStyle: ButtonStyle {
-  /// `.primary`, `.soft`, the plain `.btn`, `.accent`, `.danger`, and `.bare` for `.btn.plain`.
+  /// `.primary` and `.accent` are the indigo key, `.plain` and `.soft` the gray key,
+  /// `.bare` for `.btn.plain`, `.danger` a flat red tint.
   enum Kind { case primary, soft, plain, accent, bare, danger }
   var kind = Kind.plain
+  /// The whole button, a key's lip included.
   var height: CGFloat = 50
   var radius: CGFloat = 14
   var font: CGFloat = 16
@@ -46,34 +48,29 @@ struct PlayButtonStyle: ButtonStyle {
   @Environment(\.isEnabled) private var enabled
 
   func makeBody(configuration: Configuration) -> some View {
-    configuration.label
+    let label = configuration.label
       .font(.system(size: font, weight: .semibold))
-      .foregroundStyle(ink)
-      .padding(.horizontal, inset ?? (height < 44 ? 14 : 20)).frame(maxWidth: block ? .infinity : nil, minHeight: height)
-      .background(RoundedRectangle(cornerRadius: radius).fill(fill))
-      .contentShape(RoundedRectangle(cornerRadius: radius))
-      .opacity(enabled ? 1 : 0.35)
-      .scaleEffect(configuration.isPressed ? 0.97 : 1)
-  }
-
-  private var ink: SwiftUI.Color {
-    switch kind {
-    case .primary: SwiftUI.Color(hex: 0x0b0b0e)
-    case .accent: Theme.buttonInk
-    case .bare: Theme.text2
-    case .danger: Theme.bad
-    default: Theme.text
+      .padding(.horizontal, inset ?? (height < 44 ? 14 : 20))
+    Group {
+      if let keyKind {
+        label.frame(maxWidth: block ? .infinity : nil, minHeight: height - keyKind.lip)
+          .key(keyKind, radius: radius, pressed: configuration.isPressed)
+      } else {
+        label.foregroundStyle(kind == .danger ? Theme.bad : Theme.text2)
+          .frame(maxWidth: block ? .infinity : nil, minHeight: height)
+          .background(RoundedRectangle(cornerRadius: radius).fill(kind == .danger ? Theme.bad.opacity(0.14) : .clear))
+          .contentShape(RoundedRectangle(cornerRadius: radius))
+          .opacity(configuration.isPressed ? 0.6 : 1)
+      }
     }
+    .opacity(enabled ? 1 : 0.35)
   }
 
-  private var fill: SwiftUI.Color {
+  private var keyKind: KeyKind? {
     switch kind {
-    case .primary: Theme.text
-    case .soft: Theme.surface
-    case .plain: Theme.surface2
-    case .accent: Theme.button
-    case .bare: .clear
-    case .danger: Theme.bad.opacity(0.14)
+    case .primary, .accent: .primary
+    case .plain, .soft: .secondary
+    case .bare, .danger: nil
     }
   }
 }

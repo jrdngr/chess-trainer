@@ -104,12 +104,12 @@ struct HomeView: View {
     let selection = store.peekRoundSelection()
     if nextRound(store.state, tree, selection, store.autoHistory) != nil {
       Button { onOpen(.play) } label: { PlayLabel() }
-        .buttonStyle(PlayButtonStyle(kind: .accent, height: 54, radius: 12, block: true))
+        .buttonStyle(KeyButtonStyle(kind: .play, height: 54, radius: 12))
     } else {
       Button { onPlaybook() } label: {
         HStack(spacing: 13) {
-          Icon(name: "bolt", size: 22).foregroundStyle(Theme.buttonInk).frame(width: 42, height: 42)
-            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.button))
+          Icon(name: "bolt", size: 22).foregroundStyle(.white).frame(width: 42, height: 42)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.key))
           VStack(alignment: .leading, spacing: 1) {
             Text("PLAY").font(.system(size: 10.5, weight: .heavy)).tracking(0.9).foregroundStyle(Theme.accent)
             Text("Build").font(.system(size: 18, weight: .heavy)).foregroundStyle(Theme.text)
@@ -160,7 +160,6 @@ struct PlayLabel: View {
       Image(systemName: "play.fill").font(.system(size: 18, weight: .bold))
       Text("Play").font(.system(size: 21, weight: .heavy))
     }
-    .foregroundStyle(Theme.buttonInk)
   }
 }
 

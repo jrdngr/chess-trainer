@@ -43,7 +43,7 @@ struct RestoreView: View {
           ProgressView().tint(Theme.text2).frame(maxWidth: .infinity).padding(.top, 40)
         }
         if offered != nil {
-          BigButton(label: "Start fresh", accent: false, soft: true) { dismiss() }.padding(.top, 28)
+          BigButton(label: "Start fresh", accent: false) { dismiss() }.padding(.top, 28)
         }
       }
       .padding(20)

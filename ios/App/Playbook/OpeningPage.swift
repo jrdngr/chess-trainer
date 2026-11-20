@@ -116,10 +116,9 @@ struct OpeningPage: View {
           Text("Grow").font(.system(size: 17, weight: .heavy)).frame(maxWidth: .infinity, alignment: .leading)
           Text(gap.name).font(.system(size: 14, weight: .bold)).lineLimit(1)
         }
-        .foregroundStyle(Theme.buttonInk).padding(.horizontal, 18).frame(minHeight: 64)
-        .background(RoundedRectangle(cornerRadius: 18).fill(Theme.button))
+        .padding(.horizontal, 18)
       }
-      .buttonStyle(.plain)
+      .buttonStyle(KeyButtonStyle(kind: .primary, height: 64, radius: 18))
     case .level(let level, let games, let gamesNeeded, let green, let openings):
       waiting(trailing: "Level \(level)") {
         VStack(spacing: 12) {

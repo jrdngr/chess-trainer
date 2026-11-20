@@ -57,7 +57,6 @@ struct BigButton: View {
   var icon: String?
   var accent = true
   var xl = true
-  var soft = false
   var disabled = false
   var action: () -> Void
 
@@ -67,13 +66,9 @@ struct BigButton: View {
         if let icon { Icon(name: icon, size: 18) }
         Text(label).font(.system(size: xl ? 17 : 16, weight: .semibold)).lineLimit(1)
       }
-      .foregroundStyle(accent ? Theme.buttonInk : Theme.text)
-      .frame(maxWidth: .infinity, minHeight: xl ? 56 : 50)
-      .background(RoundedRectangle(cornerRadius: xl ? 16 : 14).fill(accent ? Theme.button : soft ? Theme.surface : Theme.surface2))
-      .contentShape(Rectangle())
     }
-    .buttonStyle(.plain)
-    .disabled(disabled).opacity(disabled ? 0.35 : 1)
+    .buttonStyle(KeyButtonStyle(kind: accent ? .primary : .secondary, height: xl ? 56 : 50, radius: xl ? 16 : 14))
+    .disabled(disabled)
   }
 }
 

@@ -405,9 +405,9 @@ private struct MapNodeView: View {
     }
     .overlay(alignment: .top) {
       if isNext {
-        Text("Next").font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.buttonInk)
+        Text("Next").font(.system(size: 10, weight: .bold)).foregroundStyle(.white)
           .padding(.horizontal, 5).frame(height: 14)
-          .background(RoundedRectangle(cornerRadius: 4).fill(Theme.button))
+          .background(RoundedRectangle(cornerRadius: 4).fill(Theme.key))
           .offset(y: -8)
       }
     }

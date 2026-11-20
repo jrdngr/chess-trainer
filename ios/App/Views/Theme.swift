@@ -12,11 +12,26 @@ enum Theme {
   static let accent = Color(hex: 0x8a8cff)
   /// Dark lines on the book's blue card back, and on a current book move.
   static let accentInk = Color(hex: 0x0e0e2a)
-  /// Filled buttons: near-white with near-black words. The accent is for highlights only.
-  static let button = Color(hex: 0xececf2)
-  static let buttonInk = Color(hex: 0x111116)
-  /// Home's Play button pressed.
-  static let buttonPressed = Color(hex: 0xd4d4dc)
+  /// Buttons are keys (`KeyKind`): a face, a lighter top edge, a darker lip, and a darker face pressed.
+  static let key = Color(hex: 0x4a4cd2)
+  static let keyEdge = Color(hex: 0x7375ee)
+  static let keyLip = Color(hex: 0x2c2d8e)
+  static let keyDown = Color(hex: 0x3a3cae)
+  static let keyDownLip = Color(hex: 0x27287c)
+  static let keyPressedInk = Color(hex: 0xe4e4f6)
+  /// Home's Play key, a step brighter than the others.
+  static let play = Color(hex: 0x5658e6)
+  static let playEdge = Color(hex: 0x9395fb)
+  static let playLip = Color(hex: 0x3031a0)
+  static let playDown = Color(hex: 0x4345c4)
+  /// The gray key.
+  static let key2 = Color(hex: 0x292930)
+  static let key2Edge = Color(hex: 0x3d3d47)
+  static let key2Lip = Color(hex: 0x18181d)
+  static let key2Down = Color(hex: 0x1a1a1f)
+  /// Something chosen that is not a button: the current move, a lens or chip turned on.
+  static let selected = Color(hex: 0x2b2c58)
+  static let selectedInk = Color(hex: 0xe9e9ff)
   static let good = Color(hex: 0x4ade80)
   static let bad = Color(hex: 0xfb7185)
   static let warn = Color(hex: 0xfbbf24)
