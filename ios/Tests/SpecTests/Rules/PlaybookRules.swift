@@ -99,6 +99,22 @@ import Testing
     #expect(page.form == 0.8)
   }
 
+  /// Rule 4: an opening you reach in another order than the book's opens at your own moves.
+  @Test func aTransposedOpeningOpensAtYourLine() throws {
+    let tree = openingTree(bookIndex)
+    var state = AppState()
+    let yours = line("d4 d5 c4 e6 Nc3 Nf6 cxd5 exd5 Bg5")
+    state.addLine(state.ensurePlaybook(.w), yours, .fixed(.book))
+    let named = try #require(tree.byKey[positionKey(walkSan(yours).fens.last!)])
+    try #require(named.sans != yours, "the book names this position by another move order")
+    func find(_ nodes: [MapNode]) -> MapNode? {
+      nodes.lazy.compactMap { $0.id == named.id ? $0 : find($0.children) }.first
+    }
+    let node = try #require(find(playbookMap(state, tree, side: .w)))
+    #expect(node.line == yours)
+    #expect(nodeAtLine(state.playbookList[0], node.line) != nil)
+  }
+
   /// Rule 5: Grow takes the first hole under the opening an open level allows; else it says what it waits for.
   @Test func growWaitsForTheCurve() throws {
     let tree = openingTree(bookIndex)

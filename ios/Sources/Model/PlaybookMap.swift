@@ -83,6 +83,14 @@ public func playbookMap(_ state: AppState, _ tree: OpeningTree, side: Color) -> 
     guard let named = tree.byKey[positionKey(node.fenAfter)] else { continue }
     for each in ancestorsOf(tree, named.id) { owned.insert(each.id) }
   }
+  // Your own moves to each position, shortest first: an opening you reach in another
+  // order than the book's opens at your line, which is the one the Playbook has.
+  var yours: [String: [String]] = [:]
+  for move in nodesInOrder(rep) {
+    let sans = pathTo(rep, move.id).map(\.san)
+    let key = positionKey(move.fenAfter)
+    if yours[key].map({ sans.count < $0.count }) ?? true { yours[key] = sans }
+  }
   var lines: [String: Int] = [:]
   for leaf in leafLines(rep) {
     var through = Set<String>()
@@ -141,7 +149,7 @@ public func playbookMap(_ state: AppState, _ tree: OpeningTree, side: Color) -> 
     let family = openingList(side).first { $0.roots.contains(node.sans) }?.id
     return MapNode(
       id: node.id, name: node.name, label: shown, move: node.depth == 1 ? moveLabel(node.sans) : node.sans.last ?? "",
-      color: side, line: node.sans, state: .owned, form: formAverage(state.form, node.id, side), lines: lines[node.id] ?? 0, shelf: shelfOf(tree, node)?.id,
+      color: side, line: yours[node.key] ?? node.sans, state: .owned, form: formAverage(state.form, node.id, side), lines: lines[node.id] ?? 0, shelf: shelfOf(tree, node)?.id,
       gap: nil, children: kids.map { build($0, node.name) } + lockedOrder(locked[node.id] ?? []) + forSale[node.id, default: []],
       family: family)
   }

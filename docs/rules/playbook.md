@@ -26,7 +26,8 @@ Tests: the `docs/rules/playbook.md` suite in
    level, "In line" for a hole further down the curve.
 4. **An opening's page is about its position.** A tap on an opening you
    have opens its page. Its board stands at the opening's position and steps
-   back through the moves to it, never past them; Analysis opens from there.
+   back through your moves to it, never past them; an opening you reach in
+   another order than the book's opens at your order; Analysis opens from there.
    Lines past it are reached through their own openings on the tree. The page
    shows the opening's form: its last 10 answers and their average (see
    [form](form.md)).
