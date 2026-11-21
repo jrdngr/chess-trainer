@@ -41,7 +41,7 @@ struct NamedLines: View {
 
   private func meta(_ line: BookLine) -> String {
     let side = line.forColor == .w ? "White" : "Black"
-    return [line.eco, side, "\((line.moves.count + 1) / 2) moves"].compactMap { $0 }.joined(separator: " \u{00b7} ")
+    return "\(side), \((line.moves.count + 1) / 2) moves"
   }
 }
 
@@ -88,7 +88,7 @@ struct GameSheet: View {
     SheetFrame(title: "\(game.white) \u{2013} \(game.black)", detents: [.medium], onClose: onClose) {
       HStack(spacing: 6) {
         AnalysisChip(text: game.result)
-        Text([game.event, String(game.year)].compactMap { $0 }.joined(separator: " \u{00b7} "))
+        Text([game.event, String(game.year)].compactMap { $0 }.joined(separator: " "))
           .font(.system(size: 12)).foregroundStyle(Theme.text3).lineLimit(1)
       }
       .padding(.bottom, 12)

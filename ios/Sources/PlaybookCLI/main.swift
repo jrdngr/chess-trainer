@@ -14,13 +14,13 @@ import Model
 /// `--save DIR` keeps the save in DIR across runs; without it every run is a fresh install.
 
 let HELP = """
-  Anywhere:  state · help · quit · home · hint (the engine's move here)
-  Start:     recommend · choose WHITE E4 D4 (ids, e.g. `choose london caro slav`) · openings · intro
+  Anywhere:  state, help, quit, home, hint (the engine's move here)
+  Start:     recommend, choose WHITE E4 D4 (ids, e.g. `choose london caro slav`), openings, intro
   Home:      select [w|b|either] [drill|freeform] [opening id or moves, "any" for Any Opening]
-             play · tree [w|b] · unlock OPENING (id or name) · endgames · middlegame · shop · buy ID · purchase unlock|pawns2000|pawns6000|pawns13000
-  Board:     <san> (or move <san> <san>...) · think SECONDS
-  Play:      end · continue · takeback · next · undo · done · grow · replay
-  Endgames:  practice · ending ID · resign · next
+             play, tree [w|b], unlock OPENING (id or name), endgames, middlegame, shop, buy ID, purchase unlock|pawns2000|pawns6000|pawns13000
+  Board:     <san> (or move <san> <san>...), think SECONDS
+  Play:      end, continue, takeback, next, undo, done, grow, replay
+  Endgames:  practice, ending ID, resign, next
   """
 
 struct Options {

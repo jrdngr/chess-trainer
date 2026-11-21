@@ -160,7 +160,7 @@ public func planOf(_ fen: String, _ me: Color, kept: String? = nil) -> Plan? {
       }
       if offered.isEmpty { continue }
       let headline = (variant.headline ?? PLAN_HEADLINES[template.id]).map { stepText(mine ? $0.a : $0.b, a, me) }
-      let label = structureLabel(structure) + (variant.name.map { " · \($0)" } ?? "")
+      let label = structureLabel(structure) + (variant.name.map { ": \($0)" } ?? "")
       candidates.append(Plan(
         key: "\(template.id):\(a.rawValue)" + (variant.id.map { ":\($0)" } ?? ""), label: label, headline: headline,
         steps: offered.map { placeStep($0, a, me) }, runs: offered.map { stepRuns($0.text, a, me) }, specificity: variant.when.count + 1, a: a))

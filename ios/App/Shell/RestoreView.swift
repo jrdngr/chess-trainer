@@ -90,7 +90,7 @@ struct RestoreView: View {
   private func deviceCard(_ device: DeviceBackup) -> some View {
     let own = device.folder == store.device.folder
     return VStack(alignment: .leading, spacing: 0) {
-      Text("\(own ? "This \(device.manifest.device)" : device.manifest.device) · \(when(device.manifest.savedAt))")
+      Text("\(own ? "This \(device.manifest.device)" : device.manifest.device), \(when(device.manifest.savedAt))")
         .font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
         .padding(.horizontal, 4).padding(.top, 24).padding(.bottom, 8)
       ListCard {

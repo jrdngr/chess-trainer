@@ -30,8 +30,3 @@ public func moveRange(_ sans: [String], _ from: Int) -> String {
     return ply % 2 == 0 ? "\(n).\(san)" : i == 0 ? "\(n)...\(san)" : san
   }.joined(separator: " ")
 }
-
-/// "White · Sicilian › Najdorf": the selection as a subtitle.
-public func selectionText(_ tree: OpeningTree, _ catalog: PickerCatalog, _ color: ColorChoice, _ openingId: String) -> String {
-  "\(colorLabel(color)) \u{00b7} \(selectionTrail(tree, catalog, openingId).joined(separator: " \u{203a} "))"
-}

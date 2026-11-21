@@ -20,7 +20,7 @@ private func mark(_ step: PlanStep, _ fen: String, _ me: ChessCore.Color) -> Ste
   let fen = "r1bqk2r/pp2ppbp/2np2p1/8/4P1n1/2PBBN2/PP1N1PPP/R2QR1K1 w kq - 0 11"
   let plan = planOf(fen, .w)!
   #expect(plan.key == "dragon:w:classical")
-  #expect(plan.label == "Dragon · Classical")
+  #expect(plan.label == "Dragon: Classical")
   #expect(plan.headline == "Knight to d5")
   #expect(plan.steps.map(\.text) == [
     "Knight to d5 trades a key defender", "Push f4–f5 for kingside space", "Watch for ...Rxc3, the exchange sacrifice",

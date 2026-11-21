@@ -81,7 +81,7 @@ struct ExplorerPanel: View {
       HStack(spacing: 12) {
         VStack(alignment: .leading, spacing: 2) {
           Text("\(game.white) \u{2013} \(game.black)").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
-          Text([game.event, String(game.year)].compactMap { $0 }.joined(separator: " \u{00b7} "))
+          Text([game.event, String(game.year)].compactMap { $0 }.joined(separator: " "))
             .font(.system(size: 12.5)).foregroundStyle(Theme.text3).lineLimit(1)
         }
         Spacer(minLength: 0)
@@ -150,23 +150,8 @@ private struct ResultBar: View {
   }
 }
 
-/// Where the book comes from: `BOOK_SOURCE`, "Lichess Elite 2025-11 · 280,246 games".
+/// How big the book is: "280,246 games".
 func bookSource(_ index: ReferenceIndex) -> String {
   let games = index.totalGames.formatted(.number.locale(Locale(identifier: "en_US")))
-  return [BookFile.source, "\(games) games"].compactMap { $0 }.joined(separator: " \u{00b7} ")
-}
-
-/// The book file's own name for its source, read from its head.
-private enum BookFile {
-  static let source: String? = {
-    guard let url = Bundle.main.url(forResource: "book", withExtension: "json"),
-      let handle = try? FileHandle(forReadingFrom: url), let head = (try? handle.read(upToCount: 400)).flatMap({ data in
-        try? handle.close()
-        return data
-      }),
-      let text = String(data: head, encoding: .utf8),
-      let match = text.firstMatch(of: /"source":"([^"]*)"/)
-    else { return nil }
-    return String(match.1)
-  }()
+  return "\(games) games"
 }

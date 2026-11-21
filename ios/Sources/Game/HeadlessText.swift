@@ -15,7 +15,7 @@ extension HeadlessApp {
     case .endgame: lines += endgameLines()
     }
     let flashed = takeSignals().compactMap(Self.describe)
-    if !flashed.isEmpty { lines.append("Shown: " + flashed.joined(separator: " · ")) }
+    if !flashed.isEmpty { lines.append("Shown: " + flashed.joined(separator: ", ")) }
     return lines.joined(separator: "\n")
   }
 
@@ -32,7 +32,7 @@ extension HeadlessApp {
   private func runLines() -> [String] {
     if let building = middlegame?.building { return ["Building the handoff: \(building.joined(separator: " › "))"] }
     guard let model = run else { return [play?.nothing == true ? "Nothing to practice yet: the Playbook has no lines in this selection." : "No round."] }
-    var lines = ["\(model.headerName) · you play \(model.run.color == .w ? "White" : "Black") · \(model.session.state.extras.pawns) pawns this run, \(state.pawns) in all"]
+    var lines = ["\(model.headerName), you play \(model.run.color == .w ? "White" : "Black"), \(model.session.state.extras.pawns) pawns this run, \(state.pawns) in all"]
     lines.append(board(model.shownFen, model.run.color))
     lines.append("Moves: \(sansToMoveText(model.run.played))")
     if let label = model.label { lines.append("Prep: \(label.rawValue)") }
@@ -60,7 +60,7 @@ extension HeadlessApp {
       let record = state.endgames
       return ["Endgames: \(record.due.count) due. `practice`, or `ending <id>`: " + record.entries.prefix(8).map(\.id).joined(separator: ", ")]
     }
-    var lines = ["\(game.entry.name) · goal: \(game.entry.goal.label) · you play \(game.color == .w ? "White" : "Black")"]
+    var lines = ["\(game.entry.name), goal \(game.entry.goal.label), you play \(game.color == .w ? "White" : "Black")"]
     lines.append(board(game.fen, game.color))
     lines.append("Moves: \(game.moves.joined(separator: " "))")
     if let note = game.note { lines.append(note) }
@@ -77,7 +77,7 @@ extension HeadlessApp {
 
   /// The Pawn Shop: every item, its price and where it stands for you.
   public func shopReport() -> String {
-    var lines = ["Pawn Shop · \(state.pawns) pawns"]
+    var lines = ["Pawn Shop: \(state.pawns) pawns"]
     for shelf in ShopShelf.allCases {
       lines.append(shelf.rawValue.capitalized + ":")
       for item in SHOP where item.shelf == shelf {

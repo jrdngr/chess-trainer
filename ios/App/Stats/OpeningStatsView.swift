@@ -78,7 +78,7 @@ struct OpeningStatsView: View {
 
   private func modeRow(_ mode: ActivityMode, _ tally: ModeTally?) -> some View {
     let (rounds, answered, correct) = (tally?.rounds ?? 0, tally?.answered ?? 0, tally?.correct ?? 0)
-    let share = answered > 0 ? " \u{00b7} \(percentText(Double(correct) / Double(answered)))" : ""
+    let share = answered > 0 ? ", \(percentText(Double(correct) / Double(answered))) right" : ""
     return HStack(spacing: 12) {
       Text(modeName(mode)).font(.system(size: 13)).foregroundStyle(Theme.text2).frame(maxWidth: .infinity, alignment: .leading)
       Text((rounds == 1 ? "1 round" : "\(rounds) rounds") + share).font(.system(size: 12.5)).foregroundStyle(Theme.text3)
@@ -96,7 +96,7 @@ struct OpeningStatsView: View {
           let stats = nodeStats(score, kid.id)
           StatsRow(
             dot: nil, title: kid.name,
-            meta: (kid.eco.map { "\($0) \u{00b7} " } ?? "") + bookMoveText(kid.sans),
+            meta: bookMoveText(kid.sans),
             value: "\(roundsOf(stats))"
           ) { onOpen(kid.id) }
         }

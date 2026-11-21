@@ -56,7 +56,7 @@ public enum TowardKind: String, Sendable {
 enum AwayKind { case closes, passed }
 
 /// Appended to the reason of a book move strong players rarely choose.
-public let RARELY_PLAYED = " · rarely played"
+public let RARELY_PLAYED = ", rarely played"
 
 /// Whether a move after `path` is the first one of its side in the game.
 public func isFirstMove(_ path: [String]) -> Bool { path.count < 2 }

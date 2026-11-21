@@ -20,7 +20,7 @@ struct RunSummary: View {
         .foregroundStyle(Theme.text).padding(.top, 4)
       Text("Survived \(state.moves) move\(state.moves == 1 ? "" : "s")").font(.system(size: 13)).foregroundStyle(Theme.text)
       if !extraStats.isEmpty {
-        Text(extraStats.joined(separator: " \u{00b7} ")).font(.system(size: 13)).foregroundStyle(Theme.text2)
+        ForEach(extraStats, id: \.self) { Text($0).font(.system(size: 13)).foregroundStyle(Theme.text2) }
       }
       if let best = newBestText {
         Text(best).font(.system(size: 13)).foregroundStyle(Theme.good).padding(.top, 4)
@@ -168,11 +168,9 @@ struct ScoreRow: View {
 
   private var meta: String {
     if score.runs == 0 && score.ended == 0 { return "No runs yet" }
-    let form = recentForm(score)
     return [
       "\(score.runs) run\(score.runs == 1 ? "" : "s")",
       score.ended > 0 ? "\(score.ended) ended" : nil,
-      form.map { "recent form \(Int($0))" },
-    ].compactMap { $0 }.joined(separator: " \u{00b7} ")
+    ].compactMap { $0 }.joined(separator: ", ")
   }
 }

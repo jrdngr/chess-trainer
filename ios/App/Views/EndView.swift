@@ -240,7 +240,7 @@ struct EndView: View {
   private func compare(_ blunder: (played: String, best: String?, lost: Double)) -> some View {
     HStack(spacing: 10) {
       side("Engine", blunder.best ?? "\u{2014}", Theme.good)
-      side("You played \u{00b7} \u{2212}\(JS.toFixed(blunder.lost / 100, 2))", blunder.played, Theme.bad)
+      side("You played (\u{2212}\(JS.toFixed(blunder.lost / 100, 2)))", blunder.played, Theme.bad)
     }
     .padding(.top, 8)
   }

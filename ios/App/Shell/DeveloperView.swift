@@ -233,7 +233,7 @@ struct DeveloperView: View {
       let open = openLevels(curveHoles(curveSides(state), tree.index, tree: tree), gate).sorted().map(String.init).joined(separator: ", ")
       section("Growth levels")
       ListCard {
-        Text("Play games \(gate.games) · green \(gate.green) of \(gate.openings) · levels open \(open)")
+        Text("Play games \(gate.games), green \(gate.green) of \(gate.openings), levels open \(open)")
           .font(.system(size: 14)).foregroundStyle(Theme.text2)
           .padding(.horizontal, 16).padding(.vertical, 14).frame(maxWidth: .infinity, alignment: .leading)
         HStack(spacing: 8) {
@@ -307,7 +307,7 @@ struct DeveloperView: View {
     let info = Bundle.main.infoDictionary
     let version = info?["CFBundleShortVersionString"] as? String ?? "?"
     let build = info?["CFBundleVersion"] as? String ?? "?"
-    return "\(version) (\(build)) · save v\(SAVE_VERSION)"
+    return "\(version) (\(build)), save v\(SAVE_VERSION)"
   }
 
   /// How many days before today the streak's last day is; nil with no streak or further back.

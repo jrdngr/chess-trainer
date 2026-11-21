@@ -293,7 +293,7 @@ struct EndgameIntroCard: View {
     let next = played < current.steps.count ? current.steps[played] : nil
     VStack(alignment: .leading, spacing: 12) {
       HStack {
-        Text("\(name) \u{00B7} \(goal)".uppercased()).font(.system(size: 12, weight: .heavy)).tracking(0.9).foregroundStyle(Theme.accent)
+        Text("\(name): \(goal)".uppercased()).font(.system(size: 12, weight: .heavy)).tracking(0.9).foregroundStyle(Theme.accent)
         Spacer()
         Button(action: onPlay) {
           Icon(name: "close", size: 16).foregroundStyle(Theme.text2)
