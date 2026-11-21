@@ -111,12 +111,14 @@ struct KeyButtonStyle: ButtonStyle {
   var kind = KeyKind.primary
   var height: CGFloat = 50
   var radius: CGFloat = 14
+  /// Drawn pressed whatever the touch is doing: a quick tap can lift before a pressed frame shows.
+  var held = false
   @Environment(\.isEnabled) private var enabled
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .frame(maxWidth: .infinity, minHeight: height - kind.lip)
-      .key(kind, radius: radius, pressed: configuration.isPressed)
+      .key(kind, radius: radius, pressed: configuration.isPressed || held)
       .opacity(enabled ? 1 : 0.35)
   }
 }

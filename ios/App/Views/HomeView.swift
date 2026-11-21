@@ -17,6 +17,8 @@ struct HomeView: View {
   let onNext: (MapNode) -> Void
   @Environment(AppStore.self) private var store
   @State private var settings = false
+  /// Play's key is held down after a tap until Play opens.
+  @State private var playHeld = false
 
   var body: some View {
     ScrollView {
@@ -97,10 +99,19 @@ struct HomeView: View {
 
   private var tip: GameTip? { store.state.homeTip }
 
-  /// Play's button.
+  /// Play's button. A tap holds the key down briefly before Play opens, so even a quick tap
+  /// shows the press.
   private var play: some View {
-    Button { onOpen(.play) } label: { PlayLabel() }
-      .buttonStyle(KeyButtonStyle(kind: .play, height: 54, radius: 12))
+    Button {
+      guard !playHeld else { return }
+      playHeld = true
+      Task { @MainActor in
+        try? await Task.sleep(for: .milliseconds(100))
+        playHeld = false
+        onOpen(.play)
+      }
+    } label: { PlayLabel() }
+    .buttonStyle(KeyButtonStyle(kind: .play, height: 54, radius: 12, held: playHeld))
   }
 
   /// A mode's tile. `held`: press and hold offers Start and Settings.
