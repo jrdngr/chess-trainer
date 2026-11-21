@@ -138,12 +138,12 @@ private struct ShopTree: View {
     let r = row
     return [
       "sidePicker": CGPoint(x: 48, y: 0), "openingPicker": CGPoint(x: 48, y: r), "freeform": CGPoint(x: 48, y: 2 * r),
-      "personalities": CGPoint(x: 48, y: 3 * r),
+      "middlegame": CGPoint(x: 48, y: 3 * r), "personalities": CGPoint(x: 48, y: 4 * r),
       "lensPawns": CGPoint(x: 150, y: 0), "lensStructure": CGPoint(x: 234, y: 0), "lensEndgamePawns": CGPoint(x: 314, y: 0),
       "lensPieces": CGPoint(x: 150, y: r), "lensControl": CGPoint(x: 234, y: r), "lensEndgamePieces": CGPoint(x: 314, y: r),
       "lensKings": CGPoint(x: 150, y: 2 * r), "lensEndgameKings": CGPoint(x: 234, y: 2 * r),
       "lensEval": CGPoint(x: 150, y: 3 * r), "lensEvalHistory": CGPoint(x: 234, y: 3 * r),
-      "middlegame": CGPoint(x: 48, y: 4 * r), "lensPlan": CGPoint(x: 150, y: 4 * r), "endgames": CGPoint(x: 254, y: 4 * r),
+      "lensPlan": CGPoint(x: 150, y: 4 * r), "endgames": CGPoint(x: 254, y: 4 * r),
       "endgamesPawn": CGPoint(x: 194, y: 5 * r), "endgamesRook": CGPoint(x: 314, y: 5 * r),
       "boards": CGPoint(x: 36, y: stylesY), "pieces": CGPoint(x: 107, y: stylesY), "decks": CGPoint(x: 179, y: stylesY),
       "styles": CGPoint(x: 251, y: stylesY), "icons": CGPoint(x: 322, y: stylesY),
