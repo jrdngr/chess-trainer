@@ -72,10 +72,11 @@ struct PlaybookView: View {
 
   private var list: some View {
     VStack(spacing: 0) {
-      AppBar(title: "Playbook", large: true) { TidyButton(onOpen: { page = .tidy }) }
-        .zIndex(1)
-      SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")])
-        .padding(.horizontal, 16)
+      AppBar(title: "Playbook", large: true) {
+        TidyButton(onOpen: { page = .tidy })
+        SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")]).frame(width: 150)
+      }
+      .zIndex(1)
       // With nothing on a side, its tree is every family for sale.
       PlaybookMapView(
         tree: tree, side: side, focus: mapFocus ?? nextFocus,
@@ -83,7 +84,6 @@ struct PlaybookView: View {
           if mapFocus != nil { onConsumedMapFocus() } else { nextFocus = nil }
         },
         onOpen: { node in page = .opening(node) })
-        .padding(.top, 4)
     }
   }
 }

@@ -52,28 +52,56 @@ import Testing
     #expect(mapPath(roots, to: family.id) == [roots[0].id, family.id])
   }
 
-  /// Rule 3: a row of more than four goes on two tiers, yours above and locked below, never overlapping.
-  @Test func wideRowsTakeTwoTiers() throws {
+  /// Rule 3: the tree stands on four columns, each branch row starting under its opening; a row of
+  /// more than four hangs off the opening's trunk in lines of three beside it, the last of up to four.
+  @Test func rowsHangOffTheTrunk() throws {
+    #expect(mapColumns(3, parent: 0) == [[0, 1, 2]])
+    #expect(mapColumns(3, parent: 3) == [[1, 2, 3]], "no room to the right: the row ends at the edge")
+    #expect(mapColumns(10, parent: 1) == [[0, 2, 3], [0, 2, 3], [0, 1, 2, 3]])
+    #expect(mapColumns(5, parent: 0) == [[1, 2, 3], [0, 1]])
+
     let tree = openingTree(bookIndex)
     var state = AppState()
     state.addLine(state.ensurePlaybook(.w), line("e4 e5 Nf3 Nc6 Bb5 a6"), .fixed(.book))
     let roots = playbookMap(state, tree, side: .w)
-    let rows = mapRows(roots, path: [roots[0].id])
+    let path = [roots[0].id]
+    let rows = mapRows(roots, path: path)
     let wide = try #require(rows.last)
-    try #require(wide.count > MAP_TIER)
-    let tiers = try #require(mapTiers(wide))
-    let mine = wide.filter(\.owned).count, locked = wide.count - mine
-    if mine <= MAP_TIER && locked <= MAP_TIER {
-      #expect(tiers.upper.allSatisfy(\.owned) && tiers.lower.allSatisfy { !$0.owned })
-    } else {
-      #expect(tiers.upper + tiers.lower == wide && tiers.upper.count - tiers.lower.count <= 1, "halves by rank")
+    try #require(wide.count > MAP_COLUMNS)
+    let layout = mapLayout(rows, path: path, width: 402)
+    let columns = (0..<MAP_COLUMNS).map { mapColumn($0, width: 402) }
+    let spots = try wide.map { try #require(layout.spots[$0.id]) }
+    #expect(spots.allSatisfy { spot in columns.contains(spot.x) && spot.x - spot.width / 2 >= 0 && spot.x + spot.width / 2 <= 402 })
+    #expect(Set(spots.map { "\($0.x),\($0.y)" }).count == spots.count, "no two openings in one place")
+    let parent = try #require(layout.spots[roots[0].id])
+    let lines = Dictionary(grouping: spots, by: \.y).sorted { $0.key < $1.key }.map(\.value)
+    #expect(lines.allSatisfy { $0.count <= MAP_COLUMNS })
+    #expect(lines.dropLast().allSatisfy { $0.allSatisfy { $0.x != parent.x } }, "the trunk's column stays clear")
+    #expect(lines.last?.contains { $0.x == parent.x } == true, "the trunk ends in the last line")
+
+    let links = mapLinks(layout, rows, path: path)
+    for spot in spots {
+      #expect(links.contains { $0.points.last == MapPoint(spot.x, spot.y - MAP_LINK_GAP) }, "every opening has its link")
     }
-    let layout = mapLayout(rows, width: 402, nodeHeight: 100)
-    let upper = tiers.upper.compactMap { layout.spots[$0.id] }, lower = tiers.lower.compactMap { layout.spots[$0.id] }
-    #expect(lower.allSatisfy { low in upper.allSatisfy { low.y >= $0.y + 100 } })
-    let xs = (upper + lower).map(\.x)
-    #expect(Set(xs.map { Int($0) }).count == xs.count, "every link has its own lane")
-    #expect(layout.spots.values.allSatisfy { $0.x - $0.width / 2 >= 0 && $0.x + $0.width / 2 <= 402 })
+    let trunk = links.filter { $0.points.allSatisfy { $0.x == parent.x } }
+    #expect(trunk.map(\.points.first!.y).min() ?? 0 > parent.y + MAP_DISC, "the trunk starts under its opening")
+  }
+
+  /// Rule 3: the open path runs straight down from each opening to the first of its branches.
+  @Test func theOpenPathIsStraight() throws {
+    let tree = openingTree(bookIndex)
+    var state = AppState()
+    state.addLine(state.ensurePlaybook(.w), line("d4 d5 c4 e6 Nc3 Nf6"), .fixed(.book))
+    let roots = playbookMap(state, tree, side: .w)
+    let d4 = try #require(roots.first { $0.id == "d4" })
+    let child = try #require(d4.children.first)
+    let path = [d4.id, child.id]
+    let rows = mapRows(roots, path: path)
+    let layout = mapLayout(rows, path: path, width: 393)
+    let top = try #require(layout.spots[d4.id]), below = try #require(layout.spots[child.id])
+    #expect(top.x == below.x)
+    let hot = mapLinks(layout, rows, path: path).filter { $0.kind == .path }
+    #expect(!hot.isEmpty && hot.allSatisfy { $0.points.allSatisfy { $0.x == top.x } })
   }
 
   /// Rule 3: what a locked opening shows under its name.

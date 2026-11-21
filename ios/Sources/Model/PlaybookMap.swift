@@ -278,72 +278,197 @@ public func mapWhen(_ state: MapState) -> String? {
 
 /* ── layout ── */
 
-/// Where an opening sits on the drawn tree: its center across, its top, and how wide its label may run.
+/// The tree stands on four columns, inside a 20pt margin.
+public let MAP_COLUMNS = 4
+/// A disc's size.
+public let MAP_DISC = 46.0
+/// Under a disc with a name: a 7pt gap and the name's two lines.
+public let MAP_NAME = 35.0
+/// The room under a name for its price or when it grows.
+public let MAP_FOOT = 16.0
+/// From one row of named openings to the next, and from a row of bare first moves.
+public let MAP_PITCH = 128.0
+public let MAP_PITCH_BARE = 76.0
+/// A link's rail runs this far above the discs it drops to, and stops this short of a disc.
+public let MAP_RAIL = 14.0
+public let MAP_LINK_GAP = 4.0
+
+/// Whether an opening shows its name under its disc: a first move of yours, for sale or on the
+/// way to them shows only the move.
+public func mapShowsName(_ node: MapNode) -> Bool {
+  !(node.line.count == 1 && (node.owned || node.forSale || node.state == .way))
+}
+
+/// The center of column `i` on a tree `width` wide.
+public func mapColumn(_ i: Int, width: Double) -> Double {
+  let pitch = (width - 63) / Double(MAP_COLUMNS)
+  return width / 2 + (Double(i) - Double(MAP_COLUMNS - 1) / 2) * pitch
+}
+
+/// Where an opening sits on the drawn tree: its center across, its disc's top, how wide its
+/// name may run, and the row of the tree it is on.
 public struct MapSpot: Equatable, Sendable {
   public var x: Double
   public var y: Double
   public var width: Double
   public var row: Int
-  /// For the lower tier of a wide row, the top of the row, where its link drops in between the upper tier.
-  public var gate: Double?
+}
+
+/// One rail of a fan and the openings that drop from it.
+public struct MapRail: Equatable, Sendable {
+  public var y: Double
+  public var ids: [String]
+}
+
+/// The links from an open opening to its branches: a trunk straight down its column from `from`,
+/// and off it one rail for each line of branches.
+public struct MapFan: Equatable, Sendable {
+  public var parent: String
+  public var x: Double
+  public var from: Double
+  public var rails: [MapRail]
 }
 
 public struct MapLayout: Equatable, Sendable {
   public var spots: [String: MapSpot]
-  /// Below each row, where the links to the next row branch out.
-  public var bus: [Double]
+  public var fans: [MapFan]
+  /// The bottom of each row of the tree.
+  public var bottoms: [Double]
   public var height: Double
 }
 
-/// The most openings a row holds on one tier.
-public let MAP_TIER = 4
-
-/// A wide row on two tiers: yours above, locked below; when either holds more
-/// than a tier's worth, the row splits in half by rank instead.
-public func mapTiers(_ row: [MapNode]) -> (upper: [MapNode], lower: [MapNode])? {
-  guard row.count > MAP_TIER else { return nil }
-  let mine = row.filter { $0.owned || $0.state == .way }, locked = row.filter { !$0.owned && $0.state != .way }
-  if !mine.isEmpty && mine.count <= MAP_TIER && locked.count <= MAP_TIER { return (mine, locked) }
-  let half = (row.count + 1) / 2
-  return (Array(row.prefix(half)), Array(row.dropFirst(half)))
+/// The columns a row of `count` branches takes under an opening in column `parent`: one line
+/// of up to four, the first under its opening when there is room; more go on lines of three
+/// beside the opening's trunk, and the last line holds up to four, ending the trunk.
+public func mapColumns(_ count: Int, parent: Int) -> [[Int]] {
+  let n = MAP_COLUMNS
+  func line(_ m: Int) -> [Int] {
+    let start = min(parent, n - m)
+    return Array(start..<(start + m))
+  }
+  guard count > n else { return count == 0 ? [] : [line(count)] }
+  let beside = (0..<n).filter { $0 != parent }
+  let upper = (count - n + beside.count - 1) / beside.count
+  return Array(repeating: beside, count: upper) + [line(count - upper * beside.count)]
 }
 
 /// The tree's rows laid out `width` wide. Each row sits under the row above, so
 /// opening a branch never moves what is already drawn.
-public func mapLayout(_ rows: [[MapNode]], width: Double, nodeHeight: Double) -> MapLayout {
-  let top = 10.0, fan = 30.0
+public func mapLayout(_ rows: [[MapNode]], path: [String], width: Double) -> MapLayout {
+  let top = 12.0
+  let pitch = (width - 63) / Double(MAP_COLUMNS)
   var spots: [String: MapSpot] = [:]
-  var bus: [Double] = []
+  var fans: [MapFan] = []
+  var bottoms: [Double] = []
+  var columns: [String: Int] = [:]
   var y = top
-  for (r, row) in rows.enumerated() {
-    let branches = { (list: [MapNode]) in list.contains { !$0.children.isEmpty } }
-    if let tiers = mapTiers(row) {
-      // Tiers sit half a step apart, so every link drops through its own lane.
-      let most = Double(max(tiers.upper.count, tiers.lower.count))
-      let pitch = min(86, (width - 16 - 80) / max(1, most - 0.5))
-      let wide = min(80, pitch - 4)
-      let same = tiers.upper.count % 2 == tiers.lower.count % 2
-      let shift = same ? -pitch / 4 : 0
-      func xs(_ list: [MapNode], _ off: Double) -> [Double] {
-        list.indices.map { width / 2 + (Double($0) - Double(list.count - 1) / 2) * pitch + off }
-      }
-      let lowerY = y + nodeHeight + (branches(tiers.upper) ? 22 : 14)
-      for (node, x) in zip(tiers.upper, xs(tiers.upper, shift)) {
-        spots[node.id] = MapSpot(x: x, y: y, width: wide, row: r, gate: nil)
-      }
-      for (node, x) in zip(tiers.lower, xs(tiers.lower, same ? pitch / 2 + shift : 0)) {
-        spots[node.id] = MapSpot(x: x, y: lowerY, width: wide, row: r, gate: y)
-      }
-      bus.append(lowerY + nodeHeight + (branches(tiers.lower) ? 16 : 4))
-    } else {
-      let slot = min(124, (width - 24) / Double(max(1, row.count)))
-      let x0 = width / 2 - slot * Double(row.count) / 2
-      for (i, node) in row.enumerated() {
-        spots[node.id] = MapSpot(x: x0 + slot * (Double(i) + 0.5), y: y, width: slot - 6, row: r, gate: nil)
-      }
-      bus.append(y + nodeHeight + (branches(row) ? 16 : 4))
-    }
-    y = bus[r] + fan
+  func bottom(_ line: [MapNode], _ y: Double) -> Double {
+    y + MAP_DISC + (line.contains(where: mapShowsName) ? MAP_NAME + MAP_FOOT : 0)
   }
-  return MapLayout(spots: spots, bus: bus, height: bus.last ?? top)
+  func step(_ line: [MapNode]) -> Double { line.contains(where: mapShowsName) ? MAP_PITCH : MAP_PITCH_BARE }
+  for (r, row) in rows.enumerated() {
+    var lines: [[(MapNode, Int)]]
+    var fan: MapFan?
+    if r == 0 {
+      lines = stride(from: 0, to: row.count, by: MAP_COLUMNS).map { start in
+        row[start..<min(row.count, start + MAP_COLUMNS)].enumerated().map { ($0.element, $0.offset) }
+      }
+    } else {
+      let parentId = path[r - 1]
+      let col = columns[parentId] ?? 0
+      var rest = row[...]
+      lines = mapColumns(row.count, parent: col).map { cols in
+        let take = rest.prefix(cols.count)
+        rest = rest.dropFirst(cols.count)
+        return Array(zip(take, cols))
+      }
+      if let parent = spots[parentId], let node = rows[r - 1].first(where: { $0.id == parentId }) {
+        let from = parent.y + MAP_DISC + (mapShowsName(node) ? MAP_NAME : 0) + MAP_LINK_GAP
+        fan = MapFan(parent: parentId, x: parent.x, from: from, rails: [])
+      }
+    }
+    var last = y
+    for (i, line) in lines.enumerated() {
+      if i > 0 { y += step(lines[i - 1].map(\.0)) }
+      for (node, col) in line {
+        spots[node.id] = MapSpot(x: mapColumn(col, width: width), y: y, width: pitch - 4, row: r)
+        columns[node.id] = col
+      }
+      fan?.rails.append(MapRail(y: y - MAP_RAIL, ids: line.map(\.0.id)))
+      last = y
+    }
+    if let fan { fans.append(fan) }
+    let lastLine = lines.last?.map(\.0) ?? []
+    bottoms.append(bottom(lastLine, last))
+    y = last + step(lastLine)
+  }
+  return MapLayout(spots: spots, fans: fans, bottoms: bottoms, height: (bottoms.last ?? top) + top)
 }
+
+/// How a link is drawn: to the open path, to an opening of yours, or to one you don't have.
+public enum MapLinkKind: Int, Comparable, Sendable {
+  case other, owned, path
+  public static func < (a: Self, b: Self) -> Bool { a.rawValue < b.rawValue }
+}
+
+public struct MapPoint: Equatable, Sendable {
+  public var x: Double
+  public var y: Double
+  public init(_ x: Double, _ y: Double) {
+    self.x = x
+    self.y = y
+  }
+}
+
+/// One stroke of the links, its turns drawn round; each piece of a link is drawn once, in the
+/// kind of the most important opening it leads to.
+public struct MapSegment: Equatable, Sendable {
+  public var kind: MapLinkKind
+  public var points: [MapPoint]
+}
+
+/// The strokes that draw a layout's fans.
+public func mapLinks(_ layout: MapLayout, _ rows: [[MapNode]], path: [String]) -> [MapSegment] {
+  let onPath = Set(path)
+  var kinds: [String: MapLinkKind] = [:]
+  for node in rows.joined() { kinds[node.id] = onPath.contains(node.id) ? .path : node.owned ? .owned : .other }
+  func best(_ ids: some Sequence<String>) -> MapLinkKind { ids.compactMap { kinds[$0] }.max() ?? .other }
+  var out: [MapSegment] = []
+  for fan in layout.fans {
+    let px = fan.x
+    var y = fan.from
+    for (i, rail) in fan.rails.enumerated() {
+      let spots = rail.ids.compactMap { id in layout.spots[id].map { (id, $0) } }
+      let below = fan.rails[i...].flatMap(\.ids)
+      let center = spots.first { abs($0.1.x - px) < 0.5 }
+      let left = spots.filter { $0.1.x < px - 0.5 }.sorted { $0.1.x > $1.1.x }
+      let right = spots.filter { $0.1.x > px + 0.5 }.sorted { $0.1.x < $1.1.x }
+      let goesOn = i < fan.rails.count - 1 || center != nil
+      let end = goesOn || (!left.isEmpty && !right.isEmpty) ? rail.y : rail.y - MAP_CORNER_ROOM
+      out.append(MapSegment(kind: best(below), points: [MapPoint(px, y), MapPoint(px, end)]))
+      for side in [left, right] where !side.isEmpty {
+        var from = px
+        for (j, (id, spot)) in side.enumerated() {
+          let drop = spot.y - MAP_LINK_GAP
+          var points = j == 0 ? [MapPoint(px, rail.y - MAP_CORNER_ROOM), MapPoint(px, rail.y)] : [MapPoint(from, rail.y)]
+          if j == side.count - 1 {
+            out.append(MapSegment(kind: kinds[id] ?? .other, points: points + [MapPoint(spot.x, rail.y), MapPoint(spot.x, drop)]))
+          } else {
+            points.append(MapPoint(spot.x, rail.y))
+            out.append(MapSegment(kind: best(side[j...].map(\.0)), points: points))
+            out.append(MapSegment(kind: kinds[id] ?? .other, points: [MapPoint(spot.x, rail.y), MapPoint(spot.x, drop)]))
+          }
+          from = spot.x
+        }
+      }
+      if let (id, spot) = center {
+        out.append(MapSegment(kind: kinds[id] ?? .other, points: [MapPoint(px, rail.y), MapPoint(px, spot.y - MAP_LINK_GAP)]))
+      }
+      y = rail.y
+    }
+  }
+  return out.sorted { $0.kind < $1.kind }
+}
+
+/// How far a link's turn reaches each way.
+public let MAP_CORNER_ROOM = 8.0

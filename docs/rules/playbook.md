@@ -19,9 +19,11 @@ Tests: the `docs/rules/playbook.md` suite in
    have, for sale (see [families](families.md)). Exactly one opening on the tree is Next. Home's Next line
    names it and when it grows, and opens the tree at it. Code:
    `PlaybookMap.swift`.
-3. **A tap opens an opening's branches;** a tap on the open one folds it. A
-   row of more than four goes on two tiers, yours above and locked below,
-   or in halves by rank when either holds more than four. A locked opening
+3. **A tap opens an opening's branches;** a tap on the open one folds it.
+   The tree stands on four columns. A row of branches starts under its
+   opening, so the open path runs straight down. A row of more than four
+   hangs off its opening's trunk: lines of three beside the trunk, then a
+   last line of up to four that ends it. A locked opening
    shows when it grows: "~2 games" for Next, "Game 40" or "Green 7/9" for a
    level, "In line" for a hole further down the curve.
 4. **An opening's page is about its position.** A tap on an opening you
@@ -51,5 +53,5 @@ Tests: the `docs/rules/playbook.md` suite in
    by hand.
 8. **Tags are Sharp, Solid, Gambit and System.** An opening's tag comes from
    the picker's shelf it sits on, its own or the nearest above it; other
-   shelves tag nothing. The bar at the bottom shows the open opening's tag;
-   the tree shows none. Code: `shelfOf` in `PlaybookMap.swift`.
+   shelves tag nothing. The card at the bottom shows the open opening's tag
+   as a word in its color; the tree shows none. Code: `shelfOf` in `PlaybookMap.swift`.

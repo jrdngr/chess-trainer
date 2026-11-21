@@ -12,8 +12,8 @@ struct MapFocus: Equatable {
 
 /// The Playbook tab's tree: first moves on top, and under the open opening its
 /// branches, the ones you have first and the locked ones the curve will add
-/// after them, then the families you don't have, for sale. The bar at the bottom is the open
-/// opening's row, for a locked one when it grows, and for a family Unlock at its price.
+/// after them, then the families you don't have, for sale. The card at the bottom is the open
+/// opening: its name and tag, and its lines, its Unlock at its price, or what it still needs.
 /// Choosing openings, it shows only the families the slot being filled takes, without prices,
 /// and tapping one fills that slot.
 struct PlaybookMapView: View {
@@ -30,50 +30,46 @@ struct PlaybookMapView: View {
   @Environment(Toasts.self) private var toasts
   @State private var memo = Memo<[MapNode]>()
   @State private var paths: [ChessCore.Color: [String]] = [:]
-  /// Each opening's drawn height, so its links start right under its name.
-  @State private var heights: [String: CGFloat] = [:]
   @State private var width: CGFloat = 393
-
-  /// The room each opening has on the tree, top to bottom.
-  static let nodeHeight: CGFloat = 104
 
   var body: some View {
     let roots = map
     let path = openPath(roots)
     let rows = mapRows(roots, path: path)
-    let layout = mapLayout(rows, width: Double(width), nodeHeight: Double(Self.nodeHeight))
+    let layout = mapLayout(rows, path: path, width: Double(width))
     let open = path.last.flatMap { id in rows.lazy.flatMap { $0 }.first { $0.id == id } }
     ScrollViewReader { reader in
       ScrollView {
         ZStack(alignment: .topLeading) {
-          links(rows, path: path, layout: layout)
+          MapLinks(segments: mapLinks(layout, rows, path: path))
           ForEach(Array(rows.enumerated()), id: \.offset) { r, row in
             ForEach(row) { node in
               if let spot = layout.spots[node.id] {
                 MapNodeView(
-                  node: node, width: CGFloat(spot.width), open: node.id == path.last,
+                  node: node, open: node.id == path.last, onPath: path.contains(node.id),
                   recede: !path.contains(node.id) && r < rows.count - 1,
+                  more: !node.children.isEmpty && !path.contains(node.id),
                   showPrice: choosing == nil, picked: picked(node)
                 )
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { heights[node.id] = $0 }
-                .frame(width: CGFloat(spot.width), height: Self.nodeHeight, alignment: .top)
+                .frame(width: CGFloat(spot.width), height: CGFloat(MAP_DISC + MAP_NAME + MAP_FOOT), alignment: .top)
+                .contentShape(Rectangle())
                 .offset(x: CGFloat(spot.x - spot.width / 2), y: CGFloat(spot.y))
                 .onTapGesture { tap(roots, path, node.id) }
                 .transition(.opacity)
               }
             }
           }
-          ForEach(Array(layout.bus.enumerated()), id: \.offset) { r, bus in
+          ForEach(Array(layout.bottoms.enumerated()), id: \.offset) { r, bottom in
             // Placed by padding, not offset: an offset moves only the drawing, and scrolling goes by layout.
-            SwiftUI.Color.clear.frame(width: 1, height: 1).padding(.top, CGFloat(bus) + 10).id("row\(r)")
+            SwiftUI.Color.clear.frame(width: 1, height: 1).padding(.top, CGFloat(bottom) + 10).id("row\(r)")
           }
         }
-        .frame(width: width, height: CGFloat(layout.height) + 24, alignment: .topLeading)
+        .frame(width: width, height: CGFloat(layout.height) + 12, alignment: .topLeading)
       }
       .scrollIndicators(.hidden)
       .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
       .safeAreaInset(edge: .bottom, spacing: 0) {
-        if let open, choosing == nil { tray(open) }
+        if let open, choosing == nil { card(open) }
       }
       .onChange(of: path) { _, now in
         let rows = mapRows(roots, path: now)
@@ -130,148 +126,72 @@ struct PlaybookMapView: View {
     onConsumedFocus()
   }
 
-  /// The links: from the open opening down to each of its branches, and a short
-  /// stub under every folded opening that has branches.
-  private func links(_ rows: [[MapNode]], path: [String], layout: MapLayout) -> some View {
-    let onPath = Set(path)
-    let quiet = SwiftUI.Color(hex: 0x3a3a44)
-    let heights = self.heights
-    func bottom(_ id: String) -> Double {
-      guard let spot = layout.spots[id] else { return 0 }
-      return spot.y + Double(heights[id] ?? Self.nodeHeight)
-    }
-    func draw(_ context: GraphicsContext, _ p: Path, hot: Bool, dashed: Bool = false, faint: Bool = false) {
-      var layer = context
-      layer.opacity = faint ? 0.6 : 1
-      layer.stroke(p, with: .color(hot ? Theme.accent : quiet),
-        style: StrokeStyle(lineWidth: hot ? 2 : 1.5, lineCap: .round, dash: dashed ? [4, 3] : []))
-    }
-    return Canvas { context, _ in
-      for (r, row) in rows.enumerated() {
-        if r > 0, r - 1 < path.count, let parent = layout.spots[path[r - 1]] {
-          let bus = layout.bus[r - 1]
-          var trunk = Path()
-          trunk.move(to: CGPoint(x: parent.x, y: bottom(path[r - 1]) + 5))
-          trunk.addLine(to: CGPoint(x: parent.x, y: bus))
-          draw(context, trunk, hot: row.contains { onPath.contains($0.id) })
-          for node in row.sorted(by: { !onPath.contains($0.id) && onPath.contains($1.id) }) {
-            guard let spot = layout.spots[node.id] else { continue }
-            let entry = (spot.gate ?? spot.y) + 1, mid = (bus + entry) / 2
-            var link = Path()
-            link.move(to: CGPoint(x: parent.x, y: bus))
-            link.addCurve(
-              to: CGPoint(x: spot.x, y: entry), control1: CGPoint(x: parent.x, y: mid + 8), control2: CGPoint(x: spot.x, y: mid - 8))
-            if spot.gate != nil { link.addLine(to: CGPoint(x: spot.x, y: spot.y + 1)) }
-            draw(context, link, hot: onPath.contains(node.id), dashed: !node.owned)
-          }
-        }
-        for node in row where !node.children.isEmpty && !onPath.contains(node.id) {
-          guard let spot = layout.spots[node.id] else { continue }
-          let top = bottom(node.id) + 4, count = node.children.count
-          for i in 0..<count {
-            let dx = (Double(i) - Double(count - 1) / 2) * 9
-            var stub = Path()
-            stub.move(to: CGPoint(x: spot.x, y: top))
-            stub.addCurve(
-              to: CGPoint(x: spot.x + dx, y: top + 11), control1: CGPoint(x: spot.x, y: top + 6),
-              control2: CGPoint(x: spot.x + dx, y: top + 4))
-            draw(context, stub, hot: false, faint: r < rows.count - 1)
-          }
-        }
-      }
-    }
-    .allowsHitTesting(false)
-  }
+  /* ── the card at the bottom ── */
 
-  /* ── the bar at the bottom ── */
-
-  @ViewBuilder private func tray(_ node: MapNode) -> some View {
-    VStack(alignment: .leading, spacing: 0) {
-      HStack(spacing: 12) {
-        Text(compactMoves(node.line)).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2).lineLimit(1)
-        if let tag = shelfTag(node) {
-          HStack(spacing: 6) {
-            RoundedRectangle(cornerRadius: 1.5).frame(width: 3, height: 13)
-            Text(tag.word).font(.system(size: 12, weight: .semibold))
-          }
-          .foregroundStyle(tag.color)
-        }
-        Spacer(minLength: 0)
-        if node.owned && !node.off {
-          Text("LINES").font(.system(size: 11, weight: .semibold)).tracking(1).foregroundStyle(Theme.text3).padding(.trailing, 28)
+  private func card(_ node: MapNode) -> some View {
+    let opens = node.owned && !node.off
+    return HStack(spacing: 12) {
+      VStack(alignment: .leading, spacing: 2) {
+        Text(node.name).font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.text)
+          .lineLimit(2).minimumScaleFactor(0.85)
+        if let tag = tag(node) {
+          Text(tag.word).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(tag.color)
         }
       }
-      .padding(.horizontal, 16).frame(height: 30)
-      VStack(spacing: 0) {
-        if node.owned { ownedRow(node) } else { lockedRows(node) }
-      }
-      .background(Theme.surface)
-      .clipShape(RoundedRectangle(cornerRadius: 16))
+      .frame(maxWidth: .infinity, alignment: .leading)
+      action(node)
     }
-    .padding(.horizontal, 16).padding(.bottom, 10).padding(.top, 4)
+    .padding(.horizontal, 16).frame(height: 70)
+    .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface))
+    .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Theme.surface2, lineWidth: 1))
+    .contentShape(RoundedRectangle(cornerRadius: 20))
+    .onTapGesture { if opens { onOpen(node) } }
+    .padding(.horizontal, 20).padding(.top, 6).padding(.bottom, 10)
     .background(Theme.background)
   }
 
-  private func ownedRow(_ node: MapNode) -> some View {
-    Button { onOpen(node) } label: {
-      HStack(spacing: 10) {
-        Text(node.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(node.off ? Theme.text2 : Theme.text).lineLimit(1)
-          .frame(maxWidth: .infinity, alignment: .leading)
-        if node.off, let id = node.family {
-          Button { store.update { $0.setOpening(id, on: true) } } label: {
-            Text("Enable").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-              .padding(.horizontal, 12).frame(height: 36)
-              .background(RoundedRectangle(cornerRadius: 10).fill(Theme.surface3))
-              .contentShape(RoundedRectangle(cornerRadius: 10))
+  /// The card's one key, or for a locked opening what it still needs.
+  @ViewBuilder private func action(_ node: MapNode) -> some View {
+    if node.owned && node.off, let id = node.family {
+      Button { store.update { $0.setOpening(id, on: true) } } label: {
+        Text("Enable").font(.system(size: 15, weight: .semibold))
+      }
+      .buttonStyle(KeyButtonStyle(kind: .primary, height: 45, radius: 12))
+      .frame(width: 116)
+    } else if node.owned {
+      Button { onOpen(node) } label: {
+        HStack(spacing: 8) {
+          Text("\(node.lines) \(node.lines == 1 ? "line" : "lines")").font(.system(size: 15, weight: .semibold))
+          Icon(name: "chevron", size: 14).opacity(0.85)
+        }
+      }
+      .buttonStyle(KeyButtonStyle(kind: .primary, height: 45, radius: 12))
+      .frame(width: 116)
+    } else if case .forSale(let price) = node.state {
+      Button { buy(node) } label: {
+        HStack(spacing: 0) {
+          Text("Unlock").font(.system(size: 15, weight: .semibold))
+          Spacer(minLength: 8)
+          PawnAmount(count: price, size: 15).fixedSize()
+        }
+        .padding(.horizontal, 14)
+      }
+      .buttonStyle(KeyButtonStyle(kind: .primary, height: 45, radius: 12))
+      .frame(width: 140)
+      .disabled(store.state.pawns < price)
+    } else {
+      let needs = requirements(node)
+      if !needs.isEmpty {
+        Grid(alignment: .trailing, horizontalSpacing: 10, verticalSpacing: 5) {
+          ForEach(needs, id: \.label) { need in
+            GridRow {
+              Text(need.label).font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.text2)
+              Text(need.value).font(.system(size: 14, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text)
+            }
           }
-          .buttonStyle(.plain)
-        } else {
-          FormRing(form: node.form).frame(width: 32, alignment: .trailing)
-          Text("\(node.lines)").font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text)
-            .frame(width: 40, alignment: .trailing)
         }
-        Icon(name: "chevron", size: 18).foregroundStyle(Theme.text3)
+        .fixedSize()
       }
-      .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 60).contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-  }
-
-  @ViewBuilder private func lockedRows(_ node: MapNode) -> some View {
-    HStack(spacing: 10) {
-      Text(node.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text2).lineLimit(1)
-        .frame(maxWidth: .infinity, alignment: .leading)
-      if case .forSale(let price) = node.state {
-        Button { buy(node) } label: {
-          HStack(spacing: 6) {
-            Text("Unlock").foregroundStyle(Theme.text)
-            PawnAmount(count: price, size: 15).fixedSize()
-          }
-          .font(.system(size: 15, weight: .semibold))
-          .padding(.horizontal, 12).frame(height: 36)
-          .background(RoundedRectangle(cornerRadius: 10).fill(Theme.surface3))
-          .contentShape(RoundedRectangle(cornerRadius: 10))
-        }
-        .buttonStyle(.plain)
-        .disabled(store.state.pawns < price)
-        .opacity(store.state.pawns < price ? 0.5 : 1)
-      } else if node.state == .way {
-        Text("Pick an answer below").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.text3)
-      }
-    }
-    .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 60)
-    ForEach(requirements(node), id: \.label) { need in
-      Divider().overlay(SwiftUI.Color.white.opacity(0.06))
-      HStack(spacing: 0) {
-        Text(need.label).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.text2)
-        Spacer()
-        Text(need.value).font(.system(size: 15, weight: .bold).monospacedDigit()).foregroundStyle(Theme.text)
-        Group {
-          if need.met { Icon(name: "check", size: 14).foregroundStyle(Theme.good) }
-        }
-        .frame(width: 18).padding(.leading, 8)
-      }
-      .padding(.horizontal, 16).frame(height: 40)
     }
   }
 
@@ -304,10 +224,15 @@ struct PlaybookMapView: View {
     if bought { toasts.show("\(node.name) added") }
   }
 
-  private func shelfTag(_ node: MapNode) -> (word: String, color: SwiftUI.Color)? {
-    guard let id = node.shelf, let shelf = SHELVES.first(where: { $0.id == id }) else { return nil }
-    let word = ["gambits": "Gambit", "systems": "System"][id] ?? shelf.label
-    return (word, SwiftUI.Color(hexString: shelf.color))
+  /// An opening's tag as a word in the tag's color.
+  private func tag(_ node: MapNode) -> (word: String, color: SwiftUI.Color)? {
+    switch node.shelf {
+    case "sharp": ("Sharp", SwiftUI.Color(hex: 0xf87171))
+    case "solid": ("Solid", SwiftUI.Color(hex: 0x4fd8c4))
+    case "gambits": ("Gambit", SwiftUI.Color(hex: 0xfb923c))
+    case "systems": ("System", SwiftUI.Color(hex: 0x6ea4f9))
+    default: nil
+    }
   }
 }
 
@@ -316,13 +241,66 @@ func compactMoves(_ sans: [String]) -> String {
   sansToMoveText(sans).replacingOccurrences(of: ". ", with: ".")
 }
 
+/// The colors of what sits off the open path, above the last row.
+private enum Recede {
+  static let text = SwiftUI.Color(hex: 0x8b8b95)
+  static let line = SwiftUI.Color(hex: 0x34343d)
+  static let gold = SwiftUI.Color(hex: 0xb8923a)
+}
+
+/// The tree's links, each turn rounded.
+private struct MapLinks: View {
+  let segments: [MapSegment]
+
+  var body: some View {
+    Canvas { context, _ in
+      for segment in segments {
+        let (color, width): (SwiftUI.Color, CGFloat) =
+          switch segment.kind {
+          case .path: (Theme.accent, 2)
+          case .owned: (SwiftUI.Color(hex: 0x50505c), 1.75)
+          case .other: (SwiftUI.Color(hex: 0x3a3a44), 1.5)
+          }
+        context.stroke(path(segment.points), with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+      }
+    }
+    .allowsHitTesting(false)
+  }
+
+  private func path(_ points: [MapPoint]) -> Path {
+    var path = Path()
+    guard let first = points.first else { return path }
+    func point(_ p: MapPoint) -> CGPoint { CGPoint(x: p.x, y: p.y) }
+    path.move(to: point(first))
+    for i in points.indices.dropFirst() {
+      let here = points[i]
+      guard i < points.count - 1 else {
+        path.addLine(to: point(here))
+        break
+      }
+      let before = points[i - 1], after = points[i + 1]
+      func toward(_ to: MapPoint) -> CGPoint {
+        let dx = to.x - here.x, dy = to.y - here.y, length = max(0.001, (dx * dx + dy * dy).squareRoot())
+        let reach = min(MAP_CORNER_ROOM, length)
+        return CGPoint(x: here.x + dx / length * reach, y: here.y + dy / length * reach)
+      }
+      path.addLine(to: toward(before))
+      path.addQuadCurve(to: toward(after), control: point(here))
+    }
+    return path
+  }
+}
+
 /// One opening on the tree: its disc with the move and the form arc, its name,
-/// and for a locked one when it grows.
+/// and under it its price, or for a locked one when it grows.
 private struct MapNodeView: View {
   let node: MapNode
-  let width: CGFloat
   let open: Bool
+  /// On the open path, above the open opening.
+  let onPath: Bool
   let recede: Bool
+  /// It has branches, folded.
+  let more: Bool
   /// A family's price under it; choosing openings shows none.
   var showPrice = true
   /// Picked for a slot while choosing openings.
@@ -330,70 +308,90 @@ private struct MapNodeView: View {
 
   private var isNext: Bool { if case .next = node.state { return true } else { return false } }
   private var top: Bool { node.line.count == 1 }
+  private var locked: Bool { !node.owned && !node.forSale && node.state != .way }
 
   var body: some View {
     VStack(spacing: 0) {
-      disc.padding(.top, 8)
-      if !(top && (node.owned || node.forSale || node.state == .way)) {
-        Text(node.label).font(.system(size: width < 76 ? 10.5 : 12, weight: .semibold))
-          .foregroundStyle(node.owned ? Theme.text : Theme.text3)
-          .multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.7)
-          .padding(.top, 6)
-      }
-      if let when = mapWhen(node.state) {
-        Text(when).font(.system(size: 11, weight: .semibold).monospacedDigit())
-          .foregroundStyle(isNext ? Theme.accent : Theme.text3).lineLimit(1)
-      } else if case .forSale(let price) = node.state, showPrice {
-        PawnAmount(count: price, size: 11)
+      disc
+      if mapShowsName(node) {
+        Text(node.label).font(.system(size: 12, weight: .semibold))
+          .foregroundStyle(recede ? Recede.text : Theme.text)
+          .multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.75)
+          .frame(maxWidth: .infinity, minHeight: 28, maxHeight: 28, alignment: .bottom)
+          .padding(.top, 7)
+        Group {
+          if let when = mapWhen(node.state) {
+            Text(when).font(.system(size: 11, weight: .medium).monospacedDigit())
+              .foregroundStyle(recede ? Recede.text : Theme.text2).lineLimit(1)
+          } else if case .forSale(let price) = node.state, showPrice {
+            PawnAmount(count: price, size: 11, color: recede ? Recede.gold : Theme.pawn)
+          }
+        }
+        .frame(height: CGFloat(MAP_FOOT))
       }
     }
-    .fixedSize(horizontal: false, vertical: true)
-    .frame(width: width)
-    .opacity(recede ? 0.5 : 1)
-    .contentShape(Rectangle())
     .accessibilityElement(children: .combine)
     .accessibilityAddTraits(.isButton)
+  }
+
+  private var ink: SwiftUI.Color {
+    if open { return .white }
+    if picked { return Theme.accent }
+    if onPath { return Theme.selectedInk }
+    if recede { return Recede.text }
+    return node.owned ? Theme.text : Theme.text2
   }
 
   private var disc: some View {
     ZStack {
       if node.owned {
-        Circle().fill(Theme.surface2)
-        if !top { FormArc(form: node.form) }
-      } else if picked {
-        Circle().strokeBorder(Theme.accent, lineWidth: 2)
+        Circle().fill(open ? Theme.key : onPath ? Theme.selected : recede ? Theme.surface : Theme.surface2)
+        Circle().stroke(open ? Theme.keyLip : onPath ? SwiftUI.Color(hex: 0x40417c) : recede ? Theme.surface3 : SwiftUI.Color(hex: 0x3a3a44), lineWidth: 3)
+          .padding(1.5)
+        if !top, let form = node.form {
+          Circle().trim(from: 0, to: max(0.001, min(1, form)))
+            .stroke(formColor(form), style: StrokeStyle(lineWidth: 3, lineCap: form >= 1 ? .butt : .round))
+            .rotationEffect(.degrees(-90))
+            .padding(1.5)
+        }
+      } else if open {
+        Circle().fill(Theme.key)
       } else {
-        Circle().strokeBorder(isNext ? Theme.accent : SwiftUI.Color(hex: 0x3a3a44), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+        Circle().fill(Theme.background)
+        Circle().strokeBorder(picked ? Theme.accent : recede ? Recede.line : SwiftUI.Color(hex: 0x4a4a55), lineWidth: picked ? 2 : 1.5)
       }
-      if node.forSale || node.state == .way {
-        Text(node.move).font(.system(size: 12, weight: .bold)).foregroundStyle(picked ? Theme.accent : Theme.text2)
-          .minimumScaleFactor(0.7).lineLimit(1).padding(.horizontal, 4)
-      } else if !node.owned {
-        Icon(name: "lock", size: 18).foregroundStyle(isNext ? Theme.accent : Theme.text3)
-      } else if top {
-        Text(node.move).font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.text)
+      if locked {
+        Icon(name: "lock", size: 16).foregroundStyle(open ? .white : recede ? Theme.text3 : Theme.text2)
       } else {
-        Text(node.move).font(.system(size: 12, weight: .bold)).foregroundStyle(node.form == nil ? Theme.text3 : Theme.text2)
-          .minimumScaleFactor(0.7).lineLimit(1).padding(.horizontal, 4)
+        Text(node.move).font(.system(size: 13, weight: .bold)).foregroundStyle(ink)
+          .minimumScaleFactor(0.6).lineLimit(1).padding(.horizontal, 4)
+          .offset(y: more ? -2.5 : 0)
+      }
+      if more {
+        Chevron().stroke(Theme.text2, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+          .frame(width: 11, height: 4.5).offset(y: 12.5)
       }
     }
-    .frame(width: 48, height: 48)
-    .overlay {
-      if open { Circle().strokeBorder(Theme.text, lineWidth: 2).padding(-5) }
-    }
-    .overlay(alignment: .top) {
-      if isNext {
-        Text("Next").font(.system(size: 10, weight: .bold)).foregroundStyle(.white)
-          .padding(.horizontal, 5).frame(height: 14)
-          .background(RoundedRectangle(cornerRadius: 4).fill(Theme.key))
-          .offset(y: -8)
-      } else if node.off {
-        Text("Off").font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.text2)
-          .padding(.horizontal, 5).frame(height: 14)
-          .background(RoundedRectangle(cornerRadius: 4).fill(Theme.background))
-          .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(Theme.text3, lineWidth: 1))
-          .offset(y: -8)
+    .frame(width: CGFloat(MAP_DISC), height: CGFloat(MAP_DISC))
+    .overlay(alignment: .topTrailing) {
+      if isNext || node.off {
+        Text(isNext ? "Next" : "Off").font(.system(size: 10, weight: .bold)).foregroundStyle(isNext ? .white : Theme.text2)
+          .padding(.horizontal, 5).frame(height: 16)
+          .background(RoundedRectangle(cornerRadius: 4.5).fill(isNext ? Theme.key : Theme.key2))
+          .background(RoundedRectangle(cornerRadius: 5.5).fill(Theme.background).padding(-2))
+          .offset(x: 7, y: -5)
       }
     }
+  }
+}
+
+/// The mark under a folded opening's move: more below.
+private struct Chevron: Shape {
+  func path(in rect: CGRect) -> Path {
+    var path = Path()
+    path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+    path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+    path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+    return path
   }
 }
