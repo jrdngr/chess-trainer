@@ -536,7 +536,7 @@ struct RunView: View {
 
   /// A blunder ends the run: its name under the board for a beat, the threat drawn on it,
   /// then the end screen, which has Analyze. The blunder tip holds it until it is put away.
-  /// With the deck, the run stays here as analysis: its ending's name at the game's end, else the move and who is to play.
+  /// With the deck, the run stays here as analysis: its ending's name at the game's end, else nothing unless the game is over on the board.
   @ViewBuilder private var ending: some View {
     if drawing {
       Group {
@@ -563,19 +563,16 @@ struct RunView: View {
     }
   }
 
-  /// Away from the game's end: the move and who is to play, or how the position stands when nothing can be played.
+  /// Away from the game's end: how the position stands when nothing can be played, else an empty line.
   @ViewBuilder private var analysisStatus: some View {
     if let analysis {
       let fen = analysis.fen
-      let turn = fenTurn(fen)
       Group {
         if legalMoves(fen).isEmpty {
           Text(analysis.last?.san.hasSuffix("#") == true ? "Checkmate" : "Stalemate")
         } else {
-          HStack(spacing: 8) {
-            SideSquare(color: turn, size: 12)
-            Text("Move \(analysis.ply / 2 + 1), \(turn == .w ? "White" : "Black") to play")
-          }
+          // Nothing is shown, but the line keeps its height so the deck below stays put.
+          Text(" ").hidden()
         }
       }
       .font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.text2).padding(.vertical, 8)
