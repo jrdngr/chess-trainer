@@ -49,3 +49,7 @@ Tests: the `docs/rules/playbook.md` suite in
    have, or on lines outside all of them: an opening you have stays yours
    (see [openings for sale](families.md)). Nothing else edits the Playbook
    by hand.
+8. **Tags are Sharp, Solid, Gambit and System.** An opening's tag comes from
+   the picker's shelf it sits on, its own or the nearest above it; other
+   shelves tag nothing. The bar at the bottom shows the open opening's tag;
+   the tree shows none. Code: `shelfOf` in `PlaybookMap.swift`.

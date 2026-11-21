@@ -335,15 +335,10 @@ private struct MapNodeView: View {
     VStack(spacing: 0) {
       disc.padding(.top, 8)
       if !(top && (node.owned || node.forSale || node.state == .way)) {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-          if let color = shelfColor {
-            RoundedRectangle(cornerRadius: 1.5).fill(color).frame(width: 3, height: 11).opacity(node.owned ? 1 : 0.55)
-          }
-          Text(node.label).font(.system(size: width < 76 ? 10.5 : 12, weight: .semibold))
-            .foregroundStyle(node.owned ? Theme.text : Theme.text3)
-            .multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.7)
-        }
-        .padding(.top, 6)
+        Text(node.label).font(.system(size: width < 76 ? 10.5 : 12, weight: .semibold))
+          .foregroundStyle(node.owned ? Theme.text : Theme.text3)
+          .multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.7)
+          .padding(.top, 6)
       }
       if let when = mapWhen(node.state) {
         Text(when).font(.system(size: 11, weight: .semibold).monospacedDigit())
@@ -358,10 +353,6 @@ private struct MapNodeView: View {
     .contentShape(Rectangle())
     .accessibilityElement(children: .combine)
     .accessibilityAddTraits(.isButton)
-  }
-
-  private var shelfColor: SwiftUI.Color? {
-    node.shelf.flatMap { id in SHELVES.first { $0.id == id } }.map { SwiftUI.Color(hexString: $0.color) }
   }
 
   private var disc: some View {

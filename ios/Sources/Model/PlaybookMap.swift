@@ -45,7 +45,7 @@ public struct MapNode: Equatable, Sendable, Identifiable {
   public var form: Double?
   /// Your lines through it.
   public var lines: Int
-  /// The picker shelf it sits on, if any: Sharp, Solid, Gambits or Systems.
+  /// Its tag, if any: the id of a shelf in `TAG_SHELVES`.
   public var shelf: String?
   /// The hole that grows it, for a locked opening.
   public var gap: Gap?
@@ -67,10 +67,13 @@ public func nameBelow(_ name: String, _ parent: String?) -> String {
   return variations.last ?? name
 }
 
-/// The shelf an opening sits on: its own, else the nearest one above it.
+/// The shelves that tag an opening on the Playbook: the ones that say how a game plays.
+public let TAG_SHELVES: Set<String> = ["gambits", "systems", "solid", "sharp"]
+
+/// The tag shelf an opening sits on: its own, else the nearest one above it.
 public func shelfOf(_ tree: OpeningTree, _ node: OpeningNode) -> Shelf? {
   for each in ancestorsOf(tree, node.id).reversed() {
-    if let shelf = SHELVES.first(where: { $0.keys.contains(each.name) }) { return shelf }
+    if let shelf = SHELVES.first(where: { TAG_SHELVES.contains($0.id) && $0.keys.contains(each.name) }) { return shelf }
   }
   return nil
 }
