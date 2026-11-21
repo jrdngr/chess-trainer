@@ -79,7 +79,7 @@ struct RootView: View {
         }, onNext: { node in
           mapFocus = MapFocus(side: node.color, id: node.id)
           tab = .playbook
-        }, onPlaybook: { tab = .playbook })
+        })
           .background(Theme.background.ignoresSafeArea())
           .tabItem { Label(Tab.home.label, systemImage: Tab.home.symbol) }.tag(Tab.home)
         PlaybookView(tree: tree, index: index, page: $playbookPage, side: $playbookSide,

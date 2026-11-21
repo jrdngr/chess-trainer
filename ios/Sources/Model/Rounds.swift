@@ -78,6 +78,30 @@ public func nextRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selec
   return AutoRound(pick: pick, at: nil, aim: gap?.line, grow: gap)
 }
 
+/// Play's next run with the selection it was picked for: the selection's own run, or with nothing
+/// prepared inside it, the nearest wider one's. The opening widens toward Any Opening, then the
+/// side to Either. Nil when even that has no run.
+public func playableRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _ history: AutoHistory)
+  -> (round: AutoRound, selection: Selection)?
+{
+  var selection = selection
+  var node = nodeById(tree, selection.opening)
+  while true {
+    if let round = nextRound(state, tree, selection, history) { return (round, selection) }
+    if let parent = node.parentId.flatMap({ tree.byId[$0] }) {
+      node = parent
+      selection.opening = parent.id
+    } else if selection.opening != ANY_OPENING {
+      node = tree.root
+      selection.opening = ANY_OPENING
+    } else if selection.color != .either {
+      selection.color = .either
+    } else {
+      return nil
+    }
+  }
+}
+
 /// Grow on an opening's page: a run started at the gap, the moves to it played for you, growing there at once.
 /// A gap at Black's first move starts from move one, its answer added before the game goes on.
 public func growRound(_ tree: OpeningTree, _ gap: Gap) -> AutoRound {

@@ -181,4 +181,18 @@ private func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.
     #expect(turnedOn && !state.isOff("italian"))
     #expect(state.forAutoPicks(tree, any).ownsFamily("italian"))
   }
+
+  /// Rule 9: the picker's first moves are those an opening you have and haven't turned off starts with.
+  @Test func pickerFirstMovesAreYours() {
+    let tree = openingTree(bookIndex)
+    var state = starter()
+    #expect(state.heldFirstMoves(.w) == ["e4"])
+    #expect(state.heldFirstMoves(.b) == ["e4", "d4"], "as Black, the moves you face")
+    state.pawns = 500
+    _ = state.buyFamily("london", tree)
+    #expect(state.heldFirstMoves(.w) == ["e4", "d4"])
+    _ = state.setOpening("italian", on: false)
+    #expect(state.heldFirstMoves(.w) == ["d4"], "an opening turned off gives none")
+    #expect(state.heldFirstMoves(nil) == ["e4", "d4"], "Either takes both sides")
+  }
 }

@@ -53,3 +53,7 @@ questions in `Recommendations.swift`; the first step is in
     until it is closed or the profile changes.
 11. **On Either, the recommendation picks the side.** On White or Black, the
     side is the picked one.
+12. **Play always plays.** A selection with nothing of yours to play in it,
+    like a line since deleted, plays the nearest wider selection's run: up
+    the opening to Any Opening, then the side to Either. Home's selection
+    stays as picked. Code: `playableRound`.

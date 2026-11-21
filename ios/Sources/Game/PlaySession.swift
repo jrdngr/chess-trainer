@@ -61,8 +61,7 @@ public final class PlaySession {
     if store.state.playbooks.values.allSatisfy({ $0.nodes.isEmpty }) {
       return RunModel(firstGame: store, tree: tree, index: index, engine: engine)
     }
-    let selection = store.takeRoundSelection()
-    guard let round = nextRound(store.state, tree, selection, store.autoHistory) else { return nil }
+    guard let (round, selection) = playableRound(store.state, tree, store.takeRoundSelection(), store.autoHistory) else { return nil }
     return RunModel(round: round, selection: selection, store: store, tree: tree, index: index, engine: engine)
   }
 

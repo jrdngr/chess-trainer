@@ -39,34 +39,21 @@ enum SelectionPicking: String, Identifiable {
   var id: String { rawValue }
 }
 
-/// The side sheet, the quick opening sheet and, from it, Browse all openings, for whatever opens them.
+/// The side sheet and the quick opening sheet, for whatever opens them.
 struct SelectionSheets: ViewModifier {
   @Binding var picking: SelectionPicking?
-  @State private var browsing = false
-  /// The presentation to open once the current one is dismissed.
-  @State private var next: Next?
-
-  enum Next { case browse, quick }
 
   func body(content: Content) -> some View {
     content
-      .sheet(item: $picking, onDismiss: {
-        if next == .browse { next = nil; browsing = true }
-      }) { which in
+      .sheet(item: $picking) { which in
         Group {
           switch which {
           case .color: ColorPickerSheet { picking = nil }
-          case .quick: QuickPicker(onClose: { picking = nil }, onBrowse: { next = .browse; picking = nil })
+          case .quick: QuickPicker(onClose: { picking = nil })
           }
         }
         .presentationDetents(which == .color ? [.height(300)] : [.large])
         .presentationBackground(Theme.background)
-      }
-      .fullScreenCover(isPresented: $browsing, onDismiss: {
-        if next == .quick { next = nil; picking = .quick }
-      }) {
-        BrowsePicker(onClose: { browsing = false }, onBack: { next = .quick; browsing = false })
-          .background(Theme.background)
       }
   }
 }
@@ -154,12 +141,10 @@ struct ChoiceRow<Leading: View>: View {
 struct QuickPicker: View {
   @Environment(AppStore.self) private var store
   let onClose: () -> Void
-  var onBrowse: () -> Void = {}
   @State private var showAll = false
   /// The full Recent list, over the sheet's page.
   @State private var history = false
 
-  static let firstMoves = ["e4", "d4", "c4", "Nf3"]
   /// Your openings shown before More: six on a side's tab, four a column on Either.
   private func shownCount(_ side: ChessCore.Color?) -> Int { side == nil ? 8 : 6 }
 
@@ -206,25 +191,19 @@ struct QuickPicker: View {
           }
           if state.recent.count > recentShown.count { more { history = true } }
         }
-        section("First move")
-        HStack(spacing: 8) {
-          ForEach(Self.firstMoves, id: \.self) { id in
-            Button { choose(id, nil) } label: {
-              Text(moveText(line(id))).font(.system(size: 15, weight: .bold, design: .monospaced)).foregroundStyle(Theme.text)
-                .frame(maxWidth: .infinity).padding(.vertical, 12).background(tileBackground(selection.opening == id))
+        let firstMoves = state.heldFirstMoves(side)
+        if !firstMoves.isEmpty {
+          section("First move")
+          HStack(spacing: 8) {
+            ForEach(firstMoves, id: \.self) { id in
+              Button { choose(id, nil) } label: {
+                Text(moveText(line(id))).font(.system(size: 15, weight: .bold, design: .monospaced)).foregroundStyle(Theme.text)
+                  .frame(maxWidth: .infinity).padding(.vertical, 12).background(tileBackground(selection.opening == id))
+              }
+              .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
           }
         }
-        Button(action: onBrowse) {
-          HStack {
-            Text("Browse all openings").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-            Spacer()
-            Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3)
-          }
-          .padding(.horizontal, 14).frame(height: 48).background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface2))
-        }
-        .buttonStyle(.plain)
       }
       .padding(20)
     }
@@ -238,7 +217,7 @@ struct QuickPicker: View {
   /// The Recent tiles: your newest picks, less your openings and the first moves, which have tiles of their own.
   private var recentTiles: [RecentTile] {
     guard let tree = store.tree, let catalog = store.catalog else { return [] }
-    let skip = Set(store.yourOpenings().map(\.node.id) + Self.firstMoves)
+    let skip = Set(store.yourOpenings().map(\.node.id) + FIRST_MOVES)
     return quickRecent(store.state.recent.filter { tree.byId[$0.opening] != nil }, skipping: skip).map { pick in
       let node = tree.byId[pick.opening]!
       return RecentTile(pick: pick, side: recentSide(pick, catalog, node), label: openingLabel(catalog, node))

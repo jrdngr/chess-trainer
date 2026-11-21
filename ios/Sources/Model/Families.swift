@@ -127,12 +127,23 @@ public func familySeed(_ tree: OpeningTree, _ root: [String], _ color: Color, si
   return line
 }
 
+/// The first moves the opening picker can offer, in its order.
+public let FIRST_MOVES = ["e4", "d4", "c4", "Nf3"]
+
 extension AppState {
   /// The openings on the list you have on a side: those your Playbook's lines are in, in list order.
   public func ownedFamilies(_ color: Color) -> [CuratedOpening] {
     guard let rep = playbookList.first(where: { $0.color == color }) else { return [] }
     let lines = leafLines(rep).map(\.sans)
     return openingList(color).filter { opening in lines.contains { opening.holds($0) } }
+  }
+
+  /// The first moves the picker offers on a side, or on both for nil: those an opening you have
+  /// and haven't turned off starts with. As Black, the first move is the one you face.
+  public func heldFirstMoves(_ side: Color?) -> [String] {
+    let sides: [Color] = side.map { [$0] } ?? [.w, .b]
+    let firsts = Set(sides.flatMap { ownedFamilies($0).filter { !families.off.contains($0.id) }.flatMap { $0.roots.compactMap(\.first) } })
+    return FIRST_MOVES.filter(firsts.contains)
   }
 
   public func ownsFamily(_ id: String) -> Bool {

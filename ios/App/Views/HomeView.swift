@@ -15,8 +15,6 @@ struct HomeView: View {
   let onSetup: (Mode) -> Void
   /// Open the Playbook tree at the opening that grows next.
   let onNext: (MapNode) -> Void
-  /// Go to the Playbook tab, when there is nothing to play yet.
-  let onPlaybook: () -> Void
   @Environment(AppStore.self) private var store
   @State private var settings = false
 
@@ -99,32 +97,10 @@ struct HomeView: View {
 
   private var tip: GameTip? { store.state.homeTip }
 
-  /// Play's button, or that there is nothing to play yet.
-  @ViewBuilder private var play: some View {
-    let selection = store.peekRoundSelection()
-    if nextRound(store.state, tree, selection, store.autoHistory) != nil {
-      Button { onOpen(.play) } label: { PlayLabel() }
-        .buttonStyle(KeyButtonStyle(kind: .play, height: 54, radius: 12))
-    } else {
-      Button { onPlaybook() } label: {
-        HStack(spacing: 13) {
-          Icon(name: "bolt", size: 22).foregroundStyle(.white).frame(width: 42, height: 42)
-            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.key))
-          VStack(alignment: .leading, spacing: 1) {
-            Text("PLAY").font(.system(size: 10.5, weight: .heavy)).tracking(0.9).foregroundStyle(Theme.accent)
-            Text("Build").font(.system(size: 18, weight: .heavy)).foregroundStyle(Theme.text)
-            Text("Nothing to play yet \u{00b7} add an opening").font(.system(size: 12.5)).foregroundStyle(Theme.text2).lineLimit(1)
-          }
-          Spacer()
-          Icon(name: "chevron", size: 20).foregroundStyle(Theme.text3)
-        }
-        .padding(.horizontal, 15).padding(.vertical, 14)
-        .background(LinearGradient(
-          colors: [Theme.accent.opacity(0.22), Theme.accent.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-      }
-      .buttonStyle(.plain)
-    }
+  /// Play's button.
+  private var play: some View {
+    Button { onOpen(.play) } label: { PlayLabel() }
+      .buttonStyle(KeyButtonStyle(kind: .play, height: 54, radius: 12))
   }
 
   /// A mode's tile. `held`: press and hold offers Start and Settings.

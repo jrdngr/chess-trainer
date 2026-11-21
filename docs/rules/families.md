@@ -52,3 +52,8 @@ What pawns buy on the Playbook tree: a curated list of openings. Code:
    The last opening on in its slot (White, Black against 1.e4, Black
    against 1.d4) offers no way to turn it off. On the tree it carries an
    Off tag.
+9. **First moves in the opening picker.** The picker's First move tiles
+   (1.e4, 1.d4, 1.c4, 1.Nf3) show only the first moves an opening you have
+   and haven't turned off starts with, on the picked side, or either side
+   on Either. As Black, that is the first move you face. With none, the
+   section is hidden.

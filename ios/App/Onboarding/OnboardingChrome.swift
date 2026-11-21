@@ -87,3 +87,23 @@ struct SkipButton: View {
 
 /// "3 moves", "1 move".
 func plural(_ n: Int, _ word: String) -> String { "\(n) \(word)\(n == 1 ? "" : "s")" }
+
+/// A round icon button.
+struct RoundIconButton: View {
+  var icon: String
+  var plain = false
+  var disabled = false
+  var size: CGFloat = 38
+  var action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Icon(name: icon, size: 20).foregroundStyle(plain ? Theme.text2 : Theme.text)
+        .frame(width: size, height: size)
+        .background(Circle().fill(plain ? .clear : Theme.surface))
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .disabled(disabled).opacity(disabled ? 0.35 : 1)
+  }
+}

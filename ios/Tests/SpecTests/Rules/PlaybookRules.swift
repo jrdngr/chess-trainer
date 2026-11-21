@@ -194,7 +194,7 @@ import Testing
   /// Rule 8: only Sharp, Solid, Gambit and System tag an opening, down through the lines under it.
   @Test func onlyFourShelvesTag() throws {
     let tree = openingTree(bookIndex)
-    func tag(_ moves: String) throws -> String? { shelfOf(tree, try #require(nodeAt(tree, line(moves))))?.id }
+    func tag(_ moves: String) throws -> String? { shelfOf(tree, try #require(tree.byId[moves]))?.id }
     #expect(try tag("e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6") == "sharp", "the Najdorf")
     #expect(try tag("e4 e5 f4") == "gambits", "the King's Gambit, on Gambits and Sharp, takes the first")
     #expect(try tag("d4 d5 c4") == nil, "the Queen's Gambit sits only on Classical")

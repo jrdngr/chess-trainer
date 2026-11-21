@@ -213,4 +213,24 @@ private func playRuns(_ state: inout AppState, _ selection: Selection, _ count: 
     #expect(!atC4.yes)
   }
 
+  /// Rule 12: a selection with nothing of yours in it plays the nearest wider selection's run.
+  @Test func playAlwaysPlays() throws {
+    let tree = openingTree(bookIndex)
+    let (state, history) = najdorf()
+    let caro = try #require(deepestNodeAlong(tree, line("e4 c6")))
+    let picked = Selection(color: .b, opening: caro.id)
+    #expect(nextRound(state, tree, picked, history) == nil, "nothing of yours in the Caro-Kann")
+    let up = try #require(playableRound(state, tree, picked, history))
+    #expect(up.selection.color == .b && up.selection.opening != caro.id)
+    #expect(caro.id.hasPrefix(up.selection.opening), "an opening above the pick")
+    #expect(up.round.pick.color == .b)
+
+    let white = Selection(color: .w, opening: ANY_OPENING)
+    #expect(nextRound(state, tree, white, history) == nil, "no White Playbook")
+    let either = try #require(playableRound(state, tree, white, history))
+    #expect(either.selection == Selection(color: .either, opening: ANY_OPENING) && either.round.pick.color == .b)
+
+    let own = Selection(color: .b, opening: ANY_OPENING)
+    #expect(playableRound(state, tree, own, history)?.selection == own, "a selection with a run keeps it")
+  }
 }
