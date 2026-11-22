@@ -1,7 +1,7 @@
 # The Play screen
 
 How a run is shown, ended and dealt. Code: `PlayView` and `RunView` in the
-app, `PlaySession` and `RunModel` in the Game target. Rule 3 is tested in
+app, `PlaySession` and `RunModel` in the Game target. Rules 3 and 9 are tested in
 `PlayScreenRules` and rules 6 and 7 by flow tests; the others have no test yet, and the parts in the Game
 target can be covered by `HeadlessApp` flow tests.
 
@@ -54,3 +54,10 @@ target can be covered by `HeadlessApp` flow tests.
 8. **Endgame header.** Once the game reaches the endgame rules (see
    [past prep](past-prep.md)), the header says Endgame and the lenses switch
    to their endgame forms.
+9. **Promotion.** A pawn moved to the last rank waits for its piece: the
+   queen, knight, rook and bishop come down its file from the promotion
+   square as keys over a dimmed board, queen first, only the ones the move
+   may be (Growth can allow fewer). A tap on a key plays that promotion; a
+   tap anywhere else takes the move back. Where only one piece is allowed,
+   it is played at once.
+   Test: `promotionOffersEachPieceQueenFirst` in `PlayScreenRules`.

@@ -43,6 +43,8 @@ struct BoardView: View {
   var onRefused: (() -> Void)? = nil
 
   @State private var selected: String?
+  /// A pawn's move to the last rank, waiting for the piece it becomes.
+  @State private var promoting: [LegalMove] = []
   @State private var tracker = PieceTracker()
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -109,6 +111,7 @@ struct BoardView: View {
         .animation(reduceMotion ? nil : Motion.slide(0.16), value: fen)
         if let marks { LensOverView(marks: marks, cell: cell, position: position) }
         ArrowsView(arrows: arrows.filter(\.over), cell: cell, position: position).allowsHitTesting(false)
+        if !promoting.isEmpty { promotionPicker(cell: cell) }
         if let pop {
           PopView(pop: pop)
             .modifier(MoveScoreFloat())
@@ -122,7 +125,39 @@ struct BoardView: View {
       .overlay(glowBorder)
     }
     .aspectRatio(1, contentMode: .fit)
-    .onChange(of: fen) { selected = nil }
+    .onChange(of: fen) {
+      selected = nil
+      promoting = []
+    }
+  }
+
+  /// The pieces a pawn can become, as keys down its file from the promotion square over a dimmed
+  /// board: queen on the square itself. A tap anywhere else takes the move back.
+  @ViewBuilder private func promotionPicker(cell: CGFloat) -> some View {
+    let to = position(promoting[0].to)
+    let step = to.row == 0 ? 1 : -1
+    let color = fenTurn(fen)
+    let lip = KeyKind.primary.lip
+    ZStack(alignment: .topLeading) {
+      Rectangle().fill(SwiftUI.Color.black.opacity(0.5))
+        .contentShape(Rectangle())
+        .onTapGesture {
+          promoting = []
+          selected = nil
+        }
+      ForEach(Array(promoting.enumerated()), id: \.offset) { index, move in
+        Button {
+          promoting = []
+          selected = nil
+          onMove(move)
+        } label: {
+          PieceView(piece: BoardPiece(square: move.to, type: move.promotion!, color: color), size: cell * 0.74, outlined: true)
+            .frame(width: cell - 4, height: cell - 4 - lip)
+        }
+        .buttonStyle(PromotionKeyStyle())
+        .offset(x: CGFloat(to.col) * cell + 2, y: CGFloat(to.row + step * index) * cell + 2)
+      }
+    }
   }
 
   @ViewBuilder private var glowBorder: some View {
@@ -176,9 +211,12 @@ struct BoardView: View {
     guard interactive else { return }
     let turn = fenTurn(fen)
     if let from = selected {
-      // Promotions go to a queen.
-      let moves = playable.filter { $0.from == from && $0.to == square }
-      if let move = moves.first(where: { $0.promotion == nil || $0.promotion == .q }) {
+      let choices = promotionChoices(playable, from: from, to: square)
+      if choices.count > 1 {
+        promoting = choices
+        return
+      }
+      if let move = choices.first ?? playable.first(where: { $0.from == from && $0.to == square }) {
         selected = nil
         onMove(move)
         return
@@ -194,6 +232,13 @@ struct BoardView: View {
     } else {
       selected = nil
     }
+  }
+}
+
+/// A promotion key: the indigo key, the piece its label.
+private struct PromotionKeyStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label.key(.primary, radius: 8, pressed: configuration.isPressed)
   }
 }
 
