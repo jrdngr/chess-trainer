@@ -3,7 +3,7 @@ import SwiftUI
 /// The app's buttons are keys: a face over a darker lip. A press sinks the face into the lip,
 /// inside the key's own footprint, so nothing around it moves.
 enum KeyKind {
-  /// Indigo with white words: Select, Continue, sheet buttons.
+  /// Indigo with white words: Select and sheet buttons.
   case primary
   /// Gray with light words: Analyze and the other quiet buttons.
   case secondary

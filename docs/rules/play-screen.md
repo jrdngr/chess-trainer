@@ -2,7 +2,7 @@
 
 How a run is shown, ended and dealt. Code: `PlayView` and `RunView` in the
 app, `PlaySession` and `RunModel` in the Game target. Rule 3 is tested in
-`PlayScreenRules` and rule 7 by a flow test; the others have no test yet, and the parts in the Game
+`PlayScreenRules` and rules 6 and 7 by flow tests; the others have no test yet, and the parts in the Game
 target can be covered by `HeadlessApp` flow tests.
 
 1. **A run is named by its opening, never by a mode,** with the side as a
@@ -31,7 +31,12 @@ target can be covered by `HeadlessApp` flow tests.
 6. **A finished round stays on its board as analysis.** There is no end
    screen. After a blunder, your move shows in red with the reply that
    punishes it, and how the round ended shows under the board (nothing when
-   you ended it yourself).
+   you ended it yourself). A moment later the engine's line that punishes
+   it plays out, a move every 0.6 seconds, and stops on the move that
+   takes your material or mates you, shown in red. Its moves are part of
+   the line to step back through; a step or a move of your own stops it.
+   Test: `aBlunderPlaysOutItsPunishment` in
+   `Tests/FlowTests/AnalysisFlowTests.swift`.
    - Swipe the deck left or right to step through the moves. A step
      forward always plays the engine's top move, the one its arrow shows;
      where the game went another way, the game's later moves give way to

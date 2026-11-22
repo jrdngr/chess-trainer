@@ -9,9 +9,9 @@ import Shared
 
 /// How a run ended.
 public enum Ending: Equatable, Sendable {
-  /// `played` is the move that lost, not on the board; `reply` the threat, as UCI.
-  /// In an endgame, `slip` is the result it gave away.
-  case blunder(played: String, best: String?, lost: Double, reply: String?, slip: ResultSlip?)
+  /// `played` is the move that lost, not on the board; `line` the engine's moves after it that show why, as UCI,
+  /// the threat first. In an endgame, `slip` is the result it gave away.
+  case blunder(played: String, best: String?, lost: Double, line: [String], slip: ResultSlip?)
   case won, lost, draw
   /// You ended it yourself.
   case ended
@@ -71,14 +71,17 @@ public struct Judgement: Equatable, Sendable {
   public var moment: Bool
   public var found: Bool
   public var reply: String?
+  /// The engine's moves after yours that show why it is a blunder, as UCI, starting with `reply`.
+  public var line: [String]
   /// An endgame where the engine had a mate and your move doesn't keep it.
   public var missedMate: Bool
   /// The exact results before and after your move, where the tablebase knows them.
   public var exact: ResultSlip?
   public init(
     san: String, ok: Bool, lost: Double, best: String?, before: Double, after: Double, moment: Bool, found: Bool, reply: String?,
-    missedMate: Bool = false, exact: ResultSlip? = nil
+    missedMate: Bool = false, exact: ResultSlip? = nil, line: [String]? = nil
   ) {
+    self.line = line ?? reply.map { [$0] } ?? []
     self.san = san
     self.ok = ok
     self.lost = lost
@@ -319,7 +322,7 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
       judged.exact
       ?? (endgameReached(run.played) ? ResultSlip(from: resultOf(run.color, judged.before), to: resultOf(run.color, judged.after)) : nil)
     return then(step) {
-      finish($0, $0.state, .blunder(played: judged.san, best: judged.best, lost: judged.lost, reply: judged.reply, slip: slip))
+      finish($0, $0.state, .blunder(played: judged.san, best: judged.best, lost: judged.lost, line: judged.line, slip: slip))
     }
   }
   return then(step) { current in

@@ -63,6 +63,21 @@ private let ROOKS = "r1r3k1/5ppp/8/8/8/8/5PPP/R1R3K1 w - - 0 1"
     guard case .blunder(played: "h3", _, _, _, _) = step.session.ending else { Issue.record("no blunder"); return }
   }
 
+  /// Rule 3: a costly move is a blunder only when the engine's line shows why. After 1.e4 d5,
+  /// 2.Qg4 drops the queen to Bxg4, so its line runs to that capture; a line that wins the pawn
+  /// back, or one the best line is just as far down in, shows nothing; a mate soon is a reason.
+  @Test func aBlunderNeedsAReasonTheLineShows() throws {
+    let fen = try #require(walkSan(line("e4 d5")).fens.last)
+    let best = ["e4d5", "d8d5", "b1c3", "d5a5"]
+    let dropsQueen = ["d1g4", "c8g4", "f1e2", "g4e2", "g1e2"]
+    #expect(punishment(fen, .w, yours: dropsQueen, best: best, mated: nil) == ["c8g4"])
+    #expect(punishment(fen, .w, yours: best, best: best, mated: nil) == nil, "the pawn traded back costs nothing")
+    #expect(punishment(fen, .w, yours: dropsQueen, best: dropsQueen, mated: nil) == nil, "the best line loses as much")
+    let quiet = ["a2a3", "e7e5", "b2b3", "b8c6"]
+    #expect(punishment(fen, .w, yours: quiet, best: best, mated: 4) == ["e7e5", "b2b3", "b8c6"], "a mate within 4 moves")
+    #expect(punishment(fen, .w, yours: quiet, best: best, mated: 5) == nil, "a mate further off is no reason")
+  }
+
   /// Rules 4 and 5: past a clean prep, a common move costing 40 or less is a book move and moves no card.
   @Test func bookMovesAfterACleanPrep() throws {
     let done = try prepDone()
@@ -183,16 +198,16 @@ private let ROOKS = "r1r3k1/5ppp/8/8/8/8/5PPP/R1R3K1 w - - 0 1"
   @Test func aGivenAwayEndingIsKeptFromThePositionBeforeTheMove() throws {
     // Black to move, deep into the fifty-move count, gave a won rook ending away.
     let fen = "8/8/8/4k3/8/8/2r5/4K3 b - - 87 120"
-    let slip = Ending.blunder(played: "Kd4", best: "Ke4", lost: 500, reply: nil, slip: ResultSlip(from: .win, to: .draw))
+    let slip = Ending.blunder(played: "Kd4", best: "Ke4", lost: 500, line: [], slip: ResultSlip(from: .win, to: .draw))
     let kept = try #require(endgameGivenAway(slip, fen: fen, name: "Sicilian", at: 5))
     // Still Black to move, the fifty-move count started afresh, so the win is there to be played for.
     #expect(kept.fen == "8/8/8/4k3/8/8/2r5/4K3 b - - 0 120")
     #expect(kept.goal == .win)
     // A draw given away as a loss is kept to be held.
-    let held = Ending.blunder(played: "Kd4", best: "Ke4", lost: 300, reply: nil, slip: ResultSlip(from: .draw, to: .loss))
+    let held = Ending.blunder(played: "Kd4", best: "Ke4", lost: 300, line: [], slip: ResultSlip(from: .draw, to: .loss))
     #expect(endgameGivenAway(held, fen: fen, name: "Sicilian", at: 5)?.goal == .hold)
     // A middlegame blunder, or a run that ended on the board, keeps nothing.
-    #expect(endgameGivenAway(.blunder(played: "Kd4", best: nil, lost: 500, reply: nil, slip: nil), fen: fen, name: "", at: 5) == nil)
+    #expect(endgameGivenAway(.blunder(played: "Kd4", best: nil, lost: 500, line: [], slip: nil), fen: fen, name: "", at: 5) == nil)
     #expect(endgameGivenAway(.draw, fen: fen, name: "", at: 5) == nil)
   }
 }

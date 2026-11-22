@@ -41,3 +41,25 @@ private struct FixedEngine: ChessEngine {
   analysis.step(1)
   #expect(analysis.line.last == top.san && analysis.ply == 4)
 }
+
+/// After a blunder, the line that punished it plays out past the game's end and can be stepped back through;
+/// while the board is on it, the game's ending still stands, and a move of your own leaves it.
+@MainActor @Test func aBlunderPlaysOutItsPunishment() async throws {
+  let game = ["e4", "d5", "Qg4"]
+  let analysis = RunAnalysis(game: game, punish: ["c8g4", "f1e2"], engine: FixedEngine(tops: [:]))
+  #expect(analysis.punish == ["Bxg4", "Be2"])
+  #expect(analysis.atEnd && analysis.onPunishment)
+  #expect(analysis.punishNext?.san == "Bxg4")
+  analysis.playPunish()
+  analysis.playPunish()
+  #expect(analysis.line == game + ["Bxg4", "Be2"] && analysis.ply == 5)
+  #expect(analysis.onPunishment && analysis.punishNext == nil, "it stops at the line's end")
+  analysis.step(-1)
+  analysis.step(-1)
+  #expect(analysis.atEnd, "stepping back reaches the blunder")
+  analysis.playPunish()
+  #expect(analysis.ply == 4 && analysis.line.count == 5, "back along the line, it plays its own moves again")
+  let other = try #require(applySan(analysis.fen, "Nf3"))
+  analysis.play(other)
+  #expect(!analysis.onPunishment && analysis.punishNext == nil)
+}

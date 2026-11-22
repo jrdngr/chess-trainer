@@ -198,8 +198,6 @@ public func streakPawns(_ days: Int) -> Int {
 }
 
 public let STREAK_STEP = 10, STREAK_CAP = 90
-/// What Continue after a blunder costs, once a run.
-public let CONTINUE_PRICE = 500
 
 /// The days before today, newest first: yesterday, the day before, and so on.
 public typealias PastDays = [String]
@@ -285,14 +283,5 @@ extension AppState {
   /// Where the streak stands today, for its ring.
   public func streakNow(_ now: Double = Env.now()) -> StreakToday {
     streakToday(pawnStreak, today: dayKey(now), past: daysBefore(now))
-  }
-
-  /// Pawns spent in play: off the balance when there are enough. Returns whether they were.
-  @discardableResult
-  public mutating func spend(_ count: Int, on what: String) -> Bool {
-    guard count >= 0, pawns >= count else { return false }
-    pawns -= count
-    logEvent(AppEvent(kind: "buy", count: count, picked: what, text: "balance \(pawns)"))
-    return true
   }
 }

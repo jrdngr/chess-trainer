@@ -51,11 +51,29 @@ struct RunView: View {
     return model.run.played
   }
 
+  /// The engine's line after the blunder the run ended on, as UCI; empty for any other ending.
+  private var punishLine: [String] {
+    if case .blunder(_, _, _, let line, _) = model.session.ending { return line }
+    return []
+  }
+
+  /// The beat before the punishing line starts, and between its moves.
+  private static let punishStartSeconds = 1.0, punishStepSeconds = 0.6
+
   /// The board's position: the analysed one while the deck is under a finished run.
   private var boardFen: String { drawing ? analysis?.fen ?? model.shownFen : model.shownFen }
 
   /// On the game's own last position, where it ended.
   private var atGameEnd: Bool { !drawing || analysis?.atEnd ?? true }
+
+  /// On the game's end or the punishing line played from it: how the game ended still shows.
+  private var onEnding: Bool { !drawing || analysis?.onPunishment ?? true }
+
+  /// The punishing line's last move is on the board: the move that takes your material, or mates.
+  private var punished: LegalMove? {
+    guard drawing, let a = analysis, !a.punish.isEmpty, a.onPunishment, a.ply == a.game.count + a.punish.count else { return nil }
+    return a.last
+  }
 
   private var deckSteps: DeckSteps {
     DeckSteps(
@@ -111,7 +129,18 @@ struct RunView: View {
       Button("Keep playing", role: .cancel) {}
     }
     .onChange(of: drawing, initial: true) {
-      if drawing && analysis == nil { analysis = RunAnalysis(game: gameLine, engine: HintEngine.shared) }
+      if drawing && analysis == nil { analysis = RunAnalysis(game: gameLine, punish: punishLine, engine: HintEngine.shared) }
+    }
+    // After a blunder, the engine's line that punished it plays out on its own; a step or move of your own stops it.
+    .task(id: drawing && analysis != nil) {
+      guard drawing, let analysis, analysis.atEnd, analysis.punishNext != nil else { return }
+      var at = analysis.ply
+      try? await Task.sleep(for: .seconds(Self.punishStartSeconds))
+      while !Task.isCancelled && analysis.ply == at && analysis.punishNext != nil {
+        analysis.playPunish()
+        at = analysis.ply
+        try? await Task.sleep(for: .seconds(Self.punishStepSeconds))
+      }
     }
     .task(id: drawing ? analysis?.fen : nil) { await analysis?.findTop() }
     // Your move's time stops while the app is in the background or the screen is locked.
@@ -511,7 +540,7 @@ struct RunView: View {
   @ViewBuilder private var ending: some View {
     if drawing {
       Group {
-        if !atGameEnd {
+        if !onEnding {
           analysisStatus
         } else {
           endingName.fixedSize().tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
@@ -519,26 +548,6 @@ struct RunView: View {
       }
       .padding(.top, 16)
       .frame(maxWidth: .infinity)
-    } else if model.canContinue {
-      // Continue can take the blunder back: the board holds it until the player chooses.
-      VStack(spacing: 14) {
-        endingName
-          .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
-        HStack(spacing: 10) {
-          Button { model.continueToEnd() } label: { Text("End run").lineLimit(1) }
-            .buttonStyle(PlayButtonStyle(kind: .plain, height: 44, block: true, inset: 12))
-          Button { model.buyContinue() } label: {
-            HStack(spacing: 8) {
-              Text("Continue")
-              PawnAmount(count: CONTINUE_PRICE, size: 15, color: .white)
-            }
-            .lineLimit(1).fixedSize()
-          }
-          .buttonStyle(PlayButtonStyle(kind: .accent, height: 44, block: true, inset: 12))
-        }
-      }
-      .frame(maxWidth: .infinity)
-      .padding(.top, 16)
     } else {
       endingName
         .tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
@@ -602,6 +611,7 @@ struct RunView: View {
   }
 
   private var lastMove: (from: String, to: String)? {
+    if punished != nil { return nil }
     if drawing && !atGameEnd { return analysis?.last.map { ($0.from, $0.to) } }
     if model.blunder != nil { return nil }
     // The green on the move just added takes the last move's tint, as in Growth.
@@ -612,6 +622,7 @@ struct RunView: View {
   }
 
   private var highlights: [String: SwiftUI.Color] {
+    if let p = punished { return [p.from: Theme.bad, p.to: Theme.bad] }
     if !atGameEnd { return [:] }
     if adding, let added = model.justAdded { return [added.from: Theme.good, added.to: Theme.good] }
     if let b = model.blunder { return [b.move.from: Theme.bad, b.move.to: Theme.bad] }
@@ -628,8 +639,6 @@ struct RunView: View {
       return b.threat.map { [BoardArrow(from: $0.from, to: $0.to, color: Theme.bad, over: true)] } ?? []
     }
     if let miss = model.miss { return [BoardArrow(from: miss.from, to: miss.to, color: Theme.good)] }
-    // The blunder Continue took back: what it would have allowed, until your next move.
-    if let threat = model.takenBack?.threat { return [BoardArrow(from: threat.from, to: threat.to, color: Theme.bad, over: true)] }
     // A chance you missed: its move, until your next one.
     if let best = model.missedBest { return [BoardArrow(from: best.from, to: best.to, color: Theme.missed, over: true)] }
     if model.atHole && !model.thinking {

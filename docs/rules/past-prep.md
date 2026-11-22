@@ -11,9 +11,15 @@ Tests: the `docs/rules/past-prep.md` suite in
    a blunder, fails the card, logs the miss, shows the prepared move as a
    green arrow, and the game goes on.
 3. **A run ends at a blunder, or when the game is over.** Past or off your
-   prep, a move that gives away more than the blunder line ends the run.
-   The line is 80 centipawns, plus 0.25 for each centipawn you lead by past
-   +1. Checkmate and draws end it too. The X ends it at any point.
+   prep, a move is a blunder when it gives away more than the blunder line
+   and the engine's line after it shows why: by your third move after it
+   you are a pawn or more down, against the position before your move and
+   against the engine's best line, and still down where the line ends; or
+   the line mates you within 4 moves. The line is 80 centipawns, plus 0.25
+   for each centipawn you lead by past +1, judged at depth 14. A costly
+   move the line shows no reason for stands, with its score. The engine's
+   line, up to the move that leaves you down, is kept to show on the
+   board. Checkmate and draws end the run too. The X ends it at any point.
 4. **The book phase.** Once your prep runs out without a miss, the run is in
    the book phase for as long as the position is in the book.
 5. **A book move** is played in at least 5% of strong players' games there

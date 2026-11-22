@@ -137,9 +137,7 @@ Cosmetics and personalities are pawn-only.
 
 ### In play
 
-- **Continue after a blunder** costs 500, once per run. It takes the
-  blunder back. Moves after it don't count toward your best, and events
-  still pay.
+- There is no Continue after a blunder: a blunder ends the run.
 - There are no streak freezes or repairs: a missed day restarts the streak.
 - There are no paid hints.
 

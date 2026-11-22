@@ -6,11 +6,14 @@ import Observation
 /// A finished run, analysed on its own board: the game's moves to step back and forth
 /// through, moves played on the board to try others, and the engine's eval and top move from each position.
 /// Stepping forward always plays the top move shown, in the game or past its end; where the line
-/// went another way, the rest of it gives way.
+/// went another way, the rest of it gives way. A run that ended on a blunder has the engine's line that
+/// punished it, which plays out past the game's end on its own.
 @MainActor @Observable
 public final class RunAnalysis {
   /// The game as played, its last move the one that ended it.
   public let game: [String]
+  /// The engine's moves that punished the blunder the game ended on, as SAN; empty for any other ending.
+  public let punish: [String]
   /// The line being looked at: the game, or another tried from a position in it.
   public private(set) var line: [String]
   /// How many of the line's moves are on the board.
@@ -24,10 +27,21 @@ public final class RunAnalysis {
 
   private let engine: ChessEngine
 
-  public init(game: [String], engine: ChessEngine) {
+  /// `punish` is the line after the game's last move, as UCI.
+  public init(game: [String], punish: [String] = [], engine: ChessEngine) {
     self.engine = engine
     let walked = walkSan(game)
     self.game = Array(game.prefix(walked.moves.count))
+    var at = walked.fens.last ?? START_FEN
+    var sans: [String] = []
+    if walked.moves.count == game.count {
+      for uci in punish {
+        guard let move = applyUci(at, uci) else { break }
+        sans.append(move.san)
+        at = move.after
+      }
+    }
+    self.punish = sans
     line = self.game
     ply = self.game.count
     fens = walked.fens
@@ -37,6 +51,24 @@ public final class RunAnalysis {
   public var fen: String { fens[ply] }
   /// On the game's own last position.
   public var atEnd: Bool { ply == game.count && Array(line.prefix(ply)) == game }
+  /// On the game's end or the punishing line played from it, so the way the game ended still stands.
+  public var onPunishment: Bool {
+    let full = game + punish
+    return ply >= game.count && ply <= full.count && Array(line.prefix(ply)) == Array(full.prefix(ply))
+  }
+
+  /// The punishing line's next move, while the board is on that line and it has more.
+  public var punishNext: LegalMove? {
+    guard onPunishment, ply < game.count + punish.count else { return nil }
+    return applySan(fen, punish[ply - game.count])
+  }
+
+  /// One more move of the punishing line, when there is one.
+  public func playPunish() {
+    guard let move = punishNext else { return }
+    if ply < line.count && moves[ply].san == move.san { ply += 1 } else { play(move) }
+  }
+
   /// The move that led here.
   public var last: LegalMove? { ply > 0 ? moves[ply - 1] : nil }
   /// The top move here, once the engine has said; nil while it thinks or with none.

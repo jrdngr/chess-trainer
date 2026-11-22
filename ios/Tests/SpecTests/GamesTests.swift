@@ -49,7 +49,7 @@ private func outcome(_ how: Ending, _ color: ChessCore.Color) -> [String] {
   #expect(outcome(.lost, .b) == ["1-0", "checkmate"])
   #expect(outcome(.draw, .w) == ["1/2-1/2", "draw"])
   #expect(outcome(.ended, .w) == ["*", "ended"])
-  #expect(outcome(.blunder(played: "Qh5", best: nil, lost: 300, reply: nil, slip: nil), .w) == ["*", "blunder"])
+  #expect(outcome(.blunder(played: "Qh5", best: nil, lost: 300, line: [], slip: nil), .w) == ["*", "blunder"])
 }
 
 /// A game as PGN: the tags with you on your side, the app's own tags, then numbered moves and the result.

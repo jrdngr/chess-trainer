@@ -40,8 +40,7 @@ extension HeadlessApp {
     if let finish = model.finish {
       lines.append("Over: \(endingTitle(finish.how, model.run.played.count))")
       if model.phase == .blunder, let blunder = model.blunder {
-        lines.append("Blunder: \(blunder.move.san)" + (blunder.threat.map { ", threat \($0.san)" } ?? "") + ". `continue` for the end screen"
-          + (model.canContinue ? ", `takeback` to take it back for \(CONTINUE_PRICE) pawns." : "."))
+        lines.append("Blunder: \(blunder.move.san)" + (blunder.threat.map { ", threat \($0.san)" } ?? "") + ". `continue` for the end screen.")
       }
       lines.append(play != nil ? "`next` deals the next round; `home` leaves." : "`next` plays another line; `home` leaves.")
       return lines

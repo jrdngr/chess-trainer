@@ -68,8 +68,3 @@ target. Tests: the `docs/rules/pawns.md` suite in
 10. **Held the draw** pays 20, under the least a mate pays, when a game ends
    drawn and, once it reached endgame rules, you stood at −3 or worse (a
    lost ending). Other draws pay nothing extra.
-11. **Continue after a blunder** costs 500, once a run. While you have the
-   pawns, a blunder holds the board with End run and Continue; Continue
-   takes the blunder back, its threat drawn until your next move, and the
-   run goes on. Moves after it don't count toward your best; events still
-   pay.

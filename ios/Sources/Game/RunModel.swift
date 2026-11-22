@@ -68,14 +68,6 @@ public final class RunModel {
   /// The gap the run reached when the engine said no new move: the player can
   /// still add one while it is their move there.
   public private(set) var holeGap: Gap?
-  /// A blunder on the board that Continue can still take back; the run isn't over yet.
-  public private(set) var heldBlunder: Finish?
-  /// Continue was bought this run: once a run.
-  public private(set) var continued = false
-  /// Your moves when Continue was bought: the record counts no more.
-  private var movesAtContinue: Int?
-  /// The blunder Continue took back: its threat stays drawn until your next move.
-  public private(set) var takenBack: (move: LegalMove, threat: LegalMove?)?
   /// The Prep complete pawns, held while growth is due here: one move added pays them.
   public private(set) var heldPrepPawn: PawnAward?
   /// The pawns in the prep's pot: one for each prepared move found, paid when the prep completes.
@@ -328,7 +320,7 @@ public final class RunModel {
     show(callout: "Off prep", good: false)
   }
 
-  /// The board as shown: your move stands while it is judged, a blunder stays until Continue.
+  /// The board as shown: your move stands while it is judged, a blunder stays on it.
   public var shownFen: String {
     if held && !introPath.isEmpty { return walkSan(introPath).fens[min(introPly, introPath.count)] }
     if let flash { return flash.move.after }
@@ -339,8 +331,8 @@ public final class RunModel {
 
   /// The blunder and the threat that made it one.
   public var blunder: (move: LegalMove, threat: LegalMove?)? {
-    guard phase == .blunder, case .blunder(let played, _, _, let reply, _) = session.ending, let move = applySan(run.fen, played) else { return nil }
-    return (move, reply.flatMap { applyUci(move.after, $0) })
+    guard phase == .blunder, case .blunder(let played, _, _, let line, _) = session.ending, let move = applySan(run.fen, played) else { return nil }
+    return (move, line.first.flatMap { applyUci(move.after, $0) })
   }
 
   /// A Middlegame run was announced while its handoff was built, so it goes straight to the board,
@@ -549,7 +541,6 @@ public final class RunModel {
   public func play(_ move: LegalMove) {
     guard live, !held, myTurn, pending == nil, flash == nil else { return }
     if tip != nil { dismissTip() }
-    takenBack = nil
     if fill != nil {
       if fillChoices.contains(where: { $0.san == move.san }) { addMove(move.san) }
       return
@@ -778,7 +769,6 @@ public final class RunModel {
   /// You ended the round.
   public func endRound() {
     guard finish == nil else { return }
-    if heldBlunder != nil { return continueToEnd() }
     log("end-round")
     stop()
     pending = nil
@@ -786,12 +776,8 @@ public final class RunModel {
     apply(endRun(session))
   }
 
-  /// Past the blunder, on to the end screen: a blunder held for Continue ends the run now.
+  /// Past the blunder, on to the end screen.
   public func continueToEnd() {
-    if let f = heldBlunder {
-      heldBlunder = nil
-      finished(f)
-    }
     phase = .over
   }
 
@@ -877,7 +863,7 @@ public final class RunModel {
         if award.event == .distance { offer(.distancePawns) }
         offerPawnTips()
       case .finish(let f):
-        if case .blunder = f.how, !continued, store.state.pawns >= CONTINUE_PRICE { holdBlunder(f) } else { finished(f) }
+        finished(f)
       }
     }
   }
@@ -909,39 +895,6 @@ public final class RunModel {
     log("pawns-withheld") { $0.source = award.event.rawValue; $0.count = award.count }
   }
 
-  /* ── continue after a blunder ── */
-
-  /// Whether Continue can take the blunder on the board back: once a run, for its price.
-  public var canContinue: Bool { heldBlunder != nil && !continued && store.state.pawns >= CONTINUE_PRICE }
-
-  /// A blunder that Continue could take back: the board holds it before the run ends.
-  private func holdBlunder(_ f: Finish) {
-    heldBlunder = f
-    stop()
-    log("blunder-held") { $0.text = "\(f.how)" }
-    offer(.blunder)
-    settle(f)
-  }
-
-  /// Continue: the blunder is taken back for its price and the run goes on from before it. Its
-  /// threat stays drawn until your next move. Moves after this don't count toward your best.
-  public func buyContinue() {
-    guard canContinue, let f = heldBlunder else { return }
-    var spent = false
-    store.update { spent = $0.spend(CONTINUE_PRICE, on: "continue") }
-    guard spent else { return }
-    takenBack = blunder
-    heldBlunder = nil
-    continued = true
-    movesAtContinue = f.ended.moves
-    if tip != nil { dismissTip() }
-    var next = session
-    next.ending = nil
-    session = next
-    phase = .playing
-    advance()
-  }
-
   /// The pot is lost: what it held drains away, and nothing reaches the counter.
   private func drainPot() {
     guard pot > 0 else { return }
@@ -959,8 +912,7 @@ public final class RunModel {
     if case .blunder = f.how { offer(.blunder) } else if handoff == nil && !advancing { offer(.analysis) }
     before = handoff != nil ? store.state.middlegame : store.state.runRecord
     let line = f.ended.run.played
-    // After a Continue, the moves that follow don't count toward your best.
-    let counted = min(f.ended.moves, movesAtContinue ?? f.ended.moves)
+    let counted = f.ended.moves
     // The streak's day comes from a game whose prep was completed; Middlegame asks no prep.
     if handoff != nil || session.prepStatus == .complete { store.finishedGame() }
     // An endgame result that slipped away is kept for Endgame mode, from the position before the move.

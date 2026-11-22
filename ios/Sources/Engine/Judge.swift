@@ -8,7 +8,7 @@ import Model
 /// How long the engine thinks about each question, at most.
 public let THINK_MS: Double = 700
 /// A search this deep settles a question early: a sound move needs no more.
-public let QUICK_DEPTH = 9
+public let QUICK_DEPTH = 14
 /// How far a suspected blunder is confirmed: this deep, capped at this long.
 public let CONFIRM_DEPTH = 16
 public let CONFIRM_MS: Double = 4000
@@ -66,7 +66,9 @@ private final class Clock: @unchecked Sendable {
 /// Judge your move against the baseline: a sound move settles at the quick
 /// check, a suspected blunder waits for the whole search. From a book
 /// position, Stockfish's score in `BookScores` decides. `reached` is true
-/// once the game has been an endgame, so its endgame rules stay on.
+/// once the game has been an endgame, so its endgame rules stay on. Before
+/// then, a costly move is a blunder only when the engine's line after it
+/// shows why (`punishment`); otherwise it stands, with its cost.
 public func judge(
   _ engine: ChessEngine, _ base: Baseline, san: String, uci: String, color: Color, moments: Bool, reached: Bool = false
 ) async -> Judgement {
@@ -86,7 +88,9 @@ public func judge(
     return (before, after)
   }()
 
-  @Sendable func weigh(_ snap: EngineSnapshot) -> (ok: Bool, lost: Double, before: Double, after: Double, found: Bool, reply: String?, missedMate: Bool)? {
+  @Sendable func weigh(_ snap: EngineSnapshot) -> (
+    ok: Bool, lost: Double, before: Double, after: Double, found: Bool, reply: String?, missedMate: Bool, yours: EngineLine, top: EngineLine
+  )? {
     guard let yours = snap.lines.first(where: { $0.pv.first == uci }) else { return nil }
     let top = theirs.flatMap { t in snap.lines.first { $0.pv.first == t } } ?? (theirs == nil ? yours : nil)
     guard let top else { return nil }
@@ -106,7 +110,17 @@ public func judge(
     // In an endgame, a mate the engine had and your move doesn't keep: the run goes on, but you hear about it.
     func mates(_ line: EngineLine) -> Bool { line.mate.map { ($0 > 0) == (color == .w) } ?? false }
     let missedMate = endgame && mates(top) && !mates(yours)
-    return (ok, result.lost, before, yourCp, found, yours.pv.count > 1 ? yours.pv[1] : nil, missedMate)
+    return (ok, result.lost, before, yourCp, found, yours.pv.count > 1 ? yours.pv[1] : nil, missedMate, yours, top)
+  }
+
+  /// The engine's line after your move, where it shows why your move is a blunder: see `punishment`.
+  @Sendable func reason(_ yours: EngineLine, _ top: EngineLine) -> [String]? {
+    let mated = yours.mate.flatMap { ($0 > 0) == (color == .w) ? nil : Int(abs($0)) }
+    return punishment(base.fen, color, yours: yours.pv, best: top.pv, mated: mated)
+  }
+  /// A costly move counts as a blunder: in an endgame by its result, before it only with a reason.
+  @Sendable func fails(_ verdict: (ok: Bool, yours: EngineLine, top: EngineLine)) -> Bool {
+    !verdict.ok && (endgame || exact != nil || reason(verdict.yours, verdict.top) != nil)
   }
 
   let searchmoves = second != nil ? [theirs!, second!, uci] : theirs != nil ? [theirs!, uci] : [uci]
@@ -114,9 +128,10 @@ public func judge(
     base.fen,
     EngineLimits(depth: CONFIRM_DEPTH, movetime: CONFIRM_MS, multiPv: searchmoves.count, searchmoves: searchmoves)
   ) { snap in
-    // A sound move, or one the tablebase or a known ending already settles, is settled at the quick check.
+    // A sound move, a costly one the engine's line shows no reason for, or one the tablebase or a known ending
+    // already settles, is settled at the quick check.
     guard let verdict = weigh(snap) else { return false }
-    return (verdict.ok || theirs == nil || exact != nil || book != nil) && (clock.elapsed >= THINK_MS || snap.depth >= QUICK_DEPTH)
+    return (!fails((verdict.ok, verdict.yours, verdict.top)) || theirs == nil || exact != nil || book != nil) && (clock.elapsed >= THINK_MS || snap.depth >= QUICK_DEPTH)
   }
   let verdict = weigh(snap)
   var judged = Judgement(
@@ -139,6 +154,14 @@ public func judge(
     judged.lost = verdict.lost
     judged.before = before
     judged.after = after
+  }
+  // Before the endgame, a blunder needs a reason the engine's line can show: material lost soon, or a mate.
+  if !judged.ok && !endgame && exact == nil, let verdict {
+    if let line = reason(verdict.yours, verdict.top) {
+      judged.line = line
+    } else {
+      judged.ok = true
+    }
   }
   return judged
 }
