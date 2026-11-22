@@ -14,7 +14,7 @@ public func endingTitle(_ ending: Ending, _ plies: Int) -> String {
   case .blunder(_, _, _, _, let slip):
     // An endgame run ends on the result it gave away, not on a blunder.
     if let slip, let text = slipText(slip.from, slip.to) { return "\(text) on move \(moveNumber(plies))" }
-    return "Blunder on move \(moveNumber(plies))"
+    return "Blunder"
   case .won: return "Checkmate, you won"
   case .lost: return "Checkmate, you lost"
   case .ended: return "Ended on move \(moveNumber(plies))"
