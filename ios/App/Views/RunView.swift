@@ -57,8 +57,8 @@ struct RunView: View {
     return []
   }
 
-  /// The beat before the punishing line starts, and between its moves.
-  private static let punishStartSeconds = 1.0, punishStepSeconds = 0.6
+  /// Show's beat: one move of the punishing line each.
+  private static let showStepSeconds = 0.8
 
   /// The board's position: the analysed one while the deck is under a finished run.
   private var boardFen: String { drawing ? analysis?.fen ?? model.shownFen : model.shownFen }
@@ -131,15 +131,12 @@ struct RunView: View {
     .onChange(of: drawing, initial: true) {
       if drawing && analysis == nil { analysis = RunAnalysis(game: gameLine, punish: punishLine, engine: HintEngine.shared) }
     }
-    // After a blunder, the engine's line that punished it plays out on its own; a step or move of your own stops it.
-    .task(id: drawing && analysis != nil) {
-      guard drawing, let analysis, analysis.atEnd, analysis.punishNext != nil else { return }
-      var at = analysis.ply
-      try? await Task.sleep(for: .seconds(Self.punishStartSeconds))
-      while !Task.isCancelled && analysis.ply == at && analysis.punishNext != nil {
-        analysis.playPunish()
-        at = analysis.ply
-        try? await Task.sleep(for: .seconds(Self.punishStepSeconds))
+    // Show plays the engine's line that punished the blunder, a move a beat; a step or move of your own stops it.
+    .task(id: analysis?.showing == true) {
+      guard let analysis else { return }
+      while !Task.isCancelled && analysis.showing {
+        analysis.showNext()
+        try? await Task.sleep(for: .seconds(Self.showStepSeconds))
       }
     }
     .task(id: drawing ? analysis?.fen : nil) { await analysis?.findTop() }
@@ -543,7 +540,13 @@ struct RunView: View {
         if !onEnding {
           analysisStatus
         } else {
-          endingName.fixedSize().tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
+          VStack(spacing: 8) {
+            endingName.fixedSize().tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
+            if let analysis, !analysis.punish.isEmpty {
+              Button("Show") { analysis.show() }
+                .buttonStyle(PlayButtonStyle(kind: .soft, height: 44, radius: 12, font: 15, held: analysis.showing))
+            }
+          }
         }
       }
       .padding(.top, 16)

@@ -7,7 +7,7 @@ import Observation
 /// through, moves played on the board to try others, and the engine's eval and top move from each position.
 /// Stepping forward always plays the top move shown, in the game or past its end; where the line
 /// went another way, the rest of it gives way. A run that ended on a blunder has the engine's line that
-/// punished it, which plays out past the game's end on its own.
+/// punished it, which Show plays out from the blunder, a move at a time.
 @MainActor @Observable
 public final class RunAnalysis {
   /// The game as played, its last move the one that ended it.
@@ -20,6 +20,11 @@ public final class RunAnalysis {
   public private(set) var ply: Int
   public private(set) var fens: [String]
   private var moves: [LegalMove]
+  /// The game's own positions and moves, to come back to for Show.
+  private let gameFens: [String]
+  private let gameMoves: [LegalMove]
+  /// Show is playing the punishing line out; a step or a move of your own stops it.
+  public private(set) var showing = false
   /// The engine's best line from each position looked at; nil when there is none to play.
   private var bests: [String: EngineLine?] = [:]
   /// How deep the engine looked from each position.
@@ -46,6 +51,8 @@ public final class RunAnalysis {
     ply = self.game.count
     fens = walked.fens
     moves = walked.moves
+    gameFens = walked.fens
+    gameMoves = walked.moves
   }
 
   public var fen: String { fens[ply] }
@@ -66,7 +73,26 @@ public final class RunAnalysis {
   /// One more move of the punishing line, when there is one.
   public func playPunish() {
     guard let move = punishNext else { return }
-    if ply < line.count && moves[ply].san == move.san { ply += 1 } else { play(move) }
+    if ply < line.count && moves[ply].san == move.san { ply += 1 } else { extendHere(move) }
+  }
+
+  /// Show: back to the blunder, with the game as played, and the punishing line plays from there.
+  public func show() {
+    guard !punish.isEmpty else { return }
+    if Array(line.prefix(game.count)) != game {
+      line = game
+      fens = gameFens
+      moves = gameMoves
+    }
+    ply = game.count
+    showing = true
+  }
+
+  /// While Show plays: the line's next move. Show stops once the line has none left.
+  public func showNext() {
+    guard showing else { return }
+    playPunish()
+    if punishNext == nil { showing = false }
   }
 
   /// The move that led here.
@@ -87,22 +113,30 @@ public final class RunAnalysis {
 
   public func step(_ dir: Int) {
     guard let move = stepMove(dir) else { return }
+    showing = false
     if dir < 0 {
       ply -= 1
     } else if ply < line.count && moves[ply].san == move.san {
       ply += 1
     } else {
-      play(move)
+      extendHere(move)
     }
   }
 
   /// Straight to the line's `target`th move, kept within the line.
   public func seek(_ target: Int) {
+    showing = false
     ply = min(max(0, target), line.count)
   }
 
   /// A move played on the board: it replaces whatever came after it.
   public func play(_ move: LegalMove) {
+    showing = false
+    extendHere(move)
+  }
+
+  /// `move` played here, in place of whatever came after.
+  private func extendHere(_ move: LegalMove) {
     line = Array(line.prefix(ply))
     fens = Array(fens.prefix(ply + 1))
     moves = Array(moves.prefix(ply))

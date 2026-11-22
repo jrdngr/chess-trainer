@@ -31,11 +31,13 @@ target can be covered by `HeadlessApp` flow tests.
 6. **A finished round stays on its board as analysis.** There is no end
    screen. After a blunder, your move shows in red with the reply that
    punishes it, and how the round ended shows under the board (nothing when
-   you ended it yourself). A moment later the engine's line that punishes
-   it plays out, a move every 0.6 seconds, and stops on the move that
-   takes your material or mates you, shown in red. Its moves are part of
+   you ended it yourself). Nothing plays on its own: a Show button under
+   "Blunder" goes back to the blunder and plays the engine's line that
+   punishes it, a move every 0.8 seconds, the button held down meanwhile.
+   It stops on the move that takes your material or mates you, shown in
+   red, and Show plays it again from the blunder. Its moves are part of
    the line to step back through; a step or a move of your own stops it.
-   Test: `aBlunderPlaysOutItsPunishment` in
+   Test: `showPlaysOutTheBlundersPunishment` in
    `Tests/FlowTests/AnalysisFlowTests.swift`.
    - Swipe the deck left or right to step through the moves. A step
      forward always plays the engine's top move, the one its arrow shows;

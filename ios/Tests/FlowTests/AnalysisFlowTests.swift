@@ -42,24 +42,35 @@ private struct FixedEngine: ChessEngine {
   #expect(analysis.line.last == top.san && analysis.ply == 4)
 }
 
-/// After a blunder, the line that punished it plays out past the game's end and can be stepped back through;
-/// while the board is on it, the game's ending still stands, and a move of your own leaves it.
-@MainActor @Test func aBlunderPlaysOutItsPunishment() async throws {
+/// After a blunder, nothing plays until Show: it plays the line that punished it past the game's end, a move a beat,
+/// and stops at its end; the line can be stepped back through, and Show plays it again from the blunder, even after
+/// another line was tried. While the board is on it the game's ending still stands; a step or a move of your own stops Show.
+@MainActor @Test func showPlaysOutTheBlundersPunishment() async throws {
   let game = ["e4", "d5", "Qg4"]
   let analysis = RunAnalysis(game: game, punish: ["c8g4", "f1e2"], engine: FixedEngine(tops: [:]))
   #expect(analysis.punish == ["Bxg4", "Be2"])
-  #expect(analysis.atEnd && analysis.onPunishment)
-  #expect(analysis.punishNext?.san == "Bxg4")
-  analysis.playPunish()
-  analysis.playPunish()
+  #expect(analysis.atEnd && analysis.onPunishment && !analysis.showing, "it waits for Show")
+  analysis.showNext()
+  #expect(analysis.atEnd, "no move before Show")
+  analysis.show()
+  analysis.showNext()
+  #expect(analysis.showing && analysis.line == game + ["Bxg4"])
+  analysis.showNext()
   #expect(analysis.line == game + ["Bxg4", "Be2"] && analysis.ply == 5)
-  #expect(analysis.onPunishment && analysis.punishNext == nil, "it stops at the line's end")
-  analysis.step(-1)
-  analysis.step(-1)
-  #expect(analysis.atEnd, "stepping back reaches the blunder")
-  analysis.playPunish()
+  #expect(!analysis.showing && analysis.onPunishment && analysis.punishNext == nil, "it stops at the line's end")
+  analysis.show()
+  #expect(analysis.atEnd && analysis.showing, "Show again starts from the blunder")
+  analysis.showNext()
   #expect(analysis.ply == 4 && analysis.line.count == 5, "back along the line, it plays its own moves again")
-  let other = try #require(applySan(analysis.fen, "Nf3"))
+  analysis.step(-1)
+  #expect(!analysis.showing, "a step stops it")
+  analysis.seek(1)
+  let other = try #require(applySan(analysis.fen, "c5"))
   analysis.play(other)
   #expect(!analysis.onPunishment && analysis.punishNext == nil)
+  analysis.show()
+  #expect(analysis.line == game && analysis.atEnd, "Show brings the game back after another line was tried")
+  analysis.showNext()
+  analysis.play(try #require(applySan(analysis.fen, "Nf3")))
+  #expect(!analysis.showing, "a move of your own stops it")
 }

@@ -45,6 +45,8 @@ struct PlayButtonStyle: ButtonStyle {
   var block = false
   /// Side padding, when the default is too wide for the row.
   var inset: CGFloat?
+  /// Drawn pressed while what it started goes on, as Show while its line plays.
+  var held = false
   @Environment(\.isEnabled) private var enabled
 
   func makeBody(configuration: Configuration) -> some View {
@@ -54,7 +56,7 @@ struct PlayButtonStyle: ButtonStyle {
     Group {
       if let keyKind {
         label.frame(maxWidth: block ? .infinity : nil, minHeight: height - keyKind.lip)
-          .key(keyKind, radius: radius, pressed: configuration.isPressed)
+          .key(keyKind, radius: radius, pressed: configuration.isPressed || held)
       } else {
         label.foregroundStyle(kind == .danger ? Theme.bad : Theme.text2)
           .frame(maxWidth: block ? .infinity : nil, minHeight: height)
