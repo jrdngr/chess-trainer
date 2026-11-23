@@ -94,6 +94,7 @@ public func gamesIn(_ games: [GameRecord], _ scope: GameScope, now: Double) -> [
 extension AppState {
   /// A game finished: kept at the front of the history.
   public mutating func recordGame(_ game: GameRecord) {
+    if game.mode == .play && !games.contains(where: { $0.id == game.id }) { playGamesPlayed += 1 }
     games = addGame(games, game)
   }
 }

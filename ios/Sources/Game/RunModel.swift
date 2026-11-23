@@ -952,6 +952,7 @@ public final class RunModel {
         state.recordRunEnd(tree, line, counted)
       }
       state.endRound(tree, runRound(f, tree, at: Env.now()))
+      state.noteOpenLevels(tree)
       if let given { state.endgames.save(given) }
     }
     settle(f)

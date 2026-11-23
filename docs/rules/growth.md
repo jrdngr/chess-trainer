@@ -26,8 +26,11 @@ at a hole), `prepRanOut`
    is "no answer yet" at the opponent's first or second move, so it leaves
    your openings there; 0 for every other hole. Level 0 is always open.
    Level 2 opens once no hole is left in the open levels, you have played
-   20 Play games, and every opening you have is green (rule 5). Level 1
-   opens the same way after level 2, at 40 games. The curve's next hole is
+   20 Play games, and every opening you have on is green (rule 5). Level 1
+   opens the same way after level 2, at 40 games. The games are every Play
+   game you have played, not only those the history keeps. A level that
+   has opened stays open. An opening turned off holds no level shut, on
+   Home or on its page. The curve's next hole is
    the most met hole in the open levels; for a selection, the most met one
    inside it, with the levels opened by the whole Playbook.
 4. **The question at the hole.** The answer is yes when the pace (Play runs

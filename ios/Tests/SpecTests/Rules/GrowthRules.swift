@@ -91,6 +91,26 @@ private func morra() -> (AppState, String) {
     #expect(openLevels(onlyFirst, CurveGate(games: 39, green: 3, openings: 3)) == [0, 2])
     #expect(openLevels(onlyFirst, CurveGate(games: 19, green: 3, openings: 3)) == [0])
     #expect(openLevels(onlyFirst, CurveGate(games: 40, green: 2, openings: 3)) == [0])
+    #expect(openLevels(found, CurveGate(games: 0, green: 0, openings: 3), opened: [2]) == [0, 2], "an opened level stays open")
+  }
+
+  /// Rule 3: the games are every Play game played, not only those the history keeps, and a level opened stays open.
+  @Test func levelsCountEveryGameAndNeverClose() throws {
+    let tree = openingTree(bookIndex)
+    var state = AppState()
+    let id = state.ensurePlaybook(.w)
+    state.addLine(id, line("c4 e5 Nc3 Nf6 Nf3 Nc6"), .fixed(.book))
+    for n in 0..<45 {
+      state.recordGame(GameRecord(id: "p\(n)", mode: .play, at: 0, color: .w, picked: state.settings.selection, opening: "", moves: ["c4"], result: "*", termination: "ended"))
+    }
+    for n in 0..<80 {
+      state.recordGame(GameRecord(id: "m\(n)", mode: .middlegame, at: 0, color: .w, picked: state.settings.selection, opening: "", moves: ["c4"], result: "*", termination: "ended"))
+    }
+    #expect(playGames(state) == 45, "Middlegame games pushing Play games out of the history don't take them back")
+    let saved = try JSONDecoder().decode(AppState.self, from: JSONEncoder().encode(state))
+    #expect(playGames(saved) == 45)
+    state.levelsOpened = [2]
+    #expect(curvePlaybookGaps(state, tree).contains { curveLevel($0) == 2 }, "level 2 stays open though no opening is green")
   }
 
   /// Rule 5: green is a form of at least 0.8 over enough answers.

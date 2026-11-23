@@ -176,6 +176,10 @@ private func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.
     #expect(round.pick.color == .w && (round.at ?? round.aim ?? []).first != "e4", "Any Opening keeps out of it")
     let node = try #require(all(playbookMap(state, tree, side: .w)).first { $0.family == "italian" })
     #expect(node.off && node.owned)
+    let gate = curveGate(state, tree)
+    let on = ownedOpenings(curveSides(state), tree).filter { !state.lineIsOff($0.color, $0.node.sans) }
+    #expect(gate.openings == on.count && on.count < ownedOpenings(curveSides(state), tree).count,
+      "an off opening isn't counted toward the levels' green")
 
     let turnedOn = state.setOpening("italian", on: true)
     #expect(turnedOn && !state.isOff("italian"))

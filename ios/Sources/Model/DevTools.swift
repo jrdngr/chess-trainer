@@ -129,7 +129,7 @@ extension AppState {
       let game = GameRecord(
         id: "dev-\(Int(now))-\(games.count)-\(n)", mode: .play, at: now, color: color, picked: settings.selection,
         opening: "", moves: moves.isEmpty ? ["e4"] : moves, result: "*", termination: "ended")
-      games = addGame(games, game)
+      recordGame(game)
     }
   }
 

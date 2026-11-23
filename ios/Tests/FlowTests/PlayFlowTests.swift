@@ -418,3 +418,19 @@ private func quietMove(_ fen: String) -> String? {
     #expect(app.run?.tip == .distancePawns, "the first distance pawns explain the bar")
   }
 }
+
+/// A run with a miss still records the line it went through, so its positions count as just seen.
+@MainActor @Test func aRunWithAMissMarksItsLineSeen() async throws {
+  try await headless { app in
+    try await drillAsWhite(app)
+    let run = try #require(app.run)
+    let wrong = try #require(legalMoves(run.run.fen).first { !run.prepNow.contains($0.san) })
+    try await app.move(wrong.san)
+    await app.endRound()
+    let played = try #require(app.run?.run.played)
+    let round = try #require(app.state.score.rounds.last)
+    #expect(round.line == played)
+    let fen = try #require(walkSan(played).fens.last)
+    #expect(app.state.score.seen[positionKey(fen)] == app.state.score.lineRounds)
+  }
+}

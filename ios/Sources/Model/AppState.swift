@@ -114,13 +114,17 @@ public struct AppState: Equatable, Sendable, Codable {
   public var cashUnlocked: Set<String> = []
   /// The games you played here, newest first, at most GAMES_CAP.
   public var games: [GameRecord] = []
+  /// Every Play game you have played, never capped; a save from before it counts its history's.
+  public var playGamesPlayed = 0
+  /// The growth levels that have opened: once open, a level stays open.
+  public var levelsOpened: Set<Int> = []
   /// The version the save was written at: one older than SAVE_VERSION is wiped on load.
   public var version = SAVE_VERSION
   public init() {}
 
   enum CodingKeys: String, CodingKey {
     case playbooks, playbookOrder, cards, score, runRecord, mistakes, log, events, settings, strength, endgames, middlegame
-    case games, version, pawns, pawnStreak, form, unlocked, families, credited, cashUnlocked
+    case games, version, pawns, pawnStreak, form, unlocked, families, credited, cashUnlocked, playGamesPlayed, levelsOpened
   }
 
   /// A save from before a field existed takes its default.
@@ -147,6 +151,8 @@ public struct AppState: Equatable, Sendable, Codable {
     families = try c.decodeIfPresent(FamilyRecord.self, forKey: .families) ?? families
     credited = try c.decodeIfPresent(Set<String>.self, forKey: .credited) ?? credited
     cashUnlocked = try c.decodeIfPresent(Set<String>.self, forKey: .cashUnlocked) ?? cashUnlocked
+    playGamesPlayed = try c.decodeIfPresent(Int.self, forKey: .playGamesPlayed) ?? games.filter { $0.mode == .play }.count
+    levelsOpened = try c.decodeIfPresent(Set<Int>.self, forKey: .levelsOpened) ?? levelsOpened
     version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 0
   }
 

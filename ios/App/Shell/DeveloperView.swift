@@ -230,7 +230,7 @@ struct DeveloperView: View {
     if let tree = store.tree {
       let state = store.state
       let gate = curveGate(state, tree)
-      let open = openLevels(curveHoles(curveSides(state), tree.index, tree: tree), gate).sorted().map(String.init).joined(separator: ", ")
+      let open = openLevels(curveHoles(curveSides(state), tree.index, tree: tree), gate, opened: state.levelsOpened).sorted().map(String.init).joined(separator: ", ")
       section("Growth levels")
       ListCard {
         Text("Play games \(gate.games), green \(gate.green) of \(gate.openings), levels open \(open)")

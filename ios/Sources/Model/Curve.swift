@@ -109,30 +109,44 @@ public func formAverage(_ form: FormRecord, _ id: String, _ color: Color) -> Dou
 /// Whether an opening is green on one side: enough answers, averaging at least `CURVE_GREEN`.
 public func isGreen(_ form: FormRecord, _ id: String, _ color: Color) -> Bool { (formAverage(form, id, color) ?? 0) >= CURVE_GREEN }
 
-/// The Play games you have played.
-public func playGames(_ state: AppState) -> Int { state.games.filter { $0.mode == .play }.count }
+/// The Play games you have played, all of them, not only those the history keeps.
+public func playGames(_ state: AppState) -> Int { max(state.playGamesPlayed, state.games.filter { $0.mode == .play }.count) }
 
+/// The gate counts the openings that are on: one turned off sits out the levels.
 public func curveGate(_ state: AppState, _ tree: OpeningTree) -> CurveGate {
-  let owned = ownedOpenings(curveSides(state), tree)
+  let owned = ownedOpenings(curveSides(state), tree).filter { !state.lineIsOff($0.color, $0.node.sans) }
   return CurveGate(games: playGames(state), green: owned.filter { isGreen(state.form, $0.node.id, $0.color) }.count, openings: owned.count)
 }
 
 /// The levels open now. Depth is always open. Level 2 opens once no hole is left
-/// in the open levels and its gate is met; level 1 the same after level 2.
-public func openLevels(_ holes: [Gap], _ gate: CurveGate) -> Set<Int> {
+/// in the open levels and its gate is met; level 1 the same after level 2. A level in `opened` has opened
+/// before and stays open.
+public func openLevels(_ holes: [Gap], _ gate: CurveGate, opened: Set<Int> = []) -> Set<Int> {
   var open: Set<Int> = [0]
   for level in [2, 1] {
+    if opened.contains(level) {
+      open.insert(level)
+      continue
+    }
     if holes.contains(where: { open.contains(curveLevel($0)) }) || !gate.met(level) { break }
     open.insert(level)
   }
   return open
 }
 
+extension AppState {
+  /// The levels open now are kept as opened, so they never close.
+  public mutating func noteOpenLevels(_ tree: OpeningTree) {
+    let holes = curveHoles(curveSides(self), tree.index, tree: tree).filter { !lineIsOff($0.color, $0.line) }
+    levelsOpened.formUnion(openLevels(holes, curveGate(self, tree), opened: levelsOpened).subtracting([0]))
+  }
+}
+
 /// The holes the curve may grow now in the whole Playbook, most met first. Openings that are
 /// off grow nothing and hold no level shut.
 public func curvePlaybookGaps(_ state: AppState, _ tree: OpeningTree) -> [Gap] {
   let holes = curveHoles(curveSides(state), tree.index, tree: tree).filter { !state.lineIsOff($0.color, $0.line) }
-  let open = openLevels(holes, curveGate(state, tree))
+  let open = openLevels(holes, curveGate(state, tree), opened: state.levelsOpened)
   return holes.filter { open.contains(curveLevel($0)) }
 }
 
@@ -142,7 +156,7 @@ public func curveSelectionGaps(_ state: AppState, _ tree: OpeningTree, _ selecti
   let sides = curveSides(state)
   let chosen = nodeById(tree, selection.opening).sans
   let all = curveHoles(sides, tree.index, tree: tree).filter { !state.lineIsOff($0.color, $0.line) }
-  let open = openLevels(all, curveGate(state, tree))
+  let open = openLevels(all, curveGate(state, tree), opened: state.levelsOpened)
   var out: [Gap] = []
   for region in regionsBySide(tree, selection) {
     out += curveHoles(sides.filter { $0.color == region.side }, tree.index, tree: tree, scope: region.node)

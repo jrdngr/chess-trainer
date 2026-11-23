@@ -29,16 +29,19 @@ public struct NodePage: Equatable, Sendable {
 public func nodePage(_ state: AppState, _ tree: OpeningTree, side: Color, id: String, line: [String]) -> NodePage {
   let key = tree.byId[id]?.key ?? positionKey(walkSan(line).fens.last ?? START_FEN)
   let answers = FormAtMove(state.events).scores(key, side)
-  let all = curveHoles(curveSides(state), tree.index, tree: tree)
-  let under = all.filter { $0.color == side && $0.line.count > line.count && $0.line.starts(with: line) }
-  return NodePage(answers: answers, form: formOf(answers), grow: nodeGrow(under, all, curveGate(state, tree)))
+  // Off openings grow nothing and hold no level shut, as on Home.
+  let all = curveHoles(curveSides(state), tree.index, tree: tree).filter { !state.lineIsOff($0.color, $0.line) }
+  let under = curveHoles(curveSides(state), tree.index, tree: tree)
+    .filter { $0.color == side && $0.line.count > line.count && $0.line.starts(with: line) }
+  return NodePage(
+    answers: answers, form: formOf(answers), grow: nodeGrow(under, all, curveGate(state, tree), opened: state.levelsOpened))
 }
 
 /// The first hole under the opening the open levels allow; else what opens them:
 /// holes in open levels elsewhere grow first, then its first hole's level opens.
-public func nodeGrow(_ under: [Gap], _ all: [Gap], _ gate: CurveGate) -> NodeGrow {
+public func nodeGrow(_ under: [Gap], _ all: [Gap], _ gate: CurveGate, opened: Set<Int> = []) -> NodeGrow {
   guard !under.isEmpty else { return .none }
-  let open = openLevels(all, gate)
+  let open = openLevels(all, gate, opened: opened)
   if let gap = under.first(where: { open.contains(curveLevel($0)) }) { return .ready(gap) }
   let ahead = all.filter { open.contains(curveLevel($0)) }
   if let next = ahead.first { return .after(next: next, count: ahead.count) }
