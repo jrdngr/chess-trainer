@@ -6,7 +6,7 @@ import ChessCore
 
 /// By how many of your own moves after a blunder its line has to leave you behind.
 public let PUNISH_MOVES = 3
-/// At which of your own moves after a blunder you must still be behind.
+/// By which of your own moves after a blunder your own line must not have won the material back.
 public let PUNISH_HOLD_MOVES = 5
 /// The least material, in pawns, you have to be behind.
 public let PUNISH_PAWNS = 1
@@ -15,7 +15,8 @@ public let PUNISH_PAWNS = 1
 /// `yours` is the engine's line with your move first, `best` its line with its own move first, both from `fen`, where
 /// `color` is to move. Material is counted after each move with any trade on that move's square finished
 /// (`settledBalance`). A reason is being `PUNISH_PAWNS` or more behind the best line by your `PUNISH_MOVES`th move
-/// after this one, and still that far behind it at your `PUNISH_HOLD_MOVES`th (each at the line's end, if sooner).
+/// after this one, with your own line still that far below what the best line had there at your `PUNISH_HOLD_MOVES`th
+/// (each at the line's end, if sooner): what the best line would only lose later never excuses it.
 /// The line then runs up to the move that leaves you behind, and on through the trade on its square, if any; where your
 /// own move leaves the material hanging, it is that trade on your move's square. `mated` is how many moves from `fen` the line mates you
 /// in, if it does; within `PUNISH_MOVES` + 1 that is a reason too, and the whole line is played.
@@ -29,9 +30,9 @@ public func punishment(_ fen: String, _ color: Color, yours: [String], best: [St
   let start = balance(fen, color)
   /// Your material after your `n`th move after this one in a line, or at the line's end when it ends sooner.
   func after(_ balance: [Int], _ n: Int) -> Int { balance.isEmpty ? start : balance[min(2 * n, balance.count - 1)] }
-  let held = after(top.balance, PUNISH_HOLD_MOVES) - after(line.balance, PUNISH_HOLD_MOVES)
-  guard held >= PUNISH_PAWNS else { return nil }
-  for n in 0...PUNISH_MOVES where after(top.balance, n) - after(line.balance, n) >= PUNISH_PAWNS {
+  let kept = after(line.balance, PUNISH_HOLD_MOVES)
+  for n in 0...PUNISH_MOVES
+  where after(top.balance, n) - after(line.balance, n) >= PUNISH_PAWNS && after(top.balance, n) - kept >= PUNISH_PAWNS {
     // Your own move left the material hanging: the line is the trade on its square, whatever the engine plays first.
     if n == 0, case let trade = tradeLine(line.fens[1], on: line.landed[0]), !trade.isEmpty { return trade }
     // Played up to the move that left you this far behind.

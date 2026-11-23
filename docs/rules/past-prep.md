@@ -14,9 +14,10 @@ Tests: the `docs/rules/past-prep.md` suite in
 3. **A run ends at a blunder, or when the game is over.** Past or off your
    prep, a move is a blunder when it gives away more than the blunder line
    and the engine's line after it shows why: it leaves you a pawn or more
-   behind the engine's best line by your third move after it, and still a
-   pawn or more behind at your fifth (or where either line ends, if
-   sooner); or the line mates you within 4 moves. Material is counted
+   behind the engine's best line by your third move after it, and your own
+   line hasn't won that back by your fifth (or where either line ends, if
+   sooner), whatever the best line would lose later; or the line mates you
+   within 4 moves. Material is counted
    after each move with the trade on that move's square finished: each
    side takes back only while that gains. So not taking back counts, and a
    line cut off mid-trade counts the trade done. The line is 70
