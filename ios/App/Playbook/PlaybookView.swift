@@ -14,6 +14,8 @@ struct PlaybookView: View {
   /// The page open and the side shown: kept above the tabs, so Grow and Middlegame come back to them.
   @Binding var page: Page?
   @Binding var side: ChessCore.Color
+  /// The tree's open path on each side: kept above the tabs, so coming back from a page finds the same opening open.
+  @Binding var paths: [ChessCore.Color: [String]]
   /// An opening for the tree to open at, from Home's Next line.
   var mapFocus: MapFocus? = nil
   var onConsumedMapFocus: () -> Void = {}
@@ -79,7 +81,7 @@ struct PlaybookView: View {
       .zIndex(1)
       // With nothing on a side, its tree is every family for sale.
       PlaybookMapView(
-        tree: tree, side: side, focus: mapFocus ?? nextFocus,
+        tree: tree, side: side, kept: $paths, focus: mapFocus ?? nextFocus,
         onConsumedFocus: {
           if mapFocus != nil { onConsumedMapFocus() } else { nextFocus = nil }
         },

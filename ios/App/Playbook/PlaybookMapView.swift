@@ -19,6 +19,8 @@ struct MapFocus: Equatable {
 struct PlaybookMapView: View {
   let tree: OpeningTree
   let side: ChessCore.Color
+  /// The open path on each side, held by the screen around the tree; without it, the tree holds its own.
+  var kept: Binding<[ChessCore.Color: [String]]>? = nil
   var focus: MapFocus?
   var onConsumedFocus: () -> Void = {}
   /// The slots being filled, while choosing openings.
@@ -29,7 +31,7 @@ struct PlaybookMapView: View {
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
   @State private var memo = Memo<[MapNode]>()
-  @State private var paths: [ChessCore.Color: [String]] = [:]
+  @State private var ownPaths: [ChessCore.Color: [String]] = [:]
   @State private var width: CGFloat = 393
 
   var body: some View {
@@ -71,12 +73,21 @@ struct PlaybookMapView: View {
       .safeAreaInset(edge: .bottom, spacing: 0) {
         if let open, choosing == nil { card(open) }
       }
+      // Back from a page: the open opening's row in view again, as it was left.
+      .onAppear { DispatchQueue.main.async { reader.scrollTo("row\(rows.count - 1)", anchor: .bottom) } }
       .onChange(of: path) { _, now in
         let rows = mapRows(roots, path: now)
         withAnimation(.easeOut(duration: 0.3)) { reader.scrollTo("row\(rows.count - 1)", anchor: .bottom) }
       }
     }
     .task(id: "\(focus?.id ?? "")|\(focus?.side.rawValue ?? "")|\(side.rawValue)") { takeFocus(roots) }
+  }
+
+  private var paths: [ChessCore.Color: [String]] {
+    get { kept?.wrappedValue ?? ownPaths }
+    nonmutating set {
+      if let kept { kept.wrappedValue = newValue } else { ownPaths = newValue }
+    }
   }
 
   /* ── the tree ── */

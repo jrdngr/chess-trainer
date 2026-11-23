@@ -30,6 +30,8 @@ struct RootView: View {
   @State private var shopFocus: String? = Self.debugShopItem
   @State private var playbookPage: PlaybookView.Page?
   @State private var playbookSide = ChessCore.Color.w
+  /// The Playbook tree's open path on each side, kept while an opening's page is open.
+  @State private var playbookPaths: [ChessCore.Color: [String]] = [:]
 
   var body: some View {
     ZStack {
@@ -82,7 +84,7 @@ struct RootView: View {
         })
           .background(Theme.background.ignoresSafeArea())
           .tabItem { Label(Tab.home.label, systemImage: Tab.home.symbol) }.tag(Tab.home)
-        PlaybookView(tree: tree, index: index, page: $playbookPage, side: $playbookSide,
+        PlaybookView(tree: tree, index: index, page: $playbookPage, side: $playbookSide, paths: $playbookPaths,
           mapFocus: mapFocus, onConsumedMapFocus: { mapFocus = nil }, onAnalyze: { sans, side in
           explore = (sans, side)
           tab = .analysis
