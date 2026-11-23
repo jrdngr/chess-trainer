@@ -17,6 +17,11 @@ struct ShopView: View {
   @State private var frames: [String: CGRect] = [:]
   @State private var flights: [Flight] = []
   @State private var sheetHeight: CGFloat = 300
+  /// Whether `sheetHeight` fits the selected item yet: the sheet waits for it, since a sheet
+  /// that opens at a stale height and grows mid-presentation can stay short and cut off its top.
+  @State private var measured = false
+  /// The shop's width, which is the sheet's: the sheet's picture is sized from it.
+  @State private var width: CGFloat = 0
   /// A sheet's picture shown whole: the sheet grows to full height to hold it. A presentation
   /// of its own inside the sheet would keep the sheet from sizing to its content.
   @State private var fullScreen: String?
@@ -53,15 +58,25 @@ struct ShopView: View {
         }
       }
     }
+    .background(alignment: .top) {
+      // The selected item's sheet, laid out unseen to size the sheet before it opens.
+      if let id = selected, let item = shopItem(id) {
+        BuySheet(item: item, purchase: purchase, width: width, measuring: true, fullScreen: .constant(nil), onSelect: { _ in }, onBuy: {}, onShort: {}) {}
+          .fixedSize(horizontal: false, vertical: true)
+          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if width > 0 { sheetHeight = min($0, 760); measured = true } }
+          .hidden().allowsHitTesting(false).accessibilityHidden(true)
+      }
+    }
+    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+    .onChange(of: selected) { if selected == nil { measured = false } }
     .background(Theme.background.ignoresSafeArea())
     .overlay { FlightLayer(flights: flights) }
     .coordinateSpace(name: Self.space)
-    .sheet(isPresented: Binding(get: { selected != nil }, set: { if !$0, purchase == nil { selected = nil } })) {
+    .sheet(isPresented: Binding(get: { selected != nil && measured }, set: { if !$0, purchase == nil { selected = nil } })) {
       if let id = selected, let item = shopItem(id) {
-        BuySheet(item: item, purchase: purchase, fullScreen: $fullScreen, onSelect: { selected = $0 }, onBuy: { buy(item) }, onShort: { pawnsOpen = true }) { selected = nil }
+        BuySheet(item: item, purchase: purchase, width: width, fullScreen: $fullScreen, onSelect: { selected = $0 }, onBuy: { buy(item) }, onShort: { pawnsOpen = true }) { selected = nil }
           .pawnSheet(isPresented: $pawnsOpen)
           .fixedSize(horizontal: false, vertical: true)
-          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if fullScreen == nil { sheetHeight = min($0, 760) } }
           .frame(maxHeight: .infinity, alignment: .top)
           .presentationDetents(fullScreen == nil ? [.height(sheetHeight)] : [.large])
           .presentationBackground(SwiftUI.Color(hex: 0x131317))
@@ -318,6 +333,11 @@ private struct ShopNode: View {
 private struct BuySheet: View {
   let item: ShopItem
   let purchase: Purchase?
+  /// The sheet's width. Given, not measured, so the picture has its size on the first layout
+  /// and the sheet's height is right before it opens.
+  let width: CGFloat
+  /// Laid out unseen only to size the sheet: a video is left as its empty frame.
+  var measuring = false
   /// The picture shown full screen, by asset name.
   @Binding var fullScreen: String?
   let onSelect: (String) -> Void
@@ -326,9 +346,6 @@ private struct BuySheet: View {
   let onShort: () -> Void
   let onClose: () -> Void
   @Environment(AppStore.self) private var store
-  /// The sheet's width inside its padding: the picture is sized from it, since a resizable
-  /// image's own size would push the sheet wider than the screen.
-  @State private var width: CGFloat = 0
 
   var body: some View {
     if let name = fullScreen {
@@ -375,12 +392,12 @@ private struct BuySheet: View {
       action(status).padding(.top, 16)
     }
     .padding(.horizontal, 16).padding(.top, 10)
-    .onGeometryChange(for: CGFloat.self) { $0.size.width - 32 } action: { width = $0 }
   }
 
-  /// The picture's size: the sheet's width, unless that would make it taller than the cap.
+  /// The picture's size: the sheet's width inside its padding, unless that would make it
+  /// taller than the cap. A resizable image's own size would push the sheet wider than the screen.
   private func size(_ aspect: CGFloat) -> CGSize {
-    let height = min(ShopShot.maxHeight, max(0, width) / aspect)
+    let height = min(ShopShot.maxHeight, max(0, width - 32) / aspect)
     return CGSize(width: height * aspect, height: height)
   }
 
@@ -396,7 +413,7 @@ private struct BuySheet: View {
         .accessibilityAddTraits(.isButton).accessibilityLabel("Show full screen")
     case .video(let name, let aspect):
       let box = size(aspect)
-      LoopingVideo(name: name)
+      Group { if measuring { SwiftUI.Color.clear } else { LoopingVideo(name: name) } }
         .frame(width: box.width, height: box.height)
         .clipShape(shape)
     }
