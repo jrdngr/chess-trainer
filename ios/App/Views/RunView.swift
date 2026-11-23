@@ -51,8 +51,8 @@ struct RunView: View {
     return model.run.played
   }
 
-  /// The engine's line after the blunder the run ended on, as UCI; empty for any other ending.
-  private var punishLine: [String] {
+  /// The engine's line that shows the blunder the run ended on, as UCI; empty for any other ending.
+  private var punishLine: PunishLine {
     if case .blunder(_, _, _, let line, _) = model.session.ending { return line }
     return []
   }
@@ -71,7 +71,9 @@ struct RunView: View {
 
   /// The punishing line's last move is on the board: the move that takes your material, or mates.
   private var punished: LegalMove? {
-    guard drawing, let a = analysis, !a.punish.isEmpty, a.onPunishment, a.ply == a.game.count + a.punish.count else { return nil }
+    guard drawing, let a = analysis, !a.punish.isEmpty, a.punishFrom == a.game.count, a.onPunishment,
+      a.ply == a.game.count + a.punish.count
+    else { return nil }
     return a.last
   }
 
@@ -83,6 +85,8 @@ struct RunView: View {
           slid = nil
           return
         }
+        // A swipe stops Show, so the step taken on release is the one it previews.
+        a.stopShow()
         slid = BoardSlide(move: move, before: dir < 0 ? a.fens[a.ply - 1] : a.fen, back: dir < 0, progress: progress)
       },
       step: { dir in
@@ -129,14 +133,16 @@ struct RunView: View {
       Button("Keep playing", role: .cancel) {}
     }
     .onChange(of: drawing, initial: true) {
-      if drawing && analysis == nil { analysis = RunAnalysis(game: gameLine, punish: punishLine, engine: HintEngine.shared) }
+      if drawing && analysis == nil { analysis = RunAnalysis(game: gameLine, punish: punishLine.moves, before: punishLine.before, engine: HintEngine.shared) }
     }
-    // Show plays the engine's line that punished the blunder, a move a beat; a step or move of your own stops it.
+    // Show holds the blunder's position for a beat, then plays the engine's line, a move a beat; a step or move of
+    // your own stops it.
     .task(id: analysis?.showing == true) {
       guard let analysis else { return }
       while !Task.isCancelled && analysis.showing {
-        analysis.showNext()
         try? await Task.sleep(for: .seconds(Self.showStepSeconds))
+        guard !Task.isCancelled else { return }
+        analysis.showNext()
       }
     }
     .task(id: drawing ? analysis?.fen : nil) { await analysis?.findTop() }
@@ -602,7 +608,7 @@ struct RunView: View {
         Icon(name: "cross", size: 18).frame(width: 26, height: 26).background(Circle().fill(Theme.bad.opacity(0.14)))
       }
       // Ended by hand, the game is just over.
-      Text(how == .ended ? "Game over" : endingTitle(how, model.run.played.count)).font(.system(size: 19, weight: .heavy)).tracking(-0.19)
+      Text(how == .ended ? "Game over" : endingTitle(how)).font(.system(size: 19, weight: .heavy)).tracking(-0.19)
     }
     .foregroundStyle(tone).padding(.vertical, 6)
   }

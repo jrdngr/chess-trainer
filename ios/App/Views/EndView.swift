@@ -122,7 +122,7 @@ struct EndView: View {
           .animation(.easeIn(duration: 0.2).delay(0.25), value: flashing)
           .overlay(alignment: .top) {
             if flashing {
-              EndVerdict(how: finish.how, plies: last).padding(.top, 8).transition(.opacity.animation(.easeOut(duration: 0.2)))
+              EndVerdict(how: finish.how).padding(.top, 8).transition(.opacity.animation(.easeOut(duration: 0.2)))
             }
           }
           // The verdict runs past the lenses' row: over the buttons under it, not under them.
@@ -297,7 +297,7 @@ struct EndView: View {
     let found = answers.filter(\.correct).count
     let times = model.session.prepTimes
     let scored = state.moves > 0 || state.extras.pawns > 0
-    let title = endingTitle(finish.how, state.run.played.count)
+    let title = endingTitle(finish.how)
     return VStack(spacing: 6) {
       if scored {
         Text("\(state.extras.pawns) pawn\(state.extras.pawns == 1 ? "" : "s")").font(.largeTitle.bold()).foregroundStyle(Theme.text)

@@ -32,12 +32,18 @@ target can be covered by `HeadlessApp` flow tests.
    screen. After a blunder, your move shows in red with the reply that
    punishes it, and how the round ended shows under the board (nothing when
    you ended it yourself). Nothing plays on its own: a Show button beside
-   "Blunder" goes back to the blunder and plays the engine's line that
-   punishes it, a move every 0.8 seconds, the button held down meanwhile
-   (its play triangle in the engine's blue, beating once a move).
-   It stops on the move that takes your material or mates you, shown in
-   red, and Show, now with a replay arrow, plays it again from the blunder. Its moves are part of
-   the line to step back through; a step or a move of your own stops it.
+   "Blunder" goes back to the blunder, holds it for 0.8 seconds, and plays
+   the engine's line that punishes it, a move every 0.8 seconds, the button
+   held down meanwhile (its play triangle in the engine's blue, beating once
+   a move). Where your move lost nothing and only missed a gain, Show goes
+   back to the move before it and plays the engine's best line from there,
+   up to the move that wins the material. It stops on the move that takes
+   your material or mates you, shown in red, and Show, now with a replay
+   arrow, plays it again from the blunder. Its moves are part of the line to
+   step back through; a step, a swipe of the deck or a move of your own
+   stops it. An endgame round's title is the result it gave away, as "Win
+   slipped to Draw"; no ending title gives the move number. Test:
+   `endingTitlesNameNoMove`.
    Test: `showPlaysOutTheBlundersPunishment` in
    `Tests/FlowTests/AnalysisFlowTests.swift`.
    - Swipe the deck left or right to step through the moves. A step

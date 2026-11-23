@@ -38,7 +38,7 @@ extension HeadlessApp {
     if let label = model.label { lines.append("Prep: \(label.rawValue)") }
     if let tip = model.tip { lines.append("Tip: \(tip.text)") }
     if let finish = model.finish {
-      lines.append("Over: \(endingTitle(finish.how, model.run.played.count))")
+      lines.append("Over: \(endingTitle(finish.how))")
       if model.phase == .blunder, let blunder = model.blunder {
         lines.append("Blunder: \(blunder.move.san)" + (blunder.threat.map { ", threat \($0.san)" } ?? "") + ". `continue` for the end screen.")
       }

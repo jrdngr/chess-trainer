@@ -85,7 +85,9 @@ private let ROOKS = "r1r3k1/5ppp/8/8/8/8/5PPP/R1R3K1 w - - 0 1"
     let taken = try #require(walkSan(line("e4 d5 exd5")).fens.last)
     let quiet = ["a7a6", "c2c4", "b8d7", "b1c3", "g8f6", "g1f3"]
     let retake = ["d8d5", "b1c3", "d5a5", "g1f3", "g8f6"]
-    #expect(punishment(taken, .b, yours: quiet, best: retake, mated: nil) == ["c2c4"], "the pawn not taken back")
+    #expect(
+      punishment(taken, .b, yours: quiet, best: retake, mated: nil) == PunishLine(moves: ["d8d5"], before: true),
+      "the pawn not taken back: the line shows the recapture missed, from before the move")
     let fen = try #require(walkSan(line("e4 d5")).fens.last)
     let best = ["e4d5", "d8d5", "b1c3", "d5a5"]
     #expect(punishment(fen, .w, yours: ["b1c3", "d5e4"], best: best, mated: nil) == nil, "Nxe4 is still to come")

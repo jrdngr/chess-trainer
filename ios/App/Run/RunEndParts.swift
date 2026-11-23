@@ -15,7 +15,7 @@ struct RunSummary: View {
     let state = finish.ended
     let extras = state.extras
     VStack(spacing: 4) {
-      Text(endingTitle(finish.how, state.run.played.count)).font(.system(size: 13)).foregroundStyle(Theme.text2)
+      Text(endingTitle(finish.how)).font(.system(size: 13)).foregroundStyle(Theme.text2)
       Text("\(extras.pawns) pawn\(extras.pawns == 1 ? "" : "s")").font(.system(size: 26, weight: .bold).monospacedDigit())
         .foregroundStyle(Theme.text).padding(.top, 4)
       Text("Survived \(state.moves) move\(state.moves == 1 ? "" : "s")").font(.system(size: 13)).foregroundStyle(Theme.text)

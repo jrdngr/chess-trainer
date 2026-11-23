@@ -6,7 +6,6 @@ import SwiftUI
 /// How the run ended, under the board as the end screen opens.
 struct EndVerdict: View {
   let how: Ending
-  let plies: Int
 
   var body: some View {
     let (symbol, tone): (String, SwiftUI.Color) = switch how {
@@ -15,7 +14,7 @@ struct EndVerdict: View {
     case .ended: ("flag.fill", Theme.warn)
     case .draw: ("equal", Theme.warn)
     }
-    CalloutStrip(text: endingTitle(how, plies), tone: tone, symbol: symbol)
+    CalloutStrip(text: endingTitle(how), tone: tone, symbol: symbol)
   }
 }
 

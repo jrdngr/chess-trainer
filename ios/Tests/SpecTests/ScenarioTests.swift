@@ -12,7 +12,7 @@ extension MoveResult {
 private func endingJSON(_ e: Ending) -> JSON {
   switch e {
   case .blunder(let played, let best, let lost, let line, _):
-    return obj(["kind": "blunder", "played": played, "best": best, "lost": lost, "reply": line.first])
+    return obj(["kind": "blunder", "played": played, "best": best, "lost": lost, "reply": line.before ? nil : line.moves.first])
   case .won: return obj(["kind": "won"])
   case .lost: return obj(["kind": "lost"])
   case .draw: return obj(["kind": "draw"])

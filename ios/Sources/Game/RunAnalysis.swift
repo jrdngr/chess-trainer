@@ -15,6 +15,9 @@ public final class RunAnalysis {
   public let game: [String]
   /// The engine's moves that punished the blunder the game ended on, as SAN; empty for any other ending.
   public let punish: [String]
+  /// The ply the punishing line plays from: the game's end, or the position before your last move where that move
+  /// only missed a gain.
+  public let punishFrom: Int
   /// The line being looked at: the game, or another tried from a position in it.
   public private(set) var line: [String]
   /// How many of the line's moves are on the board.
@@ -34,12 +37,13 @@ public final class RunAnalysis {
 
   private let engine: ChessEngine
 
-  /// `punish` is the line after the game's last move, as UCI.
-  public init(game: [String], punish: [String] = [], engine: ChessEngine) {
+  /// `punish` is the line after the game's last move, as UCI, or from before it when `before`.
+  public init(game: [String], punish: [String] = [], before: Bool = false, engine: ChessEngine) {
     self.engine = engine
     let walked = walkSan(game)
     self.game = Array(game.prefix(walked.moves.count))
-    var at = walked.fens.last ?? START_FEN
+    let from = before && !game.isEmpty ? game.count - 1 : game.count
+    var at = walked.fens[min(from, walked.fens.count - 1)]
     var sans: [String] = []
     if walked.moves.count == game.count {
       for uci in punish {
@@ -49,6 +53,7 @@ public final class RunAnalysis {
       }
     }
     self.punish = sans
+    punishFrom = from
     line = self.game
     ply = self.game.count
     fens = walked.fens
@@ -62,10 +67,11 @@ public final class RunAnalysis {
   public var onEngine: Bool { ply > gameMoves }
   /// On the game's own last position.
   public var atEnd: Bool { ply == game.count && Array(line.prefix(ply)) == game }
-  /// On the game's end or the punishing line played from it, so the way the game ended still stands.
+  /// On the game's end or the punishing line played from where it starts, so the way the game ended still stands.
   public var onPunishment: Bool {
-    let full = game + punish
-    return ply >= game.count && ply <= full.count && Array(line.prefix(ply)) == Array(full.prefix(ply))
+    if atEnd { return true }
+    let full = game.prefix(punishFrom) + punish
+    return ply >= punishFrom && ply <= full.count && Array(line.prefix(ply)) == Array(full.prefix(ply))
   }
 
   /// Show has nothing left to play from here: the board is on the punishing line's last move, so Show offers a replay.
@@ -73,23 +79,37 @@ public final class RunAnalysis {
 
   /// The punishing line's next move, while the board is on that line and it has more.
   public var punishNext: LegalMove? {
-    guard onPunishment, ply < game.count + punish.count else { return nil }
-    return applySan(fen, punish[ply - game.count])
+    guard onPunishment, ply >= punishFrom, ply < punishFrom + punish.count, Array(line.prefix(ply)) == Array((game.prefix(punishFrom) + punish).prefix(ply))
+    else { return nil }
+    return applySan(fen, punish[ply - punishFrom])
   }
 
   /// One more move of the punishing line, when there is one.
   public func playPunish() {
     guard let move = punishNext else { return }
-    if ply < line.count && moves[ply].san == move.san { ply += 1 } else { extendHere(move) }
+    if ply < line.count && moves[ply].san == move.san {
+      ply += 1
+      return
+    }
+    // A line from before the game's last move leaves the game, which comes back when you step back over it.
+    if branch == nil && ply < line.count {
+      base = (line, moves, fens)
+      branch = ply
+    }
+    extendHere(move)
   }
 
-  /// Show: back to the blunder, with the game as played, and the punishing line plays from there.
+  /// Show: back to the blunder, with the game as played, and the punishing line plays from there; where the blunder only
+  /// missed a gain, back to the move before it, and the line that wins it plays.
   public func show() {
     guard !punish.isEmpty else { return }
     dropBranch()
-    ply = game.count
+    ply = punishFrom
     showing = true
   }
+
+  /// Show stops where it is: a swipe has started, so the board holds still under it.
+  public func stopShow() { showing = false }
 
   /// While Show plays: the line's next move. Show stops once the line has none left.
   public func showNext() {

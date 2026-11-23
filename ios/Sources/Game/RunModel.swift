@@ -334,7 +334,7 @@ public final class RunModel {
   /// The blunder and the threat that made it one.
   public var blunder: (move: LegalMove, threat: LegalMove?)? {
     guard phase == .blunder, case .blunder(let played, _, _, let line, _) = session.ending, let move = applySan(run.fen, played) else { return nil }
-    return (move, line.first.flatMap { applyUci(move.after, $0) })
+    return (move, line.before ? nil : line.moves.first.flatMap { applyUci(move.after, $0) })
   }
 
   /// A Middlegame run was announced while its handoff was built, so it goes straight to the board,

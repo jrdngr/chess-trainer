@@ -117,7 +117,7 @@ public func judge(
   }
 
   /// The engine's line after your move, where it shows why your move is a blunder: see `punishment`.
-  @Sendable func reason(_ yours: EngineLine, _ top: EngineLine) -> [String]? {
+  @Sendable func reason(_ yours: EngineLine, _ top: EngineLine) -> PunishLine? {
     let mated = yours.mate.flatMap { ($0 > 0) == (color == .w) ? nil : Int(abs($0)) }
     return punishment(base.fen, color, yours: yours.pv, best: top.pv, mated: mated)
   }
@@ -176,7 +176,8 @@ public func judge(
   // With no line from the engine there is no reason to show, so the move stands.
   if !judged.ok && !endgame && exact == nil {
     if let verdict, let line = reason(verdict.yours, verdict.ref) {
-      judged.line = line
+      judged.line = line.moves
+      judged.lineBefore = line.before
     } else {
       judged.ok = true
     }

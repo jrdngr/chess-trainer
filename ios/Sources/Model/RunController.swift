@@ -9,9 +9,9 @@ import Shared
 
 /// How a run ended.
 public enum Ending: Equatable, Sendable {
-  /// `played` is the move that lost, not on the board; `line` the engine's moves after it that show why, as UCI,
-  /// the threat first. In an endgame, `slip` is the result it gave away.
-  case blunder(played: String, best: String?, lost: Double, line: [String], slip: ResultSlip?)
+  /// `played` is the move that lost, not on the board; `line` the engine's moves that show why, as UCI: after it, the
+  /// threat first, or from before it where it only missed a gain. In an endgame, `slip` is the result it gave away.
+  case blunder(played: String, best: String?, lost: Double, line: PunishLine, slip: ResultSlip?)
   case won, lost, draw
   /// You ended it yourself.
   case ended
@@ -73,6 +73,8 @@ public struct Judgement: Equatable, Sendable {
   public var reply: String?
   /// The engine's moves after yours that show why it is a blunder, as UCI, starting with `reply`.
   public var line: [String]
+  /// `line` starts before your move: your move lost nothing, and the line shows the gain it missed.
+  public var lineBefore = false
   /// An endgame where the engine had a mate and your move doesn't keep it.
   public var missedMate: Bool
   /// The exact results before and after your move, where the tablebase knows them.
@@ -326,7 +328,7 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
       judged.exact
       ?? (endgameReached(run.played) ? ResultSlip(from: resultOf(run.color, judged.before), to: resultOf(run.color, judged.after)) : nil)
     return then(step) {
-      finish($0, $0.state, .blunder(played: judged.san, best: judged.best, lost: judged.lost, line: judged.line, slip: slip))
+      finish($0, $0.state, .blunder(played: judged.san, best: judged.best, lost: judged.lost, line: PunishLine(moves: judged.line, before: judged.lineBefore), slip: slip))
     }
   }
   return then(step) { current in

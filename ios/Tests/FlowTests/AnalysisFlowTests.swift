@@ -116,4 +116,30 @@ private struct FixedEngine: ChessEngine {
   analysis.showNext()
   analysis.play(try #require(applySan(analysis.fen, "Nf3")))
   #expect(!analysis.showing, "a move of your own stops it")
+  analysis.show()
+  analysis.stopShow()
+  #expect(!analysis.showing && analysis.atEnd, "a swipe stops it where it is")
+}
+
+/// A blunder that lost nothing and only missed a gain: Show goes back to the move before it and plays the best line from
+/// there. After 1.e4 d5 2.exd5, 2...a6 leaves the pawn: Show plays 2...Qxd5 in its place, and stepping back brings the game back.
+@MainActor @Test func showPlaysTheGainMissedFromBeforeTheMove() async throws {
+  let game = ["e4", "d5", "exd5", "a6"]
+  let analysis = RunAnalysis(game: game, punish: ["d8d5"], before: true, engine: FixedEngine(tops: [:]))
+  #expect(analysis.punish == ["Qxd5"] && analysis.onPunishment)
+  analysis.show()
+  #expect(analysis.ply == 3 && analysis.onPunishment, "back to the move before the blunder")
+  analysis.showNext()
+  #expect(analysis.line == ["e4", "d5", "exd5", "Qxd5"] && !analysis.showing && analysis.atPunishmentEnd)
+  analysis.step(-1)
+  #expect(analysis.line == game && analysis.branch == nil, "the game comes back")
+  analysis.step(1)
+  #expect(analysis.atEnd && analysis.onPunishment)
+}
+
+/// An endgame round's title is the result it gave away, and no ending title gives the move number.
+@Test func endingTitlesNameNoMove() {
+  #expect(endingTitle(.blunder(played: "Kd4", best: nil, lost: 500, line: [], slip: ResultSlip(from: .win, to: .draw))) == "Win slipped to Draw")
+  #expect(endingTitle(.blunder(played: "Qh5", best: nil, lost: 300, line: [], slip: nil)) == "Blunder")
+  #expect(endingTitle(.ended) == "Ended")
 }

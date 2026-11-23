@@ -11,20 +11,35 @@ public let PUNISH_HOLD_MOVES = 5
 /// The least material, in pawns, you have to be behind.
 public let PUNISH_PAWNS = 1
 
-/// The line that shows why your move is a blunder, as UCI moves after it; nil when the engine's line shows no reason.
+/// The engine's line that shows why a move is a blunder, as UCI: after your move, or, where your move lost nothing and
+/// only missed a gain, the best line from before it (`before`).
+public struct PunishLine: Equatable, Sendable, ExpressibleByArrayLiteral {
+  public var moves: [String]
+  /// The line starts from the position before your move: what you missed.
+  public var before: Bool
+  public init(moves: [String], before: Bool = false) {
+    self.moves = moves
+    self.before = before
+  }
+  public init(arrayLiteral moves: String...) { self.init(moves: moves) }
+}
+
+/// The line that shows why your move is a blunder; nil when the engine's line shows no reason.
 /// `yours` is the engine's line with your move first, `best` its line with its own move first, both from `fen`, where
 /// `color` is to move. Material is counted after each move with any trade on that move's square finished
 /// (`settledBalance`). A reason is being `PUNISH_PAWNS` or more behind the best line by your `PUNISH_MOVES`th move
 /// after this one, with your own line still that far below what the best line had there at your `PUNISH_HOLD_MOVES`th
 /// (each at the line's end, if sooner): what the best line would only lose later never excuses it.
 /// The line then runs up to the move that leaves you behind, and on through the trade on its square, if any; where your
-/// own move leaves the material hanging, it is that trade on your move's square. `mated` is how many moves from `fen` the line mates you
+/// own move leaves the material hanging, it is that trade on your move's square. Where your own line never falls below
+/// the material you had, your move lost nothing and only missed a gain: the line is then the best line, from before your
+/// move, up to the move that wins the material and on through its trade. `mated` is how many moves from `fen` the line mates you
 /// in, if it does; within `PUNISH_MOVES` + 1 that is a reason too, and the whole line is played.
-public func punishment(_ fen: String, _ color: Color, yours: [String], best: [String], mated: Int?) -> [String]? {
+public func punishment(_ fen: String, _ color: Color, yours: [String], best: [String], mated: Int?) -> PunishLine? {
   let line = walkSettled(fen, yours, color), top = walkSettled(fen, best, color)
   guard !line.balance.isEmpty else { return nil }
   if let mated, mated <= PUNISH_MOVES + 1 {
-    return Array(line.moves.dropFirst())
+    return PunishLine(moves: Array(line.moves.dropFirst()))
   }
   guard line.moves.count > 1 else { return nil }
   let start = balance(fen, color)
@@ -33,15 +48,22 @@ public func punishment(_ fen: String, _ color: Color, yours: [String], best: [St
   let kept = after(line.balance, PUNISH_HOLD_MOVES)
   for n in 0...PUNISH_MOVES
   where after(top.balance, n) - after(line.balance, n) >= PUNISH_PAWNS && after(top.balance, n) - kept >= PUNISH_PAWNS {
+    // Your move lost nothing: the best line shows the gain you missed, from before your move.
+    if (0...n).allSatisfy({ after(line.balance, $0) >= start }) && kept >= start && !top.balance.isEmpty {
+      let i = min(2 * n, top.balance.count - 1)
+      var j = i
+      while j > 0 && top.balance[j - 1] == top.balance[i] { j -= 1 }
+      return PunishLine(moves: Array(top.moves[0...j]) + tradeLine(top.fens[j + 1], on: top.landed[j]), before: true)
+    }
     // Your own move left the material hanging: the line is the trade on its square, whatever the engine plays first.
-    if n == 0, case let trade = tradeLine(line.fens[1], on: line.landed[0]), !trade.isEmpty { return trade }
+    if n == 0, case let trade = tradeLine(line.fens[1], on: line.landed[0]), !trade.isEmpty { return PunishLine(moves: trade) }
     // Played up to the move that left you this far behind.
     let i = min(2 * n, line.balance.count - 1)
     var j = i
     while j > 1 && line.balance[j - 1] == line.balance[i] { j -= 1 }
     // The trade counted on that move's square is played out too, so the line shows the material taken.
     let end = max(j, 1)
-    return Array(line.moves[1...end]) + tradeLine(line.fens[end + 1], on: line.landed[end])
+    return PunishLine(moves: Array(line.moves[1...end]) + tradeLine(line.fens[end + 1], on: line.landed[end]))
   }
   return nil
 }
