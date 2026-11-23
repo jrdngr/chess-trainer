@@ -118,7 +118,13 @@ struct PawnSheet: View {
         HStack(spacing: 8) {
           ForEach(packs, id: \.0) { pack, product in
             Button {
-              Task { if await cash.buy(pack) { toasts.show("\(pack.pawns.formatted()) pawns added") } }
+              Task {
+                if await cash.buy(pack) {
+                  // The sheet closes, so the balance and the toast are in view.
+                  onClose()
+                  toasts.show("\(pack.pawns.formatted()) pawns added")
+                }
+              }
             } label: {
               VStack(spacing: 6) {
                 PawnAmount(count: pack.pawns, size: 15)

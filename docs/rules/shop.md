@@ -48,7 +48,8 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    comes back to every profile from the App Store. Pawn packs: 2,000 for
    $1.99, 6,000 for $4.99, 13,000 for $9.99. Both are sold in the pawn
    sheet, which the pawn balance opens on Home and in the Shop, and which
-   a price you can't pay yet opens from an item's sheet. The unlock shows
+   a price you can't pay yet opens from an item's sheet; it closes once a
+   pack is bought, and a toast over every sheet says so. The unlock shows
    there until the tree is yours. Each App Store transaction is credited once;
    an unlock seen again still grants items added to the tree since. The
    unlock starts the side picker on Either, as buying it does. A refunded

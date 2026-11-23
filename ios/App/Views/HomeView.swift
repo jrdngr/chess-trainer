@@ -19,6 +19,8 @@ struct HomeView: View {
   @State private var settings = false
   /// Play's key is held down after a tap until Play opens.
   @State private var playHeld = false
+  /// Play's open, waiting out the key's press; Home going away first cancels it.
+  @State private var playOpening: Task<Void, Never>?
 
   var body: some View {
     ScrollView {
@@ -72,8 +74,14 @@ struct HomeView: View {
     // The day's streak pawns pop out of the streak ring, once Home has laid out.
     .pawnFlights()
     .task {
-      try? await Task.sleep(for: .milliseconds(400))
+      // Left within the wait, Home keeps them for its next visit.
+      guard (try? await Task.sleep(for: .milliseconds(400))) != nil, !Task.isCancelled else { return }
       store.showStreakPawns()
+    }
+    .onDisappear {
+      playOpening?.cancel()
+      playOpening = nil
+      playHeld = false
     }
     .sheet(isPresented: $settings) { SettingsSheet().presentationBackground(Theme.background) }
     .task {
@@ -105,9 +113,10 @@ struct HomeView: View {
     Button {
       guard !playHeld else { return }
       playHeld = true
-      Task { @MainActor in
-        try? await Task.sleep(for: .milliseconds(100))
+      playOpening = Task { @MainActor in
+        let waited = (try? await Task.sleep(for: .milliseconds(100))) != nil
         playHeld = false
+        guard waited, !Task.isCancelled else { return }
         onOpen(.play)
       }
     } label: { PlayLabel() }

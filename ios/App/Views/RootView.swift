@@ -12,6 +12,7 @@ enum Mode: Equatable {
 /// The app: onboarding ahead of everything, a mode over the tabs, or the tabs.
 struct RootView: View {
   @Environment(AppStore.self) private var store
+  @Environment(Toasts.self) private var toasts
   @State private var tab: Tab = Self.debugTab ?? .home
   @State private var mode: Mode? = Self.debugMode
   /// The mode opens on its setup screen instead of starting at once. Debug opens keep the setup, for screenshots.
@@ -42,7 +43,7 @@ struct RootView: View {
         ProgressView().tint(Theme.text2)
       }
     }
-    .overlay { ToastHost() }
+    .toastWindow(toasts)
     .sheet(isPresented: Binding(get: { !store.restoreOffer.isEmpty }, set: { if !$0 { store.restoreOffer = [] } })) {
       RestoreView(offered: store.restoreOffer).presentationBackground(Theme.background).interactiveDismissDisabled()
     }
