@@ -68,3 +68,31 @@ private func everyNode(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + e
     #expect(everyNode(app.map(.w)).contains { $0.id == first.id && !$0.off })
   }
 }
+
+/// View lines on an opening's page: walk your moves past it to the end of a line, delete the
+/// move there and see it gone from the move before, then undo it.
+@MainActor @Test func viewLinesWalksAndDeletesAMove() async throws {
+  try await headless { app in
+    onboard(app)
+    let node = try #require(everyNode(app.map(.w)).first { $0.owned && !app.nextMoves($0, after: $0.line).isEmpty })
+    #expect(throws: HeadlessApp.Failure.self) { try app.deleteMove(node, at: node.line) }
+    var walked = node.line
+    while let next = app.nextMoves(node, after: walked).first { walked.append(next) }
+    #expect(walked.count > node.line.count)
+    #expect(throws: HeadlessApp.Failure.self, "the end of a starting line is the opening's named position") {
+      try app.deleteMove(node, at: walked)
+    }
+    // A move of your own past it, as growth would add.
+    let rep = try #require(app.state.playbookList.first { $0.color == node.color })
+    let end = try #require(walkSan(walked).fens.last)
+    let past = try #require(legalMoves(end).first).san
+    app.store.update { _ = $0.addLine(rep.id, walked + [past], .fixed(.book)) }
+    #expect(app.nextMoves(node, after: walked) == [past])
+    walked.append(past)
+    let before = Array(walked.dropLast())
+    let undo = try app.deleteMove(node, at: walked)
+    #expect(!app.nextMoves(node, after: before).contains(walked.last!))
+    app.undo(undo)
+    #expect(app.nextMoves(node, after: before).contains(walked.last!))
+  }
+}

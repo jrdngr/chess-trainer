@@ -2,7 +2,7 @@ import Book
 import ChessCore
 
 /// The page an opening of yours on the tree opens: that one position, how
-/// well you know it, and what growing under it waits for. Lines past it are reached through their own openings on the tree.
+/// well you know it, and what growing under it waits for. View lines walks your Playbook on past it.
 
 /// What growing under an opening waits for.
 public enum NodeGrow: Equatable, Sendable {
@@ -48,14 +48,23 @@ public func nodeGrow(_ under: [Gap], _ all: [Gap], _ gate: CurveGate) -> NodeGro
 }
 
 extension AppState {
+  /// Your Playbook's moves from where `line` leads on `side`, in its order: what View lines lists.
+  /// Empty when the line isn't yours or ends there.
+  public func nextMoves(_ side: Color, _ line: [String]) -> [String] {
+    guard let rep = playbookList.first(where: { $0.color == side }) else { return [] }
+    if line.isEmpty { return childrenOf(rep, nil).map(\.san) }
+    guard let at = nodeAtLine(rep, line) else { return [] }
+    return childrenOf(rep, at.id).map(\.san)
+  }
+
   /// The moves Delete takes from an opening's page: its last move and everything after it.
   public func movesUnder(_ side: Color, _ line: [String]) -> Int {
     guard let rep = playbookList.first(where: { $0.color == side }), let at = nodeAtLine(rep, line) else { return 0 }
     return subtreeIds(rep, at.id).count
   }
 
-  /// Delete from an opening's page: its last move and everything after it, with an undo. Nothing at
-  /// or before the named position of an opening you have.
+  /// Delete from an opening's page, or from View lines on it: the line's last move and everything
+  /// after it, with an undo. Nothing at or before the named position of an opening you have.
   @discardableResult
   public mutating func removeNodeAt(_ side: Color, _ line: [String]) -> PlaybookUndo? {
     guard canDelete(side, line), let rep = playbookList.first(where: { $0.color == side }), let at = nodeAtLine(rep, line) else { return nil }

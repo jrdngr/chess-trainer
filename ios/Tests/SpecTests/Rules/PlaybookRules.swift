@@ -191,6 +191,37 @@ import Testing
     #expect(nodeAtLine(state.playbookList[0], line("d4 d5 c4 e6 Nc3 Nf6")) != nil)
   }
 
+  /// Rule 4: View lines lists your Playbook's moves from the board's position, in its order, both sides'.
+  @Test func viewLinesListsYourNextMoves() {
+    var state = AppState()
+    let id = state.ensurePlaybook(.b)
+    state.addLine(id, line("d4 Nf6 c4 g6 Nf3 Bg7"), .fixed(.book))
+    state.addLine(id, line("d4 Nf6 c4 g6 Nc3 Bg7"), .fixed(.book))
+    state.addLine(id, line("d4 Nf6 Bf4 d5"), .fixed(.book))
+    #expect(state.nextMoves(.b, []) == ["d4"])
+    #expect(state.nextMoves(.b, line("d4 Nf6")) == ["c4", "Bf4"], "their replies, in the Playbook's order")
+    #expect(state.nextMoves(.b, line("d4 Nf6 c4 g6 Nc3")) == ["Bg7"], "your move")
+    #expect(state.nextMoves(.b, line("d4 Nf6 c4 g6 Nc3 Bg7")).isEmpty, "the line ends")
+    #expect(state.nextMoves(.b, line("e4")).isEmpty, "not your line")
+    #expect(state.nextMoves(.w, []).isEmpty, "no White Playbook")
+  }
+
+  /// Rule 7: in View lines, Delete takes the move on the board past the opening and everything after it;
+  /// the move before it lists what is left.
+  @Test func viewLinesDeletesTheMoveOnTheBoard() throws {
+    var state = AppState()
+    let id = state.ensurePlaybook(.b)
+    state.addLine(id, line("d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3 O-O Be3 c5"), .fixed(.book))
+    state.addLine(id, line("d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5"), .fixed(.book))
+    let samisch = line("d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3")
+    #expect(state.movesUnder(.b, samisch) == 4)
+    let removed = state.removeNodeAt(.b, samisch)
+    let undo = try #require(removed)
+    #expect(state.nextMoves(.b, line("d4 Nf6 c4 g6 Nc3 Bg7 e4 d6")) == ["Nf3"])
+    state.undo(undo)
+    #expect(state.nextMoves(.b, line("d4 Nf6 c4 g6 Nc3 Bg7 e4 d6")) == ["f3", "Nf3"])
+  }
+
   /// Rule 8: only Sharp, Solid, Gambit and System tag an opening, down through the lines under it.
   @Test func onlyFourShelvesTag() throws {
     let tree = openingTree(bookIndex)

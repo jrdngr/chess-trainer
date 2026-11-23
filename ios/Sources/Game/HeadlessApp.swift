@@ -225,6 +225,18 @@ public final class HeadlessApp: SignalSink {
     return undo
   }
 
+  /// View lines on an opening's page: your moves from where `line` leads.
+  public func nextMoves(_ node: MapNode, after line: [String]) -> [String] { state.nextMoves(node.color, line) }
+
+  /// View lines' Delete: the move `line` ends on and everything after it, past the opening; the undo puts it back.
+  public func deleteMove(_ node: MapNode, at line: [String]) throws -> PlaybookUndo {
+    guard line.count > node.line.count, line.starts(with: node.line) else { throw Failure.notHere("Delete in View lines takes moves past \(node.name)") }
+    var undo: PlaybookUndo?
+    store.update { undo = $0.removeNodeAt(node.color, line) }
+    guard let undo else { throw Failure.notHere("\(line.joined(separator: " ")) can't be deleted") }
+    return undo
+  }
+
   public func undo(_ undo: PlaybookUndo) { store.update { $0.undo(undo) } }
 
   /// Turn an opening of yours off or back on from its page's menu.

@@ -73,6 +73,11 @@ extension Icon {
       IconPart(.path("M8.5 8.5h7M8.5 12h4"), fill: .none, stroke: .current, opacity: (1, 1))]),
     "bolt": IconSpec(strokeWidth: 2, parts: [
       IconPart(.path("M13 2L5 13h6l-1 9 8-11h-6z"), fill: .none, stroke: .current, opacity: (1, 1))]),
+    "lines": IconSpec(strokeWidth: 2.2, parts: [
+      IconPart(.path("M9 6h11M9 12h11M9 18h11"), fill: .none, stroke: .current, opacity: (1, 1)),
+      IconPart(.circle(4.5, 6, 1.3), fill: .current, stroke: .none, opacity: (1, 1)),
+      IconPart(.circle(4.5, 12, 1.3), fill: .current, stroke: .none, opacity: (1, 1)),
+      IconPart(.circle(4.5, 18, 1.3), fill: .current, stroke: .none, opacity: (1, 1))]),
     "more": IconSpec(strokeWidth: 2, parts: [
       IconPart(.circle(5, 12, 2), fill: .current, stroke: .none, opacity: (1, 1)),
       IconPart(.circle(12, 12, 2), fill: .current, stroke: .none, opacity: (1, 1)),

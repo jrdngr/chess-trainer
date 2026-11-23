@@ -28,9 +28,11 @@ Tests: the `docs/rules/playbook.md` suite in
    level, "In line" for a hole further down the curve.
 4. **An opening's page is about its position.** A tap on an opening you
    have opens its page. Its board stands at the opening's position and steps
-   back through your moves to it, never past them; an opening you reach in
+   back through your moves to it; an opening you reach in
    another order than the book's opens at your order; Analysis opens from there.
-   Lines past it are reached through their own openings on the tree. The page
+   **View lines** walks on past it: in place of the page's cards it lists your
+   Playbook's moves from the board's position, in the Playbook's order, and a
+   tap plays one. Back returns to the page at the opening. The page
    shows the opening's form at your move: its last 10 answers to that move
    and their average (see [form](form.md)).
 5. **Grow waits for the curve.** Grow fills the first hole under the
@@ -49,8 +51,9 @@ Tests: the `docs/rules/playbook.md` suite in
 7. **Delete** takes the opening's last move and everything after it, with
    an undo. It's offered only past the named position of an opening you
    have, or on lines outside all of them: an opening you have stays yours
-   (see [openings for sale](families.md)). Nothing else edits the Playbook
-   by hand.
+   (see [openings for sale](families.md)). In View lines, Delete takes the
+   move on the board past the opening, by the same rule, and the board steps
+   back one move. Nothing else edits the Playbook by hand.
 8. **Tags are Sharp, Solid, Gambit and System.** An opening's tag comes from
    the picker's shelf it sits on, its own or the nearest above it; other
    shelves tag nothing. The card at the bottom shows the open opening's tag

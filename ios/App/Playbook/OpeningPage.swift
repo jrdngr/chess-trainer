@@ -5,8 +5,9 @@ import Model
 import SwiftUI
 
 /// An opening of yours on the tree, at its position: the board and the moves to
-/// it, its form, Grow as the curve allows it, Analyze and Select. Its menu turns an opening
-/// of yours off or on, and deletes what's past one.
+/// it, Analyze and Select, View lines, its form and Grow as the curve allows it. Its menu
+/// turns an opening of yours off or on, and deletes what's past one. View lines walks your
+/// Playbook on from the board's position and deletes the move on the board.
 struct OpeningPage: View {
   let tree: OpeningTree
   let node: MapNode
@@ -25,6 +26,9 @@ struct OpeningPage: View {
   @State private var memo = Memo<NodePage>()
   @State private var cursor: Int?
   @State private var deleting = false
+  /// View lines: the moves walked, the opening's line first, and how many the board shows; nil on the page itself.
+  @State private var walk: (line: [String], at: Int)?
+  @State private var deletingMove = false
 
   var body: some View {
     if let rep = store.state.playbookList.first(where: { $0.color == node.color }), nodeAtLine(rep, node.line) != nil {
@@ -71,12 +75,17 @@ struct OpeningPage: View {
         VStack(spacing: 12) {
           board
           VStack(spacing: 12) {
-            accuracy(page)
-            growCard(page.grow)
-            HStack(spacing: 8) {
-              SheetButton("Analyze", icon: "analysis", style: .plain) { onAnalyze(node.line, node.color) }
-              SheetButton("Select", icon: "check", style: .accent) { select() }
-                .unlockedBy(.openingPicker, hidden: true)
+            if let walk {
+              lines(walk)
+            } else {
+              HStack(spacing: 8) {
+                SheetButton("Analyze", icon: "analysis", style: .plain) { onAnalyze(node.line, node.color) }
+                SheetButton("Select", icon: "check", style: .accent) { select() }
+                  .unlockedBy(.openingPicker, hidden: true)
+              }
+              SheetButton("View lines", icon: "lines", style: .plain) { walk = (node.line, node.line.count) }
+              accuracy(page)
+              growCard(page.grow)
             }
           }
           .padding(.horizontal, 16)
@@ -87,22 +96,82 @@ struct OpeningPage: View {
     .confirmationDialog("Delete \(node.name)?", isPresented: $deleting, titleVisibility: .visible) {
       Button("Delete \(removes) \(removes == 1 ? "move" : "moves")", role: .destructive) { delete(removes) }
     }
+    .confirmationDialog(onBoard.map { "Delete \(moveName($0))?" } ?? "", isPresented: $deletingMove, titleVisibility: .visible) {
+      let count = onBoard.map { state.movesUnder(node.color, $0) } ?? 0
+      Button("Delete \(count) \(count == 1 ? "move" : "moves")", role: .destructive) { deleteMove(count) }
+    }
+  }
+
+  /// View lines' board line: the moves the board shows.
+  private var onBoard: [String]? { walk.map { Array($0.line.prefix($0.at)) } }
+
+  /// View lines: Back and Delete, then your Playbook's moves from the board's position. Delete takes the
+  /// move on the board past the opening, when it may.
+  private func lines(_ walk: (line: [String], at: Int)) -> some View {
+    let shown = Array(walk.line.prefix(walk.at))
+    let state = store.state
+    let canDelete = shown.count > node.line.count && state.canDelete(node.color, shown)
+    let next = state.nextMoves(node.color, shown)
+    return VStack(spacing: 12) {
+      HStack(spacing: 8) {
+        SheetButton("Back", icon: "back", style: .plain) { self.walk = nil }
+        if canDelete {
+          SheetButton("Delete", icon: "trash", style: .danger) { deletingMove = true }
+        }
+      }
+      if !next.isEmpty {
+        VStack(spacing: 0) {
+          ForEach(Array(next.enumerated()), id: \.element) { i, san in
+            if i > 0 { Rectangle().fill(Theme.surface2).frame(height: 1) }
+            Button { self.walk = (shown + [san], shown.count + 1) } label: {
+              HStack(spacing: 2) {
+                Text(moveNumber(shown.count)).foregroundStyle(Theme.text3).font(.system(size: 18, weight: .semibold))
+                Text(san).foregroundStyle(Theme.text).font(.system(size: 18, weight: .bold))
+                Spacer()
+                Icon(name: "chevron", size: 16).foregroundStyle(Theme.text2)
+              }
+              .padding(.horizontal, 16).frame(minHeight: 58).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+          }
+        }
+        .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+      }
+    }
+  }
+
+  /// "6." before White's move at ply `ply`, "6..." before Black's.
+  private func moveNumber(_ ply: Int) -> String { ply % 2 == 0 ? "\(ply / 2 + 1)." : "\(ply / 2 + 1)..." }
+
+  /// A line's last move with its number: "6...c5".
+  private func moveName(_ line: [String]) -> String { moveNumber(line.count - 1) + (line.last ?? "") }
+
+  private func deleteMove(_ count: Int) {
+    guard let shown = onBoard else { return }
+    var undo: PlaybookUndo?
+    store.update { undo = $0.removeNodeAt(node.color, shown) }
+    guard let undo else { return }
+    walk = (Array(shown.dropLast()), shown.count - 1)
+    toasts.show("Deleted \(count) move\(count == 1 ? "" : "s")", action: ("Undo", { store.update { $0.undo(undo) } }))
   }
 
   /// The board at the opening's position, the full width of the screen, and under it
   /// the moves to the position to step back through.
   private var board: some View {
-    let at = cursor ?? node.line.count
+    let line = walk?.line ?? node.line
+    let at = walk?.at ?? cursor ?? node.line.count
     return VStack(spacing: 10) {
       GeometryReader { geo in
-        MiniBoard(sans: Array(node.line.prefix(at)), orientation: node.color, size: geo.size.width, lastMove: true)
+        MiniBoard(sans: Array(line.prefix(at)), orientation: node.color, size: geo.size.width, lastMove: true)
       }
       .aspectRatio(1, contentMode: .fit)
       MoveStrip(
-        items: node.line.enumerated().map { i, san in
+        items: line.enumerated().map { i, san in
           StripItem(san: san, label: i % 2 == 0 ? "\(i / 2 + 1)." : nil, current: i + 1 == at, seek: i + 1)
         },
-        cursor: at, max: node.line.count, onSeek: { cursor = $0 })
+        cursor: at, max: line.count,
+        onSeek: { seek in if walk != nil { walk?.at = seek } else { cursor = seek } })
       .padding(.horizontal, 16)
     }
   }
