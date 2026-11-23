@@ -32,7 +32,9 @@ Tests: the `docs/rules/playbook.md` suite in
    another order than the book's opens at your order; Analysis opens from there.
    **View lines** walks on past it: in place of the page's cards it lists your
    Playbook's moves from the board's position, in the Playbook's order, and a
-   tap plays one. The back arrow at the top returns to the page at the opening. The page
+   tap plays one. Each move is followed, dimmed, by up to the next 3 moves of
+   its line (`VIEW_LINES_AHEAD`): your preferred move on your turn, the first
+   reply in your Playbook on theirs. The back arrow at the top returns to the page at the opening. The page
    shows the opening's form at your move: its last 10 answers to that move
    and their average (see [form](form.md)).
 5. **Grow waits for the curve.** Grow fills the first hole under the

@@ -47,6 +47,9 @@ public func nodeGrow(_ under: [Gap], _ all: [Gap], _ gate: CurveGate) -> NodeGro
     level, games: gate.games, gamesNeeded: CURVE_LEVEL_GAMES[level] ?? 0, green: gate.green, openings: gate.openings)
 }
 
+/// Moves View lines shows dimmed after each of your next moves.
+public let VIEW_LINES_AHEAD = 3
+
 extension AppState {
   /// Your Playbook's moves from where `line` leads on `side`, in its order: what View lines lists.
   /// Empty when the line isn't yours or ends there.
@@ -55,6 +58,21 @@ extension AppState {
     if line.isEmpty { return childrenOf(rep, nil).map(\.san) }
     guard let at = nodeAtLine(rep, line) else { return [] }
     return childrenOf(rep, at.id).map(\.san)
+  }
+
+  /// How your Playbook goes on after `line`, up to `count` moves: your preferred move on your
+  /// turn, the first reply in your Playbook on theirs. View lines shows it dimmed after each move.
+  public func lineAfter(_ side: Color, _ line: [String], count: Int = VIEW_LINES_AHEAD) -> [String] {
+    guard let rep = playbookList.first(where: { $0.color == side }), var at = nodeAtLine(rep, line) else { return [] }
+    var out: [String] = []
+    while out.count < count {
+      let kids = childrenOf(rep, at.id)
+      let mine = fenTurn(at.fenAfter) == side
+      guard let next = mine ? (kids.first(where: \.preferred) ?? kids.first) : kids.first else { break }
+      out.append(next.san)
+      at = next
+    }
+    return out
   }
 
   /// The moves Delete takes from an opening's page: its last move and everything after it.

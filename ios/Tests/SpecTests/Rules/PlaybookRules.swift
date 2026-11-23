@@ -206,6 +206,22 @@ import Testing
     #expect(state.nextMoves(.w, []).isEmpty, "no White Playbook")
   }
 
+  /// Rule 4: each move View lines lists is followed by up to the next 3 of its line: your preferred
+  /// move on your turn, the first reply in your Playbook on theirs.
+  @Test func viewLinesShowsTheLineAfterEachMove() throws {
+    var state = AppState()
+    let id = state.ensurePlaybook(.b)
+    state.addLine(id, line("d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O"), .fixed(.book))
+    state.addLine(id, line("d4 Nf6 c4 g6 Nf3 Bg7 Nc3 O-O"), .fixed(.book))
+    state.addLine(id, line("d4 Nf6 c4 e6"), .fixed(.book))
+    let rep = state.playbookList[0]
+    let e6 = try #require(nodeAtLine(rep, line("d4 Nf6 c4 e6")))
+    state.playbooks[id] = setPreferred(rep, e6.id)
+    #expect(state.lineAfter(.b, line("d4 Nf6")) == line("c4 e6"), "your preferred move, then the line ends")
+    #expect(state.lineAfter(.b, line("d4 Nf6 c4 g6")) == line("Nf3 Bg7 g3"), "their first reply, cut at 3")
+    #expect(state.lineAfter(.b, line("d4 Nf6 c4 g6 Nf3 Bg7 g3 O-O")).isEmpty, "the end of a line")
+  }
+
   /// Rule 7: in View lines, Delete takes the move on the board past the opening and everything after it;
   /// the move before it lists what is left.
   @Test func viewLinesDeletesTheMoveOnTheBoard() throws {

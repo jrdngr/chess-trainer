@@ -125,7 +125,10 @@ struct OpeningPage: View {
               HStack(spacing: 2) {
                 Text(moveNumber(shown.count)).foregroundStyle(Theme.text3).font(.system(size: 18, weight: .semibold))
                 Text(san).foregroundStyle(Theme.text).font(.system(size: 18, weight: .bold))
-                Spacer()
+                Text(numbered(state.lineAfter(node.color, shown + [san]), from: shown.count + 1))
+                  .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.text3)
+                  .lineLimit(1).padding(.leading, 10)
+                Spacer(minLength: 8)
                 Icon(name: "chevron", size: 16).foregroundStyle(Theme.text2)
               }
               .padding(.horizontal, 16).frame(minHeight: 58).contentShape(Rectangle())
@@ -141,6 +144,11 @@ struct OpeningPage: View {
 
   /// "6." before White's move at ply `ply`, "6..." before Black's.
   private func moveNumber(_ ply: Int) -> String { ply % 2 == 0 ? "\(ply / 2 + 1)." : "\(ply / 2 + 1)..." }
+
+  /// Moves from ply `ply` on, numbered where a move needs it: "O-O 6.Be3 e5".
+  private func numbered(_ moves: [String], from ply: Int) -> String {
+    moves.enumerated().map { i, san in (ply + i) % 2 == 0 ? "\((ply + i) / 2 + 1).\(san)" : san }.joined(separator: " ")
+  }
 
   /// A line's last move with its number: "6...c5".
   private func moveName(_ line: [String]) -> String { moveNumber(line.count - 1) + (line.last ?? "") }
