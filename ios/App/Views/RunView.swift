@@ -179,7 +179,7 @@ struct RunView: View {
         interactive: drawing ? analysis != nil : model.live && !model.held && model.myTurn && !model.thinking && model.pending == nil && model.flash == nil,
         lastMove: model.held ? lastMoveOf(Array(model.introPath.prefix(model.introPly))) : lastMove, highlights: highlights, arrows: arrows, pop: model.pop, popId: model.popCount,
         marks: marks, bothSides: drawing, allowed: drawing || model.fill == nil ? nil : model.fillChoices.map(\.san),
-        slide: drawing ? slid : nil,
+        slide: drawing ? slid : nil, stuckKing: drawing,
         onMove: { move in
           if drawing { analysis?.play(move) } else { model.play(move) }
         }
@@ -578,13 +578,13 @@ struct RunView: View {
       let fen = analysis.fen
       Group {
         if legalMoves(fen).isEmpty {
-          Text(analysis.last?.san.hasSuffix("#") == true ? "Checkmate" : "Stalemate")
+          GameOverLabel(fen: fen, you: model.run.color)
         } else {
           // Nothing is shown, but the line keeps its height so the deck below stays put.
           Text(" ").hidden()
         }
       }
-      .font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.text2).padding(.vertical, 8)
+      .frame(height: 26).padding(.vertical, 6)
     }
   }
 

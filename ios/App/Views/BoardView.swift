@@ -38,6 +38,8 @@ struct BoardView: View {
   var allowed: [String]? = nil
   /// A move part of the way along, as a swipe through a finished game has it.
   var slide: BoardSlide? = nil
+  /// With no legal move on the board, a red glow on the stuck king's square: checkmate or stalemate in analysis.
+  var stuckKing = false
   var onMove: (LegalMove) -> Void
   /// A legal move `allowed` held back.
   var onRefused: (() -> Void)? = nil
@@ -81,6 +83,11 @@ struct BoardView: View {
           .frame(width: cell, height: cell)
           .offset(x: CGFloat(col) * cell, y: CGFloat(row) * cell)
           .onTapGesture { tap(square, pieces) }
+        }
+        if stuckKing, let king = stuckKingSquare(pieces) {
+          let (col, row) = position(king)
+          StuckKingGlow(cell: cell)
+            .offset(x: CGFloat(col) * cell, y: CGFloat(row) * cell)
         }
         if let marks { LensUnderView(marks: marks, cell: cell, position: position) }
         // Under the pieces: an arrow never hides what it points at.
@@ -158,6 +165,13 @@ struct BoardView: View {
         .offset(x: CGFloat(to.col) * cell + 2, y: CGFloat(to.row + step * index) * cell + 2)
       }
     }
+  }
+
+  /// The side to move's king when it has no legal move.
+  private func stuckKingSquare(_ pieces: [String: BoardPiece]) -> String? {
+    guard legalMoves(fen).isEmpty else { return nil }
+    let turn = fenTurn(fen)
+    return pieces.values.first { $0.type == .k && $0.color == turn }?.square
   }
 
   @ViewBuilder private var glowBorder: some View {
@@ -482,5 +496,21 @@ struct BoardSlide: Equatable {
       return (moving, nil, BoardPiece(square: square, type: captured, color: mover.other), amount)
     }
     return (moving, square, nil, amount)
+  }
+}
+
+/// A red glow filling a king's square, multiplied into the square so the piece on it stays dark.
+private struct StuckKingGlow: View {
+  let cell: CGFloat
+  var body: some View {
+    RadialGradient(
+      gradient: Gradient(stops: [
+        .init(color: Theme.bad, location: 0), .init(color: Theme.bad, location: 0.44), .init(color: Theme.bad.opacity(0), location: 1),
+      ]),
+      center: .center, startRadius: 0, endRadius: cell * 0.64)
+      .frame(width: cell, height: cell)
+      .clipped()
+      .blendMode(.multiply)
+      .allowsHitTesting(false)
   }
 }

@@ -86,7 +86,7 @@ struct AnalysisTab: View {
       }
       BoardView(
         fen: fen, orientation: orientation, interactive: true, lastMove: lastMoveOf(visible),
-        arrows: marks == nil ? bestArrow : [], marks: marks, bothSides: true, onMove: { play($0.san) })
+        arrows: marks == nil ? bestArrow : [], marks: marks, bothSides: true, stuckKing: true, onMove: { play($0.san) })
         .clearsLens($lens)
       LensBar(held: $lens)
       if let lens {
@@ -102,8 +102,7 @@ struct AnalysisTab: View {
     strip
     let status = positionStatus(fen)
     if status.gameOver {
-      Text(status.checkmate ? "Checkmate" : status.stalemate ? "Stalemate" : "Draw")
-        .font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.text)
+      GameOverLabel(fen: fen, you: orientation)
         .frame(maxWidth: .infinity).padding(16).background(RoundedRectangle(cornerRadius: 16).fill(Theme.surface)).padding(.top, 8)
     }
     EngineSection(
