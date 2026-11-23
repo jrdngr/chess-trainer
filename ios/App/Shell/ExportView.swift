@@ -3,7 +3,7 @@ import Model
 import SwiftUI
 import UIKit
 
-/// Export: this profile whole, its games as PGN, or its Playbook, each sent
+/// Export: this profile whole, its games with their events, or its Playbook, each sent
 /// through the share sheet as a file.
 struct ExportView: View {
   @Environment(AppStore.self) private var store
@@ -33,7 +33,7 @@ struct ExportView: View {
           ForEach(GameScope.allCases, id: \.self) { scope in
             let picked = gamesIn(games, scope, now: now)
             row(scopeLabel(scope), count: picked.count) {
-              if let tree = store.tree { share(Data(gamesPgn(picked, tree).utf8), "games-\(scope.rawValue)", "pgn") }
+              share(try? exportJson(GamesExport(exportedAt: stamp, games: picked, events: store.state.events)), "games-\(scope.rawValue)", "json")
             }
             .disabled(picked.isEmpty)
           }

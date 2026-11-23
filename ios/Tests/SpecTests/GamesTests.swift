@@ -52,40 +52,23 @@ private func outcome(_ how: Ending, _ color: ChessCore.Color) -> [String] {
   #expect(outcome(.blunder(played: "Qh5", best: nil, lost: 300, line: [], slip: nil), .w) == ["*", "blunder"])
 }
 
-/// A game as PGN: the tags with you on your side, the app's own tags, then numbered moves and the result.
-@Test func gameAsPgn() {
-  let tree = openingTree(bookIndex)
-  // 2026-11-04 12:00:05 UTC.
-  let record = GameRecord(
-    id: "x", mode: .run, at: 1_793_793_605_000, color: .b, picked: Selection(color: .b, opening: LEGACY_ANY_FAVORITE),
-    opening: "e4 c5 d4", moves: ["e4", "c5", "d4", "cxd4"], opened: 3, result: "*", termination: "blunder")
-  let pgn = gamePgn(record, tree)
-  let opening = nodeById(tree, "e4 c5 d4").name
-  #expect(pgn == """
-    [Event "Chess Playbook Run"]
-    [Site "Chess Playbook"]
-    [Date "2026.11.04"]
-    [Round "-"]
-    [White "Chess Playbook Run"]
-    [Black "You"]
-    [Result "*"]
-    [UTCTime "12:00:05"]
-    [Termination "blunder"]
-    [Mode "run"]
-    [Picked "Any Opening"]
-    [Opening "\(opening)"]
-    [Opened "3"]
-
-    1. e4 c5 2. d4 cxd4 *
-
-    """)
-  let mine = GameRecord(
-    id: "y", mode: .freePlay, at: 0, color: .w, picked: Selection(color: .w, opening: ANY_OPENING),
-    opening: "", moves: ["e4"], result: "1-0", termination: "resignation")
-  let lines = gamePgn(mine, tree).split(separator: "\n")
-  #expect(lines.contains("[Picked \"Any Opening\"]"))
-  #expect(!lines.contains { $0.hasPrefix("[Opened") })
-  #expect(gamesPgn([record, mine], tree) == gamePgn(record, tree) + "\n" + gamePgn(mine, tree))
+/// A games export holds each game, newest first, with only the events logged in it, in the order they happened.
+@Test func gamesExportCarriesEachGamesEvents() throws {
+  let games = [game("b", at: 2), game("a", at: 1), game("quiet", at: 0)]
+  let events = [
+    AppEvent(kind: "move", game: "a", san: "e4", lost: 0),
+    AppEvent(kind: "settings", text: "moments on"),
+    AppEvent(kind: "move", game: "b", san: "d4", lost: 181),
+    AppEvent(kind: "eval", game: "a", before: 30),
+    AppEvent(kind: "move", game: "gone", san: "c4"),
+  ]
+  let export = GamesExport(exportedAt: "2026-11-23", games: games, events: events)
+  #expect(export.games.map(\.game.id) == ["b", "a", "quiet"])
+  #expect(export.games[0].events == [events[2]])
+  #expect(export.games[1].events == [events[0], events[3]])
+  #expect(export.games[2].events.isEmpty)
+  let json = try JSONSerialization.jsonObject(with: exportJson(export)) as? [String: Any]
+  #expect(json?["format"] as? String == "chess-playbook-games")
 }
 
 /// A save from before the history loads with none; the history survives a

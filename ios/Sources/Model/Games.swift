@@ -3,20 +3,11 @@ import Foundation
 
 /// The games you played here, newest first: Run, Play and Middlegame
 /// runs, and Play games. Recent reads the openings you picked from them, and
-/// Export writes them out as PGN.
+/// Export writes them out with their events.
 
 /// The mode a game was played in.
 public enum GameMode: String, Sendable, Codable, CaseIterable {
   case run, play, middlegame, freePlay
-
-  public var label: String {
-    switch self {
-    case .run: "Run"
-    case .play: "Play"
-    case .middlegame: "Middlegame"
-    case .freePlay: "Free play"
-    }
-  }
 }
 
 /// One game, whole: every move from the start position.
@@ -100,42 +91,6 @@ public func gamesIn(_ games: [GameRecord], _ scope: GameScope, now: Double) -> [
   }
 }
 
-/// A selection's name for the PGN tags.
-private func pickedName(_ tree: OpeningTree, _ selection: Selection) -> String {
-  selection.opening == ANY_OPENING || selection.opening == LEGACY_ANY_FAVORITE ? "Any Opening" : nodeById(tree, selection.opening).name
-}
-
-/// One game as PGN: the standard tags, the app's own (Mode, Picked, Opening, Opened), then the moves.
-public func gamePgn(_ game: GameRecord, _ tree: OpeningTree) -> String {
-  var calendar = Calendar(identifier: .gregorian)
-  calendar.timeZone = TimeZone(identifier: "UTC")!
-  let d = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: Date(timeIntervalSince1970: game.at / 1000))
-  let opponent = "Chess Playbook \(game.mode.label)"
-  var tags: [(String, String)] = [
-    ("Event", "Chess Playbook \(game.mode.label)"),
-    ("Site", "Chess Playbook"),
-    ("Date", String(format: "%04d.%02d.%02d", d.year!, d.month!, d.day!)),
-    ("Round", "-"),
-    ("White", game.color == .w ? "You" : opponent),
-    ("Black", game.color == .b ? "You" : opponent),
-    ("Result", game.result),
-    ("UTCTime", String(format: "%02d:%02d:%02d", d.hour!, d.minute!, d.second!)),
-    ("Termination", game.termination),
-    ("Mode", game.mode.rawValue),
-    ("Picked", pickedName(tree, game.picked)),
-    ("Opening", nodeById(tree, game.opening).name),
-  ]
-  if game.opened > 0 { tags.append(("Opened", "\(game.opened)")) }
-  let head = tags.map { "[\($0.0) \"\($0.1.replacingOccurrences(of: "\"", with: "'"))\"]" }.joined(separator: "\n")
-  let movetext = [sansToMoveText(game.moves), game.result].filter { !$0.isEmpty }.joined(separator: " ")
-  return "\(head)\n\n\(movetext)\n"
-}
-
-/// Games as one PGN file, newest first.
-public func gamesPgn(_ games: [GameRecord], _ tree: OpeningTree) -> String {
-  games.map { gamePgn($0, tree) }.joined(separator: "\n")
-}
-
 extension AppState {
   /// A game finished: kept at the front of the history.
   public mutating func recordGame(_ game: GameRecord) {
@@ -158,6 +113,26 @@ public struct ProfileExport: Encodable {
     self.exportedAt = exportedAt
     self.profile = profile
     self.state = state
+  }
+}
+
+/// Games for Export, newest first, each with the events logged in it: every move as judged, the engine's look
+/// at each position, the replies, callouts and pawns.
+public struct GamesExport: Encodable {
+  public var format = "chess-playbook-games"
+  public var version = 1
+  public var exportedAt: String
+  public var games: [Entry]
+
+  public struct Entry: Encodable {
+    public var game: GameRecord
+    public var events: [AppEvent]
+  }
+
+  public init(exportedAt: String, games: [GameRecord], events: [AppEvent]) {
+    self.exportedAt = exportedAt
+    let byGame = Dictionary(grouping: events.filter { $0.game != nil }) { $0.game! }
+    self.games = games.map { Entry(game: $0, events: byGame[$0.id] ?? []) }
   }
 }
 
