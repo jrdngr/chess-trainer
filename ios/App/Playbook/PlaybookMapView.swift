@@ -172,7 +172,7 @@ struct PlaybookMapView: View {
     } else if node.owned {
       Button { onOpen(node) } label: {
         HStack(spacing: 8) {
-          Text("\(node.lines) \(node.lines == 1 ? "line" : "lines")").font(.system(size: 15, weight: .semibold))
+          Text("View").font(.system(size: 15, weight: .semibold))
           Icon(name: "chevron", size: 14).opacity(0.85)
         }
       }
