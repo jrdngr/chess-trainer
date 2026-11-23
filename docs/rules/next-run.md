@@ -55,5 +55,6 @@ questions in `Recommendations.swift`; the first step is in
     side is the picked one.
 12. **Play always plays.** A selection with nothing of yours to play in it,
     like a line since deleted, plays the nearest wider selection's run: up
-    the opening to Any Opening, then the side to Either. Home's selection
+    the opening to Any Opening, then the side to Either. Freeform widens
+    the same way when the picked side has no Playbook. Home's selection
     stays as picked. Code: `playableRound`.

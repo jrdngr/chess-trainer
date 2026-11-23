@@ -579,8 +579,9 @@ public func endgameOutcome(
   case .holdFor(let n):
     if yourMoves >= n { return .success(text: "Draw held", mission: true) }
   case .mateIn:
-    // Past the fifty-move rule's worth of moves, the win is gone.
-    if yourMoves >= 50 { return .failure(text: "Out of moves") }
+    break
   }
+  // A Win past the fifty-move rule's worth of moves is gone, whatever its mission.
+  if entry.goal != .hold && yourMoves >= 50 { return .failure(text: "Out of moves") }
   return nil
 }

@@ -67,7 +67,6 @@ struct RunHeaderBar: View {
       if let budget = clockSeconds(model.prefs.clock), model.live, !model.held, model.myTurn {
         RunClock(budget: budget, since: model.turnStarted).id(model.turnStarted)
       }
-      ModeSettingsButton()
       PawnCounter()
     }
   }

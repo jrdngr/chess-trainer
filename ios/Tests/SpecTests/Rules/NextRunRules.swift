@@ -232,5 +232,10 @@ private func playRuns(_ state: inout AppState, _ selection: Selection, _ count: 
 
     let own = Selection(color: .b, opening: ANY_OPENING)
     #expect(playableRound(state, tree, own, history)?.selection == own, "a selection with a run keeps it")
+
+    var free = state
+    free.settings.start = .freeform
+    let freeWhite = try #require(playableRound(free, tree, white, history))
+    #expect(freeWhite.round.free && freeWhite.round.pick.color == .b, "Freeform widens to the side you have")
   }
 }

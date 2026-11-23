@@ -24,18 +24,10 @@ struct MiddlegameView: View {
   @State private var session: MiddlegameSession?
   /// Whether the first run has been tried: until then a straight start shows nothing.
   @State private var opened = false
-  @State private var settings = false
 
   var body: some View {
     Group {
       if let session { content(session) } else { Theme.background.ignoresSafeArea() }
-    }
-    .sheet(isPresented: $settings) {
-      MiddlegameSetupView(tree: tree, onStart: { prefs in
-        settings = false
-        session?.start(prefs)
-      }, onExit: { settings = false }, startLabel: "Restart")
-      .presentationBackground(Theme.background)
     }
     .task {
       let session = self.session ?? made()
@@ -73,7 +65,6 @@ struct MiddlegameView: View {
           onSameLine: session.last == nil ? nil : { if let last = session.last { session.start(store.state.settings.middlegame, line: last) } })
       } else {
         RunView(model: model, onExit: exit, onAnalyze: { onAnalyze(model.run.played, model.run.color) })
-          .environment(\.openModeSettings) { settings = true }
       }
     } else if straight && !opened {
       Theme.background.ignoresSafeArea()

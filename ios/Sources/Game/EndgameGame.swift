@@ -86,13 +86,14 @@ public final class EndgameGame {
     moves.append(move.san)
     fen = move.after
     yourMoves += 1
-    if move.promotion != nil { promoted = true }
+    // Only a queen counts as queening.
+    if move.promotion == .q { promoted = true }
     thinking = true
     store.services.emit(.buzz(10))
     task = store.services.spawn { [weak self, judgeEngine, color] in
       let base = await baseline(judgeEngine, before, moments: false)
       var judged: Judgement? = nil
-      if let base { judged = await judge(judgeEngine, base, san: move.san, uci: move.uci, color: color, moments: false) }
+      if let base { judged = await judge(judgeEngine, base, san: move.san, uci: move.uci, color: color, moments: false, reached: true) }
       guard let self, !Task.isCancelled else { return }
       self.settle(move, before, judged)
     }
@@ -116,9 +117,12 @@ public final class EndgameGame {
       $0.best = judged?.best
       if judged?.missedMate == true { $0.text = "missed mate" }
     }
+    // A move that ends the game ends the round as the game ended: a stalemate you give is "Stalemate".
+    let status = positionStatus(fen)
+    let over = status.checkmate || status.draw
     if let judged {
       evalCp = judged.after
-      if !judged.ok {
+      if !judged.ok && !over {
         let slip = judged.exact ?? ResultSlip(from: resultOf(color, judged.before), to: resultOf(color, judged.after))
         end(.failure(text: slipText(slip.from, slip.to) ?? "Gave it away"))
         return

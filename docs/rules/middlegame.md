@@ -9,7 +9,8 @@ Tests: the `docs/rules/middlegame.md` suite in
 1. **Setup.** The opponent steers toward one of your lines, or a line that
    ends at a gap. Moments and missions are always on.
 2. **The line** is the one the draw picked (see [opponent](opponent.md)),
-   to its end. A draw that finds no line of yours plays nothing out.
+   to its end. A draw that finds no line of yours plays nothing out, even
+   when your Playbook has all but the opening's last move.
 3. **The handoff** plays your line as it stands, then book moves for both
    sides, then the engine at your level once the book runs out.
 4. **Every move played for you stays near your line's eval:** within 100
@@ -24,7 +25,7 @@ Tests: the `docs/rules/middlegame.md` suite in
    side has played 15 moves. Developed means at most one knight or bishop still on its
    starting square, and the king castled, moved or without castling rights.
 7. **A gap line hands over at the gap,** right after the reply you have no
-   answer to.
+   answer to, whether your Playbook keeps that reply or not.
 8. **After the handoff, nothing is prep.** Your prep is never asked, even if
    the game transposes back into your Playbook. The book phase is over
    before it starts. The opponent plays the book, then the engine, never

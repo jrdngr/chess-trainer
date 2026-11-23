@@ -19,7 +19,8 @@ public enum PawnBreaks {
     for color in [ChessCore.Color.w, .b] {
       if let move = await best(engine, fen, color) { breaks[color] = move }
     }
-    await cache.set(key, breaks)
+    // A search cut short by a cancelled task judged on shallow lines: it isn't kept.
+    if !Task.isCancelled { await cache.set(key, breaks) }
     return breaks
   }
 

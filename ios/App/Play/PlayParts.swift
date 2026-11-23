@@ -25,7 +25,6 @@ struct PlayAppBar<Trailing: View>: View {
       .lineLimit(1).frame(maxWidth: .infinity)
       // At least the X's width even when empty, so the title stays centred; wider for what it holds.
       HStack(spacing: 10) { trailing }.fixedSize().frame(minWidth: 38, alignment: .trailing)
-      ModeSettingsButton()
     }
     .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 10).frame(minHeight: 56)
   }

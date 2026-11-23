@@ -20,8 +20,12 @@ Play run are in [past prep](past-prep.md).
    fifty-move count starts afresh.
 4. **A round ends at its goal.**
    - Mate wins, and meets a mate mission when it comes within its count. Being mated loses.
-   - A draw holds a Hold Draw and loses a Win, as "Stalemate" or "Drawn".
-   - A queened pawn wins while the win still stands.
+   - A draw holds a Hold Draw and loses a Win, as "Stalemate" or "Drawn",
+     even when your own move gave it.
+   - A pawn promoted to a queen wins while the win still stands; another
+     piece doesn't count.
+   - Every move is judged by the endgame rules (see [past prep](past-prep.md)
+     rule 8), whatever the material.
    - Holding for the mission's moves holds.
    - A Win still going after 50 of your moves is out of moves.
 5. **Each position has its own schedule, in Endgame rounds.** A success

@@ -161,6 +161,32 @@ private func handoffRun() throws -> (session: RunSession, tree: OpeningTree) {
     #expect(!yours.gap)
   }
 
+  /// Rule 2: a draw that falls back on the opening's own moves plays nothing out, even when your Playbook has all
+  /// but its last move.
+  @Test func anOpeningOneMoveShortOfYoursIsNotYourLine() throws {
+    let tree = openingTree(bookIndex)
+    let ruy = rep(.w, ["e4 e5 Nf3 Nc6 Bb5 a6 Ba4"])
+    let italian = try #require(deepestNodeAlong(tree, line("e4 e5 Nf3 Nc6 Bc4")))
+    for steer in [RunSteer.lines, .gaps] {
+      var opts = StartOptions(steer: steer, tree: tree, reps: [ruy], node: italian, color: .w)
+      opts.seed = 1
+      let begun = try #require(startRun(opts))
+      #expect(middlegameLine(begun, [ruy]).sans.isEmpty)
+    }
+  }
+
+  /// Rule 7: a reply your Playbook keeps with no answer is a gap too.
+  @Test func aKeptReplyWithNoAnswerIsAGap() throws {
+    let tree = openingTree(bookIndex)
+    let white = rep(.w, ["e4 e5 Nf3 Nc6", "e4 c5 Nf3", "e4 e6 d4", "e4 c6 d4"])
+    var opts = StartOptions(steer: .gaps, tree: tree, reps: [white], node: tree.root, color: .w)
+    opts.seed = 1
+    let begun = try #require(startRun(opts))
+    try #require(begun.state.run.target == line("e4 e5 Nf3 Nc6"), "\(begun.state.run.target)")
+    let drawn = middlegameLine(begun, [white])
+    #expect(drawn.sans == line("e4 e5 Nf3 Nc6") && drawn.gap)
+  }
+
   /// Rule 7.
   @Test func aGapLineIsHandedOverAtTheGap() async {
     // Your line to 7.Bd3, then Black's 7...c6, which your Playbook has no answer for: you take it from there.

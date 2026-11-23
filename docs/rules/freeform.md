@@ -10,7 +10,8 @@ Tests: the `docs/rules/freeform.md` suite in
    dealt.
 2. **The side is the picked one.** On Either it is the side the
    recommendation picks (see [next run](next-run.md)); with nothing to
-   recommend, there is no run.
+   recommend, there is no run. A picked side with no Playbook has no run
+   either, and Play widens the selection (next run rule 12).
 3. **Any of your lines is yours to play.** No line is drawn. At each of its
    turns the opponent picks among the replies your Playbook holds there, so
    it follows you into whichever line you play.

@@ -60,6 +60,8 @@ public final class MiddlegameSession {
       return
     }
     options.color = drawn.color == .w ? .w : .b
+    // A run still in play ends where it stands, and is recorded, before the next one.
+    if let model, model.finish == nil { model.endRound() }
     model?.stop()
     model = nil
     last = drawn

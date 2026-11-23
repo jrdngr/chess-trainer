@@ -35,13 +35,15 @@ private func source(_ state: AppState, _ tree: OpeningTree, _ node: OpeningNode,
     #expect(round.aim == nil)
   }
 
-  /// Rule 2: Freeform plays the picked side even with nothing to recommend there; only Either takes the recommendation's side.
+  /// Rule 2: Freeform plays the picked side when it has a Playbook; only Either takes the recommendation's side.
   @Test func freeformPlaysThePickedSide() throws {
     let tree = openingTree(bookIndex)
     var state = AppState()
     state.settings.start = .freeform
     state.addLine(state.ensurePlaybook(.b), line("e4 c5 d4 cxd4"), .fixed(.book))
     state.addLine(state.ensurePlaybook(.b), line("d4 d5"), .fixed(.book))
+    #expect(nextRound(state, tree, Selection(color: .w, opening: ANY_OPENING), AutoHistory()) == nil, "no White Playbook")
+    state.addLine(state.ensurePlaybook(.w), line("e4 e5"), .fixed(.book))
     let white = try #require(nextRound(state, tree, Selection(color: .w, opening: ANY_OPENING), AutoHistory()))
     #expect(white.free && white.pick.color == .w)
     let either = try #require(nextRound(state, tree, Selection(color: .either, opening: ANY_OPENING), AutoHistory()))

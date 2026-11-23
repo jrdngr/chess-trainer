@@ -235,11 +235,16 @@ public func middlegamePrefs(_ prefs: RunPrefs) -> RunPrefs {
 /// The line a Middlegame run plays out: the one Run's draw picked, to its end.
 /// Empty when the draw found no line of yours and fell back on the opening's own moves.
 /// A gap's line is yours up to the reply your Playbook has no answer for, its last move.
+/// A gap ends on the opponent's reply, so it is your move after it: one your Playbook keeps with no answer, or one
+/// it doesn't have. A line one move short of yours that ends on your own move is the opening's, not yours.
 public func middlegameLine(_ begun: RunBegun, _ reps: [Playbook]) -> (sans: [String], gap: Bool) {
   let run = begun.state.run
   guard let rep = reps.first(where: { $0.id == run.playbookId }), !run.target.isEmpty else { return ([], false) }
-  if nodeAtLine(rep, run.target) != nil { return (run.target, false) }
-  if nodeAtLine(rep, Array(run.target.dropLast())) != nil { return (run.target, true) }
+  let yourTurnAfter = run.target.count % 2 == (run.color == .w ? 0 : 1)
+  if let tip = nodeAtLine(rep, run.target) {
+    return (run.target, yourTurnAfter && childrenOf(rep, tip.id).isEmpty)
+  }
+  if yourTurnAfter && nodeAtLine(rep, Array(run.target.dropLast())) != nil { return (run.target, true) }
   return ([], false)
 }
 

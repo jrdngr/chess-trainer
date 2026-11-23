@@ -166,6 +166,8 @@ private func coordsOf(_ square: String) -> (Int, Int) {
     let pawn = ENDGAME_LIBRARY.first { $0.id == "kp-square" }!
     #expect(endgameOutcome(pawn, "Q7/8/8/8/8/8/5k2/7K b - - 0 1", you: .w, yourMoves: 4, promoted: true, stillWon: true) == .success(text: "Queened", mission: true))
     #expect(endgameOutcome(pawn, "Q7/8/8/8/8/8/5k2/7K b - - 0 1", you: .w, yourMoves: 4, promoted: true, stillWon: false) == nil)
+    #expect(endgameOutcome(pawn, "8/8/4k3/8/8/4K3/4P3/8 b - - 0 1", you: .w, yourMoves: 50, promoted: false, stillWon: true) == .failure(text: "Out of moves"),
+      "a Win of any mission is out of moves after 50 of yours")
   }
 
   /// Rule 8: first clear, first mission and mastery each pay once; mastery takes 3 days in a row.

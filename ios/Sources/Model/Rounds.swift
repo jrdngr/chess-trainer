@@ -123,6 +123,8 @@ func freeRound(_ state: AppState, _ tree: OpeningTree, _ selection: Selection, _
     guard let recommended else { return nil }
     color = recommended.color
   }
+  // A side with no Playbook has nothing to play: the selection widens, as in Drill.
+  guard state.playbookList.contains(where: { $0.color == color && !$0.nodes.isEmpty }) else { return nil }
   let pick = Recommendation(focus: recommended?.focus ?? .test, opening: nodeById(tree, selection.opening), color: color)
   return AutoRound(pick: pick, at: nil, free: true, due: dueGapLines(state, tree, selection, color: color))
 }

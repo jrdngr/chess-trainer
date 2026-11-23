@@ -36,7 +36,8 @@ public enum PlanChecks {
     let snap = await engine.analyse(fen, EngineLimits(depth: depth, movetime: thinkMs, multiPv: 1, searchmoves: uci.map { [$0] }))
     guard let line = snap.lines.first, let white = whiteCp(cp: line.cp, mate: line.mate) else { return nil }
     let score = me == .w ? white : -white
-    await cache.set(key, score)
+    // A search cut short by a cancelled task isn't kept.
+    if !Task.isCancelled { await cache.set(key, score) }
     return score
   }
 
