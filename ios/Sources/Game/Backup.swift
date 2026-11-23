@@ -5,7 +5,8 @@ import Model
 public protocol BackupDrive: Sendable {
   /// Write one profile's save (if given) as its latest and as `day`'s snapshot, then the device's
   /// manifest, then remove the files it no longer lists. False when the drive is off or a write failed.
-  func write(folder: String, profileId: String?, save: Data?, day: String, manifest: BackupManifest, removing gone: Set<String>) async -> Bool
+  /// `snapshot` false writes the latest save but leaves the day's snapshot as it is.
+  func write(folder: String, profileId: String?, save: Data?, snapshot: Bool, day: String, manifest: BackupManifest, removing gone: Set<String>) async -> Bool
   /// Every device's manifest, given the manifest files found.
   func manifests(_ urls: [URL]) async -> [DeviceBackup]
   /// The first of `files` in a device's folder that this version can read, and its name.
@@ -21,19 +22,23 @@ public struct BackupDevice: Codable, Equatable, Sendable {
   /// Profiles whose save failed to load here: not backed up until restored or reset, so the
   /// fresh start they opened on doesn't replace their backup.
   public var held: [String] = []
+  /// Snapshot files a restore keeps as they were: the copy from just before it, kept for the
+  /// rest of that day so the restore can be undone.
+  public var kept: [String] = []
 
   public init(folder: String, manifest: BackupManifest) {
     self.folder = folder
     self.manifest = manifest
   }
 
-  enum CodingKeys: String, CodingKey { case folder, manifest, held }
+  enum CodingKeys: String, CodingKey { case folder, manifest, held, kept }
 
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
     folder = try c.decode(String.self, forKey: .folder)
     manifest = try c.decode(BackupManifest.self, forKey: .manifest)
     held = try c.decodeIfPresent([String].self, forKey: .held) ?? []
+    kept = try c.decodeIfPresent([String].self, forKey: .kept) ?? []
   }
 }
 

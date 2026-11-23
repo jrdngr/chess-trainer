@@ -19,14 +19,14 @@ actor ICloudBackup: BackupDrive {
 
   /// Write one profile's save (if given) as its latest and as `day`'s snapshot, then the device's
   /// manifest, then remove the files it no longer lists. False when iCloud is off or a write failed.
-  func write(folder: String, profileId: String?, save: Data?, day: String, manifest: BackupManifest, removing gone: Set<String>) -> Bool {
+  func write(folder: String, profileId: String?, save: Data?, snapshot: Bool, day: String, manifest: BackupManifest, removing gone: Set<String>) -> Bool {
     guard let root = root() else { return false }
     let dir = root.appending(path: folder)
     do {
       try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
       if let profileId, let save {
         try coordinatedWrite(save, to: dir.appending(path: BackupManifest.saveFile(profileId)))
-        try coordinatedWrite(save, to: dir.appending(path: BackupManifest.snapshotFile(profileId, day)))
+        if snapshot { try coordinatedWrite(save, to: dir.appending(path: BackupManifest.snapshotFile(profileId, day))) }
       }
       try coordinatedWrite(JSONEncoder().encode(manifest), to: dir.appending(path: BackupManifest.file))
     } catch {
@@ -56,7 +56,7 @@ actor ICloudBackup: BackupDrive {
     guard let root = root() else { return nil }
     for file in files {
       if let data = coordinatedRead(root.appending(path: folder).appending(path: file)),
-        (try? decodeSave(data)) != nil
+        isCurrentSave(data)
       {
         return (file, data)
       }

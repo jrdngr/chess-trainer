@@ -50,6 +50,8 @@ public final class AppStore {
   @ObservationIgnored private var pendingBackup: Task<Void, Never>?
   /// The last iCloud write, so the next one waits its turn.
   @ObservationIgnored private var lastWrite: Task<Void, Never>?
+  /// The saves are read: until then `state` is a placeholder, never backed up.
+  @ObservationIgnored private var loaded = false
 
   private let deviceFile = "backup-device.json"
   private let profilesFile = "profiles.json"
@@ -82,6 +84,7 @@ public final class AppStore {
       catalog = pickerCatalog(built.1)
     }
     readState()
+    loaded = true
     if fresh && backup != nil { Task { restoreOffer = await deviceBackups() ?? [] } }
   }
 
@@ -223,11 +226,11 @@ public final class AppStore {
   }
 
   /// Back up the profile in use now: on leaving the app, and before opening another profile.
-  /// A profile whose save failed to load stays held.
+  /// A profile whose save failed to load stays held, and nothing goes before the saves are read.
   public func backUpNow() {
     pendingBackup?.cancel()
     pendingBackup = nil
-    guard !saveBlocked, !backupHeld, let data = try? JSONEncoder().encode(state) else { return }
+    guard loaded, !saveBlocked, !backupHeld, let data = try? JSONEncoder().encode(state) else { return }
     send(profileId: profiles.active, save: data)
   }
 
@@ -253,6 +256,9 @@ public final class AppStore {
     let day = backupDay(now)
     let old = device.manifest
     device.manifest = old.updated(profiles, saved: profileId, at: now, day: day)
+    // A kept snapshot lasts the day it was kept.
+    device.kept = device.kept.filter { $0.hasSuffix("-\(day).json") }
+    let snapshot = profileId.map { !device.kept.contains(BackupManifest.snapshotFile($0, day)) } ?? true
     saveDevice()
     let folder = device.folder
     let manifest = device.manifest
@@ -260,10 +266,14 @@ public final class AppStore {
     let previous = lastWrite
     lastWrite = Task { [weak self] in
       await previous?.value
-      let written = await drive.write(folder: folder, profileId: profileId, save: save, day: day, manifest: manifest, removing: gone)
+      let written = await drive.write(
+        folder: folder, profileId: profileId, save: save, snapshot: snapshot, day: day, manifest: manifest, removing: gone)
       self?.iCloudOff = !written
     }
   }
+
+  /// Waits for the backup writes sent so far.
+  public func backupsWritten() async { await lastWrite?.value }
 
   /// Backups to restore from, this device's own first; nil when iCloud is off.
   public func deviceBackups() async -> [DeviceBackup]? {
@@ -291,6 +301,12 @@ public final class AppStore {
     restoreOffer = []
     save()
     backUpNow()
+    // The profile it replaces is backed up as it was, and today's snapshot keeps that copy
+    // for the rest of the day, so the restore can be undone.
+    let replaced = backed.id == profiles.active ? nil : try? storage.read(ProfileList.savePath(backed.id))
+    if let replaced, !device.held.contains(backed.id) { send(profileId: backed.id, save: replaced) }
+    let hadCopy = backed.id == profiles.active ? (loaded && !saveBlocked && !backupHeld) : (replaced != nil && !device.held.contains(backed.id))
+    if hadCopy { device.kept.append(BackupManifest.snapshotFile(backed.id, backupDay(Env.now()))) }
     profiles.restore(backed)
     release(backed.id)
     writeSave(found.data, backed.id)

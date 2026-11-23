@@ -24,4 +24,15 @@ import Testing
     #expect(try decodeSave(JSONEncoder().encode(old)) == AppState())
     #expect(try decodeSave(Data(#"{"pawns":3}"#.utf8)) == AppState())
   }
+
+  /// Rule 3: only a save at the current version that reads whole can be restored.
+  @Test func onlyCurrentSavesRestore() throws {
+    var state = AppState()
+    state.pawns = 50
+    #expect(isCurrentSave(try JSONEncoder().encode(state)))
+    state.version = SAVE_VERSION - 1
+    #expect(!isCurrentSave(try JSONEncoder().encode(state)))
+    #expect(!isCurrentSave(Data(#"{"pawns":3}"#.utf8)))
+    #expect(!isCurrentSave(Data("not json".utf8)))
+  }
 }
