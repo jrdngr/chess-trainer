@@ -82,6 +82,13 @@ public func countsTowardMarker(pastPrep: Int, endgame: Bool) -> Bool {
   !endgame && pastPrep < DISTANCE_MAX_MARKERS * DISTANCE_EVERY
 }
 
+/// A move that takes the piece your previous move moved straight back to the square it left:
+/// Nd7 after Nc5 from d7. It doesn't count toward a distance marker.
+public func goesBack(from: String, to: String, after previous: (from: String, to: String)?) -> Bool {
+  guard let previous else { return false }
+  return from == previous.to && to == previous.from
+}
+
 /// Your moves toward the next distance marker, 0 to 4, and what it pays.
 public func nextMarker(_ pastPrep: Int, middlegame: Bool = false) -> (moves: Int, pays: Int) {
   (pastPrep % DISTANCE_EVERY, distancePawns(pastPrep / DISTANCE_EVERY + 1, middlegame: middlegame))

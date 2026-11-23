@@ -349,6 +349,7 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     s.lastScored = judged.after
     let score = prefs.moveScores && swing != nil ? moveScore(swing!) : nil
     let landed = applySan(run.fen, judged.san)
+    let previous = s.lastJudged.flatMap { $0.ply == run.played.count - 2 ? $0 : nil }
     if let landed { s.lastJudged = JudgedMark(ply: run.played.count, san: judged.san, from: landed.from, to: landed.to, swing: swing) }
     // Moments are a thing past your prep; a book move gives nothing away.
     var scored = judgedExtras(s.state.extras, ExtrasPrefs(prefs), run.color, JudgedMove(
@@ -382,8 +383,10 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
       let mine = [judged.before, judged.after].map { run.color == .w ? $0 : -$0 }
       s.endgameLow = ([s.endgameLow].compactMap { $0 } + mine).min()
     }
-    // Every 5 of your moves past prep is a distance marker, until the endgame or the last marker.
-    if expected.isEmpty && countsTowardMarker(pastPrep: s.pastPrep, endgame: inEndgame) {
+    // Every 5 of your moves past prep is a distance marker, until the endgame or the last marker;
+    // a piece sent straight back where it came from doesn't count.
+    let back = landed.map { goesBack(from: $0.from, to: $0.to, after: previous.map { ($0.from, $0.to) }) } ?? false
+    if expected.isEmpty && !back && countsTowardMarker(pastPrep: s.pastPrep, endgame: inEndgame) {
       s.pastPrep += 1
       if s.pastPrep % DISTANCE_EVERY == 0 {
         let award = PawnAward(.distance, .marker, count: distancePawns(s.pastPrep / DISTANCE_EVERY, middlegame: s.middlegame))

@@ -63,7 +63,8 @@ target. Tests: the `docs/rules/pawns.md` suite in
    each move toward the next marker, and a pawn at its end that brightens
    with each step and that the marker's pawns pop out of. In Middlegame, where every move is past prep,
    they pay 15 each. Growth moves and your prep's own moves don't
-   count. Markers stop once the game reaches endgame rules, and after the
+   count, nor does a move that sends the piece your last move moved straight
+   back to the square it left (Nc5, then Nd7 from c5). Markers stop once the game reaches endgame rules, and after the
    run's 10th (200 pawns in all); the bar goes with them.
 10. **Held the draw** pays 20, under the least a mate pays, when a game ends
    drawn and, once it reached endgame rules, you stood at −3 or worse (a

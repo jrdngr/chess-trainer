@@ -225,6 +225,22 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
     #expect(judgedMove(ending, ctx, judged("d4"), 1, 0).session.pastPrep == 6)
   }
 
+  /// Rule 9: a move sending the piece your last move moved straight back to where it came from
+  /// doesn't count toward a marker; any other move does.
+  @Test func goingBackDoesntCountTowardAMarker() throws {
+    #expect(goesBack(from: "d7", to: "c5", after: ("c5", "d7")))
+    #expect(!goesBack(from: "d7", to: "b6", after: ("c5", "d7")), "on to a new square")
+    #expect(!goesBack(from: "c5", to: "d7", after: nil), "no move of yours before it")
+    var s = prepRanOut(try session(at: line("e4 e5 Nf3 Nc6 Bb5 a6")), bookIndex).session
+    var counted: [Int] = []
+    for (mine, theirs) in [("Ba4", "Nf6"), ("Bb5", "Be7"), ("Ba4", "b5"), ("Bb3", "O-O")] {
+      s = judgedMove(s, ctx, judged(mine), 1, 0).session
+      counted.append(s.pastPrep)
+      s = engineMove(s, theirs).session
+    }
+    #expect(counted == [1, 1, 1, 2], "Bb5 and Ba4 go straight back; Bb3 moves on")
+  }
+
   /// Rule 10: a draw pays 20 when, under endgame rules, you stood at −3 or worse.
   @Test func heldDrawsPay() throws {
     #expect(heldDraw(low: -300) && !heldDraw(low: -299) && !heldDraw(low: nil))
