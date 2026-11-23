@@ -54,11 +54,11 @@ private let ROOKS = "r1r3k1/5ppp/8/8/8/8/5PPP/R1R3K1 w - - 0 1"
 
   /// Rule 3: the blunder line, and a blunder ends the run.
   @Test func blunderEndsTheRun() throws {
-    #expect(blunderLimit(.w, 0) == 80)
-    #expect(blunderLimit(.w, 300) == 130)
-    #expect(blunderLimit(.b, -300) == 130)
-    #expect(blunderLimit(.b, 300) == 80)
-    #expect(judgeByEval(.w, 0, -80).ok && !judgeByEval(.w, 0, -81).ok)
+    #expect(blunderLimit(.w, 0) == 70)
+    #expect(blunderLimit(.w, 300) == 120)
+    #expect(blunderLimit(.b, -300) == 120)
+    #expect(blunderLimit(.b, 300) == 70)
+    #expect(judgeByEval(.w, 0, -70).ok && !judgeByEval(.w, 0, -71).ok)
     let step = judgedMove(try prepDone(), ctx, judged("h3", lost: 200, ok: false), 1, 0)
     guard case .blunder(played: "h3", _, _, _, _) = step.session.ending else { Issue.record("no blunder"); return }
   }
@@ -76,6 +76,19 @@ private let ROOKS = "r1r3k1/5ppp/8/8/8/8/5PPP/R1R3K1 w - - 0 1"
     let quiet = ["a2a3", "e7e5", "b2b3", "b8c6"]
     #expect(punishment(fen, .w, yours: quiet, best: best, mated: 4) == ["e7e5", "b2b3", "b8c6"], "a mate within 4 moves")
     #expect(punishment(fen, .w, yours: quiet, best: best, mated: 5) == nil, "a mate further off is no reason")
+  }
+
+  /// Rule 3: material is counted against the best line, with each trade finished. After 1.e4 d5 2.exd5, not taking
+  /// back leaves Black a pawn behind Qxd5, though the board is no worse than now; after 1.e4 d5, a line cut off
+  /// before White takes back on e4 counts that trade finished.
+  @Test func materialIsCountedAgainstTheBestLineWithTradesFinished() throws {
+    let taken = try #require(walkSan(line("e4 d5 exd5")).fens.last)
+    let quiet = ["a7a6", "c2c4", "b8d7", "b1c3", "g8f6", "g1f3"]
+    let retake = ["d8d5", "b1c3", "d5a5", "g1f3", "g8f6"]
+    #expect(punishment(taken, .b, yours: quiet, best: retake, mated: nil) == ["c2c4"], "the pawn not taken back")
+    let fen = try #require(walkSan(line("e4 d5")).fens.last)
+    let best = ["e4d5", "d8d5", "b1c3", "d5a5"]
+    #expect(punishment(fen, .w, yours: ["b1c3", "d5e4"], best: best, mated: nil) == nil, "Nxe4 is still to come")
   }
 
   /// Rules 4 and 5: past a clean prep, a common move costing 40 or less is a book move and moves no card.

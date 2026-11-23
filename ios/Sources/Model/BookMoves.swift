@@ -8,7 +8,7 @@ import ChessCore
 /// opponent rolls and the book phase after your prep take.
 public let BOOK_SHARE = 0.05
 /// Centipawns given away past which a move is a mistake: the line a run ends at.
-public let BLUNDER_LIMIT: Double = 80
+public let BLUNDER_LIMIT: Double = 70
 
 /// How many moves at the start of a line the book has, for either side.
 public func bookLength(_ index: ReferenceIndex, _ sans: [String]) -> Int {

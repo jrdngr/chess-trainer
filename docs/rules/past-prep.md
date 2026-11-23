@@ -1,7 +1,8 @@
 # Misses, blunders and the book after your prep
 
 How a run judges your moves and when it ends. Code: `RunController.swift`,
-`Run.swift`, `judgeByEval` (`OpeningRun.swift`) and `Endgame.swift`.
+`Run.swift`, `judgeByEval` (`OpeningRun.swift`), `Punishment.swift` and
+`Endgame.swift`.
 Tests: the `docs/rules/past-prep.md` suite in
 `Tests/SpecTests/Rules/PastPrepRules.swift`.
 
@@ -12,14 +13,18 @@ Tests: the `docs/rules/past-prep.md` suite in
    green arrow, and the game goes on.
 3. **A run ends at a blunder, or when the game is over.** Past or off your
    prep, a move is a blunder when it gives away more than the blunder line
-   and the engine's line after it shows why: by your third move after it
-   you are a pawn or more down, against the position before your move and
-   against the engine's best line, and still down where the line ends; or
-   the line mates you within 4 moves. The line is 80 centipawns, plus 0.25
-   for each centipawn you lead by past +1, judged at depth 14. A costly
-   move the line shows no reason for stands, with its score. The engine's
-   line, up to the move that leaves you down, is kept to show on the
-   board. Checkmate and draws end the run too. The X ends it at any point.
+   and the engine's line after it shows why: it leaves you a pawn or more
+   behind the engine's best line by your third move after it, and still a
+   pawn or more behind at your fifth (or where either line ends, if
+   sooner); or the line mates you within 4 moves. Material is counted
+   after each move with the trade on that move's square finished: each
+   side takes back only while that gains. So not taking back counts, and a
+   line cut off mid-trade counts the trade done. The line is 70
+   centipawns, plus 0.25 for each centipawn you lead by past +1, judged at
+   depth 14. A costly move the line shows no reason for stands, with its
+   score. The engine's line, up to the move that leaves you behind, is
+   kept to show on the board. Checkmate and draws end the run too. The X
+   ends it at any point.
 4. **The book phase.** Once your prep runs out without a miss, the run is in
    the book phase for as long as the position is in the book.
 5. **A book move** is played in at least 5% of strong players' games there
@@ -31,7 +36,7 @@ Tests: the `docs/rules/past-prep.md` suite in
 8. **Endgame rules** start once the game has reached at most 8 points of
    material (knight or bishop 1, rook 2, queen 4) and stay on after. A move
    then fails only when the result it keeps is worse than before and it also
-   gives away more than 80 centipawns. Scores are held within ±600
+   gives away more than 70 centipawns. Scores are held within ±600
    centipawns for this, and +300 or better counts as a win. Where a
    tablebase knows the exact results, any worse result fails.
 9. **A missed mate in a won ending doesn't end the run.** It says "Missed
