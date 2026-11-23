@@ -541,7 +541,7 @@
     }
   },
   "src/model/openingRun.ts": {
-    "BLUNDER_LIMIT": 80,
+    "BLUNDER_LIMIT": 70,
     "BOOK_SHARE": 0.05,
     "CLOCK_MODES": [
       "off",
