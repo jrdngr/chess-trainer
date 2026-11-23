@@ -13,7 +13,9 @@ and `Missions.swift`. Tests: the `docs/rules/scoring.md` suite in
    moments found in a row.
 2. **A missed moment is a missed chance, not a blunder.** Your move is
    judged against the second-best move: the second best itself, or a move
-   within the blunder line of it, keeps the game going. A pink arrow shows
+   within the blunder line of it, keeps the game going. The reason a costly
+   one needs (past-prep rule 3) is looked for against the second best's
+   line too, not the tactic you missed. A pink arrow shows
    the move you missed until your next move, and the callout names it
    ("Missed Nxe6"). A mate missed in an ending shows the same way.
 3. **The first mission** is set where your prep runs out, from the eval:

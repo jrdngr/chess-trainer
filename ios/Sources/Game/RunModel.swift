@@ -583,7 +583,8 @@ public final class RunModel {
     }
     pending = move
     searchReply(after: move.after)
-    let fen = run.fen, color = run.color, moments = prefs.moments, reached = endgameOn
+    // Moments only count past your prep: a miss at a prepared position answers to the best move.
+    let fen = run.fen, color = run.color, moments = prefs.moments && prepNow.isEmpty, reached = endgameOn
     spawn { [weak self] in
       guard let self else { return }
       var base = self.baseline?.fen == fen ? self.baseline : nil

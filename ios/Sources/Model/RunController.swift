@@ -349,7 +349,8 @@ public func judgedMove(_ session: RunSession, _ ctx: RunContext, _ judged: Judge
     s.lastScored = judged.after
     let score = prefs.moveScores && swing != nil ? moveScore(swing!) : nil
     let landed = applySan(run.fen, judged.san)
-    let previous = s.lastJudged.flatMap { $0.ply == run.played.count - 2 ? $0 : nil }
+    // Your last move, however it was played: judged, prepared, added or handed off.
+    let previous = run.played.count >= 2 ? walkSan(Array(run.played.dropLast())).moves.last : nil
     if let landed { s.lastJudged = JudgedMark(ply: run.played.count, san: judged.san, from: landed.from, to: landed.to, swing: swing) }
     // Moments are a thing past your prep; a book move gives nothing away.
     var scored = judgedExtras(s.state.extras, ExtrasPrefs(prefs), run.color, JudgedMove(

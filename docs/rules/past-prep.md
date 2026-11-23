@@ -38,7 +38,8 @@ Tests: the `docs/rules/past-prep.md` suite in
    and never moves a card.
 6. **Any other move ends the book phase,** and costs nothing for it. So
    does a position the book has nothing for.
-7. **Moments only count past your prep.**
+7. **Moments only count past your prep.** A miss at a prepared position
+   is judged against the best move, never the second best.
 8. **Endgame rules** start once the game has reached at most 8 points of
    material (knight or bishop 1, rook 2, queen 4) and stay on after. A move
    then fails only when the result it keeps is worse than before and it also

@@ -89,7 +89,8 @@ public func judge(
   }()
 
   @Sendable func weigh(_ snap: EngineSnapshot) -> (
-    ok: Bool, lost: Double, before: Double, after: Double, found: Bool, reply: String?, missedMate: Bool, yours: EngineLine, top: EngineLine
+    ok: Bool, lost: Double, before: Double, after: Double, found: Bool, reply: String?, missedMate: Bool, yours: EngineLine, top: EngineLine,
+    ref: EngineLine
   )? {
     guard let yours = snap.lines.first(where: { $0.pv.first == uci }) else { return nil }
     let top = theirs.flatMap { t in snap.lines.first { $0.pv.first == t } } ?? (theirs == nil ? yours : nil)
@@ -110,7 +111,9 @@ public func judge(
     // In an endgame, a mate the engine had and your move doesn't keep: the run goes on, but you hear about it.
     func mates(_ line: EngineLine) -> Bool { line.mate.map { ($0 > 0) == (color == .w) } ?? false }
     let missedMate = endgame && mates(top) && !mates(yours)
-    return (ok, result.lost, before, yourCp, found, yours.pv.count > 1 ? yours.pv[1] : nil, missedMate, yours, top)
+    // The line your move answers to: at a moment missed, the next best's, as for its cost.
+    let ref = moment && !found ? next ?? top : top
+    return (ok, result.lost, before, yourCp, found, yours.pv.count > 1 ? yours.pv[1] : nil, missedMate, yours, top, ref)
   }
 
   /// The engine's line after your move, where it shows why your move is a blunder: see `punishment`.
@@ -119,8 +122,8 @@ public func judge(
     return punishment(base.fen, color, yours: yours.pv, best: top.pv, mated: mated)
   }
   /// A costly move counts as a blunder: in an endgame by its result, before it only with a reason.
-  @Sendable func fails(_ verdict: (ok: Bool, yours: EngineLine, top: EngineLine)) -> Bool {
-    !verdict.ok && (endgame || exact != nil || reason(verdict.yours, verdict.top) != nil)
+  @Sendable func fails(_ verdict: (ok: Bool, yours: EngineLine, ref: EngineLine)) -> Bool {
+    !verdict.ok && (endgame || exact != nil || reason(verdict.yours, verdict.ref) != nil)
   }
 
   let searchmoves = second != nil ? [theirs!, second!, uci] : theirs != nil ? [theirs!, uci] : [uci]
@@ -131,7 +134,7 @@ public func judge(
     // A sound move, a costly one the engine's line shows no reason for, or one the tablebase or a known ending
     // already settles, is settled at the quick check.
     guard let verdict = weigh(snap) else { return false }
-    return (!fails((verdict.ok, verdict.yours, verdict.top)) || theirs == nil || exact != nil || book != nil) && (clock.elapsed >= THINK_MS || snap.depth >= QUICK_DEPTH)
+    return (!fails((verdict.ok, verdict.yours, verdict.ref)) || theirs == nil || exact != nil || book != nil) && (clock.elapsed >= THINK_MS || snap.depth >= QUICK_DEPTH)
   }
   var verdict = weigh(snap)
   // A search cut short can leave out your move's line, or end it after your move, so it can't show why a costly move
@@ -172,7 +175,7 @@ public func judge(
   // Before the endgame, a blunder needs a reason the engine's line can show: material lost soon, or a mate.
   // With no line from the engine there is no reason to show, so the move stands.
   if !judged.ok && !endgame && exact == nil {
-    if let verdict, let line = reason(verdict.yours, verdict.top) {
+    if let verdict, let line = reason(verdict.yours, verdict.ref) {
       judged.line = line
     } else {
       judged.ok = true

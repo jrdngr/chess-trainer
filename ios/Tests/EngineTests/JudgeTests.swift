@@ -46,6 +46,20 @@ struct JudgeTests {
     #expect(far.depth == CONFIRM_DEPTH)
   }
 
+  /// At a missed moment, a quiet move's reason is looked for against the next best's line, not the tactic missed:
+  /// after 1.e4 Nc6 2.Nf3 Nb4 3.a3 Nd5, 4.h3 (instead of exd5) is 80 under 4.d3 but loses nothing to it, so it stands.
+  @Test func aQuietMoveAtAMissedMomentStands() async throws {
+    let fen = try #require(walkSan(["e4", "Nc6", "Nf3", "Nb4", "a3", "Nd5"]).fens.last)
+    let base = Baseline(fen: fen, cp: 300, best: "exd5", bestUci: "e4d5", second: (cp: 20, uci: "d2d3"))
+    #expect(base.isMomentFor(.w))
+    let engine = TableEngine(
+      scores: ["e4d5": 300, "d2d3": 20, "h2h3": -60],
+      lines: ["e4d5": ["e4d5", "e7e6", "d5e6"], "h2h3": ["h2h3", "g8f6", "d2d3", "d7d6", "b1c3"]])
+    let judged = await judge(engine, base, san: "h3", uci: "h2h3", color: .w, moments: true)
+    #expect(judged.moment && !judged.found)
+    #expect(judged.ok, "a missed chance, not a blunder")
+  }
+
   /// A costly move whose line loses no material stands, with what it cost.
   @Test func aCostlyMoveWithoutAReasonStands() async throws {
     let far = try await judged("O-O", TableEngine(scores: Self.scores))

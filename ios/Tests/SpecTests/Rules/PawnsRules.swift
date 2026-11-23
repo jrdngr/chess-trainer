@@ -239,6 +239,9 @@ private func prepPlayed(_ times: [Double]) throws -> RunSession {
       s = engineMove(s, theirs).session
     }
     #expect(counted == [1, 1, 1, 2], "Bb5 and Ba4 go straight back; Bb3 moves on")
+    // Your last move was a prepared one (3.Bb5): sending it straight back doesn't count either.
+    let afterPrep = prepRanOut(try session(at: line("e4 e5 Nf3 Nc6 Bb5 a6")), bookIndex).session
+    #expect(judgedMove(afterPrep, ctx, judged("Bf1"), 1, 0).session.pastPrep == 0)
   }
 
   /// Rule 10: a draw pays 20 when, under endgame rules, you stood at −3 or worse.
