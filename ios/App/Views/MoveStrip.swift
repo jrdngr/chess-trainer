@@ -60,19 +60,28 @@ struct MoveStrip: View {
           }
           .padding(.vertical, 2)
         }
-        .onAppear { scroll(proxy, animated: false) }
-        .onChange(of: cursor) { scroll(proxy, animated: true) }
-        // A move added at the end lays out after the cursor moves: scroll once it is there.
-        .onChange(of: items.count) { DispatchQueue.main.async { scroll(proxy, animated: true) } }
+        .onAppear { scroll(proxy, to: target, animated: false) }
+        // Keyed on the move to show, passed in fresh: read inside the action, the items can be the last step's.
+        // Scrolled on the next turn of the run loop, clear of the step's own animation and once a move added at the end is laid out.
+        .onChange(of: ScrollKey(index: target, count: items.count)) { _, key in
+          DispatchQueue.main.async { scroll(proxy, to: key.index, animated: true) }
+        }
       }
       .frame(minHeight: height)
       if arrows { arrow("chevron.right", disabled: cursor >= max) { onSeek(cursor + 1) } }
     }
   }
 
+  /// The move kept in view: the current one, else the first.
+  private var target: Int { items.firstIndex(where: \.current) ?? 0 }
+
+  private struct ScrollKey: Equatable {
+    let index: Int
+    let count: Int
+  }
+
   /// Keeps the current move in view.
-  private func scroll(_ proxy: ScrollViewProxy, animated: Bool) {
-    let index = items.firstIndex(where: \.current) ?? 0
+  private func scroll(_ proxy: ScrollViewProxy, to index: Int, animated: Bool) {
     if animated { withAnimation { proxy.scrollTo(index, anchor: .center) } } else { proxy.scrollTo(index, anchor: .center) }
   }
 
