@@ -499,7 +499,7 @@ public func runRound(_ finish: Finish, _ tree: OpeningTree, at: Double) -> Round
     color: finish.ended.run.color, answered: finish.ended.moves + (blunder ? 1 : 0), correct: finish.ended.moves,
     perfect: finish.clean != nil && !finish.stub, at: at,
     prep: RoundRecord.Prep(asked: finish.answers.count, found: finish.answers.filter(\.correct).count),
-    line: finish.clean ?? finish.ended.run.played)
+    line: finish.clean ?? (finish.ended.misses.isEmpty && !finish.ended.run.target.isEmpty ? finish.ended.run.target : finish.ended.run.played))
 }
 
 /// You ended the run yourself.

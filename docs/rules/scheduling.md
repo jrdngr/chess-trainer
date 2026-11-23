@@ -28,8 +28,8 @@ to show. Code: `Srs.swift`, `Freshness.swift`, `weaknessFromCards`
 7. **Need** is the runs since the card was last asked, over its gap: 2 runs
    while learning, its interval once known (at least 2). A need of 1 or more
    is due. A position no run has asked yet is due.
-8. **Staleness** is how long ago a run last went through a position (every
-   move it played, a miss or not): 0 for the last run, rising to 1 after 3 runs or never. A line's staleness is its
+8. **Staleness** is how long ago a run last went through a position (for a
+   run with a miss, every move it played): 0 for the last run, rising to 1 after 3 runs or never. A line's staleness is its
    own tail's (the moves after it last parts from your other lines), times
    0.5 + 0.5 × its head's.
 9. **Weakness** is how much a position wants practice when the opponent
