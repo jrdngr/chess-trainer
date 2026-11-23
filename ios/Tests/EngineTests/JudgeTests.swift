@@ -52,6 +52,17 @@ struct JudgeTests {
   }
 }
 
+/// From a book position, a costly move the engine gives no line for, even searched again, stands: with no line there is
+/// nothing to show. After 1.e4 e5 2.Bc4 Nf6 the book has 3.Bxf7+ losing 351.
+@Test func aBookBlunderWithoutALineStands() async throws {
+  let fen = try #require(walkSan(["e4", "e5", "Bc4", "Nf6"]).fens.last)
+  let base = Baseline(fen: fen, cp: 30, best: "d3", bestUci: "d2d3", second: nil)
+  /// Only the engine's own move comes back.
+  let engine = TableEngine(scores: ["d2d3": 30])
+  let judged = await judge(engine, base, san: "Bxf7+", uci: "c4f7", color: .w, moments: false)
+  #expect(judged.ok && judged.line.isEmpty)
+}
+
 /// Scores read with a true minus sign, and zero as +0.00.
 @Test func scoresUseATrueMinus() {
   func line(cp: Double? = nil, mate: Double? = nil) -> EngineLine { EngineLine(multipv: 1, depth: 1, cp: cp, mate: mate, pv: []) }

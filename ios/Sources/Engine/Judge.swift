@@ -133,7 +133,17 @@ public func judge(
     guard let verdict = weigh(snap) else { return false }
     return (!fails((verdict.ok, verdict.yours, verdict.top)) || theirs == nil || exact != nil || book != nil) && (clock.elapsed >= THINK_MS || snap.depth >= QUICK_DEPTH)
   }
-  let verdict = weigh(snap)
+  var verdict = weigh(snap)
+  // A search cut short can leave out your move's line, or end it after your move, so it can't show why a costly move
+  // is a blunder. Before the endgame, such a move is searched once more to its full depth for its line.
+  let sign: Double = color == .w ? 1 : -1
+  let bookCostly = book.map { !judgeMove(base.fen, color, sign * Double($0.best), sign * Double($0.best - $0.lost)).ok } ?? false
+  let costly = bookCostly || verdict.map { !$0.ok } ?? false
+  if costly && theirs != nil && !endgame && exact == nil && (verdict?.yours.pv.count ?? 0) < 2 {
+    let full = await engine.analyse(
+      base.fen, EngineLimits(depth: CONFIRM_DEPTH, movetime: CONFIRM_MS, multiPv: searchmoves.count, searchmoves: searchmoves))
+    if let again = weigh(full) { verdict = again }
+  }
   var judged = Judgement(
     san: san, ok: verdict?.ok ?? exact.map { $0.after >= $0.before } ?? true, lost: verdict?.lost ?? 0, best: base.best, before: verdict?.before ?? base.cp,
     after: verdict?.after ?? base.cp, moment: moment, found: verdict?.found ?? false, reply: verdict?.reply ?? nil,
@@ -147,7 +157,6 @@ public func judge(
   }
   // From a book position, Stockfish's verdict stands, except at a moment, which the engine judges against its second best.
   if let book, exact == nil, !moment {
-    let sign: Double = color == .w ? 1 : -1
     let before = sign * Double(book.best), after = sign * Double(book.best - book.lost)
     let verdict = judgeMove(base.fen, color, before, after)
     judged.ok = verdict.ok
@@ -156,8 +165,9 @@ public func judge(
     judged.after = after
   }
   // Before the endgame, a blunder needs a reason the engine's line can show: material lost soon, or a mate.
-  if !judged.ok && !endgame && exact == nil, let verdict {
-    if let line = reason(verdict.yours, verdict.top) {
+  // With no line from the engine there is no reason to show, so the move stands.
+  if !judged.ok && !endgame && exact == nil {
+    if let verdict, let line = reason(verdict.yours, verdict.top) {
       judged.line = line
     } else {
       judged.ok = true

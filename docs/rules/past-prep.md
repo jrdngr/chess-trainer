@@ -22,8 +22,11 @@ Tests: the `docs/rules/past-prep.md` suite in
    line cut off mid-trade counts the trade done. The line is 70
    centipawns, plus 0.25 for each centipawn you lead by past +1, judged at
    depth 14. A costly move the line shows no reason for stands, with its
-   score. The engine's line, up to the move that leaves you behind, is
-   kept to show on the board. Checkmate and draws end the run too. The X
+   score; so does one the engine gives no line for, even when it is
+   searched again to full depth because the first search came back cut
+   short. The engine's line, up to the move that leaves you behind and on
+   through the trade counted on that move's square, is kept to show on the
+   board. Checkmate and draws end the run too. The X
    ends it at any point.
 4. **The book phase.** Once your prep runs out without a miss, the run is in
    the book phase for as long as the position is in the book.

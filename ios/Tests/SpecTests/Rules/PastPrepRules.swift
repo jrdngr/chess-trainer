@@ -91,6 +91,14 @@ private let ROOKS = "r1r3k1/5ppp/8/8/8/8/5PPP/R1R3K1 w - - 0 1"
     #expect(punishment(fen, .w, yours: ["b1c3", "d5e4"], best: best, mated: nil) == nil, "Nxe4 is still to come")
   }
 
+  /// Rule 3: the line shown runs on through the trade counted on its last move's square. In the King's Indian after
+  /// 11.h3, 11...Re8 lets 12.Nb5 win d6: ...Nc5 defends it, but Bxc5 dxc5 Rxc5 nets a pawn, so the line plays that out.
+  @Test func theLineShowsTheTradeItCounts() throws {
+    let fen = try #require(walkSan(line("d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3 O-O Be3 e5 d5 c6 g4 cxd5 cxd5 Nbd7 Rc1 h6 h3")).fens.last)
+    let yours = ["f8e8", "c3b5", "d7c5", "e3c5", "d6c5", "c1c5"]
+    #expect(punishment(fen, .b, yours: yours, best: ["f6e8"], mated: nil) == ["c3b5", "d7c5", "e3c5", "d6c5", "c1c5"])
+  }
+
   /// Rules 4 and 5: past a clean prep, a common move costing 40 or less is a book move and moves no card.
   @Test func bookMovesAfterACleanPrep() throws {
     let done = try prepDone()

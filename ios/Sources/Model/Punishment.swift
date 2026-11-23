@@ -16,7 +16,7 @@ public let PUNISH_PAWNS = 1
 /// `color` is to move. Material is counted after each move with any trade on that move's square finished
 /// (`settledBalance`). A reason is being `PUNISH_PAWNS` or more behind the best line by your `PUNISH_MOVES`th move
 /// after this one, and still that far behind it at your `PUNISH_HOLD_MOVES`th (each at the line's end, if sooner).
-/// The line then runs up to the move that leaves you behind. `mated` is how many moves from `fen` the line mates you
+/// The line then runs up to the move that leaves you behind, and on through the trade on its square, if any. `mated` is how many moves from `fen` the line mates you
 /// in, if it does; within `PUNISH_MOVES` + 1 that is a reason too, and the whole line is played.
 public func punishment(_ fen: String, _ color: Color, yours: [String], best: [String], mated: Int?) -> [String]? {
   let line = walkSettled(fen, yours, color), top = walkSettled(fen, best, color)
@@ -35,7 +35,9 @@ public func punishment(_ fen: String, _ color: Color, yours: [String], best: [St
     let i = min(2 * n, line.balance.count - 1)
     var j = i
     while j > 1 && line.balance[j - 1] == line.balance[i] { j -= 1 }
-    return Array(line.moves[1...max(j, 1)])
+    // The trade counted on that move's square is played out too, so the line shows the material taken.
+    let end = max(j, 1)
+    return Array(line.moves[1...end]) + tradeLine(line.fens[end + 1], on: line.landed[end])
   }
   return nil
 }
@@ -57,21 +59,39 @@ func exchangeGain(_ fen: String, on square: String) -> Int {
   return best
 }
 
+/// The trade on `square` as `exchangeGain` counts it, as UCI moves: each side takes back only while that gains.
+func tradeLine(_ fen: String, on square: String) -> [String] {
+  var best: (gain: Int, move: LegalMove)?
+  for move in legalMoves(fen) where move.to == square {
+    guard let captured = move.captured else { continue }
+    let won = PIECE_VALUES[captured]! + (move.promotion.map { PIECE_VALUES[$0]! - 1 } ?? 0)
+    let gain = won - exchangeGain(move.after, on: square)
+    if gain > (best?.gain ?? 0) { best = (gain, move) }
+  }
+  guard let best else { return [] }
+  return [best.move.uci] + tradeLine(best.move.after, on: square)
+}
+
 /// Your material balance in `fen` once the trade on `square`, where the last move landed, is finished.
 public func settledBalance(_ fen: String, on square: String, _ color: Color) -> Int {
   let gain = exchangeGain(fen, on: square)
   return balance(fen, color) + (fenTurn(fen) == color ? gain : -gain)
 }
 
-/// A UCI line from `fen`, kept while its moves are legal, with your settled material balance after each of them.
-private func walkSettled(_ fen: String, _ uci: [String], _ color: Color) -> (moves: [String], balance: [Int]) {
+/// A UCI line from `fen`, kept while its moves are legal, with your settled material balance after each of them,
+/// the positions along it (`fen` first) and the square each move landed on.
+private func walkSettled(_ fen: String, _ uci: [String], _ color: Color) -> (
+  moves: [String], balance: [Int], fens: [String], landed: [String]
+) {
   var at = fen
-  var moves: [String] = [], balances: [Int] = []
+  var moves: [String] = [], balances: [Int] = [], fens = [fen], landed: [String] = []
   for u in uci {
     guard let move = applyUci(at, u) else { break }
     at = move.after
     moves.append(u)
+    fens.append(at)
+    landed.append(move.to)
     balances.append(settledBalance(at, on: move.to, color))
   }
-  return (moves, balances)
+  return (moves, balances, fens, landed)
 }
