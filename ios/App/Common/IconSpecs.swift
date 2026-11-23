@@ -79,6 +79,8 @@ extension Icon {
       IconPart(.circle(19, 12, 2), fill: .current, stroke: .none, opacity: (1, 1))]),
     "play": IconSpec(strokeWidth: 2, parts: [
       IconPart(.path("M7 4.5v15l12-7.5z"), fill: .current, stroke: .current, opacity: (1, 1))]),
+    "replay": IconSpec(strokeWidth: 3.9, parts: [
+      IconPart(.path("M4.25 12.75a7.95 7.95 0 1 0 2.4-6.3M4.25 2.6v5.35h5.35"), fill: .none, stroke: .current, opacity: (1, 1))]),
     "up": IconSpec(strokeWidth: 2.4, parts: [
       IconPart(.path("M12 19V5M5 12l7-7 7 7"), fill: .none, stroke: .current, opacity: (1, 1))]),
     "down": IconSpec(strokeWidth: 2.4, parts: [

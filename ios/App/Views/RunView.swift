@@ -550,8 +550,7 @@ struct RunView: View {
           HStack(spacing: 12) {
             endingName.fixedSize().tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
             if let analysis, !analysis.punish.isEmpty {
-              Button("Show") { analysis.show() }
-                .buttonStyle(PlayButtonStyle(kind: .soft, height: 44, radius: 12, font: 15, held: analysis.showing))
+              ShowKey(analysis: analysis)
             }
           }
         }

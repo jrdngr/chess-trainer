@@ -33,9 +33,10 @@ target can be covered by `HeadlessApp` flow tests.
    punishes it, and how the round ended shows under the board (nothing when
    you ended it yourself). Nothing plays on its own: a Show button beside
    "Blunder" goes back to the blunder and plays the engine's line that
-   punishes it, a move every 0.8 seconds, the button held down meanwhile.
+   punishes it, a move every 0.8 seconds, the button held down meanwhile
+   (its play triangle in the engine's blue, beating once a move).
    It stops on the move that takes your material or mates you, shown in
-   red, and Show plays it again from the blunder. Its moves are part of
+   red, and Show, now with a replay arrow, plays it again from the blunder. Its moves are part of
    the line to step back through; a step or a move of your own stops it.
    Test: `showPlaysOutTheBlundersPunishment` in
    `Tests/FlowTests/AnalysisFlowTests.swift`.

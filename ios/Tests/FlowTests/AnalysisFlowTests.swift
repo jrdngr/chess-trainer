@@ -82,27 +82,31 @@ private struct FixedEngine: ChessEngine {
 }
 
 /// After a blunder, nothing plays until Show: it plays the line that punished it past the game's end, a move a beat,
-/// and stops at its end; the line can be stepped back through, and Show plays it again from the blunder, even after
+/// and stops at its end, where Show offers a replay; the line can be stepped back through, and Show plays it again from the blunder, even after
 /// another line was tried. While the board is on it the game's ending still stands; a step or a move of your own stops Show.
 @MainActor @Test func showPlaysOutTheBlundersPunishment() async throws {
   let game = ["e4", "d5", "Qg4"]
   let analysis = RunAnalysis(game: game, punish: ["c8g4", "f1e2"], engine: FixedEngine(tops: [:]))
   #expect(analysis.punish == ["Bxg4", "Be2"])
   #expect(analysis.atEnd && analysis.onPunishment && !analysis.showing, "it waits for Show")
+  #expect(!analysis.atPunishmentEnd, "Show offers to play, not replay")
   analysis.showNext()
   #expect(analysis.atEnd, "no move before Show")
   analysis.show()
   analysis.showNext()
   #expect(analysis.showing && analysis.line == game + ["Bxg4"])
+  #expect(!analysis.atPunishmentEnd, "not while it plays")
   analysis.showNext()
   #expect(analysis.line == game + ["Bxg4", "Be2"] && analysis.ply == 5)
   #expect(!analysis.showing && analysis.onPunishment && analysis.punishNext == nil, "it stops at the line's end")
+  #expect(analysis.atPunishmentEnd, "at the line's end, Show offers a replay")
   analysis.show()
   #expect(analysis.atEnd && analysis.showing, "Show again starts from the blunder")
   analysis.showNext()
   #expect(analysis.ply == 4 && analysis.line.count == 5, "back along the line, it plays its own moves again")
   analysis.step(-1)
   #expect(!analysis.showing, "a step stops it")
+  #expect(!analysis.atPunishmentEnd, "stepped back off the end, Show offers to play again")
   analysis.seek(1)
   let other = try #require(applySan(analysis.fen, "c5"))
   analysis.play(other)

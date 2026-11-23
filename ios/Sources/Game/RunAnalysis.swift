@@ -68,6 +68,9 @@ public final class RunAnalysis {
     return ply >= game.count && ply <= full.count && Array(line.prefix(ply)) == Array(full.prefix(ply))
   }
 
+  /// Show has nothing left to play from here: the board is on the punishing line's last move, so Show offers a replay.
+  public var atPunishmentEnd: Bool { !punish.isEmpty && !showing && onPunishment && punishNext == nil }
+
   /// The punishing line's next move, while the board is on that line and it has more.
   public var punishNext: LegalMove? {
     guard onPunishment, ply < game.count + punish.count else { return nil }
