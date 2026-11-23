@@ -5,9 +5,10 @@ import Observation
 
 /// A finished run, analysed on its own board: the game's moves to step back and forth
 /// through, moves played on the board to try others, and the engine's eval and top move from each position.
-/// Stepping forward always plays the top move shown, in the game or past its end; where the line
-/// went another way, the rest of it gives way. A run that ended on a blunder has the engine's line that
-/// punished it, which Show plays out from the blunder, a move at a time.
+/// Stepping forward goes through the game's moves while there are any, then plays the engine's top move.
+/// A move played on the board starts your own line; stepping back over that move drops it and the game
+/// comes back. A run that ended on a blunder has the engine's line that punished it, which Show plays out
+/// from the blunder, a move at a time.
 @MainActor @Observable
 public final class RunAnalysis {
   /// The game as played, its last move the one that ended it.
@@ -20,9 +21,10 @@ public final class RunAnalysis {
   public private(set) var ply: Int
   public private(set) var fens: [String]
   private var moves: [LegalMove]
-  /// The game's own positions and moves, to come back to for Show.
-  private let gameFens: [String]
-  private let gameMoves: [LegalMove]
+  /// Where your own line starts: the ply of the first move you played on the board, nil while on the game.
+  public private(set) var branch: Int?
+  /// The line as it was before your own line started, to come back to when you step back over it.
+  private var base: (line: [String], moves: [LegalMove], fens: [String]) = ([], [], [])
   /// Show is playing the punishing line out; a step or a move of your own stops it.
   public private(set) var showing = false
   /// The engine's best line from each position looked at; nil when there is none to play.
@@ -51,11 +53,13 @@ public final class RunAnalysis {
     ply = self.game.count
     fens = walked.fens
     moves = walked.moves
-    gameFens = walked.fens
-    gameMoves = walked.moves
   }
 
   public var fen: String { fens[ply] }
+  /// How many of the line's first moves are the game's own; the rest are engine moves.
+  public var gameMoves: Int { min(branch ?? game.count, game.count) }
+  /// On engine moves: past the game's end, or on your own line.
+  public var onEngine: Bool { ply > gameMoves }
   /// On the game's own last position.
   public var atEnd: Bool { ply == game.count && Array(line.prefix(ply)) == game }
   /// On the game's end or the punishing line played from it, so the way the game ended still stands.
@@ -79,11 +83,7 @@ public final class RunAnalysis {
   /// Show: back to the blunder, with the game as played, and the punishing line plays from there.
   public func show() {
     guard !punish.isEmpty else { return }
-    if Array(line.prefix(game.count)) != game {
-      line = game
-      fens = gameFens
-      moves = gameMoves
-    }
+    dropBranch()
     ply = game.count
     showing = true
   }
@@ -104,9 +104,11 @@ public final class RunAnalysis {
   /// How deep the engine looked here; 0 before it has.
   public var depth: Int { depths[fen] ?? 0 }
 
-  /// The move a step would make: forward plays the top move shown; back takes the last one back.
+  /// The move a step would make: forward plays the line's next move (the game's, while there is one),
+  /// else the top move shown; back takes the last one back.
   public func stepMove(_ dir: Int) -> LegalMove? {
-    dir < 0 ? last : top
+    if dir < 0 { return last }
+    return ply < line.count ? moves[ply] : top
   }
 
   public func canStep(_ dir: Int) -> Bool { stepMove(dir) != nil }
@@ -116,23 +118,43 @@ public final class RunAnalysis {
     showing = false
     if dir < 0 {
       ply -= 1
-    } else if ply < line.count && moves[ply].san == move.san {
+      if let branch, ply <= branch { dropBranch() }
+    } else if ply < line.count {
       ply += 1
     } else {
-      extendHere(move)
+      extend(move)
+      ply += 1
     }
   }
 
-  /// Straight to the line's `target`th move, kept within the line.
+  /// Straight to the line's `target`th move, kept within the line. Before your own line started, it is dropped.
   public func seek(_ target: Int) {
     showing = false
     ply = min(max(0, target), line.count)
+    if let branch, ply <= branch { dropBranch() }
   }
 
-  /// A move played on the board: it replaces whatever came after it.
+  /// A move played on the board: the line's own next move is a step forward; any other starts your own line here,
+  /// or carries it on, in place of whatever came after.
   public func play(_ move: LegalMove) {
     showing = false
+    if ply < line.count && moves[ply].san == move.san {
+      ply += 1
+      return
+    }
+    if branch == nil {
+      base = (line, moves, fens)
+      branch = ply
+    }
     extendHere(move)
+  }
+
+  /// Your own line goes, and the line it started from comes back.
+  private func dropBranch() {
+    guard branch != nil else { return }
+    (line, moves, fens) = base
+    base = ([], [], [])
+    branch = nil
   }
 
   /// `move` played here, in place of whatever came after.
@@ -152,10 +174,16 @@ public final class RunAnalysis {
       bests[fen] = .some(nil)
       return
     }
-    let snap = await engine.analyse(fen, EngineLimits(depth: 14, movetime: 400, multiPv: 1))
-    guard !Task.isCancelled else { return }
-    bests[fen] = .some(snap.lines.first)
-    depths[fen] = snap.depth
+    // The engine is shared with the lenses: an answer cut short comes back empty, so ask again rather than keep it.
+    for _ in 0..<3 {
+      let snap = await engine.analyse(fen, EngineLimits(depth: 14, movetime: 400, multiPv: 1))
+      guard !Task.isCancelled else { return }
+      if let line = snap.lines.first, !line.pv.isEmpty {
+        bests[fen] = .some(line)
+        depths[fen] = snap.depth
+        return
+      }
+    }
   }
 
   private func extend(_ move: LegalMove) {

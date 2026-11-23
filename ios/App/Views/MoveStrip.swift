@@ -3,6 +3,8 @@ import SwiftUI
 /// How a move reads in the strip.
 enum MoveTone {
   case mine, theirs, ghost, bad, good
+  /// A move that isn't the game's, in analysis: the engine's past the game's end, or one of your own line.
+  case engine
   /// The board editor's: a book move filled, a move past the book outlined, a dubious move or a blunder in its color.
   case book, offBook, dubious, blunder
 }
@@ -19,6 +21,10 @@ struct StripItem {
   var seek: Int?
   /// A common move: the book plays it often. A small book follows it.
   var common = false
+  /// Not reached yet: drawn faded, whatever its tone.
+  var ahead = false
+  /// A thin line before it, where the game's moves stop and the engine's start.
+  var split = false
 }
 
 /// A scrolling row of moves with a cursor and arrows.
@@ -42,7 +48,13 @@ struct MoveStrip: View {
         ScrollView(.horizontal, showsIndicators: false) {
           HStack(spacing: 4) {
             if items.isEmpty, let hint { Text(hint).font(.system(size: 13)).foregroundStyle(Theme.text3).padding(.leading, 4) }
-            ForEach(Array(items.enumerated()), id: \.offset) { i, item in chip(item).id(i) }
+            ForEach(Array(items.enumerated()), id: \.offset) { i, item in
+              HStack(spacing: 4) {
+                if item.split { Capsule().fill(Theme.book).frame(width: 1.5, height: 22).padding(.horizontal, 2) }
+                chip(item)
+              }
+              .id(i)
+            }
           }
           .padding(.vertical, 2)
         }
@@ -93,7 +105,7 @@ struct MoveStrip: View {
         if item.current && (item.tone == .bad || item.tone == .good) { RoundedRectangle(cornerRadius: 9).strokeBorder(fg, lineWidth: 2) }
         if let edge = outline(item) { RoundedRectangle(cornerRadius: 9).strokeBorder(edge, lineWidth: item.current ? 2 : 1.5) }
       }
-      .opacity(item.tone == .ghost ? 0.45 : 1)
+      .opacity(item.tone == .ghost || item.ahead ? 0.45 : 1)
     }
     .buttonStyle(.plain)
   }
@@ -106,6 +118,7 @@ struct MoveStrip: View {
     case .offBook: return item.current ? (Theme.text, Theme.accent.opacity(0.14)) : (Theme.extText, .clear)
     case .dubious: return (Theme.warn, Theme.warn.opacity(item.current ? 0.2 : 0.12))
     case .blunder: return (Theme.bad, Theme.bad.opacity(item.current ? 0.2 : 0.12))
+    case .engine: return item.current ? (Theme.text, Theme.book.opacity(0.16)) : (Theme.book, .clear)
     default:
       if item.current { return (Theme.selectedInk, Theme.selected) }
       return item.tone == .mine ? (Theme.text, Theme.surface3) : (Theme.text2, Theme.surface)
@@ -118,12 +131,14 @@ struct MoveStrip: View {
     case .offBook: item.current ? Theme.extText : Theme.accent
     case .dubious: Theme.warn
     case .blunder: Theme.bad
+    case .engine: Theme.book
     default: nil
     }
   }
 
   private func numberColor(_ item: StripItem) -> SwiftUI.Color {
     if item.tone == .book && item.current { return Theme.accentInk.opacity(0.55) }
+    if item.tone == .engine { return Theme.book.opacity(0.6) }
     if [.book, .offBook, .dubious, .blunder].contains(item.tone) { return colors(item).0.opacity(0.6) }
     if item.tone == .bad || item.tone == .good || item.tone == .mine { return colors(item).0.opacity(0.5) }
     return item.current ? Theme.selectedInk.opacity(0.5) : Theme.text3

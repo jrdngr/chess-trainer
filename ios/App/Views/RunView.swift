@@ -193,6 +193,8 @@ struct RunView: View {
       .overlay(alignment: .top) { flash }
       .overlay { if model.pulse { IntroPulse() } }
       .overlay { if let rim { BoardRim(color: rim.color) } }
+      // Analysing: on engine moves, a rim in the engine arrow's blue.
+      .overlay { if drawing, analysis?.onEngine == true { BoardRim(color: Theme.book) } }
       .overlay {
         if let held = model.flash {
           FlashRings(loose: held.loose, orientation: model.run.color, onTakeBack: model.takeBack)
@@ -511,10 +513,12 @@ struct RunView: View {
 
   /// The analysed line's moves, as on the Analysis screen: a tap or an arrow goes to a move.
   private func analysisStrip(_ analysis: RunAnalysis) -> some View {
+    // The game's moves as they were; the engine's, and your own line, outlined in the engine arrow's blue after a thin line.
+    let split = analysis.gameMoves
     let items = analysis.line.enumerated().map { i, san in
       StripItem(
-        san: san, label: i % 2 == 0 ? "\(i / 2 + 1)." : nil, tone: i >= analysis.ply ? .ghost : nil,
-        current: i == analysis.ply - 1, seek: i + 1)
+        san: san, label: i % 2 == 0 ? "\(i / 2 + 1)." : nil, tone: i >= split ? .engine : nil,
+        current: i == analysis.ply - 1, seek: i + 1, ahead: i >= analysis.ply, split: i == split && i > 0)
     }
     return MoveStrip(items: items, cursor: analysis.ply, max: analysis.line.count) { analysis.seek($0) }.padding(.horizontal, 16)
   }

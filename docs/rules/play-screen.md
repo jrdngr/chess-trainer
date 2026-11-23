@@ -40,12 +40,21 @@ target can be covered by `HeadlessApp` flow tests.
    Test: `showPlaysOutTheBlundersPunishment` in
    `Tests/FlowTests/AnalysisFlowTests.swift`.
    - Swipe the deck left or right to step through the moves. A step
-     forward always plays the engine's top move, the one its arrow shows;
-     where the game went another way, the game's later moves give way to
-     it.
-     Test: `analysisStepsPlayTheTopMoveShown` in
+     forward plays the game's next move while the game has one, even where
+     the arrow shows another top move. Past the game's end it plays the
+     engine's top move; those moves stay, so stepping back into the game
+     and forward again goes through the same moves.
+     Test: `analysisStepsThroughTheGameThenTheEngine` in
      `Tests/FlowTests/AnalysisFlowTests.swift`.
-   - Play a move on the board to try another line.
+   - Play a move on the board to start your own line from there. Forward
+     on it plays the engine's top move. Stepping back over the move that
+     started it, or tapping a move before it in the strip, drops it and
+     the game comes back.
+     Test: `analysisOwnLineGivesWayToTheGame` in
+     `Tests/FlowTests/AnalysisFlowTests.swift`.
+   - Engine moves, and your own line, are outlined in the engine arrow's
+     blue in the move strip after a thin line, and the board has a rim in
+     that blue while you are on them.
    - Tap the deck, or flick a card up, and the next round's card is dealt.
 7. **Leaving your prep.** A miss shows Off prep under the board for a
    moment. A finished prep shows nothing there: its pawns fly to the header
