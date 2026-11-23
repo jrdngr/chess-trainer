@@ -52,6 +52,8 @@ public final class AppStore {
   @ObservationIgnored private var lastWrite: Task<Void, Never>?
   /// The saves are read: until then `state` is a placeholder, never backed up.
   @ObservationIgnored private var loaded = false
+  /// The last write of the save failed.
+  @ObservationIgnored private var lastSaveFailed = false
 
   private let deviceFile = "backup-device.json"
   private let profilesFile = "profiles.json"
@@ -193,8 +195,10 @@ public final class AppStore {
     guard !saveBlocked else { return }
     do {
       try storage.write(file, JSONEncoder().encode(state))
+      lastSaveFailed = false
       scheduleBackup()
     } catch {
+      lastSaveFailed = true
       print("save failed: \(error)")
     }
   }
@@ -396,6 +400,15 @@ public final class AppStore {
     update { done = $0.credit(product, transaction: transaction) }
     return done
   }
+
+  /// The App Store took a purchase back: a refunded unlock takes back the features only it gave.
+  public func revoke(_ product: CashProduct, transaction: String) {
+    update { $0.revoke(product, transaction: transaction) }
+  }
+
+  /// Whether the state is being kept: the save was read and the last write went through.
+  /// A purchase is finished with the App Store only then, so one not kept comes back.
+  public var savesKept: Bool { !saveBlocked && !lastSaveFailed }
 
   /// A tip shown off the board, put away for good.
   public func see(_ tip: GameTip) {

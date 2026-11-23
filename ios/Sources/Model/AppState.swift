@@ -110,6 +110,8 @@ public struct AppState: Equatable, Sendable, Codable {
   public var families = FamilyRecord()
   /// App Store transactions already credited, by id: each one pays once.
   public var credited: Set<String> = []
+  /// The feature items the App Store unlock gave, which a refund of it takes back.
+  public var cashUnlocked: Set<String> = []
   /// The games you played here, newest first, at most GAMES_CAP.
   public var games: [GameRecord] = []
   /// The version the save was written at: one older than SAVE_VERSION is wiped on load.
@@ -118,7 +120,7 @@ public struct AppState: Equatable, Sendable, Codable {
 
   enum CodingKeys: String, CodingKey {
     case playbooks, playbookOrder, cards, score, runRecord, mistakes, log, events, settings, strength, endgames, middlegame
-    case games, version, pawns, pawnStreak, form, unlocked, families, credited
+    case games, version, pawns, pawnStreak, form, unlocked, families, credited, cashUnlocked
   }
 
   /// A save from before a field existed takes its default.
@@ -144,6 +146,7 @@ public struct AppState: Equatable, Sendable, Codable {
     unlocked = try c.decodeIfPresent(Set<String>.self, forKey: .unlocked) ?? unlocked
     families = try c.decodeIfPresent(FamilyRecord.self, forKey: .families) ?? families
     credited = try c.decodeIfPresent(Set<String>.self, forKey: .credited) ?? credited
+    cashUnlocked = try c.decodeIfPresent(Set<String>.self, forKey: .cashUnlocked) ?? cashUnlocked
     version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 0
   }
 

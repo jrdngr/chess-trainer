@@ -60,13 +60,20 @@ final class CashStore {
     await restore()
   }
 
+  /// Credits a transaction, or takes back a refunded one, and finishes it with the App Store
+  /// once that is saved. One not saved stays unfinished, so the App Store hands it back later.
   @discardableResult
   private func handle(_ result: VerificationResult<StoreKit.Transaction>, bought: Bool) async -> Bool {
-    guard case .verified(let transaction) = result else { return false }
+    guard case .verified(let transaction) = result, let store else { return false }
     var credited = false
-    if transaction.revocationDate == nil, let product = CashProduct(rawValue: transaction.productID), let store {
-      credited = store.credit(product, transaction: String(transaction.id), bought: bought)
+    if let product = CashProduct(rawValue: transaction.productID) {
+      if transaction.revocationDate == nil {
+        credited = store.credit(product, transaction: String(transaction.id), bought: bought)
+      } else {
+        store.revoke(product, transaction: String(transaction.id))
+      }
     }
+    guard store.savesKept else { return credited }
     await transaction.finish()
     return credited
   }

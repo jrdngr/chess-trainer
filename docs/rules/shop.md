@@ -50,5 +50,9 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    sheet, which the pawn balance opens on Home and in the Shop, and which
    a price you can't pay yet opens from an item's sheet. The unlock shows
    there until the tree is yours. Each App Store transaction is credited once;
-   an unlock seen again still grants items added to the tree since.
+   an unlock seen again still grants items added to the tree since. The
+   unlock starts the side picker on Either, as buying it does. A refunded
+   unlock takes back the features only it gave; features bought with pawns
+   and a refunded pack's pawns stay. A transaction is finished with the App
+   Store only once its credit is saved, so one that wasn't comes back.
    Code: `Purchases.swift`, and `CashStore` in the app.

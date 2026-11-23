@@ -103,6 +103,33 @@ private func state(pawns: Int, owning: [String] = []) -> AppState {
     #expect(CashProduct.pawns13000.pawns < FEATURE_TREE.map(\.price).reduce(0, +), "$10 of pawns buys less than the unlock")
   }
 
+  /// Rule 6: the unlock starts the side picker on Either; a refund takes back only what the unlock gave.
+  @Test func aRefundTakesBackTheUnlock() {
+    var s = AppState()
+    s.holdToUnlocks()
+    #expect(s.settings.selection.color == .w)
+    s.pawns = 100
+    let bought = s.buy("sidePicker")
+    #expect(bought)
+    s.settings.selection.color = .b
+    s.credit(.unlock, transaction: "1")
+    #expect(s.settings.selection.color == .b, "a side picker you had keeps its side")
+    _ = s.credit(.pawns2000, transaction: "2")
+    let balance = s.pawns
+    let revoked = s.revoke(.unlock, transaction: "1")
+    #expect(revoked)
+    #expect(s.owns(.sidePicker), "bought with pawns, kept")
+    #expect(!s.owns(.freeform) && !s.ownsFeatureTree)
+    #expect(s.pawns == balance, "a pack's pawns stay")
+    let pack = s.revoke(.pawns2000, transaction: "2")
+    #expect(!pack)
+
+    var fresh = AppState()
+    fresh.holdToUnlocks()
+    fresh.credit(.unlock, transaction: "9")
+    #expect(fresh.settings.selection.color == .either, "the side picker starts on Either")
+  }
+
   /// Rule 5: a lens draws its first part; each upgrade adds its own.
   @Test func lensUpgradesAddTheirParts() {
     let none = LensParts([])

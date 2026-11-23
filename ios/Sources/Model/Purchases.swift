@@ -29,17 +29,33 @@ extension AppState {
   /// A purchase from the App Store, credited once per transaction: the unlock makes the whole
   /// feature tree yours (not the endgame families, cosmetics or openings); a pack adds its pawns.
   /// An unlock seen again still grants every feature, so items added to the tree later come with
-  /// it. Returns whether it was credited.
+  /// it. The side picker starts on Either, as when bought with pawns. Returns whether it was credited.
   @discardableResult
   public mutating func credit(_ product: CashProduct, transaction: String) -> Bool {
     let fresh = credited.insert(transaction).inserted
     if product == .unlock {
-      for item in FEATURE_TREE { unlocked.insert(item.id) }
+      for item in FEATURE_TREE where unlocked.insert(item.id).inserted {
+        cashUnlocked.insert(item.id)
+        if item.feature == .sidePicker { settings.selection.color = .either }
+      }
       syncEndgameFamilies()
     }
     guard fresh else { return false }
     pawns += product.pawns
     logEvent(AppEvent(kind: "cash", count: product.pawns, picked: product.rawValue, text: "balance \(pawns)"))
+    return true
+  }
+
+  /// The App Store took the unlock back (a refund): the features only it gave go. Features
+  /// bought with pawns stay, and a refunded pack's pawns stay, since they may be spent.
+  /// Returns whether anything was taken back.
+  @discardableResult
+  public mutating func revoke(_ product: CashProduct, transaction: String) -> Bool {
+    guard product == .unlock, !cashUnlocked.isEmpty else { return false }
+    unlocked.subtract(cashUnlocked)
+    cashUnlocked = []
+    holdToUnlocks()
+    logEvent(AppEvent(kind: "cash-revoked", picked: product.rawValue, text: "transaction \(transaction)"))
     return true
   }
 }
