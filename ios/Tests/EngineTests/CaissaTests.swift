@@ -14,6 +14,19 @@ struct CaissaTests {
     #expect(snap.lines.first?.mate == -1)
   }
 
+  @Test func aForcedMoveIsSearchedNotScoredLevel() async throws {
+    let engine = CaissaEngine()
+    // White's only move is Kxb2; Black is a rook up after it.
+    let fen = "k7/8/8/8/8/8/1q6/K6r w - - 0 1"
+    #expect(legalMoves(fen).count == 1)
+    let snap = await engine.analyse(fen, EngineLimits(depth: 6, multiPv: 3))
+    let line = try #require(snap.lines.first)
+    #expect(line.pv.first == "a1b2")
+    #expect(snap.lines.count == 1)
+    #expect((line.cp ?? 0) < -300 || (line.mate ?? 0) < 0, "lost, not level")
+    #expect(snap.depth >= 2)
+  }
+
   @Test func searchmovesAndMultiPvKeepToTheMovesAsked() async throws {
     let engine = CaissaEngine()
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"

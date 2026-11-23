@@ -33,7 +33,12 @@ public actor CaissaEngine: ChessEngine {
 
   public func analyse(_ fen: String, _ limits: EngineLimits, onUpdate: @escaping @Sendable (EngineSnapshot) -> Bool) async -> EngineSnapshot {
     let moves = limits.searchmoves.flatMap { $0.isEmpty ? nil : $0 }
-    let choices = moves?.count ?? legalMoves(fen).count
+    let legal = legalMoves(fen)
+    // Caissa answers a position with one legal move at once, scored 0: search the position after it.
+    if legal.count == 1, let only = legal.first, moves.map({ $0.contains(only.uci) }) ?? true {
+      return await forced(fen, only, limits, onUpdate: onUpdate)
+    }
+    let choices = moves?.count ?? legal.count
     guard choices > 0 else { return EngineSnapshot(lines: [], depth: 0, nodes: 0, thinking: false, fen: fen) }
     let multiPv = max(1, min(limits.multiPv ?? 3, choices))
     let ms = max(50, min(limits.movetime ?? Self.defaultMs, Self.maxMs))
@@ -53,6 +58,32 @@ public actor CaissaEngine: ChessEngine {
     }
     let text = out.withUnsafeBufferPointer { String(cString: $0.baseAddress!) }
     return EngineSnapshot(lines: caissaLines(text, Int(depth), fen), depth: Int(depth), nodes: Int(nodes), thinking: false, fen: fen)
+  }
+
+  /// A position with one legal move: that move, then the search of the position after it.
+  private func forced(
+    _ fen: String, _ only: LegalMove, _ limits: EngineLimits, onUpdate: @escaping @Sendable (EngineSnapshot) -> Bool
+  ) async -> EngineSnapshot {
+    let status = positionStatus(only.after)
+    if status.gameOver {
+      let mate: Double? = status.checkmate ? (fenTurn(fen) == .w ? 1 : -1) : nil
+      let line = EngineLine(multipv: 1, depth: 1, cp: mate == nil ? 0 : nil, mate: mate, pv: [only.uci])
+      return EngineSnapshot(lines: [line], depth: 1, nodes: 0, thinking: false, fen: fen)
+    }
+    let mover: Double = fenTurn(fen) == .w ? 1 : -1
+    @Sendable func lift(_ snap: EngineSnapshot) -> EngineSnapshot {
+      let lines = snap.lines.prefix(1).map { line in
+        // A mate for the side that moved is one move further off; a mate against it is as far.
+        let mate = line.mate.map { $0 * mover > 0 ? $0 + mover : $0 }
+        return EngineLine(multipv: 1, depth: line.depth + 1, cp: line.cp, mate: mate, pv: [only.uci] + line.pv)
+      }
+      return EngineSnapshot(lines: lines, depth: snap.depth + 1, nodes: snap.nodes, thinking: snap.thinking, fen: fen)
+    }
+    var after = limits
+    after.searchmoves = nil
+    after.multiPv = 1
+    if let depth = limits.depth { after.depth = max(1, depth - 1) }
+    return lift(await analyse(only.after, after) { onUpdate(lift($0)) })
   }
 
   private final class Progress: @unchecked Sendable {
