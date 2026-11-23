@@ -48,6 +48,10 @@ public struct AppEvent: Equatable, Sendable, Codable {
   public var found: Bool?
   /// Words: a callout, an ending, a setting's change.
   public var text: String?
+  /// A judged move: the engine's line after it and after its own best move, as UCI, and how deep it looked.
+  public var yours: [String]?
+  public var top: [String]?
+  public var depth: Int?
 
   public init(
     kind: String, via: EventPlace? = nil, playbookId: String? = nil, color: Color? = nil, line: String? = nil,
@@ -94,7 +98,7 @@ public struct AppEvent: Equatable, Sendable, Codable {
 
   enum CodingKeys: String, CodingKey {
     case kind, at, via, playbookId, color, line, added, source, removed, count, delta, to, rows, picked, start, offered, from, all
-    case game, san, fen, before, after, lost, ok, best, seconds, moment, found, text
+    case game, san, fen, before, after, lost, ok, best, seconds, moment, found, text, yours, top, depth
   }
 
   public static func == (a: AppEvent, b: AppEvent) -> Bool {
@@ -104,6 +108,7 @@ public struct AppEvent: Equatable, Sendable, Codable {
       && a.offered == b.offered && a.from == b.from && a.all == b.all && a.game == b.game && a.san == b.san
       && a.fen == b.fen && a.before == b.before && a.after == b.after && a.lost == b.lost && a.ok == b.ok
       && a.best == b.best && a.seconds == b.seconds && a.moment == b.moment && a.found == b.found && a.text == b.text
+      && a.yours == b.yours && a.top == b.top && a.depth == b.depth
   }
 
   /// What a delete took, spread into the event.

@@ -77,6 +77,10 @@ public struct Judgement: Equatable, Sendable {
   public var missedMate: Bool
   /// The exact results before and after your move, where the tablebase knows them.
   public var exact: ResultSlip?
+  /// The engine's lines the verdict came from, as UCI: after your move, and after its own best; and how deep it looked.
+  public var yours: [String] = []
+  public var top: [String] = []
+  public var depth = 0
   public init(
     san: String, ok: Bool, lost: Double, best: String?, before: Double, after: Double, moment: Bool, found: Bool, reply: String?,
     missedMate: Bool = false, exact: ResultSlip? = nil, line: [String]? = nil

@@ -42,6 +42,8 @@ struct JudgeTests {
     let far = try await judged("O-O")
     #expect(!far.ok, "far under the next best, losing a knight, is a blunder")
     #expect(far.line == ["c6d4"], "its line runs to the move that takes the knight")
+    #expect(far.yours == ["e1g1", "c6d4", "a2a3", "a7a6", "b2b3"] && far.top == ["d4e6"], "the lines it was judged on are kept")
+    #expect(far.depth == CONFIRM_DEPTH)
   }
 
   /// A costly move whose line loses no material stands, with what it cost.

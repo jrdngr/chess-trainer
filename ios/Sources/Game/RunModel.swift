@@ -609,6 +609,9 @@ public final class RunModel {
         $0.found = judged.found
         $0.seconds = seconds
         if judged.missedMate { $0.text = "missed mate" }
+        $0.yours = judged.yours
+        $0.top = judged.top
+        $0.depth = judged.depth
       }
       self.store.update { $0.judgedMove(lost: judged.lost) }
       let step = judgedMove(self.session, self.ctx, judged, seconds, now)
