@@ -14,7 +14,7 @@ enum Pgn {
     var body: [Substring] = []
     var sawGame = false
     for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
-      if let m = line.wholeMatch(of: /\s*\[(\w+)\s+"([^"]*)"\]\s*/) {
+      if let m = line.wholeMatch(of: /\s*\[(\w+)\s+"((?:[^"\\]|\\.)*)"\]\s*/) {
         // A header after movetext starts the next game.
         if !body.joined().trimmingCharacters(in: .whitespaces).isEmpty { break }
         sawGame = true

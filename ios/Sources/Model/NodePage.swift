@@ -28,7 +28,7 @@ public struct NodePage: Equatable, Sendable {
 /// The page for the opening `id`, reached by `line`, on `side`'s tree.
 public func nodePage(_ state: AppState, _ tree: OpeningTree, side: Color, id: String, line: [String]) -> NodePage {
   let key = tree.byId[id]?.key ?? positionKey(walkSan(line).fens.last ?? START_FEN)
-  let answers = FormAtMove(state.events).scores(key, side)
+  let answers = state.formAtMove.scores(key, side)
   // Off openings grow nothing and hold no level shut, as on Home.
   let all = curveHoles(curveSides(state), tree.index, tree: tree).filter { !state.lineIsOff($0.color, $0.line) }
   let under = curveHoles(curveSides(state), tree.index, tree: tree)

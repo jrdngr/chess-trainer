@@ -66,35 +66,49 @@ public struct FormRecord: Equatable, Sendable, Codable {
 }
 
 /// What the Playbook shows at each position: the last answers to your move there, by side,
-/// read from the event log's prep answers and misses. An answer counts for the position it
+/// from each prep answer and miss as it is logged. An answer counts for the position it
 /// was asked at and the position the prepared move reaches, so an opening shows the answers
-/// to your move there however its name falls.
-public struct FormAtMove: Equatable, Sendable {
+/// to your move there however its name falls. Kept in the save, apart from the capped event log.
+public struct FormAtMove: Equatable, Sendable, Codable {
   public var white: [String: [Double]] = [:]
   public var black: [String: [Double]] = [:]
 
+  public init() {}
+
+  /// Built from a log, for a save from before the record was kept.
   public init(_ events: [AppEvent]) {
-    for event in events {
-      guard let color = event.color, let fen = event.fen else { continue }
-      let score: Double
-      let move: String?
-      switch event.kind {
-      case "prep-answer":
-        score = event.text.flatMap(Grade.init(rawValue:)).map { formScore($0) } ?? 1
-        move = event.san
-      case "prep-miss":
-        score = 0
-        move = event.best
-      default: continue
-      }
-      var keys = [positionKey(fen)]
-      if let move, let after = applySan(fen, move) { keys.append(positionKey(after.after)) }
-      for key in Set(keys) {
-        if color == .w { white[key, default: []].append(score) } else { black[key, default: []].append(score) }
+    for event in events { add(event) }
+  }
+
+  /// A logged prep answer or miss, counted; any other event changes nothing.
+  public mutating func add(_ event: AppEvent) {
+    guard let color = event.color, let fen = event.fen else { return }
+    let score: Double
+    let move: String?
+    switch event.kind {
+    case "prep-answer":
+      score = event.text.flatMap(Grade.init(rawValue:)).map { formScore($0) } ?? 1
+      move = event.san
+    case "prep-miss":
+      score = 0
+      move = event.best
+    default: return
+    }
+    var keys = [positionKey(fen)]
+    if let move, let after = applySan(fen, move) { keys.append(positionKey(after.after)) }
+    for key in Set(keys) {
+      if color == .w {
+        white[key] = Array((white[key, default: []] + [score]).suffix(FORM_ANSWERS))
+      } else {
+        black[key] = Array((black[key, default: []] + [score]).suffix(FORM_ANSWERS))
       }
     }
-    white = white.mapValues { Array($0.suffix(FORM_ANSWERS)) }
-    black = black.mapValues { Array($0.suffix(FORM_ANSWERS)) }
+  }
+
+  /// The sum of every answer and their count: changes whenever an answer is added.
+  public var stamp: String {
+    let all = Array(white.values) + Array(black.values)
+    return "\(all.reduce(0) { $0 + $1.count }):\(all.reduce(0) { $0 + $1.reduce(0, +) })"
   }
 
   /// The last answers to your move at a position, oldest first.

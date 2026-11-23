@@ -97,7 +97,7 @@ struct PlaybookMapView: View {
     if let slot = choosing?.wrappedValue.slot { return memo.get("choosing|\(slot.rawValue)") { choosingMap(tree, slot: slot) } }
     let state = store.state
     let key = "\(side.rawValue)|" + state.playbookList.map { "\($0.id):\($0.nodes.count)" }.joined(separator: ",")
-      + "|\(lastAddedAt(state.playbookList))|\(state.games.count)|\(state.form.stamp)"
+      + "|\(lastAddedAt(state.playbookList))|\(state.games.count)|\(state.form.stamp)|\(state.formAtMove.stamp)"
       + "|\(state.owns(.sidePicker))|\(state.families.price(side))|\(state.families.off.sorted())|\(state.playGamesPlayed)"
       + "|\(state.levelsOpened.sorted())"
     return memo.get(key) { playbookMap(state, tree, side: side) }

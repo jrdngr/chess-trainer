@@ -140,8 +140,9 @@ public func parsePgn(_ pgn: String) -> [PgnGame] {
     var headers: [String: String] = [:]
     var body: [Substring] = []
     for line in chunk.split(separator: "\n", omittingEmptySubsequences: false) {
-      if let m = line.wholeMatch(of: /\s*\[(\w+)\s+"([^"]*)"\]\s*/) {
-        headers[String(m.1)] = String(m.2)
+      if let m = line.wholeMatch(of: /\s*\[(\w+)\s+"((?:[^"\\]|\\.)*)"\]\s*/) {
+        // A tag value escapes its quotes and backslashes.
+        headers[String(m.1)] = String(m.2).replacingOccurrences(of: "\\\"", with: "\"").replacingOccurrences(of: "\\\\", with: "\\")
       } else {
         body.append(line)
       }

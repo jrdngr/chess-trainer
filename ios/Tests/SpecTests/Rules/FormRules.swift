@@ -46,7 +46,8 @@ private func logged(_ moves: String, _ san: String, _ grade: Grade?, color: Colo
     for _ in 0..<5 { state.logEvent(logged("d4 d5", "c4", .hard)) }
     state.logEvent(logged("d4 d5 c4 e6", "Nc3", nil))
     state.logEvent(logged("d4 d5", "c4", .easy, color: .b))
-    let at = FormAtMove(state.events)
+    let at = state.formAtMove
+    #expect(at == FormAtMove(state.events), "kept as the log records them")
     let (qpg, qg, qgd) = (positionKey(fenAfter("d4 d5")), positionKey(fenAfter("d4 d5 c4")), positionKey(fenAfter("d4 d5 c4 e6")))
     #expect(at.scores(qpg, .w) == Array(repeating: 0.5, count: 5), "where your move was asked")
     #expect(at.scores(qg, .w) == Array(repeating: 0.5, count: 5), "where your move goes")
@@ -55,6 +56,22 @@ private func logged(_ moves: String, _ san: String, _ grade: Grade?, color: Colo
     let qpgNode = try #require(tree.byKey[qpg])
     let page = nodePage(state, tree, side: .w, id: qpgNode.id, line: line("d4 d5"))
     #expect(page.answers == Array(repeating: 0.5, count: 5))
+  }
+
+  /// Rule 3: form at your move outlasts the event log's cap, and a save from before it was kept builds it from its log.
+  @Test func formAtYourMoveOutlastsTheLog() throws {
+    var state = AppState()
+    for _ in 0..<5 { state.logEvent(logged("d4 d5", "c4", .easy)) }
+    for _ in 0..<EVENT_CAP { state.logEvent(AppEvent(kind: "eval", color: .w)) }
+    let key = positionKey(fenAfter("d4 d5"))
+    #expect(!state.events.contains { $0.kind == "prep-answer" })
+    #expect(state.formAtMove.scores(key, .w) == Array(repeating: 1, count: 5))
+    var old = AppState()
+    for _ in 0..<5 { old.logEvent(logged("d4 d5", "c4", .easy)) }
+    var json = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(old)) as? [String: Any])
+    json["formAtMove"] = nil
+    let decoded = try JSONDecoder().decode(AppState.self, from: JSONSerialization.data(withJSONObject: json))
+    #expect(decoded.formAtMove.scores(key, .w) == Array(repeating: 1, count: 5))
   }
 
   /// Rule 4.

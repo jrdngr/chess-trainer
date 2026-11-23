@@ -13,3 +13,11 @@ import Testing
   let game = try #require(parsePgn("1. e4 !? e5 2. Nf3 ! Nc6").first)
   #expect(pgnMainline(game) == ["e4", "e5", "Nf3", "Nc6"])
 }
+
+/// A header whose value escapes its quotes is still a header: the moves after it load.
+@Test func anEscapedQuoteInAHeaderKeepsTheGame() throws {
+  let pgn = "[Event \"Titled \\\"Arena\\\"\"]\n[Site \"https://lichess.org/abc\"]\n[Result \"1-0\"]\n\n1. e4 e5 2. Nf3 Nc6 1-0"
+  let game = try #require(parsePgn(pgn).first)
+  #expect(game.headers["Event"] == "Titled \"Arena\"")
+  #expect(pgnMainline(game) == ["e4", "e5", "Nf3", "Nc6"])
+}

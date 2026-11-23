@@ -12,8 +12,9 @@ suite in `Tests/SpecTests/Rules/FormRules.swift`.
 3. **The Playbook shows form at your move.** An opening's page and its arc
    on the tree show its last 10 answers to your move there. Your move is
    the opening's own last move when that move is yours, else your move from
-   its position, so 1.d4 d5 and 1.d4 d5 2.c4 both show 2.c4. These answers are read from your history, the prep
-   answers and misses in the event log, not kept on their own. Green and
+   its position, so 1.d4 d5 and 1.d4 d5 2.c4 both show 2.c4. These answers are
+   the prep answers and misses, kept for each position as they come, apart
+   from the event log, so the log's cap never takes them. Green and
    everything else still read rule 2.
 4. **Form is the average** of the answers kept. Under 5 answers, the
    opening has no form yet and its ring is an empty track.

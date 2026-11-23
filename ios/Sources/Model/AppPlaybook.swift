@@ -26,6 +26,7 @@ extension AppState {
 
   public mutating func logEvent(_ event: AppEvent) {
     events = appendEvent(events, event)
+    formAtMove.add(event)
   }
 
   @discardableResult

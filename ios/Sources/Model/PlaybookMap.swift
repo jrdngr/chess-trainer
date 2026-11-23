@@ -117,7 +117,7 @@ public func playbookMap(_ state: AppState, _ tree: OpeningTree, side: Color) -> 
     }
     for id in through { lines[id, default: 0] += 1 }
   }
-  let atMove = FormAtMove(state.events)
+  let atMove = state.formAtMove
   let next = curvePlaybookGaps(state, tree).first
   let runs = runsUntilGrowth(state)
   let gate = curveGate(state, tree)

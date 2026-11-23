@@ -114,6 +114,8 @@ public struct AppState: Equatable, Sendable, Codable {
   public var cashUnlocked: Set<String> = []
   /// The games you played here, newest first, at most GAMES_CAP.
   public var games: [GameRecord] = []
+  /// The last answers to your move at each position, which the Playbook shows as form.
+  public var formAtMove = FormAtMove()
   /// Every Play game you have played, never capped; a save from before it counts its history's.
   public var playGamesPlayed = 0
   /// The growth levels that have opened: once open, a level stays open.
@@ -124,7 +126,7 @@ public struct AppState: Equatable, Sendable, Codable {
 
   enum CodingKeys: String, CodingKey {
     case playbooks, playbookOrder, cards, score, runRecord, mistakes, log, events, settings, strength, endgames, middlegame
-    case games, version, pawns, pawnStreak, form, unlocked, families, credited, cashUnlocked, playGamesPlayed, levelsOpened
+    case games, version, pawns, pawnStreak, form, unlocked, families, credited, cashUnlocked, playGamesPlayed, levelsOpened, formAtMove
   }
 
   /// A save from before a field existed takes its default.
@@ -153,6 +155,7 @@ public struct AppState: Equatable, Sendable, Codable {
     cashUnlocked = try c.decodeIfPresent(Set<String>.self, forKey: .cashUnlocked) ?? cashUnlocked
     playGamesPlayed = try c.decodeIfPresent(Int.self, forKey: .playGamesPlayed) ?? games.filter { $0.mode == .play }.count
     levelsOpened = try c.decodeIfPresent(Set<Int>.self, forKey: .levelsOpened) ?? levelsOpened
+    formAtMove = try c.decodeIfPresent(FormAtMove.self, forKey: .formAtMove) ?? FormAtMove(events)
     version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 0
   }
 

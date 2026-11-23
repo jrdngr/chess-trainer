@@ -44,7 +44,7 @@ struct OpeningPage: View {
     let state = store.state
     let key = state.playbookList.map { "\($0.id):\($0.nodes.count)" }.joined(separator: ",")
       + "|\(lastAddedAt(state.playbookList))|\(state.games.count)|\(state.form.stamp)|\(state.families.off.sorted())"
-      + "|\(state.playGamesPlayed)|\(state.levelsOpened.sorted())|\(state.events.count)|\(state.events.last?.at ?? 0)"
+      + "|\(state.playGamesPlayed)|\(state.levelsOpened.sorted())|\(state.formAtMove.stamp)"
     return memo.get(key) { nodePage(state, tree, side: node.color, id: node.id, line: node.line) }
   }
 
