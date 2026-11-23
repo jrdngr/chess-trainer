@@ -54,7 +54,8 @@ struct OpeningPage: View {
     let off = family.map { state.isOff($0) } ?? false
     let canTurnOff = family.map { state.canTurnOff($0) } ?? false
     return VStack(spacing: 0) {
-      AppBar(title: node.name, onBack: onBack) {
+      // In View lines the bar's back returns to the page; on the page, to the tree.
+      AppBar(title: node.name, onBack: { if walk != nil { walk = nil } else { onBack() } }) {
         if canDelete || off || canTurnOff {
           Menu {
             if let family, off {
@@ -105,7 +106,7 @@ struct OpeningPage: View {
   /// View lines' board line: the moves the board shows.
   private var onBoard: [String]? { walk.map { Array($0.line.prefix($0.at)) } }
 
-  /// View lines: Back and Delete, then your Playbook's moves from the board's position. Delete takes the
+  /// View lines: Delete, then your Playbook's moves from the board's position. Delete takes the
   /// move on the board past the opening, when it may.
   private func lines(_ walk: (line: [String], at: Int)) -> some View {
     let shown = Array(walk.line.prefix(walk.at))
@@ -113,11 +114,8 @@ struct OpeningPage: View {
     let canDelete = shown.count > node.line.count && state.canDelete(node.color, shown)
     let next = state.nextMoves(node.color, shown)
     return VStack(spacing: 12) {
-      HStack(spacing: 8) {
-        SheetButton("Back", icon: "back", style: .plain) { self.walk = nil }
-        if canDelete {
-          SheetButton("Delete", icon: "trash", style: .danger) { deletingMove = true }
-        }
+      if canDelete {
+        SheetButton("Delete", icon: "trash", style: .danger) { deletingMove = true }
       }
       if !next.isEmpty {
         VStack(spacing: 0) {
