@@ -520,7 +520,9 @@ struct RunView: View {
         san: san, label: i % 2 == 0 ? "\(i / 2 + 1)." : nil, tone: i >= split ? .engine : nil,
         current: i == analysis.ply - 1, seek: i + 1, ahead: i >= analysis.ply, split: i == split && i > 0)
     }
-    return MoveStrip(items: items, cursor: analysis.ply, max: analysis.line.count) { analysis.seek($0) }.padding(.horizontal, 16)
+    // The lens bar's height under its top gap, so the strip stays clear of the board and its rim.
+    return MoveStrip(items: items, cursor: analysis.ply, max: analysis.line.count, onSeek: { analysis.seek($0) }, height: 31)
+      .padding(.horizontal, 16).padding(.top, 8)
   }
 
   /// Under the prep bar: the rim's name in its color while the board has one, else whose move.

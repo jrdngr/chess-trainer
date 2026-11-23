@@ -37,6 +37,8 @@ struct MoveStrip: View {
   var onSeek: (Int) -> Void
   /// Shown when there are no moves yet.
   var hint: String? = nil
+  /// The row's height: the arrows' size, and the least the chips' row takes.
+  var height: CGFloat = 38
 
   var body: some View {
     HStack(spacing: 6) {
@@ -63,7 +65,7 @@ struct MoveStrip: View {
         // A move added at the end lays out after the cursor moves: scroll once it is there.
         .onChange(of: items.count) { DispatchQueue.main.async { scroll(proxy, animated: true) } }
       }
-      .frame(minHeight: 38)
+      .frame(minHeight: height)
       if arrows { arrow("chevron.right", disabled: cursor >= max) { onSeek(cursor + 1) } }
     }
   }
@@ -76,7 +78,7 @@ struct MoveStrip: View {
 
   private func arrow(_ icon: String, disabled: Bool, _ action: @escaping () -> Void) -> some View {
     Button(action: action) {
-      Image(systemName: icon).font(.system(size: 16, weight: .semibold)).frame(width: 38, height: 38)
+      Image(systemName: icon).font(.system(size: 16, weight: .semibold)).frame(width: height, height: height)
         .background(Circle().fill(Theme.surface))
     }
     .foregroundStyle(Theme.text).buttonStyle(.plain).disabled(disabled).opacity(disabled ? 0.4 : 1)
