@@ -70,6 +70,8 @@ public final class RunModel {
   public private(set) var holeGap: Gap?
   /// The Prep complete pawns, held while growth is due here: one move added pays them.
   public private(set) var heldPrepPawn: PawnAward?
+  /// The held prep pawns the first move added paid out: Undo of every move added takes them back.
+  private var paidByAdding: PawnAward?
   /// The pawns in the prep's pot: one for each prepared move found, paid when the prep completes.
   public private(set) var pot = 0
   /// The square of the last prepared move found, whose pawn went into the pot.
@@ -673,6 +675,7 @@ public final class RunModel {
     current.steps.append((session, Array(line.prefix(fresh))))
     filledRep = rid
     // The held prep pawns fly out of the pot.
+    if let held = heldPrepPawn { paidByAdding = held }
     payHeldPrepPawn()
     store.update { state in
       state.addGrowthLine(rid, line, index)
@@ -720,6 +723,14 @@ public final class RunModel {
     session = last.session
     justAdded = nil
     fill = current
+    // Nothing added any more: the pot's pawns go back into it, to pay on the next move added.
+    if current.steps.isEmpty, let award = paidByAdding {
+      paidByAdding = nil
+      store.update { $0.pawns -= award.count }
+      log("pawns-returned") { $0.source = award.event.rawValue; $0.count = award.count }
+      heldPrepPawn = award
+      pot = award.count
+    }
   }
 
   /* ── tips ── */

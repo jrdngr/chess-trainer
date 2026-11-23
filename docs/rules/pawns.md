@@ -21,7 +21,7 @@ target. Tests: the `docs/rules/pawns.md` suite in
    drains, and the rest of the run still pays. When growth opens there
    because a move is due, the pot waits, breathing: the first move you add
    pays it out, every pawn from the pot, and Done or the game ending first
-   drains it. An opening
+   drains it. Undo of every move added puts the pawns back in the pot. An opening
    complete through the book has nothing due, so it always pays. Tests:
    the clean-prep and held-pot flows in `Tests/FlowTests/PlayFlowTests.swift`.
 3. **A blunder punished** pays when, past your prep, the opponent's move

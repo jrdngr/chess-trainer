@@ -335,6 +335,13 @@ private func quietMove(_ fen: String) -> String? {
     #expect(paid.first?.source == .pot, "they fly out of the pot")
     #expect(app.run?.heldPrepPawn == nil && app.run?.pot == 0)
     #expect(app.state.pawns == before + held)
+
+    // Undo of the only move added puts the pawns back in the pot; Done then drains it.
+    app.run?.undoAdded()
+    #expect(app.run?.heldPrepPawn?.count == held && app.run?.pot == held)
+    #expect(app.state.pawns == before)
+    await app.doneAdding()
+    #expect(app.state.pawns == before)
   }
 }
 
