@@ -91,6 +91,16 @@ private let ROOKS = "r1r3k1/5ppp/8/8/8/8/5PPP/R1R3K1 w - - 0 1"
     #expect(punishment(fen, .w, yours: ["b1c3", "d5e4"], best: best, mated: nil) == nil, "Nxe4 is still to come")
   }
 
+  /// Rule 3: a move that leaves material hanging shows the capture, even where the engine's line plays a quiet move first.
+  /// In a Sicilian endgame after 19.Nd5, 19...b6 hangs the pawn to Nxb6; the engine's line opens 20.Rd1.
+  @Test func aHangingMoveShowsItsCapture() throws {
+    let fen = try #require(walkSan(line(
+      "e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 g6 c4 Bg7 Be3 Nf6 Nc3 O-O Be2 e5 Nb3 d6 Qd3 Be6 Rd1 Re8 Qd2 Qc7 Qxd6 Qxd6 Rxd6 Rad8 Rd1 Rxd1+ Kxd1 Rd8+ Kc2 a6 f3 h6 Nd5"
+    )).fens.last)
+    let yours = ["b7b6", "h1d1", "d8b8", "d5b6"]
+    #expect(punishment(fen, .b, yours: yours, best: ["f6d7", "h1d1"], mated: nil) == ["d5b6"])
+  }
+
   /// Rule 3: the line shown runs on through the trade counted on its last move's square. In the King's Indian after
   /// 11.h3, 11...Re8 lets 12.Nb5 win d6: ...Nc5 defends it, but Bxc5 dxc5 Rxc5 nets a pawn, so the line plays that out.
   @Test func theLineShowsTheTradeItCounts() throws {

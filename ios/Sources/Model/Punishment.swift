@@ -16,7 +16,8 @@ public let PUNISH_PAWNS = 1
 /// `color` is to move. Material is counted after each move with any trade on that move's square finished
 /// (`settledBalance`). A reason is being `PUNISH_PAWNS` or more behind the best line by your `PUNISH_MOVES`th move
 /// after this one, and still that far behind it at your `PUNISH_HOLD_MOVES`th (each at the line's end, if sooner).
-/// The line then runs up to the move that leaves you behind, and on through the trade on its square, if any. `mated` is how many moves from `fen` the line mates you
+/// The line then runs up to the move that leaves you behind, and on through the trade on its square, if any; where your
+/// own move leaves the material hanging, it is that trade on your move's square. `mated` is how many moves from `fen` the line mates you
 /// in, if it does; within `PUNISH_MOVES` + 1 that is a reason too, and the whole line is played.
 public func punishment(_ fen: String, _ color: Color, yours: [String], best: [String], mated: Int?) -> [String]? {
   let line = walkSettled(fen, yours, color), top = walkSettled(fen, best, color)
@@ -31,6 +32,8 @@ public func punishment(_ fen: String, _ color: Color, yours: [String], best: [St
   let held = after(top.balance, PUNISH_HOLD_MOVES) - after(line.balance, PUNISH_HOLD_MOVES)
   guard held >= PUNISH_PAWNS else { return nil }
   for n in 0...PUNISH_MOVES where after(top.balance, n) - after(line.balance, n) >= PUNISH_PAWNS {
+    // Your own move left the material hanging: the line is the trade on its square, whatever the engine plays first.
+    if n == 0, case let trade = tradeLine(line.fens[1], on: line.landed[0]), !trade.isEmpty { return trade }
     // Played up to the move that left you this far behind.
     let i = min(2 * n, line.balance.count - 1)
     var j = i

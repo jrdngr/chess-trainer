@@ -26,7 +26,9 @@ Tests: the `docs/rules/past-prep.md` suite in
    searched again to full depth because the first search came back cut
    short. The engine's line, up to the move that leaves you behind and on
    through the trade counted on that move's square, is kept to show on the
-   board. Checkmate and draws end the run too. The X
+   board. Where your move itself leaves material hanging, the line shown
+   is that trade on your move's square, even if the engine's line plays a
+   quiet move first. Checkmate and draws end the run too. The X
    ends it at any point.
 4. **The book phase.** Once your prep runs out without a miss, the run is in
    the book phase for as long as the position is in the book.
