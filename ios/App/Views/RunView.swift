@@ -546,7 +546,8 @@ struct RunView: View {
         if !onEnding {
           analysisStatus
         } else {
-          VStack(spacing: 8) {
+          // Show beside the ending's name: the deck sits right under it.
+          HStack(spacing: 12) {
             endingName.fixedSize().tip(model.tip, when: model.tip == .blunder, arrow: .down, inset: 16, onDismiss: model.dismissTip)
             if let analysis, !analysis.punish.isEmpty {
               Button("Show") { analysis.show() }

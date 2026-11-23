@@ -31,7 +31,7 @@ target can be covered by `HeadlessApp` flow tests.
 6. **A finished round stays on its board as analysis.** There is no end
    screen. After a blunder, your move shows in red with the reply that
    punishes it, and how the round ended shows under the board (nothing when
-   you ended it yourself). Nothing plays on its own: a Show button under
+   you ended it yourself). Nothing plays on its own: a Show button beside
    "Blunder" goes back to the blunder and plays the engine's line that
    punishes it, a move every 0.8 seconds, the button held down meanwhile.
    It stops on the move that takes your material or mates you, shown in
