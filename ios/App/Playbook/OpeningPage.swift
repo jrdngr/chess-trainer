@@ -31,7 +31,8 @@ struct OpeningPage: View {
   @State private var deletingMove = false
 
   var body: some View {
-    if let rep = store.state.playbookList.first(where: { $0.color == node.color }), nodeAtLine(rep, node.line) != nil {
+    // An opening your lines reach only past it, in another order, opens at the book's moves to it.
+    if store.state.hasOpening(tree, side: node.color, id: node.id) {
       content(page)
     } else {
       Color.clear.onAppear(perform: onBack)
@@ -42,7 +43,8 @@ struct OpeningPage: View {
   private var page: NodePage {
     let state = store.state
     let key = state.playbookList.map { "\($0.id):\($0.nodes.count)" }.joined(separator: ",")
-      + "|\(lastAddedAt(state.playbookList))|\(state.games.count)|\(state.form.stamp)"
+      + "|\(lastAddedAt(state.playbookList))|\(state.games.count)|\(state.form.stamp)|\(state.families.off.sorted())"
+      + "|\(state.playGamesPlayed)|\(state.levelsOpened.sorted())|\(state.events.count)|\(state.events.last?.at ?? 0)"
     return memo.get(key) { nodePage(state, tree, side: node.color, id: node.id, line: node.line) }
   }
 
@@ -55,7 +57,14 @@ struct OpeningPage: View {
     let canTurnOff = family.map { state.canTurnOff($0) } ?? false
     return VStack(spacing: 0) {
       // In View lines the bar's back returns to the page; on the page, to the tree.
-      AppBar(title: node.name, onBack: { if walk != nil { walk = nil } else { onBack() } }) {
+      AppBar(title: node.name, onBack: {
+        if walk != nil {
+          walk = nil
+          cursor = nil
+        } else {
+          onBack()
+        }
+      }) {
         if canDelete || off || canTurnOff {
           Menu {
             if let family, off {
@@ -111,7 +120,7 @@ struct OpeningPage: View {
   private func lines(_ walk: (line: [String], at: Int)) -> some View {
     let shown = Array(walk.line.prefix(walk.at))
     let state = store.state
-    let canDelete = shown.count > node.line.count && state.canDelete(node.color, shown)
+    let canDelete = shown.count > node.line.count && shown.starts(with: node.line) && state.canDelete(node.color, shown)
     let next = state.nextMoves(node.color, shown)
     return VStack(spacing: 12) {
       if canDelete {

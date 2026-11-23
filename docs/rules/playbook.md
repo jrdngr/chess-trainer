@@ -29,9 +29,12 @@ Tests: the `docs/rules/playbook.md` suite in
 4. **An opening's page is about its position.** A tap on an opening you
    have opens its page. Its board stands at the opening's position and steps
    back through your moves to it; an opening you reach in
-   another order than the book's opens at your order; Analysis opens from there.
+   another order than the book's opens at your order, and one your lines
+   reach only past it, in another order, opens at the book's; Analysis opens
+   from there.
    **View lines** walks on past it: in place of the page's cards it lists your
-   Playbook's moves from the board's position, in the Playbook's order, and a
+   Playbook's moves from the board's position, under whichever of your move
+   orders they hang, in the Playbook's order, and a
    tap plays one. Each move is followed, dimmed, by up to the next 3 moves of
    its line (`VIEW_LINES_AHEAD`): your preferred move on your turn, the first
    reply in your Playbook on theirs. The back arrow at the top returns to the page at the opening. The page

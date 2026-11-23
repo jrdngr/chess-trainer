@@ -14,7 +14,9 @@ at a hole), `prepRanOut`
    - at least 1% of your games meet it: the share of games reaching its
      position times the reply's share there.
 
-   Holes are ranked by that last number, most met first. Where a line just
+   A reply your Playbook answers under one move order is answered at that
+   position under every order. Holes are ranked by that last number, most
+   met first. Where a line just
    stops, its most played reply is "too short"; every other hole is "no
    answer yet". (The older gap list, `gaps`, still names a line that stops
    as one gap at its most played reply; Grow here uses it.)

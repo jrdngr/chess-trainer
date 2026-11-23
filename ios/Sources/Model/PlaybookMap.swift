@@ -78,6 +78,18 @@ public func shelfOf(_ tree: OpeningTree, _ node: OpeningNode) -> Shelf? {
   return nil
 }
 
+extension AppState {
+  /// Whether your Playbook on `side` has the opening `id`: it reaches the opening's position or one named under it,
+  /// in any order. The tree shows such an opening as yours, and its page stays open while it is.
+  public func hasOpening(_ tree: OpeningTree, side: Color, id: String) -> Bool {
+    guard let rep = playbookList.first(where: { $0.color == side }) else { return false }
+    return rep.nodes.values.contains { move in
+      guard let named = tree.byKey[positionKey(move.fenAfter)] else { return false }
+      return ancestorsOf(tree, named.id).contains { $0.id == id }
+    }
+  }
+}
+
 /// One side's tree, its first moves at the top.
 public func playbookMap(_ state: AppState, _ tree: OpeningTree, side: Color) -> [MapNode] {
   // With no Playbook on this side yet, every family is for sale.

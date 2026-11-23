@@ -52,6 +52,14 @@ private func morra() -> (AppState, String) {
     #expect(found.yes && found.gap.line == hole)
   }
 
+  /// Rule 1: a reply answered under one move order is answered at that position under every order, whichever comes first.
+  @Test func aReplyAnsweredInAnotherOrderIsNoHole() {
+    let a = findHoles(rep(.b, ["c4 e6 d4 d5", "d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7"]), bookIndex)
+    let b = findHoles(rep(.b, ["d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7", "c4 e6 d4 d5"]), bookIndex)
+    #expect(!a.contains { $0.san == "Nc3" && walkSan($0.path).fens.last.map(positionKey) == walkSan(line("d4 d5 c4 e6")).fens.last.map(positionKey) })
+    #expect(Set(a.map { positionKey($0.after) }) == Set(b.map { positionKey($0.after) }), "the order the lines were added in doesn't matter")
+  }
+
   /// Rule 1: a hole grows when at least 1% of your games meet it, most met first.
   @Test func holesMetInOnePercent() throws {
     let tree = openingTree(bookIndex)

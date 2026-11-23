@@ -118,6 +118,9 @@ func walkChoices(_ rep: Playbook, _ index: ReferenceIndex, _ opts: GrowthOptions
     return lineInRegion(region.tree, region.node, line)
   }
   let preparedAt = Set(rep.nodes.values.map(\.key))
+  // Every move that reaches each position, so a reply answered under one move order counts under all of them.
+  var reaching: [String: [String?]] = [positionKey(fenAt(rep, nil)): [nil]]
+  for move in nodesInOrder(rep) { reaching[positionKey(move.fenAfter), default: []].append(move.id) }
 
   func walk(_ nodeId: String?, _ path: [String], _ reach: Double) {
     let fen = fenAt(rep, nodeId)
@@ -127,13 +130,15 @@ func walkChoices(_ rep: Playbook, _ index: ReferenceIndex, _ opts: GrowthOptions
       let key = positionKey(fen)
       if seen.insert(key).inserted {
         let replies = popularReplies(index, fen, minShare)
-        let answered = kids.filter { childrenOf(rep, $0.id).count > 0 || preparedAt.contains(positionKey($0.fenAfter)) }
-        let answeredIds = Set(answered.map(\.id))
+        let all = (reaching[key] ?? [nodeId]).flatMap { childrenOf(rep, $0) }
+        var sans = Set<String>()
+        let here = kids + all.filter { kid in !kids.contains { $0.san == kid.san } && sans.insert(kid.san).inserted }
+        let answered = Set(all.filter { childrenOf(rep, $0.id).count > 0 || preparedAt.contains(positionKey($0.fenAfter)) }.map(\.san))
         visit(Choice(
           path: path, fen: fen, nodeId: nodeId, reach: reach,
           replies: replies.filter { wanted(path + [$0.san]) },
-          prepared: Set(kids.map(\.san)), answered: Set(answered.map(\.san)),
-          kept: kids.filter { !answeredIds.contains($0.id) && wanted(path + [$0.san]) }))
+          prepared: Set(here.map(\.san)), answered: answered,
+          kept: here.filter { !answered.contains($0.san) && wanted(path + [$0.san]) }))
       }
     }
     if path.count >= maxPly { return }

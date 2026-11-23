@@ -53,27 +53,44 @@ public func nodeGrow(_ under: [Gap], _ all: [Gap], _ gate: CurveGate, opened: Se
 /// Moves View lines shows dimmed after each of your next moves.
 public let VIEW_LINES_AHEAD = 3
 
+/// Your Playbook's moves from the position `fen`: under the move that reaches it on your line, or, where they hang
+/// under another order to the same position, under that one.
+func movesFrom(_ rep: Playbook, _ at: RepMove?, fen: String) -> [RepMove] {
+  if let at, case let kids = childrenOf(rep, at.id), !kids.isEmpty { return kids }
+  let key = positionKey(fen)
+  for move in nodesInOrder(rep) where positionKey(move.fenAfter) == key {
+    let kids = childrenOf(rep, move.id)
+    if !kids.isEmpty { return kids }
+  }
+  return []
+}
+
 extension AppState {
-  /// Your Playbook's moves from where `line` leads on `side`, in its order: what View lines lists.
-  /// Empty when the line isn't yours or ends there.
+  /// Your Playbook's moves from where `line` leads on `side`, in its order: what View lines lists, from any order
+  /// that reaches the same position. Empty when the line isn't legal or your Playbook has nothing there.
   public func nextMoves(_ side: Color, _ line: [String]) -> [String] {
     guard let rep = playbookList.first(where: { $0.color == side }) else { return [] }
     if line.isEmpty { return childrenOf(rep, nil).map(\.san) }
-    guard let at = nodeAtLine(rep, line) else { return [] }
-    return childrenOf(rep, at.id).map(\.san)
+    let walked = walkSan(line)
+    guard walked.moves.count == line.count, let fen = walked.fens.last else { return [] }
+    return movesFrom(rep, nodeAtLine(rep, line), fen: fen).map(\.san)
   }
 
   /// How your Playbook goes on after `line`, up to `count` moves: your preferred move on your
   /// turn, the first reply in your Playbook on theirs. View lines shows it dimmed after each move.
   public func lineAfter(_ side: Color, _ line: [String], count: Int = VIEW_LINES_AHEAD) -> [String] {
-    guard let rep = playbookList.first(where: { $0.color == side }), var at = nodeAtLine(rep, line) else { return [] }
+    guard let rep = playbookList.first(where: { $0.color == side }) else { return [] }
+    let walked = walkSan(line)
+    guard walked.moves.count == line.count, var fen = walked.fens.last else { return [] }
+    var at = nodeAtLine(rep, line)
     var out: [String] = []
     while out.count < count {
-      let kids = childrenOf(rep, at.id)
-      let mine = fenTurn(at.fenAfter) == side
+      let kids = movesFrom(rep, at, fen: fen)
+      let mine = fenTurn(fen) == side
       guard let next = mine ? (kids.first(where: \.preferred) ?? kids.first) : kids.first else { break }
       out.append(next.san)
       at = next
+      fen = next.fenAfter
     }
     return out
   }

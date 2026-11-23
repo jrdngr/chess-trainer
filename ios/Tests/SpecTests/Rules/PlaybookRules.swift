@@ -144,6 +144,30 @@ import Testing
     #expect(nodeAtLine(state.playbookList[0], node.line) != nil)
   }
 
+  /// Rule 4: an opening your lines reach only past it, in another order, is yours and its page opens; one you
+  /// don't reach isn't.
+  @Test func anOpeningReachedOnlyPastItIsYours() throws {
+    let tree = openingTree(bookIndex)
+    var state = AppState()
+    state.addLine(state.ensurePlaybook(.b), line("c4 Nf6 Nc3 e6 d4 Bb4"), .fixed(.book))
+    let queensPawn = try #require(deepestNodeAlong(tree, line("d4")))
+    let sicilian = try #require(deepestNodeAlong(tree, line("e4 c5")))
+    #expect(state.hasOpening(tree, side: .b, id: queensPawn.id))
+    #expect(!state.hasOpening(tree, side: .b, id: sicilian.id))
+    #expect(!state.hasOpening(tree, side: .w, id: queensPawn.id))
+  }
+
+  /// Rule 4: View lines lists your moves from the board's position whatever order they hang under.
+  @Test func viewLinesFollowsTranspositions() {
+    var state = AppState()
+    let id = state.ensurePlaybook(.w)
+    state.addLine(id, line("d4 Nf6 c4 e6 Nc3 d5"), .fixed(.book))
+    state.addLine(id, line("d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7 e3 O-O"), .fixed(.book))
+    let first = line("d4 Nf6 c4 e6 Nc3 d5")
+    #expect(state.nextMoves(.w, first) == ["Bg5"])
+    #expect(state.lineAfter(.w, first) == ["Bg5", "Be7", "e3"])
+  }
+
   /// Rule 5: Grow takes the first hole under the opening an open level allows; else it says what it waits for.
   @Test func growWaitsForTheCurve() throws {
     let tree = openingTree(bookIndex)
