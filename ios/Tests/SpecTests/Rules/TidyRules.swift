@@ -134,7 +134,7 @@ private func find(_ r: Playbook, _ c: TidyChoice, _ loss: MoveLoss = noLoss) thr
     #expect(sortFinds([habit, small]).map(\.kind) == [small.kind, .habit])
   }
 
-  /// Rule 6: the switch replaces your move and its subtree, resets the card and misses there, and undoes.
+  /// Rule 6: the switch replaces your move and its subtree, resets the card and misses there, and undoes; a move to an owned opening stays.
   @Test func switchReplacesAndUndoes() throws {
     var state = AppState()
     let id = state.ensurePlaybook(.w)
@@ -155,6 +155,11 @@ private func find(_ r: Playbook, _ c: TidyChoice, _ loss: MoveLoss = noLoss) thr
     state.undo(undo)
     #expect(state.playbooks == before.playbooks && state.cards == before.cards && state.mistakes == before.mistakes)
     #expect(state.tidySwitch(id, node.id, "Ke2") == nil, "an illegal move switches nothing")
+    // 3.c4 is on the way to the Queen's Gambit, an opening you own: Tidy leaves it.
+    let c4 = try #require(nodeAtLine(after, line("d4 d5 c4")))
+    #expect(state.ownedFamilies(.w).contains { $0.id == "queensGambit" })
+    #expect(state.tidySwitch(id, c4.id, "Nf3") == nil, "a move to an owned opening stays")
+    #expect(nodeAtLine(try #require(state.playbooks[id]), line("d4 d5 c4")) != nil)
   }
 
   /// Rule 7: the button's tip once; on Tidy, each kind's tip the first time it is listed, one at a time down the list.

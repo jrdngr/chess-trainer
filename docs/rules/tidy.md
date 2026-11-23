@@ -39,7 +39,9 @@ and switches to it on request. Tests: the `docs/rules/tidy.md` suite in
    Playbook tab shows the count while it is above 0.
 6. **Switch these moves.** The offered move becomes yours there and your
    move goes with everything under it. The position's card starts over and
-   the misses logged there are cleared. An undo puts it all back.
+   the misses logged there are cleared. An undo puts it all back. A move
+   on the way to an opening you own is never switched and never listed,
+   the same as Delete (families rule 6).
 7. **Tips.** The Playbook tab's Tidy button explains Tidy the first time it
    shows. Each kind of find (joins your line, can join your line, your
    usual move) explains itself on the first card of that kind, once. When

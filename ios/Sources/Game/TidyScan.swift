@@ -62,10 +62,12 @@ public final class TidyScan {
   }
 
   /// The finds for the Playbook as it is, most moves removed first. Choices
-  /// the engine has not judged yet are left out until it has.
+  /// the engine has not judged yet are left out until it has, and so are
+  /// moves on the way to an opening you own, which Tidy can't take.
   public func finds(_ state: AppState, _ index: ReferenceIndex) -> [TidyFind] {
     sortFinds((choices ?? []).compactMap { choice in
       guard let rep = state.playbooks[choice.playbookId], rep.nodes[choice.nodeId] != nil,
+        state.canDelete(choice.color, choice.path + [choice.mine]),
         case .find(let find) = decide(rep, index, choice, loss)
       else { return nil }
       return find

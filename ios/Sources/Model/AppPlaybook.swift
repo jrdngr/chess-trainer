@@ -102,9 +102,13 @@ extension AppState {
 
   /// Tidy plays another move in place of yours: yours and everything under it
   /// go. The answer here changed, so what the old answer earned does not
-  /// carry: the card starts over and the misses logged against it go.
+  /// carry: the card starts over and the misses logged against it go. A move
+  /// on the way to an opening you own stays, as it does for Delete.
   public mutating func tidySwitch(_ repId: String, _ nodeId: String, _ san: String) -> PlaybookUndo? {
-    guard let rep = playbooks[repId], let node = rep.nodes[nodeId], let next = switchMove(rep, nodeId, san) else { return nil }
+    guard let rep = playbooks[repId], let node = rep.nodes[nodeId],
+      canDelete(rep.color, pathTo(rep, nodeId).map(\.san)),
+      let next = switchMove(rep, nodeId, san)
+    else { return nil }
     let undo = undoFor(repId, nodeId, kind: "tidy-undo", to: san)
     shrink(repId, { _ in next }) { before, after in
       AppEvent(kind: "tidy-switch", playbookId: repId, color: before.color, line: lineAt(before, nodeId), to: san).with(removedBetween(before, after))
