@@ -37,7 +37,11 @@ enum PawnMotion {
   static let collectMaxMs = 650.0
   static let popDistance = 50.0
   static let spreadDeg = 30.0
-  static let spawnStaggerMs = 40.0
+  /// Pawns pop out together: each waits a random part of this, most of them hardly any (`spawnSkew`).
+  static let spawnSpreadMs = 110.0
+  static let spawnSkew = 2.6
+  /// Each pawn's pop runs this much faster or slower, at random, so they settle at different moments.
+  static let popVary = 0.15
   /// From the last pawn stopping after its pop to the last one landing, however many pawns a drop holds.
   static let collectWindowMs = 1000.0
   static let bowPx = 18.0
@@ -85,6 +89,8 @@ struct PawnTrip {
   var stop: CGPoint
   var normal: CGVector
   var spawn: Double
+  /// How long its pop takes.
+  var pop: Double = PawnMotion.popMs
   var leave: Double
   var arrive: Double
   var collect: Double
@@ -97,9 +103,9 @@ struct PawnTrip {
     guard t >= spawn, t < arrive else { return nil }
     let lerp = { (a: Double, b: Double, u: Double) in a + (b - a) * u }
     let clamp = { (v: Double) in min(1, max(0, v)) }
-    if t < spawn + PawnMotion.popMs {
-      let k = PawnMotion.popMs / PawnMotion.refPopMs
-      let e = PawnMotion.popEase((t - spawn) / PawnMotion.popMs)
+    if t < spawn + pop {
+      let k = pop / PawnMotion.refPopMs
+      let e = PawnMotion.popEase((t - spawn) / pop)
       let out = 1 - pow(1 - clamp((t - spawn) / (PawnMotion.popScaleMs * k)), 3)
       return (CGPoint(x: lerp(origin.x, stop.x, e), y: lerp(origin.y, stop.y, e)), lerp(0.3, 1, out), clamp((t - spawn) / (PawnMotion.popFadeMs * k)))
     }
@@ -127,7 +133,7 @@ private struct Seeded {
 }
 
 /// Plans a drop's pawns: a fan out of the source, up or, where up leaves the screen, down,
-/// nearest the counter going first.
+/// popping out together, nearest the counter leaving first.
 func planTrips(drop: Int, count: Int, from source: CGRect, to target: CGPoint, width: Double, start: Double) -> [PawnTrip] {
   var random = Seeded(state: UInt32(truncatingIfNeeded: 9973 &* drop &+ 17))
   let origin = CGPoint(x: source.midX, y: source.midY)
@@ -181,14 +187,17 @@ func planTrips(drop: Int, count: Int, from source: CGRect, to target: CGPoint, w
   let flight = { (far: Double) in PawnMotion.collectMinMs + (PawnMotion.collectMaxMs - PawnMotion.collectMinMs) * reach(far) }
   // The leaves spread so the last pawn lands when the collect window closes.
   let leaveStagger = trips.count > 1 ? max(0, PawnMotion.collectWindowMs - flight(trips[trips.count - 1].far)) / Double(trips.count - 1) : 0
+  // All pop out at once, each a little apart, in no order.
+  for rank in trips.indices {
+    trips[rank].trip.spawn = start + PawnMotion.spawnSpreadMs * pow(random.next(), PawnMotion.spawnSkew)
+    trips[rank].trip.pop = PawnMotion.popMs * (1 - PawnMotion.popVary + 2 * PawnMotion.popVary * random.next())
+  }
   // The window opens once the last pawn has popped out and stopped.
-  let popped = start + PawnMotion.spawnStaggerMs * Double(trips.count - 1) + PawnMotion.popMs + PawnMotion.holdMs
+  let popped = (trips.map { $0.trip.spawn + $0.trip.pop }.max() ?? start) + PawnMotion.holdMs
   for rank in trips.indices {
     let f = reach(trips[rank].far)
     let collect = flight(trips[rank].far)
-    let spawn = start + PawnMotion.spawnStaggerMs * Double(rank)
     let leave = popped + leaveStagger * Double(rank)
-    trips[rank].trip.spawn = spawn
     trips[rank].trip.leave = leave
     trips[rank].trip.collect = collect
     trips[rank].trip.arrive = leave + collect
