@@ -23,6 +23,8 @@ public struct RepairItem: Sendable {
   public var played: String
   /// What the playbook says.
   public var expected: String
+  /// The games that went off prep here since it was last answered right.
+  public var games = 1
 }
 
 /// Every repairable position across the given playbooks, most recent mistake first.
@@ -38,7 +40,7 @@ public func buildRepairs(_ reps: [Playbook], _ mistakes: [Mistake]) -> [RepairIt
       id: "\(rep.id)#\(mistake.key)#mistake", source: mistake.source, playbookId: rep.id,
       color: rep.color, key: mistake.key, fen: mistake.fen, path: path,
       lineText: path.isEmpty ? "From a position you reached" : sansToMoveText(path),
-      played: mistake.played, expected: mistake.expected))
+      played: mistake.played, expected: mistake.expected, games: mistake.games ?? 1))
   }
   return out
 }

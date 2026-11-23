@@ -16,5 +16,5 @@ public func repairRefs(_ items: [RepairItem]) -> [RepairRef] {
 
 /// The evidence as `weaknessFromCards` reads it.
 public func slips(_ items: [RepairItem]) -> [Slip] {
-  items.map { Slip(kind: "offprep", playbookId: $0.playbookId, key: $0.key, games: 1) }
+  items.map { Slip(kind: "offprep", playbookId: $0.playbookId, key: $0.key, games: $0.games) }
 }

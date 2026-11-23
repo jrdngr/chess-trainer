@@ -85,6 +85,8 @@ import Testing
     let earned = try #require(app.run).session.state.extras.pawns
     #expect(earned == paid.reduce(0) { $0 + $1.count } && earned >= 1)
     #expect(app.state.pawns == before + earned)
+    let runId = try #require(app.run).run.id
+    #expect(app.state.events.contains { $0.kind == "pawns" && $0.game == runId }, "the pawns are the game's, for its export")
 
     await app.endRound()
     #expect(app.state.pawns == before + earned + 10, "the day's first game pays the streak")
@@ -358,6 +360,18 @@ private func quietMove(_ fen: String) -> String? {
     #expect(app.run?.pot == 0 && app.run?.potDrain?.count == held)
     #expect(app.state.pawns == before)
     #expect(app.run?.session.state.extras.pawns == 0, "the run's score leaves it out")
+  }
+}
+
+/// A run ended while the prep pawns wait on growth: the pot drains, and the end screen doesn't count it.
+@MainActor @Test func endingWithThePotHeldCountsNoneOfIt() async throws {
+  try await headless { app in
+    try await ruyLopezWithGrowthDue(app)
+    try await playPrep(app)
+    #expect(app.run?.heldPrepPawn != nil)
+    await app.endRound()
+    let finish = try #require(app.run?.finish)
+    #expect(finish.ended.extras.pawns == app.run?.session.state.extras.pawns)
   }
 }
 

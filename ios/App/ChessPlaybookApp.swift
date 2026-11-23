@@ -18,6 +18,8 @@ struct ChessPlaybookApp: App {
         .environment(cash)
         .preferredColorScheme(.dark)
         .task {
+          // An App Store build ignores developer settings a TestFlight build left on the device.
+          store.devAllowed = await DevAccess.allowed()
           await store.load()
           // The developer tools' clock, kept on this device.
           if store.dev.daysAhead > 0 {

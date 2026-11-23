@@ -117,4 +117,17 @@ private func close(_ a: Double, _ b: Double) -> Bool { abs(a - b) < 1e-9 }
     #expect(close(weak("p", "k"), 1 + 6 + 1.2 + 1 + 1 + 0.5))
     #expect(weaknessFromCards([:], [], round: 0)("p", "k") == 1.5)
   }
+
+  /// Rule 9: each game that went off prep at a position counts, until it is answered right.
+  @Test func eachGameOffPrepCounts() {
+    var state = AppState()
+    let id = state.ensurePlaybook(.w)
+    state.addLine(id, line("e4 e5 Nf3"), .fixed(.book))
+    let fen = walkSan(line("e4 e5")).fens.last!
+    for _ in 0..<3 { state.missed(id, fen, "Bc4", "Nf3") }
+    let found = slips(buildRepairs(state.playbookList, state.mistakes))
+    #expect(found.count == 1 && found[0].games == 3)
+    state.answered(id, fen, "Nf3", .good)
+    #expect(state.mistakes.isEmpty)
+  }
 }

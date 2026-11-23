@@ -90,7 +90,10 @@ extension AppState {
     guard let opening = curatedOpening(id), ownsFamily(id) != owned else { return false }
     if owned { return seedFamily(opening, tree) }
     guard let rep = playbookList.first(where: { $0.color == opening.color }) else { return false }
+    // Taking an opening out logs no removal: the log keeps only what you did.
+    let logged = events
     dropFamily(opening, from: rep.id)
+    events = logged
     return true
   }
 

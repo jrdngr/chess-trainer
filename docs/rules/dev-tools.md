@@ -10,7 +10,9 @@ can't be a TestFlight build). Tests: the `docs/rules/dev-tools.md` suite in
 
 1. **Changes log nothing and earn nothing.** They set the save directly:
    no event goes in the log, not even a settings change, and pawns added by
-   hand don't touch the streak or a run's score.
+   hand don't touch the streak or a run's score. The one exception: an
+   opening put in logs its moves added, as growth does; taking one out logs
+   nothing.
 2. **Pawn Shop items** are owned or not by hand. Owning one owns every item
    it needs first; taking one away takes every item that needs it. Endgames
    plays the families owned, as it does after buying. Own all and Own none
@@ -30,7 +32,8 @@ can't be a TestFlight build). Tests: the `docs/rules/dev-tools.md` suite in
    green.
 8. **The clock** runs whole days ahead. It belongs to the device, kept over
    relaunches and every profile; Home shows "+N days" while it runs ahead.
-   A pinned clock (tests, replays) doesn't move.
+   A pinned clock (tests, replays) doesn't move. An App Store build ignores
+   the clock and every other developer setting the device kept.
 9. **The App Store unlock** can be ignored on the device: one the App Store
    hands back as owned isn't credited, so the unlock shows and can be bought
    again, and buying it credits it. Forgetting credited purchases lets any

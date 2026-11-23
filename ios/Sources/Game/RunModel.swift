@@ -659,7 +659,9 @@ public final class RunModel {
     offer(.growth)
     // Green and red need the engine's word: their tip waits for the evals.
     services.growthEngine.onEvals = { [weak self] in self?.offerToneTip() }
-    store.update { $0.logEvent(AppEvent(kind: "inline-grow", via: .play, color: gap.color, line: gap.line.joined(separator: " "))) }
+    var grown = AppEvent(kind: "inline-grow", via: .play, color: gap.color, line: gap.line.joined(separator: " "))
+    grown.game = run.id
+    store.update { $0.logEvent(grown) }
   }
 
   /// A move picked while adding: saved to the Playbook, then played.
@@ -680,8 +682,10 @@ public final class RunModel {
     payHeldPrepPawn()
     store.update { state in
       state.addGrowthLine(rid, line, index)
-      state.logEvent(AppEvent(
-        kind: "growth-pick", via: .play, color: run.color, line: run.played.joined(separator: " "), picked: san, offered: offered))
+      var picked = AppEvent(
+        kind: "growth-pick", via: .play, color: run.color, line: run.played.joined(separator: " "), picked: san, offered: offered)
+      picked.game = run.id
+      state.logEvent(picked)
     }
     services.emit(.buzz(10))
     let ends = fillEnds(index, line, added: current.added, size: current.size)
@@ -887,7 +891,7 @@ public final class RunModel {
 
   /// Pawns earned go straight onto the balance, and fly to the counter.
   private func pay(_ award: PawnAward) {
-    store.pay(award)
+    store.pay(award, game: run.id)
   }
 
   /// The held prep pawns, paid out of the pot: a move was added, or growth wasn't due after all.
@@ -897,7 +901,7 @@ public final class RunModel {
     guard let award = heldPrepPawn else { return }
     heldPrepPawn = nil
     pot = 0
-    if fresh, let square = lastPotSquare { store.payPot(award, lastSquare: square) } else { pay(award) }
+    if fresh, let square = lastPotSquare { store.payPot(award, lastSquare: square, game: run.id) } else { pay(award) }
     offerPawnTips()
   }
 
@@ -918,8 +922,12 @@ public final class RunModel {
   }
 
   private func finished(_ f: Finish) {
+    let withheld = heldPrepPawn?.count ?? 0
     dropHeldPrepPawn()
     stop()
+    // The end screen counts only the pawns paid: a pot the game's end drained isn't among them.
+    var f = f
+    f.ended.extras.pawns -= withheld
     finish = f
     log("game-end") { $0.text = "\(f.how)"; $0.count = f.ended.run.played.count; $0.line = f.ended.run.played.joined(separator: " ") }
     tip = nil

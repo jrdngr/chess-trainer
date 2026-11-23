@@ -205,7 +205,8 @@ struct DeveloperView: View {
     section("Streak")
     ListCard {
       CountRow(label: "Days", value: streak.days, range: 0...365) { n in
-        store.devUpdate { $0.devSetStreak(days: n, lastPlayed: last ?? 0) }
+        // An "Older" last day (nil here) stays older.
+        store.devUpdate { $0.devSetStreak(days: n, lastPlayed: last ?? (streak.day == nil ? 0 : 4)) }
       }
       // A streak of 0 days has no last day.
       if streak.days > 0 {

@@ -19,6 +19,8 @@ public struct Mistake: Equatable, Sendable, Codable {
   public var path: [String]?
   public var played: String
   public var expected: String
+  /// The games that went off prep here since it was last answered right; nil is one.
+  public var games: Int?
 
   public init(id: String = "", at: Double = 0, source: MistakeSource, playbookId: String, key: String, fen: String, path: [String]? = nil, played: String, expected: String) {
     self.id = id
@@ -42,6 +44,8 @@ public func addMistake(_ log: [Mistake], _ mistake: Mistake) -> [Mistake] {
   var entry = mistake
   entry.at = Env.now()
   entry.id = "\(mistake.playbookId)#\(mistake.key)"
+  // A miss again at the same position counts one more game off prep there.
+  if let earlier = log.first(where: { $0.id == entry.id }) { entry.games = (earlier.games ?? 1) + 1 }
   let rest = log.filter { $0.id != entry.id }
   return Array((rest + [entry]).suffix(MISTAKE_LIMIT))
 }

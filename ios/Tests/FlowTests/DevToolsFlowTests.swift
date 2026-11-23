@@ -18,7 +18,27 @@ import Testing
     #expect(app.state.events == events)
     #expect(app.state.pawnStreak == streak)
     #expect(app.state.pawns == 10_000)
+
+    app.store.devSetOpening("london", owned: true)
+    let added = app.state.events
+    #expect(added.count > events.count, "an opening put in logs its moves added")
+    app.store.devSetOpening("london", owned: false)
+    #expect(!app.state.ownsFamily("london"))
+    #expect(app.state.events == added, "taking one out logs nothing")
   }
+}
+
+/// Rule 8: a build without the developer tools ignores what a build with them left on the device.
+@MainActor @Test func aBuildWithoutTheToolsIgnoresDevSettings() async throws {
+  let storage = MemoryStorage()
+  var kept = DevSettings()
+  kept.daysAhead = 3
+  kept.ignoreStoreUnlock = true
+  try storage.write("dev.json", JSONEncoder().encode(kept))
+  let store = AppStore(storage: storage)
+  store.devAllowed = false
+  await store.load(book: nil)
+  #expect(store.dev.daysAhead == 0 && !store.dev.ignoreStoreUnlock)
 }
 
 /// Rule 8: the clock's days ahead belong to the device: kept over a relaunch and on every profile.

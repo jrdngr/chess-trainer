@@ -49,10 +49,13 @@ extension AppStore {
     }
   }
 
-  /// Pawns earned: onto the balance (unless `paid` already), and off to the counter.
-  public func pay(_ award: PawnAward, paid: Bool = false) {
+  /// Pawns earned: onto the balance (unless `paid` already), and off to the counter. `game` tags the event
+  /// with the game that earned them.
+  public func pay(_ award: PawnAward, paid: Bool = false, game: String? = nil) {
     guard award.count > 0 else { return }
-    log(AppEvent(kind: "pawns", source: award.event.rawValue, count: award.count, text: "\(award.source)"))
+    var event = AppEvent(kind: "pawns", source: award.event.rawValue, count: award.count, text: "\(award.source)")
+    event.game = game
+    log(event)
     if !paid { update { $0.earn(award.count) } }
     drop(award)
   }
@@ -60,9 +63,11 @@ extension AppStore {
   /// A prep's pot paid out the turn its last prepared move was found: that move's pawn, still on
   /// its way into the pot, turns for the counter, and the pot pays out the rest. With nothing on
   /// its way in, the last pawn pops out of its square instead.
-  public func payPot(_ award: PawnAward, lastSquare square: String) {
+  public func payPot(_ award: PawnAward, lastSquare square: String, game: String? = nil) {
     guard award.count > 0 else { return }
-    log(AppEvent(kind: "pawns", source: award.event.rawValue, count: award.count, text: "\(award.source)"))
+    var event = AppEvent(kind: "pawns", source: award.event.rawValue, count: award.count, text: "\(award.source)")
+    event.game = game
+    log(event)
     update { $0.earn(award.count) }
     let last = PawnAward(award.event, .square(square), count: 1)
     if let i = pawnDrops.lastIndex(where: { $0.toPot && $0.flying > 0 }) {

@@ -13,8 +13,12 @@ extension AppStore {
     save()
   }
 
-  /// The developer settings for this device, read from its own file.
+  /// The developer settings for this device, read from its own file; none in a build without the tools.
   func loadDev() {
+    guard devAllowed else {
+      dev = DevSettings()
+      return
+    }
     if let data = try? storage.read(Self.devFile), let saved = try? JSONDecoder().decode(DevSettings.self, from: data) {
       dev = saved
     }
