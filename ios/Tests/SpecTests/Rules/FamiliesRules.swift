@@ -70,6 +70,20 @@ private func all(_ list: [MapNode]) -> [MapNode] { list.flatMap { [$0] + all($0.
     #expect(!short && poor.pawns == 499)
   }
 
+  /// Rule 5: once bought, the tree opens at the opening bought, not at the first move above it.
+  @Test func theTreeOpensAtTheOpeningBought() throws {
+    let tree = openingTree(bookIndex)
+    var state = starter()
+    state.pawns = 2_000
+    #expect(mapPath(playbookMap(state, tree, side: .w), family: "ruy") == nil, "not yours yet")
+    _ = state.buyFamily("ruy", tree)
+    let roots = playbookMap(state, tree, side: .w)
+    let path = try #require(mapPath(roots, family: "ruy"))
+    let open = try #require(all(roots).first { $0.id == path.last })
+    #expect(open.name == "Ruy Lopez" && open.owned)
+    #expect(path.count > 1 && path.first == roots.first { $0.line == ["e4"] }?.id)
+  }
+
   /// Rule 5: buying adds a seed line from each of its roots.
   @Test func buyingAddsItsLines() {
     let tree = openingTree(bookIndex)

@@ -233,7 +233,10 @@ struct PlaybookMapView: View {
     guard let id = node.family else { return }
     var bought = false
     store.update { bought = $0.buyFamily(id, tree) }
-    if bought { toasts.show("\(node.name) added") }
+    guard bought else { return }
+    toasts.show("\(node.name) added")
+    // The bought opening is a new node on the rebuilt tree: open the tree at it.
+    if let found = mapPath(map, family: id) { withAnimation(.easeOut(duration: 0.26)) { paths[side] = found } }
   }
 
   /// An opening's tag as a word in the tag's color.

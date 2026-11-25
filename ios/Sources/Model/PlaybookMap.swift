@@ -267,6 +267,16 @@ public func mapPath(_ roots: [MapNode], to id: String) -> [String]? {
   return nil
 }
 
+/// The ids from a top opening down to the opening of yours from a list opening, or nil when
+/// it isn't yours: where the tree opens once it is bought.
+public func mapPath(_ roots: [MapNode], family: String) -> [String]? {
+  for node in roots {
+    if node.owned && node.family == family { return [node.id] }
+    if let below = mapPath(node.children, family: family) { return [node.id] + below }
+  }
+  return nil
+}
+
 /// The open path after a tap on `id`: a tap on the open opening folds it back
 /// to its parent, any other tap opens the one tapped.
 public func mapTap(_ roots: [MapNode], path: [String], _ id: String) -> [String] {

@@ -28,7 +28,8 @@ What pawns buy on the Playbook tree: a curated list of openings. Code:
 5. **Buying adds the opening's lines:** from each of its starts, the most
    played reply and your most played answer in turn (as Black the calmest
    of the top three answers), for one fill of your moves, ending with the
-   named opening or where no reply is common enough.
+   named opening or where no reply is common enough. The tree then opens
+   at the opening bought, among the openings under it.
 6. **Your openings are yours for good,** bought or picked when choosing.
    Delete can't take an opening's named position or the moves to it, and
    the price ladder never steps down.
