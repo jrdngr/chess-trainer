@@ -124,6 +124,14 @@ extension ShopFeature {
   /// A lens, Plan among them.
   public var isLens: Bool { self == .lensPlan || LensKind.allCases.contains { Self.lens($0) == self } }
 
+  /// A feature with a control on Home: buying it takes you there to see it.
+  public var showsOnHome: Bool {
+    switch self {
+    case .sidePicker, .openingPicker, .freeform, .middlegame, .endgames: true
+    default: false
+    }
+  }
+
   /// An upgrade that adds a part to a lens.
   public var isLensUpgrade: Bool { Self.lensUpgrades.contains(self) }
 

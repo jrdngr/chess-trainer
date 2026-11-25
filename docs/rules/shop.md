@@ -29,7 +29,8 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    Freeform you play Drill. The side picker offers White, Black and Either, and starts on Either
    when bought. Home shows a
    feature's control only once it is yours: the side picker, the Freeform
-   switch, the opening picker, Middlegame and Endgames.
+   switch, the opening picker, Middlegame and Endgames. Buying one of those
+   takes you to Home to see it; any other purchase keeps you in the Shop.
 5. **Each lens shows once it is yours,** in Play, on the end screen and in
    Endgames, drawing only the parts that are yours. A lens's first part:
    Pawns tags weak and passed pawns, marks holes and arrows the best

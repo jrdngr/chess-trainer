@@ -83,6 +83,12 @@ private func state(pawns: Int, owning: [String] = []) -> AppState {
     #expect(side.settings.selection.color == .either, "Either comes with the side picker")
   }
 
+  /// Rule 4: only a feature with a control on Home takes you there when bought.
+  @Test func onlyHomeFeaturesGoHome() {
+    let home = ShopFeature.allCases.filter(\.showsOnHome)
+    #expect(home == [.sidePicker, .openingPicker, .freeform, .middlegame, .endgames])
+  }
+
   /// Rule 6: the unlock gives the feature tree and nothing else; packs add pawns; a transaction pays once.
   @Test func cashBuysTheTreeAndPawns() {
     var s = AppState()

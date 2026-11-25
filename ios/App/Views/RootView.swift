@@ -104,9 +104,8 @@ struct RootView: View {
           .id(explore?.sans.joined(separator: " ") ?? "")
           .tabItem { Label(Tab.analysis.label, systemImage: Tab.analysis.symbol) }.tag(Tab.analysis)
         ShopView(focus: $shopFocus) { feature in
-          // A feature with a place on Home shows itself off there; the lenses wait for the next game,
-          // and an endgame family is found in Endgames.
-          if !feature.isLens && feature != .endgamesPawn && feature != .endgamesRook { tab = .home }
+          // A feature with a control on Home shows itself off there; anything else keeps you in the Shop.
+          if feature.showsOnHome { tab = .home }
         }
           .tabItem { Label { Text(Tab.shop.label) } icon: { Image.pawn } }.badge(store.state.buyableCount).tag(Tab.shop)
       }
