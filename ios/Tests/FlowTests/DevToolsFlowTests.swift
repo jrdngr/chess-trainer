@@ -63,9 +63,9 @@ import Testing
     onboard(app)
     app.store.setDev { $0.ignoreStoreUnlock = true }
     #expect(!app.store.credit(.unlock, transaction: "1", bought: false))
-    #expect(!app.state.ownsFeatureTree)
+    #expect(!app.state.ownsUnlockItems)
     #expect(app.store.credit(.unlock, transaction: "1", bought: true))
-    #expect(app.state.ownsFeatureTree)
+    #expect(app.state.ownsUnlockItems)
 
     #expect(app.store.credit(.pawns2000, transaction: "2", bought: false), "packs are never ignored")
     #expect(!app.store.credit(.pawns2000, transaction: "2"))

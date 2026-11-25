@@ -11,7 +11,8 @@ measure`), so a value or price change needs no new games.
 
 - **No ads, ever.**
 - **One purchase most people make.** A one-time $10 unlock gives the whole
-  feature tree in the Pawn Shop. Everything else in the app is bought with
+  feature tree in the Pawn Shop and both endgame families (King and pawn,
+  Rook endings). Everything else in the app is bought with
   pawns, and pawns can be earned by playing.
 - **Cash buys only two things:** the $10 unlock and pawn packs. There is no
   pawn multiplier and no pawn grant with the unlock.

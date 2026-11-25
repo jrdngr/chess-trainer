@@ -102,7 +102,7 @@ struct PawnSheet: View {
         }
       }
       .frame(height: 56).padding(.horizontal, 4)
-      if let product = cash.products[.unlock], !store.state.ownsFeatureTree {
+      if let product = cash.products[.unlock], !store.state.ownsUnlockItems {
         HStack(spacing: 12) {
           Icon(name: "star", size: 20).foregroundStyle(Theme.accent)
           Text("Unlock everything").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text)

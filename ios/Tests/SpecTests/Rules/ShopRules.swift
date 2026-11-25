@@ -89,13 +89,15 @@ private func state(pawns: Int, owning: [String] = []) -> AppState {
     #expect(home == [.sidePicker, .openingPicker, .freeform, .middlegame, .endgames])
   }
 
-  /// Rule 6: the unlock gives the feature tree and nothing else; packs add pawns; a transaction pays once.
+  /// Rule 6: the unlock gives the feature tree and the endgame families; packs add pawns; a transaction pays once.
   @Test func cashBuysTheTreeAndPawns() {
     var s = AppState()
-    #expect(!s.ownsFeatureTree)
+    #expect(!s.ownsUnlockItems)
     let unlocked = s.credit(.unlock, transaction: "1")
-    #expect(unlocked && s.ownsFeatureTree && s.pawns == 0)
-    #expect(!s.owns(.endgamesPawn) && !s.owns(.endgamesRook), "endgame families are bought with pawns")
+    #expect(unlocked && s.ownsUnlockItems && s.pawns == 0)
+    #expect(s.owns(.endgamesPawn) && s.owns(.endgamesRook), "the endgame families come with it")
+    #expect(s.endgames.families == Set(["mates", "pawn", "rook", "games"]))
+    #expect(!s.unlocked.contains("personalities") && !s.unlocked.contains("boards"), "not what isn't for sale")
     #expect(s.ownedFamilies(.w).isEmpty, "no openings")
     s.unlocked.remove("lensEvalHistory")
     let again = s.credit(.unlock, transaction: "1")
@@ -106,7 +108,7 @@ private func state(pawns: Int, owning: [String] = []) -> AppState {
     #expect(!twice && s.pawns == 6_000, "a transaction is credited once")
     _ = s.credit(.pawns13000, transaction: "3")
     #expect(s.pawns == 19_000)
-    #expect(CashProduct.pawns13000.pawns < FEATURE_TREE.map(\.price).reduce(0, +), "$10 of pawns buys less than the unlock")
+    #expect(CashProduct.pawns13000.pawns < UNLOCK_ITEMS.map(\.price).reduce(0, +), "$10 of pawns buys less than the unlock")
   }
 
   /// Rule 6: the unlock starts the side picker on Either; a refund takes back only what the unlock gave.
@@ -125,10 +127,17 @@ private func state(pawns: Int, owning: [String] = []) -> AppState {
     let revoked = s.revoke(.unlock, transaction: "1")
     #expect(revoked)
     #expect(s.owns(.sidePicker), "bought with pawns, kept")
-    #expect(!s.owns(.freeform) && !s.ownsFeatureTree)
+    #expect(!s.owns(.freeform) && !s.ownsUnlockItems)
+    #expect(!s.owns(.endgamesRook), "an endgame family it gave goes too")
     #expect(s.pawns == balance, "a pack's pawns stay")
     let pack = s.revoke(.pawns2000, transaction: "2")
     #expect(!pack)
+
+    var endgames = state(pawns: 5_000)
+    _ = endgames.buy("endgames")
+    endgames.credit(.unlock, transaction: "1")
+    endgames.revoke(.unlock, transaction: "1")
+    #expect(endgames.owns(.endgames) && endgames.endgames.families == Set(["mates", "games"]), "Endgames bought with pawns keeps only its own families")
 
     var fresh = AppState()
     fresh.holdToUnlocks()

@@ -92,8 +92,11 @@ public let SHOP: [ShopItem] = [
   ShopItem("icons", "App icons", .cosmetics, 2_000, each: true, about: "New app icons."),
 ]
 
-/// The features the $10 unlock gives: the whole feature shelf.
+/// The feature shelf: the tree of features.
 public var FEATURE_TREE: [ShopItem] { SHOP.filter { $0.shelf == .features } }
+
+/// What the $10 unlock gives: the feature tree and the endgame families.
+public var UNLOCK_ITEMS: [ShopItem] { SHOP.filter { $0.shelf == .features || $0.feature?.endgameFamily != nil } }
 
 public func shopItem(_ id: String) -> ShopItem? { SHOP.first { $0.id == id } }
 

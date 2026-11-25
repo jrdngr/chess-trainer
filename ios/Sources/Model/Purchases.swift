@@ -1,6 +1,6 @@
 import Foundation
 
-/// What cash buys: the one-time unlock of the Pawn Shop's feature tree, and pawn packs.
+/// What cash buys: the one-time unlock of the Pawn Shop's feature tree and endgame families, and pawn packs.
 /// Nothing else is sold for money. The ids match the products in App Store Connect.
 public enum CashProduct: String, CaseIterable, Sendable {
   case unlock = "com.jordangrace.chessplaybook.unlock"
@@ -23,18 +23,18 @@ public enum CashProduct: String, CaseIterable, Sendable {
 }
 
 extension AppState {
-  /// Whether every item in the feature tree is yours.
-  public var ownsFeatureTree: Bool { FEATURE_TREE.allSatisfy { unlocked.contains($0.id) } }
+  /// Whether every item the unlock gives is yours.
+  public var ownsUnlockItems: Bool { UNLOCK_ITEMS.allSatisfy { unlocked.contains($0.id) } }
 
-  /// A purchase from the App Store, credited once per transaction: the unlock makes the whole
-  /// feature tree yours (not the endgame families, cosmetics or openings); a pack adds its pawns.
+  /// A purchase from the App Store, credited once per transaction: the unlock makes the
+  /// feature tree and the endgame families yours (not cosmetics or openings); a pack adds its pawns.
   /// An unlock seen again still grants every feature, so items added to the tree later come with
   /// it. The side picker starts on Either, as when bought with pawns. Returns whether it was credited.
   @discardableResult
   public mutating func credit(_ product: CashProduct, transaction: String) -> Bool {
     let fresh = credited.insert(transaction).inserted
     if product == .unlock {
-      for item in FEATURE_TREE where unlocked.insert(item.id).inserted {
+      for item in UNLOCK_ITEMS where unlocked.insert(item.id).inserted {
         cashUnlocked.insert(item.id)
         if item.feature == .sidePicker { settings.selection.color = .either }
       }
@@ -55,6 +55,7 @@ extension AppState {
     unlocked.subtract(cashUnlocked)
     cashUnlocked = []
     holdToUnlocks()
+    syncEndgameFamilies()
     logEvent(AppEvent(kind: "cash-revoked", picked: product.rawValue, text: "transaction \(transaction)"))
     return true
   }

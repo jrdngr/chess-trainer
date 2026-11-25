@@ -45,13 +45,13 @@ suite in `Tests/SpecTests/Rules/ShopRules.swift`.
    key squares, the opposition and cut-off lines. The key under the board
    lists only what the lens draws. Analysis has every lens and every part.
 6. **Cash buys two things.** The unlock ($9.99) makes every feature in the
-   tree yours; not the endgame families, the cosmetics or openings. It
+   tree and both endgame families yours; not the cosmetics or openings. It
    comes back to every profile from the App Store. Pawn packs: 2,000 for
    $1.99, 6,000 for $4.99, 13,000 for $9.99. Both are sold in the pawn
    sheet, which the pawn balance opens on Home and in the Shop, and which
    a price you can't pay yet opens from an item's sheet; it closes once a
    pack is bought, and a toast over every sheet says so. The unlock shows
-   there until the tree is yours. Each App Store transaction is credited once;
+   there until all it gives is yours. Each App Store transaction is credited once;
    an unlock seen again still grants items added to the tree since. The
    unlock starts the side picker on Either, as buying it does. A refunded
    unlock takes back the features only it gave; features bought with pawns
