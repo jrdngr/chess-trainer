@@ -75,11 +75,11 @@ struct RestoreView: View {
           ? "This replaces \(pick.profile.name) on this device."
           : "It's added as a new profile.")
     }
-    .alert("Restore all profiles?", isPresented: Binding(get: { restoringAll != nil }, set: { if !$0 { restoringAll = nil } }), presenting: restoringAll) { device in
+    .alert(store.devAllowed ? "Restore all profiles?" : "Restore your progress?", isPresented: Binding(get: { restoringAll != nil }, set: { if !$0 { restoringAll = nil } }), presenting: restoringAll) { device in
       Button("Restore", role: .destructive) { run { await store.restoreAll(device) } }
       Button("Cancel", role: .cancel) { restoringAll = nil }
     } message: { _ in
-      Text("This replaces every profile on this device.")
+      Text(store.devAllowed ? "This replaces every profile on this device." : "This replaces your progress on this device.")
     }
     .alert("Couldn't restore", isPresented: $failed) {
       Button("OK", role: .cancel) {}
@@ -95,12 +95,15 @@ struct RestoreView: View {
         .font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text2)
         .padding(.horizontal, 4).padding(.top, 24).padding(.bottom, 8)
       ListCard {
+        // Profiles are a developer tool: a player sees no profile's name, and on first launch
+        // only the one row that restores the whole backup.
         if offered != nil {
-          row("Restore all", detail: nil) { restoringAll = device }
+          row(store.devAllowed ? "Restore all" : "Restore", detail: store.devAllowed ? nil : when(device.manifest.savedAt)) { restoringAll = device }
         }
-        ForEach(device.manifest.profiles) { profile in
-          // Profiles are a developer tool: a player sees no profile's name.
-          row(store.devAllowed ? profile.name : "Restore", detail: when(profile.savedAt)) { picking = (profile, device) }
+        if offered == nil || store.devAllowed {
+          ForEach(device.manifest.profiles) { profile in
+            row(store.devAllowed ? profile.name : "Restore", detail: when(profile.savedAt)) { picking = (profile, device) }
+          }
         }
       }
     }
