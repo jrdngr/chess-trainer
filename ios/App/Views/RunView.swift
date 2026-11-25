@@ -454,11 +454,12 @@ struct RunView: View {
     onExit()
   }
 
-  /// One fixed-height slot: the moves played for you while they replay, else the goal.
+  /// One fixed-height slot: a Play run's moves while they replay, else the goal. A Middlegame
+  /// handoff's replay leaves it empty.
   @ViewBuilder private var goalSlot: some View {
     Group {
-      if model.intro == .replay, let handoff = model.handoff {
-        HandoffMoves(handoff: handoff, played: model.introPly)
+      if model.intro == .replay, model.handoff != nil {
+        Color.clear
       } else if model.intro == .replay {
         movesLine(sansToMoveText(Array(model.introPath.prefix(model.introPly))))
       } else if !model.held, model.prefs.missions, let mission = model.session.state.extras.mission {
