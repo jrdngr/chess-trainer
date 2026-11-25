@@ -27,6 +27,11 @@ struct PlaybookView: View {
   var onHome: () -> Void = {}
 
   @Environment(AppStore.self) private var store
+  /// An opening being bought: its pawns in the air, the balance counting down.
+  @State private var purchase: Purchase?
+  @State private var flights: [Flight] = []
+  @State private var balanceFrame: CGRect = .zero
+  @State private var buyingPawns = false
   /// The tree's own focus, from an opening's page: the opening the curve grows next.
   @State private var nextFocus: MapFocus?
 
@@ -76,16 +81,35 @@ struct PlaybookView: View {
     VStack(spacing: 0) {
       AppBar(title: "Playbook", large: true) {
         TidyButton(onOpen: { page = .tidy })
-        SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")]).frame(width: 150)
+        balance
       }
       .zIndex(1)
+      SegmentedControl(value: $side, options: [(.w, "White"), (.b, "Black")])
+        .padding(.horizontal, 20).padding(.bottom, 8)
       // With nothing on a side, its tree is every family for sale.
       PlaybookMapView(
         tree: tree, side: side, kept: $paths, focus: mapFocus ?? nextFocus,
         onConsumedFocus: {
           if mapFocus != nil { onConsumedMapFocus() } else { nextFocus = nil }
         },
-        onOpen: { node in page = .opening(node) })
+        onOpen: { node in page = .opening(node) },
+        purchase: $purchase, flights: $flights, balanceFrame: balanceFrame)
     }
+    .overlay { FlightLayer(flights: flights) }
+    .coordinateSpace(name: PlaybookMapView.space)
+    .pawnSheet(isPresented: $buyingPawns)
+  }
+
+  /// The pawn balance, as in the Shop: it counts down while an opening is bought, and a tap opens the pawn sheet.
+  private var balance: some View {
+    Button { if purchase == nil { buyingPawns = true } } label: {
+      PawnAmount(count: purchase?.balance ?? store.state.pawns)
+        .padding(.horizontal, 14).frame(height: 42)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface))
+        .contentShape(RoundedRectangle(cornerRadius: 14))
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("\(store.state.pawns) pawns, buy pawns")
+    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(PlaybookMapView.space)) } action: { balanceFrame = $0 }
   }
 }

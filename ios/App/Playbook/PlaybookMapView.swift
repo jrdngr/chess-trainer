@@ -27,12 +27,23 @@ struct PlaybookMapView: View {
   var choosing: Binding<Choosing>? = nil
   /// Open an opening you have on its page.
   var onOpen: (MapNode) -> Void = { _ in }
+  /// An opening being bought, and the pawns flying from the balance into its disc; without
+  /// them an Unlock buys at once.
+  var purchase: Binding<Purchase?>? = nil
+  var flights: Binding<[Flight]>? = nil
+  /// The balance the pawns fly from, in `space`.
+  var balanceFrame: CGRect = .zero
+
+  /// The screen's coordinate space, which the flights are drawn in.
+  static let space = "playbook"
 
   @Environment(AppStore.self) private var store
   @Environment(Toasts.self) private var toasts
   @State private var memo = Memo<[MapNode]>()
   @State private var ownPaths: [ChessCore.Color: [String]] = [:]
   @State private var width: CGFloat = 393
+  /// Where the tree's top left corner is in `space`, which moves as the tree scrolls.
+  @State private var origin: CGPoint = .zero
 
   var body: some View {
     let roots = map
@@ -51,12 +62,13 @@ struct PlaybookMapView: View {
                   node: node, open: node.id == path.last, onPath: path.contains(node.id),
                   recede: !path.contains(node.id) && r < rows.count - 1,
                   more: !node.children.isEmpty && !path.contains(node.id),
-                  showPrice: choosing == nil, picked: picked(node)
+                  showPrice: choosing == nil, picked: picked(node),
+                  purchase: purchase?.wrappedValue?.id == node.id ? purchase?.wrappedValue : nil
                 )
                 .frame(width: CGFloat(spot.width), height: CGFloat(MAP_DISC + MAP_NAME + MAP_FOOT), alignment: .top)
                 .contentShape(Rectangle())
                 .offset(x: CGFloat(spot.x - spot.width / 2), y: CGFloat(spot.y))
-                .onTapGesture { tap(roots, path, node.id) }
+                .onTapGesture { if purchase?.wrappedValue == nil { tap(roots, path, node.id) } }
                 .transition(.opacity)
               }
             }
@@ -67,6 +79,7 @@ struct PlaybookMapView: View {
           }
         }
         .frame(width: width, height: CGFloat(layout.height) + 12, alignment: .topLeading)
+        .onGeometryChange(for: CGPoint.self) { $0.frame(in: .named(Self.space)).origin } action: { origin = $0 }
       }
       .scrollIndicators(.hidden)
       .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
@@ -184,13 +197,14 @@ struct PlaybookMapView: View {
         HStack(spacing: 0) {
           Text("Unlock").font(.system(size: 15, weight: .semibold))
           Spacer(minLength: 8)
-          PawnAmount(count: price, size: 15).fixedSize()
+          PawnAmount(count: purchase?.wrappedValue?.left ?? price, size: 15).fixedSize()
         }
         .padding(.horizontal, 14)
       }
       .buttonStyle(KeyButtonStyle(kind: .primary, height: 45, radius: 12))
       .frame(width: 140)
       .disabled(store.state.pawns < price)
+      .allowsHitTesting(purchase?.wrappedValue == nil)
     } else {
       let needs = requirements(node)
       if !needs.isEmpty {
@@ -229,14 +243,52 @@ struct PlaybookMapView: View {
     }
   }
 
+  /// Buy an opening as the Shop buys: pawns fly from the balance into its disc while its ring
+  /// fills and the prices count down; then it is yours, and the tree opens at it.
   private func buy(_ node: MapNode) {
-    guard let id = node.family else { return }
+    guard let id = node.family, case .forSale(let price) = node.state, store.state.pawns >= price else { return }
+    guard let purchase, let flights else {
+      finish(node, id)
+      return
+    }
+    guard purchase.wrappedValue == nil else { return }
+    let roots = map
+    let path = openPath(roots)
+    let layout = mapLayout(mapRows(roots, path: path), path: path, width: Double(width))
+    let start = store.state.pawns
+    purchase.wrappedValue = Purchase(id: node.id, start: start, price: price, progress: 0)
+    Task { @MainActor in
+      if let spot = layout.spots[node.id] {
+        let to = CGPoint(x: origin.x + CGFloat(spot.x), y: origin.y + CGFloat(spot.y + MAP_DISC / 2))
+        let from = CGPoint(x: balanceFrame.midX, y: balanceFrame.midY)
+        flights.wrappedValue = (0..<10).map { Flight(id: $0, from: from, to: to) }
+      }
+      try? await Task.sleep(for: .milliseconds(210))
+      withAnimation(.linear(duration: 0.575)) { purchase.wrappedValue?.progress = 1 }
+      try? await Task.sleep(for: .milliseconds(575))
+      flights.wrappedValue = []
+      if let opened = finish(node, id) {
+        // The opening's own disc, new on the tree, pops as the Shop's medallion does.
+        purchase.wrappedValue = Purchase(id: opened, start: start, price: price, progress: 1)
+        try? await Task.sleep(for: .milliseconds(60))
+        purchase.wrappedValue?.done = true
+        try? await Task.sleep(for: .milliseconds(400))
+      }
+      purchase.wrappedValue = nil
+    }
+  }
+
+  /// The opening bought, and the tree open at it. Returns the bought opening's node.
+  @discardableResult
+  private func finish(_ node: MapNode, _ id: String) -> String? {
     var bought = false
     store.update { bought = $0.buyFamily(id, tree) }
-    guard bought else { return }
+    guard bought else { return nil }
     toasts.show("\(node.name) added")
     // The bought opening is a new node on the rebuilt tree: open the tree at it.
-    if let found = mapPath(map, family: id) { withAnimation(.easeOut(duration: 0.26)) { paths[side] = found } }
+    guard let found = mapPath(map, family: id) else { return nil }
+    withAnimation(.easeOut(duration: 0.26)) { paths[side] = found }
+    return found.last
   }
 
   /// An opening's tag as a word in the tag's color.
@@ -320,6 +372,8 @@ private struct MapNodeView: View {
   var showPrice = true
   /// Picked for a slot while choosing openings.
   var picked = false
+  /// This opening being bought.
+  var purchase: Purchase? = nil
 
   private var isNext: Bool { if case .next = node.state { return true } else { return false } }
   private var top: Bool { node.line.count == 1 }
@@ -339,7 +393,7 @@ private struct MapNodeView: View {
             Text(when).font(.system(size: 11, weight: .medium).monospacedDigit())
               .foregroundStyle(recede ? Recede.text : Theme.text2).lineLimit(1)
           } else if case .forSale(let price) = node.state, showPrice {
-            PawnAmount(count: price, size: 11, color: recede ? Recede.gold : Theme.pawn)
+            PawnAmount(count: purchase?.left ?? price, size: 11, color: recede ? Recede.gold : Theme.pawn)
           }
         }
         .frame(height: CGFloat(MAP_FOOT))
@@ -388,6 +442,18 @@ private struct MapNodeView: View {
       }
     }
     .frame(width: CGFloat(MAP_DISC), height: CGFloat(MAP_DISC))
+    .overlay {
+      if let purchase, !purchase.done {
+        Circle().trim(from: 0, to: max(0, min(1, purchase.progress)))
+          .stroke(Theme.pawn, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+          .rotationEffect(.degrees(-90))
+          .padding(-4)
+      }
+    }
+    .keyframeAnimator(initialValue: 1.0, trigger: purchase?.done == true) { view, scale in view.scaleEffect(scale) } keyframes: { _ in
+      CubicKeyframe(1.18, duration: 0.14)
+      CubicKeyframe(1, duration: 0.18)
+    }
     .overlay(alignment: .topTrailing) {
       if isNext || node.off {
         Text(isNext ? "Next" : "Off").font(.system(size: 10, weight: .bold)).foregroundStyle(isNext ? .white : Theme.text2)

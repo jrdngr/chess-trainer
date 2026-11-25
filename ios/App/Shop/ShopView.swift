@@ -529,7 +529,7 @@ struct Flight: Identifiable, Equatable {
 }
 
 /// The pawns in the air during a purchase: one after another, each arcing over to the medallion.
-private struct FlightLayer: View {
+struct FlightLayer: View {
   let flights: [Flight]
 
   var body: some View {
