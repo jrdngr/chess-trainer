@@ -59,7 +59,7 @@ struct RestoreView: View {
       looked = true
     }
     .confirmationDialog(
-      picking.map { "Restore \($0.profile.name)?" } ?? "",
+      picking.map { store.devAllowed ? "Restore \($0.profile.name)?" : "Restore your progress?" } ?? "",
       isPresented: Binding(get: { picking != nil }, set: { if !$0 { picking = nil } }),
       titleVisibility: .visible, presenting: picking
     ) { pick in
@@ -70,7 +70,8 @@ struct RestoreView: View {
       Button("Cancel", role: .cancel) { picking = nil }
     } message: { pick in
       Text(
-        store.profiles.profiles.contains { $0.id == pick.profile.id }
+        !store.devAllowed ? "This replaces your progress on this device."
+        : store.profiles.profiles.contains { $0.id == pick.profile.id }
           ? "This replaces \(pick.profile.name) on this device."
           : "It's added as a new profile.")
     }
@@ -98,7 +99,8 @@ struct RestoreView: View {
           row("Restore all", detail: nil) { restoringAll = device }
         }
         ForEach(device.manifest.profiles) { profile in
-          row(profile.name, detail: when(profile.savedAt)) { picking = (profile, device) }
+          // Profiles are a developer tool: a player sees no profile's name.
+          row(store.devAllowed ? profile.name : "Restore", detail: when(profile.savedAt)) { picking = (profile, device) }
         }
       }
     }
