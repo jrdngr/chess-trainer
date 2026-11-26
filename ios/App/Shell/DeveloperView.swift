@@ -1,20 +1,16 @@
 import ChessCore
 import Game
 import Model
-import StoreKit
 import SwiftUI
 import UIKit
 
-/// Whether this build shows the developer tools: Xcode and TestFlight builds do, App Store builds don't.
+/// Whether this build shows the developer tools: Debug builds do, Release builds (TestFlight and the App Store) don't.
 enum DevAccess {
-  static func allowed() async -> Bool {
-    #if DEBUG
-      return true
-    #else
-      guard let result = try? await AppTransaction.shared else { return false }
-      return result.unsafePayloadValue.environment != .production
-    #endif
-  }
+  #if DEBUG
+    static let allowed = true
+  #else
+    static let allowed = false
+  #endif
 }
 
 /// The developer tools: profiles, the clock, and every part of the save a test needs set by hand.

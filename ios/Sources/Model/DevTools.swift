@@ -2,7 +2,7 @@ import ChessCore
 import Foundation
 
 /// The developer tools' changes to a save: set straight, logging nothing, earning nothing.
-/// Only Xcode and TestFlight builds show them.
+/// Only Debug builds show them.
 
 /// The developer tools' settings for this device, outside every profile's save.
 public struct DevSettings: Equatable, Sendable, Codable {

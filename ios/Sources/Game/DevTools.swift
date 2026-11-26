@@ -2,7 +2,7 @@ import Foundation
 import Model
 
 /// The developer tools on the store: changes to the save that log nothing, profiles, the clock,
-/// and the save itself in and out. Only Xcode and TestFlight builds show them.
+/// and the save itself in and out. Only Debug builds show them.
 extension AppStore {
   static let devFile = "dev.json"
 

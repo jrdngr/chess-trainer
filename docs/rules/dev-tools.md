@@ -1,10 +1,10 @@
 # Developer tools
 
-What the Developer screen changes, for testing on a phone. Xcode and TestFlight
-builds show it as the last row of Settings; App Store builds don't, so a player
-has one profile. Code: `DevTools.swift` in Model and in the Game target, and
-`DeveloperView` in the app, which also checks the build (not tested: Linux
-can't be a TestFlight build). Tests: the `docs/rules/dev-tools.md` suite in
+What the Developer screen changes, for testing on a phone. Debug builds, run
+from Xcode, show it as the last row of Settings; Release builds (TestFlight and
+the App Store) don't, so a player has one profile. Code: `DevTools.swift` in
+Model and in the Game target, and `DeveloperView` in the app, which also checks
+the build. Tests: the `docs/rules/dev-tools.md` suite in
 `Tests/SpecTests/Rules/DevToolsRules.swift`, and
 `Tests/FlowTests/DevToolsFlowTests.swift` for rules 1, 8 to 12.
 
@@ -32,7 +32,7 @@ can't be a TestFlight build). Tests: the `docs/rules/dev-tools.md` suite in
    green.
 8. **The clock** runs whole days ahead. It belongs to the device, kept over
    relaunches and every profile; Home shows "+N days" while it runs ahead.
-   A pinned clock (tests, replays) doesn't move. An App Store build ignores
+   A pinned clock (tests, replays) doesn't move. A Release build ignores
    the clock and every other developer setting the device kept.
 9. **The App Store unlock** can be ignored on the device: one the App Store
    hands back as owned isn't credited, so the unlock shows and can be bought

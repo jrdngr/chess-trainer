@@ -32,7 +32,7 @@ public final class AppStore {
   public private(set) var session = UUID()
   /// The developer tools' settings for this device.
   public internal(set) var dev = DevSettings()
-  /// Whether this build may use the developer settings: App Store builds don't, whatever the device kept.
+  /// Whether this build may use the developer settings: Release builds don't, whatever the device kept.
   public var devAllowed = true
   /// Settings was open when the session changed under it: Home opens it again.
   @ObservationIgnored private var settingsHeld = false
