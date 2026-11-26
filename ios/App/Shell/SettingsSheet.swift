@@ -3,15 +3,13 @@ import Game
 import Model
 import SwiftUI
 
-/// Settings: the board, Play's extras, iCloud backup and Export, and in Xcode and TestFlight builds
-/// the developer tools.
+/// Settings: the board, Play's extras, iCloud backup, Export, Acknowledgments, and in Debug builds the developer tools.
 struct SettingsSheet: View {
   @Environment(AppStore.self) private var store
   @Environment(\.dismiss) private var dismiss
   @State private var exporting = false
   @State private var restoring = false
-  /// Xcode and TestFlight builds: the Developer row shows.
-  @State private var devTools = false
+  @State private var acknowledging = false
   @State private var developing = false
 
   var body: some View {
@@ -79,7 +77,19 @@ struct SettingsSheet: View {
             .buttonStyle(.plain)
           }
           .padding(.top, 24)
-          if devTools {
+          ListCard {
+            Button { acknowledging = true } label: {
+              HStack {
+                Text("Acknowledgments").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+                Spacer()
+                Icon(name: "chevron", size: 16).foregroundStyle(Theme.text3)
+              }
+              .padding(.horizontal, 16).frame(minHeight: 54).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+          }
+          .padding(.top, 24)
+          if DevAccess.allowed {
             ListCard {
               Button { developing = true } label: {
                 HStack {
@@ -98,12 +108,12 @@ struct SettingsSheet: View {
       }
     }
     .task {
-      devTools = await DevAccess.allowed()
-      if devTools && HomeView.debugDeveloper { developing = true }
+      if DevAccess.allowed && HomeView.debugDeveloper { developing = true }
     }
     .sheet(isPresented: $developing) { DeveloperView().presentationBackground(Theme.background) }
     .sheet(isPresented: $exporting) { ExportView().presentationBackground(Theme.background) }
     .sheet(isPresented: $restoring) { RestoreView().presentationBackground(Theme.background) }
+    .sheet(isPresented: $acknowledging) { AcknowledgmentsView().presentationBackground(Theme.background) }
   }
 
   private func section(_ title: String, first: Bool = false) -> some View {
