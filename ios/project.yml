@@ -17,6 +17,9 @@ targets:
         buildPhase: resources
       - path: Resources/Shop/shop-middlegame.mp4
         buildPhase: resources
+      # The privacy manifest: no tracking, no data collected, and Fathom's fstat on the bundled tablebases.
+      - path: Support/PrivacyInfo.xcprivacy
+        buildPhase: resources
     dependencies:
       - package: ChessPlaybook
         product: Model
@@ -31,7 +34,7 @@ targets:
         PRODUCT_NAME: Chess Playbook
         PRODUCT_BUNDLE_IDENTIFIER: com.jordangrace.chessplaybook
         DEVELOPMENT_TEAM: 94BFKA4Q2U
-        MARKETING_VERSION: "0.1.0"
+        MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
