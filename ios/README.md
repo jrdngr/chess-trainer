@@ -88,8 +88,8 @@ values and time per move can change afterwards without playing again.
 
 `App/Assets.xcassets/AppIcon.appiconset/AppIcon.png` is a single 1024px
 opaque PNG; iOS masks the corners and scales it down. Its source is
-`Design/app-icon.svg` (three pawns climbing three isometric steps, lavender
-to a gold top pawn, with gold lit step edges). Re-render the PNG from the SVG after editing it.
+`Design/app-icon.svg` (a fan of three indigo playing cards on a dark indigo
+field, the front card upright with a pale pawn). Re-render the PNG from the SVG after editing it.
 
 ## Builds and versions
 
