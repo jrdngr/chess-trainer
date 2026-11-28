@@ -26,7 +26,7 @@ Everywhere:
 
 - [Playbook](playbook.md): book moves only.
 - [Tidy](tidy.md): switching to moves that bring your lines together.
-- [Saves](saves.md): what happens to older saves.
+- [Saves](saves.md): what happens to older saves, and sealed backups.
 - [Developer tools](dev-tools.md): setting the save by hand, for testing.
 
 Other modes:

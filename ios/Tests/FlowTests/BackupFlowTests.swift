@@ -21,7 +21,7 @@ private actor MemoryDrive: BackupDrive {
 
   func read(folder: String, files: [String]) -> (file: String, data: Data)? {
     for file in files {
-      if let data = folders[folder]?[file], isCurrentSave(data) { return (file, data) }
+      if let data = folders[folder]?[file], let save = openSealedSave(data) { return (file, save) }
     }
     return nil
   }
@@ -33,7 +33,7 @@ private actor MemoryDrive: BackupDrive {
   func all() -> [String: [String: Data]] { folders }
 }
 
-private func pawns(_ data: Data?) -> Int? { data.flatMap { try? decodeSave($0).pawns } }
+private func pawns(_ data: Data?) -> Int? { data.flatMap(openSealedSave).flatMap { try? decodeSave($0).pawns } }
 
 private func saveWith(pawns: Int) throws -> Data {
   var state = AppState()
@@ -71,7 +71,7 @@ private func saveWith(pawns: Int) throws -> Data {
 
   let other = "other"
   let backed = BackedUpProfile(id: ProfileList.mainId, name: "Main", savedAt: 1, days: [])
-  await drive.put(other, "main.json", try saveWith(pawns: 100))
+  await drive.put(other, "main.json", sealSave(try saveWith(pawns: 100)))
   let source = DeviceBackup(folder: other, manifest: BackupManifest(device: "iPad", profiles: [backed]))
   #expect(await store.restore(backed, from: source, day: nil) == .restored(olderDay: nil))
   #expect(store.state.pawns == 100)
@@ -96,8 +96,33 @@ private func saveWith(pawns: Int) throws -> Data {
   old.pawns = 100
   old.version = SAVE_VERSION - 1
   let backed = BackedUpProfile(id: ProfileList.mainId, name: "Main", savedAt: 1, days: [])
-  await drive.put("other", "main.json", try JSONEncoder().encode(old))
+  await drive.put("other", "main.json", sealSave(try JSONEncoder().encode(old)))
   let source = DeviceBackup(folder: "other", manifest: BackupManifest(device: "iPad", profiles: [backed]))
+  #expect(await store.restore(backed, from: source, day: nil) == .failed)
+  #expect(store.state.pawns == 500)
+}
+
+/// A backup edited by hand doesn't restore: its seal no longer matches, so the restore falls
+/// back to the older snapshot, and with none left it fails and the profile stays as it is.
+@MainActor @Test func anEditedBackupIsNotRestored() async throws {
+  let drive = MemoryDrive()
+  let store = AppStore(storage: MemoryStorage(), backup: drive)
+  await store.load(book: nil)
+  store.update { $0.pawns = 500 }
+  let day = "2026-11-20"
+  let backed = BackedUpProfile(id: ProfileList.mainId, name: "Main", savedAt: 1, days: [day])
+  let source = DeviceBackup(folder: "other", manifest: BackupManifest(device: "iPad", profiles: [backed]))
+  // The save inside a sealed file swapped for one with more pawns, the seal left as it was.
+  var file = try #require(JSONSerialization.jsonObject(with: sealSave(try saveWith(pawns: 100))) as? [String: Any])
+  file["save"] = try saveWith(pawns: 99_999).base64EncodedString()
+  await drive.put("other", "main.json", try JSONSerialization.data(withJSONObject: file))
+  await drive.put("other", BackupManifest.snapshotFile(backed.id, day), sealSave(try saveWith(pawns: 300)))
+  #expect(await store.restore(backed, from: source, day: nil) == .restored(olderDay: day))
+  #expect(store.state.pawns == 300)
+
+  // An unsealed save, as it would be typed in by hand.
+  await drive.put("other", BackupManifest.snapshotFile(backed.id, day), try saveWith(pawns: 99_999))
+  store.update { $0.pawns = 500 }
   #expect(await store.restore(backed, from: source, day: nil) == .failed)
   #expect(store.state.pawns == 500)
 }

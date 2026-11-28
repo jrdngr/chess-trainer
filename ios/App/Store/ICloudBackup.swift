@@ -50,15 +50,15 @@ actor ICloudBackup: BackupDrive {
     }
   }
 
-  /// The first of `files` in a device's folder that this version can read, downloaded first if
-  /// need be, and its name.
+  /// The save in the first of `files` in a device's folder whose seal matches and that this
+  /// version can read, downloaded first if need be, and its name.
   func read(folder: String, files: [String]) -> (file: String, data: Data)? {
     guard let root = root() else { return nil }
     for file in files {
       if let data = coordinatedRead(root.appending(path: folder).appending(path: file)),
-        isCurrentSave(data)
+        let save = openSealedSave(data)
       {
-        return (file, data)
+        return (file, save)
       }
     }
     return nil

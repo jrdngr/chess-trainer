@@ -273,7 +273,7 @@ public final class AppStore {
     lastWrite = Task { [weak self] in
       await previous?.value
       let written = await drive.write(
-        folder: folder, profileId: profileId, save: save, snapshot: snapshot, day: day, manifest: manifest, removing: gone)
+        folder: folder, profileId: profileId, save: save.map(sealSave), snapshot: snapshot, day: day, manifest: manifest, removing: gone)
       self?.iCloudOff = !written
     }
   }

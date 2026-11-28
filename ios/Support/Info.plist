@@ -7,7 +7,7 @@
 		<key>iCloud.com.jordangrace.chessplaybook</key>
 		<dict>
 			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
-			<true/>
+			<false/>
 			<key>NSUbiquitousContainerName</key>
 			<string>Playbook</string>
 			<key>NSUbiquitousContainerSupportedFolderLevels</key>
